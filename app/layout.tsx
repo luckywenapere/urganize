@@ -1,22 +1,10 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, DM_Sans } from "next/font/google";
 import "./globals.css";
-
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
 
 export const metadata: Metadata = {
   title: "Urganize - Music Release Management",
-  description: "The operating system for music teams",
+  description: "The opinionated operating system for music careers. Stop the chaos, ship your releases.",
+  keywords: ["music", "release", "management", "artist", "manager", "promotion"],
 };
 
 export default function RootLayout({
@@ -25,9 +13,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${dmSans.variable}`}>
-      <body className="antialiased bg-gradient-to-br from-slate-950 via-slate-900 to-black text-slate-100">
+    <html lang="en" className="dark">
+      <head>
+        {/* Preconnect for performance */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Load Inter font */}
+        <link 
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" 
+          rel="stylesheet" 
+        />
+      </head>
+      <body className="bg-bg-base text-content-primary antialiased">
         {children}
+        
+        {/* Keyboard navigation hint - Linear style */}
+        <div className="keyboard-hint">
+          <kbd className="kbd">⌘</kbd>
+          <kbd className="kbd">K</kbd>
+          <span>Quick actions</span>
+        </div>
       </body>
     </html>
   );

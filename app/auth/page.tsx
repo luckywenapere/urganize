@@ -6,12 +6,16 @@ import { useAuthStore } from '@/lib/auth-store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
+import { Logo } from '@/components/ui/Logo';
+import { ArrowLeft, User, Users, Mail, Lock, UserCircle } from 'lucide-react';
+
+type AuthMode = 'login' | 'role' | 'signup';
 
 export default function AuthPage() {
   const router = useRouter();
   const { login, signup } = useAuthStore();
   
-  const [mode, setMode] = useState<'login' | 'signup' | 'role'>('login');
+  const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   
@@ -28,16 +32,11 @@ export default function AuthPage() {
     try {
       await login(email, password);
       router.push('/dashboard');
-    } catch (err) {
+    } catch {
       setError('Invalid email or password');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleRoleSelection = (hasManagerValue: boolean) => {
-    setHasManager(hasManagerValue);
-    setMode('signup');
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -49,7 +48,7 @@ export default function AuthPage() {
       const role = hasManager ? 'artist' : 'artist-manager';
       await signup(email, password, name, role);
       router.push('/dashboard');
-    } catch (err) {
+    } catch {
       setError('Signup failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -57,149 +56,40 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/10 via-transparent to-blue-600/10 blur-3xl" />
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background effects */}
+      <div className="absolute inset-0 bg-bg-base" />
+      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand/5 rounded-full blur-[120px]" />
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-brand/3 rounded-full blur-[100px]" />
       
-      <div className="w-full max-w-md relative z-10">
+      <div className="w-full max-w-[400px] relative z-10">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold font-display tracking-tight mb-2">
-            Urganize
-          </h1>
-          <p className="text-slate-400">Where music careers stop being chaotic</p>
+        <div className="text-center mb-8 animate-in">
+          <Logo size="xl" className="justify-center mb-4" />
+          <p className="text-content-secondary">
+            The operating system for music careers
+          </p>
         </div>
 
-        <Card className="p-8">
+        {/* Auth Card */}
+        <Card className="animate-in delay-1" padding="lg">
+          {/* === LOGIN === */}
           {mode === 'login' && (
-            <form onSubmit={handleLogin} className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Welcome back</h2>
-                <p className="text-slate-400 text-sm">Sign in to continue to your releases</p>
-              </div>
-
-              {error && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                  {error}
-                </div>
-              )}
-
-              <Input
-                label="Email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-              />
-
-              <Input
-                label="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-              />
-
-              <Button
-                type="submit"
-                className="w-full"
-                isLoading={isLoading}
-              >
-                Sign In
-              </Button>
-
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={() => setMode('role')}
-                  className="text-sm text-slate-400 hover:text-emerald-400 transition-colors"
-                >
-                  Don't have an account? <span className="font-semibold">Sign up</span>
-                </button>
-              </div>
-            </form>
-          )}
-
-          {mode === 'role' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Get started</h2>
-                <p className="text-slate-400 text-sm">First, let us know your situation</p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="text-center font-medium mb-4">
-                  Do you currently have a manager?
-                </div>
-
-                <button
-                  onClick={() => handleRoleSelection(true)}
-                  className="w-full p-6 rounded-xl border-2 border-slate-700 hover:border-emerald-500 bg-slate-800/50 hover:bg-slate-800 transition-all group text-left"
-                >
-                  <div className="font-semibold text-lg mb-1 group-hover:text-emerald-400 transition-colors">
-                    Yes, I have a manager
-                  </div>
-                  <div className="text-sm text-slate-400">
-                    You'll be set up as an artist with collaboration access
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => handleRoleSelection(false)}
-                  className="w-full p-6 rounded-xl border-2 border-slate-700 hover:border-emerald-500 bg-slate-800/50 hover:bg-slate-800 transition-all group text-left"
-                >
-                  <div className="font-semibold text-lg mb-1 group-hover:text-emerald-400 transition-colors">
-                    No, I manage myself
-                  </div>
-                  <div className="text-sm text-slate-400">
-                    You'll get full access to all management features
-                  </div>
-                </button>
-              </div>
-
-              <div className="text-center">
-                <button
-                  onClick={() => setMode('login')}
-                  className="text-sm text-slate-400 hover:text-emerald-400 transition-colors"
-                >
-                  Already have an account? <span className="font-semibold">Sign in</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {mode === 'signup' && (
-            <form onSubmit={handleSignup} className="space-y-6">
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setMode('role')}
-                  className="text-sm text-slate-400 hover:text-emerald-400 transition-colors mb-4 flex items-center gap-1"
-                >
-                  ← Back
-                </button>
-                <h2 className="text-2xl font-bold mb-2">Create your account</h2>
-                <p className="text-slate-400 text-sm">
-                  {hasManager ? 'Artist account' : 'Artist-Manager account'}
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-semibold text-content-primary mb-1">
+                  Welcome back
+                </h2>
+                <p className="text-sm text-content-tertiary">
+                  Sign in to continue to your releases
                 </p>
               </div>
 
               {error && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                <div className="p-3 rounded-lg bg-status-error/10 border border-status-error/20 text-status-error text-sm animate-bounce-in">
                   {error}
                 </div>
               )}
-
-              <Input
-                label="Name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-                required
-              />
 
               <Input
                 label="Email"
@@ -207,6 +97,7 @@ export default function AuthPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                leftIcon={<Mail className="w-4 h-4" />}
                 required
               />
 
@@ -216,34 +107,173 @@ export default function AuthPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                leftIcon={<Lock className="w-4 h-4" />}
                 required
-                helperText="Minimum 8 characters"
               />
 
-              <Button
-                type="submit"
-                className="w-full"
-                isLoading={isLoading}
-              >
+              <Button type="submit" className="w-full" isLoading={isLoading}>
+                Sign In
+              </Button>
+
+              <p className="text-center text-sm text-content-tertiary">
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => setMode('role')}
+                  className="text-brand hover:underline font-medium"
+                >
+                  Sign up
+                </button>
+              </p>
+            </form>
+          )}
+
+          {/* === ROLE SELECTION === */}
+          {mode === 'role' && (
+            <div className="space-y-5">
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-semibold text-content-primary mb-1">
+                  Get started
+                </h2>
+                <p className="text-sm text-content-tertiary">
+                  First, tell us about yourself
+                </p>
+              </div>
+
+              <p className="text-sm font-medium text-content-secondary text-center py-2">
+                Do you currently have a manager?
+              </p>
+
+              <div className="space-y-3">
+                <button
+                  onClick={() => { setHasManager(true); setMode('signup'); }}
+                  className="w-full p-4 rounded-xl border border-stroke-default bg-bg-elevated hover:bg-bg-hover hover:border-stroke-strong transition-all duration-fast group text-left flex items-start gap-4"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-purple-500/15 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-fast">
+                    <User className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-content-primary mb-0.5 group-hover:text-brand transition-colors">
+                      Yes, I have a manager
+                    </div>
+                    <div className="text-sm text-content-tertiary">
+                      Set up as an artist with collaboration access
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => { setHasManager(false); setMode('signup'); }}
+                  className="w-full p-4 rounded-xl border border-stroke-default bg-bg-elevated hover:bg-bg-hover hover:border-stroke-strong transition-all duration-fast group text-left flex items-start gap-4"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-brand/15 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-fast">
+                    <Users className="w-5 h-5 text-brand" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-content-primary mb-0.5 group-hover:text-brand transition-colors">
+                      No, I manage myself
+                    </div>
+                    <div className="text-sm text-content-tertiary">
+                      Full access to all management features
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <p className="text-center text-sm text-content-tertiary">
+                Already have an account?{' '}
+                <button onClick={() => setMode('login')} className="text-brand hover:underline font-medium">
+                  Sign in
+                </button>
+              </p>
+            </div>
+          )}
+
+          {/* === SIGNUP === */}
+          {mode === 'signup' && (
+            <form onSubmit={handleSignup} className="space-y-5">
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setMode('role')}
+                  className="inline-flex items-center gap-1.5 text-sm text-content-tertiary hover:text-content-primary transition-colors mb-4"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </button>
+                
+                <div className="text-center">
+                  <h2 className="text-xl font-semibold text-content-primary mb-1">
+                    Create your account
+                  </h2>
+                  <span className={`inline-flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full ${
+                    hasManager 
+                      ? 'bg-purple-500/15 text-purple-400' 
+                      : 'bg-brand/15 text-brand'
+                  }`}>
+                    {hasManager ? 'Artist Account' : 'Manager Account'}
+                  </span>
+                </div>
+              </div>
+
+              {error && (
+                <div className="p-3 rounded-lg bg-status-error/10 border border-status-error/20 text-status-error text-sm">
+                  {error}
+                </div>
+              )}
+
+              <Input
+                label="Your Name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+                leftIcon={<UserCircle className="w-4 h-4" />}
+                required
+              />
+
+              <Input
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                leftIcon={<Mail className="w-4 h-4" />}
+                required
+              />
+
+              <Input
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                leftIcon={<Lock className="w-4 h-4" />}
+                hint="Minimum 8 characters"
+                required
+              />
+
+              <Button type="submit" className="w-full" isLoading={isLoading}>
                 Create Account
               </Button>
 
-              <div className="text-center">
+              <p className="text-center text-sm text-content-tertiary">
+                Already have an account?{' '}
                 <button
                   type="button"
                   onClick={() => setMode('login')}
-                  className="text-sm text-slate-400 hover:text-emerald-400 transition-colors"
+                  className="text-brand hover:underline font-medium"
                 >
-                  Already have an account? <span className="font-semibold">Sign in</span>
+                  Sign in
                 </button>
-              </div>
+              </p>
             </form>
           )}
         </Card>
 
-        <div className="mt-6 text-center text-sm text-slate-500">
+        <p className="text-center text-xs text-content-quaternary mt-6">
           By continuing, you agree to our Terms of Service and Privacy Policy
-        </div>
+        </p>
       </div>
     </div>
   );
