@@ -1,56 +1,76 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import type { ReleaseState, Release } from '@/types';
+import { supabase, type Release } from './supabase/client';
 
-export const useReleaseStore = create<ReleaseState>()(
-  persist(
-    (set, get) => ({
-      releases: [],
-      currentRelease: null,
+interface ReleaseState {
+  releases: Release[];
+  isLoading: boolean;
+  fetchReleases: () => Promise<void>;
+  addRelease: (release: Omit<Release, 'id' | 'created_at' | 'updated_at'>) => Promise<Release>;
+  updateRelease: (id: string, updates: Partial<Release>) => Promise<void>;
+  deleteRelease: (id: string) => Promise<void>;
+}
 
-      addRelease: (releaseData) => {
-        const newRelease: Release = {
-          ...releaseData,
-          id: Date.now().toString(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
+export const useReleaseStore = create<ReleaseState>((set, get) => ({
+  releases: [],
+  isLoading: false,
 
-        set((state) => ({
-          releases: [...state.releases, newRelease],
-          currentRelease: newRelease,
-        }));
-      },
+  fetchReleases: async () => {
+    set({ isLoading: true });
+    const { data, error } = await supabase
+      .from('releases')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      updateRelease: (id, updates) => {
-        set((state) => ({
-          releases: state.releases.map((release) =>
-            release.id === id
-              ? { ...release, ...updates, updatedAt: new Date() }
-              : release
-          ),
-          currentRelease:
-            state.currentRelease?.id === id
-              ? { ...state.currentRelease, ...updates, updatedAt: new Date() }
-              : state.currentRelease,
-        }));
-      },
-
-      deleteRelease: (id) => {
-        set((state) => ({
-          releases: state.releases.filter((release) => release.id !== id),
-          currentRelease:
-            state.currentRelease?.id === id ? null : state.currentRelease,
-        }));
-      },
-
-      setCurrentRelease: (id) => {
-        const release = get().releases.find((r) => r.id === id);
-        set({ currentRelease: release || null });
-      },
-    }),
-    {
-      name: 'release-storage',
+    if (error) {
+      console.error('Failed to fetch releases:', error);
+      set({ isLoading: false });
+      return;
     }
-  )
-);
+
+    set({ releases: data || [], isLoading: false });
+  },
+
+  addRelease: async (release) => {
+    const { data, error } = await supabase
+      .from('releases')
+      .insert([release])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    set((state) => ({
+      releases: [data, ...state.releases],
+    }));
+
+    return data;
+  },
+
+  updateRelease: async (id, updates) => {
+    const { error } = await supabase
+      .from('releases')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) throw error;
+
+    set((state) => ({
+      releases: state.releases.map((r) =>
+        r.id === id ? { ...r, ...updates } : r
+      ),
+    }));
+  },
+
+  deleteRelease: async (id) => {
+    const { error } = await supabase
+      .from('releases')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    set((state) => ({
+      releases: state.releases.filter((r) => r.id !== id),
+    }));
+  },
+}));
