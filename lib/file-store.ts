@@ -92,12 +92,16 @@ export const useFileStore = create<FileState>((set, get) => ({
 
   addFile: async (file) => {
     const dbFile = fileToDb(file);
+	
+	console.log('Inserting file to DB:', dbFile);
     
     const { data, error } = await supabase
       .from('files')
       .insert([dbFile])
       .select()
       .single();
+	  
+	console.log('Insert result:', { data, error });
 
     if (error) throw error;
     if (!data) throw new Error('No data returned from insert');
