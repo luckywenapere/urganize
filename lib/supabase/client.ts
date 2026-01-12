@@ -47,6 +47,7 @@ export type DbTask = {
   status: 'pending' | 'completed';
   due_date?: string;
   is_system_generated: boolean;
+  order?: number;
   created_at: string;
   updated_at: string;
 };

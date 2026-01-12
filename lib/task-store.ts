@@ -27,6 +27,7 @@ function dbToTask(db: DbTask): Task {
     status: db.status,
     dueDate: db.due_date ? new Date(db.due_date) : undefined,
     isSystemGenerated: db.is_system_generated,
+    order: db.order ?? 0,
     createdAt: new Date(db.created_at),
     updatedAt: new Date(db.updated_at),
   };
@@ -48,6 +49,7 @@ function taskToDb(task: Partial<Task> & { userId?: string; releaseId?: string })
       : task.dueDate;
   }
   if (task.isSystemGenerated !== undefined) db.is_system_generated = task.isSystemGenerated;
+  if (task.order !== undefined) db.order = task.order;  
   
   return db;
 }
@@ -210,5 +212,6 @@ export function generateDefaultTasks(
     phase: t.phase,
     status: 'pending' as TaskStatus,
     isSystemGenerated: true,
+	order: index, 
   }));
 }
