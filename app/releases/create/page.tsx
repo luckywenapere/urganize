@@ -26,9 +26,10 @@ export default function CreateReleasePage() {
     releaseDate: '',
   });
 
-  const handleSubmit = () => {
-    if (!user) return;
+  const handleSubmit = async () => {
+  if (!user) return;
 
+  try {
     const newRelease = {
       title: formData.title,
       artistName: formData.artistName,
@@ -38,11 +39,23 @@ export default function CreateReleasePage() {
       userId: user.id,
     };
 
-    addRelease(newRelease);
-    const releaseId = Date.now().toString();
-    generateDefaultTasks(releaseId, user.id).forEach(task => addTask(task));
+    const releaseId = await addRelease(newRelease);
+    
+    // Generate default tasks for this release
+    const tasks = generateDefaultTasks(releaseId, user.id);
+    
+    // Add each task to database
+    for (const task of tasks) {
+      await addTask(task);
+    }
+    
+    // Navigate to the new release
     router.push(`/releases/${releaseId}`);
-  };
+  } catch (error) {
+    console.error('Failed to create release:', error);
+    // Optionally show error to user
+  }
+};
 
   const canProceed = step === 1 ? formData.title && formData.artistName : true;
 

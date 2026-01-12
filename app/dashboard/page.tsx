@@ -29,7 +29,7 @@ import {
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuthStore();
-  const { releases } = useReleaseStore();
+  const { releases, fetchReleases } = useReleaseStore();
   const { getTasksByRelease } = useTaskStore();
   const [mounted, setMounted] = useState(false);
 
@@ -39,6 +39,12 @@ export default function DashboardPage() {
       router.push('/auth');
     }
   }, [isAuthenticated, router]);
+  
+  useEffect(() => {
+  if (isAuthenticated && user) {
+    fetchReleases();
+  }
+}, [isAuthenticated, user, fetchReleases]);
 
   if (!isAuthenticated || !user || !mounted) {
     return (

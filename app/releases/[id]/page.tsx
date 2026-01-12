@@ -27,7 +27,14 @@ export default function ReleaseDetailPage() {
   const releaseId = params.id as string;
 
   const { releases } = useReleaseStore();
-  const { getTasksByRelease } = useTaskStore();
+  const { getTasksByRelease, fetchTasksByRelease } = useTaskStore();
+
+	useEffect(() => {
+	  if (releaseId) {
+		fetchTasksByRelease(releaseId);
+	  }
+	}, [releaseId, fetchTasksByRelease]);
+
   const { getFilesByRelease, files } = useFileStore();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
