@@ -32,10 +32,11 @@ export default function ReleaseDetailPage() {
 	useEffect(() => {
 	  if (releaseId) {
 		fetchTasksByRelease(releaseId);
+		fetchFilesByRelease(releaseId);
 	  }
 	}, [releaseId, fetchTasksByRelease]);
 
-  const { getFilesByRelease, files } = useFileStore();
+  const { getFilesByRelease, files, fetchFilesByRelease } = useFileStore();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
   const release = releases.find((r) => r.id === releaseId);

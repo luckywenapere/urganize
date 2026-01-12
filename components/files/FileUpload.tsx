@@ -7,6 +7,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { Card } from '@/components/ui/Card';
 import type { FileCategory } from '@/types';
 import { Upload, File, Trash2, Download, Music, Image, FileText } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
 
 interface FileUploadProps {
   releaseId: string;
@@ -25,19 +26,40 @@ export const FileUpload: React.FC<FileUploadProps> = ({ releaseId }) => {
   const { getFilesByCategory, addFile, deleteFile } = useFileStore();
   const [selectedCategory, setSelectedCategory] = useState<FileCategory>('audio');
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (!user) return;
-    acceptedFiles.forEach((file) => {
-      addFile({
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+  if (!user) return;
+  
+  for (const file of acceptedFiles) {
+    try {
+      // Upload to Supabase Storage
+      const filePath = `${releaseId}/${selectedCategory}/${Date.now()}_${file.name}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('release-files')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('release-files')
+        .getPublicUrl(filePath);
+
+      // Save file record to database
+      await addFile({
         releaseId,
         name: file.name,
         category: selectedCategory,
         size: file.size,
-        url: URL.createObjectURL(file),
+        url: urlData.publicUrl,
         uploadedBy: user.id,
       });
-    });
-  }, [releaseId, selectedCategory, user, addFile]);
+    } catch (error) {
+      console.error('File upload failed:', error);
+      alert(`Failed to upload ${file.name}`);
+    }
+  }
+}, [releaseId, selectedCategory, user, addFile]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, multiple: true });
 
