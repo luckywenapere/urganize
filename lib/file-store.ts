@@ -32,7 +32,6 @@ function fileToDb(file: Partial<ReleaseFile> & { releaseId?: string; uploadedBy?
   const db: any = {};
   
   if (file.releaseId) db.release_id = file.releaseId;
-  if (file.uploadedBy) db.user_id = file.uploadedBy;
   if (file.name) db.name = file.name;
   if (file.category) db.category = file.category;
   if (file.size) db.size = file.size;

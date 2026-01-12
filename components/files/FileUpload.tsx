@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import type { FileCategory } from '@/types';
 import { Upload, File, Trash2, Download, Music, Image, FileText } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
+import { uploadFileToDatabase } from '@/app/actions/upload-file';
 
 interface FileUploadProps {
   releaseId: string;
@@ -21,45 +22,89 @@ const CATEGORIES: { key: FileCategory; label: string; icon: React.ReactNode; req
   { key: 'contracts', label: 'Contracts', icon: <FileText className="w-4 h-4" /> },
 ];
 
+const fileData = {
+  release_id: releaseId,
+  name: file.name,
+  category: selectedCategory,
+  size: file.size,
+  storage_path: urlData.publicUrl,
+  user_id: user.id,
+};
+
+await uploadFileToDatabase(fileData);
+
 export const FileUpload: React.FC<FileUploadProps> = ({ releaseId }) => {
   const { user } = useAuthStore();
   const { getFilesByCategory, addFile, deleteFile } = useFileStore();
   const [selectedCategory, setSelectedCategory] = useState<FileCategory>('audio');
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-  if (!user) return;
-  
-  for (const file of acceptedFiles) {
-    try {
-      // Upload to Supabase Storage
-      const filePath = `${releaseId}/${selectedCategory}/${Date.now()}_${file.name}`;
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('release-files')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('release-files')
-        .getPublicUrl(filePath);
-
-      // Save file record to database
-      await addFile({
-        releaseId,
-        name: file.name,
-        category: selectedCategory,
-        size: file.size,
-        url: urlData.publicUrl,
-        uploadedBy: user.id,
-      });
-    } catch (error) {
-      console.error('File upload failed:', error);
-      alert(`Failed to upload ${file.name}`);
+    if (!user) {
+      alert('You must be logged in to upload files');
+      return;
     }
-  }
-}, [releaseId, selectedCategory, user, addFile]);
+    
+    // CHECK AUTH - Step 1 Debugging
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log('🔍 Auth UID:', session?.user?.id);
+    console.log('🔍 User from store:', user.id);
+    console.log('🔍 Do they match?', session?.user?.id === user.id);
+    
+    for (const file of acceptedFiles) {
+      try {
+        console.log('📤 Uploading file:', file.name);
+        
+        // Upload to Supabase Storage
+        const filePath = `${releaseId}/${selectedCategory}/${Date.now()}_${file.name}`;
+        console.log('📁 File path:', filePath);
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('release-files')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        console.log('☁️ Storage upload result:', { uploadData, uploadError });
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('release-files')
+          .getPublicUrl(filePath);
+
+        console.log('🔗 Public URL:', urlData.publicUrl);
+
+        // Prepare file data
+        const fileData = {
+          releaseId,
+          name: file.name,
+          category: selectedCategory,
+          size: file.size,
+          url: urlData.publicUrl,
+          uploadedBy: user.id, // This should match session.user.id
+        };
+        
+        console.log('💾 File data being sent to DB:', fileData);
+
+        // Save file record to database
+        await addFile(fileData);
+        
+        console.log('✅ File uploaded successfully');
+        
+      } catch (error: any) {
+        console.error('❌ File upload failed:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        alert(`Failed to upload ${file.name}: ${error.message || 'Unknown error'}`);
+      }
+    }
+  }, [releaseId, selectedCategory, user, addFile]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, multiple: true });
 
@@ -179,7 +224,7 @@ const FileItem: React.FC<FileItemProps> = ({ file, onDelete }) => {
       </div>
       
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <a
+        
           href={file.url}
           download={file.name}
           className="p-2 rounded-lg hover:bg-bg-elevated text-content-tertiary hover:text-brand transition-colors"
