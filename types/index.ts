@@ -34,6 +34,7 @@ export type TaskStatus = 'pending' | 'in-progress' | 'completed';
 export interface Task {
   id: string;
   releaseId: string;
+  userId: string;
   title: string;
   description?: string;
   phase: TaskPhase;
@@ -43,6 +44,7 @@ export interface Task {
   isSystemGenerated: boolean;
   order: number;
   createdAt: Date;
+  updatedAt?: Date;
   completedAt?: Date;
 }
 
@@ -106,10 +108,13 @@ export interface ReleaseState {
 
 export interface TaskState {
   tasks: Task[];
-  addTask: (task: Omit<Task, 'id' | 'createdAt'>) => void;
-  updateTask: (id: string, updates: Partial<Task>) => void;
-  deleteTask: (id: string) => void;
-  toggleTaskStatus: (id: string) => void;
+  isLoading: boolean;
+  fetchTasks: () => Promise<void>;
+  fetchTasksByRelease: (releaseId: string) => Promise<void>;
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>; 
+  updateTask: (id: string, updates: Partial<Task>) => Promise<void>;  
+  deleteTask: (id: string) => Promise<void>; 
+  toggleTaskStatus: (id: string) => Promise<void>;  
   getTasksByRelease: (releaseId: string) => Task[];
   getTasksByPhase: (releaseId: string, phase: TaskPhase) => Task[];
 }
