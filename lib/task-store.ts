@@ -205,13 +205,13 @@ export function generateDefaultTasks(
     { title: 'Monitor release day', phase: 'distribution' as TaskPhase },
   ];
 
-  return tasks.map(t => ({
-    releaseId,
-    userId,
-    title: t.title,
-    phase: t.phase,
-    status: 'pending' as TaskStatus,
-    isSystemGenerated: true,
-	order: index, 
-  }));
+  return tasks.map((t, index) => ({  
+  releaseId,
+  userId,
+  title: t.title,
+  phase: t.phase,
+  status: 'pending' as TaskStatus,
+  isSystemGenerated: true,
+  order: index,
+}));
 }
