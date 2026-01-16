@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -101,15 +102,25 @@ export default function AuthPage() {
                 required
               />
 
-              <Input
-                label="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                leftIcon={<Lock className="w-4 h-4" />}
-                required
-              />
+              <div>
+                <Input
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  leftIcon={<Lock className="w-4 h-4" />}
+                  required
+                />
+                <div className="flex justify-end mt-2">
+                  <Link 
+                    href="/auth/forgot-password"
+                    className="text-sm text-brand hover:underline font-medium"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+              </div>
 
               <Button type="submit" className="w-full" isLoading={isLoading}>
                 Sign In
