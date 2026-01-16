@@ -30,11 +30,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             className={clsx(
               'input',
-              leftIcon && 'pl-10',
               rightElement && 'pr-10',
               error && 'border-status-error focus:border-status-error focus:ring-status-error/20',
               className
             )}
+            style={{ 
+              paddingLeft: leftIcon ? '2.5rem' : undefined,
+              paddingRight: rightElement ? '2.5rem' : undefined 
+            }}
             {...props}
           />
           {rightElement && (
