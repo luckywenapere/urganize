@@ -12,13 +12,14 @@ import { StatusBadge } from '@/components/ui/Badge';
 import { ProgressBar, CircularProgress } from '@/components/ui/Progress';
 import { Logo } from '@/components/ui/Logo';
 import { TaskList } from '@/components/tasks/TaskList';
+// REMOVED: import { FileUpload } from '@/components/files/FileUpload';
 import { 
   ArrowLeft, Calendar, Settings, AlertTriangle, Music,
   LayoutDashboard, ListTodo, FolderOpen, ChevronRight
 } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 
-type Tab = 'overview' | 'tasks';  
+type Tab = 'overview' | 'tasks';  // REMOVED 'files' from Tab type
 
 export default function ReleaseDetailPage() {
   const router = useRouter();
@@ -63,6 +64,7 @@ export default function ReleaseDetailPage() {
     ...(releaseFiles.filter(f => f.category === 'artwork').length === 0 ? [{ text: 'No artwork uploaded', icon: '🖼️' }] : []),
   ];
 
+  // REMOVED 'files' tab from tabs array
   const tabs: { key: Tab; label: string; icon: React.ReactNode; count?: number }[] = [
     { key: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
     { key: 'tasks', label: 'Tasks', icon: <ListTodo className="w-4 h-4" />, count: pendingTasks.length },
@@ -140,9 +142,7 @@ export default function ReleaseDetailPage() {
                   <h2 className="text-lg font-semibold text-content-primary">Release Health</h2>
                   <p className="text-sm text-content-secondary">Track your release progress</p>
                 </div>
-                <CircularProgress value={healthScore} size={80} strokeWidth={8}>
-                  <span className="text-xl font-bold text-content-primary">{healthScore}%</span>
-                </CircularProgress>
+                <CircularProgress value={healthScore} size={80} strokeWidth={8} showLabel={true} />
               </div>
               
               <ProgressBar value={healthScore} className="mb-4" />
