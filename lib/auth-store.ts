@@ -1,3 +1,4 @@
+// lib/auth-store.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase, type Profile, handleSupabaseError } from './supabase/client';
@@ -8,11 +9,11 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   signup: (email: string, password: string, name: string, role: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
-  loginWithGoogle: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -81,7 +82,6 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('Login failed - no user returned');
           }
 
-          // Fetch profile
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
@@ -98,6 +98,25 @@ export const useAuthStore = create<AuthState>()(
               error: null 
             });
           }
+        } catch (error: any) {
+          const errorMessage = handleSupabaseError(error);
+          set({ isLoading: false, error: errorMessage });
+          throw new Error(errorMessage);
+        }
+      },
+
+      loginWithGoogle: async () => {
+        try {
+          set({ isLoading: true, error: null });
+          
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: `${window.location.origin}/auth/callback`,
+            },
+          });
+
+          if (error) throw error;
         } catch (error: any) {
           const errorMessage = handleSupabaseError(error);
           set({ isLoading: false, error: errorMessage });
@@ -126,9 +145,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('Signup failed - no user returned');
           }
 
-          // Check if email confirmation is required
           if (data.session) {
-            // Auto-signed in (email confirmation disabled)
             const { data: profile, error: profileError } = await supabase
               .from('profiles')
               .select('*')
@@ -136,7 +153,6 @@ export const useAuthStore = create<AuthState>()(
               .single();
 
             if (profileError) {
-              // Profile might not be created yet, wait a moment and retry
               await new Promise(resolve => setTimeout(resolve, 1000));
               
               const { data: retryProfile, error: retryError } = await supabase
@@ -164,7 +180,6 @@ export const useAuthStore = create<AuthState>()(
               });
             }
           } else {
-            // Email confirmation required
             set({ 
               isLoading: false,
               error: 'Please check your email to verify your account' 
@@ -198,7 +213,6 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'urganize-auth',
       partialize: (state) => ({
-        // Only persist user and isAuthenticated
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
@@ -206,26 +220,6 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-loginWithGoogle: async () => {
-  try {
-    set({ isLoading: true, error: null });
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-
-    if (error) throw error;
-  } catch (error: any) {
-    const errorMessage = handleSupabaseError(error);
-    set({ isLoading: false, error: errorMessage });
-    throw new Error(errorMessage);
-  }
-},
-
-// Listen to auth state changes
 supabase.auth.onAuthStateChange((event, session) => {
   const store = useAuthStore.getState();
   
