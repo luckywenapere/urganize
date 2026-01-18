@@ -14,6 +14,28 @@ import type { ReleaseType } from '@/types';
 
 export default function CreateReleasePage() {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuthStore();
+
+  // Paywall: redirect to pricing if not subscribed
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth');
+    } else if (!user?.is_subscribed) {
+      router.push('/pricing');
+    }
+  }, [isAuthenticated, user, router]);
+
+  // Show loading while checking
+  if (!user?.is_subscribed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="animate-spin w-8 h-8 border-2 border-white border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+export default function CreateReleasePage() {
+  const router = useRouter();
   const { user } = useAuthStore();
   const { addRelease } = useReleaseStore();
   const { addTask } = useTaskStore();
