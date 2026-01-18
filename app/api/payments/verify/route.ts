@@ -43,12 +43,15 @@ export async function GET(req: NextRequest) {
       }
 
       // Calculate expiry date
-      const expiresAt = new Date();
-      if (plan === 'yearly') {
-        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-      } else {
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
-      }
+const expiresAt = new Date();
+if (plan === 'yearly') {
+  expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+} else if (plan === '8months') {
+  expiresAt.setMonth(expiresAt.getMonth() + 8);
+} else {
+  expiresAt.setMonth(expiresAt.getMonth() + 1);
+}
+
 
       // Save payment record
       await supabaseAdmin.from('payments').insert({
