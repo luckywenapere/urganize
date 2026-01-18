@@ -278,11 +278,18 @@ export default function DashboardPage() {
                   Create your first release to get started. We'll automatically set up tasks, folders, and timelines.
                 </p>
                 <Button 
-                  onClick={() => router.push('/releases/create')}
-                  leftIcon={<Plus className="w-4 h-4" />}
-                >
-                  Create Your First Release
-                </Button>
+  onClick={() => {
+    if (!user.is_subscribed) {
+      router.push('/pricing');
+    } else {
+      router.push('/releases/create');
+    }
+  }}
+  leftIcon={<Plus className="w-4 h-4" />}
+>
+  Create Your First Release
+</Button>
+
               </div>
             </Card>
           ) : (
