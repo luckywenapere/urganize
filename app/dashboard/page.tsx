@@ -177,12 +177,19 @@ export default function DashboardPage() {
             </div>
             
             <Button 
-              onClick={() => router.push('/releases/create')}
-              leftIcon={<Plus className="w-4 h-4" />}
-              kbd="C"
-            >
-              New Release
-            </Button>
+  onClick={() => {
+    if (!user.is_subscribed) {
+      router.push('/pricing');
+    } else {
+      router.push('/releases/create');
+    }
+  }}
+  leftIcon={<Plus className="w-4 h-4" />}
+  kbd="C"
+>
+  New Release
+</Button>
+
           </div>
         </section>
 
