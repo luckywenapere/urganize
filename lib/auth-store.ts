@@ -1,7 +1,3 @@
-// lib/auth-store.ts
-// COMPLETE AUTH STORE WITH SUPABASE
-// Copy this ENTIRE file and paste it into your lib/auth-store.ts
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase, type Profile, handleSupabaseError } from './supabase/client';
@@ -16,6 +12,7 @@ interface AuthState {
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
+  loginWithGoogle: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -208,6 +205,25 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+loginWithGoogle: async () => {
+  try {
+    set({ isLoading: true, error: null });
+    
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) throw error;
+  } catch (error: any) {
+    const errorMessage = handleSupabaseError(error);
+    set({ isLoading: false, error: errorMessage });
+    throw new Error(errorMessage);
+  }
+},
 
 // Listen to auth state changes
 supabase.auth.onAuthStateChange((event, session) => {
