@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/lib/release-store';
@@ -8,39 +8,17 @@ import { useTaskStore, generateDefaultTasks } from '@/lib/task-store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
-import { Logo } from '@/components/ui/Logo';
 import { ArrowLeft, ArrowRight, Check, Music, Calendar, Disc3 } from 'lucide-react';
 import type { ReleaseType } from '@/types';
 
 export default function CreateReleasePage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
-
-  // Paywall: redirect to pricing if not subscribed
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth');
-    } else if (!user?.is_subscribed) {
-      router.push('/pricing');
-    }
-  }, [isAuthenticated, user, router]);
-
-  // Show loading while checking
-  if (!user?.is_subscribed) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="animate-spin w-8 h-8 border-2 border-white border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-export default function CreateReleasePage() {
-  const router = useRouter();
-  const { user } = useAuthStore();
   const { addRelease } = useReleaseStore();
   const { addTask } = useTaskStore();
-
+  
   const [step, setStep] = useState(1);
+  const [isChecking, setIsChecking] = useState(true);
   const [formData, setFormData] = useState({
     title: '',
     artistName: '',
@@ -48,36 +26,51 @@ export default function CreateReleasePage() {
     releaseDate: '',
   });
 
-  const handleSubmit = async () => {
-  if (!user) return;
-
-  try {
-    const newRelease = {
-      title: formData.title,
-      artistName: formData.artistName,
-      type: formData.type,
-      status: 'draft' as const,
-      releaseDate: formData.releaseDate ? new Date(formData.releaseDate) : undefined,
-      userId: user.id,
-    };
-
-    const releaseId = await addRelease(newRelease);
-    
-    // Generate default tasks for this release
-    const tasks = generateDefaultTasks(releaseId, user.id);
-    
-    // Add each task to database
-    for (const task of tasks) {
-      await addTask(task);
+  // Paywall: redirect to pricing if not subscribed
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth');
+    } else if (user && !user.is_subscribed) {
+      router.push('/pricing?from=create');
+    } else if (user && user.is_subscribed) {
+      setIsChecking(false);
     }
-    
-    // Navigate to the new release
-    router.push(`/releases/${releaseId}`);
-  } catch (error) {
-    console.error('Failed to create release:', error);
-    // Optionally show error to user
+  }, [isAuthenticated, user, router]);
+
+  const handleSubmit = async () => {
+    if (!user) return;
+
+    try {
+      const newRelease = {
+        title: formData.title,
+        artistName: formData.artistName,
+        type: formData.type,
+        status: 'draft' as const,
+        releaseDate: formData.releaseDate ? new Date(formData.releaseDate) : undefined,
+        userId: user.id,
+      };
+
+      const releaseId = await addRelease(newRelease);
+      const tasks = generateDefaultTasks(releaseId, user.id);
+      
+      for (const task of tasks) {
+        await addTask(task);
+      }
+      
+      router.push(`/releases/${releaseId}`);
+    } catch (error) {
+      console.error('Failed to create release:', error);
+    }
+  };
+
+  // Show loading while checking subscription
+  if (isChecking || !user?.is_subscribed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg-base">
+        <div className="animate-spin w-8 h-8 border-2 border-brand border-t-transparent rounded-full" />
+      </div>
+    );
   }
-};
 
   const canProceed = step === 1 ? formData.title && formData.artistName : true;
 
@@ -87,11 +80,9 @@ export default function CreateReleasePage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-bg-base relative">
-      {/* Background */}
       <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-brand/5 rounded-full blur-[100px]" />
       
       <div className="w-full max-w-[540px] relative z-10">
-        {/* Header */}
         <div className="mb-8 animate-in">
           <button
             onClick={() => step > 1 ? setStep(step - 1) : router.back()}
@@ -104,7 +95,6 @@ export default function CreateReleasePage() {
           <p className="text-content-secondary">Let's get your release organized</p>
         </div>
 
-        {/* Progress Steps */}
         <div className="flex items-center gap-2 mb-8 animate-in delay-1">
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center gap-2 flex-1">
@@ -124,9 +114,7 @@ export default function CreateReleasePage() {
           ))}
         </div>
 
-        {/* Card */}
         <Card className="animate-in delay-2" padding="lg">
-          {/* Step 1: Basic Info */}
           {step === 1 && (
             <div className="space-y-6">
               <div className="text-center mb-2">
@@ -134,7 +122,6 @@ export default function CreateReleasePage() {
                 <p className="text-sm text-content-tertiary">Tell us about your release</p>
               </div>
 
-              {/* Release Type */}
               <div>
                 <label className="block text-sm font-medium text-content-secondary mb-3">
                   What are you releasing?
@@ -201,7 +188,6 @@ export default function CreateReleasePage() {
             </div>
           )}
 
-          {/* Step 2: Timeline */}
           {step === 2 && (
             <div className="space-y-6">
               <div className="text-center mb-2">
@@ -253,7 +239,6 @@ export default function CreateReleasePage() {
             </div>
           )}
 
-          {/* Step 3: Review */}
           {step === 3 && (
             <div className="space-y-6">
               <div className="text-center mb-2">
@@ -261,7 +246,6 @@ export default function CreateReleasePage() {
                 <p className="text-sm text-content-tertiary">Everything look good?</p>
               </div>
 
-              {/* Summary */}
               <div className="rounded-xl border border-stroke-subtle divide-y divide-stroke-subtle overflow-hidden">
                 {[
                   { label: 'Type', value: formData.type.charAt(0).toUpperCase() + formData.type.slice(1) },
@@ -281,7 +265,6 @@ export default function CreateReleasePage() {
                 ))}
               </div>
 
-              {/* What we'll create */}
               <div className="p-4 rounded-xl bg-brand/10 border border-brand/20">
                 <p className="font-medium text-brand mb-3 flex items-center gap-2">
                   <Check className="w-4 h-4" />
