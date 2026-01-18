@@ -3,10 +3,20 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/ui/Logo';
-import { PricingCards } from '@/components/PricingCards';
 import { useAuthStore } from '@/lib/auth-store';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+// Dynamic import to avoid SSR issues with Paystack
+const PricingCards = dynamic(() => import('@/components/PricingCards').then(mod => mod.PricingCards), {
+  ssr: false,
+  loading: () => (
+    <div className="flex justify-center py-12">
+      <div className="animate-spin h-8 w-8 border-2 border-white border-t-transparent rounded-full" />
+    </div>
+  ),
+});
 
 export default function PricingPage() {
   const { user, isAuthenticated, isLoading } = useAuthStore();
@@ -29,7 +39,7 @@ export default function PricingPage() {
             <span>Back</span>
           </Link>
           <Logo />
-          <div className="w-16" /> {/* Spacer for centering */}
+          <div className="w-16" />
         </div>
       </header>
 
