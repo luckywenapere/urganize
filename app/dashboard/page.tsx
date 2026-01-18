@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { UpgradeButton } from '@/components/UpgradeButton';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
@@ -117,6 +118,9 @@ export default function DashboardPage() {
               </div>
             </button>
 
+			{/* Upgrade Button */}
+			<UpgradeButton isSubscribed={user.is_subscribed ?? false} />
+
             {/* Notifications */}
             <div className="relative">
               <IconButton tooltip="Notifications">
@@ -131,10 +135,12 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Settings */}
-            <IconButton tooltip="Settings">
-              <Settings className="w-[18px] h-[18px]" />
-            </IconButton>
+			  {/* Settings */}
+			  <IconButton tooltip="Settings">
+				<Settings className="w-[18px] h-[18px]" />
+			  </IconButton>
+
+			  
 
             {/* User */}
             <div className="flex items-center gap-3 ml-2 pl-3 border-l border-stroke-subtle">

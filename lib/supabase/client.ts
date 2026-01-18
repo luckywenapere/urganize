@@ -22,6 +22,7 @@ export type Profile = {
   role: 'artist' | 'manager' | 'artist-manager';
   created_at: string;
   updated_at: string;
+  is_subscribed?: boolean; 
 };
 
 export type DbRelease = {
