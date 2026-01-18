@@ -2,11 +2,11 @@
 
 import { PaystackButton } from './PaystackButton';
 
-interface PricingCardProps {
+interface PricingCardsProps {
   email: string;
 }
 
-export function PricingCards({ email }: PricingCardProps) {
+export function PricingCards({ email }: PricingCardsProps) {
   return (
     <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
       {/* Monthly Plan */}

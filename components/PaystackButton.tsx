@@ -4,7 +4,7 @@ import { usePaystackPayment } from 'react-paystack';
 
 interface PaystackButtonProps {
   email: string;
-  amount: number; // in Naira (we'll convert to kobo)
+  amount: number;
   plan?: string;
   onSuccess?: (reference: any) => void;
   onClose?: () => void;
@@ -24,7 +24,7 @@ export function PaystackButton({
   const config = {
     reference: `urganize_${new Date().getTime()}`,
     email,
-    amount: amount * 100, // Convert Naira to kobo
+    amount: amount * 100,
     publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY!,
     metadata: {
       plan,
@@ -45,7 +45,6 @@ export function PaystackButton({
       onSuccess: (reference) => {
         console.log('Payment successful:', reference);
         onSuccess?.(reference);
-        // Redirect to callback page for verification
         window.location.href = `/payment/callback?reference=${reference.reference}`;
       },
       onClose: () => {
