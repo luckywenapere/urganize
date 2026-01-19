@@ -138,11 +138,6 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Settings */}
-            <IconButton tooltip="Settings">
-              <Settings className="w-[18px] h-[18px]" />
-            </IconButton>
-
             {/* User Menu with Dropdown */}
             <div className="relative ml-2 pl-3 border-l border-stroke-subtle">
               <button 
