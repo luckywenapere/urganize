@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { UpgradeButton } from '@/components/UpgradeButton';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -26,7 +26,10 @@ import {
   Users,
   BarChart3,
   Command,
-  LogOut
+  LogOut,
+  Music,
+  ListTodo,
+  X
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -36,6 +39,11 @@ export default function DashboardPage() {
   const { getTasksByRelease } = useTaskStore();
   const [mounted, setMounted] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  
+  // Search state
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -49,6 +57,30 @@ export default function DashboardPage() {
       fetchReleases();
     }
   }, [isAuthenticated, user, fetchReleases]);
+
+  // Keyboard shortcut for search (⌘K or Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+      if (e.key === 'Escape') {
+        setSearchOpen(false);
+        setSearchQuery('');
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Focus search input when modal opens
+  useEffect(() => {
+    if (searchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchOpen]);
 
   if (!isAuthenticated || !user || !mounted) {
     return (
@@ -76,10 +108,232 @@ export default function DashboardPage() {
     ? Math.round((completedTasks.length / allTasks.length) * 100) 
     : 0;
 
+  // Search filtering
+  const searchLower = searchQuery.toLowerCase().trim();
+  
+  const filteredReleases = releases.filter(r => 
+    r.title.toLowerCase().includes(searchLower) ||
+    r.artistName.toLowerCase().includes(searchLower)
+  );
+
+  const filteredTasks = allTasks.filter(t =>
+    t.title.toLowerCase().includes(searchLower)
+  );
+
+  // Search result actions
+  const handleSelectRelease = (releaseId: string) => {
+    setSearchOpen(false);
+    setSearchQuery('');
+    router.push(`/releases/${releaseId}`);
+  };
+
+  const handleSelectTask = (releaseId: string) => {
+    setSearchOpen(false);
+    setSearchQuery('');
+    router.push(`/releases/${releaseId}?tab=tasks`);
+  };
+
   return (
     <div className="min-h-screen bg-bg-base">
+      {/* ===== SEARCH MODAL (Command Palette) ===== */}
+      {searchOpen && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            onClick={() => {
+              setSearchOpen(false);
+              setSearchQuery('');
+            }}
+          />
+          
+          {/* Modal */}
+          <div className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-xl z-50 px-4 animate-in">
+            <div className="bg-bg-surface border border-stroke-subtle rounded-xl shadow-2xl overflow-hidden">
+              {/* Search Input */}
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-stroke-subtle">
+                <Search className="w-5 h-5 text-content-tertiary flex-shrink-0" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search releases, tasks..."
+                  className="flex-1 bg-transparent text-content-primary placeholder:text-content-tertiary outline-none text-base"
+                />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery('')}
+                    className="p-1 hover:bg-bg-hover rounded transition-colors"
+                  >
+                    <X className="w-4 h-4 text-content-tertiary" />
+                  </button>
+                )}
+                <kbd className="kbd">ESC</kbd>
+              </div>
+
+              {/* Search Results */}
+              <div className="max-h-[400px] overflow-y-auto">
+                {searchQuery.length === 0 ? (
+                  // Default state - show recent/suggestions
+                  <div className="p-4">
+                    <p className="text-xs font-medium text-content-tertiary uppercase tracking-wider mb-3">
+                      Quick Actions
+                    </p>
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => {
+                          setSearchOpen(false);
+                          if (!user.is_subscribed) {
+                            router.push('/pricing');
+                          } else {
+                            router.push('/releases/create');
+                          }
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-bg-hover transition-colors text-left"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-brand/20 flex items-center justify-center">
+                          <Plus className="w-4 h-4 text-brand" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-content-primary">Create New Release</p>
+                          <p className="text-xs text-content-tertiary">Start a new music release</p>
+                        </div>
+                      </button>
+                    </div>
+
+                    {activeReleases.length > 0 && (
+                      <>
+                        <p className="text-xs font-medium text-content-tertiary uppercase tracking-wider mb-3 mt-6">
+                          Recent Releases
+                        </p>
+                        <div className="space-y-1">
+                          {activeReleases.slice(0, 3).map(release => (
+                            <button
+                              key={release.id}
+                              onClick={() => handleSelectRelease(release.id)}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-bg-hover transition-colors text-left"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-bg-elevated flex items-center justify-center">
+                                <Music className="w-4 h-4 text-content-secondary" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-content-primary">{release.title}</p>
+                                <p className="text-xs text-content-tertiary">{release.artistName}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  // Search results
+                  <div className="p-4">
+                    {/* Releases Results */}
+                    {filteredReleases.length > 0 && (
+                      <>
+                        <p className="text-xs font-medium text-content-tertiary uppercase tracking-wider mb-3">
+                          Releases ({filteredReleases.length})
+                        </p>
+                        <div className="space-y-1 mb-4">
+                          {filteredReleases.slice(0, 5).map(release => (
+                            <button
+                              key={release.id}
+                              onClick={() => handleSelectRelease(release.id)}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-bg-hover transition-colors text-left"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-bg-elevated flex items-center justify-center">
+                                <Music className="w-4 h-4 text-content-secondary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-content-primary truncate">{release.title}</p>
+                                <p className="text-xs text-content-tertiary truncate">{release.artistName}</p>
+                              </div>
+                              <ChevronRight className="w-4 h-4 text-content-tertiary" />
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Tasks Results */}
+                    {filteredTasks.length > 0 && (
+                      <>
+                        <p className="text-xs font-medium text-content-tertiary uppercase tracking-wider mb-3">
+                          Tasks ({filteredTasks.length})
+                        </p>
+                        <div className="space-y-1">
+                          {filteredTasks.slice(0, 5).map(task => {
+                            const release = releases.find(r => r.id === task.releaseId);
+                            return (
+                              <button
+                                key={task.id}
+                                onClick={() => handleSelectTask(task.releaseId)}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-bg-hover transition-colors text-left"
+                              >
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                  task.status === 'completed' ? 'bg-brand/20' : 'bg-bg-elevated'
+                                }`}>
+                                  <ListTodo className={`w-4 h-4 ${
+                                    task.status === 'completed' ? 'text-brand' : 'text-content-secondary'
+                                  }`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-sm font-medium truncate ${
+                                    task.status === 'completed' ? 'text-content-tertiary line-through' : 'text-content-primary'
+                                  }`}>
+                                    {task.title}
+                                  </p>
+                                  <p className="text-xs text-content-tertiary truncate">
+                                    {release?.title || 'Unknown release'}
+                                  </p>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-content-tertiary" />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+
+                    {/* No results */}
+                    {filteredReleases.length === 0 && filteredTasks.length === 0 && (
+                      <div className="text-center py-8">
+                        <Search className="w-10 h-10 text-content-tertiary mx-auto mb-3" />
+                        <p className="text-content-secondary">No results found for &quot;{searchQuery}&quot;</p>
+                        <p className="text-sm text-content-tertiary mt-1">Try a different search term</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-4 py-3 border-t border-stroke-subtle flex items-center justify-between text-xs text-content-tertiary">
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1">
+                    <kbd className="kbd">↑</kbd>
+                    <kbd className="kbd">↓</kbd>
+                    to navigate
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="kbd">↵</kbd>
+                    to select
+                  </span>
+                </div>
+                <span className="flex items-center gap-1">
+                  <kbd className="kbd">ESC</kbd>
+                  to close
+                </span>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ===== HEADER - Linear style ===== */}
-      <header className="sticky top-0 z-50 glass border-b border-stroke-subtle">
+      <header className="sticky top-0 z-40 glass border-b border-stroke-subtle">
         <div className="h-14 px-4 flex items-center justify-between max-w-[1600px] mx-auto">
           {/* Left: Logo & Nav */}
           <div className="flex items-center gap-6">
@@ -111,8 +365,11 @@ export default function DashboardPage() {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
-            {/* Search - Linear style */}
-            <button className="hidden md:flex items-center gap-2 h-8 px-3 text-sm text-content-tertiary bg-bg-elevated border border-stroke-subtle rounded-md hover:border-stroke-default transition-colors">
+            {/* Search - Linear style (now clickable) */}
+            <button 
+              onClick={() => setSearchOpen(true)}
+              className="hidden md:flex items-center gap-2 h-8 px-3 text-sm text-content-tertiary bg-bg-elevated border border-stroke-subtle rounded-md hover:border-stroke-default hover:text-content-secondary transition-colors"
+            >
               <Search className="w-4 h-4" />
               <span>Search...</span>
               <div className="flex items-center gap-0.5 ml-2">
@@ -120,6 +377,15 @@ export default function DashboardPage() {
                 <kbd className="kbd">K</kbd>
               </div>
             </button>
+
+            {/* Mobile search button */}
+            <IconButton 
+              tooltip="Search"
+              onClick={() => setSearchOpen(true)}
+              className="md:hidden"
+            >
+              <Search className="w-[18px] h-[18px]" />
+            </IconButton>
 
             {/* Upgrade Button */}
             <UpgradeButton isSubscribed={user.is_subscribed ?? false} />
@@ -325,7 +591,7 @@ export default function DashboardPage() {
               </h3>
               <p className="text-content-secondary max-w-sm mx-auto mb-6">
                 Create your first release to get started. 
-                We'll automatically set up tasks, folders, and timelines.
+                We&apos;ll automatically set up tasks, folders, and timelines.
               </p>
               <Button 
                 onClick={() => {
