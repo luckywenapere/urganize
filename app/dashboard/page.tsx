@@ -19,12 +19,14 @@ import {
   Bell, 
   Settings,
   ChevronRight,
+  ChevronDown,
   Zap,
   Calendar,
   FolderOpen,
   Users,
   BarChart3,
-  Command
+  Command,
+  LogOut
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -33,6 +35,7 @@ export default function DashboardPage() {
   const { releases, fetchReleases } = useReleaseStore();
   const { getTasksByRelease } = useTaskStore();
   const [mounted, setMounted] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -42,10 +45,10 @@ export default function DashboardPage() {
   }, [isAuthenticated, router]);
   
   useEffect(() => {
-  if (isAuthenticated && user) {
-    fetchReleases();
-  }
-}, [isAuthenticated, user, fetchReleases]);
+    if (isAuthenticated && user) {
+      fetchReleases();
+    }
+  }, [isAuthenticated, user, fetchReleases]);
 
   if (!isAuthenticated || !user || !mounted) {
     return (
@@ -118,8 +121,8 @@ export default function DashboardPage() {
               </div>
             </button>
 
-			{/* Upgrade Button */}
-			<UpgradeButton isSubscribed={user.is_subscribed ?? false} />
+            {/* Upgrade Button */}
+            <UpgradeButton isSubscribed={user.is_subscribed ?? false} />
 
             {/* Notifications */}
             <div className="relative">
@@ -135,25 +138,78 @@ export default function DashboardPage() {
               )}
             </div>
 
-			  {/* Settings */}
-			  <IconButton tooltip="Settings">
-				<Settings className="w-[18px] h-[18px]" />
-			  </IconButton>
+            {/* Settings */}
+            <IconButton tooltip="Settings">
+              <Settings className="w-[18px] h-[18px]" />
+            </IconButton>
 
-			  
-
-            {/* User */}
-            <div className="flex items-center gap-3 ml-2 pl-3 border-l border-stroke-subtle">
-              <div className="hidden md:block text-right">
-                <p className="text-sm font-medium text-content-primary leading-tight">{user.name}</p>
-                <RoleBadge role={userRole} size="sm" />
-              </div>
+            {/* User Menu with Dropdown */}
+            <div className="relative ml-2 pl-3 border-l border-stroke-subtle">
               <button 
-                onClick={() => { logout(); router.push('/auth'); }}
-                className="w-8 h-8 rounded-full bg-bg-elevated flex items-center justify-center text-content-secondary hover:text-content-primary transition-colors"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-2 h-9 px-2 rounded-lg hover:bg-bg-hover transition-colors"
               >
-                <span className="text-sm font-semibold">{firstName[0]}</span>
+                <div className="w-7 h-7 rounded-full bg-brand flex items-center justify-center">
+                  <span className="text-xs font-semibold text-white">{firstName[0]}</span>
+                </div>
+                <div className="hidden md:block text-left">
+                  <p className="text-sm font-medium text-content-primary leading-tight">{user.name}</p>
+                  <RoleBadge role={userRole} size="sm" />
+                </div>
+                <ChevronDown className={`w-4 h-4 text-content-tertiary hidden md:block transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
               </button>
+
+              {/* Dropdown Menu */}
+              {userMenuOpen && (
+                <>
+                  {/* Backdrop to close menu when clicking outside */}
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setUserMenuOpen(false)} 
+                  />
+                  
+                  {/* Menu */}
+                  <div className="absolute right-0 top-full mt-2 w-56 py-2 bg-bg-surface border border-stroke-subtle rounded-lg shadow-xl z-50 animate-in">
+                    {/* User Info */}
+                    <div className="px-4 py-3 border-b border-stroke-subtle">
+                      <p className="text-sm font-medium text-content-primary">{user.name}</p>
+                      <p className="text-xs text-content-tertiary mt-0.5">{user.email}</p>
+                      <div className="mt-2">
+                        <RoleBadge role={userRole} size="sm" />
+                      </div>
+                    </div>
+                    
+                    {/* Menu Items */}
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          // Navigate to settings when implemented
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-content-secondary hover:text-content-primary hover:bg-bg-hover transition-colors"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Settings
+                      </button>
+                    </div>
+
+                    {/* Sign Out */}
+                    <div className="border-t border-stroke-subtle pt-1">
+                      <button
+                        onClick={() => { 
+                          setUserMenuOpen(false);
+                          logout(); 
+                          router.push('/auth'); 
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Sign out
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -177,19 +233,18 @@ export default function DashboardPage() {
             </div>
             
             <Button 
-  onClick={() => {
-    if (!user.is_subscribed) {
-      router.push('/pricing');
-    } else {
-      router.push('/releases/create');
-    }
-  }}
-  leftIcon={<Plus className="w-4 h-4" />}
-  kbd="C"
->
-  New Release
-</Button>
-
+              onClick={() => {
+                if (!user.is_subscribed) {
+                  router.push('/pricing');
+                } else {
+                  router.push('/releases/create');
+                }
+              }}
+              leftIcon={<Plus className="w-4 h-4" />}
+              kbd="C"
+            >
+              New Release
+            </Button>
           </div>
         </section>
 
@@ -266,31 +321,29 @@ export default function DashboardPage() {
           </div>
 
           {activeReleases.length === 0 ? (
-            <Card className="animate-in delay-3" padding="lg">
-              <div className="text-center py-8">
-                <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-bg-elevated flex items-center justify-center">
-                  <FolderOpen className="w-7 h-7 text-content-tertiary" />
-                </div>
-                <h3 className="text-lg font-semibold text-content-primary mb-2">
-                  No releases yet
-                </h3>
-                <p className="text-content-secondary mb-6 max-w-md mx-auto">
-                  Create your first release to get started. We'll automatically set up tasks, folders, and timelines.
-                </p>
-                <Button 
-  onClick={() => {
-    if (!user.is_subscribed) {
-      router.push('/pricing');
-    } else {
-      router.push('/releases/create');
-    }
-  }}
-  leftIcon={<Plus className="w-4 h-4" />}
->
-  Create Your First Release
-</Button>
-
+            <Card className="text-center py-12">
+              <div className="w-16 h-16 rounded-2xl bg-bg-elevated flex items-center justify-center mx-auto mb-4">
+                <FolderOpen className="w-8 h-8 text-content-tertiary" />
               </div>
+              <h3 className="text-lg font-semibold text-content-primary mb-2">
+                No active releases
+              </h3>
+              <p className="text-content-secondary max-w-sm mx-auto mb-6">
+                Create your first release to get started. 
+                We'll automatically set up tasks, folders, and timelines.
+              </p>
+              <Button 
+                onClick={() => {
+                  if (!user.is_subscribed) {
+                    router.push('/pricing');
+                  } else {
+                    router.push('/releases/create');
+                  }
+                }}
+                leftIcon={<Plus className="w-4 h-4" />}
+              >
+                Create Your First Release
+              </Button>
             </Card>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
