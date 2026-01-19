@@ -54,7 +54,7 @@ export default function PricingPage() {
           </p>
           <div className="inline-block mt-4 px-4 py-2 bg-emerald-600/20 border border-emerald-600/50 rounded-full">
             <span className="text-emerald-400 text-sm font-medium">
-              🎉 Beta pricing — limited time only
+              Beta pricing: limited time only
             </span>
           </div>
         </div>
