@@ -17,7 +17,8 @@ import {
   Check,
   AlertCircle,
   MapPin,
-  Calendar
+  Calendar,
+  Sparkles
 } from 'lucide-react';
 import { 
   SongStage, 
