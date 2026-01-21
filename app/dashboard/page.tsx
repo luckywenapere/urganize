@@ -49,8 +49,11 @@ export default function DashboardPage() {
     setMounted(true);
     if (!isAuthenticated) {
       router.push('/auth');
+    } else if (isAuthenticated && user && !user.is_subscribed) {
+      // Paywall: redirect to pricing if not subscribed
+      router.push('/pricing?from=dashboard');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, user, router]);
   
   useEffect(() => {
     if (isAuthenticated && user) {

@@ -3,12 +3,14 @@
 import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/auth-store';
 
 function PaymentCallbackContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const reference = searchParams.get('reference');
   const [status, setStatus] = useState<'verifying' | 'success' | 'failed'>('verifying');
+  const { checkAuth } = useAuthStore();
 
   useEffect(() => {
     if (reference) {
@@ -23,6 +25,9 @@ function PaymentCallbackContent() {
       
       if (data.status === 'success') {
         setStatus('success');
+        // Refresh auth state to update subscription status
+        await checkAuth();
+        // Add a small delay for UX
         setTimeout(() => router.push('/dashboard'), 2000);
       } else {
         setStatus('failed');

@@ -111,10 +111,10 @@ export interface TaskState {
   isLoading: boolean;
   fetchTasks: () => Promise<void>;
   fetchTasksByRelease: (releaseId: string) => Promise<void>;
-  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>; 
-  updateTask: (id: string, updates: Partial<Task>) => Promise<void>;  
-  deleteTask: (id: string) => Promise<void>; 
-  toggleTaskStatus: (id: string) => Promise<void>;  
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
+  updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
+  toggleTaskStatus: (id: string) => Promise<void>;
   getTasksByRelease: (releaseId: string) => Task[];
   getTasksByPhase: (releaseId: string, phase: TaskPhase) => Task[];
 }
@@ -126,3 +126,5 @@ export interface FileState {
   getFilesByRelease: (releaseId: string) => ReleaseFile[];
   getFilesByCategory: (releaseId: string, category: FileCategory) => ReleaseFile[];
 }
+
+export * from './ai-tasks';
