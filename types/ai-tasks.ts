@@ -3,6 +3,8 @@
 // =============================================
 // Add these to your types/index.ts or create types/ai-tasks.ts
 
+import type { ReleaseType } from './index';
+
 // =============================================
 // ARTIST PROFILE TYPES
 // =============================================
