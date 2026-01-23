@@ -242,8 +242,13 @@ async function callGeminiAPI(prompt: string): Promise<any> {
   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not configured');
+    console.error('❌ NEXT_PUBLIC_GEMINI_API_KEY is not set in environment variables');
+    console.error('Please add NEXT_PUBLIC_GEMINI_API_KEY=your_key to .env.local and restart the dev server');
+    throw new Error('GEMINI_API_KEY is not configured. Check console for details.');
   }
+  
+  console.log('🔑 Gemini API Key found (first 10 chars):', apiKey.substring(0, 10) + '...');
+  console.log('🤖 Using model:', GEMINI_MODEL);
 
   const response = await fetch(
     `${GEMINI_API_URL}/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
@@ -273,8 +278,21 @@ async function callGeminiAPI(prompt: string): Promise<any> {
 
   if (!response.ok) {
     const error = await response.text();
+    console.error('❌ Gemini API Error:', response.status);
+    console.error('Response:', error);
+    
+    if (response.status === 401) {
+      throw new Error('Invalid API key. Please check your NEXT_PUBLIC_GEMINI_API_KEY');
+    } else if (response.status === 403) {
+      throw new Error('API access forbidden. Make sure Gemini API is enabled in your Google Cloud project');
+    } else if (response.status === 429) {
+      throw new Error('Rate limited. Please wait a moment and try again');
+    }
+    
     throw new Error(`Gemini API error: ${response.status} - ${error}`);
   }
+  
+  console.log('✅ Gemini API call successful');
 
   const data = await response.json();
   
