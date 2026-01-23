@@ -364,7 +364,7 @@ export default function CreateReleasePage() {
           <div className="max-w-2xl mx-auto flex gap-3">
             {step > 1 && (
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={() => setStep(step - 1)}
                 className="flex-1"
               >
