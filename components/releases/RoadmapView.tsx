@@ -2,7 +2,8 @@
 'use client';
 
 import { X, Check, Clock, SkipForward, Circle } from 'lucide-react';
-import type { AITask, TaskPhase, TaskStatus } from '@/types';
+import type { AITask, TaskPhase } from '@/types';
+import type { TaskStatus } from '@/types/ai-tasks';
 
 // =============================================
 // TYPES
@@ -67,10 +68,16 @@ function StatusIcon({ status }: { status: TaskStatus }) {
           <Check className="w-4 h-4 text-white" />
         </div>
       );
-    case 'in-progress':
+    case 'current':
       return (
         <div className="w-6 h-6 rounded-full bg-brand flex items-center justify-center animate-pulse">
           <Clock className="w-4 h-4 text-white" />
+        </div>
+      );
+    case 'skipped':
+      return (
+        <div className="w-6 h-6 rounded-full bg-status-warning flex items-center justify-center">
+          <SkipForward className="w-4 h-4 text-white" />
         </div>
       );
     default:
