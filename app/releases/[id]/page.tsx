@@ -1,206 +1,289 @@
+// app/dashboard/page.tsx
+// Updated with AI Campaign highlights
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/lib/release-store';
-import { useTaskStore } from '@/lib/task-store';
-import { useFileStore, hasRequiredAudioFile } from '@/lib/file-store';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { StatusBadge } from '@/components/ui/Badge';
-import { ProgressBar, CircularProgress } from '@/components/ui/Progress';
 import { Logo } from '@/components/ui/Logo';
-import { TaskList } from '@/components/tasks/TaskList';
-// REMOVED: import { FileUpload } from '@/components/files/FileUpload';
+import { ReleaseCard } from '@/components/releases/ReleaseCard';
 import { 
-  ArrowLeft, Calendar, Settings, AlertTriangle, Music,
-  LayoutDashboard, ListTodo, FolderOpen, ChevronRight
+  Plus, 
+  FolderOpen, 
+  Bell, 
+  Search,
+  Sparkles,
+  TrendingUp,
+  Clock,
+  CheckCircle2
 } from 'lucide-react';
-import { differenceInDays } from 'date-fns';
 
-type Tab = 'overview' | 'tasks';  // REMOVED 'files' from Tab type
-
-export default function ReleaseDetailPage() {
+export default function DashboardPage() {
   const router = useRouter();
-  const params = useParams();
-  const releaseId = params.id as string;
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuthStore();
+  const { releases, isLoading: releasesLoading, fetchReleases } = useReleaseStore();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const { releases } = useReleaseStore();
-  const { getTasksByRelease, fetchTasksByRelease } = useTaskStore();
-
+  // Fetch releases on mount
   useEffect(() => {
-    if (releaseId) {
-      fetchTasksByRelease(releaseId);
+    if (isAuthenticated) {
+      fetchReleases();
     }
-  }, [releaseId, fetchTasksByRelease]);
+  }, [isAuthenticated, fetchReleases]);
 
-  const { getFilesByRelease, files } = useFileStore();
-  const [activeTab, setActiveTab] = useState<Tab>('overview');
-
-  const release = releases.find((r) => r.id === releaseId);
-
+  // Redirect if not authenticated
   useEffect(() => {
-    if (!release) router.push('/dashboard');
-  }, [release, router]);
+    if (!authLoading && !isAuthenticated) {
+      router.push('/auth');
+    }
+  }, [authLoading, isAuthenticated, router]);
 
-  if (!release) return null;
+  if (authLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-bg-base flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
+      </div>
+    );
+  }
 
-  const tasks = getTasksByRelease(releaseId);
-  const releaseFiles = getFilesByRelease(releaseId);
-  const hasAudio = hasRequiredAudioFile(releaseId, files);
-  
-  const pendingTasks = tasks.filter((t) => t.status === 'pending');
-  const completedTasks = tasks.filter((t) => t.status === 'completed');
-  const healthScore = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
+  // Filter releases by search
+  const filteredReleases = releases.filter(release =>
+    release.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    release.artistName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const daysUntil = release.releaseDate 
-    ? differenceInDays(new Date(release.releaseDate), new Date())
-    : null;
-
-  const warnings = [
-    ...(!hasAudio ? [{ text: 'Missing required audio file', icon: '🎵' }] : []),
-    ...(!release.releaseDate ? [{ text: 'Release date not set', icon: '📅' }] : []),
-    ...(releaseFiles.filter(f => f.category === 'artwork').length === 0 ? [{ text: 'No artwork uploaded', icon: '🖼️' }] : []),
-  ];
-
-  // REMOVED 'files' tab from tabs array
-  const tabs: { key: Tab; label: string; icon: React.ReactNode; count?: number }[] = [
-    { key: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { key: 'tasks', label: 'Tasks', icon: <ListTodo className="w-4 h-4" />, count: pendingTasks.length },
-  ];
+  // Get active releases (not released)
+  const activeReleases = filteredReleases.filter(r => r.status !== 'released');
+  const completedReleases = filteredReleases.filter(r => r.status === 'released');
 
   return (
     <div className="min-h-screen bg-bg-base">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-bg-surface/80 backdrop-blur-md border-b border-stroke-subtle">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard">
-                <Logo size="sm" />
-              </Link>
-              <ChevronRight className="w-4 h-4 text-content-tertiary" />
-              <div>
-                <h1 className="font-semibold text-content-primary">{release.title}</h1>
-                <p className="text-sm text-content-secondary">{release.artistName}</p>
-              </div>
-            </div>
+            <Logo />
             
             <div className="flex items-center gap-3">
-              {daysUntil !== null && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-elevated">
-                  <Calendar className="w-4 h-4 text-content-tertiary" />
-                  <span className="text-sm font-medium text-content-primary">
-                    {daysUntil > 0 ? `${daysUntil} days` : daysUntil === 0 ? 'Today!' : 'Released'}
-                  </span>
-                </div>
-              )}
+              {/* Search */}
+              <div className="relative hidden sm:block">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-tertiary" />
+                <input
+                  type="text"
+                  placeholder="Search releases..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-4 py-2 bg-bg-elevated border border-stroke-subtle rounded-lg text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:border-brand w-64"
+                />
+              </div>
+              
               <IconButton variant="ghost" size="sm">
-                <Settings className="w-4 h-4" />
+                <Bell className="w-5 h-5" />
               </IconButton>
+              
+              {/* User Menu */}
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:block text-right">
+                  <p className="text-sm font-medium text-content-primary">{user?.name}</p>
+                  <p className="text-xs text-content-tertiary capitalize">{user?.role}</p>
+                </div>
+                <button
+                  onClick={logout}
+                  className="w-8 h-8 rounded-full bg-brand/20 flex items-center justify-center text-brand font-medium text-sm"
+                >
+                  {user?.name?.charAt(0).toUpperCase()}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="border-b border-stroke-subtle bg-bg-surface">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex gap-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab.key
-                    ? 'border-brand text-brand'
-                    : 'border-transparent text-content-secondary hover:text-content-primary'
-                }`}
-              >
-                {tab.icon}
-                {tab.label}
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span className="px-1.5 py-0.5 text-xs rounded-full bg-bg-elevated">
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-content-primary">
+              Welcome back{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
+            </h1>
+            <p className="text-content-secondary mt-1">
+              {activeReleases.length === 0 
+                ? "Let's get your first release started"
+                : `You have ${activeReleases.length} active release${activeReleases.length !== 1 ? 's' : ''}`
+              }
+            </p>
+          </div>
+          
+          <Button onClick={() => router.push('/releases/create')}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Release
+          </Button>
         </div>
-      </div>
 
-      {/* Content */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Health Score */}
-            <Card className="lg:col-span-2" padding="lg">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-lg font-semibold text-content-primary">Release Health</h2>
-                  <p className="text-sm text-content-secondary">Track your release progress</p>
-                </div>
-                <CircularProgress value={healthScore} size={80} strokeWidth={8} showLabel={true} />
+        {/* Quick Stats (shown when user has releases) */}
+        {releases.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+            <Card padding="md" className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-brand" />
               </div>
-              
-              <ProgressBar value={healthScore} className="mb-4" />
-              
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-content-secondary">
-                  {completedTasks.length} of {tasks.length} tasks completed
-                </span>
-                <StatusBadge status={release.status} />
+              <div>
+                <p className="text-2xl font-bold text-content-primary">{activeReleases.length}</p>
+                <p className="text-xs text-content-tertiary">Active Releases</p>
               </div>
             </Card>
-
-            {/* Warnings */}
-            {warnings.length > 0 && (
-              <Card padding="lg">
-                <h3 className="font-semibold text-content-primary mb-4 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-status-warning" />
-                  Needs Attention
-                </h3>
-                <div className="space-y-3">
-                  {warnings.map((warning, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-status-warning/10">
-                      <span>{warning.icon}</span>
-                      <span className="text-sm text-content-primary">{warning.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-
-            {/* Next Steps */}
-            <Card className="lg:col-span-3" padding="lg">
-              <h3 className="font-semibold text-content-primary mb-4">Next Steps</h3>
-              <div className="space-y-2">
-                {pendingTasks.slice(0, 5).map((task) => (
-                  <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg bg-bg-elevated hover:bg-bg-hover transition-colors">
-                    <div className="w-2 h-2 rounded-full bg-brand" />
-                    <span className="text-sm text-content-primary flex-1">{task.title}</span>
-                    <span className="text-xs text-content-tertiary">{task.phase}</span>
-                  </div>
-                ))}
-                {pendingTasks.length > 5 && (
-                  <button 
-                    onClick={() => setActiveTab('tasks')}
-                    className="text-sm text-brand hover:underline"
-                  >
-                    View all {pendingTasks.length} tasks →
-                  </button>
-                )}
+            
+            <Card padding="md" className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-green-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-content-primary">{completedReleases.length}</p>
+                <p className="text-xs text-content-tertiary">Released</p>
+              </div>
+            </Card>
+            
+            <Card padding="md" className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-content-primary">AI</p>
+                <p className="text-xs text-content-tertiary">Powered Tasks</p>
+              </div>
+            </Card>
+            
+            <Card padding="md" className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-orange-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-content-primary">24/7</p>
+                <p className="text-xs text-content-tertiary">Always Ready</p>
               </div>
             </Card>
           </div>
         )}
 
-        {activeTab === 'tasks' && (
-          <TaskList releaseId={releaseId} />
-        )}
+        {/* Mobile Search */}
+        <div className="sm:hidden mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-tertiary" />
+            <input
+              type="text"
+              placeholder="Search releases..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-3 bg-bg-elevated border border-stroke-subtle rounded-xl text-content-primary placeholder:text-content-tertiary focus:outline-none focus:border-brand"
+            />
+          </div>
+        </div>
 
+        {/* Releases Grid */}
+        {releasesLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
+          </div>
+        ) : releases.length === 0 ? (
+          /* Empty State */
+          <Card className="text-center py-16">
+            <div className="w-20 h-20 rounded-2xl bg-bg-elevated flex items-center justify-center mx-auto mb-6">
+              <FolderOpen className="w-10 h-10 text-content-tertiary" />
+            </div>
+            <h3 className="text-xl font-semibold text-content-primary mb-2">
+              No releases yet
+            </h3>
+            <p className="text-content-secondary max-w-md mx-auto mb-8">
+              Create your first release to get started. Our AI will help you build 
+              a personalized marketing campaign.
+            </p>
+            
+            <Button onClick={() => router.push('/releases/create')} size="lg">
+              <Sparkles className="w-5 h-5 mr-2" />
+              Create Your First Release
+            </Button>
+            
+            {/* Feature highlights */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12 max-w-2xl mx-auto">
+              <div className="p-4 rounded-xl bg-bg-elevated text-left">
+                <div className="w-8 h-8 rounded-lg bg-brand/20 flex items-center justify-center mb-3">
+                  <Sparkles className="w-4 h-4 text-brand" />
+                </div>
+                <h4 className="font-medium text-content-primary text-sm">AI-Powered Tasks</h4>
+                <p className="text-xs text-content-tertiary mt-1">
+                  Get personalized marketing tasks tailored to your release
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-bg-elevated text-left">
+                <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center mb-3">
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                </div>
+                <h4 className="font-medium text-content-primary text-sm">One Task at a Time</h4>
+                <p className="text-xs text-content-tertiary mt-1">
+                  Focus on what matters without feeling overwhelmed
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-bg-elevated text-left">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center mb-3">
+                  <TrendingUp className="w-4 h-4 text-purple-400" />
+                </div>
+                <h4 className="font-medium text-content-primary text-sm">Track Progress</h4>
+                <p className="text-xs text-content-tertiary mt-1">
+                  See your campaign progress across all platforms
+                </p>
+              </div>
+            </div>
+          </Card>
+        ) : filteredReleases.length === 0 ? (
+          /* No search results */
+          <Card className="text-center py-12">
+            <p className="text-content-secondary">
+              No releases found for &quot;{searchQuery}&quot;
+            </p>
+          </Card>
+        ) : (
+          /* Releases List */
+          <div className="space-y-8">
+            {/* Active Releases */}
+            {activeReleases.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-content-primary mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-brand" />
+                  Active Releases
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {activeReleases.map((release) => (
+                    <Link key={release.id} href={`/releases/${release.id}`}>
+                      <ReleaseCard release={release} />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Completed Releases */}
+            {completedReleases.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-content-primary mb-4 flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-green-400" />
+                  Released
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {completedReleases.map((release) => (
+                    <Link key={release.id} href={`/releases/${release.id}`}>
+                      <ReleaseCard release={release} />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );

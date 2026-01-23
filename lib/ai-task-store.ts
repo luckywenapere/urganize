@@ -4,12 +4,12 @@ import { supabase } from './supabase/client';
 import type { 
   AITask, 
   GeneratedTask, 
+  TaskStatus, 
   TaskPhase, 
   CompletedTaskSummary,
   ReleaseProfile,
   ArtistProfile,
 } from '@/types';
-import type { TaskStatus } from '@/types/ai-tasks';
 import {
   generateInitialStrategy,
   generateNextTasks,

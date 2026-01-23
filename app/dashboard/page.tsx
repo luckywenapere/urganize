@@ -1,669 +1,423 @@
+// app/releases/[id]/page.tsx
+// Updated with AI Campaign integration
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { UpgradeButton } from '@/components/UpgradeButton';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/lib/release-store';
 import { useTaskStore } from '@/lib/task-store';
+import { useFileStore, hasRequiredAudioFile } from '@/lib/file-store';
+import { useReleaseProfileStore } from '@/lib/release-profile-store';
+import { useAITaskStore } from '@/lib/ai-task-store';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { ReleaseCard } from '@/components/releases/ReleaseCard';
+import { StatusBadge } from '@/components/ui/Badge';
+import { ProgressBar, CircularProgress } from '@/components/ui/Progress';
 import { Logo } from '@/components/ui/Logo';
-import { RoleBadge, CountBadge } from '@/components/ui/Badge';
-import { ProgressBar } from '@/components/ui/Progress';
+import { TaskList } from '@/components/tasks/TaskList';
 import { 
-  Plus, 
-  Search, 
-  Bell, 
-  Settings,
-  ChevronRight,
-  ChevronDown,
-  Zap,
-  Calendar,
-  FolderOpen,
-  Users,
-  BarChart3,
-  Command,
-  LogOut,
-  Music,
-  ListTodo,
-  X
+  ArrowLeft, Calendar, Settings, AlertTriangle, Music,
+  LayoutDashboard, ListTodo, FolderOpen, ChevronRight,
+  Sparkles, Rocket, CheckCircle2, Clock, Play
 } from 'lucide-react';
+import { differenceInDays } from 'date-fns';
 
-export default function DashboardPage() {
+type Tab = 'overview' | 'tasks';
+
+export default function ReleaseDetailPage() {
   const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuthStore();
-  const { releases, fetchReleases } = useReleaseStore();
-  const { getTasksByRelease } = useTaskStore();
-  const [mounted, setMounted] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const params = useParams();
+  const releaseId = params.id as string;
+
+  // Existing stores
+  const { releases } = useReleaseStore();
+  const { getTasksByRelease, fetchTasksByRelease } = useTaskStore();
+  const { getFilesByRelease, files } = useFileStore();
   
-  // Search state
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  // New AI stores
+  const { profile: releaseProfile, fetchProfile: fetchReleaseProfile } = useReleaseProfileStore();
+  const { 
+    tasks: aiTasks, 
+    completedCount: aiCompletedCount,
+    totalTasksEstimate,
+    fetchTasksForRelease: fetchAITasks 
+  } = useAITaskStore();
+
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  const release = releases.find((r) => r.id === releaseId);
+
+  // Fetch release data
+  useEffect(() => {
+    if (releaseId) {
+      fetchTasksByRelease(releaseId);
+      
+      // Fetch AI-related data
+      const loadAIData = async () => {
+        setIsLoadingProfile(true);
+        try {
+          await fetchReleaseProfile(releaseId);
+          await fetchAITasks(releaseId);
+        } finally {
+          setIsLoadingProfile(false);
+        }
+      };
+      loadAIData();
+    }
+  }, [releaseId, fetchTasksByRelease]);
 
   useEffect(() => {
-    setMounted(true);
-    if (!isAuthenticated) {
-      router.push('/auth');
-    } else if (isAuthenticated && user && !user.is_subscribed) {
-      // Paywall: redirect to pricing if not subscribed
-      router.push('/pricing?from=dashboard');
-    }
-  }, [isAuthenticated, user, router]);
+    if (!release) router.push('/dashboard');
+  }, [release, router]);
+
+  if (!release) return null;
+
+  // Legacy task data
+  const tasks = getTasksByRelease(releaseId);
+  const releaseFiles = getFilesByRelease(releaseId);
+  const hasAudio = hasRequiredAudioFile(releaseId, files);
   
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      fetchReleases();
-    }
-  }, [isAuthenticated, user, fetchReleases]);
+  const pendingTasks = tasks.filter((t) => t.status === 'pending');
+  const completedTasks = tasks.filter((t) => t.status === 'completed');
+  const healthScore = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
 
-  // Keyboard shortcut for search (⌘K or Ctrl+K)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setSearchOpen(true);
-      }
-      if (e.key === 'Escape') {
-        setSearchOpen(false);
-        setSearchQuery('');
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // Focus search input when modal opens
-  useEffect(() => {
-    if (searchOpen && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [searchOpen]);
-
-  if (!isAuthenticated || !user || !mounted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-brand border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  // Data calculations
-  const activeReleases = releases.filter(r => r.status !== 'released');
-  const allTasks = releases.flatMap(r => getTasksByRelease(r.id));
-  const pendingTasks = allTasks.filter(t => t.status === 'pending');
-  const completedTasks = allTasks.filter(t => t.status === 'completed');
-  
-  const urgentTasks = pendingTasks.filter(t => {
-    if (!t.dueDate) return false;
-    const daysUntilDue = Math.ceil((new Date(t.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    return daysUntilDue <= 3 && daysUntilDue >= 0;
-  });
-
-  const firstName = user.name.split(' ')[0];
-  const userRole = user.role === 'artist-manager' ? 'manager' : 'artist';
-  const overallProgress = allTasks.length > 0 
-    ? Math.round((completedTasks.length / allTasks.length) * 100) 
+  // AI Campaign data
+  const hasAICampaign = releaseProfile?.setupCompleted && aiTasks.length > 0;
+  const aiProgressPercent = totalTasksEstimate > 0 
+    ? Math.round((aiCompletedCount / totalTasksEstimate) * 100) 
     : 0;
 
-  // Search filtering
-  const searchLower = searchQuery.toLowerCase().trim();
-  
-  const filteredReleases = releases.filter(r => 
-    r.title.toLowerCase().includes(searchLower) ||
-    r.artistName.toLowerCase().includes(searchLower)
-  );
+  const daysUntil = release.releaseDate 
+    ? differenceInDays(new Date(release.releaseDate), new Date())
+    : releaseProfile?.targetReleaseDate
+      ? differenceInDays(new Date(releaseProfile.targetReleaseDate), new Date())
+      : null;
 
-  const filteredTasks = allTasks.filter(t =>
-    t.title.toLowerCase().includes(searchLower)
-  );
+  const warnings = [
+    ...(!hasAudio && !releaseProfile?.fileLocation ? [{ text: 'Missing required audio file', icon: '🎵' }] : []),
+    ...(!release.releaseDate && !releaseProfile?.targetReleaseDate ? [{ text: 'Release date not set', icon: '📅' }] : []),
+    ...(releaseFiles.filter(f => f.category === 'artwork').length === 0 && !releaseProfile?.isArtworkReady ? [{ text: 'No artwork uploaded', icon: '🖼️' }] : []),
+  ];
 
-  // Search result actions
-  const handleSelectRelease = (releaseId: string) => {
-    setSearchOpen(false);
-    setSearchQuery('');
-    router.push(`/releases/${releaseId}`);
-  };
-
-  const handleSelectTask = (releaseId: string) => {
-    setSearchOpen(false);
-    setSearchQuery('');
-    router.push(`/releases/${releaseId}?tab=tasks`);
-  };
+  const tabs: { key: Tab; label: string; icon: React.ReactNode; count?: number }[] = [
+    { key: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { key: 'tasks', label: 'Legacy Tasks', icon: <ListTodo className="w-4 h-4" />, count: pendingTasks.length },
+  ];
 
   return (
     <div className="min-h-screen bg-bg-base">
-      {/* ===== SEARCH MODAL (Command Palette) ===== */}
-      {searchOpen && (
-        <>
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-            onClick={() => {
-              setSearchOpen(false);
-              setSearchQuery('');
-            }}
-          />
-          
-          {/* Modal */}
-          <div className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-xl z-50 px-4 animate-in">
-            <div className="bg-bg-surface border border-stroke-subtle rounded-xl shadow-2xl overflow-hidden">
-              {/* Search Input */}
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-stroke-subtle">
-                <Search className="w-5 h-5 text-content-tertiary flex-shrink-0" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search releases, tasks..."
-                  className="flex-1 bg-transparent text-content-primary placeholder:text-content-tertiary outline-none text-base"
-                />
-                {searchQuery && (
-                  <button 
-                    onClick={() => setSearchQuery('')}
-                    className="p-1 hover:bg-bg-hover rounded transition-colors"
-                  >
-                    <X className="w-4 h-4 text-content-tertiary" />
-                  </button>
-                )}
-                <kbd className="kbd">ESC</kbd>
-              </div>
-
-              {/* Search Results */}
-              <div className="max-h-[400px] overflow-y-auto">
-                {searchQuery.length === 0 ? (
-                  // Default state - show recent/suggestions
-                  <div className="p-4">
-                    <p className="text-xs font-medium text-content-tertiary uppercase tracking-wider mb-3">
-                      Quick Actions
-                    </p>
-                    <div className="space-y-1">
-                      <button
-                        onClick={() => {
-                          setSearchOpen(false);
-                          if (!user.is_subscribed) {
-                            router.push('/pricing');
-                          } else {
-                            router.push('/releases/create');
-                          }
-                        }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-bg-hover transition-colors text-left"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-brand/20 flex items-center justify-center">
-                          <Plus className="w-4 h-4 text-brand" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-content-primary">Create New Release</p>
-                          <p className="text-xs text-content-tertiary">Start a new music release</p>
-                        </div>
-                      </button>
-                    </div>
-
-                    {activeReleases.length > 0 && (
-                      <>
-                        <p className="text-xs font-medium text-content-tertiary uppercase tracking-wider mb-3 mt-6">
-                          Recent Releases
-                        </p>
-                        <div className="space-y-1">
-                          {activeReleases.slice(0, 3).map(release => (
-                            <button
-                              key={release.id}
-                              onClick={() => handleSelectRelease(release.id)}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-bg-hover transition-colors text-left"
-                            >
-                              <div className="w-8 h-8 rounded-lg bg-bg-elevated flex items-center justify-center">
-                                <Music className="w-4 h-4 text-content-secondary" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-content-primary">{release.title}</p>
-                                <p className="text-xs text-content-tertiary">{release.artistName}</p>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  // Search results
-                  <div className="p-4">
-                    {/* Releases Results */}
-                    {filteredReleases.length > 0 && (
-                      <>
-                        <p className="text-xs font-medium text-content-tertiary uppercase tracking-wider mb-3">
-                          Releases ({filteredReleases.length})
-                        </p>
-                        <div className="space-y-1 mb-4">
-                          {filteredReleases.slice(0, 5).map(release => (
-                            <button
-                              key={release.id}
-                              onClick={() => handleSelectRelease(release.id)}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-bg-hover transition-colors text-left"
-                            >
-                              <div className="w-8 h-8 rounded-lg bg-bg-elevated flex items-center justify-center">
-                                <Music className="w-4 h-4 text-content-secondary" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-content-primary truncate">{release.title}</p>
-                                <p className="text-xs text-content-tertiary truncate">{release.artistName}</p>
-                              </div>
-                              <ChevronRight className="w-4 h-4 text-content-tertiary" />
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    )}
-
-                    {/* Tasks Results */}
-                    {filteredTasks.length > 0 && (
-                      <>
-                        <p className="text-xs font-medium text-content-tertiary uppercase tracking-wider mb-3">
-                          Tasks ({filteredTasks.length})
-                        </p>
-                        <div className="space-y-1">
-                          {filteredTasks.slice(0, 5).map(task => {
-                            const release = releases.find(r => r.id === task.releaseId);
-                            return (
-                              <button
-                                key={task.id}
-                                onClick={() => handleSelectTask(task.releaseId)}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-bg-hover transition-colors text-left"
-                              >
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                  task.status === 'completed' ? 'bg-brand/20' : 'bg-bg-elevated'
-                                }`}>
-                                  <ListTodo className={`w-4 h-4 ${
-                                    task.status === 'completed' ? 'text-brand' : 'text-content-secondary'
-                                  }`} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className={`text-sm font-medium truncate ${
-                                    task.status === 'completed' ? 'text-content-tertiary line-through' : 'text-content-primary'
-                                  }`}>
-                                    {task.title}
-                                  </p>
-                                  <p className="text-xs text-content-tertiary truncate">
-                                    {release?.title || 'Unknown release'}
-                                  </p>
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-content-tertiary" />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
-
-                    {/* No results */}
-                    {filteredReleases.length === 0 && filteredTasks.length === 0 && (
-                      <div className="text-center py-8">
-                        <Search className="w-10 h-10 text-content-tertiary mx-auto mb-3" />
-                        <p className="text-content-secondary">No results found for &quot;{searchQuery}&quot;</p>
-                        <p className="text-sm text-content-tertiary mt-1">Try a different search term</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="px-4 py-3 border-t border-stroke-subtle flex items-center justify-between text-xs text-content-tertiary">
-                <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1">
-                    <kbd className="kbd">↑</kbd>
-                    <kbd className="kbd">↓</kbd>
-                    to navigate
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <kbd className="kbd">↵</kbd>
-                    to select
-                  </span>
-                </div>
-                <span className="flex items-center gap-1">
-                  <kbd className="kbd">ESC</kbd>
-                  to close
-                </span>
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-bg-surface/80 backdrop-blur-md border-b border-stroke-subtle">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <Link href="/dashboard">
+                <Logo size="sm" />
+              </Link>
+              <ChevronRight className="w-4 h-4 text-content-tertiary" />
+              <div>
+                <h1 className="font-semibold text-content-primary">{release.title}</h1>
+                <p className="text-sm text-content-secondary">{release.artistName}</p>
               </div>
             </div>
-          </div>
-        </>
-      )}
-
-      {/* ===== HEADER - Linear style ===== */}
-      <header className="sticky top-0 z-40 glass border-b border-stroke-subtle">
-        <div className="h-14 px-4 flex items-center justify-between max-w-[1600px] mx-auto">
-          {/* Left: Logo & Nav */}
-          <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
-              <Logo size="md" />
-            </Link>
             
-            <nav className="hidden md:flex items-center gap-1">
-              <Link 
-                href="/dashboard" 
-                className="h-8 px-3 flex items-center text-sm font-medium text-content-primary bg-bg-hover rounded-md"
-              >
-                Releases
-              </Link>
-              <Link 
-                href="/dashboard" 
-                className="h-8 px-3 flex items-center text-sm font-medium text-content-tertiary hover:text-content-primary hover:bg-bg-hover rounded-md transition-colors"
-              >
-                Calendar
-              </Link>
-              <Link 
-                href="/dashboard" 
-                className="h-8 px-3 flex items-center text-sm font-medium text-content-tertiary hover:text-content-primary hover:bg-bg-hover rounded-md transition-colors"
-              >
-                People
-              </Link>
-            </nav>
-          </div>
-
-          {/* Right: Actions */}
-          <div className="flex items-center gap-2">
-            {/* Search - Linear style (now clickable) */}
-            <button 
-              onClick={() => setSearchOpen(true)}
-              className="hidden md:flex items-center gap-2 h-8 px-3 text-sm text-content-tertiary bg-bg-elevated border border-stroke-subtle rounded-md hover:border-stroke-default hover:text-content-secondary transition-colors"
-            >
-              <Search className="w-4 h-4" />
-              <span>Search...</span>
-              <div className="flex items-center gap-0.5 ml-2">
-                <kbd className="kbd">⌘</kbd>
-                <kbd className="kbd">K</kbd>
-              </div>
-            </button>
-
-            {/* Mobile search button */}
-            <IconButton 
-              tooltip="Search"
-              onClick={() => setSearchOpen(true)}
-              className="md:hidden"
-            >
-              <Search className="w-[18px] h-[18px]" />
-            </IconButton>
-
-            {/* Upgrade Button */}
-            <UpgradeButton isSubscribed={user.is_subscribed ?? false} />
-
-            {/* Notifications */}
-            <div className="relative">
-              <IconButton tooltip="Notifications">
-                <Bell className="w-[18px] h-[18px]" />
+            <div className="flex items-center gap-3">
+              {daysUntil !== null && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-elevated">
+                  <Calendar className="w-4 h-4 text-content-tertiary" />
+                  <span className="text-sm font-medium text-content-primary">
+                    {daysUntil > 0 ? `${daysUntil} days` : daysUntil === 0 ? 'Today!' : 'Released'}
+                  </span>
+                </div>
+              )}
+              <IconButton variant="ghost" size="sm">
+                <Settings className="w-4 h-4" />
               </IconButton>
-              {urgentTasks.length > 0 && (
-                <CountBadge 
-                  count={urgentTasks.length} 
-                  variant="error"
-                  className="absolute -top-1 -right-1"
-                />
-              )}
-            </div>
-
-            {/* User Menu with Dropdown */}
-            <div className="relative ml-2 pl-3 border-l border-stroke-subtle">
-              <button 
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2 h-9 px-2 rounded-lg hover:bg-bg-hover transition-colors"
-              >
-                <div className="w-7 h-7 rounded-full bg-brand flex items-center justify-center">
-                  <span className="text-xs font-semibold text-white">{firstName[0]}</span>
-                </div>
-                <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium text-content-primary leading-tight">{user.name}</p>
-                  <RoleBadge role={userRole} size="sm" />
-                </div>
-                <ChevronDown className={`w-4 h-4 text-content-tertiary hidden md:block transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* Dropdown Menu */}
-              {userMenuOpen && (
-                <>
-                  {/* Backdrop to close menu when clicking outside */}
-                  <div 
-                    className="fixed inset-0 z-40" 
-                    onClick={() => setUserMenuOpen(false)} 
-                  />
-                  
-                  {/* Menu */}
-                  <div className="absolute right-0 top-full mt-2 w-56 py-2 bg-bg-surface border border-stroke-subtle rounded-lg shadow-xl z-50 animate-in">
-                    {/* User Info */}
-                    <div className="px-4 py-3 border-b border-stroke-subtle">
-                      <p className="text-sm font-medium text-content-primary">{user.name}</p>
-                      <p className="text-xs text-content-tertiary mt-0.5">{user.email}</p>
-                      <div className="mt-2">
-                        <RoleBadge role={userRole} size="sm" />
-                      </div>
-                    </div>
-                    
-                    {/* Menu Items */}
-                    <div className="py-1">
-                      <button
-                        onClick={() => {
-                          setUserMenuOpen(false);
-                          // Navigate to settings when implemented
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-content-secondary hover:text-content-primary hover:bg-bg-hover transition-colors"
-                      >
-                        <Settings className="w-4 h-4" />
-                        Settings
-                      </button>
-                    </div>
-
-                    {/* Sign Out */}
-                    <div className="border-t border-stroke-subtle pt-1">
-                      <button
-                        onClick={() => { 
-                          setUserMenuOpen(false);
-                          logout(); 
-                          router.push('/auth'); 
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        Sign out
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </div>
       </header>
 
-      {/* ===== MAIN CONTENT ===== */}
-      <main className="max-w-[1600px] mx-auto px-4 py-6">
-        {/* Welcome Section */}
-        <section className="mb-8 animate-in">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <h1 className="text-3xl font-semibold text-content-primary mb-1">
-                Welcome back, {firstName}
-              </h1>
-              <p className="text-content-secondary">
-                {activeReleases.length === 0 
-                  ? "Ready to create your first release?" 
-                  : `You have ${activeReleases.length} active ${activeReleases.length === 1 ? 'release' : 'releases'}`
-                }
-              </p>
-            </div>
-            
-            <Button 
-              onClick={() => {
-                if (!user.is_subscribed) {
-                  router.push('/pricing');
-                } else {
-                  router.push('/releases/create');
-                }
-              }}
-              leftIcon={<Plus className="w-4 h-4" />}
-              kbd="C"
-            >
-              New Release
-            </Button>
-          </div>
-        </section>
-
-        {/* Urgent Tasks Alert */}
-        {urgentTasks.length > 0 && (
-          <section className="mb-6 animate-in delay-1">
-            <Card 
-              className="border-status-warning/30 bg-status-warning/5"
-              padding="sm"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-status-warning/20 flex items-center justify-center flex-shrink-0">
-                  <Zap className="w-5 h-5 text-status-warning" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-status-warning">
-                    {urgentTasks.length} urgent {urgentTasks.length === 1 ? 'task' : 'tasks'}
-                  </h3>
-                  <p className="text-sm text-content-secondary truncate">
-                    {urgentTasks.slice(0, 2).map(t => t.title).join(', ')}
-                    {urgentTasks.length > 2 && ` +${urgentTasks.length - 2} more`}
-                  </p>
-                </div>
-                <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="w-4 h-4" />}>
-                  View
-                </Button>
-              </div>
-            </Card>
-          </section>
-        )}
-
-        {/* Stats Row */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {[
-            { label: 'Active Releases', value: activeReleases.length, icon: FolderOpen, color: 'text-brand' },
-            { label: 'Pending Tasks', value: pendingTasks.length, icon: Calendar, color: 'text-status-warning' },
-            { label: 'Completed', value: completedTasks.length, icon: BarChart3, color: 'text-status-success' },
-            { label: 'Overall Progress', value: `${overallProgress}%`, icon: Zap, color: 'text-brand', isProgress: true },
-          ].map((stat, i) => (
-            <Card 
-              key={stat.label} 
-              className={`animate-in delay-${i + 2}`}
-              padding="sm"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-content-tertiary mb-1">{stat.label}</p>
-                  <p className={`text-2xl font-bold tabular-nums ${stat.color}`}>
-                    {stat.value}
-                  </p>
-                </div>
-                <div className="w-9 h-9 rounded-lg bg-bg-elevated flex items-center justify-center">
-                  <stat.icon className={`w-[18px] h-[18px] ${stat.color}`} />
-                </div>
-              </div>
-              {stat.isProgress && (
-                <ProgressBar value={overallProgress} size="sm" className="mt-3" />
-              )}
-            </Card>
-          ))}
-        </section>
-
-        {/* Active Releases */}
-        <section className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-content-primary">
-              Active Releases
-            </h2>
-            {activeReleases.length > 0 && (
-              <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="w-4 h-4" />}>
-                View all
-              </Button>
-            )}
-          </div>
-
-          {activeReleases.length === 0 ? (
-            <Card className="text-center py-12">
-              <div className="w-16 h-16 rounded-2xl bg-bg-elevated flex items-center justify-center mx-auto mb-4">
-                <FolderOpen className="w-8 h-8 text-content-tertiary" />
-              </div>
-              <h3 className="text-lg font-semibold text-content-primary mb-2">
-                No active releases
-              </h3>
-              <p className="text-content-secondary max-w-sm mx-auto mb-6">
-                Create your first release to get started. 
-                We&apos;ll automatically set up tasks, folders, and timelines.
-              </p>
-              <Button 
-                onClick={() => {
-                  if (!user.is_subscribed) {
-                    router.push('/pricing');
-                  } else {
-                    router.push('/releases/create');
-                  }
-                }}
-                leftIcon={<Plus className="w-4 h-4" />}
+      {/* Tabs */}
+      <div className="border-b border-stroke-subtle bg-bg-surface">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex gap-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab.key
+                    ? 'border-brand text-brand'
+                    : 'border-transparent text-content-secondary hover:text-content-primary'
+                }`}
               >
-                Create Your First Release
-              </Button>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {activeReleases.map((release, i) => {
-                const tasks = getTasksByRelease(release.id);
-                const pendingCount = tasks.filter(t => t.status === 'pending').length;
+                {tab.icon}
+                {tab.label}
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span className="px-1.5 py-0.5 text-xs rounded-full bg-bg-elevated">
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
+
+      {/* Content */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            
+            {/* AI Campaign Card - PRIMARY CTA */}
+            <Card padding="lg" className="border-2 border-brand/20 bg-gradient-to-br from-brand/5 to-transparent">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-brand/20 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-7 h-7 text-brand" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-content-primary mb-1">
+                      {hasAICampaign ? 'AI Marketing Campaign' : 'Start Your AI Campaign'}
+                    </h2>
+                    {hasAICampaign ? (
+                      <>
+                        <p className="text-content-secondary mb-3">
+                          {releaseProfile?.campaignNarrative || 'Your personalized marketing campaign is in progress.'}
+                        </p>
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2 text-sm">
+                            <CheckCircle2 className="w-4 h-4 text-green-400" />
+                            <span className="text-content-primary font-medium">{aiCompletedCount} done</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="w-4 h-4 text-content-tertiary" />
+                            <span className="text-content-secondary">~{totalTasksEstimate - aiCompletedCount} remaining</span>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-content-secondary">
+                        Get a personalized, AI-powered marketing strategy with step-by-step tasks tailored to your release.
+                      </p>
+                    )}
+                  </div>
+                </div>
                 
-                return (
-                  <div 
-                    key={release.id}
-                    className={`animate-in delay-${Math.min(i + 3, 8)}`}
+                <div className="flex flex-col items-end gap-3">
+                  {hasAICampaign && (
+                    <div className="text-right mb-2">
+                      <span className="text-3xl font-bold text-brand">{aiProgressPercent}%</span>
+                      <p className="text-xs text-content-tertiary">complete</p>
+                    </div>
+                  )}
+                  <Button
+                    onClick={() => router.push(
+                      hasAICampaign 
+                        ? `/releases/${releaseId}/tasks` 
+                        : `/releases/${releaseId}/setup`
+                    )}
+                    size="lg"
+                    className="whitespace-nowrap"
                   >
-                    <ReleaseCard
-                      release={release}
-                      pendingTasks={pendingCount}
-                      totalTasks={tasks.length}
+                    {hasAICampaign ? (
+                      <>
+                        <Play className="w-4 h-4 mr-2" />
+                        Continue Campaign
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className="w-4 h-4 mr-2" />
+                        Start Campaign
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Progress bar for active campaigns */}
+              {hasAICampaign && (
+                <div className="mt-6 pt-6 border-t border-stroke-subtle">
+                  <div className="flex items-center justify-between text-xs text-content-tertiary mb-2">
+                    <span>Campaign Progress</span>
+                    <span>{aiCompletedCount} of ~{totalTasksEstimate} tasks</span>
+                  </div>
+                  <div className="w-full bg-bg-elevated rounded-full h-3 overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-brand to-purple-500 rounded-full transition-all duration-500"
+                      style={{ width: `${aiProgressPercent}%` }}
                     />
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
+                </div>
+              )}
+            </Card>
 
-        {/* Quick Actions */}
-        {activeReleases.length > 0 && (
-          <section className="animate-in delay-6">
-            <h2 className="text-lg font-semibold text-content-primary mb-4">
-              Quick Actions
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                { icon: Plus, label: 'Create Task', kbd: 'T' },
-                { icon: FolderOpen, label: 'Upload Files', kbd: 'U' },
-                { icon: Users, label: 'Add Person', kbd: 'P' },
-                { icon: BarChart3, label: 'View Reports', kbd: 'R' },
-              ].map((action) => (
-                <button
-                  key={action.label}
-                  className="card card-interactive p-4 text-left group"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-9 h-9 rounded-lg bg-bg-elevated flex items-center justify-center card-icon transition-all duration-fast">
-                      <action.icon className="w-[18px] h-[18px] text-content-secondary" />
-                    </div>
-                    <kbd className="kbd opacity-0 group-hover:opacity-100 transition-opacity">
-                      {action.kbd}
-                    </kbd>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Health Score */}
+              <Card className="lg:col-span-2" padding="lg">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-lg font-semibold text-content-primary">Release Health</h2>
+                    <p className="text-sm text-content-secondary">Track your release progress</p>
                   </div>
-                  <span className="text-sm font-medium text-content-primary">
-                    {action.label}
+                  <CircularProgress value={healthScore} size={80} strokeWidth={8} showLabel={true} />
+                </div>
+                
+                <ProgressBar value={healthScore} className="mb-4" />
+                
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-content-secondary">
+                    {completedTasks.length} of {tasks.length} tasks completed
                   </span>
-                </button>
-              ))}
+                  <StatusBadge status={release.status} />
+                </div>
+              </Card>
+
+              {/* Warnings */}
+              {warnings.length > 0 && (
+                <Card padding="lg">
+                  <h3 className="font-semibold text-content-primary mb-4 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-status-warning" />
+                    Needs Attention
+                  </h3>
+                  <div className="space-y-3">
+                    {warnings.map((warning, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-status-warning/10">
+                        <span>{warning.icon}</span>
+                        <span className="text-sm text-content-primary">{warning.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {/* No warnings - show quick stats instead */}
+              {warnings.length === 0 && (
+                <Card padding="lg">
+                  <h3 className="font-semibold text-content-primary mb-4 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-400" />
+                    Looking Good!
+                  </h3>
+                  <p className="text-sm text-content-secondary">
+                    No critical issues detected. Keep up the momentum!
+                  </p>
+                </Card>
+              )}
+
+              {/* Next Steps */}
+              <Card className="lg:col-span-3" padding="lg">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-content-primary">Next Steps</h3>
+                  {hasAICampaign && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => router.push(`/releases/${releaseId}/tasks`)}
+                    >
+                      View AI Tasks →
+                    </Button>
+                  )}
+                </div>
+                
+                {hasAICampaign && aiTasks.length > 0 ? (
+                  // Show AI tasks if campaign is active
+                  <div className="space-y-2">
+                    {aiTasks
+                      .filter(t => t.status === 'current' || t.status === 'pending')
+                      .slice(0, 5)
+                      .map((task, index) => (
+                        <div 
+                          key={task.id} 
+                          className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                            task.status === 'current' 
+                              ? 'bg-brand/10 border border-brand/20' 
+                              : 'bg-bg-elevated hover:bg-bg-hover'
+                          }`}
+                        >
+                          <div className={`w-2 h-2 rounded-full ${
+                            task.status === 'current' ? 'bg-brand animate-pulse' : 'bg-content-tertiary'
+                          }`} />
+                          <span className={`text-sm flex-1 ${
+                            task.status === 'current' ? 'text-brand font-medium' : 'text-content-primary'
+                          }`}>
+                            {task.title}
+                          </span>
+                          {task.status === 'current' && (
+                            <span className="text-xs text-brand font-medium">Current</span>
+                          )}
+                          <span className="text-xs text-content-tertiary capitalize">{task.phase.replace('-', ' ')}</span>
+                        </div>
+                      ))}
+                    <button 
+                      onClick={() => router.push(`/releases/${releaseId}/tasks`)}
+                      className="text-sm text-brand hover:underline mt-2"
+                    >
+                      Continue campaign →
+                    </button>
+                  </div>
+                ) : (
+                  // Show legacy tasks if no AI campaign
+                  <div className="space-y-2">
+                    {pendingTasks.slice(0, 5).map((task) => (
+                      <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg bg-bg-elevated hover:bg-bg-hover transition-colors">
+                        <div className="w-2 h-2 rounded-full bg-brand" />
+                        <span className="text-sm text-content-primary flex-1">{task.title}</span>
+                        <span className="text-xs text-content-tertiary">{task.phase}</span>
+                      </div>
+                    ))}
+                    {pendingTasks.length > 5 && (
+                      <button 
+                        onClick={() => setActiveTab('tasks')}
+                        className="text-sm text-brand hover:underline"
+                      >
+                        View all {pendingTasks.length} tasks →
+                      </button>
+                    )}
+                    {pendingTasks.length === 0 && !hasAICampaign && (
+                      <div className="text-center py-8">
+                        <Sparkles className="w-10 h-10 text-brand/40 mx-auto mb-3" />
+                        <p className="text-content-secondary mb-4">
+                          Start your AI-powered campaign for personalized marketing tasks
+                        </p>
+                        <Button onClick={() => router.push(`/releases/${releaseId}/setup`)}>
+                          <Rocket className="w-4 h-4 mr-2" />
+                          Start Campaign
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Card>
             </div>
-          </section>
+          </div>
+        )}
+
+        {activeTab === 'tasks' && (
+          <div>
+            <div className="mb-6 p-4 bg-brand/5 border border-brand/20 rounded-xl">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-brand" />
+                <div className="flex-1">
+                  <p className="text-sm text-content-primary font-medium">
+                    Try the new AI-powered campaign
+                  </p>
+                  <p className="text-xs text-content-secondary">
+                    Get personalized marketing tasks tailored to your release
+                  </p>
+                </div>
+                <Button 
+                  size="sm" 
+                  onClick={() => router.push(`/releases/${releaseId}/${hasAICampaign ? 'tasks' : 'setup'}`)}
+                >
+                  {hasAICampaign ? 'Continue' : 'Try it'}
+                </Button>
+              </div>
+            </div>
+            <TaskList releaseId={releaseId} />
+          </div>
         )}
       </main>
     </div>
