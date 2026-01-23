@@ -67,16 +67,10 @@ function StatusIcon({ status }: { status: TaskStatus }) {
           <Check className="w-4 h-4 text-white" />
         </div>
       );
-    case 'current':
+    case 'in-progress':
       return (
         <div className="w-6 h-6 rounded-full bg-brand flex items-center justify-center animate-pulse">
           <Clock className="w-4 h-4 text-white" />
-        </div>
-      );
-    case 'skipped':
-      return (
-        <div className="w-6 h-6 rounded-full bg-status-warning flex items-center justify-center">
-          <SkipForward className="w-4 h-4 text-white" />
         </div>
       );
     default:
