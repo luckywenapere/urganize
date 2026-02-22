@@ -7,11 +7,13 @@ interface AuthState {
   user: Profile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  needsOnboarding: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   signup: (email: string, password: string, name: string, role: string) => Promise<void>;
   updateRole: (role: Profile['role']) => Promise<void>;
+  setNeedsOnboarding: (needsOnboarding: boolean) => void;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
@@ -23,9 +25,11 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: true,
+      needsOnboarding: true,
       error: null,
 
       clearError: () => set({ error: null }),
+      setNeedsOnboarding: (needsOnboarding: boolean) => set({ needsOnboarding }),
 
       checkAuth: async () => {
         try {
@@ -45,17 +49,41 @@ export const useAuthStore = create<AuthState>()(
             if (profileError) throw profileError;
 
             if (profile) {
+              let needsOnboarding = true;
+
+              const { data: releases, error: releasesError } = await supabase
+                .from('releases')
+                .select('id')
+                .eq('user_id', session.user.id)
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+              if (!releasesError && releases && releases.length > 0) {
+                const releaseIds = releases.map((release) => release.id);
+
+                const { data: onboardingProfiles, error: onboardingError } = await supabase
+                  .from('release_profiles')
+                  .select('setup_completed')
+                  .in('release_id', releaseIds)
+                  .order('updated_at', { ascending: false });
+
+                if (!onboardingError && onboardingProfiles && onboardingProfiles.length > 0) {
+                  needsOnboarding = !onboardingProfiles.some((item) => item.setup_completed);
+                }
+              }
+
               set({ 
                 user: profile, 
                 isAuthenticated: true, 
                 isLoading: false,
+                needsOnboarding,
                 error: null 
               });
               return;
             }
           }
           
-          set({ user: null, isAuthenticated: false, isLoading: false, error: null });
+          set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, error: null });
         } catch (error: any) {
           console.error('Auth check failed:', error);
           const errorMessage = handleSupabaseError(error);
@@ -63,6 +91,7 @@ export const useAuthStore = create<AuthState>()(
             user: null, 
             isAuthenticated: false, 
             isLoading: false,
+            needsOnboarding: true,
             error: errorMessage 
           });
         }
@@ -96,6 +125,7 @@ export const useAuthStore = create<AuthState>()(
               user: profile, 
               isAuthenticated: true, 
               isLoading: false,
+              needsOnboarding: true,
               error: null 
             });
           }
@@ -169,6 +199,7 @@ export const useAuthStore = create<AuthState>()(
                   user: retryProfile, 
                   isAuthenticated: true, 
                   isLoading: false,
+                  needsOnboarding: true,
                   error: null 
                 });
               }
@@ -177,6 +208,7 @@ export const useAuthStore = create<AuthState>()(
                 user: profile, 
                 isAuthenticated: true, 
                 isLoading: false,
+                needsOnboarding: true,
                 error: null 
               });
             }
@@ -211,11 +243,12 @@ export const useAuthStore = create<AuthState>()(
 
           if (error) throw error;
 
-          set({
-            user: updatedProfile,
-            isLoading: false,
-            error: null,
-          });
+        set({
+          user: updatedProfile,
+          isLoading: false,
+          needsOnboarding: true,
+          error: null,
+        });
         } catch (error: any) {
           const errorMessage = handleSupabaseError(error);
           set({ isLoading: false, error: errorMessage });
@@ -232,6 +265,7 @@ export const useAuthStore = create<AuthState>()(
             user: null, 
             isAuthenticated: false, 
             isLoading: false,
+            needsOnboarding: true,
             error: null 
           });
         } catch (error: any) {
@@ -246,6 +280,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        needsOnboarding: state.needsOnboarding,
       }),
     }
   )
