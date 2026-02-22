@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
-import type { Metadata } from "next";
+import { PostAuthScreen } from '@/components/PostAuthScreen';
 import "./globals.css";
 
 export default function RootLayout({
@@ -11,6 +12,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const checkAuth = useAuthStore((state) => state.checkAuth);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const pathname = usePathname();
+
+  const isAuthRoute = pathname?.startsWith('/auth');
+  const showPostAuthScreen = isAuthenticated && !isAuthRoute;
 
   useEffect(() => {
     checkAuth();
@@ -27,12 +33,14 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-bg-base text-content-primary antialiased">
-        {children}
-        <div className="keyboard-hint">
-          <kbd className="kbd">⌘</kbd>
-          <kbd className="kbd">K</kbd>
-          <span>Quick actions</span>
-        </div>
+        {showPostAuthScreen ? <PostAuthScreen /> : children}
+        {!showPostAuthScreen && (
+          <div className="keyboard-hint">
+            <kbd className="kbd">⌘</kbd>
+            <kbd className="kbd">K</kbd>
+            <span>Quick actions</span>
+          </div>
+        )}
       </body>
     </html>
   );
