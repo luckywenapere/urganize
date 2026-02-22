@@ -42,20 +42,25 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
 
 // Role Badge
 interface RoleBadgeProps {
-  role: 'manager' | 'artist' | 'artist-manager';
+  role: 'manager' | 'artist-team' | 'artist' | 'artist-manager';
   size?: 'sm' | 'md';
 }
 
 export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, size = 'md' }) => {
-  const isManager = role === 'manager' || role === 'artist-manager';
+  const isManagerLike = role === 'manager' || role === 'artist-manager';
+  const isArtistTeam = role === 'artist-team';
   
   return (
     <span className={clsx(
       'badge',
-      isManager ? 'badge-manager' : 'bg-purple-500/15 text-purple-400 border border-purple-500/20',
+      isManagerLike
+        ? 'badge-manager'
+        : isArtistTeam
+          ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
+          : 'bg-purple-500/15 text-purple-400 border border-purple-500/20',
       size === 'sm' && 'text-[10px] px-2 py-0.5'
     )}>
-      {isManager ? 'Manager' : 'Artist'}
+      {isManagerLike ? 'Manager' : isArtistTeam ? 'Artist Team' : 'Artist'}
     </span>
   );
 };

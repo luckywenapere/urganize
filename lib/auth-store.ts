@@ -11,6 +11,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   signup: (email: string, password: string, name: string, role: string) => Promise<void>;
+  updateRole: (role: Profile['role']) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
@@ -185,6 +186,36 @@ export const useAuthStore = create<AuthState>()(
               error: 'Please check your email to verify your account' 
             });
           }
+        } catch (error: any) {
+          const errorMessage = handleSupabaseError(error);
+          set({ isLoading: false, error: errorMessage });
+          throw new Error(errorMessage);
+        }
+      },
+
+      updateRole: async (role: Profile['role']) => {
+        try {
+          const currentUser = get().user;
+          if (!currentUser) {
+            throw new Error('User not found');
+          }
+
+          set({ isLoading: true, error: null });
+
+          const { data: updatedProfile, error } = await supabase
+            .from('profiles')
+            .update({ role })
+            .eq('id', currentUser.id)
+            .select('*')
+            .single();
+
+          if (error) throw error;
+
+          set({
+            user: updatedProfile,
+            isLoading: false,
+            error: null,
+          });
         } catch (error: any) {
           const errorMessage = handleSupabaseError(error);
           set({ isLoading: false, error: errorMessage });

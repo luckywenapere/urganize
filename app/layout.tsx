@@ -13,10 +13,13 @@ export default function RootLayout({
 }) {
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
 
   const isAuthRoute = pathname?.startsWith('/auth');
-  const showPostAuthScreen = isAuthenticated && !isAuthRoute;
+  const shouldShowOnboarding =
+    !user?.role || user.role === 'artist-manager';
+  const showPostAuthScreen = isAuthenticated && !isAuthRoute && shouldShowOnboarding;
 
   useEffect(() => {
     checkAuth();

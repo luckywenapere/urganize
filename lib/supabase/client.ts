@@ -19,7 +19,7 @@ export type Profile = {
   id: string;
   name: string;
   email: string;
-  role: 'artist' | 'manager' | 'artist-manager';
+  role: 'artist' | 'manager' | 'artist-team' | 'artist-manager';
   created_at: string;
   updated_at: string;
   is_subscribed?: boolean; 

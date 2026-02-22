@@ -73,7 +73,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
 // Role Badge (Manager, Artist, etc.)
 interface RoleBadgeProps {
-  role: 'manager' | 'artist' | 'artist-manager';
+  role: 'manager' | 'artist-team' | 'artist' | 'artist-manager';
   size?: 'sm' | 'md';
 }
 
@@ -85,6 +85,11 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, size = 'md' }) => {
         return {
           label: 'Manager',
           className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+        };
+      case 'artist-team':
+        return {
+          label: 'Artist Team',
+          className: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
         };
       case 'artist':
         return {
