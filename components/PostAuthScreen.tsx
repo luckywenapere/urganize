@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PaystackButton } from '@/components/PaystackButton';
+import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 
@@ -11,6 +11,10 @@ type ProofType = 'screenshot' | 'link' | 'text';
 
 const MIN_GENERATION_MS = 7000;
 const PRICING_SHEET_MS = 2500;
+const PaystackButton = dynamic(
+  () => import('@/components/PaystackButton').then((mod) => mod.PaystackButton),
+  { ssr: false }
+);
 
 export function PostAuthScreen() {
   const router = useRouter();

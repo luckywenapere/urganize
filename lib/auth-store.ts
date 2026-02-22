@@ -286,12 +286,14 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-supabase.auth.onAuthStateChange((event, session) => {
-  const store = useAuthStore.getState();
-  
-  if (event === 'SIGNED_OUT') {
-    store.logout();
-  } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-    store.checkAuth();
-  }
-});
+if (typeof window !== 'undefined') {
+  supabase.auth.onAuthStateChange((event) => {
+    const store = useAuthStore.getState();
+    
+    if (event === 'SIGNED_OUT') {
+      store.logout();
+    } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      store.checkAuth();
+    }
+  });
+}

@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 export async function GET(req: NextRequest) {
   const reference = req.nextUrl.searchParams.get('reference');
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
 
   if (!reference) {
     return NextResponse.json({ error: 'No reference provided' }, { status: 400 });
   }
+  if (!supabaseUrl || !serviceRoleKey || !paystackSecretKey) {
+    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
   try {
     // Verify with Paystack
@@ -19,7 +22,7 @@ export async function GET(req: NextRequest) {
       `https://api.paystack.co/transaction/verify/${reference}`,
       {
         headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          Authorization: `Bearer ${paystackSecretKey}`,
         },
       }
     );
