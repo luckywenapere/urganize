@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const DELETION_WINDOW_DAYS = 30;
-const GOOGLE_REAUTH_MAX_AGE_MS = 5 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -21,9 +20,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
-  const confirmationEmail = body?.confirmationEmail as string | undefined;
   const confirmationText = body?.confirmationText as string | undefined;
-  const currentPassword = body?.currentPassword as string | undefined;
 
   const supabaseUserClient = createClient(supabaseUrl, supabaseAnonKey);
   const {
@@ -35,43 +32,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if ((confirmationEmail || '').trim().toLowerCase() !== user.email.toLowerCase()) {
-    return NextResponse.json({ error: 'Email confirmation does not match your account' }, { status: 400 });
-  }
-
   if ((confirmationText || '').trim() !== 'DELETE') {
     return NextResponse.json({ error: 'Please type DELETE exactly to continue' }, { status: 400 });
-  }
-
-  const provider = user.app_metadata?.provider || 'email';
-
-  if (provider === 'email') {
-    if (!currentPassword || currentPassword.length < 8) {
-      return NextResponse.json({ error: 'Current password is required' }, { status: 400 });
-    }
-
-    const passwordCheckClient = createClient(supabaseUrl, supabaseAnonKey);
-    const { error: passwordError } = await passwordCheckClient.auth.signInWithPassword({
-      email: user.email,
-      password: currentPassword,
-    });
-
-    if (passwordError) {
-      return NextResponse.json({ error: 'Password verification failed' }, { status: 401 });
-    }
-  } else if (provider === 'google') {
-    const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : 0;
-    if (!lastSignIn || Date.now() - lastSignIn > GOOGLE_REAUTH_MAX_AGE_MS) {
-      return NextResponse.json(
-        { error: 'Please re-verify your Google session and try again' },
-        { status: 401 }
-      );
-    }
-  } else {
-    return NextResponse.json(
-      { error: 'This auth provider is not currently supported for in-app account deletion' },
-      { status: 400 }
-    );
   }
 
   const now = new Date();

@@ -50,11 +50,7 @@ export default function SettingsPage() {
   });
   const [selectedPlan, setSelectedPlan] = useState<PlanId>('monthly');
 
-  const [provider, setProvider] = useState<string>('email');
-  const [lastSignInAt, setLastSignInAt] = useState<string | null>(null);
-  const [confirmationEmail, setConfirmationEmail] = useState('');
   const [confirmationText, setConfirmationText] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteScheduledAt, setDeleteScheduledAt] = useState<string | null>(null);
 
@@ -68,7 +64,6 @@ export default function SettingsPage() {
     }
 
     setName(user.name || '');
-    setConfirmationEmail(user.email || '');
   }, [router, user]);
 
   useEffect(() => {
@@ -112,8 +107,6 @@ export default function SettingsPage() {
       } = await supabase.auth.getUser();
 
       if (authUser) {
-        setProvider(authUser.app_metadata?.provider || 'email');
-        setLastSignInAt(authUser.last_sign_in_at || null);
         const scheduled = authUser.user_metadata?.scheduled_deletion_at as string | undefined;
         if (scheduled) {
           setDeleteScheduledAt(scheduled);
@@ -128,12 +121,6 @@ export default function SettingsPage() {
     () => planOptions.find((option) => option.id === selectedPlan) || planOptions[0],
     [selectedPlan]
   );
-
-  const isGoogleFreshlyReverified = useMemo(() => {
-    if (provider !== 'google' || !lastSignInAt) return false;
-    const last = new Date(lastSignInAt).getTime();
-    return Date.now() - last <= 5 * 60 * 1000;
-  }, [lastSignInAt, provider]);
 
   const clearFeedback = () => {
     setError('');
@@ -210,41 +197,12 @@ export default function SettingsPage() {
     }
   };
 
-  const handleGoogleReverify = async () => {
-    clearFeedback();
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/settings&reauth=1`,
-      },
-    });
-
-    if (oauthError) {
-      setError(oauthError.message || 'Failed to start Google re-verification');
-    }
-  };
-
   const handleScheduleDelete = async () => {
     clearFeedback();
     if (!user) return;
 
-    if (confirmationEmail.trim().toLowerCase() !== user.email.toLowerCase()) {
-      setError('Enter your exact account email to continue');
-      return;
-    }
-
     if (confirmationText.trim() !== 'DELETE') {
       setError('Type DELETE exactly to confirm');
-      return;
-    }
-
-    if (provider === 'email' && currentPassword.length < 8) {
-      setError('Current password is required');
-      return;
-    }
-
-    if (provider === 'google' && !isGoogleFreshlyReverified) {
-      setError('Re-verify your Google session first');
       return;
     }
 
@@ -261,9 +219,7 @@ export default function SettingsPage() {
           Authorization: `Bearer ${session?.access_token || ''}`,
         },
         body: JSON.stringify({
-          confirmationEmail,
           confirmationText,
-          currentPassword: provider === 'email' ? currentPassword : undefined,
         }),
       });
 
@@ -431,14 +387,6 @@ export default function SettingsPage() {
           )}
           <div className="space-y-4">
             <label className="block">
-              <span className="mb-1 block text-sm text-red-100/80">Confirm your email</span>
-              <input
-                value={confirmationEmail}
-                onChange={(e) => setConfirmationEmail(e.target.value)}
-                className="w-full rounded-lg border border-red-300/40 bg-black/40 px-3 py-2 outline-none focus:border-red-200/70"
-              />
-            </label>
-            <label className="block">
               <span className="mb-1 block text-sm text-red-100/80">Type DELETE</span>
               <input
                 value={confirmationText}
@@ -446,35 +394,6 @@ export default function SettingsPage() {
                 className="w-full rounded-lg border border-red-300/40 bg-black/40 px-3 py-2 outline-none focus:border-red-200/70"
               />
             </label>
-
-            {provider === 'email' ? (
-              <label className="block">
-                <span className="mb-1 block text-sm text-red-100/80">Current password</span>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full rounded-lg border border-red-300/40 bg-black/40 px-3 py-2 outline-none focus:border-red-200/70"
-                />
-              </label>
-            ) : (
-              <div className="rounded-lg border border-red-300/35 bg-black/30 p-3">
-                <p className="mb-2 text-sm text-red-100/85">Provider: Google</p>
-                <p className="mb-3 text-xs text-red-100/70">
-                  Re-verify your Google session before confirming deletion.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleGoogleReverify}
-                  className="rounded-lg border border-red-200/50 px-3 py-2 text-sm text-red-100 hover:bg-red-400/15"
-                >
-                  Re-verify with Google
-                </button>
-                {isGoogleFreshlyReverified && (
-                  <p className="mt-2 text-xs text-emerald-300">Google session verified.</p>
-                )}
-              </div>
-            )}
 
             <button
               type="button"
