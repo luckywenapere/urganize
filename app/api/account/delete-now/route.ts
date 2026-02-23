@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const DELETION_WINDOW_DAYS = 30;
-
 export async function POST(req: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -36,40 +34,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Please type DELETE exactly to continue' }, { status: 400 });
   }
 
-  const now = new Date();
-  const scheduledDeletion = new Date(now);
-  scheduledDeletion.setDate(now.getDate() + DELETION_WINDOW_DAYS);
-
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-  const nextMetadata = {
-    ...(user.user_metadata || {}),
-    deletion_requested_at: now.toISOString(),
-    scheduled_deletion_at: scheduledDeletion.toISOString(),
-  };
+  const nowIso = new Date().toISOString();
 
-  const { error: adminUpdateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
-    user_metadata: nextMetadata,
-  });
-
-  if (adminUpdateError) {
-    return NextResponse.json({ error: 'Failed to schedule account deletion' }, { status: 500 });
-  }
-
-  await supabaseAdmin
-    .from('profiles')
-    .update({ is_subscribed: false, updated_at: now.toISOString() })
-    .eq('id', user.id);
+  const { data: releases } = await supabaseAdmin
+    .from('releases')
+    .select('id')
+    .eq('user_id', user.id);
+  const releaseIds = (releases || []).map((item) => item.id);
 
   await supabaseAdmin
     .from('subscriptions')
-    .update({ status: 'canceled', updated_at: now.toISOString() })
+    .update({ status: 'canceled', updated_at: nowIso })
     .eq('user_id', user.id)
     .eq('status', 'active');
 
+  await supabaseAdmin.from('payments').delete().eq('user_id', user.id);
+  await supabaseAdmin.from('subscriptions').delete().eq('user_id', user.id);
+  await supabaseAdmin.from('artist_profiles').delete().eq('user_id', user.id);
+
+  if (releaseIds.length > 0) {
+    await supabaseAdmin.from('ai_tasks').delete().in('release_id', releaseIds);
+    await supabaseAdmin.from('release_profiles').delete().in('release_id', releaseIds);
+  }
+
+  await supabaseAdmin.from('releases').delete().eq('user_id', user.id);
+  await supabaseAdmin.from('profiles').delete().eq('id', user.id);
+
+  const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(user.id, false);
+  if (deleteAuthError) {
+    return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 });
+  }
+
   return NextResponse.json({
-    status: 'scheduled',
-    scheduled_deletion_at: scheduledDeletion.toISOString(),
-    recovery: 'support-only',
-    recovery_contact: 'theurganization@gmail.com',
+    status: 'deleted',
+    deleted_at: nowIso,
   });
 }

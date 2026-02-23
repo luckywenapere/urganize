@@ -52,7 +52,6 @@ export default function SettingsPage() {
 
   const [confirmationText, setConfirmationText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteScheduledAt, setDeleteScheduledAt] = useState<string | null>(null);
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -102,16 +101,6 @@ export default function SettingsPage() {
         }
       }
 
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser();
-
-      if (authUser) {
-        const scheduled = authUser.user_metadata?.scheduled_deletion_at as string | undefined;
-        if (scheduled) {
-          setDeleteScheduledAt(scheduled);
-        }
-      }
     };
 
     loadSettingsData();
@@ -212,7 +201,7 @@ export default function SettingsPage() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      const res = await fetch('/api/account/schedule-delete', {
+      const res = await fetch('/api/account/delete-now', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,14 +214,13 @@ export default function SettingsPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.error || 'Could not schedule account deletion');
+        throw new Error(data?.error || 'Could not delete account');
       }
 
-      setDeleteScheduledAt(data?.scheduled_deletion_at || null);
       await logout();
       router.push('/auth');
     } catch (err: any) {
-      setError(err?.message || 'Could not schedule account deletion');
+      setError(err?.message || 'Could not delete account');
     } finally {
       setIsDeleting(false);
     }
@@ -378,13 +366,8 @@ export default function SettingsPage() {
         <section className="rounded-2xl border border-red-500/35 bg-red-500/10 p-6">
           <h2 className="mb-2 text-xl text-red-300">Delete Account</h2>
           <p className="mb-4 text-sm text-red-100/80">
-            This schedules your account for deletion in 30 days. Your account is immediately signed out. Recovery during that period is support-only via theurganization@gmail.com.
+            This permanently deletes your account immediately. This action cannot be undone.
           </p>
-          {deleteScheduledAt && (
-            <p className="mb-4 text-sm text-red-200">
-              Deletion already scheduled for {new Date(deleteScheduledAt).toLocaleString()}.
-            </p>
-          )}
           <div className="space-y-4">
             <label className="block">
               <span className="mb-1 block text-sm text-red-100/80">Type DELETE</span>
@@ -398,10 +381,10 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={handleScheduleDelete}
-              disabled={isDeleting || !!deleteScheduledAt}
+              disabled={isDeleting}
               className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400 disabled:opacity-55"
             >
-              {isDeleting ? 'Scheduling...' : 'Schedule account deletion'}
+              {isDeleting ? 'Deleting...' : 'Delete account now'}
             </button>
           </div>
         </section>
@@ -409,3 +392,4 @@ export default function SettingsPage() {
     </main>
   );
 }
+
