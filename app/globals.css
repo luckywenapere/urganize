@@ -691,6 +691,25 @@ body::before {
   padding: 0 var(--space-6);
 }
 
+/* Route-aware app shell layout */
+.app-body {
+  min-height: 100vh;
+}
+
+.app-layout {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0 auto;
+}
+
+.app-layout-centered {
+  max-width: 1120px;
+}
+
+.app-layout-fluid {
+  max-width: 1600px;
+}
+
 /* ============================================
    SPECIAL EFFECTS
    ============================================ */
@@ -771,6 +790,17 @@ body::before {
   
   .container {
     padding: 0 var(--space-4);
+  }
+
+  .app-layout {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-layout {
+    padding-left: clamp(24px, 3vw, 56px);
+    padding-right: clamp(24px, 3vw, 56px);
   }
 }
 

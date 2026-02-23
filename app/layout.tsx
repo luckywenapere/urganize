@@ -18,7 +18,9 @@ export default function RootLayout({
   const pathname = usePathname();
 
   const isAuthRoute = pathname?.startsWith('/auth');
+  const isDashboardRoute = pathname?.startsWith('/dashboard');
   const showPostAuthScreen = isAuthenticated && !isAuthRoute && needsOnboarding;
+  const pageLayoutClassName = isDashboardRoute ? 'app-layout app-layout-fluid' : 'app-layout app-layout-centered';
 
   useEffect(() => {
     checkAuth();
@@ -34,8 +36,8 @@ export default function RootLayout({
           rel="stylesheet" 
         />
       </head>
-      <body className="bg-bg-base text-content-primary antialiased">
-        {showPostAuthScreen ? <PostAuthScreen /> : children}
+      <body className="app-body bg-bg-base text-content-primary antialiased">
+        {showPostAuthScreen ? <PostAuthScreen /> : <div className={pageLayoutClassName}>{children}</div>}
         {!showPostAuthScreen && (
           <div className="keyboard-hint">
             <kbd className="kbd">⌘</kbd>

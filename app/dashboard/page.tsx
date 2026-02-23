@@ -70,7 +70,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-[980px] flex-col px-6 py-12 sm:px-12">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1360px] flex-col px-6 py-10 lg:px-10 lg:py-12 xl:px-14">
         <div className="flex items-center justify-between">
           <button type="button" className="text-[clamp(2rem,4.5vw,3rem)] leading-none">≡</button>
           <button
@@ -85,7 +85,7 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        <section className="mt-[16vh]">
+        <section className="mt-20 lg:mt-24 xl:mt-28">
           <h1 className="text-[clamp(2.6rem,6vw,5rem)] tracking-tight">Progress Timeline</h1>
 
           <div className="mt-10">
