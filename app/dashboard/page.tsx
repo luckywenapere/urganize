@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
@@ -13,6 +14,8 @@ export default function DashboardPage() {
   const [currentTask, setCurrentTask] = useState('Single task');
   const [goalStatus, setGoalStatus] = useState('In Progress');
   const [loading, setLoading] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -63,6 +66,28 @@ export default function DashboardPage() {
     loadData();
   }, [user]);
 
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
+
   const progress = useMemo(() => {
     if (completedTasks <= 0) return 24;
     return Math.min(92, 24 + completedTasks * 9);
@@ -72,17 +97,48 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-black text-white">
       <div className="mx-auto flex min-h-screen w-full max-w-[1360px] flex-col px-6 py-10 lg:max-w-[1120px] lg:px-10 lg:py-12 xl:px-12">
         <div className="flex items-center justify-between">
-          <button type="button" className="text-[clamp(2rem,4.5vw,3rem)] leading-none lg:text-[2rem]">≡</button>
-          <button
-            type="button"
-            onClick={async () => {
-              await logout();
-              router.push('/auth');
-            }}
-            className="text-[clamp(2rem,4.5vw,3rem)] leading-none lg:text-[2rem]"
-          >
-            Logout
-          </button>
+          <div ref={menuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen((open) => !open)}
+              className="text-[clamp(2rem,4.5vw,3rem)] leading-none lg:text-[2rem]"
+              aria-expanded={isMenuOpen}
+              aria-haspopup="menu"
+            >
+              ≡
+            </button>
+            {isMenuOpen && (
+              <div className="absolute left-0 top-full z-20 mt-3 min-w-[180px] rounded-xl border border-white/10 bg-[#02090d] p-2 shadow-lg">
+                <Link
+                  href="/dashboard"
+                  className="block rounded-md px-3 py-2 text-sm text-white/85 hover:bg-white/10"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/settings"
+                  className="block rounded-md px-3 py-2 text-sm text-white/85 hover:bg-white/10"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Settings
+                </Link>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsMenuOpen(false);
+                    await logout();
+                    router.push('/auth');
+                  }}
+                  className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-white/85 hover:bg-white/10"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="w-[1em]" aria-hidden />
         </div>
 
         <section className="mt-20 lg:mt-20 xl:mt-24">

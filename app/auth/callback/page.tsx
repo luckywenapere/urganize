@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { checkAuth } = useAuthStore();
 
   useEffect(() => {
@@ -44,14 +45,21 @@ export default function AuthCallbackPage() {
         }
 
         await checkAuth();
-        router.push('/dashboard');
+        const next = searchParams.get('next');
+        const safeNext = next && next.startsWith('/') ? next : '/dashboard';
+
+        if (searchParams.get('reauth') === '1') {
+          localStorage.setItem('urganize.reauth.ts', String(Date.now()));
+        }
+
+        router.push(safeNext);
       } else {
         router.push('/auth');
       }
     };
 
     handleCallback();
-  }, [router, checkAuth]);
+  }, [router, checkAuth, searchParams]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">

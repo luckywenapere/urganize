@@ -3,6 +3,18 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase, type Profile, handleSupabaseError } from './supabase/client';
 
+const getScheduledDeletion = (metadata: Record<string, any> | undefined | null): string | null => {
+  const value = metadata?.scheduled_deletion_at;
+  return typeof value === 'string' ? value : null;
+};
+
+const isScheduledDeletionActive = (metadata: Record<string, any> | undefined | null): boolean => {
+  const scheduled = getScheduledDeletion(metadata);
+  if (!scheduled) return false;
+  const scheduledTime = new Date(scheduled).getTime();
+  return Number.isFinite(scheduledTime) && scheduledTime > Date.now();
+};
+
 interface AuthState {
   user: Profile | null;
   isAuthenticated: boolean;
@@ -40,6 +52,19 @@ export const useAuthStore = create<AuthState>()(
           if (sessionError) throw sessionError;
           
           if (session?.user) {
+            if (isScheduledDeletionActive(session.user.user_metadata as Record<string, any>)) {
+              const scheduledAt = getScheduledDeletion(session.user.user_metadata as Record<string, any>);
+              await supabase.auth.signOut();
+              set({
+                user: null,
+                isAuthenticated: false,
+                isLoading: false,
+                needsOnboarding: true,
+                error: `Account is scheduled for deletion on ${new Date(scheduledAt || '').toLocaleString()}. Contact theurganization@gmail.com to recover.`,
+              });
+              return;
+            }
+
             const { data: profile, error: profileError } = await supabase
               .from('profiles')
               .select('*')
@@ -110,6 +135,12 @@ export const useAuthStore = create<AuthState>()(
 
           if (!data.user) {
             throw new Error('Login failed - no user returned');
+          }
+
+          if (isScheduledDeletionActive(data.user.user_metadata as Record<string, any>)) {
+            const scheduledAt = getScheduledDeletion(data.user.user_metadata as Record<string, any>);
+            await supabase.auth.signOut();
+            throw new Error(`Account is scheduled for deletion on ${new Date(scheduledAt || '').toLocaleString()}. Contact theurganization@gmail.com to recover.`);
           }
 
           const { data: profile, error: profileError } = await supabase
