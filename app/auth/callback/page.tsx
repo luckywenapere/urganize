@@ -1,13 +1,12 @@
 'use client';
 
-import { Suspense, useEffect, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 
-function AuthCallbackContent() {
+export default function AuthCallbackPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { checkAuth } = useAuthStore();
   const handledRef = useRef(false);
 
@@ -22,11 +21,25 @@ function AuthCallbackContent() {
     handledRef.current = true;
 
     const handleCallback = async () => {
+      const timeout = window.setTimeout(() => {
+        router.replace('/auth?error=callback_timeout');
+      }, 7000);
+
       try {
-        const next = searchParams.get('next');
+        const url = new URL(window.location.href);
+        const next = url.searchParams.get('next');
         const safeNext = next && next.startsWith('/') ? next : '/dashboard';
 
-        // Ensure session is hydrated from hash fragments (OAuth implicit callback).
+        // Handle PKCE/code flow if present.
+        const code = url.searchParams.get('code');
+        if (code) {
+          const { error: codeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (codeError) {
+            console.error('Auth callback exchangeCodeForSession error:', codeError);
+          }
+        }
+
+        // Handle hash token flow if present.
         const hash = window.location.hash?.startsWith('#') ? window.location.hash.slice(1) : '';
         const hashParams = new URLSearchParams(hash);
         const accessToken = hashParams.get('access_token');
@@ -80,10 +93,11 @@ function AuthCallbackContent() {
           }
         }
 
-        if (searchParams.get('reauth') === '1') {
+        if (url.searchParams.get('reauth') === '1') {
           localStorage.setItem('urganize.reauth.ts', String(Date.now()));
         }
 
+        window.clearTimeout(timeout);
         router.replace(safeNext);
       } catch (error) {
         console.error('Auth callback fatal error:', error);
@@ -94,12 +108,13 @@ function AuthCallbackContent() {
           }, 120);
           return;
         }
+        window.clearTimeout(timeout);
         router.replace('/auth?error=callback_failed');
       }
     };
 
     handleCallback();
-  }, [router, checkAuth, searchParams]);
+  }, [router, checkAuth]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">
@@ -108,22 +123,5 @@ function AuthCallbackContent() {
         <p className="text-white">Signing you in...</p>
       </div>
     </div>
-  );
-}
-
-export default function AuthCallbackPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-black">
-          <div className="text-center">
-            <div className="animate-spin h-8 w-8 border-2 border-white border-t-transparent rounded-full mx-auto mb-4" />
-            <p className="text-white">Signing you in...</p>
-          </div>
-        </div>
-      }
-    >
-      <AuthCallbackContent />
-    </Suspense>
   );
 }
