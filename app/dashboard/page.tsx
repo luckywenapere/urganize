@@ -19,7 +19,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const loadData = async () => {
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        router.push('/auth');
+        return;
+      }
 
       const { data: releases } = await supabase
         .from('releases')
@@ -64,7 +68,7 @@ export default function DashboardPage() {
     };
 
     loadData();
-  }, [user]);
+  }, [router, user]);
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {

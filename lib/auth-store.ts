@@ -3,6 +3,59 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase, type Profile, handleSupabaseError } from './supabase/client';
 
+const buildFallbackProfile = (authUser: any): Omit<Profile, 'created_at' | 'updated_at'> => {
+  const email = authUser?.email || '';
+  const metadata = authUser?.user_metadata || {};
+  const name =
+    metadata.name ||
+    metadata.full_name ||
+    (email.includes('@') ? email.split('@')[0] : 'User');
+  const role = metadata.role || 'artist-manager';
+
+  return {
+    id: authUser.id,
+    name,
+    email,
+    role,
+    is_subscribed: false,
+  };
+};
+
+const getOrCreateProfile = async (authUser: any): Promise<Profile> => {
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', authUser.id)
+    .single();
+
+  if (!profileError && profile) {
+    return profile;
+  }
+
+  if (profileError?.code !== 'PGRST116') {
+    throw profileError;
+  }
+
+  const fallbackProfile = buildFallbackProfile(authUser);
+  const { error: insertError } = await supabase
+    .from('profiles')
+    .upsert(fallbackProfile, { onConflict: 'id' });
+
+  if (insertError) throw insertError;
+
+  const { data: createdProfile, error: createdError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', authUser.id)
+    .single();
+
+  if (createdError || !createdProfile) {
+    throw createdError || new Error('Could not load profile');
+  }
+
+  return createdProfile;
+};
+
 const getScheduledDeletion = (metadata: Record<string, any> | undefined | null): string | null => {
   const value = metadata?.scheduled_deletion_at;
   return typeof value === 'string' ? value : null;
@@ -65,13 +118,7 @@ export const useAuthStore = create<AuthState>()(
               return;
             }
 
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-
-            if (profileError) throw profileError;
+            const profile = await getOrCreateProfile(session.user);
 
             if (profile) {
               let needsOnboarding = true;
@@ -143,13 +190,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(`Account is scheduled for deletion on ${new Date(scheduledAt || '').toLocaleString()}. Contact theurganization@gmail.com to recover.`);
           }
 
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', data.user.id)
-            .single();
-
-          if (profileError) throw profileError;
+          const profile = await getOrCreateProfile(data.user);
 
           if (profile) {
             set({ 
@@ -319,12 +360,16 @@ export const useAuthStore = create<AuthState>()(
 
 if (typeof window !== 'undefined') {
   supabase.auth.onAuthStateChange((event) => {
-    const store = useAuthStore.getState();
-    
     if (event === 'SIGNED_OUT') {
-      store.logout();
+      useAuthStore.setState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        needsOnboarding: true,
+        error: null,
+      });
     } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-      store.checkAuth();
+      useAuthStore.getState().checkAuth();
     }
   });
 }
