@@ -2,10 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
-import { PaystackButton } from '@/components/PaystackButton';
+
+const PaystackButton = dynamic(
+  () => import('@/components/PaystackButton').then((mod) => mod.PaystackButton),
+  { ssr: false }
+);
 
 type PlanId = 'monthly' | '8months' | 'yearly';
 
