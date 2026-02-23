@@ -12,6 +12,22 @@ function AuthCallbackContent() {
 
   useEffect(() => {
     const handleCallback = async () => {
+      // Ensure session is hydrated from hash fragments (Google OAuth implicit callback).
+      const hash = window.location.hash?.startsWith('#') ? window.location.hash.slice(1) : '';
+      const hashParams = new URLSearchParams(hash);
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+
+      if (accessToken && refreshToken) {
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (setSessionError) {
+          console.error('Auth callback setSession error:', setSessionError);
+        }
+      }
+
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (error) {

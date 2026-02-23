@@ -3,6 +3,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase, type Profile, handleSupabaseError } from './supabase/client';
 
+let authCheckInFlight: Promise<void> | null = null;
+
 const buildFallbackProfile = (authUser: any): Omit<Profile, 'created_at' | 'updated_at'> => {
   const email = authUser?.email || '';
   const metadata = authUser?.user_metadata || {};
@@ -68,6 +70,12 @@ const isScheduledDeletionActive = (metadata: Record<string, any> | undefined | n
   return Number.isFinite(scheduledTime) && scheduledTime > Date.now();
 };
 
+const isAbortError = (error: any): boolean => {
+  const message = String(error?.message || '').toLowerCase();
+  const name = String(error?.name || '').toLowerCase();
+  return name === 'aborterror' || message.includes('aborted') || message.includes('operation was aborted');
+};
+
 interface AuthState {
   user: Profile | null;
   isAuthenticated: boolean;
@@ -97,7 +105,12 @@ export const useAuthStore = create<AuthState>()(
       setNeedsOnboarding: (needsOnboarding: boolean) => set({ needsOnboarding }),
 
       checkAuth: async () => {
-        try {
+        if (authCheckInFlight) {
+          return authCheckInFlight;
+        }
+
+        authCheckInFlight = (async () => {
+          try {
           set({ isLoading: true });
           
           const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -156,7 +169,13 @@ export const useAuthStore = create<AuthState>()(
           }
           
           set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, error: null });
-        } catch (error: any) {
+          } catch (error: any) {
+          if (isAbortError(error)) {
+            // Parallel auth checks during OAuth callback can cancel each other.
+            // Do not treat cancellation as an auth failure.
+            set((state) => ({ isLoading: false, error: state.error }));
+            return;
+          }
           console.error('Auth check failed:', error);
           const errorMessage = handleSupabaseError(error);
           set({ 
@@ -166,7 +185,12 @@ export const useAuthStore = create<AuthState>()(
             needsOnboarding: true,
             error: errorMessage 
           });
-        }
+          } finally {
+            authCheckInFlight = null;
+          }
+        })();
+
+        return authCheckInFlight;
       },
 
       login: async (email: string, password: string) => {
