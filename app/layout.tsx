@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
 import { PostAuthScreen } from '@/components/PostAuthScreen';
 import "./globals.css";
@@ -42,6 +43,7 @@ export default function RootLayout({
             <span>Quick actions</span>
           </div>
         )}
+        <Analytics />
       </body>
     </html>
   );
