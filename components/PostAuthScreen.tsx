@@ -781,6 +781,10 @@ export function PostAuthScreen() {
     router.push('/dashboard');
   };
 
+  const handleSeeTaskAgain = async () => {
+    await setStepPersisted(7);
+  };
+
   const handleToProofSelection = async () => {
     await handleMarkDone();
   };
@@ -1374,7 +1378,28 @@ export function PostAuthScreen() {
               Logout
             </button>
 
-            <h1 className="text-[clamp(2rem,4.5vw,3.2rem)] tracking-tight">Submit..</h1>
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-4 sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <p className="text-xs uppercase tracking-wide text-white/55">Task recap</p>
+                  <span className="rounded-full border border-emerald-300/30 bg-emerald-500/15 px-2 py-1 text-[11px] font-medium text-emerald-200">
+                    Task complete
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={handleSeeTaskAgain}
+                  className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/20 disabled:opacity-40"
+                >
+                  See the task again
+                </button>
+              </div>
+              <p className="mt-3 text-lg font-semibold text-white">{taskTitle}</p>
+              <p className="mt-1 text-sm text-white/75">{taskOutcome}</p>
+            </div>
+
+            <h1 className="mt-8 text-[clamp(2rem,4.5vw,3.2rem)] tracking-tight">Submit..</h1>
             <p className="mt-2 text-sm text-white/65">
               Share what happened so the next task quality gets sharper. Proof is optional, but detailed feedback is required.
             </p>
