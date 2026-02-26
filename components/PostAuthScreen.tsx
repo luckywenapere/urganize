@@ -1,13 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 
 type RoleOption = 'manager' | 'artist-team' | 'artist';
-type ProofType = 'screenshot' | 'link' | 'text';
+type ProofType = 'none' | 'screenshot' | 'video' | 'link' | 'text';
+const PROOF_TYPE_OPTIONS: ProofType[] = ['none', 'screenshot', 'video', 'link', 'text'];
 
 const GENRE_OPTIONS = [
   'Afrobeats',
@@ -85,6 +86,7 @@ const MIN_GOAL_CHARS = 20;
 const MIN_BUDGET = 100;
 const MAX_BUDGET = 100000000;
 const DEFAULT_PLAN_DURATION_DAYS = 30;
+const MIN_FEEDBACK_CHARS = 20;
 
 const formatDateInput = (value: Date): string => {
   const year = value.getFullYear();
@@ -134,9 +136,10 @@ export function PostAuthScreen() {
   const [taskId, setTaskId] = useState<string | null>(null);
 
   const [showPricingSheet, setShowPricingSheet] = useState(false);
-  const [selectedProof, setSelectedProof] = useState<ProofType>('screenshot');
+  const [selectedProof, setSelectedProof] = useState<ProofType>('none');
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofLink, setProofLink] = useState('');
+  const [proofText, setProofText] = useState('');
 
   const [artistName, setArtistName] = useState('');
   const [genre, setGenre] = useState('');
@@ -150,12 +153,84 @@ export function PostAuthScreen() {
   const [timeline, setTimeline] = useState('');
   const [deadlineDate, setDeadlineDate] = useState('');
   const [stepsText, setStepsText] = useState('');
+  const [whatYouTried, setWhatYouTried] = useState('');
   const [whatHappened, setWhatHappened] = useState('');
+  const [resultsMode, setResultsMode] = useState<'tracked' | 'not-tracked'>('tracked');
+  const [resultsMetrics, setResultsMetrics] = useState('');
+  const [blockersNext, setBlockersNext] = useState('');
+  const [lastDraftSavedAt, setLastDraftSavedAt] = useState<number | null>(null);
 
   const [taskTitle, setTaskTitle] = useState('Single task');
   const [taskOutcome, setTaskOutcome] = useState('Expected outcome');
+  const feedbackDraftLoadedRef = useRef<string>('');
+
+  const feedbackDraftKey = useMemo(() => {
+    if (!user?.id || !releaseId || !taskId) return '';
+    return `urganize.feedbackDraft.${user.id}.${releaseId}.${taskId}`;
+  }, [releaseId, taskId, user?.id]);
 
   const resetError = () => setError('');
+
+  useEffect(() => {
+    if (!feedbackDraftKey) {
+      feedbackDraftLoadedRef.current = '';
+      return;
+    }
+    if (feedbackDraftLoadedRef.current === feedbackDraftKey) return;
+    feedbackDraftLoadedRef.current = feedbackDraftKey;
+
+    const rawDraft = localStorage.getItem(feedbackDraftKey);
+    if (!rawDraft) return;
+
+    try {
+      const draft = JSON.parse(rawDraft) as Record<string, unknown>;
+      if (typeof draft.selectedProof === 'string' && PROOF_TYPE_OPTIONS.includes(draft.selectedProof as ProofType)) {
+        setSelectedProof(draft.selectedProof as ProofType);
+      }
+      if (typeof draft.proofLink === 'string') setProofLink(draft.proofLink);
+      if (typeof draft.proofText === 'string') setProofText(draft.proofText);
+      if (typeof draft.whatYouTried === 'string') setWhatYouTried(draft.whatYouTried);
+      if (typeof draft.whatHappened === 'string') setWhatHappened(draft.whatHappened);
+      if (draft.resultsMode === 'tracked' || draft.resultsMode === 'not-tracked') {
+        setResultsMode(draft.resultsMode);
+      }
+      if (typeof draft.resultsMetrics === 'string') setResultsMetrics(draft.resultsMetrics);
+      if (typeof draft.blockersNext === 'string') setBlockersNext(draft.blockersNext);
+      if (typeof draft.savedAt === 'number' && Number.isFinite(draft.savedAt)) {
+        setLastDraftSavedAt(draft.savedAt);
+      }
+    } catch {
+      // Ignore malformed local draft payloads.
+    }
+  }, [feedbackDraftKey]);
+
+  useEffect(() => {
+    if (!feedbackDraftKey) return;
+    const savedAt = Date.now();
+    const draft = {
+      selectedProof,
+      proofLink,
+      proofText,
+      whatYouTried,
+      whatHappened,
+      resultsMode,
+      resultsMetrics,
+      blockersNext,
+      savedAt,
+    };
+    localStorage.setItem(feedbackDraftKey, JSON.stringify(draft));
+    setLastDraftSavedAt(savedAt);
+  }, [
+    feedbackDraftKey,
+    selectedProof,
+    proofLink,
+    proofText,
+    whatYouTried,
+    whatHappened,
+    resultsMode,
+    resultsMetrics,
+    blockersNext,
+  ]);
 
   const parseCareerStage = (value: string): 'emerging' | 'growing' | 'established' => {
     const normalized = value.trim().toLowerCase();
@@ -262,7 +337,7 @@ export function PostAuthScreen() {
         setDeadlineDate(parseStoredDate(requestedProfile.hard_deadline));
         setTimeline(requestedProfile.deadline_reason || '');
         setStepsText(requestedProfile.other_goals || '');
-        setStep(Math.max(requestedProfile.setup_step || 2, 2));
+        setStep(Math.min(9, Math.max(requestedProfile.setup_step || 2, 2)));
         return requestedRelease.id;
       }
 
@@ -318,7 +393,7 @@ export function PostAuthScreen() {
         const release = existingReleases.find((item) => item.id === activeProfile.release_id);
         if (release?.artist_name) setArtistName(release.artist_name);
 
-        setStep(Math.max(activeProfile.setup_step || 2, 2));
+        setStep(Math.min(9, Math.max(activeProfile.setup_step || 2, 2)));
         return activeProfile.release_id;
       }
     }
@@ -710,15 +785,18 @@ export function PostAuthScreen() {
     await handleMarkDone();
   };
 
-  const handleProofSubmit = async () => {
-    await setStepPersisted(10);
-  };
-
   const uploadProofIfNeeded = async () => {
     if (!user || !releaseId || !taskId) return '';
-    if (selectedProof !== 'screenshot' || !proofFile) return '';
+    if ((selectedProof !== 'screenshot' && selectedProof !== 'video') || !proofFile) return '';
 
-    const extension = proofFile.name.split('.').pop() || 'png';
+    if (selectedProof === 'screenshot' && !proofFile.type.startsWith('image/')) {
+      throw new Error('Upload an image file for screenshot proof.');
+    }
+    if (selectedProof === 'video' && !proofFile.type.startsWith('video/')) {
+      throw new Error('Upload a video file for video proof.');
+    }
+
+    const extension = proofFile.name.split('.').pop() || (selectedProof === 'video' ? 'mp4' : 'png');
     const filePath = `${user.id}/${releaseId}/${taskId}-${Date.now()}.${extension}`;
 
     const { error: uploadError } = await supabase.storage
@@ -733,21 +811,70 @@ export function PostAuthScreen() {
   const completeOnboarding = async () => {
     if (!releaseId || !taskId) return;
 
+    const attempted = whatYouTried.trim();
+    const happened = whatHappened.trim();
+    const results = resultsMetrics.trim();
+    const blockers = blockersNext.trim();
+    const proofLinkValue = proofLink.trim();
+    const proofTextValue = proofText.trim();
+
+    if (attempted.length < MIN_FEEDBACK_CHARS) {
+      setError(`Tell us what you tried in at least ${MIN_FEEDBACK_CHARS} characters.`);
+      return;
+    }
+    if (happened.length < MIN_FEEDBACK_CHARS) {
+      setError(`Tell us what happened in at least ${MIN_FEEDBACK_CHARS} characters.`);
+      return;
+    }
+    if (resultsMode === 'tracked' && results.length < 3) {
+      setError('Add at least one measurable result, or choose "Not tracked".');
+      return;
+    }
+    if (blockers.length < MIN_FEEDBACK_CHARS) {
+      setError(`Share blockers/next steps in at least ${MIN_FEEDBACK_CHARS} characters.`);
+      return;
+    }
+    if (selectedProof === 'link' && !proofLinkValue) {
+      setError('Add a proof link or switch proof type to "No proof".');
+      return;
+    }
+    if (selectedProof === 'text' && proofTextValue.length < MIN_FEEDBACK_CHARS) {
+      setError(`Add proof notes in at least ${MIN_FEEDBACK_CHARS} characters, or choose a different proof type.`);
+      return;
+    }
+    if ((selectedProof === 'screenshot' || selectedProof === 'video') && !proofFile) {
+      setError('Upload the selected proof file, or switch proof type to "No proof".');
+      return;
+    }
+
     setIsBusy(true);
     try {
       const fileUrl = await uploadProofIfNeeded();
       const proofPayload =
-        selectedProof === 'link'
-          ? proofLink
-          : selectedProof === 'text'
-            ? whatHappened
-            : 'Screenshot proof uploaded';
+        selectedProof === 'none'
+          ? 'No proof provided'
+          : selectedProof === 'link'
+            ? `Proof link: ${proofLinkValue}`
+            : selectedProof === 'text'
+              ? `Proof notes: ${proofTextValue}`
+              : selectedProof === 'video'
+                ? 'Video proof uploaded'
+                : 'Screenshot proof uploaded';
+
+      const resultsSummary = resultsMode === 'not-tracked' ? 'Not tracked' : results;
+      const structuredFeedback = [
+        `What you tried:\n${attempted}`,
+        `What happened:\n${happened}`,
+        `Results/metrics:\n${resultsSummary}`,
+        `What blocked you / improve next:\n${blockers}`,
+        `Proof:\n${proofPayload}`,
+      ].join('\n\n');
 
       await supabase
         .from('ai_tasks')
         .update({
           status: 'completed',
-          user_input: `${proofPayload}\n\n${whatHappened}`.trim(),
+          user_input: structuredFeedback,
           user_input_file_url: fileUrl || null,
           completed_at: new Date().toISOString(),
         })
@@ -767,10 +894,14 @@ export function PostAuthScreen() {
         .update({ status: 'in-progress' })
         .eq('id', releaseId);
 
+      if (feedbackDraftKey) {
+        localStorage.removeItem(feedbackDraftKey);
+      }
+
       setNeedsOnboarding(false);
-      router.push('/dashboard');
+      router.push(`/dashboard/plans/${releaseId}`);
     } catch (err: any) {
-      setError(err?.message || 'Failed to submit proof');
+      setError(err?.message || 'Failed to submit feedback');
     } finally {
       setIsBusy(false);
     }
@@ -805,11 +936,30 @@ export function PostAuthScreen() {
     listenerPlatforms.length > 0 &&
     budgetIsValid &&
     (deadlineDate.length > 0 || timeline.trim().length > 0);
-  const canContinueProof = useMemo(() => {
-    if (selectedProof === 'screenshot') return !!proofFile;
-    if (selectedProof === 'link') return !!proofLink.trim();
-    return true;
-  }, [proofFile, proofLink, selectedProof]);
+  const feedbackCoreReady =
+    whatYouTried.trim().length >= MIN_FEEDBACK_CHARS &&
+    whatHappened.trim().length >= MIN_FEEDBACK_CHARS &&
+    blockersNext.trim().length >= MIN_FEEDBACK_CHARS &&
+    (resultsMode === 'not-tracked' || resultsMetrics.trim().length >= 3);
+  const proofSelectionReady =
+    selectedProof === 'none' ||
+    (selectedProof === 'link' && proofLink.trim().length > 0) ||
+    (selectedProof === 'text' && proofText.trim().length >= MIN_FEEDBACK_CHARS) ||
+    ((selectedProof === 'screenshot' || selectedProof === 'video') && !!proofFile);
+  const canSubmitFeedback = feedbackCoreReady && proofSelectionReady;
+  const hasFeedbackDraftContent =
+    selectedProof !== 'none' ||
+    proofLink.trim().length > 0 ||
+    proofText.trim().length > 0 ||
+    whatYouTried.trim().length > 0 ||
+    whatHappened.trim().length > 0 ||
+    resultsMetrics.trim().length > 0 ||
+    blockersNext.trim().length > 0 ||
+    resultsMode === 'not-tracked';
+  const draftSavedTimeLabel = useMemo(() => {
+    if (!lastDraftSavedAt) return '';
+    return new Date(lastDraftSavedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }, [lastDraftSavedAt]);
 
   if (isBootstrapping) {
     return (
@@ -824,7 +974,7 @@ export function PostAuthScreen() {
   return (
     <main className={shellClass}>
       <div className="mx-auto flex min-h-screen w-full max-w-[980px] flex-col px-6 py-12 sm:px-12">
-        {step > 0 && step <= 10 && (
+        {step > 0 && step <= 9 && (
           <button
             type="button"
             onClick={handleBack}
@@ -1212,22 +1362,94 @@ export function PostAuthScreen() {
         )}
 
         {step === 9 && (
-          <div className="mx-auto mt-[20vh] w-full max-w-[700px]">
+          <div className="mx-auto mt-16 w-full max-w-[820px] rounded-2xl border border-white/10 bg-[#02090d] p-6 sm:p-8">
             <button
               type="button"
               onClick={async () => {
                 await logout();
                 router.push('/auth');
               }}
-              className="absolute right-6 top-8 text-[clamp(2rem,4vw,3rem)]"
+              className="absolute right-6 top-8 text-sm text-white/70 hover:text-white"
             >
               Logout
             </button>
-            <div className="space-y-8">
-              <div className="space-y-4 text-[clamp(2rem,4.6vw,3.4rem)]">
-                <button type="button" onClick={() => setSelectedProof('screenshot')} className={selectedProof === 'screenshot' ? 'text-white' : 'text-white/60'}>Screenshot</button>
-                <button type="button" onClick={() => setSelectedProof('link')} className={selectedProof === 'link' ? 'text-white' : 'text-white/60'}>Link</button>
-                <button type="button" onClick={() => setSelectedProof('text')} className={selectedProof === 'text' ? 'text-white' : 'text-white/60'}>Text</button>
+
+            <h1 className="text-[clamp(2rem,4.5vw,3.2rem)] tracking-tight">Submit..</h1>
+            <p className="mt-2 text-sm text-white/65">
+              Share what happened so the next task quality gets sharper. Proof is optional, but detailed feedback is required.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/70">
+              <span>Draft auto-saves on this device.</span>
+              <span className={hasFeedbackDraftContent && draftSavedTimeLabel ? 'text-emerald-300' : 'text-white/45'}>
+                {hasFeedbackDraftContent && draftSavedTimeLabel ? `Saved at ${draftSavedTimeLabel}` : 'Start typing to save'}
+              </span>
+            </div>
+
+            <div className="mt-8 space-y-6">
+              <div>
+                <p className="mb-3 text-xs uppercase tracking-wide text-white/55">Proof (Optional)</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedProof('none');
+                      setProofFile(null);
+                    }}
+                    className={`rounded-full border px-3 py-1 text-sm ${
+                      selectedProof === 'none' ? 'border-white/40 bg-white/10 text-white' : 'border-white/15 text-white/70 hover:bg-white/10'
+                    }`}
+                  >
+                    No proof
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedProof('screenshot');
+                      setProofFile(null);
+                    }}
+                    className={`rounded-full border px-3 py-1 text-sm ${
+                      selectedProof === 'screenshot' ? 'border-white/40 bg-white/10 text-white' : 'border-white/15 text-white/70 hover:bg-white/10'
+                    }`}
+                  >
+                    Screenshot
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedProof('video');
+                      setProofFile(null);
+                    }}
+                    className={`rounded-full border px-3 py-1 text-sm ${
+                      selectedProof === 'video' ? 'border-white/40 bg-white/10 text-white' : 'border-white/15 text-white/70 hover:bg-white/10'
+                    }`}
+                  >
+                    Video
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedProof('link');
+                      setProofFile(null);
+                    }}
+                    className={`rounded-full border px-3 py-1 text-sm ${
+                      selectedProof === 'link' ? 'border-white/40 bg-white/10 text-white' : 'border-white/15 text-white/70 hover:bg-white/10'
+                    }`}
+                  >
+                    Link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedProof('text');
+                      setProofFile(null);
+                    }}
+                    className={`rounded-full border px-3 py-1 text-sm ${
+                      selectedProof === 'text' ? 'border-white/40 bg-white/10 text-white' : 'border-white/15 text-white/70 hover:bg-white/10'
+                    }`}
+                  >
+                    Notes
+                  </button>
+                </div>
               </div>
 
               {selectedProof === 'screenshot' && (
@@ -1235,38 +1457,123 @@ export function PostAuthScreen() {
                   type="file"
                   accept="image/*"
                   onChange={(e) => setProofFile(e.target.files?.[0] || null)}
-                  className="block w-full text-base text-white/80"
+                  className="block w-full text-sm text-white/80"
+                />
+              )}
+              {selectedProof === 'video' && (
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                  className="block w-full text-sm text-white/80"
                 />
               )}
               {selectedProof === 'link' && (
                 <input
                   type="url"
                   className={fieldClass}
-                  placeholder="https://"
+                  placeholder="https://example.com/proof"
                   value={proofLink}
                   onChange={(e) => setProofLink(e.target.value)}
                 />
               )}
-            </div>
-            <button type="button" disabled={!canContinueProof} onClick={handleProofSubmit} className="mt-12 self-center text-[clamp(2.1rem,4.5vw,3.5rem)] disabled:opacity-40">
-              Submit..
-            </button>
-          </div>
-        )}
+              {selectedProof === 'text' && (
+                <textarea
+                  className="min-h-[120px] w-full border border-white/5 bg-[#02090d] p-4 text-base text-white/90 outline-none placeholder:text-white/25"
+                  placeholder="Paste short proof notes or excerpt here."
+                  value={proofText}
+                  onChange={(e) => setProofText(e.target.value)}
+                />
+              )}
 
-        {step === 10 && (
-          <>
-            <h1 className="mt-[18vh] text-[clamp(2.4rem,5.6vw,4.4rem)] tracking-tight">What happened?</h1>
-            <textarea
-              className="mt-10 min-h-[230px] w-full border border-white/5 bg-[#02090d] p-4 text-xl outline-none"
-              value={whatHappened}
-              onChange={(e) => setWhatHappened(e.target.value)}
-              placeholder="Example: We posted 5 clips, reached 42k views, and saved the best-performing hook for next week."
-            />
-            <button type="button" disabled={isBusy} onClick={completeOnboarding} className="mt-12 self-center text-[clamp(2.1rem,4.5vw,3.5rem)]">
-              Submit..
-            </button>
-          </>
+              <div className="space-y-2">
+                <label className="text-sm text-white/80">What you tried *</label>
+                <textarea
+                  className="min-h-[120px] w-full border border-white/5 bg-[#02090d] p-4 text-base text-white/90 outline-none placeholder:text-white/25"
+                  placeholder="Example: I posted 3 teaser clips to TikTok and 2 to Reels using the same hook."
+                  value={whatYouTried}
+                  onChange={(e) => setWhatYouTried(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm text-white/80">What happened *</label>
+                <textarea
+                  className="min-h-[120px] w-full border border-white/5 bg-[#02090d] p-4 text-base text-white/90 outline-none placeholder:text-white/25"
+                  placeholder="Describe audience response and what worked or did not work."
+                  value={whatHappened}
+                  onChange={(e) => setWhatHappened(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-sm text-white/80">Results / metrics *</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setResultsMode('tracked')}
+                    className={`rounded-full border px-3 py-1 text-sm ${
+                      resultsMode === 'tracked' ? 'border-white/40 bg-white/10 text-white' : 'border-white/15 text-white/70 hover:bg-white/10'
+                    }`}
+                  >
+                    I tracked results
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setResultsMode('not-tracked')}
+                    className={`rounded-full border px-3 py-1 text-sm ${
+                      resultsMode === 'not-tracked' ? 'border-white/40 bg-white/10 text-white' : 'border-white/15 text-white/70 hover:bg-white/10'
+                    }`}
+                  >
+                    Not tracked
+                  </button>
+                </div>
+                {resultsMode === 'tracked' && (
+                  <textarea
+                    className="min-h-[110px] w-full border border-white/5 bg-[#02090d] p-4 text-base text-white/90 outline-none placeholder:text-white/25"
+                    placeholder="Example: 12,420 views, 410 saves, CTR 3.4%, 98 pre-saves."
+                    value={resultsMetrics}
+                    onChange={(e) => setResultsMetrics(e.target.value)}
+                  />
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm text-white/80">What blocked you / improve next *</label>
+                <textarea
+                  className="min-h-[120px] w-full border border-white/5 bg-[#02090d] p-4 text-base text-white/90 outline-none placeholder:text-white/25"
+                  placeholder="Example: Posting late reduced reach. Next time I will schedule uploads before peak hours."
+                  value={blockersNext}
+                  onChange={(e) => setBlockersNext(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {!canSubmitFeedback && (
+              <p className="mt-4 text-xs text-white/60">
+                Fill all required feedback fields before submitting.
+              </p>
+            )}
+
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                disabled={isBusy || !canSubmitFeedback}
+                onClick={completeOnboarding}
+                className="rounded-xl border border-emerald-400/35 bg-emerald-500/20 px-6 py-3 text-base font-semibold text-white transition hover:bg-emerald-500/30 disabled:opacity-40"
+              >
+                Submit..
+              </button>
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={handleGoToDashboard}
+                className="rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/20 disabled:opacity-40"
+              >
+                Go to Dashboard
+              </button>
+            </div>
+          </div>
         )}
 
         {error && (
