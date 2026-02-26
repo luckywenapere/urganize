@@ -17,7 +17,7 @@ type PlanSummary = {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, logout, setNeedsOnboarding } = useAuthStore();
+  const { user, logout, setNeedsOnboarding, isLoading: authLoading } = useAuthStore();
 
   const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,9 +33,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const loadData = async () => {
+      if (authLoading) return;
       if (!user) {
         setLoading(false);
-        router.push('/auth');
+        router.replace('/auth');
         return;
       }
 
@@ -83,7 +84,7 @@ export default function DashboardPage() {
     };
 
     loadData();
-  }, [router, user]);
+  }, [authLoading, router, user]);
 
   const createNewPlan = async () => {
     if (!user || isCreatingPlan) return;

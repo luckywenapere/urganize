@@ -36,7 +36,7 @@ export default function PlanDashboardPage() {
   const router = useRouter();
   const params = useParams<{ planId: string }>();
   const planId = Array.isArray(params?.planId) ? params.planId[0] : params?.planId;
-  const { user, logout, setNeedsOnboarding } = useAuthStore();
+  const { user, logout, setNeedsOnboarding, isLoading: authLoading } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -48,6 +48,7 @@ export default function PlanDashboardPage() {
 
   useEffect(() => {
     const loadPlan = async () => {
+      if (authLoading) return;
       if (!planId) {
         setError('Plan not found');
         setLoading(false);
@@ -55,7 +56,7 @@ export default function PlanDashboardPage() {
       }
 
       if (!user) {
-        router.push('/auth');
+        router.replace('/auth');
         setLoading(false);
         return;
       }
@@ -147,7 +148,7 @@ export default function PlanDashboardPage() {
     };
 
     loadPlan();
-  }, [planId, router, user]);
+  }, [authLoading, planId, router, user]);
 
   const timelineMetrics = useMemo(() => {
     const now = Date.now();

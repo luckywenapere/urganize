@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
@@ -14,7 +14,7 @@ type AuthMode = 'login' | 'role' | 'signup';
 
 export default function AuthPage() {
   const router = useRouter();
-  const { login, signup, loginWithGoogle } = useAuthStore();
+  const { login, signup, loginWithGoogle, isAuthenticated, isLoading: authLoading } = useAuthStore();
   
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
@@ -25,6 +25,13 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [hasManager, setHasManager] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (isAuthenticated) {
+      router.replace('/dashboard');
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

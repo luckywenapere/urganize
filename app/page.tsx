@@ -7,14 +7,15 @@ import { LogoIcon } from '@/components/ui/Logo';
 
 export default function HomePage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuthStore();
 
   useEffect(() => {
+    if (isLoading) return;
     const timer = setTimeout(() => {
-      router.push(isAuthenticated ? '/dashboard' : '/auth');
+      router.replace(isAuthenticated ? '/dashboard' : '/auth');
     }, 600);
     return () => clearTimeout(timer);
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isLoading, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg-base relative">

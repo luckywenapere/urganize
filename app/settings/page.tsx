@@ -29,7 +29,7 @@ const planOptions: Array<{ id: PlanId; label: string; amount: number; descriptio
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, logout, checkAuth } = useAuthStore();
+  const { user, logout, checkAuth, isLoading: authLoading } = useAuthStore();
 
   const [name, setName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
@@ -57,13 +57,14 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
-      router.push('/auth');
+      router.replace('/auth');
       return;
     }
 
     setName(user.name || '');
-  }, [router, user]);
+  }, [authLoading, router, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -225,6 +226,16 @@ export default function SettingsPage() {
       setIsDeleting(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <main className="min-h-screen bg-black text-white">
+        <div className="mx-auto w-full max-w-3xl px-6 py-10">
+          <p className="text-white/75">Loading settings...</p>
+        </div>
+      </main>
+    );
+  }
 
   if (!user) return null;
 
