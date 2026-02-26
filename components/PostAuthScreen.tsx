@@ -112,9 +112,51 @@ const addDaysISO = (base: string | Date, days: number): string => {
 
 const MIN_GENERATION_MS = 7000;
 const PRICING_SHEET_MS = 2500;
-const PaystackButton = dynamic(
-  () => import('@/components/PaystackButton').then((mod) => mod.PaystackButton),
-  { ssr: false }
+
+const Step0Intro = dynamic(() => import('@/components/onboarding/steps/Step0Intro').then((mod) => mod.Step0Intro), {
+  ssr: false,
+});
+const Step1Role = dynamic(() => import('@/components/onboarding/steps/Step1Role').then((mod) => mod.Step1Role), {
+  ssr: false,
+});
+const Step2ArtistDetails = dynamic(
+  () => import('@/components/onboarding/steps/Step2ArtistDetails').then((mod) => mod.Step2ArtistDetails),
+  {
+    ssr: false,
+  }
+);
+const Step3Goal = dynamic(() => import('@/components/onboarding/steps/Step3Goal').then((mod) => mod.Step3Goal), {
+  ssr: false,
+});
+const Step4ProfileInputs = dynamic(
+  () => import('@/components/onboarding/steps/Step4ProfileInputs').then((mod) => mod.Step4ProfileInputs),
+  {
+    ssr: false,
+  }
+);
+const Step5ExistingSteps = dynamic(
+  () => import('@/components/onboarding/steps/Step5ExistingSteps').then((mod) => mod.Step5ExistingSteps),
+  {
+    ssr: false,
+  }
+);
+const Step6GeneratingTask = dynamic(
+  () => import('@/components/onboarding/steps/Step6GeneratingTask').then((mod) => mod.Step6GeneratingTask),
+  {
+    ssr: false,
+  }
+);
+const Step7TaskStart = dynamic(
+  () => import('@/components/onboarding/steps/Step7TaskStart').then((mod) => mod.Step7TaskStart),
+  {
+    ssr: false,
+  }
+);
+const Step8TaskDone = dynamic(
+  () => import('@/components/onboarding/steps/Step8TaskDone').then((mod) => mod.Step8TaskDone),
+  {
+    ssr: false,
+  }
 );
 
 const FeedbackSubmitStep = dynamic(
@@ -798,6 +840,11 @@ export function PostAuthScreen() {
     router.push('/dashboard');
   };
 
+  const handleLogoutToAuth = async () => {
+    await logout();
+    router.push('/auth');
+  };
+
   const handleSeeTaskAgain = async () => {
     await setStepPersisted(7);
   };
@@ -935,8 +982,7 @@ export function PostAuthScreen() {
 
   const handleBack = async () => {
     if (step === 0 || step === 1) {
-      await logout();
-      router.push('/auth');
+      await handleLogoutToAuth();
       return;
     }
 
@@ -1010,381 +1056,112 @@ export function PostAuthScreen() {
           </button>
         )}
 
-        {step === 0 && (
-          <button
-            type="button"
-            onClick={() => setStep(1)}
-            className="mt-[44vh] self-center text-[clamp(2.2rem,5.5vw,3.8rem)] text-white/95"
-          >
-            Tap to Continue
-          </button>
-        )}
+        {step === 0 && <Step0Intro onContinue={() => setStep(1)} />}
 
         {step === 1 && (
-          <>
-            <h1 className="mt-[20vh] text-[clamp(2.4rem,6.2vw,5rem)] tracking-tight">Select Your Role.</h1>
-            <div className="mt-20 space-y-4">
-              <button type="button" onClick={() => handleSelectRole('manager')} disabled={isBusy} className="flex w-full items-center justify-between text-left text-[clamp(2rem,4.5vw,3.3rem)]">
-                <span>Artist Manager</span>
-                <span className="h-0 w-0 border-y-[18px] border-y-transparent border-r-[34px] border-r-[#138f10]" />
-              </button>
-              <button type="button" onClick={() => handleSelectRole('artist-team')} disabled={isBusy} className="flex w-full items-center justify-between text-left text-[clamp(2rem,4.5vw,3.3rem)]">
-                <span>Artist Team</span>
-                <span className="h-0 w-0 border-y-[18px] border-y-transparent border-r-[34px] border-r-[#138f10]" />
-              </button>
-              <button type="button" onClick={() => handleSelectRole('artist')} disabled={isBusy} className="flex w-full items-center justify-between text-left text-[clamp(2rem,4.5vw,3.3rem)]">
-                <span>Artist</span>
-                <span className="h-0 w-0 border-y-[18px] border-y-transparent border-r-[34px] border-r-[#138f10]" />
-              </button>
-            </div>
-          </>
+          <Step1Role
+            isBusy={isBusy}
+            onSelectRole={handleSelectRole}
+          />
         )}
 
         {step === 2 && (
-          <>
-            <h1 className="mt-[18vh] text-[clamp(2.7rem,6.4vw,5rem)] tracking-tight">Add Artist</h1>
-            <div className="mx-auto mt-10 grid w-full max-w-[720px] grid-cols-1 gap-5">
-              <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Artist Name</label>
-              <input
-                className={fieldClass}
-                value={artistName}
-                onChange={(e) => setArtistName(e.target.value)}
-                placeholder="e.g. Tems"
-                autoComplete="off"
-              />
-              <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Genre</label>
-              <div>
-                <input
-                  className={fieldClass}
-                  value={genre}
-                  onChange={(e) => setGenre(e.target.value)}
-                  list="genre-options"
-                  placeholder="Pick or type a genre (e.g. Afrobeats)"
-                  autoComplete="off"
-                />
-                <datalist id="genre-options">
-                  {GENRE_OPTIONS.map((option) => (
-                    <option key={option} value={option} />
-                  ))}
-                </datalist>
-              </div>
-              <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Primary Platform</label>
-              <div>
-                <input
-                  className={fieldClass}
-                  value={primaryPlatform}
-                  onChange={(e) => setPrimaryPlatform(e.target.value)}
-                  onBlur={syncPrimaryPlatformToAudiencePlatforms}
-                  list="primary-platform-options"
-                  placeholder="Pick or type a channel (e.g. TikTok)"
-                  autoComplete="off"
-                />
-                <datalist id="primary-platform-options">
-                  {PRIMARY_PLATFORM_OPTIONS.map((option) => (
-                    <option key={option} value={option} />
-                  ))}
-                </datalist>
-              </div>
-            </div>
-            <button type="button" disabled={!canContinueArtist || isBusy} onClick={handleSaveAddArtist} className="mt-16 self-center text-[clamp(2.2rem,5vw,3.8rem)] disabled:opacity-40">
-              Tap to Continue
-            </button>
-          </>
+          <Step2ArtistDetails
+            fieldClass={fieldClass}
+            artistName={artistName}
+            genre={genre}
+            primaryPlatform={primaryPlatform}
+            genreOptions={GENRE_OPTIONS}
+            primaryPlatformOptions={PRIMARY_PLATFORM_OPTIONS}
+            isBusy={isBusy}
+            canContinueArtist={canContinueArtist}
+            onArtistNameChange={setArtistName}
+            onGenreChange={setGenre}
+            onPrimaryPlatformChange={setPrimaryPlatform}
+            onPrimaryPlatformBlur={syncPrimaryPlatformToAudiencePlatforms}
+            onContinue={handleSaveAddArtist}
+          />
         )}
 
         {step === 3 && (
-          <>
-            <h1 className="mt-[18vh] text-[clamp(2.4rem,5.6vw,4.4rem)] tracking-tight">What do you want to achieve?</h1>
-            <textarea
-              className="mt-10 min-h-[230px] w-full border border-white/5 bg-[#02090d] p-4 text-xl outline-none"
-              value={goalText}
-              onChange={(e) => setGoalText(e.target.value)}
-              placeholder="Example: Grow monthly listeners from 5k to 15k before my next single drops."
-            />
-            <p className={`mt-3 text-sm ${goalRemainingChars === 0 ? 'text-emerald-300/80' : 'text-white/65'}`}>
-              {goalRemainingChars === 0
-                ? 'Looks good. We can generate better tasks with this level of detail.'
-                : `Add ${goalRemainingChars} more characters for a higher-quality plan.`}
-            </p>
-            <button type="button" disabled={!canContinueGoal || isBusy} onClick={handleSaveGoal} className="mt-12 self-center text-[clamp(2.1rem,4.5vw,3.5rem)] disabled:opacity-40">
-              Next..
-            </button>
-          </>
+          <Step3Goal
+            goalText={goalText}
+            goalRemainingChars={goalRemainingChars}
+            canContinueGoal={canContinueGoal}
+            isBusy={isBusy}
+            onGoalTextChange={setGoalText}
+            onContinue={handleSaveGoal}
+          />
         )}
 
         {step === 4 && (
-          <>
-            <div className="mx-auto mt-[17vh] grid w-full max-w-[720px] grid-cols-1 gap-5">
-              <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Stage</label>
-              <select
-                className={fieldClass}
-                value={stage || 'emerging'}
-                onChange={(e) => setStage(e.target.value)}
-              >
-                {STAGE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Audience Size</label>
-              <div>
-                <input
-                  className={fieldClass}
-                  value={audienceSize}
-                  onChange={(e) => setAudienceSize(e.target.value)}
-                  list="audience-size-options"
-                  placeholder="Combined audience (e.g. 5,001 - 20,000)"
-                  autoComplete="off"
-                />
-                <datalist id="audience-size-options">
-                  {AUDIENCE_SIZE_OPTIONS.map((option) => (
-                    <option key={option} value={option} />
-                  ))}
-                </datalist>
-                <p className="mt-2 text-xs text-white/55">Use your estimated combined audience across all channels.</p>
-              </div>
-              <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Platforms</label>
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  {listenerPlatforms.map((platform) => (
-                    <span
-                      key={platform}
-                      className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-sm text-white/90"
-                    >
-                      {platform}
-                      <button
-                        type="button"
-                        onClick={() => removeListenerPlatform(platform)}
-                        className="text-white/70 hover:text-white"
-                        aria-label={`Remove ${platform}`}
-                      >
-                        x
-                      </button>
-                    </span>
-                  ))}
-                  {listenerPlatforms.length === 0 && (
-                    <p className="text-sm text-white/55">No platforms added yet.</p>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    className={fieldClass}
-                    value={platformInput}
-                    onChange={(e) => setPlatformInput(e.target.value)}
-                    onBlur={commitPlatformInput}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ',') {
-                        e.preventDefault();
-                        commitPlatformInput();
-                      }
-                    }}
-                    list="listener-platform-options"
-                    placeholder="Type platform and press Enter"
-                    autoComplete="off"
-                  />
-                  <button
-                    type="button"
-                    onClick={commitPlatformInput}
-                    className="rounded-none border border-white/20 px-4 py-2 text-sm text-white/90 hover:bg-white/10"
-                  >
-                    Add
-                  </button>
-                </div>
-                <datalist id="listener-platform-options">
-                  {LISTENER_PLATFORM_OPTIONS.map((option) => (
-                    <option key={option} value={option} />
-                  ))}
-                </datalist>
-                <p className="text-xs text-white/55">Pick from suggestions or type custom channels.</p>
-              </div>
-              <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Budget</label>
-              <input
-                className={fieldClass}
-                type="number"
-                min={0}
-                step={1000}
-                inputMode="numeric"
-                value={budget}
-                onChange={(e) => setBudget(e.target.value)}
-                placeholder="e.g. 100000"
-              />
-              <p className={`mt-2 text-xs ${budget.trim().length > 0 && !budgetIsValid ? 'text-red-400' : 'text-white/55'}`}>
-                Enter a realistic budget between {MIN_BUDGET} and {MAX_BUDGET}.
-              </p>
-              <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Timeline</label>
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <input
-                    className={fieldClass}
-                    type="date"
-                    min={formatDateInput(new Date())}
-                    value={deadlineDate}
-                    onChange={(e) => setDeadlineDate(e.target.value)}
-                  />
-                  <input
-                    className={fieldClass}
-                    value={timeline}
-                    onChange={(e) => setTimeline(e.target.value)}
-                    list="timeline-options"
-                    placeholder="Optional context (e.g. before summer campaign)"
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => applyTimelinePreset(14, 'ASAP (within 2 weeks)')}
-                    className="rounded-full border border-white/15 px-3 py-1 text-sm text-white/85 hover:bg-white/10"
-                  >
-                    2 weeks
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyTimelinePreset(30, 'Within 1 month')}
-                    className="rounded-full border border-white/15 px-3 py-1 text-sm text-white/85 hover:bg-white/10"
-                  >
-                    30 days
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyTimelinePreset(90, 'In 2-3 months')}
-                    className="rounded-full border border-white/15 px-3 py-1 text-sm text-white/85 hover:bg-white/10"
-                  >
-                    90 days
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyTimelinePreset(null, 'No fixed deadline')}
-                    className="rounded-full border border-white/15 px-3 py-1 text-sm text-white/85 hover:bg-white/10"
-                  >
-                    No deadline
-                  </button>
-                </div>
-                <datalist id="timeline-options">
-                  {TIMELINE_OPTIONS.map((option) => (
-                    <option key={option} value={option} />
-                  ))}
-                </datalist>
-              </div>
-            </div>
-            {!profileFieldsReady && (
-              <p className="mx-auto mt-4 w-full max-w-[720px] text-sm text-white/65">
-                Complete audience size, platform list, budget, and timeline to continue.
-              </p>
-            )}
-            <button type="button" disabled={isBusy || !profileFieldsReady} onClick={handleSaveProfileInputs} className="mt-12 self-center text-[clamp(2.1rem,4.5vw,3.5rem)] disabled:opacity-40">
-              Submit..
-            </button>
-          </>
+          <Step4ProfileInputs
+            fieldClass={fieldClass}
+            stage={stage}
+            stageOptions={STAGE_OPTIONS}
+            audienceSize={audienceSize}
+            audienceSizeOptions={AUDIENCE_SIZE_OPTIONS}
+            listenerPlatforms={listenerPlatforms}
+            platformInput={platformInput}
+            listenerPlatformOptions={LISTENER_PLATFORM_OPTIONS}
+            budget={budget}
+            budgetIsValid={budgetIsValid}
+            minBudget={MIN_BUDGET}
+            maxBudget={MAX_BUDGET}
+            deadlineDate={deadlineDate}
+            timeline={timeline}
+            timelineOptions={TIMELINE_OPTIONS}
+            minDate={formatDateInput(new Date())}
+            profileFieldsReady={profileFieldsReady}
+            isBusy={isBusy}
+            onStageChange={setStage}
+            onAudienceSizeChange={setAudienceSize}
+            onRemoveListenerPlatform={removeListenerPlatform}
+            onPlatformInputChange={setPlatformInput}
+            onCommitPlatformInput={commitPlatformInput}
+            onBudgetChange={setBudget}
+            onDeadlineDateChange={setDeadlineDate}
+            onTimelineChange={setTimeline}
+            onApplyTimelinePreset={applyTimelinePreset}
+            onSubmit={handleSaveProfileInputs}
+          />
         )}
 
         {step === 5 && (
-          <>
-            <h1 className="mt-[18vh] text-[clamp(2.4rem,5.6vw,4.4rem)] tracking-tight">Do you have steps?</h1>
-            <textarea
-              className="mt-10 min-h-[230px] w-full border border-white/5 bg-[#02090d] p-4 text-xl outline-none"
-              value={stepsText}
-              onChange={(e) => setStepsText(e.target.value)}
-              placeholder="Example: 1) Tease snippet for 7 days 2) Shoot 3 UGC clips 3) DM 20 micro-creators."
-            />
-            <button type="button" disabled={isBusy} onClick={handleSaveSteps} className="mt-12 self-center text-[clamp(2.1rem,4.5vw,3.5rem)]">
-              Skip..
-            </button>
-          </>
+          <Step5ExistingSteps
+            stepsText={stepsText}
+            isBusy={isBusy}
+            onStepsTextChange={setStepsText}
+            onSkip={handleSaveSteps}
+          />
         )}
 
         {step === 6 && (
-          <>
-            <div className="flex flex-1 items-center justify-center text-[clamp(2.2rem,5.2vw,4rem)]">
-              Generating task...
-            </div>
-
-            {showPricingSheet && (
-              <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#03080c] p-6 sm:p-8">
-                <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-6">
-                  <div>
-                    <p className="text-xl text-white/95">Unlock unlimited task generation</p>
-                    <p className="text-sm text-white/60">Monthly plan starts now.</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowPricingSheet(false)}
-                      className="text-lg text-white/70"
-                    >
-                      Close
-                    </button>
-                    <PaystackButton
-                      email={user?.email || ''}
-                      amount={8000}
-                      plan="monthly"
-                      className="rounded-none bg-white px-5 py-3 text-base font-medium text-black"
-                    >
-                      Subscribe
-                    </PaystackButton>
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
+          <Step6GeneratingTask
+            showPricingSheet={showPricingSheet}
+            userEmail={user?.email || ''}
+            onClosePricingSheet={() => setShowPricingSheet(false)}
+          />
         )}
 
         {step === 7 && (
-          <div className="mx-auto mt-[16vh] w-full max-w-[700px]">
-            <button
-              type="button"
-              onClick={async () => {
-                await logout();
-                router.push('/auth');
-              }}
-              className="absolute right-6 top-8 text-[clamp(2rem,4vw,3rem)]"
-            >
-              Logout
-            </button>
-            <div className="space-y-12">
-              <h2 className="text-[clamp(2.6rem,6.2vw,4.8rem)]">{taskTitle}</h2>
-              <p className="text-[clamp(2rem,4.8vw,3.8rem)] text-white/85">{taskOutcome}</p>
-              <button type="button" disabled={isBusy} onClick={handleMarkStarted} className="flex items-center gap-4 text-[clamp(2rem,4.6vw,3.4rem)]">
-                <span className="inline-block h-12 w-12 border border-white/35 sm:h-14 sm:w-14" />
-                <span>Mark Started</span>
-              </button>
-            </div>
-          </div>
+          <Step7TaskStart
+            isBusy={isBusy}
+            taskTitle={taskTitle}
+            taskOutcome={taskOutcome}
+            onLogout={handleLogoutToAuth}
+            onMarkStarted={handleMarkStarted}
+          />
         )}
 
         {step === 8 && (
-          <div className="mx-auto mt-[20vh] w-full max-w-[700px]">
-            <button
-              type="button"
-              onClick={async () => {
-                await logout();
-                router.push('/auth');
-              }}
-              className="absolute right-6 top-8 text-[clamp(2rem,4vw,3rem)]"
-            >
-              Logout
-            </button>
-            <button type="button" disabled={isBusy} onClick={handleMarkDone} className="flex items-center gap-4 text-[clamp(2rem,4.6vw,3.4rem)] disabled:opacity-40">
-              <span className="inline-block h-12 w-12 border border-white/35 sm:h-14 sm:w-14" />
-              <span>Mark Done</span>
-            </button>
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={handleToProofSelection}
-              className="mt-8 rounded-xl border border-emerald-400/35 bg-emerald-500/20 px-5 py-3 text-base font-semibold text-white transition hover:bg-emerald-500/30 disabled:opacity-40"
-            >
-              Drop Feedback
-            </button>
-            <button
-              type="button"
-              onClick={handleGoToDashboard}
-              className="mt-8 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
-            >
-              Go to Dashboard
-            </button>
-          </div>
+          <Step8TaskDone
+            isBusy={isBusy}
+            onLogout={handleLogoutToAuth}
+            onMarkDone={handleMarkDone}
+            onDropFeedback={handleToProofSelection}
+            onGoToDashboard={handleGoToDashboard}
+          />
         )}
 
         {step === 9 && (
@@ -1403,10 +1180,7 @@ export function PostAuthScreen() {
             blockersNext={blockersNext}
             taskTitle={taskTitle}
             taskOutcome={taskOutcome}
-            onLogout={async () => {
-              await logout();
-              router.push('/auth');
-            }}
+            onLogout={handleLogoutToAuth}
             onSeeTaskAgain={handleSeeTaskAgain}
             onSelectProof={handleSelectProof}
             onProofFileChange={setProofFile}
