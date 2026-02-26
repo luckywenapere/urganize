@@ -9,6 +9,105 @@ import { useAuthStore } from '@/lib/auth-store';
 type RoleOption = 'manager' | 'artist-team' | 'artist';
 type ProofType = 'screenshot' | 'link' | 'text';
 
+const GENRE_OPTIONS = [
+  'Afrobeats',
+  'Afro-fusion',
+  'Amapiano',
+  'Hip-Hop/Rap',
+  'R&B',
+  'Pop',
+  'Alternative',
+  'Gospel',
+  'Dancehall',
+  'Reggae',
+  'House',
+  'EDM',
+  'Indie',
+  'Highlife',
+  'Fuji',
+  'Folk/Acoustic',
+];
+
+const PRIMARY_PLATFORM_OPTIONS = [
+  'TikTok',
+  'Instagram Reels',
+  'YouTube Shorts',
+  'YouTube',
+  'Spotify',
+  'Apple Music',
+  'Audiomack',
+  'Boomplay',
+  'SoundCloud',
+  'X (Twitter)',
+  'Facebook',
+];
+
+const AUDIENCE_SIZE_OPTIONS = [
+  'Under 1,000 (combined)',
+  '1,000 - 5,000 (combined)',
+  '5,001 - 20,000 (combined)',
+  '20,001 - 100,000 (combined)',
+  '100,000+ (combined)',
+  'Not sure yet',
+];
+
+const LISTENER_PLATFORM_OPTIONS = [
+  'All Streaming Platforms',
+  'TikTok',
+  'Instagram',
+  'YouTube',
+  'Spotify',
+  'Apple Music',
+  'Audiomack',
+  'Boomplay',
+  'SoundCloud',
+  'WhatsApp',
+  'X (Twitter)',
+  'Facebook',
+];
+
+const TIMELINE_OPTIONS = [
+  'ASAP (within 2 weeks)',
+  'Within 1 month',
+  'In 2-3 months',
+  'In 4-6 months',
+  'This quarter',
+  'No fixed deadline',
+];
+
+const STAGE_OPTIONS: Array<{ value: 'emerging' | 'growing' | 'established'; label: string }> = [
+  { value: 'emerging', label: 'Emerging' },
+  { value: 'growing', label: 'Growing' },
+  { value: 'established', label: 'Established' },
+];
+
+const MIN_GOAL_CHARS = 20;
+const MIN_BUDGET = 100;
+const MAX_BUDGET = 100000000;
+const DEFAULT_PLAN_DURATION_DAYS = 30;
+
+const formatDateInput = (value: Date): string => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseStoredDate = (value: string | null | undefined): string => {
+  if (!value) return '';
+  if (/^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return formatDateInput(parsed);
+};
+
+const normalizeLabel = (value: string): string => value.trim().replace(/\s+/g, ' ');
+const addDaysISO = (base: string | Date, days: number): string => {
+  const date = new Date(base);
+  date.setDate(date.getDate() + days);
+  return date.toISOString();
+};
+
 const MIN_GENERATION_MS = 7000;
 const PRICING_SHEET_MS = 2500;
 const PaystackButton = dynamic(
@@ -45,9 +144,11 @@ export function PostAuthScreen() {
   const [goalText, setGoalText] = useState('');
   const [stage, setStage] = useState('');
   const [audienceSize, setAudienceSize] = useState('');
-  const [platforms, setPlatforms] = useState('');
+  const [listenerPlatforms, setListenerPlatforms] = useState<string[]>([]);
+  const [platformInput, setPlatformInput] = useState('');
   const [budget, setBudget] = useState('');
   const [timeline, setTimeline] = useState('');
+  const [deadlineDate, setDeadlineDate] = useState('');
   const [stepsText, setStepsText] = useState('');
   const [whatHappened, setWhatHappened] = useState('');
 
@@ -63,6 +164,52 @@ export function PostAuthScreen() {
     return 'emerging';
   };
 
+  const mergePlatforms = useCallback((current: string[], incoming: string[]) => {
+    const next = [...current];
+    const seen = new Set(current.map((item) => item.toLowerCase()));
+    incoming.forEach((value) => {
+      const normalized = normalizeLabel(value);
+      const key = normalized.toLowerCase();
+      if (!normalized || seen.has(key)) return;
+      seen.add(key);
+      next.push(normalized);
+    });
+    return next;
+  }, []);
+
+  const commitPlatformInput = useCallback(() => {
+    const values = platformInput
+      .split(',')
+      .map((item) => normalizeLabel(item))
+      .filter(Boolean);
+    if (values.length === 0) return;
+    setListenerPlatforms((current) => mergePlatforms(current, values));
+    setPlatformInput('');
+  }, [mergePlatforms, platformInput]);
+
+  const removeListenerPlatform = (value: string) => {
+    const normalized = value.toLowerCase();
+    setListenerPlatforms((current) => current.filter((item) => item.toLowerCase() !== normalized));
+  };
+
+  const syncPrimaryPlatformToAudiencePlatforms = useCallback(() => {
+    const normalizedPrimary = normalizeLabel(primaryPlatform);
+    if (!normalizedPrimary) return;
+    setListenerPlatforms((current) => mergePlatforms(current, [normalizedPrimary]));
+  }, [mergePlatforms, primaryPlatform]);
+
+  const applyTimelinePreset = (days: number | null, label: string) => {
+    if (days === null) {
+      setDeadlineDate('');
+      setTimeline(label);
+      return;
+    }
+    const target = new Date();
+    target.setDate(target.getDate() + days);
+    setDeadlineDate(formatDateInput(target));
+    setTimeline(label);
+  };
+
   const setStepPersisted = useCallback(async (nextStep: number) => {
     setStep(nextStep);
     if (!releaseId) return;
@@ -74,7 +221,65 @@ export function PostAuthScreen() {
 
   const ensureOnboardingRelease = useCallback(async (): Promise<string> => {
     if (!user) throw new Error('User not found');
-    if (releaseId) return releaseId;
+
+    const requestedPlanId = searchParams.get('planId');
+    if (requestedPlanId && releaseId === requestedPlanId) return releaseId;
+    if (!requestedPlanId && releaseId) return releaseId;
+
+    if (requestedPlanId) {
+      const { data: requestedRelease, error: requestedReleaseError } = await supabase
+        .from('releases')
+        .select('id, artist_name, created_at')
+        .eq('id', requestedPlanId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (requestedReleaseError) throw requestedReleaseError;
+      if (!requestedRelease) throw new Error('Plan not found');
+
+      setReleaseId(requestedRelease.id);
+      if (requestedRelease.artist_name) setArtistName(requestedRelease.artist_name);
+
+      const { data: requestedProfile, error: requestedProfileError } = await supabase
+        .from('release_profiles')
+        .select('setup_step, setup_completed, genre, primary_market, campaign_narrative, target_audience_description, listener_interests, budget_naira, hard_deadline, deadline_reason, other_goals')
+        .eq('release_id', requestedRelease.id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (requestedProfileError) throw requestedProfileError;
+
+      if (requestedProfile) {
+        setGenre(requestedProfile.genre || '');
+        setPrimaryPlatform(requestedProfile.primary_market || '');
+        setGoalText(requestedProfile.campaign_narrative || '');
+        setAudienceSize(requestedProfile.target_audience_description || '');
+        setListenerPlatforms(
+          Array.isArray(requestedProfile.listener_interests)
+            ? requestedProfile.listener_interests.filter((item: unknown): item is string => typeof item === 'string')
+            : []
+        );
+        setBudget(requestedProfile.budget_naira ? String(requestedProfile.budget_naira) : '');
+        setDeadlineDate(parseStoredDate(requestedProfile.hard_deadline));
+        setTimeline(requestedProfile.deadline_reason || '');
+        setStepsText(requestedProfile.other_goals || '');
+        setStep(Math.max(requestedProfile.setup_step || 2, 2));
+        return requestedRelease.id;
+      }
+
+      const autoDeadline = addDaysISO(requestedRelease.created_at || new Date(), DEFAULT_PLAN_DURATION_DAYS);
+      const { error: requestedProfileInsertError } = await supabase
+        .from('release_profiles')
+        .insert({
+          release_id: requestedRelease.id,
+          setup_step: 2,
+          setup_completed: false,
+          hard_deadline: autoDeadline,
+        });
+      if (requestedProfileInsertError) throw requestedProfileInsertError;
+      setDeadlineDate(parseStoredDate(autoDeadline));
+      setStep(2);
+      return requestedRelease.id;
+    }
 
     const { data: existingReleases, error: releaseFetchError } = await supabase
       .from('releases')
@@ -100,9 +305,14 @@ export function PostAuthScreen() {
         setPrimaryPlatform(activeProfile.primary_market || '');
         setGoalText(activeProfile.campaign_narrative || '');
         setAudienceSize(activeProfile.target_audience_description || '');
-        setPlatforms((activeProfile.listener_interests || []).join(', '));
+        setListenerPlatforms(
+          Array.isArray(activeProfile.listener_interests)
+            ? activeProfile.listener_interests.filter((item: unknown): item is string => typeof item === 'string')
+            : []
+        );
         setBudget(activeProfile.budget_naira ? String(activeProfile.budget_naira) : '');
-        setTimeline(activeProfile.hard_deadline || activeProfile.deadline_reason || '');
+        setDeadlineDate(parseStoredDate(activeProfile.hard_deadline));
+        setTimeline(activeProfile.deadline_reason || '');
         setStepsText(activeProfile.other_goals || '');
 
         const release = existingReleases.find((item) => item.id === activeProfile.release_id);
@@ -122,7 +332,7 @@ export function PostAuthScreen() {
         type: 'single',
         status: 'draft',
       })
-      .select('id')
+      .select('id, created_at')
       .single();
     if (releaseInsertError || !release) {
       throw releaseInsertError || new Error('Could not create release');
@@ -134,12 +344,13 @@ export function PostAuthScreen() {
         release_id: release.id,
         setup_step: 2,
         setup_completed: false,
+        hard_deadline: addDaysISO(release.created_at || new Date(), DEFAULT_PLAN_DURATION_DAYS),
       });
     if (profileInsertError) throw profileInsertError;
 
     setReleaseId(release.id);
     return release.id;
-  }, [artistName, releaseId, user]);
+  }, [artistName, releaseId, searchParams, user]);
 
   const loadCurrentTask = useCallback(async (activeReleaseId: string) => {
     const { data: task, error: taskError } = await supabase
@@ -247,6 +458,7 @@ export function PostAuthScreen() {
     resetError();
     setIsBusy(true);
     try {
+      syncPrimaryPlatformToAudiencePlatforms();
       const activeReleaseId = await ensureOnboardingRelease();
       await supabase.from('releases').update({
         artist_name: artistName.trim(),
@@ -271,13 +483,19 @@ export function PostAuthScreen() {
   };
 
   const handleSaveGoal = async () => {
+    const goalValue = goalText.trim();
+    if (goalValue.length < MIN_GOAL_CHARS) {
+      setError(`Add at least ${MIN_GOAL_CHARS} characters so we can generate better tasks.`);
+      return;
+    }
+
     resetError();
     setIsBusy(true);
     try {
       const activeReleaseId = await ensureOnboardingRelease();
       await supabase
         .from('release_profiles')
-        .update({ campaign_narrative: goalText || null })
+        .update({ campaign_narrative: goalValue || null })
         .eq('release_id', activeReleaseId);
       await setStepPersisted(4);
     } catch (err: any) {
@@ -288,24 +506,58 @@ export function PostAuthScreen() {
   };
 
   const handleSaveProfileInputs = async () => {
+    const pendingPlatforms = platformInput
+      .split(',')
+      .map((item) => normalizeLabel(item))
+      .filter(Boolean);
+    const listeners = mergePlatforms(listenerPlatforms, pendingPlatforms);
+    const maybeBudget = Number(budget);
+    const hasDeadline = Boolean(deadlineDate);
+    const timelineValue = timeline.trim();
+
+    if (!audienceSize.trim()) {
+      setError('Select or type your combined audience size.');
+      return;
+    }
+
+    if (listeners.length === 0) {
+      setError('Add at least one audience platform.');
+      return;
+    }
+
+    if (!budget.trim()) {
+      setError('Enter your estimated budget.');
+      return;
+    }
+
+    if (!Number.isFinite(maybeBudget) || maybeBudget < MIN_BUDGET || maybeBudget > MAX_BUDGET) {
+      setError(`Budget should be between ${MIN_BUDGET} and ${MAX_BUDGET}.`);
+      return;
+    }
+
+    if (!hasDeadline && !timelineValue) {
+      setError('Add a target date or timeline hint.');
+      return;
+    }
+
     resetError();
     setIsBusy(true);
     try {
       const activeReleaseId = await ensureOnboardingRelease();
-      const maybeBudget = Number(budget);
-      const listeners = platforms
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean);
+      if (pendingPlatforms.length > 0) {
+        setListenerPlatforms(listeners);
+        setPlatformInput('');
+      }
 
       await supabase
         .from('release_profiles')
         .update({
-          song_stage: stage || null,
-          target_audience_description: audienceSize || null,
+          song_stage: stage || 'emerging',
+          target_audience_description: audienceSize.trim() || null,
           listener_interests: listeners,
-          budget_naira: Number.isFinite(maybeBudget) && maybeBudget > 0 ? maybeBudget : null,
-          deadline_reason: timeline || null,
+          budget_naira: maybeBudget,
+          hard_deadline: deadlineDate || null,
+          deadline_reason: timelineValue || null,
         })
         .eq('release_id', activeReleaseId);
       await upsertArtistProfile();
@@ -514,7 +766,19 @@ export function PostAuthScreen() {
     'w-full rounded-none border border-white/5 bg-[#02090d] px-3 py-2 text-lg text-white/90 outline-none placeholder:text-white/20';
 
   const canContinueArtist = useMemo(() => !!artistName.trim(), [artistName]);
-  const canContinueGoal = useMemo(() => !!goalText.trim(), [goalText]);
+  const canContinueGoal = useMemo(() => goalText.trim().length >= MIN_GOAL_CHARS, [goalText]);
+  const goalRemainingChars = useMemo(() => Math.max(0, MIN_GOAL_CHARS - goalText.trim().length), [goalText]);
+  const budgetValue = Number(budget);
+  const budgetIsValid =
+    budget.trim().length > 0 &&
+    Number.isFinite(budgetValue) &&
+    budgetValue >= MIN_BUDGET &&
+    budgetValue <= MAX_BUDGET;
+  const profileFieldsReady =
+    audienceSize.trim().length > 0 &&
+    listenerPlatforms.length > 0 &&
+    budgetIsValid &&
+    (deadlineDate.length > 0 || timeline.trim().length > 0);
   const canContinueProof = useMemo(() => {
     if (selectedProof === 'screenshot') return !!proofFile;
     if (selectedProof === 'link') return !!proofLink.trim();
@@ -550,7 +814,7 @@ export function PostAuthScreen() {
             onClick={() => setStep(1)}
             className="mt-[44vh] self-center text-[clamp(2.2rem,5.5vw,3.8rem)] text-white/95"
           >
-            Tap to Continue..
+            Tap to Continue
           </button>
         )}
 
@@ -577,16 +841,51 @@ export function PostAuthScreen() {
         {step === 2 && (
           <>
             <h1 className="mt-[18vh] text-[clamp(2.7rem,6.4vw,5rem)] tracking-tight">Add Artist</h1>
-            <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-[1fr_1.2fr] md:items-center">
+            <div className="mx-auto mt-10 grid w-full max-w-[720px] grid-cols-1 gap-5">
               <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Artist Name</label>
-              <input className={fieldClass} value={artistName} onChange={(e) => setArtistName(e.target.value)} />
+              <input
+                className={fieldClass}
+                value={artistName}
+                onChange={(e) => setArtistName(e.target.value)}
+                placeholder="e.g. Tems"
+                autoComplete="off"
+              />
               <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Genre</label>
-              <input className={fieldClass} value={genre} onChange={(e) => setGenre(e.target.value)} />
+              <div>
+                <input
+                  className={fieldClass}
+                  value={genre}
+                  onChange={(e) => setGenre(e.target.value)}
+                  list="genre-options"
+                  placeholder="Pick or type a genre (e.g. Afrobeats)"
+                  autoComplete="off"
+                />
+                <datalist id="genre-options">
+                  {GENRE_OPTIONS.map((option) => (
+                    <option key={option} value={option} />
+                  ))}
+                </datalist>
+              </div>
               <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Primary Platform</label>
-              <input className={fieldClass} value={primaryPlatform} onChange={(e) => setPrimaryPlatform(e.target.value)} />
+              <div>
+                <input
+                  className={fieldClass}
+                  value={primaryPlatform}
+                  onChange={(e) => setPrimaryPlatform(e.target.value)}
+                  onBlur={syncPrimaryPlatformToAudiencePlatforms}
+                  list="primary-platform-options"
+                  placeholder="Pick or type a channel (e.g. TikTok)"
+                  autoComplete="off"
+                />
+                <datalist id="primary-platform-options">
+                  {PRIMARY_PLATFORM_OPTIONS.map((option) => (
+                    <option key={option} value={option} />
+                  ))}
+                </datalist>
+              </div>
             </div>
             <button type="button" disabled={!canContinueArtist || isBusy} onClick={handleSaveAddArtist} className="mt-16 self-center text-[clamp(2.2rem,5vw,3.8rem)] disabled:opacity-40">
-              Continue..
+              Tap to Continue
             </button>
           </>
         )}
@@ -598,7 +897,13 @@ export function PostAuthScreen() {
               className="mt-10 min-h-[230px] w-full border border-white/5 bg-[#02090d] p-4 text-xl outline-none"
               value={goalText}
               onChange={(e) => setGoalText(e.target.value)}
+              placeholder="Example: Grow monthly listeners from 5k to 15k before my next single drops."
             />
+            <p className={`mt-3 text-sm ${goalRemainingChars === 0 ? 'text-emerald-300/80' : 'text-white/65'}`}>
+              {goalRemainingChars === 0
+                ? 'Looks good. We can generate better tasks with this level of detail.'
+                : `Add ${goalRemainingChars} more characters for a higher-quality plan.`}
+            </p>
             <button type="button" disabled={!canContinueGoal || isBusy} onClick={handleSaveGoal} className="mt-12 self-center text-[clamp(2.1rem,4.5vw,3.5rem)] disabled:opacity-40">
               Next..
             </button>
@@ -607,19 +912,166 @@ export function PostAuthScreen() {
 
         {step === 4 && (
           <>
-            <div className="mt-[17vh] grid grid-cols-1 gap-5 md:grid-cols-[1fr_1.2fr] md:items-center">
+            <div className="mx-auto mt-[17vh] grid w-full max-w-[720px] grid-cols-1 gap-5">
               <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Stage</label>
-              <input className={fieldClass} value={stage} onChange={(e) => setStage(e.target.value)} />
+              <select
+                className={fieldClass}
+                value={stage || 'emerging'}
+                onChange={(e) => setStage(e.target.value)}
+              >
+                {STAGE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
               <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Audience Size</label>
-              <input className={fieldClass} value={audienceSize} onChange={(e) => setAudienceSize(e.target.value)} />
+              <div>
+                <input
+                  className={fieldClass}
+                  value={audienceSize}
+                  onChange={(e) => setAudienceSize(e.target.value)}
+                  list="audience-size-options"
+                  placeholder="Combined audience (e.g. 5,001 - 20,000)"
+                  autoComplete="off"
+                />
+                <datalist id="audience-size-options">
+                  {AUDIENCE_SIZE_OPTIONS.map((option) => (
+                    <option key={option} value={option} />
+                  ))}
+                </datalist>
+                <p className="mt-2 text-xs text-white/55">Use your estimated combined audience across all channels.</p>
+              </div>
               <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Platforms</label>
-              <input className={fieldClass} value={platforms} onChange={(e) => setPlatforms(e.target.value)} />
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {listenerPlatforms.map((platform) => (
+                    <span
+                      key={platform}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-sm text-white/90"
+                    >
+                      {platform}
+                      <button
+                        type="button"
+                        onClick={() => removeListenerPlatform(platform)}
+                        className="text-white/70 hover:text-white"
+                        aria-label={`Remove ${platform}`}
+                      >
+                        x
+                      </button>
+                    </span>
+                  ))}
+                  {listenerPlatforms.length === 0 && (
+                    <p className="text-sm text-white/55">No platforms added yet.</p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    className={fieldClass}
+                    value={platformInput}
+                    onChange={(e) => setPlatformInput(e.target.value)}
+                    onBlur={commitPlatformInput}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        commitPlatformInput();
+                      }
+                    }}
+                    list="listener-platform-options"
+                    placeholder="Type platform and press Enter"
+                    autoComplete="off"
+                  />
+                  <button
+                    type="button"
+                    onClick={commitPlatformInput}
+                    className="rounded-none border border-white/20 px-4 py-2 text-sm text-white/90 hover:bg-white/10"
+                  >
+                    Add
+                  </button>
+                </div>
+                <datalist id="listener-platform-options">
+                  {LISTENER_PLATFORM_OPTIONS.map((option) => (
+                    <option key={option} value={option} />
+                  ))}
+                </datalist>
+                <p className="text-xs text-white/55">Pick from suggestions or type custom channels.</p>
+              </div>
               <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Budget</label>
-              <input className={fieldClass} value={budget} onChange={(e) => setBudget(e.target.value)} />
+              <input
+                className={fieldClass}
+                type="number"
+                min={0}
+                step={1000}
+                inputMode="numeric"
+                value={budget}
+                onChange={(e) => setBudget(e.target.value)}
+                placeholder="e.g. 100000"
+              />
+              <p className={`mt-2 text-xs ${budget.trim().length > 0 && !budgetIsValid ? 'text-red-400' : 'text-white/55'}`}>
+                Enter a realistic budget between {MIN_BUDGET} and {MAX_BUDGET}.
+              </p>
               <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Timeline</label>
-              <input className={fieldClass} value={timeline} onChange={(e) => setTimeline(e.target.value)} />
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <input
+                    className={fieldClass}
+                    type="date"
+                    min={formatDateInput(new Date())}
+                    value={deadlineDate}
+                    onChange={(e) => setDeadlineDate(e.target.value)}
+                  />
+                  <input
+                    className={fieldClass}
+                    value={timeline}
+                    onChange={(e) => setTimeline(e.target.value)}
+                    list="timeline-options"
+                    placeholder="Optional context (e.g. before summer campaign)"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => applyTimelinePreset(14, 'ASAP (within 2 weeks)')}
+                    className="rounded-full border border-white/15 px-3 py-1 text-sm text-white/85 hover:bg-white/10"
+                  >
+                    2 weeks
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyTimelinePreset(30, 'Within 1 month')}
+                    className="rounded-full border border-white/15 px-3 py-1 text-sm text-white/85 hover:bg-white/10"
+                  >
+                    30 days
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyTimelinePreset(90, 'In 2-3 months')}
+                    className="rounded-full border border-white/15 px-3 py-1 text-sm text-white/85 hover:bg-white/10"
+                  >
+                    90 days
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyTimelinePreset(null, 'No fixed deadline')}
+                    className="rounded-full border border-white/15 px-3 py-1 text-sm text-white/85 hover:bg-white/10"
+                  >
+                    No deadline
+                  </button>
+                </div>
+                <datalist id="timeline-options">
+                  {TIMELINE_OPTIONS.map((option) => (
+                    <option key={option} value={option} />
+                  ))}
+                </datalist>
+              </div>
             </div>
-            <button type="button" disabled={isBusy} onClick={handleSaveProfileInputs} className="mt-12 self-center text-[clamp(2.1rem,4.5vw,3.5rem)]">
+            {!profileFieldsReady && (
+              <p className="mx-auto mt-4 w-full max-w-[720px] text-sm text-white/65">
+                Complete audience size, platform list, budget, and timeline to continue.
+              </p>
+            )}
+            <button type="button" disabled={isBusy || !profileFieldsReady} onClick={handleSaveProfileInputs} className="mt-12 self-center text-[clamp(2.1rem,4.5vw,3.5rem)] disabled:opacity-40">
               Submit..
             </button>
           </>
@@ -632,6 +1084,7 @@ export function PostAuthScreen() {
               className="mt-10 min-h-[230px] w-full border border-white/5 bg-[#02090d] p-4 text-xl outline-none"
               value={stepsText}
               onChange={(e) => setStepsText(e.target.value)}
+              placeholder="Example: 1) Tease snippet for 7 days 2) Shoot 3 UGC clips 3) DM 20 micro-creators."
             />
             <button type="button" disabled={isBusy} onClick={handleSaveSteps} className="mt-12 self-center text-[clamp(2.1rem,4.5vw,3.5rem)]">
               Skip..
@@ -770,6 +1223,7 @@ export function PostAuthScreen() {
               className="mt-10 min-h-[230px] w-full border border-white/5 bg-[#02090d] p-4 text-xl outline-none"
               value={whatHappened}
               onChange={(e) => setWhatHappened(e.target.value)}
+              placeholder="Example: We posted 5 clips, reached 42k views, and saved the best-performing hook for next week."
             />
             <button type="button" disabled={isBusy} onClick={completeOnboarding} className="mt-12 self-center text-[clamp(2.1rem,4.5vw,3.5rem)]">
               Submit..

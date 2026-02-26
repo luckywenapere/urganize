@@ -1,32 +1,35 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+
+type PlanSummary = {
+  id: string;
+  title: string;
+  artist_name: string;
+  created_at: string;
+  setup_completed: boolean;
+  hard_deadline: string | null;
+};
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, logout, setNeedsOnboarding } = useAuthStore();
 
-  const [completedTasks, setCompletedTasks] = useState(0);
-  const [currentTask, setCurrentTask] = useState('Single task');
-  const [goalStatus, setGoalStatus] = useState('In Progress');
-  const [plans, setPlans] = useState<
-    Array<{
-      id: string;
-      title: string;
-      artist_name: string;
-      status: string;
-      created_at: string;
-      setup_completed: boolean;
-    }>
-  >([]);
+  const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const getPlanStatus = (plan: PlanSummary): 'Completed' | 'Overdue' | 'In Progress' => {
+    if (plan.setup_completed) return 'Completed';
+    if (!plan.hard_deadline) return 'In Progress';
+    return new Date(plan.hard_deadline).getTime() < Date.now() ? 'Overdue' : 'In Progress';
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -38,7 +41,7 @@ export default function DashboardPage() {
 
       const { data: releases } = await supabase
         .from('releases')
-        .select('id,title,artist_name,status,created_at')
+        .select('id,title,artist_name,created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -50,33 +53,19 @@ export default function DashboardPage() {
         return;
       }
 
-      const { data: completed } = await supabase
-        .from('ai_tasks')
-        .select('id', { count: 'exact' })
-        .in('release_id', ids)
-        .eq('status', 'completed');
-      setCompletedTasks(completed?.length || 0);
-
-      const { data: activeTask } = await supabase
-        .from('ai_tasks')
-        .select('title')
-        .in('release_id', ids)
-        .in('status', ['current', 'pending'])
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (activeTask?.title) setCurrentTask(activeTask.title);
-
       const { data: setupRows } = await supabase
         .from('release_profiles')
-        .select('release_id,setup_completed')
+        .select('release_id,setup_completed,hard_deadline')
         .in('release_id', ids)
         .order('updated_at', { ascending: false });
 
-      const setupMap = new Map<string, boolean>();
+      const setupMap = new Map<string, { setup_completed: boolean; hard_deadline: string | null }>();
       (setupRows || []).forEach((row) => {
         if (!setupMap.has(row.release_id)) {
-          setupMap.set(row.release_id, !!row.setup_completed);
+          setupMap.set(row.release_id, {
+            setup_completed: !!row.setup_completed,
+            hard_deadline: row.hard_deadline || null,
+          });
         }
       });
 
@@ -84,13 +73,12 @@ export default function DashboardPage() {
         id: release.id,
         title: release.title || 'Untitled Plan',
         artist_name: release.artist_name || 'Unknown Artist',
-        status: release.status || 'draft',
         created_at: release.created_at,
-        setup_completed: setupMap.get(release.id) || false,
+        setup_completed: setupMap.get(release.id)?.setup_completed || false,
+        hard_deadline: setupMap.get(release.id)?.hard_deadline || null,
       }));
 
       setPlans(mappedPlans);
-      setGoalStatus(mappedPlans.some((plan) => !plan.setup_completed) ? 'Onboarding Active' : 'Onboarding Complete');
       setLoading(false);
     };
 
@@ -108,6 +96,9 @@ export default function DashboardPage() {
     }).format(new Date());
 
     try {
+      const defaultDeadline = new Date();
+      defaultDeadline.setDate(defaultDeadline.getDate() + 30);
+
       const { data: release, error: releaseError } = await supabase
         .from('releases')
         .insert({
@@ -130,6 +121,7 @@ export default function DashboardPage() {
           release_id: release.id,
           setup_step: 2,
           setup_completed: false,
+          hard_deadline: defaultDeadline.toISOString(),
         });
 
       if (profileError) {
@@ -137,7 +129,7 @@ export default function DashboardPage() {
       }
 
       setNeedsOnboarding(true);
-      router.push('/dashboard?startOnboarding=2');
+      router.push(`/dashboard?startOnboarding=2&planId=${release.id}`);
     } finally {
       setIsCreatingPlan(false);
     }
@@ -164,11 +156,6 @@ export default function DashboardPage() {
       document.removeEventListener('keydown', onKeyDown);
     };
   }, []);
-
-  const progress = useMemo(() => {
-    if (completedTasks <= 0) return 24;
-    return Math.min(92, 24 + completedTasks * 9);
-  }, [completedTasks]);
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -220,7 +207,7 @@ export default function DashboardPage() {
 
         <section className="mt-20 lg:mt-20 xl:mt-24">
           <div className="flex items-center justify-between gap-4">
-            <h1 className="text-[clamp(2.6rem,6vw,5rem)] tracking-tight lg:text-[3.2rem] xl:text-[3.6rem]">Progress Timeline</h1>
+            <h1 className="text-[clamp(2.6rem,6vw,5rem)] tracking-tight lg:text-[3.2rem] xl:text-[3.6rem]">Plans</h1>
             <button
               type="button"
               onClick={createNewPlan}
@@ -231,30 +218,7 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          <div className="mt-10">
-            <div className="relative h-8 w-full bg-transparent lg:h-7">
-              <div className="absolute left-0 top-1/2 h-6 w-full -translate-y-1/2 bg-white lg:h-4" />
-              <div
-                className="absolute top-1/2 h-24 w-10 -translate-y-1/2 bg-white lg:h-16 lg:w-8"
-                style={{ left: `calc(${progress}% - 20px)` }}
-              />
-            </div>
-          </div>
-
-          <div className="mt-12 rounded-[28px] border border-white/5 bg-[#02090d] p-7 sm:p-9">
-            {loading ? (
-              <p className="text-[clamp(1.9rem,4.6vw,3.2rem)] text-white/85 lg:text-[2rem]">Loading...</p>
-            ) : (
-              <div className="space-y-6">
-                <p className="text-[clamp(2rem,4.8vw,3.5rem)] lg:text-[2.15rem]">Completed Tasks: {completedTasks}</p>
-                <p className="text-[clamp(2rem,4.8vw,3.5rem)] lg:text-[2.15rem]">Current Task: {currentTask}</p>
-                <p className="text-[clamp(2rem,4.8vw,3.5rem)] lg:text-[2.15rem]">Goal Status: {goalStatus}</p>
-              </div>
-            )}
-          </div>
-
           <div className="mt-8 rounded-[28px] border border-white/5 bg-[#02090d] p-7 sm:p-9">
-            <h2 className="text-2xl tracking-tight sm:text-3xl">Plans</h2>
             {loading ? (
               <p className="mt-4 text-white/75">Loading plans...</p>
             ) : plans.length === 0 ? (
@@ -262,20 +226,32 @@ export default function DashboardPage() {
             ) : (
               <div className="mt-5 space-y-3">
                 {plans.map((plan) => (
-                  <div
+                  <button
+                    type="button"
                     key={plan.id}
-                    className="flex flex-col gap-1 rounded-xl border border-white/10 bg-black/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    onClick={() => router.push(`/dashboard/plans/${plan.id}`)}
+                    className="flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-left transition hover:border-white/20 hover:bg-black/30 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
                       <p className="text-base font-medium text-white">{plan.title}</p>
                       <p className="text-sm text-white/70">{plan.artist_name}</p>
                     </div>
-                    <div className="text-sm text-white/70">
-                      <span>{plan.setup_completed ? 'Onboarding Complete' : 'Onboarding Active'}</span>
-                      <span className="mx-2 text-white/30">•</span>
+                    <div className="flex items-center gap-2 text-sm text-white/70">
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs font-medium ${
+                          getPlanStatus(plan) === 'Completed'
+                            ? 'bg-emerald-500/20 text-emerald-200'
+                            : getPlanStatus(plan) === 'Overdue'
+                              ? 'bg-red-500/20 text-red-200'
+                              : 'bg-amber-500/20 text-amber-100'
+                        }`}
+                      >
+                        {getPlanStatus(plan)}
+                      </span>
+                      <span className="text-white/30">•</span>
                       <span>{new Date(plan.created_at).toLocaleDateString()}</span>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

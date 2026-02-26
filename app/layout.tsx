@@ -19,7 +19,8 @@ export default function RootLayout({
 
   const isAuthRoute = pathname?.startsWith('/auth');
   const isDashboardRoute = pathname?.startsWith('/dashboard');
-  const showPostAuthScreen = isAuthenticated && !isAuthRoute && needsOnboarding;
+  const isDashboardRootRoute = pathname === '/dashboard';
+  const showPostAuthScreen = isAuthenticated && !isAuthRoute && needsOnboarding && isDashboardRootRoute;
   const pageLayoutClassName = isDashboardRoute ? 'app-layout app-layout-fluid' : 'app-layout app-layout-centered';
 
   useEffect(() => {
