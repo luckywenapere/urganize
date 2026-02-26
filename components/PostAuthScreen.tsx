@@ -548,7 +548,7 @@ export function PostAuthScreen() {
             onClick={() => setStep(1)}
             className="mt-[44vh] self-center text-[clamp(2.2rem,5.5vw,3.8rem)] text-white/95"
           >
-            Continue..
+            Tap to Continue..
           </button>
         )}
 

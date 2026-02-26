@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 
+const ALLOWED_ROLES = new Set(['artist', 'manager', 'artist-team', 'artist-manager']);
+
 export default function AuthCallbackPage() {
   const router = useRouter();
   const { checkAuth } = useAuthStore();
@@ -69,20 +71,27 @@ export default function AuthCallbackPage() {
 
         // Profile sync should not block login completion.
         const fallbackName = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User';
-        const fallbackRole = session.user.user_metadata?.role || 'artist-manager';
+        const roleFromMetadata = session.user.user_metadata?.role;
+        const fallbackRole =
+          typeof roleFromMetadata === 'string' && ALLOWED_ROLES.has(roleFromMetadata)
+            ? roleFromMetadata
+            : 'artist-manager';
+        const profilePayload = {
+          id: session.user.id,
+          name: fallbackName,
+          role: fallbackRole,
+          ...(session.user.email ? { email: session.user.email } : {}),
+        };
         const { error: upsertError } = await supabase
           .from('profiles')
-          .upsert(
-            {
-              id: session.user.id,
-              email: session.user.email,
-              name: fallbackName,
-              role: fallbackRole,
-            },
-            { onConflict: 'id' }
-          );
+          .upsert(profilePayload, { onConflict: 'id', ignoreDuplicates: true });
         if (upsertError) {
-          console.error('Profile upsert error:', upsertError);
+          console.warn('Profile sync warning:', {
+            message: upsertError.message,
+            code: (upsertError as any).code,
+            details: (upsertError as any).details,
+            hint: (upsertError as any).hint,
+          });
         }
 
         try {

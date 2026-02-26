@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 import { supabase, type Profile, handleSupabaseError } from './supabase/client';
 
 let authCheckInFlight: Promise<void> | null = null;
+const shouldEnforceScheduledDeletion = process.env.NODE_ENV === 'production';
 
 const buildFallbackProfile = (authUser: any): Omit<Profile, 'created_at' | 'updated_at'> => {
   const email = authUser?.email || '';
@@ -118,7 +119,7 @@ export const useAuthStore = create<AuthState>()(
           if (sessionError) throw sessionError;
           
           if (session?.user) {
-            if (isScheduledDeletionActive(session.user.user_metadata as Record<string, any>)) {
+            if (shouldEnforceScheduledDeletion && isScheduledDeletionActive(session.user.user_metadata as Record<string, any>)) {
               const scheduledAt = getScheduledDeletion(session.user.user_metadata as Record<string, any>);
               await supabase.auth.signOut();
               set({
@@ -208,7 +209,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('Login failed - no user returned');
           }
 
-          if (isScheduledDeletionActive(data.user.user_metadata as Record<string, any>)) {
+          if (shouldEnforceScheduledDeletion && isScheduledDeletionActive(data.user.user_metadata as Record<string, any>)) {
             const scheduledAt = getScheduledDeletion(data.user.user_metadata as Record<string, any>);
             await supabase.auth.signOut();
             throw new Error(`Account is scheduled for deletion on ${new Date(scheduledAt || '').toLocaleString()}. Contact theurganization@gmail.com to recover.`);
