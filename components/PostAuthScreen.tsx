@@ -1576,14 +1576,14 @@ export function PostAuthScreen() {
 
             {!canSubmitFeedback && (
               <p className="mt-4 text-xs text-white/60">
-                Fill all required feedback fields before submitting.
+                Tap Submit.. and we will show exactly what is missing.
               </p>
             )}
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                disabled={isBusy || !canSubmitFeedback}
+                disabled={isBusy}
                 onClick={completeOnboarding}
                 className="rounded-xl border border-emerald-400/35 bg-emerald-500/20 px-6 py-3 text-base font-semibold text-white transition hover:bg-emerald-500/30 disabled:opacity-40"
               >
