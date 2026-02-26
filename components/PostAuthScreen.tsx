@@ -680,8 +680,34 @@ export function PostAuthScreen() {
     }
   };
 
+  const handleMarkDone = async () => {
+    if (!taskId) return;
+    setIsBusy(true);
+    try {
+      await supabase
+        .from('ai_tasks')
+        .update({
+          status: 'pending',
+        })
+        .eq('id', taskId);
+      await setStepPersisted(9);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to mark task as done');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const handleGoToDashboard = () => {
+    if (releaseId) {
+      router.push(`/dashboard/plans/${releaseId}`);
+      return;
+    }
+    router.push('/dashboard');
+  };
+
   const handleToProofSelection = async () => {
-    await setStepPersisted(9);
+    await handleMarkDone();
   };
 
   const handleProofSubmit = async () => {
@@ -1163,12 +1189,24 @@ export function PostAuthScreen() {
             >
               Logout
             </button>
-            <button type="button" className="flex items-center gap-4 text-[clamp(2rem,4.6vw,3.4rem)]">
+            <button type="button" disabled={isBusy} onClick={handleMarkDone} className="flex items-center gap-4 text-[clamp(2rem,4.6vw,3.4rem)] disabled:opacity-40">
               <span className="inline-block h-12 w-12 border border-white/35 sm:h-14 sm:w-14" />
               <span>Mark Done</span>
             </button>
-            <button type="button" onClick={handleToProofSelection} className="mt-12 text-[clamp(2rem,4.6vw,3.4rem)]">
-              Upload Proof
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={handleToProofSelection}
+              className="mt-8 rounded-xl border border-emerald-400/35 bg-emerald-500/20 px-5 py-3 text-base font-semibold text-white transition hover:bg-emerald-500/30 disabled:opacity-40"
+            >
+              Drop Feedback
+            </button>
+            <button
+              type="button"
+              onClick={handleGoToDashboard}
+              className="mt-8 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
+            >
+              Go to Dashboard
             </button>
           </div>
         )}

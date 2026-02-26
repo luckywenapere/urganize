@@ -337,7 +337,7 @@ export default function PlanDashboardPage() {
                   type="button"
                   onClick={() => {
                     setNeedsOnboarding(true);
-                    router.push(`/dashboard?startOnboarding=2&planId=${planId}`);
+                    router.push(`/dashboard?planId=${planId}`);
                   }}
                   className="rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/20"
                 >
