@@ -798,7 +798,7 @@ export function PostAuthScreen() {
   return (
     <main className={shellClass}>
       <div className="mx-auto flex min-h-screen w-full max-w-[980px] flex-col px-6 py-12 sm:px-12">
-        {step <= 10 && (
+        {step > 0 && step <= 10 && (
           <button
             type="button"
             onClick={handleBack}
