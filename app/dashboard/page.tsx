@@ -8,12 +8,23 @@ import { useAuthStore } from '@/lib/auth-store';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, setNeedsOnboarding } = useAuthStore();
 
   const [completedTasks, setCompletedTasks] = useState(0);
   const [currentTask, setCurrentTask] = useState('Single task');
   const [goalStatus, setGoalStatus] = useState('In Progress');
+  const [plans, setPlans] = useState<
+    Array<{
+      id: string;
+      title: string;
+      artist_name: string;
+      status: string;
+      created_at: string;
+      setup_completed: boolean;
+    }>
+  >([]);
   const [loading, setLoading] = useState(true);
+  const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -27,13 +38,14 @@ export default function DashboardPage() {
 
       const { data: releases } = await supabase
         .from('releases')
-        .select('id')
+        .select('id,title,artist_name,status,created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(10);
 
       const ids = (releases || []).map((item) => item.id);
       if (ids.length === 0) {
+        setPlans([]);
         setLoading(false);
         return;
       }
@@ -55,20 +67,81 @@ export default function DashboardPage() {
         .maybeSingle();
       if (activeTask?.title) setCurrentTask(activeTask.title);
 
-      const { data: setup } = await supabase
+      const { data: setupRows } = await supabase
         .from('release_profiles')
-        .select('setup_completed')
+        .select('release_id,setup_completed')
         .in('release_id', ids)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('updated_at', { ascending: false });
 
-      setGoalStatus(setup?.setup_completed ? 'Onboarding Complete' : 'Onboarding Active');
+      const setupMap = new Map<string, boolean>();
+      (setupRows || []).forEach((row) => {
+        if (!setupMap.has(row.release_id)) {
+          setupMap.set(row.release_id, !!row.setup_completed);
+        }
+      });
+
+      const mappedPlans = (releases || []).map((release) => ({
+        id: release.id,
+        title: release.title || 'Untitled Plan',
+        artist_name: release.artist_name || 'Unknown Artist',
+        status: release.status || 'draft',
+        created_at: release.created_at,
+        setup_completed: setupMap.get(release.id) || false,
+      }));
+
+      setPlans(mappedPlans);
+      setGoalStatus(mappedPlans.some((plan) => !plan.setup_completed) ? 'Onboarding Active' : 'Onboarding Complete');
       setLoading(false);
     };
 
     loadData();
   }, [router, user]);
+
+  const createNewPlan = async () => {
+    if (!user || isCreatingPlan) return;
+
+    setIsCreatingPlan(true);
+    const dateLabel = new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(new Date());
+
+    try {
+      const { data: release, error: releaseError } = await supabase
+        .from('releases')
+        .insert({
+          user_id: user.id,
+          title: `New Plan - ${dateLabel}`,
+          artist_name: user.name || 'Artist',
+          type: 'single',
+          status: 'draft',
+        })
+        .select('id')
+        .single();
+
+      if (releaseError || !release) {
+        throw releaseError || new Error('Failed to create plan');
+      }
+
+      const { error: profileError } = await supabase
+        .from('release_profiles')
+        .insert({
+          release_id: release.id,
+          setup_step: 2,
+          setup_completed: false,
+        });
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      setNeedsOnboarding(true);
+      router.push('/dashboard?startOnboarding=2');
+    } finally {
+      setIsCreatingPlan(false);
+    }
+  };
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
@@ -146,7 +219,17 @@ export default function DashboardPage() {
         </div>
 
         <section className="mt-20 lg:mt-20 xl:mt-24">
-          <h1 className="text-[clamp(2.6rem,6vw,5rem)] tracking-tight lg:text-[3.2rem] xl:text-[3.6rem]">Progress Timeline</h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-[clamp(2.6rem,6vw,5rem)] tracking-tight lg:text-[3.2rem] xl:text-[3.6rem]">Progress Timeline</h1>
+            <button
+              type="button"
+              onClick={createNewPlan}
+              disabled={isCreatingPlan || loading}
+              className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20 disabled:opacity-50"
+            >
+              {isCreatingPlan ? 'Creating...' : 'Create New Plan'}
+            </button>
+          </div>
 
           <div className="mt-10">
             <div className="relative h-8 w-full bg-transparent lg:h-7">
@@ -166,6 +249,34 @@ export default function DashboardPage() {
                 <p className="text-[clamp(2rem,4.8vw,3.5rem)] lg:text-[2.15rem]">Completed Tasks: {completedTasks}</p>
                 <p className="text-[clamp(2rem,4.8vw,3.5rem)] lg:text-[2.15rem]">Current Task: {currentTask}</p>
                 <p className="text-[clamp(2rem,4.8vw,3.5rem)] lg:text-[2.15rem]">Goal Status: {goalStatus}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-8 rounded-[28px] border border-white/5 bg-[#02090d] p-7 sm:p-9">
+            <h2 className="text-2xl tracking-tight sm:text-3xl">Plans</h2>
+            {loading ? (
+              <p className="mt-4 text-white/75">Loading plans...</p>
+            ) : plans.length === 0 ? (
+              <p className="mt-4 text-white/75">No plans yet. Create a new one to start onboarding.</p>
+            ) : (
+              <div className="mt-5 space-y-3">
+                {plans.map((plan) => (
+                  <div
+                    key={plan.id}
+                    className="flex flex-col gap-1 rounded-xl border border-white/10 bg-black/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="text-base font-medium text-white">{plan.title}</p>
+                      <p className="text-sm text-white/70">{plan.artist_name}</p>
+                    </div>
+                    <div className="text-sm text-white/70">
+                      <span>{plan.setup_completed ? 'Onboarding Complete' : 'Onboarding Active'}</span>
+                      <span className="mx-2 text-white/30">•</span>
+                      <span>{new Date(plan.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

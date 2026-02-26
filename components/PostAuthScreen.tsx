@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
@@ -18,6 +18,7 @@ const PaystackButton = dynamic(
 
 export function PostAuthScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     user,
     updateRole,
@@ -162,6 +163,7 @@ export function PostAuthScreen() {
       if (!user) return;
 
       try {
+        const requestedStartStep = Number(searchParams.get('startOnboarding') || 0);
         const activeReleaseId = await ensureOnboardingRelease();
         await loadCurrentTask(activeReleaseId);
 
@@ -178,8 +180,8 @@ export function PostAuthScreen() {
           setStage(artistProfile.career_stage);
         }
 
-        if (user.role === 'artist-manager') {
-          setStep(0);
+        if (requestedStartStep >= 2) {
+          setStep(2);
         }
       } catch (err: any) {
         setError(err?.message || 'Failed to load onboarding');
@@ -189,7 +191,7 @@ export function PostAuthScreen() {
     };
 
     bootstrap();
-  }, [artistName, ensureOnboardingRelease, loadCurrentTask, stage, user]);
+  }, [artistName, ensureOnboardingRelease, loadCurrentTask, searchParams, stage, user]);
 
   const upsertArtistProfile = useCallback(async () => {
     if (!user) throw new Error('User not found');
