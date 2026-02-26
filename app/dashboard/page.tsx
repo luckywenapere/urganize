@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
@@ -15,15 +16,39 @@ type PlanSummary = {
   hard_deadline: string | null;
 };
 
+type CachedPlansPayload = {
+  plans: PlanSummary[];
+  cachedAt: number;
+};
+
+const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000;
+const VIRTUALIZED_LIST_THRESHOLD = 12;
+
+const VirtualizedPlanList = dynamic(
+  () => import('@/components/dashboard/VirtualizedPlanList').then((mod) => mod.VirtualizedPlanList),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mt-5 space-y-3">
+        <div className="h-20 rounded-xl skeleton-shimmer" />
+        <div className="h-20 rounded-xl skeleton-shimmer" />
+        <div className="h-20 rounded-xl skeleton-shimmer" />
+      </div>
+    ),
+  }
+);
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user, logout, setNeedsOnboarding, isLoading: authLoading } = useAuthStore();
 
   const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const cacheKey = user ? `urganize.dashboard.plans.${user.id}` : '';
 
   const getPlanStatus = (plan: PlanSummary): 'Completed' | 'Overdue' | 'In Progress' => {
     if (plan.setup_completed) return 'Completed';
@@ -32,6 +57,22 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
+    const readCachedPlans = (): CachedPlansPayload | null => {
+      if (!cacheKey) return null;
+      const raw = localStorage.getItem(cacheKey);
+      if (!raw) return null;
+      try {
+        const parsed = JSON.parse(raw) as CachedPlansPayload;
+        if (!Array.isArray(parsed.plans) || typeof parsed.cachedAt !== 'number') return null;
+        if (Date.now() - parsed.cachedAt > DASHBOARD_CACHE_TTL_MS) return null;
+        return parsed;
+      } catch {
+        return null;
+      }
+    };
+
     const loadData = async () => {
       if (authLoading) return;
       if (!user) {
@@ -40,51 +81,77 @@ export default function DashboardPage() {
         return;
       }
 
-      const { data: releases } = await supabase
-        .from('releases')
-        .select('id,title,artist_name,created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      const ids = (releases || []).map((item) => item.id);
-      if (ids.length === 0) {
-        setPlans([]);
+      const cached = readCachedPlans();
+      if (cached && !cancelled) {
+        setPlans(cached.plans);
         setLoading(false);
-        return;
       }
 
-      const { data: setupRows } = await supabase
-        .from('release_profiles')
-        .select('release_id,setup_completed,hard_deadline')
-        .in('release_id', ids)
-        .order('updated_at', { ascending: false });
+      setIsRefreshing(true);
+      try {
+        const { data: releases } = await supabase
+          .from('releases')
+          .select('id,title,artist_name,created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(30);
 
-      const setupMap = new Map<string, { setup_completed: boolean; hard_deadline: string | null }>();
-      (setupRows || []).forEach((row) => {
-        if (!setupMap.has(row.release_id)) {
-          setupMap.set(row.release_id, {
-            setup_completed: !!row.setup_completed,
-            hard_deadline: row.hard_deadline || null,
-          });
+        const ids = (releases || []).map((item) => item.id);
+        if (ids.length === 0) {
+          if (!cancelled) {
+            setPlans([]);
+          }
+          return;
         }
-      });
 
-      const mappedPlans = (releases || []).map((release) => ({
-        id: release.id,
-        title: release.title || 'Untitled Plan',
-        artist_name: release.artist_name || 'Unknown Artist',
-        created_at: release.created_at,
-        setup_completed: setupMap.get(release.id)?.setup_completed || false,
-        hard_deadline: setupMap.get(release.id)?.hard_deadline || null,
-      }));
+        const { data: setupRows } = await supabase
+          .from('release_profiles')
+          .select('release_id,setup_completed,hard_deadline')
+          .in('release_id', ids)
+          .order('updated_at', { ascending: false });
 
-      setPlans(mappedPlans);
-      setLoading(false);
+        const setupMap = new Map<string, { setup_completed: boolean; hard_deadline: string | null }>();
+        (setupRows || []).forEach((row) => {
+          if (!setupMap.has(row.release_id)) {
+            setupMap.set(row.release_id, {
+              setup_completed: !!row.setup_completed,
+              hard_deadline: row.hard_deadline || null,
+            });
+          }
+        });
+
+        const mappedPlans = (releases || []).map((release) => ({
+          id: release.id,
+          title: release.title || 'Untitled Plan',
+          artist_name: release.artist_name || 'Unknown Artist',
+          created_at: release.created_at,
+          setup_completed: setupMap.get(release.id)?.setup_completed || false,
+          hard_deadline: setupMap.get(release.id)?.hard_deadline || null,
+        }));
+
+        if (!cancelled) {
+          setPlans(mappedPlans);
+          if (cacheKey) {
+            const cachePayload: CachedPlansPayload = {
+              plans: mappedPlans,
+              cachedAt: Date.now(),
+            };
+            localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
+          }
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setIsRefreshing(false);
+        }
+      }
     };
 
     loadData();
-  }, [authLoading, router, user]);
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, cacheKey, router, user]);
 
   const createNewPlan = async () => {
     if (!user || isCreatingPlan) return;
@@ -170,7 +237,7 @@ export default function DashboardPage() {
               aria-expanded={isMenuOpen}
               aria-haspopup="menu"
             >
-              ≡
+              Menu
             </button>
             {isMenuOpen && (
               <div className="absolute left-0 top-full z-20 mt-3 min-w-[180px] rounded-xl border border-white/10 bg-[#02090d] p-2 shadow-lg">
@@ -209,14 +276,21 @@ export default function DashboardPage() {
         <section className="mt-20 lg:mt-20 xl:mt-24">
           <div className="flex items-center justify-between gap-4">
             <h1 className="text-[clamp(2.6rem,6vw,5rem)] tracking-tight lg:text-[3.2rem] xl:text-[3.6rem]">Plans</h1>
-            <button
-              type="button"
-              onClick={createNewPlan}
-              disabled={isCreatingPlan || loading}
-              className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20 disabled:opacity-50"
-            >
-              {isCreatingPlan ? 'Creating...' : 'Create New Plan'}
-            </button>
+            <div className="flex items-center gap-3">
+              {isRefreshing && !loading && (
+                <span className="rounded-full border border-white/15 bg-white/5 px-2 py-1 text-xs text-white/70">
+                  Refreshing...
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={createNewPlan}
+                disabled={isCreatingPlan || loading}
+                className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20 disabled:opacity-50"
+              >
+                {isCreatingPlan ? 'Creating...' : 'Create New Plan'}
+              </button>
+            </div>
           </div>
 
           <div className="mt-8 rounded-[28px] border border-white/5 bg-[#02090d] p-7 sm:p-9">
@@ -224,6 +298,12 @@ export default function DashboardPage() {
               <p className="mt-4 text-white/75">Loading plans...</p>
             ) : plans.length === 0 ? (
               <p className="mt-4 text-white/75">No plans yet. Create a new one to start onboarding.</p>
+            ) : plans.length >= VIRTUALIZED_LIST_THRESHOLD ? (
+              <VirtualizedPlanList
+                plans={plans}
+                getPlanStatus={getPlanStatus}
+                onSelectPlan={(planId) => router.push(`/dashboard/plans/${planId}`)}
+              />
             ) : (
               <div className="mt-5 space-y-3">
                 {plans.map((plan) => (
@@ -231,7 +311,7 @@ export default function DashboardPage() {
                     type="button"
                     key={plan.id}
                     onClick={() => router.push(`/dashboard/plans/${plan.id}`)}
-                    className="flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-left transition hover:border-white/20 hover:bg-black/30 sm:flex-row sm:items-center sm:justify-between"
+                    className="lazy-fade lazy-fade-in flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-left transition hover:border-white/20 hover:bg-black/30 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
                       <p className="text-base font-medium text-white">{plan.title}</p>
@@ -249,7 +329,7 @@ export default function DashboardPage() {
                       >
                         {getPlanStatus(plan)}
                       </span>
-                      <span className="text-white/30">•</span>
+                      <span className="text-white/30">.</span>
                       <span>{new Date(plan.created_at).toLocaleDateString()}</span>
                     </div>
                   </button>

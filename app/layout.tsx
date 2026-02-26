@@ -1,11 +1,29 @@
 'use client';
 
 import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
-import { PostAuthScreen } from '@/components/PostAuthScreen';
 import "./globals.css";
+
+const PostAuthScreen = dynamic(
+  () => import('@/components/PostAuthScreen').then((mod) => mod.PostAuthScreen),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-screen items-center justify-center bg-black text-white">
+        <div className="skeleton-card w-full max-w-xl p-8">
+          <div className="h-8 w-48 rounded-lg skeleton-shimmer" />
+          <div className="mt-4 space-y-3">
+            <div className="skeleton-line skeleton-shimmer w-full" />
+            <div className="skeleton-line skeleton-shimmer w-4/5" />
+          </div>
+        </div>
+      </div>
+    ),
+  }
+);
 
 export default function RootLayout({
   children,
@@ -38,7 +56,11 @@ export default function RootLayout({
         />
       </head>
       <body className="app-body bg-bg-base text-content-primary antialiased">
-        {showPostAuthScreen ? <PostAuthScreen /> : <div className={pageLayoutClassName}>{children}</div>}
+        {showPostAuthScreen ? (
+          <PostAuthScreen />
+        ) : (
+          <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>{children}</div>
+        )}
         {!showPostAuthScreen && (
           <div className="keyboard-hint">
             <kbd className="kbd">⌘</kbd>

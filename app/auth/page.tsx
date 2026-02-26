@@ -81,7 +81,7 @@ export default function AuthPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center text-center">
-          <Logo size="lg" />
+          <Logo size="lg" priority />
           <p className="text-content-secondary mt-2">
             {mode === 'login' ? 'Welcome back' : 'Get started for free'}
           </p>

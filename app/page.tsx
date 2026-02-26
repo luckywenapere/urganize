@@ -25,7 +25,7 @@ export default function HomePage() {
       <div className="relative flex flex-col items-center gap-4 animate-in">
         {/* Logo with spin */}
         <div className="relative">
-          <LogoIcon size={48} className="text-content-primary" />
+          <LogoIcon size={48} className="text-content-primary" priority />
           <svg 
             className="absolute inset-0 w-16 h-16 -m-2 animate-spin" 
             style={{ animationDuration: '2s' }}

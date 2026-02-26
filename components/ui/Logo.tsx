@@ -8,6 +8,7 @@ interface LogoProps {
   showText?: boolean;
   className?: string;
   variant?: 'default' | 'square';
+  priority?: boolean;
 }
 
 const sizes = {
@@ -29,6 +30,7 @@ export const Logo: React.FC<LogoProps> = ({
   showText = true,
   className = '',
   variant = 'default',
+  priority = false,
 }) => {
   const dimensions = sizes[size];
   const squareSize = squareSizes[size];
@@ -43,7 +45,7 @@ export const Logo: React.FC<LogoProps> = ({
           width={squareSize}
           height={squareSize}
           className="flex-shrink-0 object-contain"
-          priority
+          priority={priority}
         />
       </div>
     );
@@ -58,16 +60,17 @@ export const Logo: React.FC<LogoProps> = ({
         width={dimensions.width}
         height={dimensions.height}
         className="flex-shrink-0 object-contain"
-        priority
+        priority={priority}
       />
     </div>
   );
 };
 
 // Icon-only variant (square logo)
-export const LogoIcon: React.FC<{ size?: number; className?: string }> = ({ 
+export const LogoIcon: React.FC<{ size?: number; className?: string; priority?: boolean }> = ({ 
   size = 24, 
-  className = '' 
+  className = '',
+  priority = false,
 }) => {
   return (
     <Image 
@@ -76,7 +79,7 @@ export const LogoIcon: React.FC<{ size?: number; className?: string }> = ({
       width={size}
       height={size}
       className={`object-contain ${className}`}
-      priority
+      priority={priority}
     />
   );
 };

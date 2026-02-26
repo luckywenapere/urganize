@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-[400px] relative z-10">
         {/* Logo */}
         <div className="text-center mb-8 animate-in">
-          <Logo size="xl" className="justify-center mb-4" />
+          <Logo size="xl" className="justify-center mb-4" priority />
           <p className="text-content-secondary">
             The operating system for music careers
           </p>

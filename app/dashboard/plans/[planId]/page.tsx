@@ -9,6 +9,7 @@ import { useAuthStore } from '@/lib/auth-store';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ONBOARDING_TOTAL_STEPS = 13;
 const DEFAULT_PLAN_DURATION_DAYS = 30;
+const PLAN_CACHE_TTL_MS = 5 * 60 * 1000;
 
 type PlanRow = {
   id: string;
@@ -22,6 +23,15 @@ type PlanProfile = {
   setup_completed: boolean | null;
   hard_deadline: string | null;
   deadline_reason: string | null;
+};
+
+type CachedPlanPayload = {
+  plan: PlanRow;
+  profile: PlanProfile;
+  totalTasks: number;
+  completedTasks: number;
+  nextTask: string;
+  cachedAt: number;
 };
 
 const addDaysIso = (base: string | Date, days: number): string => {
@@ -45,8 +55,26 @@ export default function PlanDashboardPage() {
   const [totalTasks, setTotalTasks] = useState(0);
   const [completedTasks, setCompletedTasks] = useState(0);
   const [nextTask, setNextTask] = useState('No active task');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const cacheKey = user && planId ? `urganize.planDashboard.${user.id}.${planId}` : '';
 
   useEffect(() => {
+    let cancelled = false;
+
+    const readCachedPlan = (): CachedPlanPayload | null => {
+      if (!cacheKey) return null;
+      const raw = localStorage.getItem(cacheKey);
+      if (!raw) return null;
+      try {
+        const parsed = JSON.parse(raw) as CachedPlanPayload;
+        if (!parsed?.plan || !parsed?.profile || typeof parsed.cachedAt !== 'number') return null;
+        if (Date.now() - parsed.cachedAt > PLAN_CACHE_TTL_MS) return null;
+        return parsed;
+      } catch {
+        return null;
+      }
+    };
+
     const loadPlan = async () => {
       if (authLoading) return;
       if (!planId) {
@@ -61,6 +89,17 @@ export default function PlanDashboardPage() {
         return;
       }
 
+      const cached = readCachedPlan();
+      if (cached && !cancelled) {
+        setPlan(cached.plan);
+        setProfile(cached.profile);
+        setTotalTasks(cached.totalTasks);
+        setCompletedTasks(cached.completedTasks);
+        setNextTask(cached.nextTask || 'No active task');
+        setLoading(false);
+      }
+
+      setIsRefreshing(true);
       try {
         const { data: release, error: releaseError } = await supabase
           .from('releases')
@@ -72,10 +111,9 @@ export default function PlanDashboardPage() {
         if (releaseError) throw releaseError;
         if (!release) {
           setError('Plan not found');
-          setLoading(false);
+          if (cacheKey) localStorage.removeItem(cacheKey);
           return;
         }
-        setPlan(release);
 
         const { data: latestProfile, error: profileError } = await supabase
           .from('release_profiles')
@@ -118,7 +156,6 @@ export default function PlanDashboardPage() {
         } else {
           resolvedProfile = latestProfile;
         }
-        setProfile(resolvedProfile);
 
         const [{ count: totalCount, error: totalError }, { count: doneCount, error: doneError }, { data: activeTask, error: taskError }] = await Promise.all([
           supabase.from('ai_tasks').select('id', { count: 'exact', head: true }).eq('release_id', release.id),
@@ -137,18 +174,43 @@ export default function PlanDashboardPage() {
         if (doneError) throw doneError;
         if (taskError) throw taskError;
 
-        setTotalTasks(totalCount || 0);
-        setCompletedTasks(doneCount || 0);
-        if (activeTask?.title) setNextTask(activeTask.title);
+        if (!cancelled) {
+          setError('');
+          setPlan(release);
+          setProfile(resolvedProfile);
+          setTotalTasks(totalCount || 0);
+          setCompletedTasks(doneCount || 0);
+          setNextTask(activeTask?.title || 'No active task');
+
+          if (cacheKey) {
+            const cachePayload: CachedPlanPayload = {
+              plan: release,
+              profile: resolvedProfile,
+              totalTasks: totalCount || 0,
+              completedTasks: doneCount || 0,
+              nextTask: activeTask?.title || 'No active task',
+              cachedAt: Date.now(),
+            };
+            localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
+          }
+        }
       } catch (loadError: any) {
-        setError(loadError?.message || 'Could not load plan dashboard');
+        if (!cancelled) {
+          setError(loadError?.message || 'Could not load plan dashboard');
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setIsRefreshing(false);
+        }
       }
     };
 
     loadPlan();
-  }, [authLoading, planId, router, user]);
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, cacheKey, planId, router, user]);
 
   const timelineMetrics = useMemo(() => {
     const now = Date.now();
@@ -256,8 +318,15 @@ export default function PlanDashboardPage() {
             <section className="mt-14">
               <h1 className="text-[clamp(2.2rem,4.8vw,3.7rem)] tracking-tight">{plan?.title || 'Plan Dashboard'}</h1>
               <p className="mt-2 text-white/70">{plan?.artist_name || 'Unknown Artist'}</p>
-              <div className="mt-4 inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-white/90 ring-1 ring-white/20">
-                Created {timelineMetrics.createdAt.toLocaleDateString()}
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-white/90 ring-1 ring-white/20">
+                  Created {timelineMetrics.createdAt.toLocaleDateString()}
+                </div>
+                {isRefreshing && (
+                  <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/70">
+                    Refreshing...
+                  </div>
+                )}
               </div>
             </section>
 

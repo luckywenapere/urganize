@@ -91,7 +91,7 @@ export default function ResetPasswordPage() {
         <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-brand/3 rounded-full blur-[100px]" />
         
         <div className="w-full max-w-[400px] relative z-10 text-center">
-          <Logo size="xl" className="justify-center mb-4" />
+          <Logo size="xl" className="justify-center mb-4" priority />
           <p className="text-content-secondary">Verifying reset link...</p>
         </div>
       </div>
@@ -108,7 +108,7 @@ export default function ResetPasswordPage() {
         
         <div className="w-full max-w-[400px] relative z-10">
           <div className="text-center mb-8 animate-in">
-            <Logo size="xl" className="justify-center mb-4" />
+            <Logo size="xl" className="justify-center mb-4" priority />
             <p className="text-content-secondary">
               The operating system for music careers
             </p>
@@ -159,7 +159,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-[400px] relative z-10">
         {/* Logo */}
         <div className="text-center mb-8 animate-in">
-          <Logo size="xl" className="justify-center mb-4" />
+          <Logo size="xl" className="justify-center mb-4" priority />
           <p className="text-content-secondary">
             The operating system for music careers
           </p>
