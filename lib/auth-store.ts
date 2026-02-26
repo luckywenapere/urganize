@@ -154,7 +154,9 @@ export const useAuthStore = create<AuthState>()(
                   .order('updated_at', { ascending: false });
 
                 if (!onboardingError && onboardingProfiles && onboardingProfiles.length > 0) {
-                  needsOnboarding = !onboardingProfiles.some((item) => item.setup_completed);
+                  // Use the most recently updated profile as the source of truth for active onboarding state.
+                  // This prevents auth refresh events from dismissing onboarding while a new plan is still in progress.
+                  needsOnboarding = onboardingProfiles[0].setup_completed !== true;
                 }
               }
 
