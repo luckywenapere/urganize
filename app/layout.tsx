@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
@@ -33,18 +33,35 @@ export default function RootLayout({
 }) {
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAuthLoading = useAuthStore((state) => state.isLoading);
   const needsOnboarding = useAuthStore((state) => state.needsOnboarding);
   const pathname = usePathname();
+  const [hasOnboardingIntent, setHasOnboardingIntent] = useState(false);
 
   const isAuthRoute = pathname?.startsWith('/auth');
   const isDashboardRoute = pathname?.startsWith('/dashboard');
   const isDashboardRootRoute = pathname === '/dashboard';
-  const showPostAuthScreen = isAuthenticated && !isAuthRoute && needsOnboarding && isDashboardRootRoute;
+  const showPostAuthScreen =
+    isAuthenticated &&
+    !isAuthLoading &&
+    !isAuthRoute &&
+    isDashboardRootRoute &&
+    (needsOnboarding || hasOnboardingIntent);
   const pageLayoutClassName = isDashboardRoute ? 'app-layout app-layout-fluid' : 'app-layout app-layout-centered';
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  useEffect(() => {
+    if (!isDashboardRootRoute || typeof window === 'undefined') {
+      setHasOnboardingIntent(false);
+      return;
+    }
+
+    const query = new URLSearchParams(window.location.search);
+    setHasOnboardingIntent(query.has('startOnboarding') || query.has('planId'));
+  }, [isDashboardRootRoute, pathname]);
 
   return (
     <html lang="en" suppressHydrationWarning data-theme="dark" className="dark">

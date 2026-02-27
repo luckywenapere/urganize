@@ -85,6 +85,37 @@ const isAbortError = (error: any): boolean => {
   return name === 'aborterror' || message.includes('aborted') || message.includes('operation was aborted');
 };
 
+const resolveNeedsOnboarding = async (userId: string): Promise<boolean> => {
+  const { data: releases, error: releasesError } = await supabase
+    .from('releases')
+    .select('id')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(30);
+
+  if (releasesError || !releases || releases.length === 0) {
+    return true;
+  }
+
+  const releaseIds = releases.map((release) => release.id);
+  const { data: onboardingProfiles, error: onboardingError } = await supabase
+    .from('release_profiles')
+    .select('setup_completed')
+    .in('release_id', releaseIds)
+    .order('updated_at', { ascending: false });
+
+  if (onboardingError || !onboardingProfiles || onboardingProfiles.length === 0) {
+    return true;
+  }
+
+  const hasCompletedOnboarding = onboardingProfiles.some((profile) => profile.setup_completed === true);
+  if (hasCompletedOnboarding) {
+    return false;
+  }
+
+  return onboardingProfiles[0].setup_completed !== true;
+};
+
 interface AuthState {
   user: Profile | null;
   isAuthenticated: boolean;
@@ -144,30 +175,7 @@ export const useAuthStore = create<AuthState>()(
 
             if (profile) {
               persistLastAuthEmail(profile.email || session.user.email);
-              let needsOnboarding = true;
-
-              const { data: releases, error: releasesError } = await supabase
-                .from('releases')
-                .select('id')
-                .eq('user_id', session.user.id)
-                .order('created_at', { ascending: false })
-                .limit(20);
-
-              if (!releasesError && releases && releases.length > 0) {
-                const releaseIds = releases.map((release) => release.id);
-
-                const { data: onboardingProfiles, error: onboardingError } = await supabase
-                  .from('release_profiles')
-                  .select('setup_completed')
-                  .in('release_id', releaseIds)
-                  .order('updated_at', { ascending: false });
-
-                if (!onboardingError && onboardingProfiles && onboardingProfiles.length > 0) {
-                  // Use the most recently updated profile as the source of truth for active onboarding state.
-                  // This prevents auth refresh events from dismissing onboarding while a new plan is still in progress.
-                  needsOnboarding = onboardingProfiles[0].setup_completed !== true;
-                }
-              }
+              const needsOnboarding = await resolveNeedsOnboarding(session.user.id);
 
               set({ 
                 user: profile, 
@@ -230,11 +238,12 @@ export const useAuthStore = create<AuthState>()(
 
           if (profile) {
             persistLastAuthEmail(profile.email || data.user.email);
+            const needsOnboarding = await resolveNeedsOnboarding(data.user.id);
             set({ 
               user: profile, 
               isAuthenticated: true, 
               isLoading: false,
-              needsOnboarding: true,
+              needsOnboarding,
               error: null 
             });
           }

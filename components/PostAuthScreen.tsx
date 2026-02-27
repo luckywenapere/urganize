@@ -785,7 +785,6 @@ export function PostAuthScreen() {
       const { error: profileUpdateError } = await supabase
         .from('release_profiles')
         .update({
-          song_stage: stage || 'emerging',
           target_audience_description: audienceSize.trim() || null,
           listener_interests: listeners,
           budget_naira: maybeBudget,
