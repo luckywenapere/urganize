@@ -606,6 +606,7 @@ export function PostAuthScreen() {
       .from('ai_tasks')
       .select('id, title, description')
       .eq('release_id', activeReleaseId)
+      .in('status', ['current', 'pending'])
       .order('order_index', { ascending: true })
       .limit(1)
       .maybeSingle();
@@ -615,7 +616,9 @@ export function PostAuthScreen() {
       setTaskId(task.id);
       setTaskTitle(task.title || 'Single task');
       setTaskOutcome(task.description || 'Expected outcome');
+      return;
     }
+    setTaskId(null);
   }, []);
 
   const bootstrapTargetKey = `${user?.id || 'anon'}:${requestedPlanId || 'auto'}:${Number.isFinite(requestedStartStep) ? requestedStartStep : 0}`;
@@ -1173,7 +1176,7 @@ export function PostAuthScreen() {
       }
 
       setNeedsOnboarding(false);
-      router.push(`/dashboard/plans/${releaseId}`);
+      router.push(`/dashboard/plans/${releaseId}/next-step`);
     } catch (err: any) {
       setError(err?.message || 'Failed to submit feedback');
     } finally {

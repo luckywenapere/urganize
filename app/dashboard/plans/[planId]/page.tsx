@@ -16,6 +16,7 @@ type PlanRow = {
   title: string;
   artist_name: string;
   created_at: string;
+  status: 'draft' | 'in-progress' | 'ready' | 'released';
 };
 
 type PlanProfile = {
@@ -116,7 +117,7 @@ export default function PlanDashboardPage() {
       try {
         const { data: release, error: releaseError } = await supabase
           .from('releases')
-          .select('id,title,artist_name,created_at')
+          .select('id,title,artist_name,created_at,status')
           .eq('id', planId)
           .eq('user_id', user.id)
           .maybeSingle();
@@ -608,6 +609,22 @@ export default function PlanDashboardPage() {
                 >
                   Resume Onboarding
                 </button>
+              </div>
+            )}
+            {profile?.setup_completed && plan?.status !== 'released' && (
+              <div className="mt-8">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/dashboard/plans/${planId}/next-step`)}
+                  className="rounded-xl border border-brand/35 bg-brand-muted px-5 py-3 text-sm font-semibold text-content-primary transition hover:bg-brand/20"
+                >
+                  Plan Next Step
+                </button>
+              </div>
+            )}
+            {profile?.setup_completed && plan?.status === 'released' && (
+              <div className="mt-8 rounded-xl border border-brand/35 bg-brand-muted p-4 text-sm text-content-secondary">
+                This plan is completed and archived.
               </div>
             )}
           </>

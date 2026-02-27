@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
@@ -12,6 +12,7 @@ type PlanSummary = {
   title: string;
   artist_name: string;
   created_at: string;
+  status: 'draft' | 'in-progress' | 'ready' | 'released';
   setup_completed: boolean;
   hard_deadline: string | null;
 };
@@ -49,6 +50,7 @@ export default function DashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [planFilter, setPlanFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [activePlanMenuId, setActivePlanMenuId] = useState<string | null>(null);
   const [activePlanMenuDirection, setActivePlanMenuDirection] = useState<'up' | 'down'>('down');
   const [activePlanMenuOffsetX, setActivePlanMenuOffsetX] = useState(0);
@@ -61,10 +63,19 @@ export default function DashboardPage() {
   const cacheKey = user ? `urganize.dashboard.plans.${user.id}` : '';
 
   const getPlanStatus = (plan: PlanSummary): 'Completed' | 'Overdue' | 'In Progress' => {
+    if (plan.status === 'released') return 'Completed';
     if (plan.setup_completed) return 'Completed';
     if (!plan.hard_deadline) return 'In Progress';
     return new Date(plan.hard_deadline).getTime() < Date.now() ? 'Overdue' : 'In Progress';
   };
+
+  const activePlansCount = useMemo(() => plans.filter((plan) => plan.status !== 'released').length, [plans]);
+  const archivedPlansCount = useMemo(() => plans.filter((plan) => plan.status === 'released').length, [plans]);
+  const filteredPlans = useMemo(() => {
+    if (planFilter === 'active') return plans.filter((plan) => plan.status !== 'released');
+    if (planFilter === 'archived') return plans.filter((plan) => plan.status === 'released');
+    return plans;
+  }, [planFilter, plans]);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,7 +113,7 @@ export default function DashboardPage() {
       try {
         const { data: releases } = await supabase
           .from('releases')
-          .select('id,title,artist_name,created_at')
+          .select('id,title,artist_name,created_at,status')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(30);
@@ -139,6 +150,7 @@ export default function DashboardPage() {
           title: release.title || 'Untitled Plan',
           artist_name: release.artist_name || 'Unknown Artist',
           created_at: release.created_at,
+          status: release.status || 'draft',
           setup_completed: setupMap.get(release.id)?.setup_completed || false,
           hard_deadline: setupMap.get(release.id)?.hard_deadline || null,
         }));
@@ -420,6 +432,43 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
+          {plans.length > 0 && (
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPlanFilter('active')}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                  planFilter === 'active'
+                    ? 'border-brand/45 bg-brand-muted text-content-primary'
+                    : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                }`}
+              >
+                Active ({activePlansCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPlanFilter('archived')}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                  planFilter === 'archived'
+                    ? 'border-brand/45 bg-brand-muted text-content-primary'
+                    : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                }`}
+              >
+                Archived ({archivedPlansCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPlanFilter('all')}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                  planFilter === 'all'
+                    ? 'border-brand/45 bg-brand-muted text-content-primary'
+                    : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                }`}
+              >
+                All ({plans.length})
+              </button>
+            </div>
+          )}
 
           {error && (
             <p className="mt-5 rounded-xl border border-status-error/35 bg-status-error/10 px-4 py-3 text-sm text-status-error">
@@ -434,16 +483,27 @@ export default function DashboardPage() {
               <div className="mt-4 rounded-2xl border border-dashed border-stroke-default bg-bg-elevated p-6 text-center">
                 <p className="text-content-secondary">No plans yet. Create your first plan to start onboarding.</p>
               </div>
-            ) : plans.length >= VIRTUALIZED_LIST_THRESHOLD ? (
+            ) : filteredPlans.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-stroke-default bg-bg-elevated p-6 text-center">
+                <p className="text-content-secondary">
+                  {planFilter === 'archived'
+                    ? 'No archived plans yet.'
+                    : planFilter === 'active'
+                      ? 'No active plans right now.'
+                      : 'No plans available.'}
+                </p>
+              </div>
+            ) : filteredPlans.length >= VIRTUALIZED_LIST_THRESHOLD ? (
               <VirtualizedPlanList
-                plans={plans}
+                plans={filteredPlans}
+                showArchivedBadge={planFilter === 'all'}
                 getPlanStatus={getPlanStatus}
                 onSelectPlan={(planId) => router.push(`/dashboard/plans/${planId}`)}
                 onRequestDeletePlan={(plan) => requestDeletePlan(plan)}
               />
             ) : (
               <div className="mt-5 space-y-3">
-                {plans.map((plan) => (
+                {filteredPlans.map((plan) => (
                   <div
                     key={plan.id}
                     className="relative lazy-fade lazy-fade-in flex w-full flex-col gap-2 rounded-xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-left transition hover:border-stroke-default hover:bg-bg-hover sm:flex-row sm:items-center sm:justify-between"
@@ -455,7 +515,14 @@ export default function DashboardPage() {
                       className="flex min-w-0 flex-1 flex-col gap-2 text-left sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-base font-medium text-content-primary">{plan.title}</p>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <p className="truncate text-base font-medium text-content-primary">{plan.title}</p>
+                          {planFilter === 'all' && plan.status === 'released' && (
+                            <span className="rounded-full border border-stroke-default bg-bg-surface px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-content-tertiary">
+                              Archived
+                            </span>
+                          )}
+                        </div>
                         <p className="truncate text-sm text-content-secondary">{plan.artist_name}</p>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-content-secondary">

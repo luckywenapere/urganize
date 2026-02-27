@@ -7,6 +7,7 @@ type PlanSummary = {
   title: string;
   artist_name: string;
   created_at: string;
+  status: 'draft' | 'in-progress' | 'ready' | 'released';
   setup_completed: boolean;
   hard_deadline: string | null;
 };
@@ -15,6 +16,7 @@ type PlanStatus = 'Completed' | 'Overdue' | 'In Progress';
 
 type VirtualizedPlanListProps = {
   plans: PlanSummary[];
+  showArchivedBadge?: boolean;
   getPlanStatus: (plan: PlanSummary) => PlanStatus;
   onSelectPlan: (planId: string) => void;
   onRequestDeletePlan: (plan: PlanSummary) => void;
@@ -26,7 +28,7 @@ const OVERSCAN_ROWS = 4;
 const PLAN_MENU_WIDTH_PX = 190;
 const PLAN_MENU_SAFE_MARGIN_PX = 12;
 
-export function VirtualizedPlanList({ plans, getPlanStatus, onSelectPlan, onRequestDeletePlan }: VirtualizedPlanListProps) {
+export function VirtualizedPlanList({ plans, showArchivedBadge = false, getPlanStatus, onSelectPlan, onRequestDeletePlan }: VirtualizedPlanListProps) {
   const [scrollTop, setScrollTop] = useState(0);
   const [activePlanMenuId, setActivePlanMenuId] = useState<string | null>(null);
   const [activePlanMenuDirection, setActivePlanMenuDirection] = useState<'up' | 'down'>('down');
@@ -91,7 +93,14 @@ export function VirtualizedPlanList({ plans, getPlanStatus, onSelectPlan, onRequ
                   className="flex min-w-0 flex-1 items-start justify-between gap-3 text-left"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-base font-medium text-content-primary">{plan.title}</p>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <p className="truncate text-base font-medium text-content-primary">{plan.title}</p>
+                      {showArchivedBadge && plan.status === 'released' && (
+                        <span className="rounded-full border border-stroke-default bg-bg-surface px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-content-tertiary">
+                          Archived
+                        </span>
+                      )}
+                    </div>
                     <p className="truncate text-sm text-content-secondary">{plan.artist_name}</p>
                   </div>
                   <div className="flex items-center gap-2 whitespace-nowrap text-sm text-content-secondary">
