@@ -63,14 +63,6 @@ export function FeedbackSubmitStep({
 }: FeedbackSubmitStepProps) {
   return (
     <div className="mx-auto mt-16 w-full max-w-[820px] rounded-2xl border border-stroke-default bg-bg-surface p-6 sm:p-8">
-      <button
-        type="button"
-        onClick={onLogout}
-        className="absolute right-6 top-8 text-sm text-content-secondary hover:text-content-primary"
-      >
-        Logout
-      </button>
-
       <div className="rounded-2xl border border-stroke-default bg-bg-elevated p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -288,6 +280,14 @@ export function FeedbackSubmitStep({
           className="rounded-xl border border-stroke-default bg-bg-overlay px-5 py-3 text-sm font-medium text-content-primary transition hover:bg-bg-hover disabled:opacity-40"
         >
           Go to Dashboard
+        </button>
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={onLogout}
+          className="text-sm text-content-secondary transition hover:text-content-primary disabled:opacity-40"
+        >
+          Logout
         </button>
       </div>
     </div>

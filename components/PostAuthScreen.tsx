@@ -1025,6 +1025,7 @@ export function PostAuthScreen() {
   };
 
   const handleGoToDashboard = () => {
+    setNeedsOnboarding(false);
     if (releaseId) {
       router.push(`/dashboard/plans/${releaseId}`);
       return;
@@ -1353,6 +1354,7 @@ export function PostAuthScreen() {
             taskOutcome={taskOutcome}
             onLogout={handleLogoutToAuth}
             onMarkStarted={handleMarkStarted}
+            onGoToDashboard={handleGoToDashboard}
           />
         )}
 

@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import "./globals.css";
 
 const PostAuthScreen = dynamic(
@@ -87,9 +86,6 @@ export default function RootLayout({
         />
       </head>
       <body className="app-body bg-bg-base text-content-primary antialiased">
-        <div className="fixed right-4 top-4 z-[90] md:right-6 md:top-6">
-          <ThemeToggle compact />
-        </div>
         {showPostAuthScreen ? (
           <PostAuthScreen />
         ) : (

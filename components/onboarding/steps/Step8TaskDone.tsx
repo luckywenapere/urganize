@@ -17,13 +17,6 @@ export function Step8TaskDone({
 }: Step8TaskDoneProps) {
   return (
     <div className="mx-auto mt-[20vh] w-full max-w-[700px]">
-      <button
-        type="button"
-        onClick={onLogout}
-        className="absolute right-6 top-8 text-sm text-content-secondary hover:text-content-primary"
-      >
-        Logout
-      </button>
       <button type="button" disabled={isBusy} onClick={onMarkDone} className="flex items-center gap-4 text-[clamp(2rem,4.6vw,3.4rem)] text-content-primary disabled:opacity-40">
         <span className="inline-block h-12 w-12 rounded-md border border-stroke-default bg-bg-elevated sm:h-14 sm:w-14" />
         <span>Mark Done</span>
@@ -42,6 +35,14 @@ export function Step8TaskDone({
         className="mt-8 rounded-xl border border-stroke-default bg-bg-elevated px-4 py-2 text-sm font-medium text-content-primary transition hover:bg-bg-hover"
       >
         Go to Dashboard
+      </button>
+      <button
+        type="button"
+        disabled={isBusy}
+        onClick={onLogout}
+        className="mt-4 text-sm text-content-secondary transition hover:text-content-primary disabled:opacity-40"
+      >
+        Logout
       </button>
     </div>
   );
