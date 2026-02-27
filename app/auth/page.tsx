@@ -173,9 +173,11 @@ export default function AuthPage() {
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo size="lg" priority />
-          <p className="text-content-secondary mt-2">
-            {mode === 'login' ? 'Welcome back' : 'Get started for free'}
-          </p>
+          {mode !== 'login' && (
+            <p className="text-content-secondary mt-2">
+              Get started for free
+            </p>
+          )}
         </div>
 
         <Card padding="lg">
