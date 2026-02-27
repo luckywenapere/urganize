@@ -23,6 +23,8 @@ type CachedPlansPayload = {
 
 const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000;
 const VIRTUALIZED_LIST_THRESHOLD = 12;
+const PLAN_MENU_WIDTH_PX = 190;
+const PLAN_MENU_SAFE_MARGIN_PX = 12;
 
 const VirtualizedPlanList = dynamic(
   () => import('@/components/dashboard/VirtualizedPlanList').then((mod) => mod.VirtualizedPlanList),
@@ -48,6 +50,8 @@ export default function DashboardPage() {
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activePlanMenuId, setActivePlanMenuId] = useState<string | null>(null);
+  const [activePlanMenuDirection, setActivePlanMenuDirection] = useState<'up' | 'down'>('down');
+  const [activePlanMenuOffsetX, setActivePlanMenuOffsetX] = useState(0);
   const [planPendingDelete, setPlanPendingDelete] = useState<PlanSummary | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeletingPlan, setIsDeletingPlan] = useState(false);
@@ -226,6 +230,32 @@ export default function DashboardPage() {
     setDeleteConfirmText('');
     setDeleteError('');
     setActivePlanMenuId(null);
+    setActivePlanMenuDirection('down');
+    setActivePlanMenuOffsetX(0);
+  };
+
+  const togglePlanMenu = (planId: string, anchor: HTMLElement) => {
+    if (activePlanMenuId === planId) {
+      setActivePlanMenuId(null);
+      setActivePlanMenuDirection('down');
+      setActivePlanMenuOffsetX(0);
+      return;
+    }
+    const anchorRect = anchor.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - anchorRect.bottom;
+    const menuLeft = anchorRect.right - PLAN_MENU_WIDTH_PX;
+    const menuRight = anchorRect.right;
+    let offsetX = 0;
+    if (menuLeft < PLAN_MENU_SAFE_MARGIN_PX) {
+      offsetX = PLAN_MENU_SAFE_MARGIN_PX - menuLeft;
+    }
+    const maxRight = window.innerWidth - PLAN_MENU_SAFE_MARGIN_PX;
+    if (menuRight + offsetX > maxRight) {
+      offsetX -= menuRight + offsetX - maxRight;
+    }
+    setActivePlanMenuDirection(spaceBelow < 220 ? 'up' : 'down');
+    setActivePlanMenuOffsetX(offsetX);
+    setActivePlanMenuId(planId);
   };
 
   const closeDeleteModal = () => {
@@ -301,6 +331,8 @@ export default function DashboardPage() {
       const targetElement = event.target as HTMLElement;
       if (!targetElement.closest('[data-plan-menu="true"]')) {
         setActivePlanMenuId(null);
+        setActivePlanMenuDirection('down');
+        setActivePlanMenuOffsetX(0);
       }
     };
 
@@ -308,6 +340,8 @@ export default function DashboardPage() {
       if (event.key === 'Escape') {
         setIsMenuOpen(false);
         setActivePlanMenuId(null);
+        setActivePlanMenuDirection('down');
+        setActivePlanMenuOffsetX(0);
       }
     };
 
@@ -412,7 +446,8 @@ export default function DashboardPage() {
                 {plans.map((plan) => (
                   <div
                     key={plan.id}
-                    className="lazy-fade lazy-fade-in flex w-full flex-col gap-2 rounded-xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-left transition hover:border-stroke-default hover:bg-bg-hover sm:flex-row sm:items-center sm:justify-between"
+                    className="relative lazy-fade lazy-fade-in flex w-full flex-col gap-2 rounded-xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-left transition hover:border-stroke-default hover:bg-bg-hover sm:flex-row sm:items-center sm:justify-between"
+                    style={{ zIndex: activePlanMenuId === plan.id ? 40 : 1 }}
                   >
                     <button
                       type="button"
@@ -442,18 +477,23 @@ export default function DashboardPage() {
                     <div className="relative self-end sm:self-auto" data-plan-menu="true">
                       <button
                         type="button"
-                        onClick={() => setActivePlanMenuId((current) => (current === plan.id ? null : plan.id))}
+                        onClick={(event) => togglePlanMenu(plan.id, event.currentTarget)}
                         className="rounded-md border border-stroke-default bg-bg-surface px-2 py-1 text-content-secondary hover:bg-bg-hover hover:text-content-primary"
                         aria-label={`Open menu for ${plan.title}`}
                       >
                         ...
                       </button>
                       {activePlanMenuId === plan.id && (
-                        <div className="absolute right-0 top-full z-20 mt-2 min-w-[170px] rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-lg">
+                        <div
+                          className={`absolute right-0 z-50 min-w-[170px] rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-lg ${activePlanMenuDirection === 'up' ? 'bottom-full mb-2 animate-menu-up' : 'top-full mt-2 animate-menu-down'}`}
+                          style={{ transform: `translateX(${activePlanMenuOffsetX}px)` }}
+                        >
                           <button
                             type="button"
                             onClick={() => {
                               setActivePlanMenuId(null);
+                              setActivePlanMenuDirection('down');
+                              setActivePlanMenuOffsetX(0);
                               router.push(`/dashboard/plans/${plan.id}`);
                             }}
                             className="block w-full rounded-md px-3 py-2 text-left text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"

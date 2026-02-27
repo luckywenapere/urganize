@@ -23,10 +23,38 @@ type VirtualizedPlanListProps = {
 const ROW_HEIGHT = 94;
 const MAX_LIST_HEIGHT = 470;
 const OVERSCAN_ROWS = 4;
+const PLAN_MENU_WIDTH_PX = 190;
+const PLAN_MENU_SAFE_MARGIN_PX = 12;
 
 export function VirtualizedPlanList({ plans, getPlanStatus, onSelectPlan, onRequestDeletePlan }: VirtualizedPlanListProps) {
   const [scrollTop, setScrollTop] = useState(0);
   const [activePlanMenuId, setActivePlanMenuId] = useState<string | null>(null);
+  const [activePlanMenuDirection, setActivePlanMenuDirection] = useState<'up' | 'down'>('down');
+  const [activePlanMenuOffsetX, setActivePlanMenuOffsetX] = useState(0);
+
+  const togglePlanMenu = (planId: string, anchor: HTMLElement) => {
+    if (activePlanMenuId === planId) {
+      setActivePlanMenuId(null);
+      setActivePlanMenuDirection('down');
+      setActivePlanMenuOffsetX(0);
+      return;
+    }
+    const anchorRect = anchor.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - anchorRect.bottom;
+    const menuLeft = anchorRect.right - PLAN_MENU_WIDTH_PX;
+    const menuRight = anchorRect.right;
+    let offsetX = 0;
+    if (menuLeft < PLAN_MENU_SAFE_MARGIN_PX) {
+      offsetX = PLAN_MENU_SAFE_MARGIN_PX - menuLeft;
+    }
+    const maxRight = window.innerWidth - PLAN_MENU_SAFE_MARGIN_PX;
+    if (menuRight + offsetX > maxRight) {
+      offsetX -= menuRight + offsetX - maxRight;
+    }
+    setActivePlanMenuDirection(spaceBelow < 220 ? 'up' : 'down');
+    setActivePlanMenuOffsetX(offsetX);
+    setActivePlanMenuId(planId);
+  };
 
   const viewportHeight = Math.min(MAX_LIST_HEIGHT, plans.length * ROW_HEIGHT);
   const totalHeight = plans.length * ROW_HEIGHT;
@@ -50,7 +78,10 @@ export function VirtualizedPlanList({ plans, getPlanStatus, onSelectPlan, onRequ
             <div
               key={plan.id}
               className="absolute left-0 right-0 h-[84px] rounded-xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-left transition hover:border-stroke-default hover:bg-bg-hover"
-              style={{ top: absoluteIndex * ROW_HEIGHT }}
+              style={{
+                top: absoluteIndex * ROW_HEIGHT,
+                zIndex: activePlanMenuId === plan.id ? 60 : 1,
+              }}
               data-plan-menu="true"
             >
               <div className="flex h-full items-start justify-between gap-3">
@@ -82,18 +113,23 @@ export function VirtualizedPlanList({ plans, getPlanStatus, onSelectPlan, onRequ
                 <div className="relative ml-2">
                   <button
                     type="button"
-                    onClick={() => setActivePlanMenuId((current) => (current === plan.id ? null : plan.id))}
+                    onClick={(event) => togglePlanMenu(plan.id, event.currentTarget)}
                     className="rounded-md border border-stroke-default bg-bg-surface px-2 py-1 text-content-secondary hover:bg-bg-hover hover:text-content-primary"
                     aria-label={`Open menu for ${plan.title}`}
                   >
                     ...
                   </button>
                   {activePlanMenuId === plan.id && (
-                    <div className="absolute right-0 top-full z-20 mt-2 min-w-[170px] rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-lg">
+                    <div
+                      className={`absolute right-0 z-50 min-w-[170px] rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-lg ${activePlanMenuDirection === 'up' ? 'bottom-full mb-2 animate-menu-up' : 'top-full mt-2 animate-menu-down'}`}
+                      style={{ transform: `translateX(${activePlanMenuOffsetX}px)` }}
+                    >
                       <button
                         type="button"
                         onClick={() => {
                           setActivePlanMenuId(null);
+                          setActivePlanMenuDirection('down');
+                          setActivePlanMenuOffsetX(0);
                           onSelectPlan(plan.id);
                         }}
                         className="block w-full rounded-md px-3 py-2 text-left text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
@@ -104,6 +140,8 @@ export function VirtualizedPlanList({ plans, getPlanStatus, onSelectPlan, onRequ
                         type="button"
                         onClick={() => {
                           setActivePlanMenuId(null);
+                          setActivePlanMenuDirection('down');
+                          setActivePlanMenuOffsetX(0);
                           onRequestDeletePlan(plan);
                         }}
                         className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-status-error hover:bg-status-error/10"
