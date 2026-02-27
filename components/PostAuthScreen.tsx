@@ -247,6 +247,8 @@ export function PostAuthScreen() {
   const feedbackDraftLoadedRef = useRef<string>('');
   const onboardingDraftLoadedRef = useRef<string>('');
   const bootstrappedTargetRef = useRef<string>('');
+  const artistDefaultsKey = useMemo(() => (user?.id ? `urganize.artistDefaults.${user.id}` : ''), [user?.id]);
+  const hasArtistDefaults = Boolean(artistName.trim() && genre.trim() && primaryPlatform.trim());
 
   const feedbackDraftKey = useMemo(() => {
     if (!user?.id || !releaseId || !taskId) return '';
@@ -535,12 +537,16 @@ export function PostAuthScreen() {
     }
 
     if (shouldForceCreatePlan) {
+      const resolvedArtistName = artistName.trim() || user.name || 'Artist';
+      const resolvedGenre = genre.trim();
+      const resolvedPrimaryPlatform = primaryPlatform.trim();
+      const shouldSkipArtistDetails = Boolean(resolvedArtistName && resolvedGenre && resolvedPrimaryPlatform);
       const { data: release, error: releaseInsertError } = await supabase
         .from('releases')
         .insert({
           user_id: user.id,
-          title: 'New Plan',
-          artist_name: user.name || 'Artist',
+          title: `${resolvedArtistName} Goal`,
+          artist_name: resolvedArtistName,
           type: 'single',
           status: 'draft',
         })
@@ -554,8 +560,10 @@ export function PostAuthScreen() {
         .from('release_profiles')
         .insert({
           release_id: release.id,
-          setup_step: 2,
+          setup_step: shouldSkipArtistDetails ? 3 : 2,
           setup_completed: false,
+          genre: resolvedGenre || null,
+          primary_market: resolvedPrimaryPlatform || null,
           hard_deadline: addDaysISO(release.created_at || new Date(), DEFAULT_PLAN_DURATION_DAYS),
         });
       if (profileInsertError) throw profileInsertError;
@@ -637,7 +645,7 @@ export function PostAuthScreen() {
 
     setReleaseId(release.id);
     return release.id;
-  }, [flow, releaseId, requestedPlanId, user]);
+  }, [artistName, flow, genre, primaryPlatform, releaseId, requestedPlanId, user]);
 
   const loadCurrentTask = useCallback(async (activeReleaseId: string) => {
     const { data: task, error: taskError } = await supabase
@@ -669,6 +677,51 @@ export function PostAuthScreen() {
 
     const bootstrap = async () => {
       try {
+        let resolvedArtistName = '';
+        let resolvedGenre = '';
+        let resolvedPrimaryPlatform = '';
+
+        if (artistDefaultsKey) {
+          const rawDefaults = localStorage.getItem(artistDefaultsKey);
+          if (rawDefaults) {
+            try {
+              const parsed = JSON.parse(rawDefaults) as Record<string, unknown>;
+              resolvedArtistName = typeof parsed.artistName === 'string' ? parsed.artistName.trim() : '';
+              resolvedGenre = typeof parsed.genre === 'string' ? parsed.genre.trim() : '';
+              resolvedPrimaryPlatform = typeof parsed.primaryPlatform === 'string' ? parsed.primaryPlatform.trim() : '';
+            } catch {
+              // Ignore malformed local defaults.
+            }
+          }
+        }
+
+        if (!resolvedGenre || !resolvedPrimaryPlatform) {
+          const { data: recentReleases } = await supabase
+            .from('releases')
+            .select('id')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+          const recentReleaseIds = (recentReleases || []).map((item) => item.id);
+          if (recentReleaseIds.length > 0) {
+            const { data: recentProfiles } = await supabase
+              .from('release_profiles')
+              .select('genre,primary_market,updated_at')
+              .in('release_id', recentReleaseIds)
+              .order('updated_at', { ascending: false })
+              .limit(20);
+
+            const bestProfile = (recentProfiles || []).find(
+              (item) => !!String(item.genre || '').trim() && !!String(item.primary_market || '').trim()
+            );
+            if (bestProfile) {
+              resolvedGenre = resolvedGenre || String(bestProfile.genre || '').trim();
+              resolvedPrimaryPlatform = resolvedPrimaryPlatform || String(bestProfile.primary_market || '').trim();
+            }
+          }
+        }
+
         const shouldSkipAutoCreate = flow === 'create-plan' && !requestedPlanId;
         if (!shouldSkipAutoCreate) {
           const activeReleaseId = await ensureOnboardingRelease();
@@ -682,14 +735,31 @@ export function PostAuthScreen() {
           .maybeSingle();
 
         if (artistProfile?.artist_name) {
-          setArtistName((current) => current || artistProfile.artist_name || '');
+          resolvedArtistName = resolvedArtistName || String(artistProfile.artist_name || '').trim();
         }
         if (artistProfile?.career_stage) {
           setStage((current) => current || artistProfile.career_stage || '');
         }
 
+        if (resolvedArtistName) setArtistName((current) => current || resolvedArtistName);
+        if (resolvedGenre) setGenre((current) => current || resolvedGenre);
+        if (resolvedPrimaryPlatform) setPrimaryPlatform((current) => current || resolvedPrimaryPlatform);
+
+        const canSkipArtistStep = Boolean(resolvedArtistName && resolvedGenre && resolvedPrimaryPlatform);
+        if (canSkipArtistStep && artistDefaultsKey) {
+          localStorage.setItem(
+            artistDefaultsKey,
+            JSON.stringify({
+              artistName: resolvedArtistName,
+              genre: resolvedGenre,
+              primaryPlatform: resolvedPrimaryPlatform,
+              savedAt: Date.now(),
+            })
+          );
+        }
+
         if (requestedStartStep >= 2) {
-          setStep((current) => Math.max(current, 2));
+          setStep((current) => Math.max(current, canSkipArtistStep ? 3 : 2));
         }
       } catch (err: any) {
         setError(err?.message || 'Failed to load onboarding');
@@ -699,7 +769,7 @@ export function PostAuthScreen() {
     };
 
     bootstrap();
-  }, [bootstrapTargetKey, ensureOnboardingRelease, flow, loadCurrentTask, requestedPlanId, requestedStartStep, user]);
+  }, [artistDefaultsKey, bootstrapTargetKey, ensureOnboardingRelease, flow, loadCurrentTask, requestedPlanId, requestedStartStep, user]);
 
   const upsertArtistProfile = useCallback(async () => {
     if (!user) throw new Error('User not found');
@@ -731,6 +801,18 @@ export function PostAuthScreen() {
       });
     if (insertError) throw insertError;
   }, [artistName, stage, user]);
+
+  const persistArtistDefaults = useCallback(() => {
+    if (!artistDefaultsKey) return;
+    const payload = {
+      artistName: artistName.trim(),
+      genre: genre.trim(),
+      primaryPlatform: primaryPlatform.trim(),
+      savedAt: Date.now(),
+    };
+    if (!payload.artistName || !payload.genre || !payload.primaryPlatform) return;
+    localStorage.setItem(artistDefaultsKey, JSON.stringify(payload));
+  }, [artistDefaultsKey, artistName, genre, primaryPlatform]);
 
   const tryRepairLegacySongStage = useCallback(
     async (activeReleaseId: string): Promise<boolean> => {
@@ -791,7 +873,7 @@ export function PostAuthScreen() {
     try {
       await updateRole(role);
       const activeReleaseId = await ensureOnboardingRelease();
-      await setStepPersisted(2, activeReleaseId);
+      await setStepPersisted(hasArtistDefaults ? 3 : 2, activeReleaseId);
     } catch (err: any) {
       setError(err?.message || 'Failed to save role');
     } finally {
@@ -829,6 +911,7 @@ export function PostAuthScreen() {
       if (profileUpdateError) throw profileUpdateError;
 
       await upsertArtistProfile();
+      persistArtistDefaults();
       await setStepPersisted(3, activeReleaseId);
     } catch (err: any) {
       setError(err?.message || 'Failed to save artist details');
@@ -1236,13 +1319,18 @@ export function PostAuthScreen() {
       return;
     }
 
-    const previous = Math.max(0, step - 1);
+    const previous = step === 3 && hasArtistDefaults ? 1 : Math.max(0, step - 1);
     try {
       await setStepPersisted(previous);
     } catch (err: any) {
       setError(err?.message || 'Could not move back right now');
     }
   };
+
+  useEffect(() => {
+    if (step !== 2 || !hasArtistDefaults) return;
+    setStep(3);
+  }, [hasArtistDefaults, step]);
 
   const shellClass = 'relative min-h-screen w-full overflow-hidden bg-bg-base text-content-primary';
   const fieldClass =
