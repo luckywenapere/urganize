@@ -81,6 +81,21 @@ const STAGE_OPTIONS: Array<{ value: 'emerging' | 'growing' | 'established'; labe
   { value: 'growing', label: 'Growing' },
   { value: 'established', label: 'Established' },
 ];
+const CAREER_STAGE_VALUES = new Set(['emerging', 'growing', 'established']);
+const SONG_STAGE_FALLBACK_CANDIDATES = [
+  'pre-production',
+  'production',
+  'promotion',
+  'distribution',
+  'draft',
+  'idea',
+  'planning',
+  'recording',
+  'mixing',
+  'mastering',
+  'ready',
+  'released',
+];
 
 const MIN_GOAL_CHARS = 20;
 const MIN_BUDGET = 100;
@@ -108,6 +123,11 @@ const addDaysISO = (base: string | Date, days: number): string => {
   const date = new Date(base);
   date.setDate(date.getDate() + days);
   return date.toISOString();
+};
+
+const isSongStageConstraintError = (error: unknown): boolean => {
+  const message = String((error as { message?: string } | null)?.message || '').toLowerCase();
+  return message.includes('release_profiles_song_stage_check');
 };
 
 const MIN_GENERATION_MS = 7000;
@@ -662,6 +682,59 @@ export function PostAuthScreen() {
     if (insertError) throw insertError;
   }, [artistName, stage, user]);
 
+  const tryRepairLegacySongStage = useCallback(
+    async (activeReleaseId: string): Promise<boolean> => {
+      if (!user) return false;
+
+      const { data: releases, error: releasesError } = await supabase
+        .from('releases')
+        .select('id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (releasesError || !releases || releases.length === 0) {
+        return false;
+      }
+
+      const releaseIds = releases.map((release) => release.id);
+      const { data: profiles } = await supabase
+        .from('release_profiles')
+        .select('release_id, song_stage')
+        .in('release_id', releaseIds)
+        .order('updated_at', { ascending: false });
+
+      const inferredCandidates = (profiles || [])
+        .map((profile) => String((profile as { song_stage?: string | null }).song_stage || '').trim())
+        .filter((value) => value && !CAREER_STAGE_VALUES.has(value));
+
+      const uniqueCandidates = Array.from(new Set([...inferredCandidates, ...SONG_STAGE_FALLBACK_CANDIDATES]));
+
+      const clearAttempt = await supabase
+        .from('release_profiles')
+        .update({ song_stage: null })
+        .eq('release_id', activeReleaseId);
+
+      if (!clearAttempt.error) {
+        return true;
+      }
+
+      for (const candidate of uniqueCandidates) {
+        const { error } = await supabase
+          .from('release_profiles')
+          .update({ song_stage: candidate })
+          .eq('release_id', activeReleaseId);
+
+        if (!error) {
+          return true;
+        }
+      }
+
+      return false;
+    },
+    [user]
+  );
+
   const handleSelectRole = async (role: RoleOption) => {
     resetError();
     setIsBusy(true);
@@ -782,16 +855,30 @@ export function PostAuthScreen() {
         setPlatformInput('');
       }
 
-      const { error: profileUpdateError } = await supabase
+      const profileUpdatePayload = {
+        target_audience_description: audienceSize.trim() || null,
+        listener_interests: listeners,
+        budget_naira: maybeBudget,
+        hard_deadline: deadlineDate || null,
+        deadline_reason: timelineValue || null,
+      };
+
+      let { error: profileUpdateError } = await supabase
         .from('release_profiles')
-        .update({
-          target_audience_description: audienceSize.trim() || null,
-          listener_interests: listeners,
-          budget_naira: maybeBudget,
-          hard_deadline: deadlineDate || null,
-          deadline_reason: timelineValue || null,
-        })
+        .update(profileUpdatePayload)
         .eq('release_id', activeReleaseId);
+
+      if (profileUpdateError && isSongStageConstraintError(profileUpdateError)) {
+        const repaired = await tryRepairLegacySongStage(activeReleaseId);
+        if (repaired) {
+          const retry = await supabase
+            .from('release_profiles')
+            .update(profileUpdatePayload)
+            .eq('release_id', activeReleaseId);
+          profileUpdateError = retry.error;
+        }
+      }
+
       if (profileUpdateError) throw profileUpdateError;
       await upsertArtistProfile();
       await setStepPersisted(5);
