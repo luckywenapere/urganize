@@ -261,9 +261,6 @@ export default function AuthPage() {
                     >
                       Use email instead
                     </Button>
-                    <p className="text-xs text-content-tertiary text-center">
-                      This email signs in with Google.
-                    </p>
                   </>
                 ) : (
                   <>
