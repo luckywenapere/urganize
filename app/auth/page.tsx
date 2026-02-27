@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
@@ -13,6 +13,23 @@ import { ArrowLeft, User, Users, Mail, Lock, UserCircle } from 'lucide-react';
 type AuthMode = 'login' | 'role' | 'signup';
 type LoginProviderHint = 'unknown' | 'google' | 'email';
 const LAST_AUTH_EMAIL_KEY = 'urganize.last_auth_email';
+const normalizeAuthEmail = (value: string) => value.trim().toLowerCase();
+
+const resolveLoginProviderHint = async (normalizedEmail: string): Promise<LoginProviderHint> => {
+  try {
+    const response = await fetch('/api/auth/providers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normalizedEmail }),
+    });
+
+    if (!response.ok) throw new Error('provider_lookup_failed');
+    const payload = (await response.json()) as { hasGoogle?: boolean };
+    return payload.hasGoogle ? 'google' : 'email';
+  } catch {
+    return 'unknown';
+  }
+};
 
 export default function AuthPage() {
   const router = useRouter();
@@ -28,10 +45,21 @@ export default function AuthPage() {
   const [name, setName] = useState('');
   const [hasManager, setHasManager] = useState<boolean | null>(null);
   const [providerHint, setProviderHint] = useState<LoginProviderHint>('unknown');
+  const [providerHintEmail, setProviderHintEmail] = useState('');
   const [isCheckingProvider, setIsCheckingProvider] = useState(false);
   const [showEmailLoginForGoogle, setShowEmailLoginForGoogle] = useState(false);
+  const providerLookupRequestIdRef = useRef(0);
 
-  const shouldHideEmailLogin = mode === 'login' && providerHint === 'google' && !showEmailLoginForGoogle;
+  const normalizedLoginEmail = normalizeAuthEmail(email);
+  const hasLookupEligibleEmail = mode === 'login' && normalizedLoginEmail.includes('@');
+  const isProviderLookupPending =
+    hasLookupEligibleEmail &&
+    (isCheckingProvider || providerHintEmail !== normalizedLoginEmail);
+  const shouldHideEmailLogin =
+    mode === 'login' &&
+    providerHint === 'google' &&
+    providerHintEmail === normalizedLoginEmail &&
+    !showEmailLoginForGoogle;
 
   useEffect(() => {
     if (authLoading) return;
@@ -49,55 +77,47 @@ export default function AuthPage() {
   }, [email]);
 
   useEffect(() => {
-    if (mode !== 'login') return;
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail || !normalizedEmail.includes('@')) {
+    const requestId = ++providerLookupRequestIdRef.current;
+
+    if (mode !== 'login') {
       setProviderHint('unknown');
+      setProviderHintEmail('');
       setIsCheckingProvider(false);
       return;
     }
 
-    let cancelled = false;
+    if (!hasLookupEligibleEmail) {
+      setProviderHint('unknown');
+      setProviderHintEmail('');
+      setIsCheckingProvider(false);
+      return;
+    }
+
+    setIsCheckingProvider(true);
     const timer = window.setTimeout(async () => {
-      setIsCheckingProvider(true);
-      try {
-        const response = await fetch('/api/auth/providers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: normalizedEmail }),
-        });
+      const hint = await resolveLoginProviderHint(normalizedLoginEmail);
+      if (providerLookupRequestIdRef.current !== requestId) return;
 
-        if (!response.ok) throw new Error('provider_lookup_failed');
-        const payload = (await response.json()) as { hasGoogle?: boolean };
-        if (cancelled) return;
+      setProviderHint(hint);
+      setProviderHintEmail(normalizedLoginEmail);
+      setIsCheckingProvider(false);
 
-        if (payload.hasGoogle) {
-          setProviderHint('google');
-          setShowEmailLoginForGoogle(false);
-        } else {
-          setProviderHint('email');
-        }
-      } catch {
-        if (!cancelled) {
-          setProviderHint('unknown');
-        }
-      } finally {
-        if (!cancelled) {
-          setIsCheckingProvider(false);
-        }
+      if (hint === 'google') {
+        setShowEmailLoginForGoogle(false);
+        setPassword('');
       }
-    }, 350);
+    }, 300);
 
     return () => {
-      cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [email, mode]);
+  }, [hasLookupEligibleEmail, mode, normalizedLoginEmail]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isProviderLookupPending) return;
     if (shouldHideEmailLogin) {
-      setShowEmailLoginForGoogle(true);
+      setError('Use Google to continue, or click "Use email instead".');
       return;
     }
     setError('');
@@ -106,7 +126,7 @@ export default function AuthPage() {
     try {
       await login(email, password);
       if (typeof window !== 'undefined') {
-        localStorage.setItem(LAST_AUTH_EMAIL_KEY, email.trim().toLowerCase());
+        localStorage.setItem(LAST_AUTH_EMAIL_KEY, normalizedLoginEmail);
       }
       router.push('/dashboard');
     } catch {
@@ -138,7 +158,7 @@ export default function AuthPage() {
 
     try {
       if (typeof window !== 'undefined' && email.trim()) {
-        localStorage.setItem(LAST_AUTH_EMAIL_KEY, email.trim().toLowerCase());
+        localStorage.setItem(LAST_AUTH_EMAIL_KEY, normalizedLoginEmail);
       }
       await loginWithGoogle();
     } catch {
@@ -166,7 +186,7 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={handleGoogleLogin}
-                disabled={isGoogleLoading}
+                disabled={isGoogleLoading || isLoading}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-zinc-100 text-black font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isGoogleLoading ? (
@@ -210,31 +230,39 @@ export default function AuthPage() {
                   label="Email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (error) setError('');
+                  }}
                   placeholder="you@example.com"
                   leftIcon={<Mail className="w-4 h-4" />}
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  disabled={isLoading || isGoogleLoading}
                   required
                 />
-                {isCheckingProvider && providerHint === 'unknown' && (
+                {isProviderLookupPending ? (
                   <p className="text-xs text-content-tertiary text-center">
                     Checking sign-in options...
                   </p>
-                )}
-
-                {shouldHideEmailLogin ? (
+                ) : shouldHideEmailLogin ? (
                   <>
                     <Button
                       type="button"
                       className="w-full"
+                      disabled={isLoading || isGoogleLoading}
                       onClick={() => {
                         setShowEmailLoginForGoogle(true);
                         setError('');
+                        setPassword('');
                       }}
                     >
                       Use email instead
                     </Button>
                     <p className="text-xs text-content-tertiary text-center">
-                      This email is linked with Google.
+                      This email signs in with Google.
                     </p>
                   </>
                 ) : (
@@ -243,13 +271,19 @@ export default function AuthPage() {
                       label="Password"
                       type="password"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (error) setError('');
+                      }}
                       placeholder="••••••••"
                       leftIcon={<Lock className="w-4 h-4" />}
+                      autoComplete="current-password"
+                      autoFocus={showEmailLoginForGoogle && providerHint === 'google'}
+                      disabled={isLoading || isGoogleLoading}
                       required
                     />
 
-                    <Button type="submit" className="w-full" disabled={isLoading}>
+                    <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
                       {isLoading ? 'Signing in...' : 'Sign In'}
                     </Button>
                   </>
@@ -270,7 +304,7 @@ export default function AuthPage() {
                 </button>
               </p>
 
-              {!shouldHideEmailLogin && (
+              {!shouldHideEmailLogin && !isProviderLookupPending && (
                 <p className="text-center text-sm text-content-tertiary mt-2">
                   <Link href="/auth/forgot-password" className="text-brand hover:underline">
                     Forgot password?
@@ -357,7 +391,7 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={handleGoogleLogin}
-                disabled={isGoogleLoading}
+                disabled={isGoogleLoading || isLoading}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-zinc-100 text-black font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isGoogleLoading ? (
@@ -400,27 +434,44 @@ export default function AuthPage() {
                   label="Full Name"
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (error) setError('');
+                  }}
                   placeholder="John Doe"
                   leftIcon={<UserCircle className="w-4 h-4" />}
+                  disabled={isLoading || isGoogleLoading}
                   required
                 />
                 <Input
                   label="Email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (error) setError('');
+                  }}
                   placeholder="you@example.com"
                   leftIcon={<Mail className="w-4 h-4" />}
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  disabled={isLoading || isGoogleLoading}
                   required
                 />
                 <Input
                   label="Password"
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (error) setError('');
+                  }}
                   placeholder="••••••••"
                   leftIcon={<Lock className="w-4 h-4" />}
+                  autoComplete="new-password"
+                  disabled={isLoading || isGoogleLoading}
                   required
                 />
 
