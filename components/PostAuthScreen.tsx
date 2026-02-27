@@ -102,6 +102,7 @@ const MIN_BUDGET = 100;
 const MAX_BUDGET = 100000000;
 const DEFAULT_PLAN_DURATION_DAYS = 30;
 const MIN_FEEDBACK_CHARS = 20;
+const CREATE_PLAN_DRAFT_TTL_MS = 10 * 60 * 1000;
 
 const formatDateInput = (value: Date): string => {
   const year = value.getFullYear();
@@ -263,6 +264,7 @@ export function PostAuthScreen() {
   }, [flow, releaseId, requestedPlanId, user?.id]);
 
   const resetError = () => setError('');
+  const isCreatePlanFlow = flow === 'create-plan' && !requestedPlanId;
   const isPlanSetupFlow =
     flow === 'create-plan' ||
     flow === 'resume-plan' ||
@@ -343,6 +345,18 @@ export function PostAuthScreen() {
 
     try {
       const draft = JSON.parse(rawDraft) as Record<string, unknown>;
+      const savedAt = typeof draft.savedAt === 'number' ? draft.savedAt : 0;
+      const started = !!draft.started;
+      if (isCreatePlanFlow) {
+        if (!started) {
+          localStorage.removeItem(onboardingDraftKey);
+          return;
+        }
+        if (!savedAt || Date.now() - savedAt > CREATE_PLAN_DRAFT_TTL_MS) {
+          localStorage.removeItem(onboardingDraftKey);
+          return;
+        }
+      }
       if (typeof draft.artistName === 'string' && !artistName.trim()) setArtistName(draft.artistName);
       if (typeof draft.genre === 'string' && !genre.trim()) setGenre(draft.genre);
       if (typeof draft.primaryPlatform === 'string' && !primaryPlatform.trim()) setPrimaryPlatform(draft.primaryPlatform);
@@ -357,6 +371,9 @@ export function PostAuthScreen() {
       if (typeof draft.timeline === 'string' && !timeline.trim()) setTimeline(draft.timeline);
       if (typeof draft.deadlineDate === 'string' && !deadlineDate.trim()) setDeadlineDate(draft.deadlineDate);
       if (typeof draft.stepsText === 'string' && !stepsText.trim()) setStepsText(draft.stepsText);
+      if (typeof draft.step === 'number' && Number.isFinite(draft.step)) {
+        setStep(Math.max(2, Math.min(9, draft.step)));
+      }
     } catch {
       // Ignore malformed local draft payloads.
     }
@@ -374,10 +391,29 @@ export function PostAuthScreen() {
     stage,
     stepsText,
     timeline,
+    isCreatePlanFlow,
   ]);
+
+  const hasStartedOnboardingInput =
+    artistName.trim().length > 0 ||
+    genre.trim().length > 0 ||
+    primaryPlatform.trim().length > 0 ||
+    goalText.trim().length > 0 ||
+    stage.trim().length > 0 ||
+    audienceSize.trim().length > 0 ||
+    listenerPlatforms.length > 0 ||
+    platformInput.trim().length > 0 ||
+    budget.trim().length > 0 ||
+    timeline.trim().length > 0 ||
+    deadlineDate.trim().length > 0 ||
+    stepsText.trim().length > 0;
 
   useEffect(() => {
     if (!onboardingDraftKey) return;
+    if (isCreatePlanFlow && !hasStartedOnboardingInput) {
+      localStorage.removeItem(onboardingDraftKey);
+      return;
+    }
     const draft = {
       artistName,
       genre,
@@ -391,6 +427,8 @@ export function PostAuthScreen() {
       timeline,
       deadlineDate,
       stepsText,
+      step,
+      started: hasStartedOnboardingInput,
       savedAt: Date.now(),
     };
     localStorage.setItem(onboardingDraftKey, JSON.stringify(draft));
@@ -406,9 +444,21 @@ export function PostAuthScreen() {
     platformInput,
     primaryPlatform,
     stage,
+    step,
     stepsText,
     timeline,
+    isCreatePlanFlow,
+    hasStartedOnboardingInput,
   ]);
+
+  useEffect(() => {
+    return () => {
+      if (!onboardingDraftKey || !isCreatePlanFlow) return;
+      if (!hasStartedOnboardingInput) {
+        localStorage.removeItem(onboardingDraftKey);
+      }
+    };
+  }, [hasStartedOnboardingInput, isCreatePlanFlow, onboardingDraftKey]);
 
   const parseCareerStage = (value: string): 'emerging' | 'growing' | 'established' => {
     const normalized = value.trim().toLowerCase();
