@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
@@ -57,9 +57,15 @@ export default function PlanDashboardPage() {
   const [nextTask, setNextTask] = useState('No active task');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSavingBasics, setIsSavingBasics] = useState(false);
+  const [isPlanMenuOpen, setIsPlanMenuOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [isDeletingPlan, setIsDeletingPlan] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftArtistName, setDraftArtistName] = useState('');
   const [draftDeadline, setDraftDeadline] = useState('');
+  const planMenuRef = useRef<HTMLDivElement | null>(null);
   const cacheKey = user && planId ? `urganize.planDashboard.${user.id}.${planId}` : '';
 
   useEffect(() => {
@@ -345,6 +351,69 @@ export default function PlanDashboardPage() {
     }
   };
 
+  const requestDeletePlan = () => {
+    setShowDeleteModal(true);
+    setDeleteConfirmText('');
+    setDeleteError('');
+    setIsPlanMenuOpen(false);
+  };
+
+  const closeDeleteModal = () => {
+    if (isDeletingPlan) return;
+    setShowDeleteModal(false);
+    setDeleteConfirmText('');
+    setDeleteError('');
+  };
+
+  const confirmDeletePlan = async () => {
+    if (!planId) return;
+    if (deleteConfirmText.trim() !== 'DELETE') {
+      setDeleteError('Type DELETE exactly to confirm.');
+      return;
+    }
+
+    setIsDeletingPlan(true);
+    setDeleteError('');
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Session expired. Please sign in again.');
+
+      const response = await fetch(`/api/plans/${planId}/delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ confirmationText: deleteConfirmText }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not delete plan');
+      }
+
+      if (cacheKey) localStorage.removeItem(cacheKey);
+      router.push('/dashboard');
+    } catch (deletePlanError: any) {
+      setDeleteError(deletePlanError?.message || 'Could not delete plan.');
+    } finally {
+      setIsDeletingPlan(false);
+    }
+  };
+
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      if (!planMenuRef.current) return;
+      if (!planMenuRef.current.contains(event.target as Node)) {
+        setIsPlanMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, []);
+
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
       <div className="mx-auto flex min-h-screen w-full max-w-[1120px] flex-col px-6 py-10 lg:px-10 lg:py-12">
@@ -352,16 +421,40 @@ export default function PlanDashboardPage() {
           <Link href="/dashboard" className="text-sm text-content-secondary hover:text-content-primary">
             Back to Plans
           </Link>
-          <button
-            type="button"
-            onClick={async () => {
-              await logout();
-              router.push('/auth');
-            }}
-            className="text-sm text-content-secondary hover:text-content-primary"
-          >
-            Logout
-          </button>
+          <div className="relative" ref={planMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsPlanMenuOpen((open) => !open)}
+              className="rounded-md border border-stroke-default bg-bg-surface px-2 py-1 text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+              aria-haspopup="menu"
+              aria-expanded={isPlanMenuOpen}
+              aria-label="Plan actions"
+            >
+              ...
+            </button>
+            {isPlanMenuOpen && (
+              <div className="absolute right-0 top-full z-30 mt-2 min-w-[170px] rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-lg">
+                <button
+                  type="button"
+                  onClick={requestDeletePlan}
+                  className="block w-full rounded-md px-3 py-2 text-left text-sm text-status-error hover:bg-status-error/10"
+                >
+                  Delete plan
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsPlanMenuOpen(false);
+                    await logout();
+                    router.push('/auth');
+                  }}
+                  className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -520,6 +613,44 @@ export default function PlanDashboardPage() {
           </>
         )}
       </div>
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-stroke-default bg-bg-surface p-6">
+            <h2 className="text-xl font-semibold text-content-primary">Delete this plan?</h2>
+            <p className="mt-2 text-sm text-content-secondary">
+              This permanently deletes this plan and all plan assets. This action cannot be undone.
+            </p>
+            <p className="mt-3 text-sm text-content-secondary">
+              Type <span className="font-semibold text-content-primary">DELETE</span> to confirm.
+            </p>
+            <input
+              value={deleteConfirmText}
+              onChange={(event) => setDeleteConfirmText(event.target.value)}
+              className="mt-3 w-full rounded-lg border border-status-error/35 bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-status-error"
+              placeholder="DELETE"
+            />
+            {deleteError && <p className="mt-3 text-sm text-status-error">{deleteError}</p>}
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={isDeletingPlan}
+                className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary hover:bg-bg-hover disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeletePlan}
+                disabled={isDeletingPlan}
+                className="rounded-lg bg-status-error px-4 py-2 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:opacity-50"
+              >
+                {isDeletingPlan ? 'Deleting...' : 'Delete plan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

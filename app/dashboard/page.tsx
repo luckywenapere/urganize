@@ -47,6 +47,11 @@ export default function DashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activePlanMenuId, setActivePlanMenuId] = useState<string | null>(null);
+  const [planPendingDelete, setPlanPendingDelete] = useState<PlanSummary | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeletingPlan, setIsDeletingPlan] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const [error, setError] = useState('');
   const menuRef = useRef<HTMLDivElement | null>(null);
   const cacheKey = user ? `urganize.dashboard.plans.${user.id}` : '';
@@ -216,17 +221,93 @@ export default function DashboardPage() {
     }
   };
 
+  const requestDeletePlan = (plan: PlanSummary) => {
+    setPlanPendingDelete(plan);
+    setDeleteConfirmText('');
+    setDeleteError('');
+    setActivePlanMenuId(null);
+  };
+
+  const closeDeleteModal = () => {
+    if (isDeletingPlan) return;
+    setPlanPendingDelete(null);
+    setDeleteConfirmText('');
+    setDeleteError('');
+  };
+
+  const confirmDeletePlan = async () => {
+    if (!planPendingDelete) return;
+    if (deleteConfirmText.trim() !== 'DELETE') {
+      setDeleteError('Type DELETE exactly to confirm.');
+      return;
+    }
+
+    setDeleteError('');
+    setIsDeletingPlan(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Session expired. Please sign in again.');
+
+      const response = await fetch(`/api/plans/${planPendingDelete.id}/delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ confirmationText: deleteConfirmText }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not delete plan');
+      }
+
+      setPlans((current) => {
+        const nextPlans = current.filter((plan) => plan.id !== planPendingDelete.id);
+        if (cacheKey) {
+          if (nextPlans.length === 0) {
+            localStorage.removeItem(cacheKey);
+          } else {
+            const cachePayload: CachedPlansPayload = {
+              plans: nextPlans,
+              cachedAt: Date.now(),
+            };
+            localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
+          }
+        }
+        return nextPlans;
+      });
+
+      setPlanPendingDelete(null);
+      setDeleteConfirmText('');
+      setDeleteError('');
+    } catch (deletePlanError: any) {
+      setDeleteError(deletePlanError?.message || 'Could not delete plan.');
+    } finally {
+      setIsDeletingPlan(false);
+    }
+  };
+
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (!menuRef.current) return;
-      if (!menuRef.current.contains(event.target as Node)) {
+      if (!menuRef.current.contains(target)) {
         setIsMenuOpen(false);
+      }
+      const targetElement = event.target as HTMLElement;
+      if (!targetElement.closest('[data-plan-menu="true"]')) {
+        setActivePlanMenuId(null);
       }
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsMenuOpen(false);
+        setActivePlanMenuId(null);
       }
     };
 
@@ -324,42 +405,114 @@ export default function DashboardPage() {
                 plans={plans}
                 getPlanStatus={getPlanStatus}
                 onSelectPlan={(planId) => router.push(`/dashboard/plans/${planId}`)}
+                onRequestDeletePlan={(plan) => requestDeletePlan(plan)}
               />
             ) : (
               <div className="mt-5 space-y-3">
                 {plans.map((plan) => (
-                  <button
-                    type="button"
+                  <div
                     key={plan.id}
-                    onClick={() => router.push(`/dashboard/plans/${plan.id}`)}
                     className="lazy-fade lazy-fade-in flex w-full flex-col gap-2 rounded-xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-left transition hover:border-stroke-default hover:bg-bg-hover sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div>
-                      <p className="text-base font-medium text-content-primary">{plan.title}</p>
-                      <p className="text-sm text-content-secondary">{plan.artist_name}</p>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-content-secondary">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-medium ${
-                          getPlanStatus(plan) === 'Completed'
-                            ? 'bg-brand-muted text-brand'
-                            : getPlanStatus(plan) === 'Overdue'
-                              ? 'bg-status-error/20 text-status-error'
-                              : 'bg-status-warning/20 text-status-warning'
-                        }`}
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/dashboard/plans/${plan.id}`)}
+                      className="flex min-w-0 flex-1 flex-col gap-2 text-left sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-medium text-content-primary">{plan.title}</p>
+                        <p className="truncate text-sm text-content-secondary">{plan.artist_name}</p>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-content-secondary">
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-medium ${
+                            getPlanStatus(plan) === 'Completed'
+                              ? 'bg-brand-muted text-brand'
+                              : getPlanStatus(plan) === 'Overdue'
+                                ? 'bg-status-error/20 text-status-error'
+                                : 'bg-status-warning/20 text-status-warning'
+                          }`}
+                        >
+                          {getPlanStatus(plan)}
+                        </span>
+                        <span className="text-content-tertiary">.</span>
+                        <span>{new Date(plan.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </button>
+                    <div className="relative self-end sm:self-auto" data-plan-menu="true">
+                      <button
+                        type="button"
+                        onClick={() => setActivePlanMenuId((current) => (current === plan.id ? null : plan.id))}
+                        className="rounded-md border border-stroke-default bg-bg-surface px-2 py-1 text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                        aria-label={`Open menu for ${plan.title}`}
                       >
-                        {getPlanStatus(plan)}
-                      </span>
-                      <span className="text-content-tertiary">.</span>
-                      <span>{new Date(plan.created_at).toLocaleDateString()}</span>
+                        ...
+                      </button>
+                      {activePlanMenuId === plan.id && (
+                        <div className="absolute right-0 top-full z-20 mt-2 min-w-[170px] rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-lg">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActivePlanMenuId(null);
+                              router.push(`/dashboard/plans/${plan.id}`);
+                            }}
+                            className="block w-full rounded-md px-3 py-2 text-left text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                          >
+                            Open plan
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => requestDeletePlan(plan)}
+                            className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-status-error hover:bg-status-error/10"
+                          >
+                            Delete plan
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
           </div>
         </section>
       </div>
+      {planPendingDelete && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-stroke-default bg-bg-surface p-6">
+            <h2 className="text-xl font-semibold text-content-primary">Delete this plan?</h2>
+            <p className="mt-2 text-sm text-content-secondary">
+              This will permanently delete <span className="font-semibold text-content-primary">{planPendingDelete.title}</span> and all plan assets.
+            </p>
+            <p className="mt-3 text-sm text-content-secondary">Type <span className="font-semibold text-content-primary">DELETE</span> to confirm.</p>
+            <input
+              value={deleteConfirmText}
+              onChange={(event) => setDeleteConfirmText(event.target.value)}
+              className="mt-3 w-full rounded-lg border border-status-error/35 bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-status-error"
+              placeholder="DELETE"
+            />
+            {deleteError && <p className="mt-3 text-sm text-status-error">{deleteError}</p>}
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={isDeletingPlan}
+                className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary hover:bg-bg-hover disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeletePlan}
+                disabled={isDeletingPlan}
+                className="rounded-lg bg-status-error px-4 py-2 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:opacity-50"
+              >
+                {isDeletingPlan ? 'Deleting...' : 'Delete plan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
