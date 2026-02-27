@@ -5,6 +5,14 @@ import { supabase, type Profile, handleSupabaseError } from './supabase/client';
 
 let authCheckInFlight: Promise<void> | null = null;
 const shouldEnforceScheduledDeletion = process.env.NODE_ENV === 'production';
+const LAST_AUTH_EMAIL_KEY = 'urganize.last_auth_email';
+
+const persistLastAuthEmail = (email: string | null | undefined) => {
+  if (typeof window === 'undefined') return;
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return;
+  localStorage.setItem(LAST_AUTH_EMAIL_KEY, normalized);
+};
 
 const buildFallbackProfile = (authUser: any): Omit<Profile, 'created_at' | 'updated_at'> => {
   const email = authUser?.email || '';
@@ -135,6 +143,7 @@ export const useAuthStore = create<AuthState>()(
             const profile = await getOrCreateProfile(session.user);
 
             if (profile) {
+              persistLastAuthEmail(profile.email || session.user.email);
               let needsOnboarding = true;
 
               const { data: releases, error: releasesError } = await supabase
@@ -220,6 +229,7 @@ export const useAuthStore = create<AuthState>()(
           const profile = await getOrCreateProfile(data.user);
 
           if (profile) {
+            persistLastAuthEmail(profile.email || data.user.email);
             set({ 
               user: profile, 
               isAuthenticated: true, 
@@ -294,6 +304,7 @@ export const useAuthStore = create<AuthState>()(
               if (retryError) throw retryError;
 
               if (retryProfile) {
+                persistLastAuthEmail(retryProfile.email || data.user.email);
                 set({ 
                   user: retryProfile, 
                   isAuthenticated: true, 
@@ -303,6 +314,7 @@ export const useAuthStore = create<AuthState>()(
                 });
               }
             } else if (profile) {
+              persistLastAuthEmail(profile.email || data.user.email);
               set({ 
                 user: profile, 
                 isAuthenticated: true, 

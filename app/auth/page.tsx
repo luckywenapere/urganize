@@ -11,6 +11,8 @@ import { Logo } from '@/components/ui/Logo';
 import { ArrowLeft, User, Users, Mail, Lock, UserCircle } from 'lucide-react';
 
 type AuthMode = 'login' | 'role' | 'signup';
+type LoginProviderHint = 'unknown' | 'google' | 'email';
+const LAST_AUTH_EMAIL_KEY = 'urganize.last_auth_email';
 
 export default function AuthPage() {
   const router = useRouter();
@@ -25,6 +27,11 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [hasManager, setHasManager] = useState<boolean | null>(null);
+  const [providerHint, setProviderHint] = useState<LoginProviderHint>('unknown');
+  const [isCheckingProvider, setIsCheckingProvider] = useState(false);
+  const [showEmailLoginForGoogle, setShowEmailLoginForGoogle] = useState(false);
+
+  const shouldHideEmailLogin = mode === 'login' && providerHint === 'google' && !showEmailLoginForGoogle;
 
   useEffect(() => {
     if (authLoading) return;
@@ -33,13 +40,74 @@ export default function AuthPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const lastEmail = localStorage.getItem(LAST_AUTH_EMAIL_KEY) || '';
+    if (lastEmail && !email) {
+      setEmail(lastEmail);
+    }
+  }, [email]);
+
+  useEffect(() => {
+    if (mode !== 'login') return;
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !normalizedEmail.includes('@')) {
+      setProviderHint('unknown');
+      setIsCheckingProvider(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setIsCheckingProvider(true);
+      try {
+        const response = await fetch('/api/auth/providers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: normalizedEmail }),
+        });
+
+        if (!response.ok) throw new Error('provider_lookup_failed');
+        const payload = (await response.json()) as { hasGoogle?: boolean };
+        if (cancelled) return;
+
+        if (payload.hasGoogle) {
+          setProviderHint('google');
+          setShowEmailLoginForGoogle(false);
+        } else {
+          setProviderHint('email');
+        }
+      } catch {
+        if (!cancelled) {
+          setProviderHint('unknown');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsCheckingProvider(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [email, mode]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (shouldHideEmailLogin) {
+      setShowEmailLoginForGoogle(true);
+      return;
+    }
     setError('');
     setIsLoading(true);
 
     try {
       await login(email, password);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(LAST_AUTH_EMAIL_KEY, email.trim().toLowerCase());
+      }
       router.push('/dashboard');
     } catch {
       setError('Invalid email or password');
@@ -69,6 +137,9 @@ export default function AuthPage() {
     setIsGoogleLoading(true);
 
     try {
+      if (typeof window !== 'undefined' && email.trim()) {
+        localStorage.setItem(LAST_AUTH_EMAIL_KEY, email.trim().toLowerCase());
+      }
       await loginWithGoogle();
     } catch {
       setError('Google sign-in failed. Please try again.');
@@ -144,23 +215,49 @@ export default function AuthPage() {
                   leftIcon={<Mail className="w-4 h-4" />}
                   required
                 />
-                <Input
-                  label="Password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  leftIcon={<Lock className="w-4 h-4" />}
-                  required
-                />
+                {isCheckingProvider && providerHint === 'unknown' && (
+                  <p className="text-xs text-content-tertiary text-center">
+                    Checking sign-in options...
+                  </p>
+                )}
+
+                {shouldHideEmailLogin ? (
+                  <>
+                    <Button
+                      type="button"
+                      className="w-full"
+                      onClick={() => {
+                        setShowEmailLoginForGoogle(true);
+                        setError('');
+                      }}
+                    >
+                      Use email instead
+                    </Button>
+                    <p className="text-xs text-content-tertiary text-center">
+                      This email is linked with Google.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Input
+                      label="Password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      leftIcon={<Lock className="w-4 h-4" />}
+                      required
+                    />
+
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? 'Signing in...' : 'Sign In'}
+                    </Button>
+                  </>
+                )}
 
                 {error && (
                   <p className="text-sm text-red-500 text-center">{error}</p>
                 )}
-
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Signing in...' : 'Sign In'}
-                </Button>
               </form>
 
               <p className="text-center text-sm text-content-tertiary mt-6">
@@ -173,11 +270,13 @@ export default function AuthPage() {
                 </button>
               </p>
 
-              <p className="text-center text-sm text-content-tertiary mt-2">
-                <Link href="/auth/forgot-password" className="text-brand hover:underline">
-                  Forgot password?
-                </Link>
-              </p>
+              {!shouldHideEmailLogin && (
+                <p className="text-center text-sm text-content-tertiary mt-2">
+                  <Link href="/auth/forgot-password" className="text-brand hover:underline">
+                    Forgot password?
+                  </Link>
+                </p>
+              )}
             </>
           )}
 
