@@ -185,56 +185,11 @@ export default function DashboardPage() {
 
   const createNewPlan = async () => {
     if (!user || isCreatingPlan) return;
-
     setError('');
     setIsCreatingPlan(true);
-    const dateLabel = new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(new Date());
-
-    try {
-      const defaultDeadline = new Date();
-      defaultDeadline.setDate(defaultDeadline.getDate() + 30);
-
-      const { data: release, error: releaseError } = await supabase
-        .from('releases')
-        .insert({
-          user_id: user.id,
-          title: `New Plan - ${dateLabel}`,
-          artist_name: user.name || 'Artist',
-          type: 'single',
-          status: 'draft',
-        })
-        .select('id')
-        .single();
-
-      if (releaseError || !release) {
-        throw releaseError || new Error('Failed to create plan');
-      }
-
-      const { error: profileError } = await supabase
-        .from('release_profiles')
-        .insert({
-          release_id: release.id,
-          setup_step: 2,
-          setup_completed: false,
-          hard_deadline: defaultDeadline.toISOString(),
-        });
-
-      if (profileError) {
-        await supabase.from('releases').delete().eq('id', release.id);
-        throw profileError;
-      }
-
-      setNeedsOnboarding(true);
-      router.push(`/dashboard?startOnboarding=2&planId=${release.id}&flow=create-plan`);
-    } catch (createError: any) {
-      setError(createError?.message || 'Could not create a new plan.');
-    } finally {
-      setIsCreatingPlan(false);
-    }
+    setNeedsOnboarding(true);
+    router.push('/dashboard?startOnboarding=2&flow=create-plan');
+    setIsCreatingPlan(false);
   };
 
   const requestDeletePlan = (plan: PlanSummary) => {

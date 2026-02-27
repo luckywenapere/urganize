@@ -254,9 +254,11 @@ export function PostAuthScreen() {
   }, [releaseId, taskId, user?.id]);
 
   const onboardingDraftKey = useMemo(() => {
-    if (!user?.id || !releaseId) return '';
-    return `urganize.onboardingDraft.${user.id}.${releaseId}`;
-  }, [releaseId, user?.id]);
+    if (!user?.id) return '';
+    const scope = releaseId || requestedPlanId || (flow === 'create-plan' ? 'new-plan' : '');
+    if (!scope) return '';
+    return `urganize.onboardingDraft.${user.id}.${scope}`;
+  }, [flow, releaseId, requestedPlanId, user?.id]);
 
   const resetError = () => setError('');
   const isPlanSetupFlow =
@@ -459,18 +461,20 @@ export function PostAuthScreen() {
     setTimeline(label);
   };
 
-  const setStepPersisted = useCallback(async (nextStep: number) => {
+  const setStepPersisted = useCallback(async (nextStep: number, targetReleaseId?: string) => {
     setStep(nextStep);
-    if (!releaseId) return;
+    const releaseTarget = targetReleaseId || releaseId;
+    if (!releaseTarget) return;
     const { error: updateError } = await supabase
       .from('release_profiles')
       .update({ setup_step: nextStep })
-      .eq('release_id', releaseId);
+      .eq('release_id', releaseTarget);
     if (updateError) throw updateError;
   }, [releaseId]);
 
   const ensureOnboardingRelease = useCallback(async (): Promise<string> => {
     if (!user) throw new Error('User not found');
+    const shouldForceCreatePlan = flow === 'create-plan' && !requestedPlanId;
 
     if (requestedPlanId && releaseId === requestedPlanId) return releaseId;
     if (!requestedPlanId && releaseId) return releaseId;
@@ -528,6 +532,40 @@ export function PostAuthScreen() {
       setDeadlineDate(parseStoredDate(autoDeadline));
       setStep(2);
       return requestedRelease.id;
+    }
+
+    if (shouldForceCreatePlan) {
+      const { data: release, error: releaseInsertError } = await supabase
+        .from('releases')
+        .insert({
+          user_id: user.id,
+          title: 'New Plan',
+          artist_name: user.name || 'Artist',
+          type: 'single',
+          status: 'draft',
+        })
+        .select('id, created_at')
+        .single();
+      if (releaseInsertError || !release) {
+        throw releaseInsertError || new Error('Could not create release');
+      }
+
+      const { error: profileInsertError } = await supabase
+        .from('release_profiles')
+        .insert({
+          release_id: release.id,
+          setup_step: 2,
+          setup_completed: false,
+          hard_deadline: addDaysISO(release.created_at || new Date(), DEFAULT_PLAN_DURATION_DAYS),
+        });
+      if (profileInsertError) throw profileInsertError;
+
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(`urganize.onboardingDraft.${user.id}.new-plan`);
+      }
+
+      setReleaseId(release.id);
+      return release.id;
     }
 
     const { data: existingReleases, error: releaseFetchError } = await supabase
@@ -599,7 +637,7 @@ export function PostAuthScreen() {
 
     setReleaseId(release.id);
     return release.id;
-  }, [releaseId, requestedPlanId, user]);
+  }, [flow, releaseId, requestedPlanId, user]);
 
   const loadCurrentTask = useCallback(async (activeReleaseId: string) => {
     const { data: task, error: taskError } = await supabase
@@ -631,8 +669,11 @@ export function PostAuthScreen() {
 
     const bootstrap = async () => {
       try {
-        const activeReleaseId = await ensureOnboardingRelease();
-        await loadCurrentTask(activeReleaseId);
+        const shouldSkipAutoCreate = flow === 'create-plan' && !requestedPlanId;
+        if (!shouldSkipAutoCreate) {
+          const activeReleaseId = await ensureOnboardingRelease();
+          await loadCurrentTask(activeReleaseId);
+        }
 
         const { data: artistProfile } = await supabase
           .from('artist_profiles')
@@ -658,7 +699,7 @@ export function PostAuthScreen() {
     };
 
     bootstrap();
-  }, [bootstrapTargetKey, ensureOnboardingRelease, loadCurrentTask, requestedStartStep, user]);
+  }, [bootstrapTargetKey, ensureOnboardingRelease, flow, loadCurrentTask, requestedPlanId, requestedStartStep, user]);
 
   const upsertArtistProfile = useCallback(async () => {
     if (!user) throw new Error('User not found');
@@ -749,8 +790,8 @@ export function PostAuthScreen() {
     setIsBusy(true);
     try {
       await updateRole(role);
-      await ensureOnboardingRelease();
-      await setStepPersisted(2);
+      const activeReleaseId = await ensureOnboardingRelease();
+      await setStepPersisted(2, activeReleaseId);
     } catch (err: any) {
       setError(err?.message || 'Failed to save role');
     } finally {
@@ -788,7 +829,7 @@ export function PostAuthScreen() {
       if (profileUpdateError) throw profileUpdateError;
 
       await upsertArtistProfile();
-      await setStepPersisted(3);
+      await setStepPersisted(3, activeReleaseId);
     } catch (err: any) {
       setError(err?.message || 'Failed to save artist details');
     } finally {
@@ -812,7 +853,7 @@ export function PostAuthScreen() {
         .update({ campaign_narrative: goalValue || null })
         .eq('release_id', activeReleaseId);
       if (goalUpdateError) throw goalUpdateError;
-      await setStepPersisted(4);
+      await setStepPersisted(4, activeReleaseId);
     } catch (err: any) {
       setError(err?.message || 'Failed to save goal');
     } finally {
@@ -890,7 +931,7 @@ export function PostAuthScreen() {
 
       if (profileUpdateError) throw profileUpdateError;
       await upsertArtistProfile();
-      await setStepPersisted(5);
+      await setStepPersisted(5, activeReleaseId);
     } catch (err: any) {
       setError(err?.message || 'Failed to save profile');
     } finally {
@@ -908,7 +949,7 @@ export function PostAuthScreen() {
         .update({ other_goals: stepsText || null })
         .eq('release_id', activeReleaseId);
       if (stepsUpdateError) throw stepsUpdateError;
-      await setStepPersisted(6);
+      await setStepPersisted(6, activeReleaseId);
     } catch (err: any) {
       setError(err?.message || 'Failed to save steps');
     } finally {
