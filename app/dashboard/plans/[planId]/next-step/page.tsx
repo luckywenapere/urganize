@@ -54,10 +54,27 @@ export default function PlanNextStepPage() {
     [activeTask, completedTasks, totalTasks]
   );
 
-  const routeToTaskExecution = () => {
+  const clearPlanFeedbackDrafts = () => {
+    if (typeof window === 'undefined' || !user?.id || !planId) return;
+    const prefix = `urganize.feedbackDraft.${user.id}.${planId}.`;
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(prefix)) {
+        toRemove.push(key);
+      }
+    }
+    toRemove.forEach((key) => localStorage.removeItem(key));
+  };
+
+  const routeToTaskExecution = (options?: { forceStep7?: boolean }) => {
     if (!planId) return;
     setNeedsOnboarding(true);
-    router.push(`/dashboard?startOnboarding=7&planId=${planId}&flow=next-task`);
+    const shouldForceStep7 = options?.forceStep7 === true;
+    const query = shouldForceStep7
+      ? `?startOnboarding=7&planId=${planId}&flow=next-task`
+      : `?planId=${planId}&flow=next-task`;
+    router.push(`/dashboard${query}`);
   };
 
   const getNextOrderIndex = async (): Promise<number> => {
@@ -125,8 +142,19 @@ export default function PlanNextStepPage() {
     if (insertError || !insertedTask) {
       throw insertError || new Error('Could not create next step');
     }
+
+    const { error: profileStepResetError } = await supabase
+      .from('release_profiles')
+      .update({
+        setup_step: 7,
+        setup_completed: false,
+      })
+      .eq('release_id', planId);
+    if (profileStepResetError) throw profileStepResetError;
+
+    clearPlanFeedbackDrafts();
     setActiveTask(insertedTask);
-    routeToTaskExecution();
+    routeToTaskExecution({ forceStep7: true });
   };
 
   const handleGenerateAIGuidedStep = async () => {
@@ -330,7 +358,7 @@ export default function PlanNextStepPage() {
                 <p className="mt-2 text-sm text-content-secondary">{activeTask.description || 'Open this step to continue execution.'}</p>
                 <button
                   type="button"
-                  onClick={routeToTaskExecution}
+                  onClick={() => routeToTaskExecution()}
                   className="mt-5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
                 >
                   Execute current step
