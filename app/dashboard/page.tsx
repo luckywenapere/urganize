@@ -208,7 +208,7 @@ export default function DashboardPage() {
       }
 
       setNeedsOnboarding(true);
-      router.push(`/dashboard?startOnboarding=2&planId=${release.id}`);
+      router.push(`/dashboard?startOnboarding=2&planId=${release.id}&flow=create-plan`);
     } catch (createError: any) {
       setError(createError?.message || 'Could not create a new plan.');
     } finally {

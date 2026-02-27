@@ -201,6 +201,7 @@ export function PostAuthScreen() {
   const searchParams = useSearchParams();
   const requestedPlanId = searchParams.get('planId');
   const requestedStartStep = Number(searchParams.get('startOnboarding') || 0);
+  const flow = searchParams.get('flow');
   const {
     user,
     updateRole,
@@ -258,6 +259,11 @@ export function PostAuthScreen() {
   }, [releaseId, user?.id]);
 
   const resetError = () => setError('');
+  const isPlanSetupFlow =
+    flow === 'create-plan' ||
+    flow === 'resume-plan' ||
+    requestedStartStep >= 2 ||
+    Boolean(requestedPlanId);
 
   useEffect(() => {
     if (!feedbackDraftKey) {
@@ -1026,10 +1032,6 @@ export function PostAuthScreen() {
 
   const handleGoToDashboard = () => {
     setNeedsOnboarding(false);
-    if (releaseId) {
-      router.push(`/dashboard/plans/${releaseId}`);
-      return;
-    }
     router.push('/dashboard');
   };
 
@@ -1180,6 +1182,11 @@ export function PostAuthScreen() {
   };
 
   const handleBack = async () => {
+    if (isPlanSetupFlow) {
+      handleGoToDashboard();
+      return;
+    }
+
     if (step === 0 || step === 1) {
       await handleLogoutToAuth();
       return;
@@ -1255,7 +1262,7 @@ export function PostAuthScreen() {
             onClick={handleBack}
             className="w-fit text-[clamp(1.8rem,4.5vw,3rem)] leading-none tracking-tight text-content-primary/90"
           >
-            ...Back
+            {isPlanSetupFlow ? 'Back to Dashboard' : '...Back'}
           </button>
         )}
 
