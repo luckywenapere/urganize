@@ -56,6 +56,10 @@ export default function PlanDashboardPage() {
   const [completedTasks, setCompletedTasks] = useState(0);
   const [nextTask, setNextTask] = useState('No active task');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSavingBasics, setIsSavingBasics] = useState(false);
+  const [draftTitle, setDraftTitle] = useState('');
+  const [draftArtistName, setDraftArtistName] = useState('');
+  const [draftDeadline, setDraftDeadline] = useState('');
   const cacheKey = user && planId ? `urganize.planDashboard.${user.id}.${planId}` : '';
 
   useEffect(() => {
@@ -96,6 +100,9 @@ export default function PlanDashboardPage() {
         setTotalTasks(cached.totalTasks);
         setCompletedTasks(cached.completedTasks);
         setNextTask(cached.nextTask || 'No active task');
+        setDraftTitle(cached.plan.title || '');
+        setDraftArtistName(cached.plan.artist_name || '');
+        setDraftDeadline((cached.profile.hard_deadline || '').slice(0, 10));
         setLoading(false);
       }
 
@@ -181,6 +188,9 @@ export default function PlanDashboardPage() {
           setTotalTasks(totalCount || 0);
           setCompletedTasks(doneCount || 0);
           setNextTask(activeTask?.title || 'No active task');
+          setDraftTitle(release.title || '');
+          setDraftArtistName(release.artist_name || '');
+          setDraftDeadline((resolvedProfile.hard_deadline || '').slice(0, 10));
 
           if (cacheKey) {
             const cachePayload: CachedPlanPayload = {
@@ -270,12 +280,12 @@ export default function PlanDashboardPage() {
 
   const statusBadgeClass =
     timelineMetrics.status === 'Completed'
-      ? 'bg-emerald-500/20 text-emerald-200'
+      ? 'bg-brand-muted text-brand'
       : timelineMetrics.status === 'Overdue'
-        ? 'bg-red-500/20 text-red-200'
+        ? 'bg-status-error/20 text-status-error'
         : timelineMetrics.status === 'At Risk'
-          ? 'bg-amber-500/20 text-amber-100'
-          : 'bg-sky-500/20 text-sky-100';
+          ? 'bg-status-warning/20 text-status-warning'
+          : 'bg-status-info/20 text-status-info';
 
   const timelineMessage =
     timelineMetrics.status === 'Completed'
@@ -286,11 +296,60 @@ export default function PlanDashboardPage() {
           ? 'You are falling behind the timeline. Complete the next action today.'
           : 'You are on track. Keep shipping tasks at this pace.';
 
+  const savePlanBasics = async () => {
+    if (!planId) return;
+    const title = draftTitle.trim();
+    const artist = draftArtistName.trim();
+    const deadline = draftDeadline.trim();
+
+    if (!title) {
+      setError('Plan title is required.');
+      return;
+    }
+    if (!artist) {
+      setError('Artist name is required.');
+      return;
+    }
+
+    if (deadline) {
+      const deadlineDate = new Date(deadline);
+      if (Number.isNaN(deadlineDate.getTime())) {
+        setError('Deadline date is invalid.');
+        return;
+      }
+    }
+
+    setIsSavingBasics(true);
+    setError('');
+    try {
+      const { error: releaseUpdateError } = await supabase
+        .from('releases')
+        .update({ title, artist_name: artist, updated_at: new Date().toISOString() })
+        .eq('id', planId)
+        .eq('user_id', user?.id || '');
+      if (releaseUpdateError) throw releaseUpdateError;
+
+      const { error: profileUpdateError } = await supabase
+        .from('release_profiles')
+        .update({ hard_deadline: deadline || null, updated_at: new Date().toISOString() })
+        .eq('release_id', planId);
+      if (profileUpdateError) throw profileUpdateError;
+
+      setPlan((current) => (current ? { ...current, title, artist_name: artist } : current));
+      setProfile((current) => (current ? { ...current, hard_deadline: deadline || null } : current));
+      setError('');
+    } catch (saveError: any) {
+      setError(saveError?.message || 'Could not save plan details');
+    } finally {
+      setIsSavingBasics(false);
+    }
+  };
+
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-bg-base text-content-primary">
       <div className="mx-auto flex min-h-screen w-full max-w-[1120px] flex-col px-6 py-10 lg:px-10 lg:py-12">
         <div className="flex items-center justify-between">
-          <Link href="/dashboard" className="text-sm text-white/70 hover:text-white">
+          <Link href="/dashboard" className="text-sm text-content-secondary hover:text-content-primary">
             Back to Plans
           </Link>
           <button
@@ -299,46 +358,87 @@ export default function PlanDashboardPage() {
               await logout();
               router.push('/auth');
             }}
-            className="text-sm text-white/70 hover:text-white"
+            className="text-sm text-content-secondary hover:text-content-primary"
           >
             Logout
           </button>
         </div>
 
         {loading ? (
-          <div className="mt-16 rounded-2xl border border-white/10 bg-[#02090d] p-6">
-            <p className="text-white/75">Loading plan dashboard...</p>
+          <div className="mt-16 rounded-2xl border border-stroke-default bg-bg-surface p-6">
+            <p className="text-content-secondary">Loading plan dashboard...</p>
           </div>
         ) : error ? (
-          <div className="mt-16 rounded-2xl border border-red-500/40 bg-red-500/10 p-6">
-            <p className="text-red-200">{error}</p>
+          <div className="mt-16 rounded-2xl border border-status-error/40 bg-status-error/10 p-6">
+            <p className="text-status-error">{error}</p>
           </div>
         ) : (
           <>
             <section className="mt-14">
               <h1 className="text-[clamp(2.2rem,4.8vw,3.7rem)] tracking-tight">{plan?.title || 'Plan Dashboard'}</h1>
-              <p className="mt-2 text-white/70">{plan?.artist_name || 'Unknown Artist'}</p>
+              <p className="mt-2 text-content-secondary">{plan?.artist_name || 'Unknown Artist'}</p>
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-white/90 ring-1 ring-white/20">
+                <div className="inline-flex items-center rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs font-medium text-content-primary">
                   Created {timelineMetrics.createdAt.toLocaleDateString()}
                 </div>
                 {isRefreshing && (
-                  <div className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/70">
+                  <div className="inline-flex items-center rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs text-content-secondary">
                     Refreshing...
                   </div>
                 )}
               </div>
             </section>
 
+            <section className="mt-8 rounded-2xl border border-stroke-default bg-bg-surface p-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h2 className="text-xl font-semibold">Edit Plan Basics</h2>
+                <button
+                  type="button"
+                  onClick={savePlanBasics}
+                  disabled={isSavingBasics}
+                  className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                >
+                  {isSavingBasics ? 'Saving...' : 'Save changes'}
+                </button>
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <label className="text-sm">
+                  <span className="mb-1 block text-content-secondary">Plan title</span>
+                  <input
+                    value={draftTitle}
+                    onChange={(event) => setDraftTitle(event.target.value)}
+                    className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block text-content-secondary">Artist name</span>
+                  <input
+                    value={draftArtistName}
+                    onChange={(event) => setDraftArtistName(event.target.value)}
+                    className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block text-content-secondary">Target date</span>
+                  <input
+                    type="date"
+                    value={draftDeadline}
+                    onChange={(event) => setDraftDeadline(event.target.value)}
+                    className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+                  />
+                </label>
+              </div>
+            </section>
+
             <section className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-4">
-              <article className="rounded-xl border border-white/10 bg-[#02090d] p-4">
-                <p className="text-xs uppercase tracking-wide text-white/55">Plan Status</p>
+              <article className="rounded-xl border border-stroke-default bg-bg-surface p-4">
+                <p className="text-xs uppercase tracking-wide text-content-tertiary">Plan Status</p>
                 <p className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusBadgeClass}`}>
                   {timelineMetrics.status}
                 </p>
               </article>
-              <article className="rounded-xl border border-white/10 bg-[#02090d] p-4">
-                <p className="text-xs uppercase tracking-wide text-white/55">Days Left</p>
+              <article className="rounded-xl border border-stroke-default bg-bg-surface p-4">
+                <p className="text-xs uppercase tracking-wide text-content-tertiary">Days Left</p>
                 <p className="mt-2 text-2xl font-semibold">
                   {timelineMetrics.status === 'Completed'
                     ? 'Done'
@@ -347,51 +447,53 @@ export default function PlanDashboardPage() {
                       : timelineMetrics.daysLeft}
                 </p>
               </article>
-              <article className="rounded-xl border border-white/10 bg-[#02090d] p-4">
-                <p className="text-xs uppercase tracking-wide text-white/55">Completed Tasks</p>
+              <article className="rounded-xl border border-stroke-default bg-bg-surface p-4">
+                <p className="text-xs uppercase tracking-wide text-content-tertiary">Completed Tasks</p>
                 <p className="mt-2 text-2xl font-semibold">
                   {completedTasks}/{Math.max(totalTasks, 1)}
                 </p>
               </article>
-              <article className="rounded-xl border border-white/10 bg-[#02090d] p-4">
-                <p className="text-xs uppercase tracking-wide text-white/55">Next Action</p>
-                <p className="mt-2 text-sm text-white/85">{nextTask}</p>
+              <article className="rounded-xl border border-stroke-default bg-bg-surface p-4">
+                <p className="text-xs uppercase tracking-wide text-content-tertiary">Next Action</p>
+                <p className="mt-2 text-sm text-content-secondary">{nextTask}</p>
               </article>
             </section>
 
-            <section className="mt-8 rounded-2xl border border-white/10 bg-[#02090d] p-6">
+            <section className="mt-8 rounded-2xl border border-stroke-default bg-bg-surface p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-xl font-semibold">Timeline Pace</h2>
-                <p className="text-sm text-white/65">
+                <p className="text-sm text-content-secondary">
                   Target date: {timelineMetrics.deadline.toLocaleDateString()}
                 </p>
               </div>
 
-              <div className="mt-6 rounded-xl border border-white/10 bg-black/30 p-4">
-                <div className="relative h-4 w-full rounded-full bg-white/10">
+              <div className="mt-6 rounded-xl border border-stroke-default bg-bg-elevated p-4">
+                <div className="relative h-4 w-full rounded-full bg-bg-overlay">
                   <div
-                    className="absolute left-0 top-0 h-4 rounded-full bg-white"
+                    className="absolute left-0 top-0 h-4 rounded-full bg-brand"
                     style={{ width: `${Math.round(timelineMetrics.workProgress * 100)}%` }}
                   />
                   <div
-                    className="absolute top-[-6px] h-7 w-[2px] bg-amber-300"
+                    className="absolute top-[-6px] h-7 w-[2px] bg-status-warning"
                     style={{ left: `${Math.round(timelineMetrics.timeProgress * 100)}%` }}
                   />
                 </div>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-white/65">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-content-secondary">
                   <span>Work completed: {Math.round(timelineMetrics.workProgress * 100)}%</span>
                   <span>Time elapsed: {Math.round(timelineMetrics.timeProgress * 100)}%</span>
                 </div>
               </div>
 
-              <p className="mt-4 text-sm text-white/80">{timelineMessage}</p>
+              <p className="mt-4 text-sm text-content-secondary">{timelineMessage}</p>
 
               <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-5">
                 {timelineMetrics.milestones.map((milestone) => (
                   <div
                     key={milestone.label}
                     className={`rounded-lg border p-3 text-xs ${
-                      milestone.complete ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100' : 'border-white/10 bg-black/20 text-white/70'
+                      milestone.complete
+                        ? 'border-brand/40 bg-brand-muted text-content-primary'
+                        : 'border-stroke-default bg-bg-elevated text-content-secondary'
                     }`}
                   >
                     <p className="font-medium">{milestone.label}</p>
@@ -409,9 +511,9 @@ export default function PlanDashboardPage() {
                     setNeedsOnboarding(true);
                     router.push(`/dashboard?planId=${planId}`);
                   }}
-                  className="rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/20"
+                  className="rounded-xl border border-brand/35 bg-brand-muted px-5 py-3 text-sm font-semibold text-content-primary transition hover:bg-brand/20"
                 >
-                  Lock In This Plan
+                  Resume Onboarding
                 </button>
               </div>
             )}

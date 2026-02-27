@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { getIndividualPlanAmount } from '@/lib/billing';
 
 const PaystackButton = dynamic(
   () => import('@/components/PaystackButton').then((mod) => mod.PaystackButton),
@@ -18,32 +19,34 @@ export function Step6GeneratingTask({
   userEmail,
   onClosePricingSheet,
 }: Step6GeneratingTaskProps) {
+  const monthlyAmount = getIndividualPlanAmount('monthly');
+
   return (
     <>
-      <div className="flex flex-1 items-center justify-center text-[clamp(2.2rem,5.2vw,4rem)]">
+      <div className="flex flex-1 items-center justify-center text-center text-[clamp(2rem,5vw,3.6rem)] text-content-primary">
         Generating task...
       </div>
 
       {showPricingSheet && (
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#03080c] p-6 sm:p-8">
-          <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-6">
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-stroke-default bg-bg-surface/95 p-6 backdrop-blur sm:p-8">
+          <div className="mx-auto flex w-full max-w-2xl flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
             <div>
-              <p className="text-xl text-white/95">Unlock unlimited task generation</p>
-              <p className="text-sm text-white/60">Monthly plan starts now.</p>
+              <p className="text-xl text-content-primary">Unlock unlimited task generation</p>
+              <p className="text-sm text-content-secondary">Start Pro at NGN {monthlyAmount.toLocaleString()} per month.</p>
             </div>
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={onClosePricingSheet}
-                className="text-lg text-white/70"
+                className="rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
               >
-                Close
+                Skip for now
               </button>
               <PaystackButton
                 email={userEmail}
-                amount={8000}
+                amount={monthlyAmount}
                 plan="monthly"
-                className="rounded-none bg-white px-5 py-3 text-base font-medium text-black"
+                className="rounded-lg bg-brand px-5 py-3 text-base font-semibold text-content-inverse hover:bg-brand-hover"
               >
                 Subscribe
               </PaystackButton>

@@ -20,26 +20,26 @@ export function Step8TaskDone({
       <button
         type="button"
         onClick={onLogout}
-        className="absolute right-6 top-8 text-[clamp(2rem,4vw,3rem)]"
+        className="absolute right-6 top-8 text-sm text-content-secondary hover:text-content-primary"
       >
         Logout
       </button>
-      <button type="button" disabled={isBusy} onClick={onMarkDone} className="flex items-center gap-4 text-[clamp(2rem,4.6vw,3.4rem)] disabled:opacity-40">
-        <span className="inline-block h-12 w-12 border border-white/35 sm:h-14 sm:w-14" />
+      <button type="button" disabled={isBusy} onClick={onMarkDone} className="flex items-center gap-4 text-[clamp(2rem,4.6vw,3.4rem)] text-content-primary disabled:opacity-40">
+        <span className="inline-block h-12 w-12 rounded-md border border-stroke-default bg-bg-elevated sm:h-14 sm:w-14" />
         <span>Mark Done</span>
       </button>
       <button
         type="button"
         disabled={isBusy}
         onClick={onDropFeedback}
-        className="mt-8 rounded-xl border border-emerald-400/35 bg-emerald-500/20 px-5 py-3 text-base font-semibold text-white transition hover:bg-emerald-500/30 disabled:opacity-40"
+        className="mt-8 rounded-xl border border-brand/30 bg-brand/15 px-5 py-3 text-base font-semibold text-content-primary transition hover:bg-brand/25 disabled:opacity-40"
       >
         Drop Feedback
       </button>
       <button
         type="button"
         onClick={onGoToDashboard}
-        className="mt-8 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
+        className="mt-8 rounded-xl border border-stroke-default bg-bg-elevated px-4 py-2 text-sm font-medium text-content-primary transition hover:bg-bg-hover"
       >
         Go to Dashboard
       </button>

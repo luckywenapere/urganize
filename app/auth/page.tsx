@@ -47,16 +47,18 @@ export default function AuthPage() {
   const [providerHint, setProviderHint] = useState<LoginProviderHint>('unknown');
   const [providerHintEmail, setProviderHintEmail] = useState('');
   const [isCheckingProvider, setIsCheckingProvider] = useState(false);
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
   const [showEmailLoginForGoogle, setShowEmailLoginForGoogle] = useState(false);
   const providerLookupRequestIdRef = useRef(0);
 
   const normalizedLoginEmail = normalizeAuthEmail(email);
-  const hasLookupEligibleEmail = mode === 'login' && normalizedLoginEmail.includes('@');
+  const hasLookupEligibleEmail = mode === 'login' && showEmailLogin && normalizedLoginEmail.includes('@');
   const isProviderLookupPending =
     hasLookupEligibleEmail &&
     (isCheckingProvider || providerHintEmail !== normalizedLoginEmail);
   const shouldHideEmailLogin =
     mode === 'login' &&
+    showEmailLogin &&
     providerHint === 'google' &&
     providerHintEmail === normalizedLoginEmail &&
     !showEmailLoginForGoogle;
@@ -79,7 +81,7 @@ export default function AuthPage() {
   useEffect(() => {
     const requestId = ++providerLookupRequestIdRef.current;
 
-    if (mode !== 'login') {
+    if (mode !== 'login' || !showEmailLogin) {
       setProviderHint('unknown');
       setProviderHintEmail('');
       setIsCheckingProvider(false);
@@ -111,7 +113,7 @@ export default function AuthPage() {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [hasLookupEligibleEmail, mode, normalizedLoginEmail]);
+  }, [hasLookupEligibleEmail, mode, normalizedLoginEmail, showEmailLogin]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,94 +218,149 @@ export default function AuthPage() {
                 Continue with Google
               </button>
 
-              {/* Divider */}
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-zinc-800" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-bg-surface text-zinc-500">or</span>
-                </div>
-              </div>
-
-              {/* Email/Password Form */}
-              <form onSubmit={handleLogin} className="space-y-4">
-                <Input
-                  label="Email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (error) setError('');
-                  }}
-                  placeholder="you@example.com"
-                  leftIcon={<Mail className="w-4 h-4" />}
-                  autoComplete="email"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
+              {!showEmailLogin ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="mt-4 w-full"
                   disabled={isLoading || isGoogleLoading}
-                  required
-                />
-                {isProviderLookupPending ? (
-                  <p className="text-xs text-content-tertiary text-center">
-                    Checking sign-in options...
-                  </p>
-                ) : shouldHideEmailLogin ? (
-                  <>
-                    <Button
-                      type="button"
-                      className="w-full"
-                      disabled={isLoading || isGoogleLoading}
-                      onClick={() => {
-                        setShowEmailLoginForGoogle(true);
-                        setError('');
-                        setPassword('');
-                      }}
-                    >
-                      Use email instead
-                    </Button>
-                  </>
-                ) : (
-                  <>
+                  onClick={() => {
+                    setShowEmailLogin(true);
+                    setShowEmailLoginForGoogle(false);
+                    setPassword('');
+                    setError('');
+                  }}
+                >
+                  Sign in with email
+                </Button>
+              ) : (
+                <>
+                  {/* Divider */}
+                  <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-stroke-subtle" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-bg-surface text-content-tertiary">or</span>
+                    </div>
+                  </div>
+
+                  {/* Email/Password Form */}
+                  <form onSubmit={handleLogin} className="space-y-4">
                     <Input
-                      label="Password"
-                      type="password"
-                      value={password}
+                      label="Email"
+                      type="email"
+                      value={email}
                       onChange={(e) => {
-                        setPassword(e.target.value);
+                        setEmail(e.target.value);
                         if (error) setError('');
                       }}
-                      placeholder="••••••••"
-                      leftIcon={<Lock className="w-4 h-4" />}
-                      autoComplete="current-password"
-                      autoFocus={showEmailLoginForGoogle && providerHint === 'google'}
+                      placeholder="you@example.com"
+                      leftIcon={<Mail className="w-4 h-4" />}
+                      autoComplete="email"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
                       disabled={isLoading || isGoogleLoading}
                       required
                     />
+                    {isProviderLookupPending ? (
+                      <p className="text-center text-xs text-content-tertiary">
+                        Checking sign-in options...
+                      </p>
+                    ) : shouldHideEmailLogin ? (
+                      <>
+                        <p className="text-center text-xs text-content-secondary">
+                          This account uses Google sign-in.
+                        </p>
+                        <Button
+                          type="button"
+                          className="w-full"
+                          disabled={isLoading || isGoogleLoading}
+                          onClick={handleGoogleLogin}
+                        >
+                          Continue with Google
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="w-full"
+                          disabled={isLoading || isGoogleLoading}
+                          onClick={() => {
+                            setShowEmailLoginForGoogle(true);
+                            setError('');
+                            setPassword('');
+                          }}
+                        >
+                          Use email instead
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Input
+                          label="Password"
+                          type="password"
+                          value={password}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+                            if (error) setError('');
+                          }}
+                          placeholder="••••••••"
+                          leftIcon={<Lock className="w-4 h-4" />}
+                          autoComplete="current-password"
+                          autoFocus={showEmailLoginForGoogle && providerHint === 'google'}
+                          disabled={isLoading || isGoogleLoading}
+                          required
+                        />
 
-                    <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-                      {isLoading ? 'Signing in...' : 'Sign In'}
-                    </Button>
-                  </>
-                )}
+                        <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
+                          {isLoading ? 'Signing in...' : 'Sign In'}
+                        </Button>
+                      </>
+                    )}
 
-                {error && (
-                  <p className="text-sm text-red-500 text-center">{error}</p>
-                )}
-              </form>
+                    {error && (
+                      <p className="text-center text-sm text-status-error">{error}</p>
+                    )}
+                  </form>
+                  <p className="mt-2 text-center text-sm text-content-tertiary">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowEmailLogin(false);
+                        setShowEmailLoginForGoogle(false);
+                        setPassword('');
+                        setError('');
+                      }}
+                      className="text-brand hover:underline"
+                    >
+                      Hide email sign-in
+                    </button>
+                  </p>
+                </>
+              )}
+
+              {error && !showEmailLogin && (
+                <p className="mt-4 text-center text-sm text-status-error">{error}</p>
+              )}
 
               <p className="text-center text-sm text-content-tertiary mt-6">
                 Don't have an account?{' '}
                 <button
-                  onClick={() => setMode('role')}
+                  onClick={() => {
+                    setMode('role');
+                    setShowEmailLogin(false);
+                    setShowEmailLoginForGoogle(false);
+                    setPassword('');
+                    setError('');
+                  }}
                   className="text-brand hover:underline font-medium"
                 >
                   Sign up
                 </button>
               </p>
 
-              {!shouldHideEmailLogin && !isProviderLookupPending && (
+              {showEmailLogin && !shouldHideEmailLogin && !isProviderLookupPending && (
                 <p className="text-center text-sm text-content-tertiary mt-2">
                   <Link href="/auth/forgot-password" className="text-brand hover:underline">
                     Forgot password?
@@ -317,7 +374,13 @@ export default function AuthPage() {
           {mode === 'role' && (
             <>
               <button
-                onClick={() => setMode('login')}
+                onClick={() => {
+                  setMode('login');
+                  setShowEmailLogin(false);
+                  setShowEmailLoginForGoogle(false);
+                  setPassword('');
+                  setError('');
+                }}
                 className="inline-flex items-center gap-2 text-sm text-content-tertiary hover:text-content-primary transition-colors mb-6"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -336,6 +399,10 @@ export default function AuthPage() {
                   onClick={() => {
                     setHasManager(false);
                     setMode('signup');
+                    setShowEmailLogin(false);
+                    setShowEmailLoginForGoogle(false);
+                    setPassword('');
+                    setError('');
                   }}
                   className="w-full p-4 rounded-xl border border-stroke-default bg-bg-elevated hover:bg-bg-hover transition-colors text-left group"
                 >
@@ -354,12 +421,16 @@ export default function AuthPage() {
                   onClick={() => {
                     setHasManager(true);
                     setMode('signup');
+                    setShowEmailLogin(false);
+                    setShowEmailLoginForGoogle(false);
+                    setPassword('');
+                    setError('');
                   }}
                   className="w-full p-4 rounded-xl border border-stroke-default bg-bg-elevated hover:bg-bg-hover transition-colors text-left group"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                      <User className="w-6 h-6 text-purple-500" />
+                    <div className="w-12 h-12 rounded-lg bg-status-info/12 flex items-center justify-center">
+                      <User className="w-6 h-6 text-status-info" />
                     </div>
                     <div>
                       <p className="font-medium text-content-primary">I'm an Artist</p>
@@ -375,7 +446,13 @@ export default function AuthPage() {
           {mode === 'signup' && (
             <>
               <button
-                onClick={() => setMode('role')}
+                onClick={() => {
+                  setMode('role');
+                  setShowEmailLogin(false);
+                  setShowEmailLoginForGoogle(false);
+                  setPassword('');
+                  setError('');
+                }}
                 className="inline-flex items-center gap-2 text-sm text-content-tertiary hover:text-content-primary transition-colors mb-6"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -421,10 +498,10 @@ export default function AuthPage() {
               {/* Divider */}
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-zinc-800" />
+                  <div className="w-full border-t border-stroke-subtle" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-bg-surface text-zinc-500">or</span>
+                  <span className="px-2 bg-bg-surface text-content-tertiary">or</span>
                 </div>
               </div>
 
@@ -486,7 +563,13 @@ export default function AuthPage() {
               <p className="text-center text-sm text-content-tertiary mt-6">
                 Already have an account?{' '}
                 <button
-                  onClick={() => setMode('login')}
+                  onClick={() => {
+                    setMode('login');
+                    setShowEmailLogin(false);
+                    setShowEmailLoginForGoogle(false);
+                    setPassword('');
+                    setError('');
+                  }}
                   className="text-brand hover:underline font-medium"
                 >
                   Sign in

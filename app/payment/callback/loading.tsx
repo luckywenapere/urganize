@@ -1,6 +1,6 @@
 export default function PaymentCallbackLoading() {
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-bg-base text-content-primary">
       <div className="flex min-h-screen items-center justify-center px-6">
         <div className="skeleton-card w-full max-w-sm p-6 text-center">
           <div className="mx-auto h-10 w-10 rounded-full skeleton-shimmer" />

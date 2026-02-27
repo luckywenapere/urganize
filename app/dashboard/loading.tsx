@@ -1,6 +1,6 @@
 export default function DashboardLoading() {
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-bg-base text-content-primary">
       <div className="mx-auto w-full max-w-[1120px] px-6 py-10 lg:px-10 lg:py-12">
         <div className="flex items-center justify-between">
           <div className="h-10 w-10 rounded-lg skeleton-shimmer" />

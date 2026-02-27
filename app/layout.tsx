@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import "./globals.css";
 
 const PostAuthScreen = dynamic(
@@ -12,7 +13,7 @@ const PostAuthScreen = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex min-h-screen items-center justify-center bg-black text-white">
+      <div className="flex min-h-screen items-center justify-center bg-bg-base text-content-primary">
         <div className="skeleton-card w-full max-w-xl p-8">
           <div className="h-8 w-48 rounded-lg skeleton-shimmer" />
           <div className="mt-4 space-y-3">
@@ -46,16 +47,32 @@ export default function RootLayout({
   }, [checkAuth]);
 
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning data-theme="dark" className="dark">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link 
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" 
-          rel="stylesheet" 
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var key = 'urganize.theme';
+                  var stored = localStorage.getItem(key);
+                  var resolved = stored === 'light' || stored === 'dark'
+                    ? stored
+                    : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+                  var root = document.documentElement;
+                  root.dataset.theme = resolved;
+                  root.classList.remove('dark', 'light');
+                  root.classList.add(resolved);
+                } catch (_) {}
+              })();
+            `,
+          }}
         />
       </head>
       <body className="app-body bg-bg-base text-content-primary antialiased">
+        <div className="fixed right-4 top-4 z-[90] md:right-6 md:top-6">
+          <ThemeToggle compact />
+        </div>
         {showPostAuthScreen ? (
           <PostAuthScreen />
         ) : (

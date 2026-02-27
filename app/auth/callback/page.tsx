@@ -126,10 +126,10 @@ export default function AuthCallbackPage() {
   }, [router, checkAuth]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
+    <div className="min-h-screen flex items-center justify-center bg-bg-base text-content-primary">
       <div className="text-center">
-        <div className="animate-spin h-8 w-8 border-2 border-white border-t-transparent rounded-full mx-auto mb-4" />
-        <p className="text-white">Signing you in...</p>
+        <div className="animate-spin h-8 w-8 border-2 border-content-primary border-t-transparent rounded-full mx-auto mb-4" />
+        <p>Signing you in...</p>
       </div>
     </div>
   );

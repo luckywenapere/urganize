@@ -49,27 +49,27 @@ export function VirtualizedPlanList({ plans, getPlanStatus, onSelectPlan }: Virt
               type="button"
               key={plan.id}
               onClick={() => onSelectPlan(plan.id)}
-              className="absolute left-0 right-0 h-[84px] rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-left transition hover:border-white/20 hover:bg-black/30"
+              className="absolute left-0 right-0 h-[84px] rounded-xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-left transition hover:border-stroke-default hover:bg-bg-hover"
               style={{ top: absoluteIndex * ROW_HEIGHT }}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-base font-medium text-white">{plan.title}</p>
-                  <p className="truncate text-sm text-white/70">{plan.artist_name}</p>
+                  <p className="truncate text-base font-medium text-content-primary">{plan.title}</p>
+                  <p className="truncate text-sm text-content-secondary">{plan.artist_name}</p>
                 </div>
-                <div className="flex items-center gap-2 whitespace-nowrap text-sm text-white/70">
+                <div className="flex items-center gap-2 whitespace-nowrap text-sm text-content-secondary">
                   <span
                     className={`rounded-full px-2 py-1 text-xs font-medium ${
                       status === 'Completed'
-                        ? 'bg-emerald-500/20 text-emerald-200'
+                        ? 'bg-brand-muted text-brand'
                         : status === 'Overdue'
-                          ? 'bg-red-500/20 text-red-200'
-                          : 'bg-amber-500/20 text-amber-100'
+                          ? 'bg-status-error/20 text-status-error'
+                          : 'bg-status-warning/20 text-status-warning'
                     }`}
                   >
                     {status}
                   </span>
-                  <span className="text-white/30">.</span>
+                  <span className="text-content-tertiary">.</span>
                   <span>{new Date(plan.created_at).toLocaleDateString()}</span>
                 </div>
               </div>

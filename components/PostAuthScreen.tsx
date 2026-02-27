@@ -164,7 +164,7 @@ const FeedbackSubmitStep = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="mx-auto mt-16 w-full max-w-[820px] rounded-2xl border border-white/10 bg-[#02090d] p-6 sm:p-8">
+      <div className="mx-auto mt-16 w-full max-w-[820px] rounded-2xl border border-stroke-default bg-bg-surface p-6 sm:p-8">
         <div className="h-8 w-32 rounded-lg skeleton-shimmer" />
         <div className="mt-4 space-y-3">
           <div className="h-10 rounded-lg skeleton-shimmer" />
@@ -179,6 +179,8 @@ const FeedbackSubmitStep = dynamic(
 export function PostAuthScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const requestedPlanId = searchParams.get('planId');
+  const requestedStartStep = Number(searchParams.get('startOnboarding') || 0);
   const {
     user,
     updateRole,
@@ -222,11 +224,18 @@ export function PostAuthScreen() {
   const [taskTitle, setTaskTitle] = useState('Single task');
   const [taskOutcome, setTaskOutcome] = useState('Expected outcome');
   const feedbackDraftLoadedRef = useRef<string>('');
+  const onboardingDraftLoadedRef = useRef<string>('');
+  const bootstrappedTargetRef = useRef<string>('');
 
   const feedbackDraftKey = useMemo(() => {
     if (!user?.id || !releaseId || !taskId) return '';
     return `urganize.feedbackDraft.${user.id}.${releaseId}.${taskId}`;
   }, [releaseId, taskId, user?.id]);
+
+  const onboardingDraftKey = useMemo(() => {
+    if (!user?.id || !releaseId) return '';
+    return `urganize.onboardingDraft.${user.id}.${releaseId}`;
+  }, [releaseId, user?.id]);
 
   const resetError = () => setError('');
 
@@ -291,6 +300,86 @@ export function PostAuthScreen() {
     blockersNext,
   ]);
 
+  useEffect(() => {
+    if (!onboardingDraftKey) {
+      onboardingDraftLoadedRef.current = '';
+      return;
+    }
+    if (onboardingDraftLoadedRef.current === onboardingDraftKey) return;
+    onboardingDraftLoadedRef.current = onboardingDraftKey;
+
+    const rawDraft = localStorage.getItem(onboardingDraftKey);
+    if (!rawDraft) return;
+
+    try {
+      const draft = JSON.parse(rawDraft) as Record<string, unknown>;
+      if (typeof draft.artistName === 'string' && !artistName.trim()) setArtistName(draft.artistName);
+      if (typeof draft.genre === 'string' && !genre.trim()) setGenre(draft.genre);
+      if (typeof draft.primaryPlatform === 'string' && !primaryPlatform.trim()) setPrimaryPlatform(draft.primaryPlatform);
+      if (typeof draft.goalText === 'string' && !goalText.trim()) setGoalText(draft.goalText);
+      if (typeof draft.stage === 'string' && !stage.trim()) setStage(draft.stage);
+      if (typeof draft.audienceSize === 'string' && !audienceSize.trim()) setAudienceSize(draft.audienceSize);
+      if (Array.isArray(draft.listenerPlatforms) && listenerPlatforms.length === 0) {
+        setListenerPlatforms(draft.listenerPlatforms.filter((item: unknown): item is string => typeof item === 'string'));
+      }
+      if (typeof draft.platformInput === 'string' && !platformInput.trim()) setPlatformInput(draft.platformInput);
+      if (typeof draft.budget === 'string' && !budget.trim()) setBudget(draft.budget);
+      if (typeof draft.timeline === 'string' && !timeline.trim()) setTimeline(draft.timeline);
+      if (typeof draft.deadlineDate === 'string' && !deadlineDate.trim()) setDeadlineDate(draft.deadlineDate);
+      if (typeof draft.stepsText === 'string' && !stepsText.trim()) setStepsText(draft.stepsText);
+    } catch {
+      // Ignore malformed local draft payloads.
+    }
+  }, [
+    artistName,
+    audienceSize,
+    budget,
+    deadlineDate,
+    genre,
+    goalText,
+    listenerPlatforms.length,
+    onboardingDraftKey,
+    platformInput,
+    primaryPlatform,
+    stage,
+    stepsText,
+    timeline,
+  ]);
+
+  useEffect(() => {
+    if (!onboardingDraftKey) return;
+    const draft = {
+      artistName,
+      genre,
+      primaryPlatform,
+      goalText,
+      stage,
+      audienceSize,
+      listenerPlatforms,
+      platformInput,
+      budget,
+      timeline,
+      deadlineDate,
+      stepsText,
+      savedAt: Date.now(),
+    };
+    localStorage.setItem(onboardingDraftKey, JSON.stringify(draft));
+  }, [
+    artistName,
+    audienceSize,
+    budget,
+    deadlineDate,
+    genre,
+    goalText,
+    listenerPlatforms,
+    onboardingDraftKey,
+    platformInput,
+    primaryPlatform,
+    stage,
+    stepsText,
+    timeline,
+  ]);
+
   const parseCareerStage = (value: string): 'emerging' | 'growing' | 'established' => {
     const normalized = value.trim().toLowerCase();
     if (normalized.includes('established')) return 'established';
@@ -347,16 +436,16 @@ export function PostAuthScreen() {
   const setStepPersisted = useCallback(async (nextStep: number) => {
     setStep(nextStep);
     if (!releaseId) return;
-    await supabase
+    const { error: updateError } = await supabase
       .from('release_profiles')
       .update({ setup_step: nextStep })
       .eq('release_id', releaseId);
+    if (updateError) throw updateError;
   }, [releaseId]);
 
   const ensureOnboardingRelease = useCallback(async (): Promise<string> => {
     if (!user) throw new Error('User not found');
 
-    const requestedPlanId = searchParams.get('planId');
     if (requestedPlanId && releaseId === requestedPlanId) return releaseId;
     if (!requestedPlanId && releaseId) return releaseId;
 
@@ -462,7 +551,7 @@ export function PostAuthScreen() {
       .insert({
         user_id: user.id,
         title: 'Onboarding Goal',
-        artist_name: artistName || user.name || 'Artist',
+        artist_name: user.name || 'Artist',
         type: 'single',
         status: 'draft',
       })
@@ -484,7 +573,7 @@ export function PostAuthScreen() {
 
     setReleaseId(release.id);
     return release.id;
-  }, [artistName, releaseId, searchParams, user]);
+  }, [releaseId, requestedPlanId, user]);
 
   const loadCurrentTask = useCallback(async (activeReleaseId: string) => {
     const { data: task, error: taskError } = await supabase
@@ -503,12 +592,16 @@ export function PostAuthScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    const bootstrap = async () => {
-      if (!user) return;
+  const bootstrapTargetKey = `${user?.id || 'anon'}:${requestedPlanId || 'auto'}:${Number.isFinite(requestedStartStep) ? requestedStartStep : 0}`;
 
+  useEffect(() => {
+    if (!user) return;
+    if (bootstrappedTargetRef.current === bootstrapTargetKey) return;
+    bootstrappedTargetRef.current = bootstrapTargetKey;
+    setIsBootstrapping(true);
+
+    const bootstrap = async () => {
       try {
-        const requestedStartStep = Number(searchParams.get('startOnboarding') || 0);
         const activeReleaseId = await ensureOnboardingRelease();
         await loadCurrentTask(activeReleaseId);
 
@@ -518,15 +611,15 @@ export function PostAuthScreen() {
           .eq('user_id', user.id)
           .maybeSingle();
 
-        if (artistProfile?.artist_name && !artistName) {
-          setArtistName(artistProfile.artist_name);
+        if (artistProfile?.artist_name) {
+          setArtistName((current) => current || artistProfile.artist_name || '');
         }
-        if (artistProfile?.career_stage && !stage) {
-          setStage(artistProfile.career_stage);
+        if (artistProfile?.career_stage) {
+          setStage((current) => current || artistProfile.career_stage || '');
         }
 
         if (requestedStartStep >= 2) {
-          setStep(2);
+          setStep((current) => Math.max(current, 2));
         }
       } catch (err: any) {
         setError(err?.message || 'Failed to load onboarding');
@@ -536,7 +629,7 @@ export function PostAuthScreen() {
     };
 
     bootstrap();
-  }, [artistName, ensureOnboardingRelease, loadCurrentTask, searchParams, stage, user]);
+  }, [bootstrapTargetKey, ensureOnboardingRelease, loadCurrentTask, requestedStartStep, user]);
 
   const upsertArtistProfile = useCallback(async () => {
     if (!user) throw new Error('User not found');
@@ -594,18 +687,23 @@ export function PostAuthScreen() {
     try {
       syncPrimaryPlatformToAudiencePlatforms();
       const activeReleaseId = await ensureOnboardingRelease();
-      await supabase.from('releases').update({
-        artist_name: artistName.trim(),
-        title: `${artistName.trim()} Goal`,
-      }).eq('id', activeReleaseId);
+      const { error: releaseUpdateError } = await supabase
+        .from('releases')
+        .update({
+          artist_name: artistName.trim(),
+          title: `${artistName.trim()} Goal`,
+        })
+        .eq('id', activeReleaseId);
+      if (releaseUpdateError) throw releaseUpdateError;
 
-      await supabase
+      const { error: profileUpdateError } = await supabase
         .from('release_profiles')
         .update({
           genre: genre || null,
           primary_market: primaryPlatform || null,
         })
         .eq('release_id', activeReleaseId);
+      if (profileUpdateError) throw profileUpdateError;
 
       await upsertArtistProfile();
       await setStepPersisted(3);
@@ -627,10 +725,11 @@ export function PostAuthScreen() {
     setIsBusy(true);
     try {
       const activeReleaseId = await ensureOnboardingRelease();
-      await supabase
+      const { error: goalUpdateError } = await supabase
         .from('release_profiles')
         .update({ campaign_narrative: goalValue || null })
         .eq('release_id', activeReleaseId);
+      if (goalUpdateError) throw goalUpdateError;
       await setStepPersisted(4);
     } catch (err: any) {
       setError(err?.message || 'Failed to save goal');
@@ -683,7 +782,7 @@ export function PostAuthScreen() {
         setPlatformInput('');
       }
 
-      await supabase
+      const { error: profileUpdateError } = await supabase
         .from('release_profiles')
         .update({
           song_stage: stage || 'emerging',
@@ -694,6 +793,7 @@ export function PostAuthScreen() {
           deadline_reason: timelineValue || null,
         })
         .eq('release_id', activeReleaseId);
+      if (profileUpdateError) throw profileUpdateError;
       await upsertArtistProfile();
       await setStepPersisted(5);
     } catch (err: any) {
@@ -708,10 +808,11 @@ export function PostAuthScreen() {
     setIsBusy(true);
     try {
       const activeReleaseId = await ensureOnboardingRelease();
-      await supabase
+      const { error: stepsUpdateError } = await supabase
         .from('release_profiles')
         .update({ other_goals: stepsText || null })
         .eq('release_id', activeReleaseId);
+      if (stepsUpdateError) throw stepsUpdateError;
       await setStepPersisted(6);
     } catch (err: any) {
       setError(err?.message || 'Failed to save steps');
@@ -769,10 +870,11 @@ export function PostAuthScreen() {
 
     const runGeneration = async () => {
       try {
-        await supabase
+        const { error: setupStepError } = await supabase
           .from('release_profiles')
           .update({ setup_step: 6 })
           .eq('release_id', releaseId);
+        if (setupStepError) throw setupStepError;
 
         pricingTimer = setTimeout(() => {
           if (!cancelled) setShowPricingSheet(true);
@@ -801,14 +903,17 @@ export function PostAuthScreen() {
     if (!taskId) return;
     setIsBusy(true);
     try {
-      await supabase
+      const { error: startError } = await supabase
         .from('ai_tasks')
         .update({
           status: 'current',
           started_at: new Date().toISOString(),
         })
         .eq('id', taskId);
+      if (startError) throw startError;
       await setStepPersisted(8);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to mark task as started');
     } finally {
       setIsBusy(false);
     }
@@ -818,12 +923,13 @@ export function PostAuthScreen() {
     if (!taskId) return;
     setIsBusy(true);
     try {
-      await supabase
+      const { error: doneError } = await supabase
         .from('ai_tasks')
         .update({
           status: 'pending',
         })
         .eq('id', taskId);
+      if (doneError) throw doneError;
       await setStepPersisted(9);
     } catch (err: any) {
       setError(err?.message || 'Failed to mark task as done');
@@ -943,7 +1049,7 @@ export function PostAuthScreen() {
         `Proof:\n${proofPayload}`,
       ].join('\n\n');
 
-      await supabase
+      const { error: taskUpdateError } = await supabase
         .from('ai_tasks')
         .update({
           status: 'completed',
@@ -952,8 +1058,9 @@ export function PostAuthScreen() {
           completed_at: new Date().toISOString(),
         })
         .eq('id', taskId);
+      if (taskUpdateError) throw taskUpdateError;
 
-      await supabase
+      const { error: profileCompletionError } = await supabase
         .from('release_profiles')
         .update({
           setup_step: 13,
@@ -961,14 +1068,19 @@ export function PostAuthScreen() {
           setup_completed_at: new Date().toISOString(),
         })
         .eq('release_id', releaseId);
+      if (profileCompletionError) throw profileCompletionError;
 
-      await supabase
+      const { error: releaseStatusError } = await supabase
         .from('releases')
         .update({ status: 'in-progress' })
         .eq('id', releaseId);
+      if (releaseStatusError) throw releaseStatusError;
 
       if (feedbackDraftKey) {
         localStorage.removeItem(feedbackDraftKey);
+      }
+      if (onboardingDraftKey) {
+        localStorage.removeItem(onboardingDraftKey);
       }
 
       setNeedsOnboarding(false);
@@ -987,12 +1099,16 @@ export function PostAuthScreen() {
     }
 
     const previous = Math.max(0, step - 1);
-    await setStepPersisted(previous);
+    try {
+      await setStepPersisted(previous);
+    } catch (err: any) {
+      setError(err?.message || 'Could not move back right now');
+    }
   };
 
-  const shellClass = 'relative min-h-screen w-full overflow-hidden bg-black text-white';
+  const shellClass = 'relative min-h-screen w-full overflow-hidden bg-bg-base text-content-primary';
   const fieldClass =
-    'w-full rounded-none border border-white/5 bg-[#02090d] px-3 py-2 text-lg text-white/90 outline-none placeholder:text-white/20';
+    'w-full rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-lg text-content-primary outline-none placeholder:text-content-quaternary focus:border-brand';
 
   const canContinueArtist = useMemo(() => !!artistName.trim(), [artistName]);
   const canContinueGoal = useMemo(() => goalText.trim().length >= MIN_GOAL_CHARS, [goalText]);
@@ -1050,7 +1166,7 @@ export function PostAuthScreen() {
           <button
             type="button"
             onClick={handleBack}
-            className="w-fit text-[clamp(1.8rem,4.5vw,3rem)] leading-none tracking-tight text-white/90"
+            className="w-fit text-[clamp(1.8rem,4.5vw,3rem)] leading-none tracking-tight text-content-primary/90"
           >
             ...Back
           </button>
@@ -1197,7 +1313,7 @@ export function PostAuthScreen() {
         )}
 
         {error && (
-          <p className="mt-6 text-base text-red-400">{error}</p>
+          <p className="mt-6 rounded-lg border border-status-error/35 bg-status-error/10 px-4 py-3 text-sm text-status-error">{error}</p>
         )}
       </div>
     </main>

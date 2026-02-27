@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [error, setError] = useState('');
   const menuRef = useRef<HTMLDivElement | null>(null);
   const cacheKey = user ? `urganize.dashboard.plans.${user.id}` : '';
 
@@ -88,6 +89,7 @@ export default function DashboardPage() {
       }
 
       setIsRefreshing(true);
+      setError('');
       try {
         const { data: releases } = await supabase
           .from('releases')
@@ -100,6 +102,9 @@ export default function DashboardPage() {
         if (ids.length === 0) {
           if (!cancelled) {
             setPlans([]);
+            if (cacheKey) {
+              localStorage.removeItem(cacheKey);
+            }
           }
           return;
         }
@@ -139,6 +144,10 @@ export default function DashboardPage() {
             localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
           }
         }
+      } catch (loadError: any) {
+        if (!cancelled) {
+          setError(loadError?.message || 'Could not load plans right now.');
+        }
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -156,6 +165,7 @@ export default function DashboardPage() {
   const createNewPlan = async () => {
     if (!user || isCreatingPlan) return;
 
+    setError('');
     setIsCreatingPlan(true);
     const dateLabel = new Intl.DateTimeFormat('en-US', {
       month: 'short',
@@ -193,11 +203,14 @@ export default function DashboardPage() {
         });
 
       if (profileError) {
+        await supabase.from('releases').delete().eq('id', release.id);
         throw profileError;
       }
 
       setNeedsOnboarding(true);
       router.push(`/dashboard?startOnboarding=2&planId=${release.id}`);
+    } catch (createError: any) {
+      setError(createError?.message || 'Could not create a new plan.');
     } finally {
       setIsCreatingPlan(false);
     }
@@ -226,31 +239,31 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-bg-base text-content-primary">
       <div className="mx-auto flex min-h-screen w-full max-w-[1360px] flex-col px-6 py-10 lg:max-w-[1120px] lg:px-10 lg:py-12 xl:px-12">
         <div className="flex items-center justify-between">
           <div ref={menuRef} className="relative">
             <button
               type="button"
               onClick={() => setIsMenuOpen((open) => !open)}
-              className="text-[clamp(2rem,4.5vw,3rem)] leading-none lg:text-[2rem]"
+              className="text-[clamp(1.6rem,4.2vw,2.3rem)] leading-none text-content-primary lg:text-[2rem]"
               aria-expanded={isMenuOpen}
               aria-haspopup="menu"
             >
               Menu
             </button>
             {isMenuOpen && (
-              <div className="absolute left-0 top-full z-20 mt-3 min-w-[180px] rounded-xl border border-white/10 bg-[#02090d] p-2 shadow-lg">
+              <div className="absolute left-0 top-full z-20 mt-3 min-w-[190px] rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-lg">
                 <Link
                   href="/dashboard"
-                  className="block rounded-md px-3 py-2 text-sm text-white/85 hover:bg-white/10"
+                  className="block rounded-md px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Dashboard
                 </Link>
                 <Link
                   href="/settings"
-                  className="block rounded-md px-3 py-2 text-sm text-white/85 hover:bg-white/10"
+                  className="block rounded-md px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Settings
@@ -262,7 +275,7 @@ export default function DashboardPage() {
                     await logout();
                     router.push('/auth');
                   }}
-                  className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-white/85 hover:bg-white/10"
+                  className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
                 >
                   Logout
                 </button>
@@ -278,7 +291,7 @@ export default function DashboardPage() {
             <h1 className="text-[clamp(2.6rem,6vw,5rem)] tracking-tight lg:text-[3.2rem] xl:text-[3.6rem]">Plans</h1>
             <div className="flex items-center gap-3">
               {isRefreshing && !loading && (
-                <span className="rounded-full border border-white/15 bg-white/5 px-2 py-1 text-xs text-white/70">
+                <span className="rounded-full border border-stroke-default bg-bg-elevated px-2 py-1 text-xs text-content-secondary">
                   Refreshing...
                 </span>
               )}
@@ -286,18 +299,26 @@ export default function DashboardPage() {
                 type="button"
                 onClick={createNewPlan}
                 disabled={isCreatingPlan || loading}
-                className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20 disabled:opacity-50"
+                className="rounded-xl border border-brand/40 bg-brand-muted px-4 py-2 text-sm font-semibold text-content-primary transition hover:bg-brand/20 disabled:opacity-50"
               >
                 {isCreatingPlan ? 'Creating...' : 'Create New Plan'}
               </button>
             </div>
           </div>
 
-          <div className="mt-8 rounded-[28px] border border-white/5 bg-[#02090d] p-7 sm:p-9">
+          {error && (
+            <p className="mt-5 rounded-xl border border-status-error/35 bg-status-error/10 px-4 py-3 text-sm text-status-error">
+              {error}
+            </p>
+          )}
+
+          <div className="mt-8 rounded-[28px] border border-stroke-subtle bg-bg-surface p-7 sm:p-9">
             {loading ? (
-              <p className="mt-4 text-white/75">Loading plans...</p>
+              <p className="mt-4 text-content-secondary">Loading plans...</p>
             ) : plans.length === 0 ? (
-              <p className="mt-4 text-white/75">No plans yet. Create a new one to start onboarding.</p>
+              <div className="mt-4 rounded-2xl border border-dashed border-stroke-default bg-bg-elevated p-6 text-center">
+                <p className="text-content-secondary">No plans yet. Create your first plan to start onboarding.</p>
+              </div>
             ) : plans.length >= VIRTUALIZED_LIST_THRESHOLD ? (
               <VirtualizedPlanList
                 plans={plans}
@@ -311,25 +332,25 @@ export default function DashboardPage() {
                     type="button"
                     key={plan.id}
                     onClick={() => router.push(`/dashboard/plans/${plan.id}`)}
-                    className="lazy-fade lazy-fade-in flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-left transition hover:border-white/20 hover:bg-black/30 sm:flex-row sm:items-center sm:justify-between"
+                    className="lazy-fade lazy-fade-in flex w-full flex-col gap-2 rounded-xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-left transition hover:border-stroke-default hover:bg-bg-hover sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
-                      <p className="text-base font-medium text-white">{plan.title}</p>
-                      <p className="text-sm text-white/70">{plan.artist_name}</p>
+                      <p className="text-base font-medium text-content-primary">{plan.title}</p>
+                      <p className="text-sm text-content-secondary">{plan.artist_name}</p>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-white/70">
+                    <div className="flex items-center gap-2 text-sm text-content-secondary">
                       <span
                         className={`rounded-full px-2 py-1 text-xs font-medium ${
                           getPlanStatus(plan) === 'Completed'
-                            ? 'bg-emerald-500/20 text-emerald-200'
+                            ? 'bg-brand-muted text-brand'
                             : getPlanStatus(plan) === 'Overdue'
-                              ? 'bg-red-500/20 text-red-200'
-                              : 'bg-amber-500/20 text-amber-100'
+                              ? 'bg-status-error/20 text-status-error'
+                              : 'bg-status-warning/20 text-status-warning'
                         }`}
                       >
                         {getPlanStatus(plan)}
                       </span>
-                      <span className="text-white/30">.</span>
+                      <span className="text-content-tertiary">.</span>
                       <span>{new Date(plan.created_at).toLocaleDateString()}</span>
                     </div>
                   </button>

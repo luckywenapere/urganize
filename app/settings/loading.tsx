@@ -1,6 +1,6 @@
 export default function SettingsLoading() {
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-bg-base text-content-primary">
       <div className="mx-auto w-full max-w-3xl px-6 py-10">
         <div className="h-10 w-40 rounded-lg skeleton-shimmer" />
 

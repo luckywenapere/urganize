@@ -1,68 +1,133 @@
 'use client';
 
-import { Suspense } from 'react';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
+
+type PaymentStatus = 'verifying' | 'success' | 'failed';
+
+type VerificationResult = {
+  status?: string;
+  plan?: string;
+  amount?: number;
+  message?: string;
+  error?: string;
+  payment_mode?: string;
+};
 
 function PaymentCallbackContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const reference = searchParams.get('reference');
-  const [status, setStatus] = useState<'verifying' | 'success' | 'failed'>('verifying');
   const { checkAuth } = useAuthStore();
 
-  useEffect(() => {
-    if (reference) {
-      verifyPayment(reference);
-    }
-  }, [reference]);
+  const [status, setStatus] = useState<PaymentStatus>('verifying');
+  const [result, setResult] = useState<VerificationResult>({});
 
-  const verifyPayment = async (ref: string) => {
-    try {
-      const res = await fetch(`/api/payments/verify?reference=${ref}`);
-      const data = await res.json();
-      
-      if (data.status === 'success') {
-        setStatus('success');
-        // Refresh auth state to update subscription status
-        await checkAuth();
-        // Add a small delay for UX
-        setTimeout(() => router.push('/dashboard'), 2000);
-      } else {
-        setStatus('failed');
-      }
-    } catch (error) {
+  useEffect(() => {
+    if (!reference) {
       setStatus('failed');
+      setResult({ error: 'Missing payment reference. Please try again from Billing.' });
+      return;
     }
-  };
+
+    const controller = new AbortController();
+    const verifyPayment = async () => {
+      try {
+        const res = await fetch(`/api/payments/verify?reference=${encodeURIComponent(reference)}`, {
+          signal: controller.signal,
+          cache: 'no-store',
+        });
+        const payload = (await res.json()) as VerificationResult;
+
+        if (!res.ok || payload.status !== 'success') {
+          setStatus('failed');
+          setResult(payload);
+          return;
+        }
+
+        setStatus('success');
+        setResult(payload);
+        await checkAuth();
+      } catch (error) {
+        if ((error as Error)?.name === 'AbortError') return;
+        setStatus('failed');
+        setResult({ error: 'Could not verify payment. Check your network and try again.' });
+      }
+    };
+
+    verifyPayment();
+    return () => {
+      controller.abort();
+    };
+  }, [checkAuth, reference]);
 
   return (
-    <div className="text-center">
+    <div className="w-full max-w-md rounded-2xl border border-stroke-subtle bg-bg-surface p-6 shadow-lg">
       {status === 'verifying' && (
-        <>
-          <div className="animate-spin h-8 w-8 border-2 border-white border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-white">Verifying payment...</p>
-        </>
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-content-primary border-t-transparent" />
+          <p className="text-lg font-semibold text-content-primary">Verifying payment...</p>
+          <p className="mt-2 text-sm text-content-secondary">Please wait while we confirm your transaction.</p>
+        </div>
       )}
+
       {status === 'success' && (
-        <>
-          <div className="text-emerald-500 text-5xl mb-4">✓</div>
-          <p className="text-white text-xl">Payment successful!</p>
-          <p className="text-gray-400 mt-2">Redirecting to dashboard...</p>
-        </>
+        <div className="text-center">
+          <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-brand-muted text-2xl text-brand">
+            ✓
+          </div>
+          <p className="text-xl font-semibold text-content-primary">Payment successful</p>
+          {typeof result.amount === 'number' && (
+            <p className="mt-2 text-sm text-content-secondary">Amount: NGN {result.amount.toLocaleString()}</p>
+          )}
+          {result.plan && <p className="text-sm text-content-secondary">Plan: {String(result.plan).replace('_', ' ')}</p>}
+
+          <div className="mt-6 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => router.push('/dashboard')}
+              className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+            >
+              Go to Dashboard
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push('/settings')}
+              className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary hover:bg-bg-hover"
+            >
+              Return to Billing
+            </button>
+          </div>
+        </div>
       )}
+
       {status === 'failed' && (
-        <>
-          <div className="text-red-500 text-5xl mb-4">✕</div>
-          <p className="text-white text-xl">Payment verification failed</p>
-          <button 
-            onClick={() => router.push('/dashboard')}
-            className="mt-4 px-4 py-2 bg-white text-black rounded"
-          >
-            Return to Dashboard
-          </button>
-        </>
+        <div className="text-center">
+          <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-status-error/20 text-2xl text-status-error">
+            !
+          </div>
+          <p className="text-xl font-semibold text-content-primary">Payment verification failed</p>
+          <p className="mt-2 text-sm text-content-secondary">
+            {result.error || result.message || 'Your transaction could not be confirmed at the moment.'}
+          </p>
+          <div className="mt-6 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+            >
+              Retry verification
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push('/settings')}
+              className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary hover:bg-bg-hover"
+            >
+              Return to Billing
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -70,15 +135,19 @@ function PaymentCallbackContent() {
 
 export default function PaymentCallbackPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
-      <Suspense fallback={
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-2 border-white border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-white">Loading...</p>
-        </div>
-      }>
-        <PaymentCallbackContent />
-      </Suspense>
-    </div>
+    <main className="min-h-screen bg-bg-base text-content-primary">
+      <div className="mx-auto flex min-h-screen w-full max-w-[720px] items-center justify-center px-6 py-12">
+        <Suspense
+          fallback={
+            <div className="w-full max-w-md rounded-2xl border border-stroke-subtle bg-bg-surface p-6 text-center">
+              <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-content-primary border-t-transparent" />
+              <p className="text-content-secondary">Loading payment status...</p>
+            </div>
+          }
+        >
+          <PaymentCallbackContent />
+        </Suspense>
+      </div>
+    </main>
   );
 }

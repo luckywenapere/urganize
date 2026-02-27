@@ -1,5 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getBillingCycleFromPlan, getPlanExpiry, resolveExpectedAmount } from '@/lib/billing';
+
+type SafeMetadata = Record<string, string | number | boolean | null | undefined>;
+
+const isPrimitive = (value: unknown): value is string | number | boolean | null | undefined => {
+  return value == null || ['string', 'number', 'boolean'].includes(typeof value);
+};
+
+const normalizeMetadata = (value: unknown): SafeMetadata => {
+  if (!value || typeof value !== 'object') return {};
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, entry]) => isPrimitive(entry))
+    .map(([key, entry]) => [key, entry as string | number | boolean | null | undefined]);
+  return Object.fromEntries(entries);
+};
 
 export async function GET(req: NextRequest) {
   const reference = req.nextUrl.searchParams.get('reference');
@@ -10,6 +25,7 @@ export async function GET(req: NextRequest) {
   if (!reference) {
     return NextResponse.json({ error: 'No reference provided' }, { status: 400 });
   }
+
   if (!supabaseUrl || !serviceRoleKey || !paystackSecretKey) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
@@ -17,86 +33,139 @@ export async function GET(req: NextRequest) {
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
   try {
-    // Verify with Paystack
-    const response = await fetch(
-      `https://api.paystack.co/transaction/verify/${reference}`,
-      {
-        headers: {
-          Authorization: `Bearer ${paystackSecretKey}`,
+    const existingPaymentResult = await supabaseAdmin
+      .from('payments')
+      .select('id,plan,status')
+      .eq('reference', reference)
+      .maybeSingle();
+
+    if (existingPaymentResult.error) throw existingPaymentResult.error;
+
+    if (existingPaymentResult.data?.status === 'success') {
+      return NextResponse.json({
+        status: 'success',
+        plan: existingPaymentResult.data.plan,
+        reference,
+        already_verified: true,
+      });
+    }
+
+    const verifyResponse = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+      headers: {
+        Authorization: `Bearer ${paystackSecretKey}`,
+      },
+    });
+
+    const verifyPayload = await verifyResponse.json();
+    if (!verifyPayload?.status || verifyPayload?.data?.status !== 'success') {
+      return NextResponse.json(
+        { status: 'failed', message: verifyPayload?.message || 'Payment verification failed' },
+        { status: 400 }
+      );
+    }
+
+    const paymentData = verifyPayload.data;
+    const amount = Number(paymentData.amount || 0) / 100;
+    const metadata = normalizeMetadata(paymentData.metadata);
+    const plan = typeof metadata.plan === 'string' ? metadata.plan : 'monthly';
+    const expectedAmount = resolveExpectedAmount(plan, metadata);
+
+    if (!expectedAmount) {
+      return NextResponse.json({ error: 'Unknown billing plan' }, { status: 400 });
+    }
+
+    if (Math.abs(amount - expectedAmount) > 1) {
+      return NextResponse.json(
+        {
+          error: 'Payment amount mismatch',
+          expected: expectedAmount,
+          received: amount,
         },
-      }
-    );
+        { status: 400 }
+      );
+    }
 
-    const data = await response.json();
+    const customerEmail =
+      String(paymentData.customer?.email || paymentData.customer_email || paymentData.metadata?.email || '')
+        .trim()
+        .toLowerCase();
 
-    if (data.status && data.data.status === 'success') {
-      const { email, customer } = data.data;
-      const amount = data.data.amount / 100; // Convert from kobo
-      const plan = data.data.metadata?.plan || 'monthly';
+    if (!customerEmail) {
+      return NextResponse.json({ error: 'Could not resolve customer email' }, { status: 400 });
+    }
 
-      // Get user by email
-      const { data: profile } = await supabaseAdmin
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
+    const profileResult = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('email', customerEmail)
+      .maybeSingle();
+    if (profileResult.error) throw profileResult.error;
 
-      if (!profile) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
+    if (!profileResult.data?.id) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
 
-      // Calculate expiry date
-const expiresAt = new Date();
-if (plan === 'yearly') {
-  expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-} else if (plan === '8months') {
-  expiresAt.setMonth(expiresAt.getMonth() + 8);
-} else {
-  expiresAt.setMonth(expiresAt.getMonth() + 1);
-}
+    const paymentMode = metadata.payment_mode === 'split' ? 'split' : 'full';
+    const teamSize = Number(metadata.team_size || 0);
+    const seatsPaidNow = Number(metadata.seats_paid_now || 0);
+    const groupCycle = getBillingCycleFromPlan(plan);
+    const isPartialGroupPayment =
+      paymentMode === 'split' &&
+      !!groupCycle &&
+      Number.isFinite(teamSize) &&
+      Number.isFinite(seatsPaidNow) &&
+      seatsPaidNow > 0 &&
+      teamSize > seatsPaidNow;
 
+    const subscriptionStatus = isPartialGroupPayment ? 'partial' : 'active';
+    const expiresAt = getPlanExpiry(plan, new Date());
 
-      // Save payment record
-      await supabaseAdmin.from('payments').insert({
-        user_id: profile.id,
+    if (!existingPaymentResult.data) {
+      const paymentInsert = await supabaseAdmin.from('payments').insert({
+        user_id: profileResult.data.id,
         amount,
         reference,
         status: 'success',
         plan,
-        paystack_response: data.data,
+        paystack_response: paymentData,
       });
+      if (paymentInsert.error) throw paymentInsert.error;
+    }
 
-      // Create or update subscription
-      await supabaseAdmin
-        .from('subscriptions')
-        .upsert({
-          user_id: profile.id,
+    const subscriptionUpsert = await supabaseAdmin
+      .from('subscriptions')
+      .upsert(
+        {
+          user_id: profileResult.data.id,
           plan,
-          status: 'active',
+          status: subscriptionStatus,
           amount,
           paystack_reference: reference,
-          paystack_customer_code: customer.customer_code,
+          paystack_customer_code: paymentData.customer?.customer_code || null,
           started_at: new Date().toISOString(),
           expires_at: expiresAt.toISOString(),
           updated_at: new Date().toISOString(),
-        }, {
+        },
+        {
           onConflict: 'user_id',
-        });
+        }
+      );
+    if (subscriptionUpsert.error) throw subscriptionUpsert.error;
 
-      // Update profile
-      await supabaseAdmin
-        .from('profiles')
-        .update({ is_subscribed: true })
-        .eq('id', profile.id);
+    const profileUpdate = await supabaseAdmin
+      .from('profiles')
+      .update({ is_subscribed: true })
+      .eq('id', profileResult.data.id);
+    if (profileUpdate.error) throw profileUpdate.error;
 
-      return NextResponse.json({
-        status: 'success',
-        plan,
-        expires_at: expiresAt.toISOString(),
-      });
-    }
-
-    return NextResponse.json({ status: 'failed', message: data.message }, { status: 400 });
+    return NextResponse.json({
+      status: 'success',
+      plan,
+      amount,
+      expected_amount: expectedAmount,
+      payment_mode: paymentMode,
+      expires_at: expiresAt.toISOString(),
+    });
   } catch (error) {
     console.error('Verification error:', error);
     return NextResponse.json({ error: 'Verification failed' }, { status: 500 });

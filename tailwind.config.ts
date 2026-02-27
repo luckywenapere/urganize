@@ -1,5 +1,7 @@
 import type { Config } from "tailwindcss";
 
+const withOpacity = (cssVarName: string) => `rgb(var(${cssVarName}) / <alpha-value>)`;
+
 const config: Config = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -11,52 +13,52 @@ const config: Config = {
       colors: {
         // Background hierarchy
         bg: {
-          base: '#0a0a0b',
-          surface: '#111113',
-          elevated: '#18181b',
-          overlay: '#1f1f23',
-          hover: '#27272a',
-          active: '#2e2e33',
+          base: withOpacity('--color-bg-base'),
+          surface: withOpacity('--color-bg-surface'),
+          elevated: withOpacity('--color-bg-elevated'),
+          overlay: withOpacity('--color-bg-overlay'),
+          hover: withOpacity('--color-bg-hover'),
+          active: withOpacity('--color-bg-active'),
         },
         // Brand
         brand: {
-          DEFAULT: '#10b981',
-          hover: '#059669',
-          muted: 'rgba(16, 185, 129, 0.15)',
-          subtle: 'rgba(16, 185, 129, 0.08)',
+          DEFAULT: withOpacity('--color-brand'),
+          hover: withOpacity('--color-brand-hover'),
+          muted: 'rgb(var(--color-brand) / 0.16)',
+          subtle: 'rgb(var(--color-brand) / 0.09)',
         },
         // Text
         content: {
-          primary: '#fafafa',
-          secondary: '#a1a1aa',
-          tertiary: '#71717a',
-          quaternary: '#52525b',
-          inverse: '#09090b',
+          primary: withOpacity('--color-text-primary'),
+          secondary: withOpacity('--color-text-secondary'),
+          tertiary: withOpacity('--color-text-tertiary'),
+          quaternary: withOpacity('--color-text-quaternary'),
+          inverse: withOpacity('--color-text-inverse'),
         },
         // Borders
         stroke: {
-          subtle: 'rgba(255, 255, 255, 0.06)',
-          default: 'rgba(255, 255, 255, 0.1)',
-          strong: 'rgba(255, 255, 255, 0.15)',
+          subtle: 'rgb(var(--color-stroke) / 0.08)',
+          default: 'rgb(var(--color-stroke) / 0.14)',
+          strong: 'rgb(var(--color-stroke) / 0.22)',
         },
         // Status
         status: {
-          success: '#22c55e',
-          warning: '#f59e0b',
-          error: '#ef4444',
-          info: '#3b82f6',
+          success: withOpacity('--color-status-success'),
+          warning: withOpacity('--color-status-warning'),
+          error: withOpacity('--color-status-error'),
+          info: withOpacity('--color-status-info'),
         },
         // Phases
         phase: {
-          preproduction: '#a855f7',
-          production: '#3b82f6',
-          promotion: '#f59e0b',
-          distribution: '#10b981',
+          preproduction: withOpacity('--color-phase-preproduction'),
+          production: withOpacity('--color-phase-production'),
+          promotion: withOpacity('--color-phase-promotion'),
+          distribution: withOpacity('--color-phase-distribution'),
         },
       },
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        display: ['Cal Sans', 'Inter', '-apple-system', 'sans-serif'],
+        sans: ['Space Grotesk', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        display: ['Syne', 'Space Grotesk', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       fontSize: {

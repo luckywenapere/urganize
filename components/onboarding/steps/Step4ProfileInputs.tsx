@@ -102,7 +102,7 @@ export function Step4ProfileInputs({
               <option key={option} value={option} />
             ))}
           </datalist>
-          <p className="mt-2 text-xs text-white/55">Use your estimated combined audience across all channels.</p>
+          <p className="mt-2 text-xs text-content-tertiary">Use your estimated combined audience across all channels.</p>
         </div>
         <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Platforms</label>
         <div className="space-y-3">
@@ -110,13 +110,13 @@ export function Step4ProfileInputs({
             {listenerPlatforms.map((platform) => (
               <span
                 key={platform}
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-sm text-white/90"
+                className="inline-flex items-center gap-2 rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-sm text-content-primary"
               >
                 {platform}
                 <button
                   type="button"
                   onClick={() => onRemoveListenerPlatform(platform)}
-                  className="text-white/70 hover:text-white"
+                  className="text-content-tertiary hover:text-content-primary"
                   aria-label={`Remove ${platform}`}
                 >
                   x
@@ -124,7 +124,7 @@ export function Step4ProfileInputs({
               </span>
             ))}
             {listenerPlatforms.length === 0 && (
-              <p className="text-sm text-white/55">No platforms added yet.</p>
+              <p className="text-sm text-content-tertiary">No platforms added yet.</p>
             )}
           </div>
           <div className="flex gap-2">
@@ -141,7 +141,7 @@ export function Step4ProfileInputs({
             <button
               type="button"
               onClick={onCommitPlatformInput}
-              className="rounded-none border border-white/20 px-4 py-2 text-sm text-white/90 hover:bg-white/10"
+              className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary hover:bg-bg-hover"
             >
               Add
             </button>
@@ -151,7 +151,7 @@ export function Step4ProfileInputs({
               <option key={option} value={option} />
             ))}
           </datalist>
-          <p className="text-xs text-white/55">Pick from suggestions or type custom channels.</p>
+          <p className="text-xs text-content-tertiary">Pick from suggestions or type custom channels.</p>
         </div>
         <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Budget</label>
         <input
@@ -164,7 +164,7 @@ export function Step4ProfileInputs({
           onChange={(e) => onBudgetChange(e.target.value)}
           placeholder="e.g. 100000"
         />
-        <p className={`mt-2 text-xs ${budget.trim().length > 0 && !budgetIsValid ? 'text-red-400' : 'text-white/55'}`}>
+        <p className={`mt-2 text-xs ${budget.trim().length > 0 && !budgetIsValid ? 'text-status-error' : 'text-content-tertiary'}`}>
           Enter a realistic budget between {minBudget} and {maxBudget}.
         </p>
         <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Timeline</label>
@@ -190,28 +190,28 @@ export function Step4ProfileInputs({
             <button
               type="button"
               onClick={() => onApplyTimelinePreset(14, 'ASAP (within 2 weeks)')}
-              className="rounded-full border border-white/15 px-3 py-1 text-sm text-white/85 hover:bg-white/10"
+              className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-sm text-content-primary hover:bg-bg-hover"
             >
               2 weeks
             </button>
             <button
               type="button"
               onClick={() => onApplyTimelinePreset(30, 'Within 1 month')}
-              className="rounded-full border border-white/15 px-3 py-1 text-sm text-white/85 hover:bg-white/10"
+              className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-sm text-content-primary hover:bg-bg-hover"
             >
               30 days
             </button>
             <button
               type="button"
               onClick={() => onApplyTimelinePreset(90, 'In 2-3 months')}
-              className="rounded-full border border-white/15 px-3 py-1 text-sm text-white/85 hover:bg-white/10"
+              className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-sm text-content-primary hover:bg-bg-hover"
             >
               90 days
             </button>
             <button
               type="button"
               onClick={() => onApplyTimelinePreset(null, 'No fixed deadline')}
-              className="rounded-full border border-white/15 px-3 py-1 text-sm text-white/85 hover:bg-white/10"
+              className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-sm text-content-primary hover:bg-bg-hover"
             >
               No deadline
             </button>
@@ -224,11 +224,11 @@ export function Step4ProfileInputs({
         </div>
       </div>
       {!profileFieldsReady && (
-        <p className="mx-auto mt-4 w-full max-w-[720px] text-sm text-white/65">
+        <p className="mx-auto mt-4 w-full max-w-[720px] text-sm text-content-secondary">
           Complete audience size, platform list, budget, and timeline to continue.
         </p>
       )}
-      <button type="button" disabled={isBusy || !profileFieldsReady} onClick={onSubmit} className="mt-12 self-center text-[clamp(2.1rem,4.5vw,3.5rem)] disabled:opacity-40">
+      <button type="button" disabled={isBusy || !profileFieldsReady} onClick={onSubmit} className="mt-12 self-center text-[clamp(2.1rem,4.5vw,3.5rem)] text-content-primary disabled:opacity-40">
         Submit..
       </button>
     </>
