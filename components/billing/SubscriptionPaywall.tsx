@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 
 type SubscriptionPaywallProps = {
@@ -18,7 +17,6 @@ export function SubscriptionPaywall({
   compact = false,
   showTrialCta = true,
 }: SubscriptionPaywallProps) {
-  const router = useRouter();
   const [isStartingTrial, setIsStartingTrial] = useState(false);
   const [trialMessage, setTrialMessage] = useState('');
 
@@ -50,8 +48,7 @@ export function SubscriptionPaywall({
       }
 
       setTrialMessage('Free trial started. Redirecting...');
-      router.push('/dashboard');
-      router.refresh();
+      window.location.assign('/dashboard?trialStarted=1');
     } catch (error: any) {
       setTrialMessage(error?.message || 'Could not start free trial');
     } finally {
