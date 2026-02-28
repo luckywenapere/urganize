@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
 const TRIAL_DAYS = 10;
+const TRIAL_SUBSCRIPTION_PLAN = 'monthly';
+const TRIAL_SUBSCRIPTION_STATUS = 'active';
 
 const addDays = (input: Date, days: number): Date => {
   const next = new Date(input);
@@ -111,8 +113,8 @@ export async function POST(req: NextRequest) {
   const { error: subscriptionError } = await supabaseAdmin.from('subscriptions').upsert(
     {
       user_id: user.id,
-      plan: 'trial',
-      status: 'trialing',
+      plan: TRIAL_SUBSCRIPTION_PLAN,
+      status: TRIAL_SUBSCRIPTION_STATUS,
       amount: 0,
       started_at: nowIso,
       expires_at: expiresIso,
