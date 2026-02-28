@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+import { getSubscriptionAccess } from '@/lib/subscription-access';
+import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ONBOARDING_TOTAL_STEPS = 13;
@@ -66,6 +68,7 @@ export default function PlanDashboardPage() {
   const [draftTitle, setDraftTitle] = useState('');
   const [draftArtistName, setDraftArtistName] = useState('');
   const [draftDeadline, setDraftDeadline] = useState('');
+  const [hasSubscriptionAccess, setHasSubscriptionAccess] = useState<boolean | null>(null);
   const planMenuRef = useRef<HTMLDivElement | null>(null);
   const cacheKey = user && planId ? `urganize.planDashboard.${user.id}.${planId}` : '';
 
@@ -115,6 +118,15 @@ export default function PlanDashboardPage() {
 
       setIsRefreshing(true);
       try {
+        const entitlement = await getSubscriptionAccess(user.id);
+        if (!cancelled) {
+          setHasSubscriptionAccess(entitlement.hasAccess);
+        }
+        if (!entitlement.hasAccess) {
+          if (!cancelled && cacheKey) localStorage.removeItem(cacheKey);
+          return;
+        }
+
         const { data: release, error: releaseError } = await supabase
           .from('releases')
           .select('id,title,artist_name,created_at,status')
@@ -462,6 +474,13 @@ export default function PlanDashboardPage() {
           <div className="mt-16 rounded-2xl border border-stroke-default bg-bg-surface p-6">
             <p className="text-content-secondary">Loading plan dashboard...</p>
           </div>
+        ) : hasSubscriptionAccess === false ? (
+          <section className="mt-14">
+            <SubscriptionPaywall
+              title="Subscription required to access this plan"
+              description="Billing is inactive. Renew to view and manage this plan."
+            />
+          </section>
         ) : error ? (
           <div className="mt-16 rounded-2xl border border-status-error/40 bg-status-error/10 p-6">
             <p className="text-status-error">{error}</p>
@@ -615,7 +634,9 @@ export default function PlanDashboardPage() {
               <div className="mt-8">
                 <button
                   type="button"
-                  onClick={() => router.push(`/dashboard/plans/${planId}/next-step`)}
+                  onClick={() => {
+                    router.push(`/dashboard/plans/${planId}/next-step`);
+                  }}
                   className="rounded-xl border border-brand/35 bg-brand-muted px-5 py-3 text-sm font-semibold text-content-primary transition hover:bg-brand/20"
                 >
                   Plan Next Step

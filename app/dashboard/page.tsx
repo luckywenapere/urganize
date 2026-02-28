@@ -6,6 +6,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+import { getSubscriptionAccess } from '@/lib/subscription-access';
+import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 
 type PlanSummary = {
   id: string;
@@ -59,6 +61,7 @@ export default function DashboardPage() {
   const [isDeletingPlan, setIsDeletingPlan] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [error, setError] = useState('');
+  const [hasSubscriptionAccess, setHasSubscriptionAccess] = useState<boolean | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const cacheKey = user ? `urganize.dashboard.plans.${user.id}` : '';
 
@@ -111,6 +114,20 @@ export default function DashboardPage() {
       setIsRefreshing(true);
       setError('');
       try {
+        const entitlement = await getSubscriptionAccess(user.id);
+        if (!cancelled) {
+          setHasSubscriptionAccess(entitlement.hasAccess);
+        }
+        if (!entitlement.hasAccess) {
+          if (!cancelled) {
+            setPlans([]);
+            if (cacheKey) {
+              localStorage.removeItem(cacheKey);
+            }
+          }
+          return;
+        }
+
         const { data: releases } = await supabase
           .from('releases')
           .select('id,title,artist_name,created_at,status')
@@ -168,6 +185,7 @@ export default function DashboardPage() {
       } catch (loadError: any) {
         if (!cancelled) {
           setError(loadError?.message || 'Could not load plans right now.');
+          setHasSubscriptionAccess(false);
         }
       } finally {
         if (!cancelled) {
@@ -185,6 +203,10 @@ export default function DashboardPage() {
 
   const createNewPlan = async () => {
     if (!user || isCreatingPlan) return;
+    if (hasSubscriptionAccess === false) {
+      router.push('/settings');
+      return;
+    }
     setError('');
     setIsCreatingPlan(true);
     setNeedsOnboarding(true);
@@ -380,14 +402,21 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={createNewPlan}
-                disabled={isCreatingPlan || loading}
+                disabled={isCreatingPlan || loading || hasSubscriptionAccess !== true}
                 className="rounded-xl border border-brand/40 bg-brand-muted px-4 py-2 text-sm font-semibold text-content-primary transition hover:bg-brand/20 disabled:opacity-50"
               >
                 {isCreatingPlan ? 'Creating...' : 'Create New Plan'}
               </button>
             </div>
           </div>
-          {plans.length > 0 && (
+          {hasSubscriptionAccess === false ? (
+            <div className="mt-8">
+              <SubscriptionPaywall
+                title="Subscription required to access plans"
+                description="Your subscription is inactive. Renew billing to view, create, and manage plans."
+              />
+            </div>
+          ) : plans.length > 0 ? (
             <div className="mt-5 flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -423,7 +452,7 @@ export default function DashboardPage() {
                 All ({plans.length})
               </button>
             </div>
-          )}
+          ) : null}
 
           {error && (
             <p className="mt-5 rounded-xl border border-status-error/35 bg-status-error/10 px-4 py-3 text-sm text-status-error">
@@ -434,6 +463,8 @@ export default function DashboardPage() {
           <div className="mt-8 rounded-[28px] border border-stroke-subtle bg-bg-surface p-7 sm:p-9">
             {loading ? (
               <p className="mt-4 text-content-secondary">Loading plans...</p>
+            ) : hasSubscriptionAccess === false ? (
+              <p className="mt-4 text-content-secondary">Plans are locked until billing is active.</p>
             ) : plans.length === 0 ? (
               <div className="mt-4 rounded-2xl border border-dashed border-stroke-default bg-bg-elevated p-6 text-center">
                 <p className="text-content-secondary">No plans yet. Create your first plan to start onboarding.</p>

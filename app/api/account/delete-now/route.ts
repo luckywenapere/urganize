@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     .eq('user_id', user.id)
     .eq('status', 'active');
 
-  await supabaseAdmin.from('payments').delete().eq('user_id', user.id);
+  await supabaseAdmin.from('payments').delete().eq('user_id', user.id).neq('plan', 'trial_claim');
   await supabaseAdmin.from('subscriptions').delete().eq('user_id', user.id);
   await supabaseAdmin.from('artist_profiles').delete().eq('user_id', user.id);
 

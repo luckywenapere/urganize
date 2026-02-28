@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+import { getSubscriptionAccess } from '@/lib/subscription-access';
+import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 
 type RoleOption = 'manager' | 'artist-team' | 'artist';
 type ProofType = 'none' | 'screenshot' | 'video' | 'link' | 'text';
@@ -214,6 +216,7 @@ export function PostAuthScreen() {
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState('');
+  const [hasSubscriptionAccess, setHasSubscriptionAccess] = useState(true);
 
   const [releaseId, setReleaseId] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
@@ -727,6 +730,15 @@ export function PostAuthScreen() {
 
     const bootstrap = async () => {
       try {
+        if (isPlanSetupFlow) {
+          const entitlement = await getSubscriptionAccess(user.id);
+          if (!entitlement.hasAccess) {
+            setHasSubscriptionAccess(false);
+            return;
+          }
+        }
+        setHasSubscriptionAccess(true);
+
         let resolvedArtistName = '';
         let resolvedGenre = '';
         let resolvedPrimaryPlatform = '';
@@ -819,7 +831,7 @@ export function PostAuthScreen() {
     };
 
     bootstrap();
-  }, [artistDefaultsKey, bootstrapTargetKey, ensureOnboardingRelease, flow, loadCurrentTask, requestedPlanId, requestedStartStep, user]);
+  }, [artistDefaultsKey, bootstrapTargetKey, ensureOnboardingRelease, flow, isPlanSetupFlow, loadCurrentTask, requestedPlanId, requestedStartStep, user]);
 
   const upsertArtistProfile = useCallback(async () => {
     if (!user) throw new Error('User not found');
@@ -1430,6 +1442,16 @@ export function PostAuthScreen() {
       <main className={shellClass}>
         <div className="flex min-h-screen items-center justify-center text-[clamp(2rem,4vw,3rem)]">
           Loading...
+        </div>
+      </main>
+    );
+  }
+
+  if (!hasSubscriptionAccess && isPlanSetupFlow) {
+    return (
+      <main className={shellClass}>
+        <div className="mx-auto flex min-h-screen w-full max-w-[760px] items-center px-6 py-12 sm:px-10">
+          <SubscriptionPaywall title="Upgrade to continue this plan" />
         </div>
       </main>
     );

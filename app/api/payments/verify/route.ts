@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getBillingCycleFromPlan, getPlanExpiry, resolveExpectedAmount } from '@/lib/billing';
+import { getPlanExpiry, resolveExpectedAmount } from '@/lib/billing';
 
 type SafeMetadata = Record<string, string | number | boolean | null | undefined>;
 
@@ -106,18 +106,7 @@ export async function GET(req: NextRequest) {
     }
 
     const paymentMode = metadata.payment_mode === 'split' ? 'split' : 'full';
-    const teamSize = Number(metadata.team_size || 0);
-    const seatsPaidNow = Number(metadata.seats_paid_now || 0);
-    const groupCycle = getBillingCycleFromPlan(plan);
-    const isPartialGroupPayment =
-      paymentMode === 'split' &&
-      !!groupCycle &&
-      Number.isFinite(teamSize) &&
-      Number.isFinite(seatsPaidNow) &&
-      seatsPaidNow > 0 &&
-      teamSize > seatsPaidNow;
-
-    const subscriptionStatus = isPartialGroupPayment ? 'partial' : 'active';
+    const subscriptionStatus = 'active';
     const expiresAt = getPlanExpiry(plan, new Date());
 
     if (!existingPaymentResult.data) {

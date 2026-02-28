@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+import { getSubscriptionAccess } from '@/lib/subscription-access';
+import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 
 type PlanRow = {
   id: string;
@@ -41,6 +43,7 @@ export default function PlanNextStepPage() {
   const [totalTasks, setTotalTasks] = useState(0);
   const [completedTasks, setCompletedTasks] = useState(0);
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const [hasSubscriptionAccess, setHasSubscriptionAccess] = useState<boolean | null>(null);
 
   const [customTitle, setCustomTitle] = useState('');
   const [customNotes, setCustomNotes] = useState('');
@@ -267,6 +270,12 @@ export default function PlanNextStepPage() {
       }
 
       try {
+        const entitlement = await getSubscriptionAccess(user.id);
+        setHasSubscriptionAccess(entitlement.hasAccess);
+        if (!entitlement.hasAccess) {
+          return;
+        }
+
         const [{ data: release, error: releaseError }, { data: task, error: activeTaskError }, { count: total, error: totalError }, { count: done, error: doneError }] =
           await Promise.all([
             supabase.from('releases').select('id,title,artist_name,status').eq('id', planId).eq('user_id', user.id).maybeSingle(),
@@ -329,6 +338,13 @@ export default function PlanNextStepPage() {
           <section className="mt-10 rounded-2xl border border-stroke-default bg-bg-surface p-6">
             <div className="h-7 w-48 rounded-lg skeleton-shimmer" />
             <div className="mt-4 h-24 rounded-xl skeleton-shimmer" />
+          </section>
+        ) : hasSubscriptionAccess === false ? (
+          <section className="mt-10">
+            <SubscriptionPaywall
+              title="Upgrade to generate your next step"
+              description="Your plan is visible, but next-step generation and execution require an active subscription."
+            />
           </section>
         ) : (
           <>
