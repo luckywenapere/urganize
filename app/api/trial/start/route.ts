@@ -1,21 +1,37 @@
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
 
-const TRIAL_DAYS = 10;
-const TRIAL_SUBSCRIPTION_PLAN = 'monthly';
-const TRIAL_SUBSCRIPTION_STATUS = 'active';
+const TRIAL_DAYS = 30;
+const TOKEN_TTL_MS = 15 * 60 * 1000;
+const TRIAL_CLAIM_PLAN = 'trial_claim';
+const DEFAULT_TOKENIZATION_AMOUNT = 100;
+const PLAN_IDS = new Set(['monthly', '8months', 'yearly', 'group_monthly', 'group_yearly']);
 
-const addDays = (input: Date, days: number): Date => {
-  const next = new Date(input);
-  next.setDate(next.getDate() + days);
-  return next;
+type EligibilityTokenPayload = {
+  uid: string;
+  plan: string;
+  exp: number;
+  fp: string;
 };
 
 const normalizeEmail = (value: string): string => String(value || '').trim().toLowerCase();
 
-const buildTrialEmailHash = (email: string, salt: string): string => {
-  return crypto.createHash('sha256').update(`${salt}:${normalizeEmail(email)}`).digest('hex');
+const hashWithSalt = (value: string, salt: string): string => {
+  return crypto.createHash('sha256').update(`${salt}:${value}`).digest('hex');
+};
+
+const resolveClientIp = (req: NextRequest): string => {
+  const forwarded = req.headers.get('x-forwarded-for') || '';
+  const candidate = forwarded.split(',').map((part) => part.trim()).find(Boolean);
+  if (candidate) return candidate;
+  return req.headers.get('x-real-ip') || 'unknown-ip';
+};
+
+const signToken = (payload: EligibilityTokenPayload, secret: string): string => {
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto.createHmac('sha256', secret).update(body).digest('base64url');
+  return `${body}.${signature}`;
 };
 
 export async function POST(req: NextRequest) {
@@ -23,6 +39,7 @@ export async function POST(req: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const trialSalt = process.env.TRIAL_CLAIMS_SALT || serviceRoleKey || '';
+  const tokenizationAmount = Math.max(50, Number(process.env.TRIAL_TOKENIZATION_AMOUNT_NGN || DEFAULT_TOKENIZATION_AMOUNT));
 
   if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey || !trialSalt) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
@@ -33,6 +50,16 @@ export async function POST(req: NextRequest) {
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const body = await req.json().catch(() => ({}));
+  const requestedPlan = String((body as Record<string, unknown>).plan || '').trim();
+  if (!PLAN_IDS.has(requestedPlan)) {
+    return NextResponse.json({ error: 'Select a valid plan before starting trial.' }, { status: 400 });
+  }
+
+  const deviceHashInput = String((body as Record<string, unknown>).trial_device_id_hash || '').trim();
+  const userAgent = req.headers.get('user-agent') || 'unknown-agent';
+  const ip = resolveClientIp(req);
 
   const supabaseUserClient = createClient(supabaseUrl, supabaseAnonKey);
   const {
@@ -45,101 +72,67 @@ export async function POST(req: NextRequest) {
   }
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-  const emailHash = buildTrialEmailHash(user.email, trialSalt);
+  const emailHash = hashWithSalt(normalizeEmail(user.email), trialSalt);
+  const fingerprintSeed = `${deviceHashInput || 'no-device'}|${ip}|${userAgent}`;
+  const fingerprintHash = hashWithSalt(fingerprintSeed, trialSalt);
 
-  const { data: priorTrialClaim, error: claimLookupError } = await supabaseAdmin
-    .from('payments')
-    .select('id')
-    .eq('plan', 'trial_claim')
-    .contains('paystack_response', { trial_email_hash: emailHash, source: 'free_trial' })
-    .limit(1)
-    .maybeSingle();
+  const [priorEmailClaim, priorFingerprintClaim, existingSubscription] = await Promise.all([
+    supabaseAdmin
+      .from('payments')
+      .select('id')
+      .eq('plan', TRIAL_CLAIM_PLAN)
+      .contains('paystack_response', { trial_email_hash: emailHash, source: 'free_trial_tokenization' })
+      .limit(1)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('payments')
+      .select('id')
+      .eq('plan', TRIAL_CLAIM_PLAN)
+      .contains('paystack_response', { trial_fingerprint_hash: fingerprintHash, source: 'free_trial_tokenization' })
+      .limit(1)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('subscriptions')
+      .select('id,status')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
-  if (claimLookupError) {
-    return NextResponse.json({ error: claimLookupError.message || 'Could not verify trial eligibility' }, { status: 500 });
+  if (priorEmailClaim.error || priorFingerprintClaim.error || existingSubscription.error) {
+    return NextResponse.json({ error: 'Could not verify trial eligibility' }, { status: 500 });
   }
 
-  if (priorTrialClaim?.id) {
+  if (priorEmailClaim.data?.id) {
     return NextResponse.json({ error: 'Free trial already used for this email.' }, { status: 409 });
   }
 
-  const { data: existingSubscription, error: existingError } = await supabaseAdmin
-    .from('subscriptions')
-    .select('id,status,plan')
-    .eq('user_id', user.id)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (existingError) {
-    return NextResponse.json({ error: existingError.message || 'Could not verify trial eligibility' }, { status: 500 });
+  if (priorFingerprintClaim.data?.id) {
+    return NextResponse.json({ error: 'Free trial already used on this device/network.' }, { status: 409 });
   }
 
-  if (existingSubscription?.id) {
+  if (existingSubscription.data?.id) {
     return NextResponse.json(
-      { error: 'Free trial already used or an active subscription already exists.' },
+      { error: 'A subscription already exists for this account.' },
       { status: 409 }
     );
   }
 
-  const now = new Date();
-  const expiresAt = addDays(now, TRIAL_DAYS);
-  const nowIso = now.toISOString();
-  const expiresIso = expiresAt.toISOString();
+  const tokenPayload: EligibilityTokenPayload = {
+    uid: user.id,
+    plan: requestedPlan,
+    exp: Date.now() + TOKEN_TTL_MS,
+    fp: fingerprintHash,
+  };
 
-  const claimReference = `trial_claim_${emailHash.slice(0, 32)}`;
-  const { error: claimInsertError } = await supabaseAdmin.from('payments').insert({
-    user_id: user.id,
-    amount: 0,
-    reference: claimReference,
-    status: 'success',
-    plan: 'trial_claim',
-    paystack_response: {
-      source: 'free_trial',
-      trial_email_hash: emailHash,
-      trial_days: TRIAL_DAYS,
-      claimed_at: nowIso,
-    },
-  });
-
-  if (claimInsertError) {
-    const duplicateClaim = String(claimInsertError.message || '').toLowerCase().includes('duplicate');
-    if (duplicateClaim) {
-      return NextResponse.json({ error: 'Free trial already used for this email.' }, { status: 409 });
-    }
-    return NextResponse.json({ error: claimInsertError.message || 'Could not reserve free trial' }, { status: 500 });
-  }
-
-  const { error: subscriptionError } = await supabaseAdmin.from('subscriptions').upsert(
-    {
-      user_id: user.id,
-      plan: TRIAL_SUBSCRIPTION_PLAN,
-      status: TRIAL_SUBSCRIPTION_STATUS,
-      amount: 0,
-      started_at: nowIso,
-      expires_at: expiresIso,
-      updated_at: nowIso,
-    },
-    { onConflict: 'user_id' }
-  );
-
-  if (subscriptionError) {
-    return NextResponse.json({ error: subscriptionError.message || 'Could not start free trial' }, { status: 500 });
-  }
-
-  const { error: profileError } = await supabaseAdmin
-    .from('profiles')
-    .update({ is_subscribed: true, updated_at: nowIso })
-    .eq('id', user.id);
-
-  if (profileError) {
-    return NextResponse.json({ error: profileError.message || 'Could not update profile' }, { status: 500 });
-  }
+  const eligibilityToken = signToken(tokenPayload, trialSalt);
 
   return NextResponse.json({
-    status: 'trialing',
+    status: 'eligible',
     trial_days: TRIAL_DAYS,
-    started_at: nowIso,
-    expires_at: expiresIso,
+    tokenization_amount_ngn: tokenizationAmount,
+    eligibility_token: eligibilityToken,
+    consent_required: true,
   });
 }

@@ -730,12 +730,10 @@ export function PostAuthScreen() {
 
     const bootstrap = async () => {
       try {
-        if (isPlanSetupFlow) {
-          const entitlement = await getSubscriptionAccess(user.id);
-          if (!entitlement.hasAccess) {
-            setHasSubscriptionAccess(false);
-            return;
-          }
+        const entitlement = await getSubscriptionAccess(user.id);
+        if (!entitlement.hasAccess) {
+          setHasSubscriptionAccess(false);
+          return;
         }
         setHasSubscriptionAccess(true);
 
@@ -1447,11 +1445,11 @@ export function PostAuthScreen() {
     );
   }
 
-  if (!hasSubscriptionAccess && isPlanSetupFlow) {
+  if (!hasSubscriptionAccess) {
     return (
       <main className={shellClass}>
         <div className="mx-auto flex min-h-screen w-full max-w-[760px] items-center px-6 py-12 sm:px-10">
-          <SubscriptionPaywall title="Upgrade to continue this plan" />
+          <SubscriptionPaywall title="Start your 30-day trial to continue" />
         </div>
       </main>
     );

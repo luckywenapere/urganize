@@ -10,6 +10,9 @@ type VerificationResult = {
   status?: string;
   plan?: string;
   amount?: number;
+  trialing?: boolean;
+  trial_days?: number;
+  trial_ends_at?: string;
   message?: string;
   error?: string;
   payment_mode?: string;
@@ -82,6 +85,20 @@ function PaymentCallbackContent() {
             <p className="mt-2 text-sm text-content-secondary">Amount: NGN {result.amount.toLocaleString()}</p>
           )}
           {result.plan && <p className="text-sm text-content-secondary">Plan: {String(result.plan).replace('_', ' ')}</p>}
+          {result.trialing && (
+            <p className="mt-2 text-sm text-content-secondary">
+              Trial active until{' '}
+              <span className="font-semibold text-content-primary">
+                {result.trial_ends_at ? new Date(result.trial_ends_at).toLocaleDateString() : 'your renewal date'}
+              </span>
+              .
+            </p>
+          )}
+          {result.trialing && (
+            <p className="mt-1 text-xs text-content-tertiary">
+              Your selected plan will auto-renew after trial unless canceled beforehand.
+            </p>
+          )}
 
           <div className="mt-6 flex flex-col gap-2">
             <button

@@ -32,6 +32,8 @@ export function PaystackButton({
   const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '';
   const safeAmount = Math.max(0, Number(amount) || 0);
   const reference = `urganize_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
+  const paymentPurpose = String(metadata?.purpose || '').trim().toLowerCase();
+  const isTrialTokenization = paymentPurpose === 'trial_tokenization';
 
   const config = {
     reference,
@@ -39,6 +41,7 @@ export function PaystackButton({
     amount: Math.round(safeAmount * 100),
     currency,
     publicKey,
+    ...(isTrialTokenization ? { channels: ['card'] } : {}),
     metadata: {
       plan,
       ...metadata,
