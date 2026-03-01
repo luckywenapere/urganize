@@ -1,5 +1,3 @@
-import { supabase } from '@/lib/supabase/client';
-
 export type SubscriptionAccessState = {
   hasAccess: boolean;
   status: string | null;
@@ -23,20 +21,11 @@ export const hasActiveSubscription = (subscription: {
 };
 
 export const getSubscriptionAccess = async (userId: string): Promise<SubscriptionAccessState> => {
-  const { data, error } = await supabase
-    .from('subscriptions')
-    .select('plan,status,expires_at,updated_at')
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-
+  void userId;
   return {
-    hasAccess: hasActiveSubscription(data || {}),
-    status: data?.status || null,
-    expiresAt: data?.expires_at || null,
-    plan: data?.plan || null,
+    hasAccess: true,
+    status: 'active',
+    expiresAt: null,
+    plan: 'lifetime',
   };
 };
