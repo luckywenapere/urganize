@@ -100,7 +100,7 @@ const resolveNeedsOnboarding = async (userId: string): Promise<boolean> => {
   const releaseIds = releases.map((release) => release.id);
   const { data: onboardingProfiles, error: onboardingError } = await supabase
     .from('release_profiles')
-    .select('setup_completed')
+    .select('setup_completed, setup_step')
     .in('release_id', releaseIds)
     .order('updated_at', { ascending: false });
 
@@ -108,12 +108,17 @@ const resolveNeedsOnboarding = async (userId: string): Promise<boolean> => {
     return true;
   }
 
-  const hasCompletedOnboarding = onboardingProfiles.some((profile) => profile.setup_completed === true);
-  if (hasCompletedOnboarding) {
-    return false;
-  }
+  const hasInProgressOnboarding = onboardingProfiles.some((profile) => {
+    if (profile.setup_completed === true) return false;
+    const step = Number(profile.setup_step || 0);
+    return step >= 2 && step < 13;
+  });
+  if (hasInProgressOnboarding) return true;
 
-  return onboardingProfiles[0].setup_completed !== true;
+  const hasCompletedOnboarding = onboardingProfiles.some((profile) => profile.setup_completed === true);
+  if (hasCompletedOnboarding) return false;
+
+  return true;
 };
 
 interface AuthState {
