@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
@@ -25,7 +25,7 @@ const PostAuthScreen = dynamic(
   }
 );
 
-export default function RootLayout({
+function AppShell({
   children,
 }: {
   children: React.ReactNode;
@@ -56,6 +56,31 @@ export default function RootLayout({
   }, [checkAuth]);
 
   return (
+    <>
+      {showPostAuthScreen ? (
+        <PostAuthScreen />
+      ) : (
+        <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>{children}</div>
+      )}
+      {!showPostAuthScreen && (
+        <div className="keyboard-hint">
+          <kbd className="kbd">⌘</kbd>
+          <kbd className="kbd">K</kbd>
+          <span>Quick actions</span>
+        </div>
+      )}
+      <Analytics />
+    </>
+  );
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+
+  return (
     <html lang="en" suppressHydrationWarning data-theme="dark" className="dark">
       <head>
         <script
@@ -79,19 +104,13 @@ export default function RootLayout({
         />
       </head>
       <body className="app-body bg-bg-base text-content-primary antialiased">
-        {showPostAuthScreen ? (
-          <PostAuthScreen />
-        ) : (
-          <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>{children}</div>
-        )}
-        {!showPostAuthScreen && (
-          <div className="keyboard-hint">
-            <kbd className="kbd">⌘</kbd>
-            <kbd className="kbd">K</kbd>
-            <span>Quick actions</span>
-          </div>
-        )}
-        <Analytics />
+        <Suspense
+          fallback={
+            <div className="app-layout app-layout-centered lazy-fade lazy-fade-in">{children}</div>
+          }
+        >
+          <AppShell>{children}</AppShell>
+        </Suspense>
       </body>
     </html>
   );
