@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
-import { PaystackButton } from '@/components/PaystackButton';
 import {
   INDIVIDUAL_PLAN_OPTIONS,
   MIN_GROUP_TEAM_SIZE,
@@ -16,6 +16,11 @@ import {
   type GroupPaymentMode,
   type IndividualPlanId,
 } from '@/lib/billing';
+
+const PaystackButton = dynamic(
+  () => import('@/components/PaystackButton').then((mod) => mod.PaystackButton),
+  { ssr: false }
+);
 
 type SubscriptionPaywallProps = {
   title?: string;

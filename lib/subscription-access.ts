@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 
 export type SubscriptionAccessState = {
   hasAccess: boolean;
@@ -8,6 +8,19 @@ export type SubscriptionAccessState = {
 };
 
 const ACTIVE_STATUSES = new Set(['active', 'trialing']);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+const createReadClient = () => {
+  if (!supabaseUrl || !supabaseAnonKey) return null;
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+};
 
 export const hasActiveSubscription = (subscription: {
   status?: string | null;
@@ -33,6 +46,15 @@ export const getSubscriptionAccess = async (userId: string): Promise<Subscriptio
   }
 
   try {
+    const supabase = createReadClient();
+    if (!supabase) {
+      return {
+        hasAccess: false,
+        status: null,
+        expiresAt: null,
+        plan: null,
+      };
+    }
     const { data, error } = await supabase
       .from('subscriptions')
       .select('status,expires_at,plan,updated_at')
