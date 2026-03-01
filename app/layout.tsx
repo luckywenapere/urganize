@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
 import "./globals.css";
@@ -35,11 +35,14 @@ export default function RootLayout({
   const isAuthLoading = useAuthStore((state) => state.isLoading);
   const needsOnboarding = useAuthStore((state) => state.needsOnboarding);
   const pathname = usePathname();
-  const [hasOnboardingIntent, setHasOnboardingIntent] = useState(false);
+  const searchParams = useSearchParams();
 
   const isAuthRoute = pathname?.startsWith('/auth');
   const isDashboardRoute = pathname?.startsWith('/dashboard');
   const isDashboardRootRoute = pathname === '/dashboard';
+  const hasOnboardingIntent =
+    isDashboardRootRoute &&
+    (searchParams?.has('startOnboarding') || searchParams?.has('planId'));
   const showPostAuthScreen =
     isAuthenticated &&
     !isAuthLoading &&
@@ -51,16 +54,6 @@ export default function RootLayout({
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
-
-  useEffect(() => {
-    if (!isDashboardRootRoute || typeof window === 'undefined') {
-      setHasOnboardingIntent(false);
-      return;
-    }
-
-    const query = new URLSearchParams(window.location.search);
-    setHasOnboardingIntent(query.has('startOnboarding') || query.has('planId'));
-  }, [isDashboardRootRoute, pathname]);
 
   return (
     <html lang="en" suppressHydrationWarning data-theme="dark" className="dark">
