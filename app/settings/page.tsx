@@ -480,6 +480,25 @@ export default function SettingsPage() {
           </section>
         </div>
 
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <section className={panelClass}>
+            <h2 className="mb-4 text-xl">Session</h2>
+            <div className="rounded-lg border border-stroke-subtle bg-bg-elevated p-4">
+              <p className="text-sm text-content-secondary">Signed in as {user.email}. End your session on this device.</p>
+              <button
+                type="button"
+                onClick={async () => {
+                  await logout();
+                  router.push('/auth');
+                }}
+                className="mt-4 rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover"
+              >
+                Logout this device
+              </button>
+            </div>
+          </section>
+        </div>
+
         <section className={`${panelClass} mt-6`}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl">Billing</h2>
