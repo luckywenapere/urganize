@@ -62,7 +62,6 @@ const verifyEligibilityToken = (token: string, secret: string): TrialEligibility
   try {
     const parsed = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as TrialEligibilityPayload;
     if (!parsed?.uid || !parsed?.plan || !parsed?.exp || !parsed?.fp) return null;
-    if (parsed.exp < Date.now()) return null;
     return parsed;
   } catch {
     return null;
