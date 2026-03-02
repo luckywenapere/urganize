@@ -31,6 +31,16 @@ type SubscriptionInfo = {
   expires_at: string | null;
 };
 
+type PaymentVerifyResponse = {
+  status?: string;
+  error?: string;
+  message?: string;
+  plan?: string;
+  amount?: number;
+  trialing?: boolean;
+  trial_ends_at?: string;
+};
+
 const panelClass = 'rounded-2xl border border-stroke-default bg-bg-surface p-5 sm:p-6';
 
 const parsePaymentMetadata = (paystackResponse: unknown): Record<string, unknown> => {
@@ -70,6 +80,10 @@ export default function SettingsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [paymentReference, setPaymentReference] = useState('');
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+  const [paymentCheckMessage, setPaymentCheckMessage] = useState('');
+  const [paymentCheckError, setPaymentCheckError] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
@@ -291,6 +305,46 @@ export default function SettingsPage() {
       setError(err?.message || 'Could not delete account');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleCheckPaymentStatus = async () => {
+    const reference = paymentReference.trim();
+    if (!reference) {
+      setPaymentCheckError('Enter a payment reference to check.');
+      setPaymentCheckMessage('');
+      return;
+    }
+
+    setIsCheckingPayment(true);
+    setPaymentCheckError('');
+    setPaymentCheckMessage('');
+
+    try {
+      const response = await fetch(`/api/payments/verify?reference=${encodeURIComponent(reference)}`, {
+        method: 'GET',
+        cache: 'no-store',
+      });
+      const payload = (await response.json().catch(() => ({}))) as PaymentVerifyResponse;
+
+      if (!response.ok || payload.status !== 'success') {
+        setPaymentCheckError(payload.error || payload.message || 'Payment could not be verified.');
+        return;
+      }
+
+      const planLabel = payload.plan ? String(payload.plan).replace('_', ' ') : 'unknown plan';
+      const amountLabel =
+        typeof payload.amount === 'number' ? `NGN ${payload.amount.toLocaleString()}` : 'amount unavailable';
+      const trialLabel = payload.trialing
+        ? ` Trial active until ${payload.trial_ends_at ? new Date(payload.trial_ends_at).toLocaleDateString() : 'renewal date'}.`
+        : '';
+
+      setPaymentCheckMessage(`Payment verified for ${planLabel} (${amountLabel}).${trialLabel}`);
+      await checkAuth();
+    } catch {
+      setPaymentCheckError('Could not verify payment right now.');
+    } finally {
+      setIsCheckingPayment(false);
     }
   };
 
@@ -589,6 +643,39 @@ export default function SettingsPage() {
             >
               Continue with {billingMode === 'individual' ? individualPlanMeta.label : `Group ${groupBillingCycle === 'yearly' ? 'Yearly' : 'Monthly'}`}
             </PaystackButton>
+          </div>
+
+          <div className="mt-6 rounded-xl border border-stroke-subtle bg-bg-elevated p-4">
+            <p className="text-sm font-semibold text-content-primary">Check payment status</p>
+            <p className="mt-1 text-xs text-content-secondary">
+              Paste a Paystack reference to confirm if your payment was processed.
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <input
+                value={paymentReference}
+                onChange={(event) => setPaymentReference(event.target.value)}
+                placeholder="e.g. urganize_1740861234_ab12cd"
+                className="w-full rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-content-primary outline-none focus:border-brand"
+              />
+              <button
+                type="button"
+                onClick={handleCheckPaymentStatus}
+                disabled={isCheckingPayment}
+                className="rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm text-content-primary hover:bg-bg-hover disabled:opacity-60"
+              >
+                {isCheckingPayment ? 'Checking...' : 'Check'}
+              </button>
+            </div>
+            {paymentCheckMessage && (
+              <p className="mt-3 rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
+                {paymentCheckMessage}
+              </p>
+            )}
+            {paymentCheckError && (
+              <p className="mt-3 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+                {paymentCheckError}
+              </p>
+            )}
           </div>
         </section>
 
