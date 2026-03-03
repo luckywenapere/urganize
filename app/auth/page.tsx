@@ -65,10 +65,10 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (isAuthenticated) {
+    if (isAuthenticated && mode === 'login') {
       router.replace('/dashboard');
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, mode, router]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -146,7 +146,7 @@ export default function AuthPage() {
     try {
       const role = hasManager ? 'artist' : 'artist-manager';
       await signup(email, password, name, role);
-      router.push('/dashboard');
+      router.push('/dashboard?startOnboarding=0&flow=first-login');
     } catch {
       setError('Signup failed. Please try again.');
     } finally {

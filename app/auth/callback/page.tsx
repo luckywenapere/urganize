@@ -69,6 +69,16 @@ export default function AuthCallbackPage() {
           return;
         }
 
+        const { data: existingProfile, error: existingProfileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        if (existingProfileError) {
+          console.warn('Profile existence check warning:', existingProfileError.message);
+        }
+        const isFirstLogin = !existingProfile?.id;
+
         // Profile sync should not block login completion.
         const fallbackName = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User';
         const roleFromMetadata = session.user.user_metadata?.role;
@@ -106,8 +116,13 @@ export default function AuthCallbackPage() {
           localStorage.setItem('urganize.reauth.ts', String(Date.now()));
         }
 
+        const hasExplicitNext = Boolean(next && next.startsWith('/'));
+        const destination = isFirstLogin && !hasExplicitNext
+          ? '/dashboard?startOnboarding=0&flow=first-login'
+          : safeNext;
+
         window.clearTimeout(timeout);
-        router.replace(safeNext);
+        router.replace(destination);
       } catch (error) {
         console.error('Auth callback fatal error:', error);
         if (isAbortError(error)) {

@@ -33,7 +33,6 @@ function AppShell({
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthLoading = useAuthStore((state) => state.isLoading);
-  const needsOnboarding = useAuthStore((state) => state.needsOnboarding);
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -48,7 +47,7 @@ function AppShell({
     !isAuthLoading &&
     !isAuthRoute &&
     isDashboardRootRoute &&
-    (needsOnboarding || hasOnboardingIntent);
+    hasOnboardingIntent;
   const pageLayoutClassName = isDashboardRoute ? 'app-layout app-layout-fluid' : 'app-layout app-layout-centered';
 
   useEffect(() => {
