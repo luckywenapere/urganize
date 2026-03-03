@@ -10,6 +10,8 @@ export type SubscriptionAccessState = {
 const ACTIVE_STATUSES = new Set(['active', 'trialing']);
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const PAYWALL_STATUS_CACHE_TTL_MS = 30 * 1000;
+let paywallCache: { enabled: boolean; cachedAt: number } | null = null;
 
 const createReadClient = () => {
   if (!supabaseUrl || !supabaseAnonKey) return null;
@@ -20,6 +22,27 @@ const createReadClient = () => {
       detectSessionInUrl: false,
     },
   });
+};
+
+const isGlobalPaywallEnabled = async (): Promise<boolean> => {
+  if (typeof window === 'undefined') return true;
+
+  if (paywallCache && Date.now() - paywallCache.cachedAt < PAYWALL_STATUS_CACHE_TTL_MS) {
+    return paywallCache.enabled;
+  }
+
+  try {
+    const response = await fetch('/api/paywall-status', {
+      method: 'GET',
+      cache: 'no-store',
+    });
+    const payload = (await response.json().catch(() => ({}))) as { enabled?: unknown };
+    const enabled = typeof payload.enabled === 'boolean' ? payload.enabled : true;
+    paywallCache = { enabled, cachedAt: Date.now() };
+    return enabled;
+  } catch {
+    return true;
+  }
 };
 
 export const hasActiveSubscription = (subscription: {
@@ -40,6 +63,16 @@ export const getSubscriptionAccess = async (userId: string): Promise<Subscriptio
     return {
       hasAccess: false,
       status: null,
+      expiresAt: null,
+      plan: null,
+    };
+  }
+
+  const paywallEnabled = await isGlobalPaywallEnabled();
+  if (!paywallEnabled) {
+    return {
+      hasAccess: true,
+      status: 'paywall_disabled',
       expiresAt: null,
       plan: null,
     };

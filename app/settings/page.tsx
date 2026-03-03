@@ -368,9 +368,20 @@ export default function SettingsPage() {
             <h1 className="text-3xl tracking-tight sm:text-4xl">Settings</h1>
             <p className="mt-1 text-sm text-content-secondary">Account, billing, and workflow preferences.</p>
           </div>
-          <Link href="/dashboard" className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary">
-            Back to dashboard
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin"
+              className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+            >
+              Admin
+            </Link>
+            <Link
+              href="/dashboard"
+              className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+            >
+              Back to dashboard
+            </Link>
+          </div>
         </div>
 
         {error && <p className="mb-5 rounded-lg border border-status-error/40 bg-status-error/10 px-4 py-3 text-sm text-status-error">{error}</p>}

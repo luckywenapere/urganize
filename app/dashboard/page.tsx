@@ -372,6 +372,13 @@ export default function DashboardPage() {
                 >
                   Settings
                 </Link>
+                <Link
+                  href="/admin"
+                  className="block rounded-md px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Admin
+                </Link>
                 <button
                   type="button"
                   onClick={async () => {
