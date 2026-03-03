@@ -12,19 +12,39 @@ type Step6GeneratingTaskProps = {
   showPricingSheet: boolean;
   userEmail: string;
   onClosePricingSheet: () => void;
+  isGenerating: boolean;
+  generationError: string;
+  onRetryGeneration: () => void;
 };
 
 export function Step6GeneratingTask({
   showPricingSheet,
   userEmail,
   onClosePricingSheet,
+  isGenerating,
+  generationError,
+  onRetryGeneration,
 }: Step6GeneratingTaskProps) {
   const monthlyAmount = getIndividualPlanAmount('monthly');
 
   return (
     <>
-      <div className="flex flex-1 items-center justify-center text-center text-[clamp(2rem,5vw,3.6rem)] text-content-primary">
-        Generating task...
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+        <p className="text-[clamp(2rem,5vw,3.6rem)] text-content-primary">
+          {isGenerating ? 'Generating task...' : 'Task generation paused'}
+        </p>
+        {generationError && (
+          <div className="max-w-xl rounded-xl border border-status-error/35 bg-status-error/10 px-5 py-4">
+            <p className="text-sm text-status-error">{generationError}</p>
+            <button
+              type="button"
+              onClick={onRetryGeneration}
+              className="mt-3 rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm font-semibold text-content-primary hover:bg-bg-hover"
+            >
+              Generate again
+            </button>
+          </div>
+        )}
       </div>
 
       {showPricingSheet && (

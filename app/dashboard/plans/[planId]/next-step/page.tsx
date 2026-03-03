@@ -23,6 +23,13 @@ type TaskRow = {
   status: 'current' | 'pending' | 'completed';
 };
 
+type AiTaskGenerationPayload = {
+  title: string;
+  description: string;
+  why_it_matters: string;
+  measurable_outcome: string;
+};
+
 type ScreenMode = 'decision' | 'custom' | 'generating' | 'archived';
 
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High'] as const;
@@ -167,16 +174,53 @@ export default function PlanNextStepPage() {
     setMode('generating');
     try {
       const startedAt = Date.now();
-      const generatedTitle = plan?.title ? `Move "${plan.title}" Forward` : 'Move Plan Forward';
-      const generatedDescription = [
-        'Execute one high-leverage action that creates measurable momentum for this plan.',
-        'Capture proof and metrics so the next recommendation improves.',
-      ].join('\n');
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        throw new Error('Session expired. Sign in again and retry.');
+      }
+
+      const generateResponse = await fetch('/api/ai/generate-task', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          mode: 'next-step',
+          releaseId: planId,
+        }),
+      });
+
+      const generatedPayload = (await generateResponse.json().catch(() => ({}))) as
+        | Partial<AiTaskGenerationPayload>
+        | { error?: string; detail?: string };
+
+      if (!generateResponse.ok) {
+        const failurePayload = generatedPayload as { error?: string; detail?: string };
+        throw new Error(
+          String(
+            `${failurePayload.error || 'Task generation failed after retries. Please generate again.'}${
+              failurePayload.detail ? ` (${failurePayload.detail})` : ''
+            }`
+          )
+        );
+      }
+
+      const generatedTitle = String((generatedPayload as Partial<AiTaskGenerationPayload>).title || '').trim();
+      const generatedDescription = String((generatedPayload as Partial<AiTaskGenerationPayload>).description || '').trim();
+      const generatedWhy = String((generatedPayload as Partial<AiTaskGenerationPayload>).why_it_matters || '').trim();
+      const measurableOutcome = String((generatedPayload as Partial<AiTaskGenerationPayload>).measurable_outcome || '').trim();
+      if (!generatedTitle || !generatedDescription || !generatedWhy || !measurableOutcome) {
+        throw new Error('AI returned an invalid task format. Please generate again.');
+      }
 
       await createTask({
         title: generatedTitle,
-        description: generatedDescription,
-        whyItMatters: 'Automatically suggested after review submission.',
+        description: `${generatedDescription}\n\nMeasurable outcome: ${measurableOutcome}`,
+        whyItMatters: `${generatedWhy}\nMeasurable outcome: ${measurableOutcome}`,
       });
 
       const elapsed = Date.now() - startedAt;

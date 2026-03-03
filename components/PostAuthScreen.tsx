@@ -11,6 +11,12 @@ import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 type RoleOption = 'manager' | 'artist-team' | 'artist';
 type ProofType = 'none' | 'screenshot' | 'video' | 'link' | 'text';
 const PROOF_TYPE_OPTIONS: ProofType[] = ['none', 'screenshot', 'video', 'link', 'text'];
+type AiTaskGenerationPayload = {
+  title: string;
+  description: string;
+  why_it_matters: string;
+  measurable_outcome: string;
+};
 
 const GENRE_OPTIONS = [
   'Afrobeats',
@@ -216,6 +222,8 @@ export function PostAuthScreen() {
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState('');
+  const [generationError, setGenerationError] = useState('');
+  const [generationAttemptKey, setGenerationAttemptKey] = useState(0);
   const [hasSubscriptionAccess, setHasSubscriptionAccess] = useState(true);
 
   const [releaseId, setReleaseId] = useState<string | null>(null);
@@ -715,9 +723,10 @@ export function PostAuthScreen() {
       setTaskId(task.id);
       setTaskTitle(task.title || 'Single task');
       setTaskOutcome(task.description || 'Expected outcome');
-      return;
+      return task;
     }
     setTaskId(null);
+    return null;
   }, []);
 
   const bootstrapTargetKey = `${user?.id || 'anon'}:${requestedPlanId || 'auto'}:${Number.isFinite(requestedStartStep) ? requestedStartStep : 0}`;
@@ -1100,36 +1109,116 @@ export function PostAuthScreen() {
     }
   };
 
-  const createFallbackTask = useCallback(async (activeReleaseId: string) => {
-    if (!user) return;
+  const generateOnboardingTask = useCallback(async (activeReleaseId: string) => {
+    if (!user) throw new Error('User not found');
 
-    const { data: existingTask } = await supabase
-      .from('ai_tasks')
-      .select('id, title, description')
-      .eq('release_id', activeReleaseId)
-      .order('order_index', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+    const existingTask = await loadCurrentTask(activeReleaseId);
 
-    if (existingTask) {
-      setTaskId(existingTask.id);
-      setTaskTitle(existingTask.title || 'Single task');
-      setTaskOutcome(existingTask.description || 'Expected outcome');
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      throw new Error('Session expired. Sign in again and retry.');
+    }
+
+    const generateResponse = await fetch('/api/ai/generate-task', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        mode: 'onboarding',
+        releaseId: activeReleaseId,
+        onboardingInputs: {
+          role: user.role || '',
+          artist_name: artistName.trim(),
+          genre: genre.trim(),
+          primary_platform: primaryPlatform.trim(),
+          campaign_goal: goalText.trim(),
+          career_stage: stage.trim(),
+          audience_size: audienceSize.trim(),
+          listener_platforms: listenerPlatforms,
+          listener_platform_input: platformInput.trim(),
+          budget_naira: budget.trim(),
+          timeline: timeline.trim(),
+          hard_deadline: deadlineDate.trim(),
+          existing_steps: stepsText.trim(),
+        },
+      }),
+    });
+
+    const generatedPayload = (await generateResponse.json().catch(() => ({}))) as
+      | Partial<AiTaskGenerationPayload>
+      | { error?: string; detail?: string };
+
+    if (!generateResponse.ok) {
+      const failurePayload = generatedPayload as { error?: string; detail?: string };
+      throw new Error(
+        String(
+          `${failurePayload.error || 'Task generation failed after retries. Please generate again.'}${
+            failurePayload.detail ? ` (${failurePayload.detail})` : ''
+          }`
+        )
+      );
+    }
+
+    const title = String((generatedPayload as Partial<AiTaskGenerationPayload>).title || '').trim();
+    const description = String((generatedPayload as Partial<AiTaskGenerationPayload>).description || '').trim();
+    const whyItMatters = String((generatedPayload as Partial<AiTaskGenerationPayload>).why_it_matters || '').trim();
+    const measurableOutcome = String((generatedPayload as Partial<AiTaskGenerationPayload>).measurable_outcome || '').trim();
+
+    if (!title || !description || !whyItMatters || !measurableOutcome) {
+      throw new Error('AI returned an invalid task format. Please generate again.');
+    }
+
+    const nextDescription = `${description}\n\nMeasurable outcome: ${measurableOutcome}`;
+    const nextWhy = `${whyItMatters}\nMeasurable outcome: ${measurableOutcome}`;
+
+    if (existingTask?.id) {
+      const { data: updatedTask, error: updateTaskError } = await supabase
+        .from('ai_tasks')
+        .update({
+          title,
+          description: nextDescription,
+          why_it_matters: nextWhy,
+          status: 'current',
+          input_type: 'text',
+          phase: 'pre-production',
+        })
+        .eq('id', existingTask.id)
+        .select('id, title, description')
+        .single();
+      if (updateTaskError || !updatedTask) throw updateTaskError || new Error('Could not update task');
+      setTaskId(updatedTask.id);
+      setTaskTitle(updatedTask.title || 'Single task');
+      setTaskOutcome(updatedTask.description || 'Expected outcome');
       return;
     }
+
+    const { data: lastTask, error: lastTaskError } = await supabase
+      .from('ai_tasks')
+      .select('order_index')
+      .eq('release_id', activeReleaseId)
+      .order('order_index', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (lastTaskError) throw lastTaskError;
+    const nextOrderIndex = (lastTask?.order_index ?? -1) + 1;
 
     const { data: insertedTask, error: insertError } = await supabase
       .from('ai_tasks')
       .insert({
         release_id: activeReleaseId,
         user_id: user.id,
-        title: 'Single task',
-        description: goalText || 'Expected outcome',
-        why_it_matters: 'This drives your campaign forward.',
+        title,
+        description: nextDescription,
+        why_it_matters: nextWhy,
         input_type: 'text',
         status: 'current',
         phase: 'pre-production',
-        order_index: 0,
+        order_index: nextOrderIndex,
       })
       .select('id, title, description')
       .single();
@@ -1138,16 +1227,37 @@ export function PostAuthScreen() {
     setTaskId(insertedTask.id);
     setTaskTitle(insertedTask.title || 'Single task');
     setTaskOutcome(insertedTask.description || 'Expected outcome');
-  }, [goalText, user]);
+  }, [
+    artistName,
+    audienceSize,
+    budget,
+    deadlineDate,
+    genre,
+    goalText,
+    listenerPlatforms,
+    loadCurrentTask,
+    platformInput,
+    primaryPlatform,
+    stage,
+    stepsText,
+    timeline,
+    user,
+  ]);
 
   useEffect(() => {
     if (step !== 6 || !releaseId) return;
+    setGenerationAttemptKey((current) => current + 1);
+  }, [releaseId, step]);
+
+  useEffect(() => {
+    if (step !== 6 || !releaseId || generationAttemptKey === 0) return;
 
     let pricingTimer: ReturnType<typeof setTimeout> | null = null;
-    let doneTimer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
 
     const runGeneration = async () => {
+      setGenerationError('');
+      setIsBusy(true);
       try {
         const { error: setupStepError } = await supabase
           .from('release_profiles')
@@ -1159,13 +1269,23 @@ export function PostAuthScreen() {
           if (!cancelled) setShowPricingSheet(true);
         }, PRICING_SHEET_MS);
 
-        doneTimer = setTimeout(async () => {
-          if (cancelled) return;
-          await createFallbackTask(releaseId);
-          await setStepPersisted(7);
-        }, MIN_GENERATION_MS);
+        const startedAt = Date.now();
+        await generateOnboardingTask(releaseId);
+        const elapsed = Date.now() - startedAt;
+        if (elapsed < MIN_GENERATION_MS) {
+          await new Promise((resolve) => setTimeout(resolve, MIN_GENERATION_MS - elapsed));
+        }
+        if (cancelled) return;
+        await setStepPersisted(7);
       } catch (err: any) {
-        setError(err?.message || 'Task generation failed');
+        if (!cancelled) {
+          setShowPricingSheet(false);
+          setGenerationError(err?.message || 'Task generation failed after retries. Please generate again.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsBusy(false);
+        }
       }
     };
 
@@ -1174,9 +1294,13 @@ export function PostAuthScreen() {
     return () => {
       cancelled = true;
       if (pricingTimer) clearTimeout(pricingTimer);
-      if (doneTimer) clearTimeout(doneTimer);
     };
-  }, [createFallbackTask, releaseId, setStepPersisted, step]);
+  }, [generateOnboardingTask, generationAttemptKey, releaseId, setStepPersisted, step]);
+
+  useEffect(() => {
+    if (step === 6 || !generationError) return;
+    setGenerationError('');
+  }, [generationError, step]);
 
   const handleMarkStarted = async () => {
     if (!taskId) return;
@@ -1229,6 +1353,11 @@ export function PostAuthScreen() {
 
   const handleSeeTaskAgain = async () => {
     await setStepPersisted(7);
+  };
+
+  const handleRetryGeneration = () => {
+    if (step !== 6 || !releaseId || isBusy) return;
+    setGenerationAttemptKey((current) => current + 1);
   };
 
   const handleSelectProof = (proofType: ProofType) => {
@@ -1553,6 +1682,9 @@ export function PostAuthScreen() {
             showPricingSheet={showPricingSheet}
             userEmail={user?.email || ''}
             onClosePricingSheet={() => setShowPricingSheet(false)}
+            isGenerating={isBusy}
+            generationError={generationError}
+            onRetryGeneration={handleRetryGeneration}
           />
         )}
 

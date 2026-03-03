@@ -59,6 +59,10 @@ SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=
 PAYSTACK_SECRET_KEY=
 
+# AI generation via local Ollama
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen2.5:3b
+
 # Optional (fallbacks to service role key if unset)
 TRIAL_CLAIMS_SALT=
 ```
