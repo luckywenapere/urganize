@@ -260,7 +260,7 @@ export function FeedbackSubmitStep({
 
       {!canSubmitFeedback && (
         <p className="mt-4 text-xs text-content-secondary">
-          Tap Submit.. and we will show exactly what is missing.
+          Tap Submit review & generate next step and we will show exactly what is missing.
         </p>
       )}
 
@@ -271,7 +271,7 @@ export function FeedbackSubmitStep({
           onClick={onSubmit}
           className="rounded-xl border border-brand/35 bg-brand-muted px-6 py-3 text-base font-semibold text-content-primary transition hover:bg-brand/20 disabled:opacity-40"
         >
-          Submit..
+          Submit review & generate next step
         </button>
         <button
           type="button"

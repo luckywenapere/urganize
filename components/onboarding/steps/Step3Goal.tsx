@@ -1,6 +1,7 @@
 'use client';
 
 type Step3GoalProps = {
+  heading?: string;
   goalText: string;
   goalRemainingChars: number;
   canContinueGoal: boolean;
@@ -10,6 +11,7 @@ type Step3GoalProps = {
 };
 
 export function Step3Goal({
+  heading,
   goalText,
   goalRemainingChars,
   canContinueGoal,
@@ -19,7 +21,7 @@ export function Step3Goal({
 }: Step3GoalProps) {
   return (
     <>
-      <h1 className="mt-[18vh] text-[clamp(2.4rem,5.6vw,4.4rem)] tracking-tight">What do you want to achieve?</h1>
+      <h1 className="mt-[18vh] text-[clamp(2.4rem,5.6vw,4.4rem)] tracking-tight">{heading || 'What do you want to achieve?'}</h1>
       <textarea
         className="mt-10 min-h-[230px] w-full rounded-lg border border-stroke-subtle bg-bg-surface p-4 text-xl text-content-primary outline-none placeholder:text-content-quaternary"
         value={goalText}

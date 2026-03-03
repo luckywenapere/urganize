@@ -109,7 +109,7 @@ const MIN_GOAL_CHARS = 20;
 const MIN_BUDGET = 100;
 const MAX_BUDGET = 100000000;
 const DEFAULT_PLAN_DURATION_DAYS = 30;
-const MIN_FEEDBACK_CHARS = 20;
+const MIN_FEEDBACK_CHARS = 1;
 const CREATE_PLAN_DRAFT_TTL_MS = 10 * 60 * 1000;
 
 const formatDateInput = (value: Date): string => {
@@ -141,6 +141,13 @@ const isSongStageConstraintError = (error: unknown): boolean => {
 
 const MIN_GENERATION_MS = 7000;
 const PRICING_SHEET_MS = 2500;
+const NEXT_CYCLE_TRANSITION_MS = 1800;
+const CYCLE_TIMELINE = [
+  { step: 3, label: 'Objective', description: 'Define the exact outcome for this cycle in one clear statement.' },
+  { step: 4, label: 'Context', description: 'Set audience, budget, and timing constraints that shape the plan.' },
+  { step: 5, label: 'Current Steps', description: 'List what already exists so the next task builds on real progress.' },
+  { step: 6, label: 'AI Task', description: 'Generate one focused manager-style task with measurable outcome.' },
+] as const;
 
 const Step0Intro = dynamic(() => import('@/components/onboarding/steps/Step0Intro').then((mod) => mod.Step0Intro), {
   ssr: false,
@@ -224,6 +231,9 @@ export function PostAuthScreen() {
   const [error, setError] = useState('');
   const [generationError, setGenerationError] = useState('');
   const [generationAttemptKey, setGenerationAttemptKey] = useState(0);
+  const [isCycleTransitioning, setIsCycleTransitioning] = useState(false);
+  const [cycleNumber, setCycleNumber] = useState(1);
+  const [activeTimelineStep, setActiveTimelineStep] = useState<number | null>(null);
   const [hasSubscriptionAccess, setHasSubscriptionAccess] = useState(true);
 
   const [releaseId, setReleaseId] = useState<string | null>(null);
@@ -259,6 +269,7 @@ export function PostAuthScreen() {
   const feedbackDraftLoadedRef = useRef<string>('');
   const onboardingDraftLoadedRef = useRef<string>('');
   const bootstrappedTargetRef = useRef<string>('');
+  const nextCycleClearedRef = useRef<string>('');
   const artistDefaultsKey = useMemo(() => (user?.id ? `urganize.artistDefaults.${user.id}` : ''), [user?.id]);
   const hasArtistDefaults = Boolean(artistName.trim() && genre.trim() && primaryPlatform.trim());
 
@@ -276,11 +287,34 @@ export function PostAuthScreen() {
 
   const resetError = () => setError('');
   const isCreatePlanFlow = flow === 'create-plan' && !requestedPlanId;
+  const isNextCycleFlow = flow === 'next-cycle';
   const isPlanSetupFlow =
     flow === 'create-plan' ||
     flow === 'resume-plan' ||
+    flow === 'next-cycle' ||
     requestedStartStep >= 2 ||
     Boolean(requestedPlanId);
+
+  const resetCycleInputs = useCallback(() => {
+    setGoalText('');
+    setAudienceSize('');
+    setListenerPlatforms([]);
+    setPlatformInput('');
+    setBudget('');
+    setTimeline('');
+    setDeadlineDate('');
+    setStepsText('');
+  }, []);
+
+  const refreshCycleNumber = useCallback(async (activeReleaseId: string) => {
+    const { count, error: countError } = await supabase
+      .from('ai_tasks')
+      .select('id', { head: true, count: 'exact' })
+      .eq('release_id', activeReleaseId)
+      .eq('status', 'completed');
+    if (countError) throw countError;
+    setCycleNumber((count || 0) + 1);
+  }, []);
 
   useEffect(() => {
     if (!feedbackDraftKey) {
@@ -350,6 +384,10 @@ export function PostAuthScreen() {
     }
     if (onboardingDraftLoadedRef.current === onboardingDraftKey) return;
     onboardingDraftLoadedRef.current = onboardingDraftKey;
+    if (isNextCycleFlow) {
+      localStorage.removeItem(onboardingDraftKey);
+      return;
+    }
 
     const rawDraft = localStorage.getItem(onboardingDraftKey);
     if (!rawDraft) return;
@@ -403,6 +441,7 @@ export function PostAuthScreen() {
     stepsText,
     timeline,
     isCreatePlanFlow,
+    isNextCycleFlow,
   ]);
 
   const hasStartedOnboardingInput =
@@ -792,9 +831,12 @@ export function PostAuthScreen() {
         }
 
         const shouldSkipAutoCreate = flow === 'create-plan' && !requestedPlanId;
+        let activeReleaseIdForCycle: string | null = null;
         if (!shouldSkipAutoCreate) {
           const activeReleaseId = await ensureOnboardingRelease();
+          activeReleaseIdForCycle = activeReleaseId;
           await loadCurrentTask(activeReleaseId);
+          await refreshCycleNumber(activeReleaseId);
         }
 
         const { data: artistProfile } = await supabase
@@ -827,7 +869,28 @@ export function PostAuthScreen() {
           );
         }
 
-        if (requestedStartStep >= 2) {
+        if (isNextCycleFlow && activeReleaseIdForCycle && nextCycleClearedRef.current !== activeReleaseIdForCycle) {
+          nextCycleClearedRef.current = activeReleaseIdForCycle;
+          resetCycleInputs();
+          setTaskId(null);
+          setTaskTitle('Single task');
+          setTaskOutcome('Expected outcome');
+          if (user?.id) {
+            localStorage.removeItem(`urganize.onboardingDraft.${user.id}.${activeReleaseIdForCycle}`);
+          }
+          try {
+            await supabase
+              .from('release_profiles')
+              .update({
+                setup_step: 3,
+                setup_completed: false,
+              })
+              .eq('release_id', activeReleaseIdForCycle);
+          } catch {
+            // Non-fatal; UI still proceeds with cycle reset.
+          }
+          setStep(3);
+        } else if (requestedStartStep >= 2) {
           setStep((current) => Math.max(current, canSkipArtistStep ? 3 : 2));
         }
       } catch (err: any) {
@@ -838,7 +901,20 @@ export function PostAuthScreen() {
     };
 
     bootstrap();
-  }, [artistDefaultsKey, bootstrapTargetKey, ensureOnboardingRelease, flow, isPlanSetupFlow, loadCurrentTask, requestedPlanId, requestedStartStep, user]);
+  }, [
+    artistDefaultsKey,
+    bootstrapTargetKey,
+    ensureOnboardingRelease,
+    flow,
+    isNextCycleFlow,
+    isPlanSetupFlow,
+    loadCurrentTask,
+    refreshCycleNumber,
+    requestedPlanId,
+    requestedStartStep,
+    resetCycleInputs,
+    user,
+  ]);
 
   const upsertArtistProfile = useCallback(async () => {
     if (!user) throw new Error('User not found');
@@ -1302,6 +1378,12 @@ export function PostAuthScreen() {
     setGenerationError('');
   }, [generationError, step]);
 
+  useEffect(() => {
+    if (step < 3 || step > 6) {
+      setActiveTimelineStep(null);
+    }
+  }, [step]);
+
   const handleMarkStarted = async () => {
     if (!taskId) return;
     setIsBusy(true);
@@ -1410,7 +1492,7 @@ export function PostAuthScreen() {
       setError(`Tell us what happened in at least ${MIN_FEEDBACK_CHARS} characters.`);
       return;
     }
-    if (resultsMode === 'tracked' && results.length < 3) {
+    if (resultsMode === 'tracked' && results.length < 1) {
       setError('Add at least one measurable result, or choose "Not tracked".');
       return;
     }
@@ -1468,9 +1550,8 @@ export function PostAuthScreen() {
       const { error: profileCompletionError } = await supabase
         .from('release_profiles')
         .update({
-          setup_step: 13,
-          setup_completed: true,
-          setup_completed_at: new Date().toISOString(),
+          setup_step: 3,
+          setup_completed: false,
         })
         .eq('release_id', releaseId);
       if (profileCompletionError) throw profileCompletionError;
@@ -1487,13 +1568,23 @@ export function PostAuthScreen() {
       if (onboardingDraftKey) {
         localStorage.removeItem(onboardingDraftKey);
       }
+      if (user?.id) {
+        localStorage.removeItem(`urganize.onboardingDraft.${user.id}.${releaseId}`);
+      }
 
-      setNeedsOnboarding(false);
-      router.push(`/dashboard/plans/${releaseId}/next-step`);
+      resetCycleInputs();
+      setTaskId(null);
+      setTaskTitle('Single task');
+      setTaskOutcome('Expected outcome');
+      setNeedsOnboarding(true);
+      setIsCycleTransitioning(true);
+      await new Promise((resolve) => setTimeout(resolve, NEXT_CYCLE_TRANSITION_MS));
+      router.push(`/dashboard?startOnboarding=3&planId=${releaseId}&flow=next-cycle`);
     } catch (err: any) {
       setError(err?.message || 'Failed to submit feedback');
     } finally {
       setIsBusy(false);
+      setIsCycleTransitioning(false);
     }
   };
 
@@ -1543,7 +1634,7 @@ export function PostAuthScreen() {
     whatYouTried.trim().length >= MIN_FEEDBACK_CHARS &&
     whatHappened.trim().length >= MIN_FEEDBACK_CHARS &&
     blockersNext.trim().length >= MIN_FEEDBACK_CHARS &&
-    (resultsMode === 'not-tracked' || resultsMetrics.trim().length >= 3);
+    (resultsMode === 'not-tracked' || resultsMetrics.trim().length >= 1);
   const proofSelectionReady =
     selectedProof === 'none' ||
     (selectedProof === 'link' && proofLink.trim().length > 0) ||
@@ -1563,6 +1654,7 @@ export function PostAuthScreen() {
     if (!lastDraftSavedAt) return '';
     return new Date(lastDraftSavedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }, [lastDraftSavedAt]);
+  const showCycleTimeline = step >= 3 && step <= 6;
 
   if (isBootstrapping) {
     return (
@@ -1584,6 +1676,20 @@ export function PostAuthScreen() {
     );
   }
 
+  if (isCycleTransitioning) {
+    return (
+      <main className={shellClass}>
+        <div className="mx-auto flex min-h-screen w-full max-w-[760px] flex-col items-center justify-center px-6 text-center">
+          <p className="text-[clamp(2rem,4.8vw,3.4rem)] tracking-tight text-content-primary">Review saved.</p>
+          <p className="mt-3 text-lg text-content-secondary">Building your next cycle...</p>
+          <div className="mt-8 h-2 w-full max-w-[420px] overflow-hidden rounded-full bg-bg-elevated">
+            <div className="h-full w-2/3 animate-pulse rounded-full bg-brand" />
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className={shellClass}>
       <div className="mx-auto flex min-h-screen w-full max-w-[980px] flex-col px-6 py-12 sm:px-12">
@@ -1595,6 +1701,53 @@ export function PostAuthScreen() {
           >
             {isPlanSetupFlow ? 'Back to Dashboard' : '...Back'}
           </button>
+        )}
+
+        {showCycleTimeline && (
+          <section className="mt-6 rounded-xl border border-stroke-default bg-bg-surface px-4 py-4 sm:px-5">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-xs uppercase tracking-wide text-content-tertiary">Execution Cycle</p>
+              <span className="rounded-full border border-brand/35 bg-brand-muted px-2.5 py-1 text-xs font-medium text-brand">
+                Cycle {cycleNumber}
+              </span>
+            </div>
+            <div className="relative">
+              <div className="absolute left-0 right-0 top-[17px] h-px bg-stroke-default" />
+              <div className="relative grid grid-cols-4 gap-2">
+                {CYCLE_TIMELINE.map((item) => {
+                  const isDone = step > item.step;
+                  const isCurrent = step === item.step;
+                  const isActive = activeTimelineStep === item.step;
+                  return (
+                    <button
+                      key={item.step}
+                      type="button"
+                      onClick={() => setActiveTimelineStep((current) => (current === item.step ? null : item.step))}
+                      onMouseEnter={() => setActiveTimelineStep(item.step)}
+                      onMouseLeave={() => setActiveTimelineStep((current) => (current === item.step ? null : current))}
+                      onFocus={() => setActiveTimelineStep(item.step)}
+                      onBlur={() => setActiveTimelineStep((current) => (current === item.step ? null : current))}
+                      className="group relative flex flex-col items-center text-center"
+                    >
+                      <span
+                        className={`relative z-10 h-[14px] w-[14px] rounded-full border ${
+                          isCurrent || isDone ? 'border-brand bg-brand' : 'border-stroke-subtle bg-bg-surface'
+                        }`}
+                      />
+                      <span className={`mt-3 text-xs sm:text-sm ${isCurrent ? 'text-content-primary' : 'text-content-secondary'}`}>{item.label}</span>
+                      <span
+                        className={`pointer-events-none absolute left-1/2 top-[64px] z-30 w-52 -translate-x-1/2 rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2 text-left text-xs text-content-secondary shadow-lg transition ${
+                          isActive ? 'opacity-100' : 'opacity-0 md:group-hover:opacity-100'
+                        }`}
+                      >
+                        {item.description}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
         )}
 
         {step === 0 && <Step0Intro onContinue={() => setStep(1)} />}
@@ -1626,6 +1779,7 @@ export function PostAuthScreen() {
 
         {step === 3 && (
           <Step3Goal
+            heading={isNextCycleFlow ? 'Set your next objective' : undefined}
             goalText={goalText}
             goalRemainingChars={goalRemainingChars}
             canContinueGoal={canContinueGoal}
