@@ -7,11 +7,22 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
+import { WorkspaceSection, type WorkspaceTab } from '@/components/dashboard/workspace/WorkspaceSection';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ONBOARDING_TOTAL_STEPS = 13;
 const DEFAULT_PLAN_DURATION_DAYS = 30;
 const PLAN_CACHE_TTL_MS = 5 * 60 * 1000;
+const ASSET_CATEGORIES = ['cover_art', 'audio', 'promo_image', 'video', 'document'] as const;
+const DEFAULT_DISTRIBUTION_CHECKLIST = [
+  { id: 'metadata_complete', label: 'Metadata complete', done: false },
+  { id: 'isrc_assigned', label: 'ISRC assigned', done: false },
+  { id: 'upc_assigned', label: 'UPC assigned', done: false },
+  { id: 'cover_art_approved', label: 'Cover art approved', done: false },
+  { id: 'audio_approved', label: 'Audio approved', done: false },
+  { id: 'submission_complete', label: 'Distributor submission complete', done: false },
+  { id: 'links_received', label: 'Platform links received', done: false },
+] as const;
 
 type PlanRow = {
   id: string;
@@ -26,6 +37,62 @@ type PlanProfile = {
   setup_completed: boolean | null;
   hard_deadline: string | null;
   deadline_reason: string | null;
+};
+
+type TaskBoardItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: 'current' | 'pending' | 'completed';
+  order_index: number | null;
+};
+
+type CustomTaskItem = {
+  id: string;
+  title: string;
+  description: string;
+  status: 'current' | 'pending' | 'completed';
+  priority: 'low' | 'medium' | 'high';
+  dueDate: string;
+  tagScope: 'release' | 'artist';
+  tagLabel: string;
+};
+
+type MarketingCalendarItem = {
+  id: string;
+  platform: string;
+  contentType: string;
+  captionIdea: string;
+  publishDate: string;
+  owner: string;
+};
+
+type PlaylistTrackerItem = {
+  id: string;
+  curator: string;
+  platform: string;
+  submissionDate: string;
+  status: 'Not Submitted' | 'Submitted' | 'Accepted' | 'Rejected';
+  notes: string;
+};
+
+type DistributionChecklistItem = {
+  id: string;
+  label: string;
+  done: boolean;
+};
+
+type AssetCategory = (typeof ASSET_CATEGORIES)[number];
+
+type AssetItem = {
+  id: string;
+  name: string;
+  category: AssetCategory;
+  ownerScope: 'release' | 'artist';
+  url: string;
+  path: string;
+  size: number;
+  createdAt: string;
 };
 
 type CachedPlanPayload = {
@@ -44,6 +111,29 @@ const addDaysIso = (base: string | Date, days: number): string => {
 };
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
+const sanitizeFileName = (value: string): string => value.replace(/[^a-zA-Z0-9._-]/g, '_');
+const prettyAssetCategory = (category: AssetCategory): string => category.replace(/_/g, ' ');
+const normalizeCustomTasks = (value: unknown): CustomTaskItem[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => {
+      const item = entry as Partial<CustomTaskItem>;
+      const status = item.status === 'current' || item.status === 'completed' ? item.status : 'pending';
+      const priority = item.priority === 'high' || item.priority === 'low' ? item.priority : 'medium';
+      const tagScope = item.tagScope === 'artist' ? 'artist' : 'release';
+      return {
+        id: String(item.id || '').trim(),
+        title: String(item.title || '').trim(),
+        description: String(item.description || '').trim(),
+        status,
+        priority,
+        dueDate: String(item.dueDate || '').trim(),
+        tagScope,
+        tagLabel: String(item.tagLabel || '').trim(),
+      } as CustomTaskItem;
+    })
+    .filter((item) => item.id && item.title);
+};
 
 export default function PlanDashboardPage() {
   const router = useRouter();
@@ -69,8 +159,55 @@ export default function PlanDashboardPage() {
   const [draftArtistName, setDraftArtistName] = useState('');
   const [draftDeadline, setDraftDeadline] = useState('');
   const [hasSubscriptionAccess, setHasSubscriptionAccess] = useState<boolean | null>(null);
+  const [taskBoardItems, setTaskBoardItems] = useState<TaskBoardItem[]>([]);
+  const [customTaskItems, setCustomTaskItems] = useState<CustomTaskItem[]>([]);
+  const [marketingItems, setMarketingItems] = useState<MarketingCalendarItem[]>([]);
+  const [playlistItems, setPlaylistItems] = useState<PlaylistTrackerItem[]>([]);
+  const [distributionItems, setDistributionItems] = useState<DistributionChecklistItem[]>(
+    DEFAULT_DISTRIBUTION_CHECKLIST.map((item) => ({ ...item }))
+  );
+  const [newMarketing, setNewMarketing] = useState({
+    platform: '',
+    contentType: '',
+    captionIdea: '',
+    publishDate: '',
+    owner: '',
+  });
+  const [newPlaylist, setNewPlaylist] = useState({
+    curator: '',
+    platform: '',
+    submissionDate: '',
+    notes: '',
+  });
+  const [newCustomTask, setNewCustomTask] = useState<{
+    title: string;
+    description: string;
+    priority: 'low' | 'medium' | 'high';
+    dueDate: string;
+    tagScope: 'release' | 'artist';
+  }>({
+    title: '',
+    description: '',
+    priority: 'medium',
+    dueDate: '',
+    tagScope: 'release',
+  });
+  const [assets, setAssets] = useState<AssetItem[]>([]);
+  const [assetCategory, setAssetCategory] = useState<AssetCategory>('cover_art');
+  const [assetOwnerScope, setAssetOwnerScope] = useState<'release' | 'artist'>('release');
+  const [assetFile, setAssetFile] = useState<File | null>(null);
+  const [isUploadingAsset, setIsUploadingAsset] = useState(false);
+  const [isLoadingAssets, setIsLoadingAssets] = useState(false);
+  const [workspaceSyncMode, setWorkspaceSyncMode] = useState<'loading' | 'database' | 'local'>('loading');
+  const [workspaceSyncMessage, setWorkspaceSyncMessage] = useState('');
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<WorkspaceTab>('overview');
+  const assetFileInputRef = useRef<HTMLInputElement | null>(null);
   const planMenuRef = useRef<HTMLDivElement | null>(null);
+  const workspaceHydratedRef = useRef(false);
+  const workspaceSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cacheKey = user && planId ? `urganize.planDashboard.${user.id}.${planId}` : '';
+  const workspaceStoragePrefix = user && planId ? `urganize.workspace.${user.id}.${planId}` : '';
+  const taskBoardFilterStorageKey = workspaceStoragePrefix ? `${workspaceStoragePrefix}.taskBoardFilter` : '';
 
   useEffect(() => {
     let cancelled = false;
@@ -183,7 +320,12 @@ export default function PlanDashboardPage() {
           resolvedProfile = latestProfile;
         }
 
-        const [{ count: totalCount, error: totalError }, { count: doneCount, error: doneError }, { data: activeTask, error: taskError }] = await Promise.all([
+        const [
+          { count: totalCount, error: totalError },
+          { count: doneCount, error: doneError },
+          { data: activeTask, error: taskError },
+          { data: taskRows, error: boardError },
+        ] = await Promise.all([
           supabase.from('ai_tasks').select('id', { count: 'exact', head: true }).eq('release_id', release.id),
           supabase.from('ai_tasks').select('id', { count: 'exact', head: true }).eq('release_id', release.id).eq('status', 'completed'),
           supabase
@@ -194,11 +336,18 @@ export default function PlanDashboardPage() {
             .order('order_index', { ascending: true })
             .limit(1)
             .maybeSingle(),
+          supabase
+            .from('ai_tasks')
+            .select('id,title,description,status,order_index')
+            .eq('release_id', release.id)
+            .order('order_index', { ascending: true })
+            .limit(12),
         ]);
 
         if (totalError) throw totalError;
         if (doneError) throw doneError;
         if (taskError) throw taskError;
+        if (boardError) throw boardError;
 
         if (!cancelled) {
           setError('');
@@ -210,6 +359,7 @@ export default function PlanDashboardPage() {
           setDraftTitle(release.title || '');
           setDraftArtistName(release.artist_name || '');
           setDraftDeadline((resolvedProfile.hard_deadline || '').slice(0, 10));
+          setTaskBoardItems((taskRows || []) as TaskBoardItem[]);
 
           if (cacheKey) {
             const cachePayload: CachedPlanPayload = {
@@ -240,6 +390,146 @@ export default function PlanDashboardPage() {
       cancelled = true;
     };
   }, [authLoading, cacheKey, planId, router, user]);
+
+  useEffect(() => {
+    workspaceHydratedRef.current = false;
+    setWorkspaceSyncMode('loading');
+    setWorkspaceSyncMessage('');
+  }, [workspaceStoragePrefix]);
+
+  useEffect(() => {
+    if (!workspaceStoragePrefix) return;
+
+    const readJson = <T,>(suffix: string): T | null => {
+      const raw = localStorage.getItem(`${workspaceStoragePrefix}.${suffix}`);
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw) as T;
+      } catch {
+        return null;
+      }
+    };
+
+    const savedMarketing = readJson<MarketingCalendarItem[]>('marketing');
+    const savedPlaylist = readJson<PlaylistTrackerItem[]>('playlist');
+    const savedDistribution = readJson<DistributionChecklistItem[]>('distribution');
+    const savedCustomTasks = readJson<CustomTaskItem[]>('customTasks');
+
+    setMarketingItems(Array.isArray(savedMarketing) ? savedMarketing : []);
+    setPlaylistItems(Array.isArray(savedPlaylist) ? savedPlaylist : []);
+    setDistributionItems(
+      Array.isArray(savedDistribution) && savedDistribution.length > 0
+        ? savedDistribution
+        : DEFAULT_DISTRIBUTION_CHECKLIST.map((item) => ({ ...item }))
+    );
+    setCustomTaskItems(normalizeCustomTasks(savedCustomTasks));
+    workspaceHydratedRef.current = true;
+    setWorkspaceSyncMode((current) => (current === 'loading' ? 'local' : current));
+  }, [workspaceStoragePrefix]);
+
+  useEffect(() => {
+    if (!workspaceStoragePrefix) return;
+    localStorage.setItem(`${workspaceStoragePrefix}.marketing`, JSON.stringify(marketingItems));
+  }, [marketingItems, workspaceStoragePrefix]);
+
+  useEffect(() => {
+    if (!workspaceStoragePrefix) return;
+    localStorage.setItem(`${workspaceStoragePrefix}.playlist`, JSON.stringify(playlistItems));
+  }, [playlistItems, workspaceStoragePrefix]);
+
+  useEffect(() => {
+    if (!workspaceStoragePrefix) return;
+    localStorage.setItem(`${workspaceStoragePrefix}.distribution`, JSON.stringify(distributionItems));
+  }, [distributionItems, workspaceStoragePrefix]);
+
+  useEffect(() => {
+    if (!workspaceStoragePrefix) return;
+    localStorage.setItem(`${workspaceStoragePrefix}.customTasks`, JSON.stringify(customTaskItems));
+  }, [customTaskItems, workspaceStoragePrefix]);
+
+  useEffect(() => {
+    if (!user?.id || !planId || hasSubscriptionAccess !== true) return;
+    loadAssets();
+    // loadAssets is recreated each render and intentionally not included
+    // to avoid reruns while typing in unrelated fields.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, planId, hasSubscriptionAccess]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id || !planId || hasSubscriptionAccess !== true) return;
+
+    const run = async () => {
+      try {
+        await loadWorkspaceFromApi();
+      } catch (workspaceError: any) {
+        if (cancelled) return;
+        setWorkspaceSyncMode('local');
+        setWorkspaceSyncMessage(workspaceError?.message || 'Workspace sync is unavailable. Using local drafts.');
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+    // loadWorkspaceFromApi is recreated each render and intentionally not included
+    // to avoid retriggering while editing local state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, planId, hasSubscriptionAccess]);
+
+  useEffect(() => {
+    if (!workspaceHydratedRef.current) return;
+    if (!user?.id || !planId) return;
+    if (workspaceSyncMode === 'local') return;
+
+    if (workspaceSyncTimerRef.current) {
+      clearTimeout(workspaceSyncTimerRef.current);
+    }
+
+    workspaceSyncTimerRef.current = setTimeout(async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token || '';
+        if (!token) return;
+
+        const response = await fetch(`/api/plans/${planId}/workspace`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            marketingItems,
+            playlistItems,
+            distributionItems,
+          }),
+        });
+
+        if (response.status === 501) {
+          setWorkspaceSyncMode('local');
+          setWorkspaceSyncMessage('Workspace table is not configured yet. Using local workspace drafts.');
+          return;
+        }
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload?.error || 'Could not save workspace');
+        }
+        setWorkspaceSyncMode('database');
+      } catch (workspaceSaveError: any) {
+        setWorkspaceSyncMessage(workspaceSaveError?.message || 'Could not sync workspace right now.');
+      }
+    }, 700);
+
+    return () => {
+      if (workspaceSyncTimerRef.current) {
+        clearTimeout(workspaceSyncTimerRef.current);
+      }
+    };
+  }, [distributionItems, marketingItems, planId, playlistItems, user?.id, workspaceSyncMode]);
 
   const timelineMetrics = useMemo(() => {
     const now = Date.now();
@@ -315,6 +605,98 @@ export default function PlanDashboardPage() {
           ? 'You are falling behind the timeline. Complete the next action today.'
           : 'You are on track. Keep shipping tasks at this pace.';
 
+  const getAccessToken = async (): Promise<string> => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    return session?.access_token || '';
+  };
+
+  const loadWorkspaceFromApi = async () => {
+    if (!planId) return;
+
+    const token = await getAccessToken();
+    if (!token) return;
+
+    const response = await fetch(`/api/plans/${planId}/workspace`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 501) {
+      setWorkspaceSyncMode('local');
+      setWorkspaceSyncMessage('Workspace table is not configured yet. Using local workspace drafts.');
+      workspaceHydratedRef.current = true;
+      return;
+    }
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload?.error || 'Could not load workspace data');
+    }
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      workspace?: {
+        marketingItems?: MarketingCalendarItem[];
+        playlistItems?: PlaylistTrackerItem[];
+        distributionItems?: DistributionChecklistItem[];
+      };
+    };
+
+    const workspace = payload.workspace || {};
+    setMarketingItems(Array.isArray(workspace.marketingItems) ? workspace.marketingItems : []);
+    setPlaylistItems(Array.isArray(workspace.playlistItems) ? workspace.playlistItems : []);
+    setDistributionItems(
+      Array.isArray(workspace.distributionItems) && workspace.distributionItems.length > 0
+        ? workspace.distributionItems
+        : DEFAULT_DISTRIBUTION_CHECKLIST.map((item) => ({ ...item }))
+    );
+    setWorkspaceSyncMode('database');
+    setWorkspaceSyncMessage('');
+    workspaceHydratedRef.current = true;
+  };
+
+  const loadAssets = async () => {
+    if (!user?.id || !planId || hasSubscriptionAccess === false) return;
+    setIsLoadingAssets(true);
+    try {
+      const listResults = await Promise.all(
+        ASSET_CATEGORIES.map(async (category) => {
+          const basePath = `${user.id}/${planId}/assets/${category}`;
+          const { data, error: listError } = await supabase.storage.from('proofs').list(basePath, {
+            limit: 100,
+            sortBy: { column: 'created_at', order: 'desc' },
+          });
+          if (listError) throw listError;
+
+          return (data || [])
+            .filter((file) => file.name)
+            .map((file) => {
+              const path = `${basePath}/${file.name}`;
+              const { data: urlData } = supabase.storage.from('proofs').getPublicUrl(path);
+              const ownerScope = String(file.metadata?.owner_scope || 'release') === 'artist' ? 'artist' : 'release';
+              return {
+                id: path,
+                name: file.name,
+                category,
+                ownerScope,
+                url: urlData.publicUrl || '',
+                path,
+                size: Number(file.metadata?.size || 0),
+                createdAt: String(file.created_at || file.updated_at || ''),
+              } as AssetItem;
+            });
+        })
+      );
+      setAssets(listResults.flat().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)));
+    } catch (assetLoadError: any) {
+      setError(assetLoadError?.message || 'Could not load assets.');
+    } finally {
+      setIsLoadingAssets(false);
+    }
+  };
+
   const savePlanBasics = async () => {
     if (!planId) return;
     const title = draftTitle.trim();
@@ -362,6 +744,125 @@ export default function PlanDashboardPage() {
     } finally {
       setIsSavingBasics(false);
     }
+  };
+
+  const addMarketingItem = () => {
+    if (!newMarketing.platform.trim() || !newMarketing.contentType.trim() || !newMarketing.publishDate.trim()) {
+      setError('Marketing item requires platform, content type, and publish date.');
+      return;
+    }
+    setError('');
+    setMarketingItems((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        platform: newMarketing.platform.trim(),
+        contentType: newMarketing.contentType.trim(),
+        captionIdea: newMarketing.captionIdea.trim(),
+        publishDate: newMarketing.publishDate.trim(),
+        owner: newMarketing.owner.trim(),
+      },
+    ]);
+    setNewMarketing({ platform: '', contentType: '', captionIdea: '', publishDate: '', owner: '' });
+  };
+
+  const addPlaylistItem = () => {
+    if (!newPlaylist.curator.trim() || !newPlaylist.platform.trim()) {
+      setError('Playlist item requires curator and platform.');
+      return;
+    }
+    setError('');
+    setPlaylistItems((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        curator: newPlaylist.curator.trim(),
+        platform: newPlaylist.platform.trim(),
+        submissionDate: newPlaylist.submissionDate.trim(),
+        status: 'Not Submitted',
+        notes: newPlaylist.notes.trim(),
+      },
+    ]);
+    setNewPlaylist({ curator: '', platform: '', submissionDate: '', notes: '' });
+  };
+
+  const addCustomTaskItem = () => {
+    const title = newCustomTask.title.trim();
+    if (!title) {
+      setError('Custom task requires a title.');
+      return;
+    }
+    const tagScope = newCustomTask.tagScope;
+    const tagLabel =
+      tagScope === 'release' ? (plan?.title || 'Untitled release').trim() : (plan?.artist_name || 'Unknown artist').trim();
+    setError('');
+    setCustomTaskItems((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        title,
+        description: newCustomTask.description.trim(),
+        status: 'pending',
+        priority: newCustomTask.priority,
+        dueDate: newCustomTask.dueDate.trim(),
+        tagScope,
+        tagLabel: tagLabel || (tagScope === 'release' ? 'Untitled release' : 'Unknown artist'),
+      },
+    ]);
+    setNewCustomTask({ title: '', description: '', priority: 'medium', dueDate: '', tagScope });
+  };
+
+  const uploadAsset = async () => {
+    if (!user?.id || !planId) return;
+    if (!assetFile) {
+      setError('Select a file before uploading.');
+      return;
+    }
+
+    setError('');
+    setIsUploadingAsset(true);
+    try {
+      const safeName = sanitizeFileName(assetFile.name || `${Date.now()}.bin`);
+      const path = `${user.id}/${planId}/assets/${assetCategory}/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage.from('proofs').upload(path, assetFile, {
+        cacheControl: '3600',
+        metadata: { owner_scope: assetOwnerScope },
+      });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('proofs').getPublicUrl(path);
+      setAssets((current) => [
+        {
+          id: path,
+          name: assetFile.name,
+          category: assetCategory,
+          ownerScope: assetOwnerScope,
+          url: urlData.publicUrl || '',
+          path,
+          size: assetFile.size || 0,
+          createdAt: new Date().toISOString(),
+        },
+        ...current,
+      ]);
+      setAssetFile(null);
+      if (assetFileInputRef.current) {
+        assetFileInputRef.current.value = '';
+      }
+    } catch (uploadAssetError: any) {
+      setError(uploadAssetError?.message || 'Could not upload asset.');
+    } finally {
+      setIsUploadingAsset(false);
+    }
+  };
+
+  const deleteAsset = async (path: string) => {
+    setError('');
+    const { error: removeError } = await supabase.storage.from('proofs').remove([path]);
+    if (removeError) {
+      setError(removeError.message || 'Could not delete asset.');
+      return;
+    }
+    setAssets((current) => current.filter((item) => item.path !== path));
   };
 
   const requestDeletePlan = () => {
@@ -616,6 +1117,97 @@ export default function PlanDashboardPage() {
               </div>
             </section>
 
+            <WorkspaceSection
+              workspaceSyncMode={workspaceSyncMode}
+              workspaceSyncMessage={workspaceSyncMessage}
+              activeWorkspaceTab={activeWorkspaceTab}
+              onTabChange={setActiveWorkspaceTab}
+              taskBoardFilterStorageKey={taskBoardFilterStorageKey}
+              taskBoardItems={taskBoardItems}
+              customTaskItems={customTaskItems}
+              newCustomTask={newCustomTask}
+              releaseTagLabel={plan?.title || 'Untitled release'}
+              artistTagLabel={plan?.artist_name || 'Unknown artist'}
+              onNewCustomTaskChange={(field, value) =>
+                setNewCustomTask((current) => ({
+                  ...current,
+                  [field]:
+                    field === 'tagScope'
+                      ? ((value === 'artist' ? 'artist' : 'release') as 'release' | 'artist')
+                      : field === 'priority'
+                        ? ((value === 'high' || value === 'low' ? value : 'medium') as 'low' | 'medium' | 'high')
+                      : value,
+                }))
+              }
+              onAddCustomTask={addCustomTaskItem}
+              onRemoveCustomTask={(id) =>
+                setCustomTaskItems((current) => current.filter((entry) => entry.id !== id))
+              }
+              onCustomTaskStatusChange={(id, status) =>
+                setCustomTaskItems((current) =>
+                  current.map((entry) => (entry.id === id ? { ...entry, status } : entry))
+                )
+              }
+              onUpdateCustomTask={(id, updates) =>
+                setCustomTaskItems((current) =>
+                  current.map((entry) => (entry.id === id ? { ...entry, ...updates } : entry))
+                )
+              }
+              onReorderCustomTask={(fromId, toId) =>
+                setCustomTaskItems((current) => {
+                  const fromIndex = current.findIndex((entry) => entry.id === fromId);
+                  const toIndex = current.findIndex((entry) => entry.id === toId);
+                  if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return current;
+                  const next = [...current];
+                  const [moved] = next.splice(fromIndex, 1);
+                  next.splice(toIndex, 0, moved);
+                  return next;
+                })
+              }
+              distributionItems={distributionItems}
+              onToggleDistributionItem={(id) =>
+                setDistributionItems((current) =>
+                  current.map((entry) => (entry.id === id ? { ...entry, done: !entry.done } : entry))
+                )
+              }
+              marketingItems={marketingItems}
+              newMarketing={newMarketing}
+              onNewMarketingChange={(field, value) =>
+                setNewMarketing((current) => ({ ...current, [field]: value }))
+              }
+              onAddMarketing={addMarketingItem}
+              onRemoveMarketing={(id) =>
+                setMarketingItems((current) => current.filter((entry) => entry.id !== id))
+              }
+              playlistItems={playlistItems}
+              newPlaylist={newPlaylist}
+              onNewPlaylistChange={(field, value) =>
+                setNewPlaylist((current) => ({ ...current, [field]: value }))
+              }
+              onAddPlaylist={addPlaylistItem}
+              onRemovePlaylist={(id) =>
+                setPlaylistItems((current) => current.filter((entry) => entry.id !== id))
+              }
+              onPlaylistStatusChange={(id, status) =>
+                setPlaylistItems((current) =>
+                  current.map((entry) => (entry.id === id ? { ...entry, status } : entry))
+                )
+              }
+              assets={assets}
+              isLoadingAssets={isLoadingAssets}
+              assetCategory={assetCategory}
+              assetCategoryOptions={ASSET_CATEGORIES}
+              onAssetCategoryChange={(value) => setAssetCategory(value as AssetCategory)}
+              assetOwnerScope={assetOwnerScope}
+              onAssetOwnerScopeChange={setAssetOwnerScope}
+              assetFileInputRef={assetFileInputRef}
+              onAssetFileSelect={setAssetFile}
+              onUploadAsset={uploadAsset}
+              isUploadingAsset={isUploadingAsset}
+              onDeleteAsset={deleteAsset}
+              prettyAssetCategory={(category) => prettyAssetCategory(category as AssetCategory)}
+            />
+
             {!profile?.setup_completed && (
               <div className="mt-8">
                 <button
@@ -626,7 +1218,7 @@ export default function PlanDashboardPage() {
                   }}
                   className="rounded-xl border border-brand/35 bg-brand-muted px-5 py-3 text-sm font-semibold text-content-primary transition hover:bg-brand/20"
                 >
-                  Resume Onboarding
+                  Start Task
                 </button>
               </div>
             )}

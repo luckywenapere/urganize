@@ -66,7 +66,7 @@ function PaymentCallbackContent() {
   }, [checkAuth, reference]);
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-stroke-subtle bg-bg-surface p-6 shadow-lg">
+    <div className="w-full max-w-md rounded-3xl border border-stroke-subtle bg-bg-surface/95 p-6 shadow-[0_12px_32px_rgba(0,0,0,0.18)] backdrop-blur-sm">
       {status === 'verifying' && (
         <div className="text-center">
           <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-content-primary border-t-transparent" />
@@ -153,10 +153,12 @@ function PaymentCallbackContent() {
 export default function PaymentCallbackPage() {
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto flex min-h-screen w-full max-w-[720px] items-center justify-center px-6 py-12">
+      <div className="relative mx-auto flex min-h-screen w-full max-w-[720px] items-center justify-center px-6 py-12">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-brand/15 blur-3xl" />
+        <div className="pointer-events-none absolute -left-20 bottom-0 h-60 w-60 rounded-full bg-status-info/12 blur-3xl" />
         <Suspense
           fallback={
-            <div className="w-full max-w-md rounded-2xl border border-stroke-subtle bg-bg-surface p-6 text-center">
+            <div className="w-full max-w-md rounded-3xl border border-stroke-subtle bg-bg-surface/95 p-6 text-center shadow-[0_12px_32px_rgba(0,0,0,0.18)] backdrop-blur-sm">
               <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-content-primary border-t-transparent" />
               <p className="text-content-secondary">Loading payment status...</p>
             </div>

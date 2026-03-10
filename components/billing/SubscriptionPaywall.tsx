@@ -104,15 +104,18 @@ export function SubscriptionPaywall({
 
   const postTrialAmount = billingMode === 'individual' ? individualPlanMeta.amount : groupPricing.amountDueNow;
 
-  const checkoutMetadata: Record<string, string | number | boolean> =
-    billingMode === 'individual'
-      ? {}
-      : buildGroupPaymentMetadata({
-          billingCycle: groupBillingCycle,
-          paymentMode: groupPaymentMode,
-          teamSize: groupPricing.teamSize,
-          seatsPaidNow: groupPricing.seatsPaidNow,
-        });
+  const checkoutMetadata = useMemo<Record<string, string | number | boolean>>(
+    () =>
+      billingMode === 'individual'
+        ? {}
+        : buildGroupPaymentMetadata({
+            billingCycle: groupBillingCycle,
+            paymentMode: groupPaymentMode,
+            teamSize: groupPricing.teamSize,
+            seatsPaidNow: groupPricing.seatsPaidNow,
+          }),
+    [billingMode, groupBillingCycle, groupPaymentMode, groupPricing.seatsPaidNow, groupPricing.teamSize]
+  );
 
   useEffect(() => {
     setPreparedCheckout(null);

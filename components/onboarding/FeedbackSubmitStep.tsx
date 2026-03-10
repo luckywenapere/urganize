@@ -62,11 +62,13 @@ export function FeedbackSubmitStep({
   onGoToDashboard,
 }: FeedbackSubmitStepProps) {
   return (
-    <div className="mx-auto mt-16 w-full max-w-[820px] rounded-2xl border border-stroke-default bg-bg-surface p-6 sm:p-8">
-      <div className="rounded-2xl border border-stroke-default bg-bg-elevated p-4 sm:p-5">
+    <div className="relative mx-auto mt-16 w-full max-w-[860px] rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl sm:p-8">
+      <div className="pointer-events-none absolute -left-12 -top-12 h-36 w-36 rounded-full bg-brand/10 blur-[90px]" />
+      <div className="pointer-events-none absolute -bottom-14 right-0 h-40 w-40 rounded-full bg-brand/8 blur-[95px]" />
+      <div className="relative rounded-2xl border border-stroke-default bg-bg-elevated/80 p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <p className="text-xs uppercase tracking-wide text-content-tertiary">Task recap</p>
+            <p className="text-[11px] uppercase tracking-[0.22em] text-content-tertiary">Task recap</p>
             <span className="rounded-full border border-brand/35 bg-brand-muted px-2 py-1 text-[11px] font-medium text-brand">
               Task complete
             </span>
@@ -84,11 +86,11 @@ export function FeedbackSubmitStep({
         <p className="mt-1 text-sm text-content-secondary">{taskOutcome}</p>
       </div>
 
-      <h1 className="mt-8 text-[clamp(2rem,4.5vw,3.2rem)] tracking-tight">Submit..</h1>
+      <h1 className="mt-8 text-[clamp(2rem,4.5vw,3.2rem)] tracking-tight">Submit review</h1>
       <p className="mt-2 text-sm text-content-secondary">
         Share what happened so the next task quality gets sharper. Proof is optional, but detailed feedback is required.
       </p>
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-stroke-default bg-bg-elevated px-3 py-2 text-xs text-content-secondary">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-stroke-default bg-bg-elevated/75 px-3 py-2 text-xs text-content-secondary">
         <span>Draft auto-saves on this device.</span>
         <span className={hasFeedbackDraftContent && draftSavedTimeLabel ? 'text-brand' : 'text-content-tertiary'}>
           {hasFeedbackDraftContent && draftSavedTimeLabel ? `Saved at ${draftSavedTimeLabel}` : 'Start typing to save'}
@@ -97,14 +99,14 @@ export function FeedbackSubmitStep({
 
       <div className="mt-8 space-y-6">
         <div>
-          <p className="mb-3 text-xs uppercase tracking-wide text-content-tertiary">Proof (Optional)</p>
+          <p className="mb-3 text-[11px] uppercase tracking-[0.22em] text-content-tertiary">Proof (Optional)</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => onSelectProof('none')}
-              className={`rounded-full border px-3 py-1 text-sm ${
+              className={`rounded-full border px-3 py-1 text-sm transition ${
                 selectedProof === 'none'
-                  ? 'border-brand/50 bg-brand-muted text-content-primary'
+                  ? 'border-brand/50 bg-brand-muted text-content-primary shadow-[0_8px_24px_-14px_rgba(255,200,120,0.65)]'
                   : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover'
               }`}
             >
@@ -113,9 +115,9 @@ export function FeedbackSubmitStep({
             <button
               type="button"
               onClick={() => onSelectProof('screenshot')}
-              className={`rounded-full border px-3 py-1 text-sm ${
+              className={`rounded-full border px-3 py-1 text-sm transition ${
                 selectedProof === 'screenshot'
-                  ? 'border-brand/50 bg-brand-muted text-content-primary'
+                  ? 'border-brand/50 bg-brand-muted text-content-primary shadow-[0_8px_24px_-14px_rgba(255,200,120,0.65)]'
                   : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover'
               }`}
             >
@@ -124,9 +126,9 @@ export function FeedbackSubmitStep({
             <button
               type="button"
               onClick={() => onSelectProof('video')}
-              className={`rounded-full border px-3 py-1 text-sm ${
+              className={`rounded-full border px-3 py-1 text-sm transition ${
                 selectedProof === 'video'
-                  ? 'border-brand/50 bg-brand-muted text-content-primary'
+                  ? 'border-brand/50 bg-brand-muted text-content-primary shadow-[0_8px_24px_-14px_rgba(255,200,120,0.65)]'
                   : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover'
               }`}
             >
@@ -135,9 +137,9 @@ export function FeedbackSubmitStep({
             <button
               type="button"
               onClick={() => onSelectProof('link')}
-              className={`rounded-full border px-3 py-1 text-sm ${
+              className={`rounded-full border px-3 py-1 text-sm transition ${
                 selectedProof === 'link'
-                  ? 'border-brand/50 bg-brand-muted text-content-primary'
+                  ? 'border-brand/50 bg-brand-muted text-content-primary shadow-[0_8px_24px_-14px_rgba(255,200,120,0.65)]'
                   : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover'
               }`}
             >
@@ -146,9 +148,9 @@ export function FeedbackSubmitStep({
             <button
               type="button"
               onClick={() => onSelectProof('text')}
-              className={`rounded-full border px-3 py-1 text-sm ${
+              className={`rounded-full border px-3 py-1 text-sm transition ${
                 selectedProof === 'text'
-                  ? 'border-brand/50 bg-brand-muted text-content-primary'
+                  ? 'border-brand/50 bg-brand-muted text-content-primary shadow-[0_8px_24px_-14px_rgba(255,200,120,0.65)]'
                   : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover'
               }`}
             >
@@ -269,7 +271,7 @@ export function FeedbackSubmitStep({
           type="button"
           disabled={isBusy}
           onClick={onSubmit}
-          className="rounded-xl border border-brand/35 bg-brand-muted px-6 py-3 text-base font-semibold text-content-primary transition hover:bg-brand/20 disabled:opacity-40"
+          className="rounded-xl border border-brand/35 bg-brand-muted px-6 py-3 text-base font-semibold text-content-primary shadow-[0_12px_28px_-18px_rgba(255,193,109,0.7)] transition hover:bg-brand/20 disabled:opacity-40"
         >
           Submit review & generate next step
         </button>

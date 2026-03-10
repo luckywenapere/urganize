@@ -29,12 +29,12 @@ export function Step6GeneratingTask({
 
   return (
     <>
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+      <div className="mx-auto mt-[16vh] w-full max-w-[860px] rounded-3xl border border-stroke-default bg-bg-surface/95 p-8 text-center shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl">
         <p className="text-[clamp(2rem,5vw,3.6rem)] text-content-primary">
           {isGenerating ? 'Generating task...' : 'Task generation paused'}
         </p>
         {generationError && (
-          <div className="max-w-xl rounded-xl border border-status-error/35 bg-status-error/10 px-5 py-4">
+          <div className="mx-auto mt-4 max-w-xl rounded-2xl border border-status-error/35 bg-status-error/10 px-5 py-4">
             <p className="text-sm text-status-error">{generationError}</p>
             <button
               type="button"
@@ -48,7 +48,7 @@ export function Step6GeneratingTask({
       </div>
 
       {showPricingSheet && (
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-stroke-default bg-bg-surface/95 p-6 backdrop-blur sm:p-8">
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-stroke-default bg-bg-surface/95 p-6 shadow-[0_-20px_60px_-40px_rgba(0,0,0,0.6)] backdrop-blur-xl sm:p-8">
           <div className="mx-auto flex w-full max-w-2xl flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
             <div>
               <p className="text-xl text-content-primary">Unlock unlimited task generation</p>

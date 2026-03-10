@@ -200,7 +200,7 @@ const FeedbackSubmitStep = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="mx-auto mt-16 w-full max-w-[820px] rounded-2xl border border-stroke-default bg-bg-surface p-6 sm:p-8">
+      <div className="mx-auto mt-16 w-full max-w-[860px] rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl sm:p-8">
         <div className="h-8 w-32 rounded-lg skeleton-shimmer" />
         <div className="mt-4 space-y-3">
           <div className="h-10 rounded-lg skeleton-shimmer" />
@@ -1614,7 +1614,7 @@ export function PostAuthScreen() {
 
   const shellClass = 'relative min-h-screen w-full overflow-hidden bg-bg-base text-content-primary';
   const fieldClass =
-    'w-full rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-lg text-content-primary outline-none placeholder:text-content-quaternary focus:border-brand';
+    'w-full rounded-2xl border border-stroke-subtle bg-bg-elevated/70 px-4 py-3 text-lg text-content-primary outline-none placeholder:text-content-quaternary focus:border-brand';
 
   const canContinueArtist = useMemo(() => !!artistName.trim(), [artistName]);
   const canContinueGoal = useMemo(() => goalText.trim().length >= MIN_GOAL_CHARS, [goalText]);

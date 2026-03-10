@@ -46,13 +46,13 @@ export default function ForgotPasswordPage() {
         {/* Logo */}
         <div className="text-center mb-8 animate-in">
           <Logo size="xl" className="justify-center mb-4" priority />
-          <p className="text-content-secondary">
-            The operating system for music careers
+          <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">
+            Account Recovery
           </p>
         </div>
 
         {/* Forgot Password Card */}
-        <Card className="animate-in delay-1" padding="lg">
+        <Card className="animate-in delay-1 rounded-3xl border border-stroke-default bg-bg-surface/95 backdrop-blur-sm shadow-[0_10px_40px_rgba(0,0,0,0.18)]" padding="lg">
           {!isSubmitted ? (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
                     Forgot your password?
                   </h2>
                   <p className="text-sm text-content-tertiary">
-                    No worries, we'll send you reset instructions.
+                    No worries, we&apos;ll send you reset instructions.
                   </p>
                 </div>
               </div>
@@ -113,7 +113,7 @@ export default function ForgotPasswordPage() {
               </div>
 
               <p className="text-sm text-content-tertiary">
-                Didn't receive the email?{' '}
+                Didn&apos;t receive the email?{' '}
                 <button
                   type="button"
                   onClick={() => setIsSubmitted(false)}

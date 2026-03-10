@@ -41,7 +41,8 @@ type PaymentVerifyResponse = {
   trial_ends_at?: string;
 };
 
-const panelClass = 'rounded-2xl border border-stroke-default bg-bg-surface p-5 sm:p-6';
+const panelClass =
+  'rounded-3xl border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-sm sm:p-6';
 
 const parsePaymentMetadata = (paystackResponse: unknown): Record<string, unknown> => {
   if (!paystackResponse || typeof paystackResponse !== 'object') return {};
@@ -362,22 +363,24 @@ export default function SettingsPage() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10 relative">
+        <div className="pointer-events-none absolute -right-16 -top-12 h-52 w-52 rounded-full bg-brand/15 blur-3xl" />
+        <div className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-status-info/12 blur-3xl" />
         <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-3xl tracking-tight sm:text-4xl">Settings</h1>
-            <p className="mt-1 text-sm text-content-secondary">Account, billing, and workflow preferences.</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.14em] text-content-tertiary">Account, billing, and workflow preferences</p>
           </div>
           <div className="flex items-center gap-2">
             <Link
               href="/admin"
-              className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+              className="rounded-full border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
             >
               Admin
             </Link>
             <Link
               href="/dashboard"
-              className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+              className="rounded-full border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
             >
               Back to dashboard
             </Link>
@@ -510,10 +513,10 @@ export default function SettingsPage() {
           </section>
         </div>
 
-        <section className={`${panelClass} mt-6`}>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl">Billing</h2>
-            <div className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs text-content-secondary">
+          <section className={`${panelClass} mt-6`}>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-xl">Billing</h2>
+              <div className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs text-content-secondary">
               Current: {subscription.plan || 'No active plan'} {subscription.status ? `(${subscription.status})` : ''}
             </div>
           </div>
@@ -709,7 +712,7 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <section className="mt-6 rounded-2xl border border-status-error/35 bg-status-error/10 p-6">
+        <section className="mt-6 rounded-3xl border border-status-error/35 bg-status-error/10 p-6">
           <h2 className="mb-2 text-xl text-status-error">Delete Account</h2>
           <p className="mb-4 text-sm text-content-secondary">
             This permanently deletes your account immediately. This action cannot be undone.

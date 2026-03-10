@@ -9,6 +9,10 @@ Current scope is:
 - Plan dashboard + timeline pacing + next-step generation/custom entry
 - Billing/settings with Paystack checkout + payment verification
 
+## Documentation
+
+- Product Requirements Document (MVP): [`docs/PRODUCT_REQUIREMENTS.md`](docs/PRODUCT_REQUIREMENTS.md)
+
 ## Tech Stack
 
 - Next.js 16 (App Router), React 19, TypeScript

@@ -141,10 +141,14 @@ export default function AuthCallbackPage() {
   }, [router, checkAuth]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-base text-content-primary">
-      <div className="text-center">
-        <div className="animate-spin h-8 w-8 border-2 border-content-primary border-t-transparent rounded-full mx-auto mb-4" />
-        <p>Signing you in...</p>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-bg-base text-content-primary">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-[-190px] h-[340px] w-[340px] -translate-x-1/2 rounded-full bg-brand/12 blur-[135px]" />
+      </div>
+      <div className="relative w-full max-w-md rounded-3xl border border-stroke-default bg-bg-surface/95 p-8 text-center shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl">
+        <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-content-primary border-t-transparent" />
+        <p className="text-sm uppercase tracking-[0.22em] text-content-tertiary">Release command center</p>
+        <p className="mt-3">Signing you in...</p>
       </div>
     </div>
   );

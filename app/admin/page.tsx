@@ -116,8 +116,12 @@ export default function AdminPage() {
 
   if (authLoading || !user) {
     return (
-      <main className="min-h-screen bg-bg-base text-content-primary">
-        <div className="mx-auto w-full max-w-4xl px-6 py-10">
+      <main className="relative min-h-screen overflow-hidden bg-bg-base text-content-primary">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-[7%] top-[-180px] h-[320px] w-[320px] rounded-full bg-brand/10 blur-[130px]" />
+          <div className="absolute bottom-[-210px] right-[8%] h-[360px] w-[360px] rounded-full bg-brand/8 blur-[140px]" />
+        </div>
+        <div className="relative mx-auto w-full max-w-4xl px-6 py-10">
           <p className="text-content-secondary">Loading admin...</p>
         </div>
       </main>
@@ -125,16 +129,21 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto w-full max-w-4xl px-6 py-10">
+    <main className="relative min-h-screen overflow-hidden bg-bg-base text-content-primary">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-[7%] top-[-180px] h-[320px] w-[320px] rounded-full bg-brand/10 blur-[130px]" />
+        <div className="absolute bottom-[-210px] right-[8%] h-[360px] w-[360px] rounded-full bg-brand/8 blur-[140px]" />
+      </div>
+      <div className="relative mx-auto w-full max-w-4xl px-6 py-10">
         <div className="mb-6 flex items-center justify-between gap-3">
           <div>
             <h1 className="text-3xl tracking-tight sm:text-4xl">Admin</h1>
-            <p className="mt-1 text-sm text-content-secondary">Control global app access settings.</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.22em] text-content-tertiary">Release command settings</p>
+            <p className="mt-2 text-sm text-content-secondary">Control global app access settings.</p>
           </div>
           <Link
             href="/dashboard"
-            className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+            className="rounded-full border border-stroke-default bg-bg-elevated/85 px-4 py-2 text-sm text-content-secondary transition hover:bg-bg-hover hover:text-content-primary"
           >
             Back to dashboard
           </Link>
@@ -151,7 +160,7 @@ export default function AdminPage() {
           </p>
         )}
 
-        <section className="rounded-2xl border border-stroke-default bg-bg-surface p-6">
+        <section className="rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl">
           <h2 className="text-xl">Global Paywall</h2>
           <p className="mt-2 text-sm text-content-secondary">
             When ON, users need an active subscription to access plans. When OFF, subscription checks are bypassed app-wide.

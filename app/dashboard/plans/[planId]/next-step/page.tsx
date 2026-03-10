@@ -368,7 +368,9 @@ export default function PlanNextStepPage() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto flex min-h-screen w-full max-w-[880px] flex-col px-6 py-10 sm:px-10">
+      <div className="relative mx-auto flex min-h-screen w-full max-w-[880px] flex-col px-6 py-10 sm:px-10">
+        <div className="pointer-events-none absolute -right-16 -top-14 h-52 w-52 rounded-full bg-brand/15 blur-3xl" />
+        <div className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-status-info/12 blur-3xl" />
         <div className="flex items-center justify-between">
           <Link href={planId ? `/dashboard/plans/${planId}` : '/dashboard'} className="text-sm text-content-secondary hover:text-content-primary">
             Back to Plan
@@ -393,13 +395,13 @@ export default function PlanNextStepPage() {
         ) : (
           <>
             <section className="mt-10">
-              <p className="text-xs uppercase tracking-wide text-content-tertiary">Next Step</p>
+              <p className="text-xs uppercase tracking-[0.15em] text-content-tertiary">Next Step</p>
               <h1 className="mt-2 text-[clamp(2rem,4.8vw,3.2rem)] tracking-tight">{plan?.title || 'Plan'}</h1>
               <p className="mt-2 text-sm text-content-secondary">{plan?.artist_name || ''}</p>
             </section>
 
             {mode === 'archived' ? (
-              <section className="mt-8 rounded-2xl border border-brand/35 bg-brand-muted p-6">
+              <section className="mt-8 rounded-3xl border border-brand/35 bg-brand-muted p-6 shadow-[0_10px_28px_rgba(0,0,0,0.15)]">
                 <p className="text-lg font-semibold text-content-primary">Plan archived</p>
                 <p className="mt-2 text-sm text-content-secondary">
                   This plan is marked complete and moved to archive-style status.
@@ -412,8 +414,8 @@ export default function PlanNextStepPage() {
                 </Link>
               </section>
             ) : activeTask ? (
-              <section className="mt-8 rounded-2xl border border-stroke-default bg-bg-surface p-6">
-                <p className="text-xs uppercase tracking-wide text-content-tertiary">Current step ready</p>
+              <section className="mt-8 rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_10px_28px_rgba(0,0,0,0.15)] backdrop-blur-sm">
+                <p className="text-xs uppercase tracking-[0.15em] text-content-tertiary">Current step ready</p>
                 <p className="mt-3 text-xl font-semibold text-content-primary">{activeTask.title}</p>
                 <p className="mt-2 text-sm text-content-secondary">{activeTask.description || 'Open this step to continue execution.'}</p>
                 <button
@@ -427,7 +429,7 @@ export default function PlanNextStepPage() {
             ) : (
               <>
                 {allTasksCompleted && (
-                  <section className="mt-8 rounded-2xl border border-status-info/35 bg-status-info/10 p-5">
+                  <section className="mt-8 rounded-3xl border border-status-info/35 bg-status-info/10 p-5 shadow-[0_10px_28px_rgba(0,0,0,0.12)]">
                     <p className="text-sm text-content-secondary">All current tasks are complete.</p>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <button
@@ -443,7 +445,7 @@ export default function PlanNextStepPage() {
                 )}
 
                 {mode === 'decision' && (
-                  <section className="mt-8 rounded-2xl border border-stroke-default bg-bg-surface p-6">
+                  <section className="mt-8 rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_10px_28px_rgba(0,0,0,0.15)] backdrop-blur-sm">
                     <p className="text-sm text-content-secondary">Before we generate the next step:</p>
                     <h2 className="mt-2 text-2xl font-semibold text-content-primary">Do you already have the next step in mind?</h2>
                     <div className="mt-5 flex flex-wrap gap-3">
@@ -470,7 +472,7 @@ export default function PlanNextStepPage() {
                 )}
 
                 {mode === 'custom' && (
-                  <section className="mt-8 rounded-2xl border border-stroke-default bg-bg-surface p-6">
+                  <section className="mt-8 rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_10px_28px_rgba(0,0,0,0.15)] backdrop-blur-sm">
                     <h2 className="text-xl font-semibold text-content-primary">Add your next custom step</h2>
                     <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <label className="text-sm sm:col-span-2">
@@ -554,7 +556,7 @@ export default function PlanNextStepPage() {
                 )}
 
                 {mode === 'generating' && (
-                  <section className="mt-8 rounded-2xl border border-stroke-default bg-bg-surface p-6">
+                  <section className="mt-8 rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_10px_28px_rgba(0,0,0,0.15)] backdrop-blur-sm">
                     <p className="text-sm text-content-secondary">Generating your next best step...</p>
                     <div className="mt-4 h-24 rounded-xl skeleton-shimmer" />
                     <div className="mt-3 h-4 w-2/3 rounded-lg skeleton-shimmer" />

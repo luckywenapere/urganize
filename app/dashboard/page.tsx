@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
@@ -53,32 +53,72 @@ export default function DashboardPage() {
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [planFilter, setPlanFilter] = useState<'active' | 'archived' | 'all'>('active');
+  const [planSearch, setPlanSearch] = useState('');
+  const [planSort, setPlanSort] = useState<'newest' | 'oldest' | 'title_asc' | 'title_desc' | 'status'>('newest');
   const [activePlanMenuId, setActivePlanMenuId] = useState<string | null>(null);
   const [activePlanMenuDirection, setActivePlanMenuDirection] = useState<'up' | 'down'>('down');
   const [activePlanMenuOffsetX, setActivePlanMenuOffsetX] = useState(0);
+  const [planPendingRename, setPlanPendingRename] = useState<PlanSummary | null>(null);
+  const [renameTitle, setRenameTitle] = useState('');
+  const [renameError, setRenameError] = useState('');
+  const [isRenamingPlan, setIsRenamingPlan] = useState(false);
   const [planPendingDelete, setPlanPendingDelete] = useState<PlanSummary | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeletingPlan, setIsDeletingPlan] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [error, setError] = useState('');
   const [hasSubscriptionAccess, setHasSubscriptionAccess] = useState<boolean | null>(null);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editingPlanTitle, setEditingPlanTitle] = useState('');
+  const [savingInlinePlanId, setSavingInlinePlanId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const cacheKey = user ? `urganize.dashboard.plans.${user.id}` : '';
 
-  const getPlanStatus = (plan: PlanSummary): 'Completed' | 'Overdue' | 'In Progress' => {
+  const getPlanStatus = useCallback((plan: PlanSummary): 'Completed' | 'Overdue' | 'In Progress' => {
     if (plan.status === 'released') return 'Completed';
     if (plan.setup_completed) return 'Completed';
     if (!plan.hard_deadline) return 'In Progress';
     return new Date(plan.hard_deadline).getTime() < Date.now() ? 'Overdue' : 'In Progress';
-  };
+  }, []);
 
   const activePlansCount = useMemo(() => plans.filter((plan) => plan.status !== 'released').length, [plans]);
   const archivedPlansCount = useMemo(() => plans.filter((plan) => plan.status === 'released').length, [plans]);
+  const overduePlansCount = useMemo(
+    () => plans.filter((plan) => getPlanStatus(plan) === 'Overdue').length,
+    [getPlanStatus, plans]
+  );
   const filteredPlans = useMemo(() => {
-    if (planFilter === 'active') return plans.filter((plan) => plan.status !== 'released');
-    if (planFilter === 'archived') return plans.filter((plan) => plan.status === 'released');
-    return plans;
-  }, [planFilter, plans]);
+    const query = planSearch.trim().toLowerCase();
+    const filterByStatus = (plan: PlanSummary) => {
+      if (planFilter === 'active') return plan.status !== 'released';
+      if (planFilter === 'archived') return plan.status === 'released';
+      return true;
+    };
+    const filterBySearch = (plan: PlanSummary) => {
+      if (!query) return true;
+      return (
+        plan.title.toLowerCase().includes(query) ||
+        plan.artist_name.toLowerCase().includes(query) ||
+        plan.status.toLowerCase().includes(query)
+      );
+    };
+    const statusRank = (plan: PlanSummary): number => {
+      const status = getPlanStatus(plan);
+      if (status === 'Overdue') return 0;
+      if (status === 'In Progress') return 1;
+      return 2;
+    };
+    const sorted = plans
+      .filter((plan) => filterByStatus(plan) && filterBySearch(plan))
+      .sort((a, b) => {
+        if (planSort === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        if (planSort === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        if (planSort === 'title_asc') return a.title.localeCompare(b.title);
+        if (planSort === 'title_desc') return b.title.localeCompare(a.title);
+        return statusRank(a) - statusRank(b) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+    return sorted;
+  }, [getPlanStatus, planFilter, planSearch, planSort, plans]);
 
   useEffect(() => {
     let cancelled = false;
@@ -223,6 +263,66 @@ export default function DashboardPage() {
     setActivePlanMenuOffsetX(0);
   };
 
+  const requestRenamePlan = (plan: PlanSummary) => {
+    setPlanPendingRename(plan);
+    setRenameTitle(plan.title || '');
+    setRenameError('');
+    setActivePlanMenuId(null);
+    setActivePlanMenuDirection('down');
+    setActivePlanMenuOffsetX(0);
+  };
+
+  const renamePlanTitle = async (planId: string, nextTitle: string) => {
+    if (!user?.id) return;
+    const { error: renameUpdateError } = await supabase
+      .from('releases')
+      .update({ title: nextTitle, updated_at: new Date().toISOString() })
+      .eq('id', planId)
+      .eq('user_id', user.id);
+    if (renameUpdateError) throw renameUpdateError;
+
+    setPlans((current) => {
+      const nextPlans = current.map((plan) => (plan.id === planId ? { ...plan, title: nextTitle } : plan));
+      if (cacheKey) {
+        const cachePayload: CachedPlansPayload = {
+          plans: nextPlans,
+          cachedAt: Date.now(),
+        };
+        localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
+      }
+      return nextPlans;
+    });
+  };
+
+  const beginInlineTitleEdit = (plan: PlanSummary) => {
+    setEditingPlanId(plan.id);
+    setEditingPlanTitle(plan.title || '');
+    setError('');
+  };
+
+  const commitInlineTitleEdit = async (planId: string) => {
+    const nextTitle = editingPlanTitle.trim();
+    const currentPlan = plans.find((plan) => plan.id === planId);
+    const currentTitle = (currentPlan?.title || '').trim();
+
+    if (!nextTitle || nextTitle === currentTitle) {
+      setEditingPlanId(null);
+      setEditingPlanTitle('');
+      return;
+    }
+
+    setSavingInlinePlanId(planId);
+    try {
+      await renamePlanTitle(planId, nextTitle);
+      setEditingPlanId(null);
+      setEditingPlanTitle('');
+    } catch (renameError: any) {
+      setError(renameError?.message || 'Could not rename plan.');
+    } finally {
+      setSavingInlinePlanId(null);
+    }
+  };
+
   const togglePlanMenu = (planId: string, anchor: HTMLElement) => {
     if (activePlanMenuId === planId) {
       setActivePlanMenuId(null);
@@ -252,6 +352,36 @@ export default function DashboardPage() {
     setPlanPendingDelete(null);
     setDeleteConfirmText('');
     setDeleteError('');
+  };
+
+  const closeRenameModal = () => {
+    if (isRenamingPlan) return;
+    setPlanPendingRename(null);
+    setRenameTitle('');
+    setRenameError('');
+  };
+
+  const confirmRenamePlan = async () => {
+    if (!planPendingRename || !user?.id) return;
+    const nextTitle = renameTitle.trim();
+    if (!nextTitle) {
+      setRenameError('Title is required.');
+      return;
+    }
+
+    setRenameError('');
+    setIsRenamingPlan(true);
+    try {
+      await renamePlanTitle(planPendingRename.id, nextTitle);
+
+      setPlanPendingRename(null);
+      setRenameTitle('');
+      setRenameError('');
+    } catch (renamePlanError: any) {
+      setRenameError(renamePlanError?.message || 'Could not rename plan.');
+    } finally {
+      setIsRenamingPlan(false);
+    }
   };
 
   const confirmDeletePlan = async () => {
@@ -350,7 +480,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setIsMenuOpen((open) => !open)}
-              className="text-[clamp(1.6rem,4.2vw,2.3rem)] leading-none text-content-primary lg:text-[2rem]"
+              className="rounded-full border border-stroke-default bg-bg-elevated px-4 py-2 text-sm font-semibold text-content-primary transition hover:bg-bg-hover"
               aria-expanded={isMenuOpen}
               aria-haspopup="menu"
             >
@@ -399,7 +529,10 @@ export default function DashboardPage() {
 
         <section className="mt-20 lg:mt-20 xl:mt-24">
           <div className="flex items-center justify-between gap-4">
-            <h1 className="text-[clamp(2.6rem,6vw,5rem)] tracking-tight lg:text-[3.2rem] xl:text-[3.6rem]">Plans</h1>
+            <div>
+              <h1 className="text-[clamp(2.6rem,6vw,5rem)] tracking-tight lg:text-[3.2rem] xl:text-[3.6rem]">Plans</h1>
+              <p className="mt-1 text-xs uppercase tracking-[0.14em] text-content-tertiary">Release command dashboard</p>
+            </div>
             <div className="flex items-center gap-3">
               {isRefreshing && !loading && (
                 <span className="rounded-full border border-stroke-default bg-bg-elevated px-2 py-1 text-xs text-content-secondary">
@@ -416,6 +549,24 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
+          {hasSubscriptionAccess !== false && !loading && (
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-stroke-default bg-bg-elevated p-3">
+                <p className="text-xs uppercase tracking-wide text-content-tertiary">Active</p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight text-content-primary">{activePlansCount}</p>
+              </div>
+              <div className="rounded-xl border border-stroke-default bg-bg-elevated p-3">
+                <p className="text-xs uppercase tracking-wide text-content-tertiary">Archived</p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight text-content-primary">{archivedPlansCount}</p>
+              </div>
+              <div className="rounded-xl border border-stroke-default bg-bg-elevated p-3">
+                <p className="text-xs uppercase tracking-wide text-content-tertiary">Overdue</p>
+                <p className={`mt-1 text-2xl font-semibold tracking-tight ${overduePlansCount > 0 ? 'text-status-warning' : 'text-content-primary'}`}>
+                  {overduePlansCount}
+                </p>
+              </div>
+            </div>
+          )}
           {hasSubscriptionAccess === false ? (
             <div className="mt-8">
               <SubscriptionPaywall
@@ -424,40 +575,65 @@ export default function DashboardPage() {
               />
             </div>
           ) : plans.length > 0 ? (
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPlanFilter('active')}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                  planFilter === 'active'
-                    ? 'border-brand/45 bg-brand-muted text-content-primary'
-                    : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover hover:text-content-primary'
-                }`}
-              >
-                Active ({activePlansCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setPlanFilter('archived')}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                  planFilter === 'archived'
-                    ? 'border-brand/45 bg-brand-muted text-content-primary'
-                    : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover hover:text-content-primary'
-                }`}
-              >
-                Archived ({archivedPlansCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setPlanFilter('all')}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                  planFilter === 'all'
-                    ? 'border-brand/45 bg-brand-muted text-content-primary'
-                    : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover hover:text-content-primary'
-                }`}
-              >
-                All ({plans.length})
-              </button>
+            <div className="mt-5 rounded-2xl border border-stroke-default/80 bg-bg-elevated/70 p-2 backdrop-blur-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPlanFilter('active')}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition hover:-translate-y-[1px] ${
+                    planFilter === 'active'
+                      ? 'border-brand/45 bg-brand-muted text-content-primary'
+                      : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                  }`}
+                >
+                  Active ({activePlansCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlanFilter('archived')}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition hover:-translate-y-[1px] ${
+                    planFilter === 'archived'
+                      ? 'border-brand/45 bg-brand-muted text-content-primary'
+                      : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                  }`}
+                >
+                  Archived ({archivedPlansCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlanFilter('all')}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition hover:-translate-y-[1px] ${
+                    planFilter === 'all'
+                      ? 'border-brand/45 bg-brand-muted text-content-primary'
+                      : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                  }`}
+                >
+                  All ({plans.length})
+                </button>
+              </div>
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <input
+                  value={planSearch}
+                  onChange={(event) => setPlanSearch(event.target.value)}
+                  placeholder="Search plans, artists, status"
+                  className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
+                />
+                <select
+                  value={planSort}
+                  onChange={(event) =>
+                    setPlanSort(
+                      (event.target.value as 'newest' | 'oldest' | 'title_asc' | 'title_desc' | 'status') || 'newest'
+                    )
+                  }
+                  className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                >
+                  <option value="newest">Sort: Newest</option>
+                  <option value="oldest">Sort: Oldest</option>
+                  <option value="title_asc">Sort: Title A-Z</option>
+                  <option value="title_desc">Sort: Title Z-A</option>
+                  <option value="status">Sort: Status (Overdue first)</option>
+                </select>
+              </div>
             </div>
           ) : null}
 
@@ -467,7 +643,9 @@ export default function DashboardPage() {
             </p>
           )}
 
-          <div className="mt-8 rounded-[28px] border border-stroke-subtle bg-bg-surface p-7 sm:p-9">
+          <div className="relative mt-8 overflow-hidden rounded-[30px] border border-stroke-subtle bg-bg-surface p-7 sm:p-9">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-brand/15 blur-3xl" />
+            <div className="pointer-events-none absolute -left-20 bottom-0 h-48 w-48 rounded-full bg-status-info/12 blur-3xl" />
             {loading ? (
               <p className="mt-4 text-content-secondary">Loading plans...</p>
             ) : hasSubscriptionAccess === false ? (
@@ -492,6 +670,10 @@ export default function DashboardPage() {
                 showArchivedBadge={planFilter === 'all'}
                 getPlanStatus={getPlanStatus}
                 onSelectPlan={(planId) => router.push(`/dashboard/plans/${planId}`)}
+                onRenamePlanTitle={async (planId, title) => {
+                  await renamePlanTitle(planId, title);
+                }}
+                onRequestRenamePlan={(plan) => requestRenamePlan(plan)}
                 onRequestDeletePlan={(plan) => requestDeletePlan(plan)}
               />
             ) : (
@@ -499,17 +681,60 @@ export default function DashboardPage() {
                 {filteredPlans.map((plan) => (
                   <div
                     key={plan.id}
-                    className="relative lazy-fade lazy-fade-in flex w-full flex-col gap-2 rounded-xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-left transition hover:border-stroke-default hover:bg-bg-hover sm:flex-row sm:items-center sm:justify-between"
+                    className="relative lazy-fade lazy-fade-in flex w-full flex-col gap-2 rounded-2xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-left transition hover:-translate-y-[1px] hover:border-stroke-default hover:bg-bg-hover sm:flex-row sm:items-center sm:justify-between"
                     style={{ zIndex: activePlanMenuId === plan.id ? 40 : 1 }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/dashboard/plans/${plan.id}`)}
-                      className="flex min-w-0 flex-1 flex-col gap-2 text-left sm:flex-row sm:items-center sm:justify-between"
+                    <div
+                      className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                      onClick={() => {
+                        if (editingPlanId === plan.id) return;
+                        router.push(`/dashboard/plans/${plan.id}`);
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' && editingPlanId !== plan.id) {
+                          router.push(`/dashboard/plans/${plan.id}`);
+                        }
+                      }}
                     >
                       <div className="min-w-0">
                         <div className="flex min-w-0 items-center gap-2">
-                          <p className="truncate text-base font-medium text-content-primary">{plan.title}</p>
+                          {editingPlanId === plan.id ? (
+                            <input
+                              value={editingPlanTitle}
+                              onChange={(event) => setEditingPlanTitle(event.target.value)}
+                              onBlur={() => {
+                                void commitInlineTitleEdit(plan.id);
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                  event.preventDefault();
+                                  void commitInlineTitleEdit(plan.id);
+                                }
+                                if (event.key === 'Escape') {
+                                  setEditingPlanId(null);
+                                  setEditingPlanTitle('');
+                                }
+                              }}
+                              autoFocus
+                              className="w-full max-w-[320px] rounded border border-stroke-subtle bg-bg-surface px-2 py-1 text-base font-medium text-content-primary outline-none focus:border-brand"
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                beginInlineTitleEdit(plan);
+                              }}
+                              className="truncate text-left text-base font-medium text-content-primary underline-offset-4 hover:underline"
+                            >
+                              {plan.title}
+                            </button>
+                          )}
+                          {savingInlinePlanId === plan.id && (
+                            <span className="text-[11px] text-content-tertiary">Saving...</span>
+                          )}
                           {planFilter === 'all' && plan.status === 'released' && (
                             <span className="rounded-full border border-stroke-default bg-bg-surface px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-content-tertiary">
                               Archived
@@ -533,7 +758,7 @@ export default function DashboardPage() {
                         <span className="text-content-tertiary">.</span>
                         <span>{new Date(plan.created_at).toLocaleDateString()}</span>
                       </div>
-                    </button>
+                    </div>
                     <div className="relative self-end sm:self-auto" data-plan-menu="true">
                       <button
                         type="button"
@@ -559,6 +784,13 @@ export default function DashboardPage() {
                             className="block w-full rounded-md px-3 py-2 text-left text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
                           >
                             Open plan
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => requestRenamePlan(plan)}
+                            className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                          >
+                            Rename title
                           </button>
                           <button
                             type="button"
@@ -608,6 +840,41 @@ export default function DashboardPage() {
                 className="rounded-lg bg-status-error px-4 py-2 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:opacity-50"
               >
                 {isDeletingPlan ? 'Deleting...' : 'Delete plan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {planPendingRename && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-stroke-default bg-bg-surface p-6">
+            <h2 className="text-xl font-semibold text-content-primary">Rename plan title</h2>
+            <p className="mt-2 text-sm text-content-secondary">
+              Enter a new title for <span className="font-semibold text-content-primary">{planPendingRename.title}</span>.
+            </p>
+            <input
+              value={renameTitle}
+              onChange={(event) => setRenameTitle(event.target.value)}
+              className="mt-3 w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+              placeholder="Plan title"
+            />
+            {renameError && <p className="mt-3 text-sm text-status-error">{renameError}</p>}
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeRenameModal}
+                disabled={isRenamingPlan}
+                className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary hover:bg-bg-hover disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmRenamePlan}
+                disabled={isRenamingPlan}
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-50"
+              >
+                {isRenamingPlan ? 'Saving...' : 'Save title'}
               </button>
             </div>
           </div>

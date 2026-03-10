@@ -18,7 +18,7 @@ export function Step7TaskStart({
   onGoToDashboard,
 }: Step7TaskStartProps) {
   return (
-    <div className="mx-auto mt-[16vh] w-full max-w-[700px]">
+    <div className="mx-auto mt-[14vh] w-full max-w-[860px] rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl sm:p-8">
       <div className="space-y-12">
         <h2 className="text-[clamp(2.6rem,6.2vw,4.8rem)] text-content-primary">{taskTitle}</h2>
         <p className="text-[clamp(2rem,4.8vw,3.8rem)] text-content-secondary">{taskOutcome}</p>
