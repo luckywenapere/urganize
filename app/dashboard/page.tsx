@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { getRolePermissions } from '@/lib/role-permissions';
+import { clearTrackedEvents, readTrackedEvents, type AnalyticsEvent } from '@/lib/analytics';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 
 type PlanSummary = {
@@ -83,6 +84,8 @@ export default function DashboardPage() {
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editingPlanTitle, setEditingPlanTitle] = useState('');
   const [savingInlinePlanId, setSavingInlinePlanId] = useState<string | null>(null);
+  const [analyticsEvents, setAnalyticsEvents] = useState<AnalyticsEvent[]>([]);
+  const [analyticsSearch, setAnalyticsSearch] = useState('');
   const [artists, setArtists] = useState<ArtistDirectoryItem[]>([]);
   const [artistSearch, setArtistSearch] = useState('');
   const [artistForm, setArtistForm] = useState({ name: '', genre: '', primaryPlatform: '', notes: '' });
@@ -149,6 +152,20 @@ export default function DashboardPage() {
       );
     });
   }, [artistSearch, artists]);
+  const filteredAnalyticsEvents = useMemo(() => {
+    const query = analyticsSearch.trim().toLowerCase();
+    const sorted = [...analyticsEvents].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    if (!query) return sorted;
+    return sorted.filter((event) => {
+      return (
+        event.name.toLowerCase().includes(query) ||
+        String(event.userId || '')
+          .toLowerCase()
+          .includes(query) ||
+        JSON.stringify(event.payload).toLowerCase().includes(query)
+      );
+    });
+  }, [analyticsEvents, analyticsSearch]);
   const importablePlanArtists = useMemo(() => {
     const existing = new Set(artists.map((artist) => artist.name.trim().toLowerCase()).filter(Boolean));
     const names = Array.from(
@@ -305,6 +322,10 @@ export default function DashboardPage() {
     if (!artistDirectoryKey) return;
     localStorage.setItem(artistDirectoryKey, JSON.stringify(artists));
   }, [artistDirectoryKey, artists]);
+
+  useEffect(() => {
+    setAnalyticsEvents(readTrackedEvents());
+  }, []);
 
   const createNewPlan = async () => {
     if (!user || isCreatingPlan) return;
@@ -693,6 +714,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={createNewPlan}
                 disabled={isCreatingPlan || loading || hasSubscriptionAccess !== true || !permissions.canCreatePlans}
+                title={!permissions.canCreatePlans ? 'Only manager role can create plans.' : undefined}
                 className="rounded-xl border border-brand/40 bg-brand-muted px-4 py-2 text-sm font-semibold text-content-primary transition hover:bg-brand/20 disabled:opacity-50"
               >
                 {isCreatingPlan ? 'Creating...' : permissions.canCreatePlans ? 'Create New Plan' : 'Manager Only'}
@@ -830,6 +852,87 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <p className="mt-3 text-sm text-content-secondary">No artists yet. Add one to speed up plan creation.</p>
+              )}
+            </section>
+          )}
+          {hasSubscriptionAccess !== false && (
+            <section className="mt-6 rounded-2xl border border-stroke-default/80 bg-bg-elevated/70 p-4 backdrop-blur-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-content-tertiary">Product Analytics</h2>
+                  <p className="mt-1 text-sm text-content-secondary">Local event log for core MVP funnel signals.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const escapeCsv = (value: string) => `"${String(value || '').replace(/"/g, '""')}"`;
+                      const header = ['timestamp', 'event_name', 'user_id', 'payload'];
+                      const rows = filteredAnalyticsEvents.map((event) =>
+                        [
+                          event.timestamp,
+                          event.name,
+                          event.userId || '',
+                          JSON.stringify(event.payload || {}),
+                        ].map(escapeCsv)
+                      );
+                      const csv = [header.join(','), ...rows.map((row) => row.join(','))].join('\n');
+                      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = 'analytics-events.csv';
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      URL.revokeObjectURL(url);
+                    }}
+                    disabled={filteredAnalyticsEvents.length === 0}
+                    className="rounded-md border border-stroke-default bg-bg-surface px-2.5 py-1 text-xs text-content-secondary hover:bg-bg-hover hover:text-content-primary disabled:opacity-50"
+                  >
+                    Export CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearTrackedEvents();
+                      setAnalyticsEvents([]);
+                    }}
+                    disabled={analyticsEvents.length === 0}
+                    className="rounded-md border border-stroke-default bg-bg-surface px-2.5 py-1 text-xs text-content-secondary hover:bg-bg-hover hover:text-content-primary disabled:opacity-50"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAnalyticsEvents(readTrackedEvents())}
+                    className="rounded-md border border-stroke-default bg-bg-surface px-2.5 py-1 text-xs text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                  >
+                    Refresh
+                  </button>
+                </div>
+              </div>
+              <input
+                value={analyticsSearch}
+                onChange={(event) => setAnalyticsSearch(event.target.value)}
+                placeholder="Search event name, user id, payload"
+                className="mt-3 w-full rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+              />
+              {filteredAnalyticsEvents.length > 0 ? (
+                <div className="mt-3 max-h-[260px] space-y-2 overflow-auto pr-1">
+                  {filteredAnalyticsEvents.slice(0, 80).map((event) => (
+                    <article key={event.id} className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs font-medium text-content-primary">{event.name}</p>
+                        <p className="text-[11px] text-content-tertiary">{new Date(event.timestamp).toLocaleString()}</p>
+                      </div>
+                      <p className="mt-1 text-[11px] text-content-secondary">User: {event.userId || 'anonymous'}</p>
+                      <p className="mt-1 break-all text-[11px] text-content-secondary">{JSON.stringify(event.payload || {})}</p>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-content-secondary">No analytics events tracked yet.</p>
               )}
             </section>
           )}

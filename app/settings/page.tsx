@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+import { trackEvent } from '@/lib/analytics';
 import {
   INDIVIDUAL_PLAN_OPTIONS,
   MIN_GROUP_TEAM_SIZE,
@@ -445,6 +446,27 @@ export default function SettingsPage() {
         : '';
 
       setPaymentCheckMessage(`Payment verified for ${planLabel} (${amountLabel}).${trialLabel}`);
+      if (payload.trialing) {
+        trackEvent('trial_started', {
+          userId: user?.id || null,
+          payload: {
+            source: 'settings-payment-verify',
+            reference,
+            plan: payload.plan || null,
+            trialEndsAt: payload.trial_ends_at || null,
+          },
+        });
+      } else {
+        trackEvent('trial_converted', {
+          userId: user?.id || null,
+          payload: {
+            source: 'settings-payment-verify',
+            reference,
+            plan: payload.plan || null,
+            amount: typeof payload.amount === 'number' ? payload.amount : null,
+          },
+        });
+      }
       await checkAuth();
     } catch {
       setPaymentCheckError('Could not verify payment right now.');

@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+import { trackEvent } from '@/lib/analytics';
 import {
   INDIVIDUAL_PLAN_OPTIONS,
   MIN_GROUP_TEAM_SIZE,
@@ -180,6 +181,15 @@ export function SubscriptionPaywall({
         tokenizationAmount,
         eligibilityToken,
         preparedAt: Date.now(),
+      });
+      trackEvent('trial_started', {
+        userId: user?.id || null,
+        payload: {
+          selectedPlan,
+          trialDays,
+          tokenizationAmount,
+          source: 'subscription-paywall',
+        },
       });
       setMessage('Card authorization is ready. Complete checkout to activate your trial.');
     } catch (prepareError: any) {

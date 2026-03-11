@@ -52,6 +52,7 @@ type CustomTaskItem = {
   id: string;
   title: string;
   description: string;
+  owner: string;
   status: 'current' | 'pending' | 'completed';
   priority: 'low' | 'medium' | 'high';
   dueDate: string;
@@ -126,6 +127,7 @@ const normalizeCustomTasks = (value: unknown): CustomTaskItem[] => {
         id: String(item.id || '').trim(),
         title: String(item.title || '').trim(),
         description: String(item.description || '').trim(),
+        owner: String(item.owner || '').trim(),
         status,
         priority,
         dueDate: String(item.dueDate || '').trim(),
@@ -184,16 +186,24 @@ export default function PlanDashboardPage() {
   const [newCustomTask, setNewCustomTask] = useState<{
     title: string;
     description: string;
+    owner: string;
     priority: 'low' | 'medium' | 'high';
     dueDate: string;
     tagScope: 'release' | 'artist';
   }>({
     title: '',
     description: '',
+    owner: user?.name || user?.email || '',
     priority: 'medium',
     dueDate: '',
     tagScope: 'release',
   });
+  useEffect(() => {
+    if (!user) return;
+    const fallbackOwner = user.name || user.email || '';
+    if (!fallbackOwner) return;
+    setNewCustomTask((current) => (current.owner.trim() ? current : { ...current, owner: fallbackOwner }));
+  }, [user]);
   const [assets, setAssets] = useState<AssetItem[]>([]);
   const [assetCategory, setAssetCategory] = useState<AssetCategory>('cover_art');
   const [assetOwnerScope, setAssetOwnerScope] = useState<'release' | 'artist'>('release');
@@ -790,8 +800,13 @@ export default function PlanDashboardPage() {
 
   const addCustomTaskItem = () => {
     const title = newCustomTask.title.trim();
+    const owner = newCustomTask.owner.trim();
     if (!title) {
       setError('Custom task requires a title.');
+      return;
+    }
+    if (!owner) {
+      setError('Custom task requires an owner.');
       return;
     }
     const tagScope = newCustomTask.tagScope;
@@ -804,6 +819,7 @@ export default function PlanDashboardPage() {
         id: crypto.randomUUID(),
         title,
         description: newCustomTask.description.trim(),
+        owner,
         status: 'pending',
         priority: newCustomTask.priority,
         dueDate: newCustomTask.dueDate.trim(),
@@ -811,7 +827,14 @@ export default function PlanDashboardPage() {
         tagLabel: tagLabel || (tagScope === 'release' ? 'Untitled release' : 'Unknown artist'),
       },
     ]);
-    setNewCustomTask({ title: '', description: '', priority: 'medium', dueDate: '', tagScope });
+    setNewCustomTask({
+      title: '',
+      description: '',
+      owner,
+      priority: 'medium',
+      dueDate: '',
+      tagScope,
+    });
   };
 
   const uploadAsset = async () => {
@@ -1019,6 +1042,7 @@ export default function PlanDashboardPage() {
                     type="button"
                     onClick={savePlanBasics}
                     disabled={isSavingBasics}
+                    title={!permissions.canManagePlans ? 'Only manager role can edit plan basics.' : undefined}
                     className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
                   >
                     {isSavingBasics ? 'Saving...' : 'Save changes'}
@@ -1239,6 +1263,7 @@ export default function PlanDashboardPage() {
                 <button
                   type="button"
                   disabled={!permissions.canEditWorkspace}
+                  title={!permissions.canEditWorkspace ? 'Your role has read-only workspace access.' : undefined}
                   onClick={() => {
                     if (!permissions.canEditWorkspace) return;
                     setNeedsOnboarding(true);
@@ -1255,6 +1280,7 @@ export default function PlanDashboardPage() {
                 <button
                   type="button"
                   disabled={!permissions.canEditWorkspace}
+                  title={!permissions.canEditWorkspace ? 'Your role has read-only workspace access.' : undefined}
                   onClick={() => {
                     if (!permissions.canEditWorkspace) return;
                     router.push(`/dashboard/plans/${planId}/next-step`);

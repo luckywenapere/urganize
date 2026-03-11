@@ -444,6 +444,7 @@ export default function PlanNextStepPage() {
                 <button
                   type="button"
                   disabled={!permissions.canEditWorkspace}
+                  title={!permissions.canEditWorkspace ? 'Your role has read-only workspace access.' : undefined}
                   onClick={() => routeToTaskExecution()}
                   className="mt-5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
                 >
@@ -459,6 +460,7 @@ export default function PlanNextStepPage() {
                       <button
                         type="button"
                         disabled={!permissions.canManagePlans}
+                        title={!permissions.canManagePlans ? 'Only manager role can mark plans complete.' : undefined}
                         onClick={() => setShowCompleteConfirm(true)}
                         className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
                       >
@@ -477,6 +479,7 @@ export default function PlanNextStepPage() {
                       <button
                         type="button"
                         disabled={!permissions.canEditWorkspace}
+                        title={!permissions.canEditWorkspace ? 'Your role has read-only workspace access.' : undefined}
                         onClick={() => {
                           setError('');
                           setMode('custom');
@@ -488,6 +491,7 @@ export default function PlanNextStepPage() {
                       <button
                         type="button"
                         disabled={isBusy || !permissions.canEditWorkspace}
+                        title={!permissions.canEditWorkspace ? 'Your role has read-only workspace access.' : undefined}
                         onClick={handleGenerateAIGuidedStep}
                         className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm font-semibold text-content-primary hover:bg-bg-hover disabled:opacity-60"
                       >
@@ -564,6 +568,7 @@ export default function PlanNextStepPage() {
                       <button
                         type="button"
                         disabled={isBusy || !permissions.canEditWorkspace}
+                        title={!permissions.canEditWorkspace ? 'Your role has read-only workspace access.' : undefined}
                         onClick={handleCreateCustomStep}
                         className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
                       >

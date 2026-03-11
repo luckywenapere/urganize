@@ -16,6 +16,7 @@ type CustomTaskItem = {
   id: string;
   title: string;
   description: string;
+  owner: string;
   status: 'current' | 'pending' | 'completed';
   priority: 'low' | 'medium' | 'high';
   dueDate: string;
@@ -69,13 +70,17 @@ type WorkspaceSectionProps = {
   newCustomTask: {
     title: string;
     description: string;
+    owner: string;
     priority: 'low' | 'medium' | 'high';
     dueDate: string;
     tagScope: 'release' | 'artist';
   };
   releaseTagLabel: string;
   artistTagLabel: string;
-  onNewCustomTaskChange: (field: 'title' | 'description' | 'priority' | 'dueDate' | 'tagScope', value: string) => void;
+  onNewCustomTaskChange: (
+    field: 'title' | 'description' | 'owner' | 'priority' | 'dueDate' | 'tagScope',
+    value: string
+  ) => void;
   onAddCustomTask: () => void;
   onRemoveCustomTask: (id: string) => void;
   onCustomTaskStatusChange: (id: string, status: CustomTaskItem['status']) => void;
@@ -177,11 +182,13 @@ export function WorkspaceSection({
   const [editDraft, setEditDraft] = useState<{
     title: string;
     description: string;
+    owner: string;
     priority: 'low' | 'medium' | 'high';
     dueDate: string;
   }>({
     title: '',
     description: '',
+    owner: '',
     priority: 'medium',
     dueDate: '',
   });
@@ -231,6 +238,7 @@ export function WorkspaceSection({
       return (
         task.title.toLowerCase().includes(normalizedTaskSearch) ||
         task.description.toLowerCase().includes(normalizedTaskSearch) ||
+        task.owner.toLowerCase().includes(normalizedTaskSearch) ||
         task.tagLabel.toLowerCase().includes(normalizedTaskSearch)
       );
     });
@@ -399,27 +407,29 @@ export function WorkspaceSection({
               disabled={!hasTasksForExport}
               onClick={() => {
                 const escapeCsv = (value: string) => `"${String(value || '').replace(/"/g, '""')}"`;
-                const header = ['type', 'title', 'description', 'status', 'priority', 'due_date', 'tag_scope', 'tag_label'];
-                const aiRows = visibleAiTasks.map((task) =>
-                  [
-                    'ai',
-                    task.title,
-                    task.description || '',
-                    task.status,
-                    '',
-                    '',
+                  const header = ['type', 'title', 'description', 'owner', 'status', 'priority', 'due_date', 'tag_scope', 'tag_label'];
+                  const aiRows = visibleAiTasks.map((task) =>
+                    [
+                      'ai',
+                      task.title,
+                      task.description || '',
+                      '',
+                      task.status,
+                      '',
+                      '',
                     'release',
                     releaseTagLabel,
                   ].map(escapeCsv)
                 );
                 const customRows = visibleCustomTasks.map((task) =>
                   [
-                    'custom',
-                    task.title,
-                    task.description,
-                    task.status,
-                    task.priority,
-                    task.dueDate,
+                      'custom',
+                      task.title,
+                      task.description,
+                      task.owner,
+                      task.status,
+                      task.priority,
+                      task.dueDate,
                     task.tagScope,
                     task.tagLabel,
                   ].map(escapeCsv)
@@ -569,6 +579,9 @@ export function WorkspaceSection({
                               <span className="rounded-full border border-stroke-subtle bg-bg-elevated px-2 py-0.5 text-[11px] text-content-secondary">
                                 {task.dueDate || 'No due date'}
                               </span>
+                              <span className="rounded-full border border-stroke-subtle bg-bg-elevated px-2 py-0.5 text-[11px] text-content-secondary">
+                                owner: {task.owner || 'unassigned'}
+                              </span>
                               {task.dueDate && task.dueDate < todayIso && task.status !== 'completed' && (
                                 <span className="rounded-full border border-status-error/35 bg-status-error/10 px-2 py-0.5 text-[11px] text-status-error">
                                   overdue
@@ -596,6 +609,7 @@ export function WorkspaceSection({
                                       onUpdateCustomTask(task.id, {
                                         title: editDraft.title.trim() || task.title,
                                         description: editDraft.description,
+                                        owner: editDraft.owner.trim(),
                                         priority: editDraft.priority,
                                         dueDate: editDraft.dueDate,
                                       });
@@ -606,6 +620,7 @@ export function WorkspaceSection({
                                     setEditDraft({
                                       title: task.title,
                                       description: task.description,
+                                      owner: task.owner,
                                       priority: task.priority,
                                       dueDate: task.dueDate,
                                     });
@@ -660,6 +675,12 @@ export function WorkspaceSection({
                               className="min-h-[68px] rounded border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-primary outline-none focus:border-brand md:col-span-2"
                             />
                             <div className="space-y-2">
+                              <input
+                                value={editDraft.owner}
+                                onChange={(event) => setEditDraft((current) => ({ ...current, owner: event.target.value }))}
+                                placeholder="Owner"
+                                className="w-full rounded border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-primary outline-none focus:border-brand"
+                              />
                               <select
                                 value={editDraft.priority}
                                 onChange={(event) =>
@@ -699,12 +720,18 @@ export function WorkspaceSection({
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">Create Custom Task</p>
             {canEditWorkspace ? (
               <>
-                <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-6">
+                <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-7">
                   <input
                     value={newCustomTask.title}
                     onChange={(event) => onNewCustomTaskChange('title', event.target.value)}
                     placeholder="Task title"
                     className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand md:col-span-2"
+                  />
+                  <input
+                    value={newCustomTask.owner}
+                    onChange={(event) => onNewCustomTaskChange('owner', event.target.value)}
+                    placeholder="Owner"
+                    className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
                   />
                   <select
                     value={newCustomTask.priority}

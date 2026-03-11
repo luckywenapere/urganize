@@ -7,7 +7,7 @@ type AnalyticsEventName =
   | 'trial_started'
   | 'trial_converted';
 
-type AnalyticsEvent = {
+export type AnalyticsEvent = {
   id: string;
   name: AnalyticsEventName;
   userId: string | null;
@@ -53,4 +53,9 @@ export const readTrackedEvents = (): AnalyticsEvent[] => {
   } catch {
     return [];
   }
+};
+
+export const clearTrackedEvents = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(STORAGE_KEY);
 };
