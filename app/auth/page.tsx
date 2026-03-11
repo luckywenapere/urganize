@@ -131,8 +131,8 @@ export default function AuthPage() {
         localStorage.setItem(LAST_AUTH_EMAIL_KEY, normalizedLoginEmail);
       }
       router.push('/dashboard');
-    } catch {
-      setError('Invalid email or password');
+    } catch (loginError: any) {
+      setError(loginError?.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -32,6 +32,28 @@ const buildFallbackProfile = (authUser: any): Omit<Profile, 'created_at' | 'upda
   };
 };
 
+const buildRuntimeFallbackProfile = (authUser: any): Profile => {
+  const base = buildFallbackProfile(authUser);
+  const nowIso = new Date().toISOString();
+  return {
+    ...base,
+    created_at: nowIso,
+    updated_at: nowIso,
+  };
+};
+
+const isNonFatalProfileAccessError = (error: any): boolean => {
+  const code = String(error?.code || '').toLowerCase();
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    code === '42501' ||
+    message.includes('permission denied') ||
+    message.includes('row-level security') ||
+    message.includes('not authorized') ||
+    message.includes('forbidden')
+  );
+};
+
 const getOrCreateProfile = async (authUser: any): Promise<Profile> => {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
@@ -43,6 +65,11 @@ const getOrCreateProfile = async (authUser: any): Promise<Profile> => {
     return profile;
   }
 
+  if (profileError && isNonFatalProfileAccessError(profileError)) {
+    // Production auth should not be blocked by profile policy drift.
+    return buildRuntimeFallbackProfile(authUser);
+  }
+
   if (profileError?.code !== 'PGRST116') {
     throw profileError;
   }
@@ -52,7 +79,12 @@ const getOrCreateProfile = async (authUser: any): Promise<Profile> => {
     .from('profiles')
     .upsert(fallbackProfile, { onConflict: 'id' });
 
-  if (insertError) throw insertError;
+  if (insertError) {
+    if (isNonFatalProfileAccessError(insertError)) {
+      return buildRuntimeFallbackProfile(authUser);
+    }
+    throw insertError;
+  }
 
   const { data: createdProfile, error: createdError } = await supabase
     .from('profiles')
@@ -61,6 +93,9 @@ const getOrCreateProfile = async (authUser: any): Promise<Profile> => {
     .single();
 
   if (createdError || !createdProfile) {
+    if (isNonFatalProfileAccessError(createdError)) {
+      return buildRuntimeFallbackProfile(authUser);
+    }
     throw createdError || new Error('Could not load profile');
   }
 
