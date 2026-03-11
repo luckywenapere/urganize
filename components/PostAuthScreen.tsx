@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
+import { trackEvent } from '@/lib/analytics';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 
 type RoleOption = 'manager' | 'artist-team' | 'artist';
@@ -667,6 +668,10 @@ export function PostAuthScreen() {
           hard_deadline: addDaysISO(release.created_at || new Date(), DEFAULT_PLAN_DURATION_DAYS),
         });
       if (profileInsertError) throw profileInsertError;
+      trackEvent('release_created', {
+        userId: user.id,
+        payload: { releaseId: release.id, source: 'create-plan-flow', artistName: resolvedArtistName },
+      });
 
       if (typeof window !== 'undefined') {
         localStorage.removeItem(`urganize.onboardingDraft.${user.id}.new-plan`);
@@ -742,6 +747,10 @@ export function PostAuthScreen() {
         hard_deadline: addDaysISO(release.created_at || new Date(), DEFAULT_PLAN_DURATION_DAYS),
       });
     if (profileInsertError) throw profileInsertError;
+    trackEvent('release_created', {
+      userId: user.id,
+      payload: { releaseId: release.id, source: 'auto-onboarding', artistName: user.name || 'Artist' },
+    });
 
     setReleaseId(release.id);
     return release.id;
@@ -1057,6 +1066,15 @@ export function PostAuthScreen() {
 
       await upsertArtistProfile();
       persistArtistDefaults();
+      trackEvent('artist_created', {
+        userId: user?.id || null,
+        payload: {
+          releaseId: activeReleaseId,
+          artistName: artistName.trim(),
+          genre: genre.trim() || null,
+          primaryPlatform: primaryPlatform.trim() || null,
+        },
+      });
       await setStepPersisted(3, activeReleaseId);
     } catch (err: any) {
       setError(err?.message || 'Failed to save artist details');
@@ -1270,6 +1288,10 @@ export function PostAuthScreen() {
       setTaskId(updatedTask.id);
       setTaskTitle(updatedTask.title || 'Single task');
       setTaskOutcome(updatedTask.description || 'Expected outcome');
+      trackEvent('ai_plan_generated', {
+        userId: user.id,
+        payload: { releaseId: activeReleaseId, taskId: updatedTask.id, mode: 'onboarding-update' },
+      });
       return;
     }
 
@@ -1303,6 +1325,10 @@ export function PostAuthScreen() {
     setTaskId(insertedTask.id);
     setTaskTitle(insertedTask.title || 'Single task');
     setTaskOutcome(insertedTask.description || 'Expected outcome');
+    trackEvent('ai_plan_generated', {
+      userId: user.id,
+      payload: { releaseId: activeReleaseId, taskId: insertedTask.id, mode: 'onboarding-create' },
+    });
   }, [
     artistName,
     audienceSize,
@@ -1546,6 +1572,10 @@ export function PostAuthScreen() {
         })
         .eq('id', taskId);
       if (taskUpdateError) throw taskUpdateError;
+      trackEvent('task_completed', {
+        userId: user?.id || null,
+        payload: { releaseId, taskId, source: 'onboarding-feedback' },
+      });
 
       const { error: profileCompletionError } = await supabase
         .from('release_profiles')

@@ -6,6 +6,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
+import { trackEvent } from '@/lib/analytics';
+import { getRolePermissions } from '@/lib/role-permissions';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 
 type PlanRow = {
@@ -39,6 +41,7 @@ export default function PlanNextStepPage() {
   const params = useParams<{ planId: string }>();
   const planId = Array.isArray(params?.planId) ? params.planId[0] : params?.planId;
   const { user, isLoading: authLoading, setNeedsOnboarding } = useAuthStore();
+  const permissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
 
   const [loading, setLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
@@ -152,6 +155,10 @@ export default function PlanNextStepPage() {
     if (insertError || !insertedTask) {
       throw insertError || new Error('Could not create next step');
     }
+    trackEvent('ai_plan_generated', {
+      userId: user.id,
+      payload: { releaseId: planId, taskId: insertedTask.id, mode: 'next-step' },
+    });
 
     const { error: profileStepResetError } = await supabase
       .from('release_profiles')
@@ -168,6 +175,10 @@ export default function PlanNextStepPage() {
   };
 
   const handleGenerateAIGuidedStep = async () => {
+    if (!permissions.canEditWorkspace) {
+      setError('Read-only role: cannot generate next steps.');
+      return;
+    }
     if (isBusy || !planId) return;
     setError('');
     setIsBusy(true);
@@ -236,6 +247,10 @@ export default function PlanNextStepPage() {
   };
 
   const handleCreateCustomStep = async () => {
+    if (!permissions.canEditWorkspace) {
+      setError('Read-only role: cannot create next steps.');
+      return;
+    }
     if (isBusy || !planId) return;
 
     const title = customTitle.trim();
@@ -280,6 +295,10 @@ export default function PlanNextStepPage() {
   };
 
   const handleMarkPlanComplete = async () => {
+    if (!permissions.canManagePlans) {
+      setError('Only managers can mark plans complete.');
+      return;
+    }
     if (!planId) return;
     setError('');
     setIsMarkingComplete(true);
@@ -398,6 +417,10 @@ export default function PlanNextStepPage() {
               <p className="text-xs uppercase tracking-[0.15em] text-content-tertiary">Next Step</p>
               <h1 className="mt-2 text-[clamp(2rem,4.8vw,3.2rem)] tracking-tight">{plan?.title || 'Plan'}</h1>
               <p className="mt-2 text-sm text-content-secondary">{plan?.artist_name || ''}</p>
+              <p className="mt-2 text-xs text-content-secondary">
+                Role: <span className="font-medium text-content-primary">{permissions.role}</span>
+                {!permissions.canEditWorkspace ? ' • Read-only actions' : ''}
+              </p>
             </section>
 
             {mode === 'archived' ? (
@@ -420,8 +443,9 @@ export default function PlanNextStepPage() {
                 <p className="mt-2 text-sm text-content-secondary">{activeTask.description || 'Open this step to continue execution.'}</p>
                 <button
                   type="button"
+                  disabled={!permissions.canEditWorkspace}
                   onClick={() => routeToTaskExecution()}
-                  className="mt-5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+                  className="mt-5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
                 >
                   Execute current step
                 </button>
@@ -434,8 +458,9 @@ export default function PlanNextStepPage() {
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <button
                         type="button"
+                        disabled={!permissions.canManagePlans}
                         onClick={() => setShowCompleteConfirm(true)}
-                        className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+                        className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
                       >
                         Mark plan complete
                       </button>
@@ -451,17 +476,18 @@ export default function PlanNextStepPage() {
                     <div className="mt-5 flex flex-wrap gap-3">
                       <button
                         type="button"
+                        disabled={!permissions.canEditWorkspace}
                         onClick={() => {
                           setError('');
                           setMode('custom');
                         }}
-                        className="rounded-lg border border-brand/40 bg-brand-muted px-4 py-2 text-sm font-semibold text-content-primary hover:bg-brand/20"
+                        className="rounded-lg border border-brand/40 bg-brand-muted px-4 py-2 text-sm font-semibold text-content-primary hover:bg-brand/20 disabled:opacity-60"
                       >
                         Yes, I will add it
                       </button>
                       <button
                         type="button"
-                        disabled={isBusy}
+                        disabled={isBusy || !permissions.canEditWorkspace}
                         onClick={handleGenerateAIGuidedStep}
                         className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm font-semibold text-content-primary hover:bg-bg-hover disabled:opacity-60"
                       >
@@ -537,7 +563,7 @@ export default function PlanNextStepPage() {
                     <div className="mt-5 flex flex-wrap gap-2">
                       <button
                         type="button"
-                        disabled={isBusy}
+                        disabled={isBusy || !permissions.canEditWorkspace}
                         onClick={handleCreateCustomStep}
                         className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
                       >

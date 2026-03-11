@@ -17,6 +17,7 @@ type PlanStatus = 'Completed' | 'Overdue' | 'In Progress';
 type VirtualizedPlanListProps = {
   plans: PlanSummary[];
   showArchivedBadge?: boolean;
+  canManagePlans?: boolean;
   getPlanStatus: (plan: PlanSummary) => PlanStatus;
   onSelectPlan: (planId: string) => void;
   onRenamePlanTitle: (planId: string, nextTitle: string) => Promise<void>;
@@ -33,6 +34,7 @@ const PLAN_MENU_SAFE_MARGIN_PX = 12;
 export function VirtualizedPlanList({
   plans,
   showArchivedBadge = false,
+  canManagePlans = true,
   getPlanStatus,
   onSelectPlan,
   onRenamePlanTitle,
@@ -134,7 +136,7 @@ export function VirtualizedPlanList({
                 >
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-2">
-                      {editingPlanId === plan.id ? (
+                      {canManagePlans && editingPlanId === plan.id ? (
                         <input
                           value={editingPlanTitle}
                           onChange={(event) => setEditingPlanTitle(event.target.value)}
@@ -154,7 +156,7 @@ export function VirtualizedPlanList({
                           autoFocus
                           className="w-full max-w-[260px] rounded border border-stroke-subtle bg-bg-surface px-2 py-1 text-base font-medium text-content-primary outline-none focus:border-brand"
                         />
-                      ) : (
+                      ) : canManagePlans ? (
                         <button
                           type="button"
                           onClick={(event) => {
@@ -166,6 +168,8 @@ export function VirtualizedPlanList({
                         >
                           {plan.title}
                         </button>
+                      ) : (
+                        <p className="truncate text-left text-base font-medium text-content-primary">{plan.title}</p>
                       )}
                       {savingPlanId === plan.id && (
                         <span className="text-[11px] text-content-tertiary">Saving...</span>
@@ -208,18 +212,20 @@ export function VirtualizedPlanList({
                       className={`absolute right-0 z-50 min-w-[170px] rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-lg ${activePlanMenuDirection === 'up' ? 'bottom-full mb-2 animate-menu-up' : 'top-full mt-2 animate-menu-down'}`}
                       style={{ transform: `translateX(${activePlanMenuOffsetX}px)` }}
                     >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActivePlanMenuId(null);
-                          setActivePlanMenuDirection('down');
-                          setActivePlanMenuOffsetX(0);
-                          onRequestRenamePlan(plan);
-                        }}
-                        className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-                      >
-                        Rename title
-                      </button>
+                      {canManagePlans && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActivePlanMenuId(null);
+                            setActivePlanMenuDirection('down');
+                            setActivePlanMenuOffsetX(0);
+                            onRequestRenamePlan(plan);
+                          }}
+                          className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                        >
+                          Rename title
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => {
@@ -232,18 +238,20 @@ export function VirtualizedPlanList({
                       >
                         Open plan
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActivePlanMenuId(null);
-                          setActivePlanMenuDirection('down');
-                          setActivePlanMenuOffsetX(0);
-                          onRequestDeletePlan(plan);
-                        }}
-                        className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-status-error hover:bg-status-error/10"
-                      >
-                        Delete plan
-                      </button>
+                      {canManagePlans && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActivePlanMenuId(null);
+                            setActivePlanMenuDirection('down');
+                            setActivePlanMenuOffsetX(0);
+                            onRequestDeletePlan(plan);
+                          }}
+                          className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-status-error hover:bg-status-error/10"
+                        >
+                          Delete plan
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

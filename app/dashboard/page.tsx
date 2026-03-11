@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
+import { getRolePermissions } from '@/lib/role-permissions';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 
 type PlanSummary = {
@@ -22,6 +23,16 @@ type PlanSummary = {
 type CachedPlansPayload = {
   plans: PlanSummary[];
   cachedAt: number;
+};
+
+type ArtistDirectoryItem = {
+  id: string;
+  name: string;
+  genre: string;
+  primaryPlatform: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -46,6 +57,7 @@ const VirtualizedPlanList = dynamic(
 export default function DashboardPage() {
   const router = useRouter();
   const { user, logout, setNeedsOnboarding, isLoading: authLoading } = useAuthStore();
+  const permissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
 
   const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,8 +83,14 @@ export default function DashboardPage() {
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editingPlanTitle, setEditingPlanTitle] = useState('');
   const [savingInlinePlanId, setSavingInlinePlanId] = useState<string | null>(null);
+  const [artists, setArtists] = useState<ArtistDirectoryItem[]>([]);
+  const [artistSearch, setArtistSearch] = useState('');
+  const [artistForm, setArtistForm] = useState({ name: '', genre: '', primaryPlatform: '', notes: '' });
+  const [editingArtistId, setEditingArtistId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const cacheKey = user ? `urganize.dashboard.plans.${user.id}` : '';
+  const artistDirectoryKey = user ? `urganize.artistDirectory.${user.id}` : '';
+  const artistDefaultsKey = user ? `urganize.artistDefaults.${user.id}` : '';
 
   const getPlanStatus = useCallback((plan: PlanSummary): 'Completed' | 'Overdue' | 'In Progress' => {
     if (plan.status === 'released') return 'Completed';
@@ -119,6 +137,30 @@ export default function DashboardPage() {
       });
     return sorted;
   }, [getPlanStatus, planFilter, planSearch, planSort, plans]);
+  const filteredArtists = useMemo(() => {
+    const query = artistSearch.trim().toLowerCase();
+    if (!query) return artists;
+    return artists.filter((artist) => {
+      return (
+        artist.name.toLowerCase().includes(query) ||
+        artist.genre.toLowerCase().includes(query) ||
+        artist.primaryPlatform.toLowerCase().includes(query) ||
+        artist.notes.toLowerCase().includes(query)
+      );
+    });
+  }, [artistSearch, artists]);
+  const importablePlanArtists = useMemo(() => {
+    const existing = new Set(artists.map((artist) => artist.name.trim().toLowerCase()).filter(Boolean));
+    const names = Array.from(
+      new Set(
+        plans
+          .map((plan) => plan.artist_name.trim())
+          .filter(Boolean)
+          .filter((name) => !existing.has(name.toLowerCase()))
+      )
+    );
+    return names;
+  }, [artists, plans]);
 
   useEffect(() => {
     let cancelled = false;
@@ -241,8 +283,35 @@ export default function DashboardPage() {
     };
   }, [authLoading, cacheKey, router, user]);
 
+  useEffect(() => {
+    if (!artistDirectoryKey) {
+      setArtists([]);
+      return;
+    }
+    const raw = localStorage.getItem(artistDirectoryKey);
+    if (!raw) {
+      setArtists([]);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw) as ArtistDirectoryItem[];
+      setArtists(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      setArtists([]);
+    }
+  }, [artistDirectoryKey]);
+
+  useEffect(() => {
+    if (!artistDirectoryKey) return;
+    localStorage.setItem(artistDirectoryKey, JSON.stringify(artists));
+  }, [artistDirectoryKey, artists]);
+
   const createNewPlan = async () => {
     if (!user || isCreatingPlan) return;
+    if (!permissions.canCreatePlans) {
+      setError('Only managers can create plans.');
+      return;
+    }
     if (hasSubscriptionAccess === false) {
       router.push('/settings');
       return;
@@ -252,6 +321,83 @@ export default function DashboardPage() {
     setNeedsOnboarding(true);
     router.push('/dashboard?startOnboarding=2&flow=create-plan');
     setIsCreatingPlan(false);
+  };
+
+  const saveArtistDirectoryItem = () => {
+    const name = artistForm.name.trim();
+    if (!name) {
+      setError('Artist name is required.');
+      return;
+    }
+    const now = new Date().toISOString();
+    const payload = {
+      name,
+      genre: artistForm.genre.trim(),
+      primaryPlatform: artistForm.primaryPlatform.trim(),
+      notes: artistForm.notes.trim(),
+      updatedAt: now,
+    };
+    setArtists((current) => {
+      if (editingArtistId) {
+        return current.map((artist) => (artist.id === editingArtistId ? { ...artist, ...payload } : artist));
+      }
+      const newArtist: ArtistDirectoryItem = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: now,
+        ...payload,
+      };
+      return [newArtist, ...current];
+    });
+    setArtistForm({ name: '', genre: '', primaryPlatform: '', notes: '' });
+    setEditingArtistId(null);
+    setError('');
+  };
+
+  const editArtistDirectoryItem = (artist: ArtistDirectoryItem) => {
+    setEditingArtistId(artist.id);
+    setArtistForm({
+      name: artist.name,
+      genre: artist.genre,
+      primaryPlatform: artist.primaryPlatform,
+      notes: artist.notes,
+    });
+  };
+
+  const deleteArtistDirectoryItem = (artistId: string) => {
+    setArtists((current) => current.filter((artist) => artist.id !== artistId));
+    if (editingArtistId === artistId) {
+      setEditingArtistId(null);
+      setArtistForm({ name: '', genre: '', primaryPlatform: '', notes: '' });
+    }
+  };
+
+  const startPlanForArtist = (artist: ArtistDirectoryItem) => {
+    if (!artistDefaultsKey) return;
+    localStorage.setItem(
+      artistDefaultsKey,
+      JSON.stringify({
+        artistName: artist.name,
+        genre: artist.genre,
+        primaryPlatform: artist.primaryPlatform,
+      })
+    );
+    setNeedsOnboarding(true);
+    router.push('/dashboard?startOnboarding=2&flow=create-plan');
+  };
+
+  const importArtistsFromPlans = () => {
+    if (importablePlanArtists.length === 0) return;
+    const now = new Date().toISOString();
+    const imported = importablePlanArtists.map((name, index) => ({
+      id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      genre: '',
+      primaryPlatform: '',
+      notes: '',
+      createdAt: now,
+      updatedAt: now,
+    }));
+    setArtists((current) => [...imported, ...current]);
   };
 
   const requestDeletePlan = (plan: PlanSummary) => {
@@ -532,6 +678,10 @@ export default function DashboardPage() {
             <div>
               <h1 className="text-[clamp(2.6rem,6vw,5rem)] tracking-tight lg:text-[3.2rem] xl:text-[3.6rem]">Plans</h1>
               <p className="mt-1 text-xs uppercase tracking-[0.14em] text-content-tertiary">Release command dashboard</p>
+              <p className="mt-2 text-xs text-content-secondary">
+                Role: <span className="font-medium text-content-primary">{permissions.role}</span>
+                {!permissions.canManagePlans ? ' • Read-only plan management' : ''}
+              </p>
             </div>
             <div className="flex items-center gap-3">
               {isRefreshing && !loading && (
@@ -542,10 +692,10 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={createNewPlan}
-                disabled={isCreatingPlan || loading || hasSubscriptionAccess !== true}
+                disabled={isCreatingPlan || loading || hasSubscriptionAccess !== true || !permissions.canCreatePlans}
                 className="rounded-xl border border-brand/40 bg-brand-muted px-4 py-2 text-sm font-semibold text-content-primary transition hover:bg-brand/20 disabled:opacity-50"
               >
-                {isCreatingPlan ? 'Creating...' : 'Create New Plan'}
+                {isCreatingPlan ? 'Creating...' : permissions.canCreatePlans ? 'Create New Plan' : 'Manager Only'}
               </button>
             </div>
           </div>
@@ -566,6 +716,122 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
+          )}
+          {hasSubscriptionAccess !== false && permissions.canManageArtists && (
+            <section className="mt-6 rounded-2xl border border-stroke-default/80 bg-bg-elevated/70 p-4 backdrop-blur-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-content-tertiary">Artist Directory</h2>
+                  <p className="mt-1 text-sm text-content-secondary">Save artists, then start a new plan with prefilled artist details.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {importablePlanArtists.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={importArtistsFromPlans}
+                      className="rounded-md border border-stroke-default bg-bg-surface px-2.5 py-1 text-xs text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                    >
+                      Import {importablePlanArtists.length} from plans
+                    </button>
+                  )}
+                  <span className="rounded-full border border-stroke-default bg-bg-surface px-2.5 py-1 text-xs text-content-secondary">
+                    {artists.length} artist{artists.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-4">
+                <input
+                  value={artistForm.name}
+                  onChange={(event) => setArtistForm((current) => ({ ...current, name: event.target.value }))}
+                  placeholder="Artist name"
+                  className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                />
+                <input
+                  value={artistForm.genre}
+                  onChange={(event) => setArtistForm((current) => ({ ...current, genre: event.target.value }))}
+                  placeholder="Genre"
+                  className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                />
+                <input
+                  value={artistForm.primaryPlatform}
+                  onChange={(event) => setArtistForm((current) => ({ ...current, primaryPlatform: event.target.value }))}
+                  placeholder="Primary platform"
+                  className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                />
+                <button
+                  type="button"
+                  onClick={saveArtistDirectoryItem}
+                  className="rounded-lg border border-brand/40 bg-brand-muted px-3 py-2 text-sm font-semibold text-content-primary hover:bg-brand/20"
+                >
+                  {editingArtistId ? 'Save Artist' : 'Add Artist'}
+                </button>
+              </div>
+              <textarea
+                value={artistForm.notes}
+                onChange={(event) => setArtistForm((current) => ({ ...current, notes: event.target.value }))}
+                placeholder="Notes (optional)"
+                className="mt-2 min-h-[72px] w-full rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+              />
+              {editingArtistId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingArtistId(null);
+                    setArtistForm({ name: '', genre: '', primaryPlatform: '', notes: '' });
+                  }}
+                  className="mt-2 text-xs text-content-secondary hover:underline"
+                >
+                  Cancel editing
+                </button>
+              )}
+              <input
+                value={artistSearch}
+                onChange={(event) => setArtistSearch(event.target.value)}
+                placeholder="Search artists"
+                className="mt-3 w-full rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+              />
+              {filteredArtists.length > 0 ? (
+                <div className="mt-3 space-y-2">
+                  {filteredArtists.map((artist) => (
+                    <div key={artist.id} className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2">
+                      <div>
+                        <p className="text-sm font-medium text-content-primary">{artist.name}</p>
+                        <p className="text-xs text-content-secondary">
+                          {artist.genre || 'No genre'}
+                          {artist.primaryPlatform ? ` • ${artist.primaryPlatform}` : ''}
+                        </p>
+                        {artist.notes && <p className="mt-1 text-xs text-content-secondary">{artist.notes}</p>}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => startPlanForArtist(artist)}
+                          className="rounded-md border border-brand/35 bg-brand-muted px-2 py-1 text-content-primary hover:bg-brand/20"
+                        >
+                          Start Plan
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => editArtistDirectoryItem(artist)}
+                          className="text-content-secondary hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteArtistDirectoryItem(artist.id)}
+                          className="text-status-error hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-content-secondary">No artists yet. Add one to speed up plan creation.</p>
+              )}
+            </section>
           )}
           {hasSubscriptionAccess === false ? (
             <div className="mt-8">
@@ -668,6 +934,7 @@ export default function DashboardPage() {
               <VirtualizedPlanList
                 plans={filteredPlans}
                 showArchivedBadge={planFilter === 'all'}
+                canManagePlans={permissions.canManagePlans}
                 getPlanStatus={getPlanStatus}
                 onSelectPlan={(planId) => router.push(`/dashboard/plans/${planId}`)}
                 onRenamePlanTitle={async (planId, title) => {
@@ -721,16 +988,22 @@ export default function DashboardPage() {
                               className="w-full max-w-[320px] rounded border border-stroke-subtle bg-bg-surface px-2 py-1 text-base font-medium text-content-primary outline-none focus:border-brand"
                             />
                           ) : (
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                beginInlineTitleEdit(plan);
-                              }}
-                              className="truncate text-left text-base font-medium text-content-primary underline-offset-4 hover:underline"
-                            >
-                              {plan.title}
-                            </button>
+                            <>
+                              {permissions.canManagePlans ? (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    beginInlineTitleEdit(plan);
+                                  }}
+                                  className="truncate text-left text-base font-medium text-content-primary underline-offset-4 hover:underline"
+                                >
+                                  {plan.title}
+                                </button>
+                              ) : (
+                                <p className="truncate text-left text-base font-medium text-content-primary">{plan.title}</p>
+                              )}
+                            </>
                           )}
                           {savingInlinePlanId === plan.id && (
                             <span className="text-[11px] text-content-tertiary">Saving...</span>
@@ -785,20 +1058,24 @@ export default function DashboardPage() {
                           >
                             Open plan
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => requestRenamePlan(plan)}
-                            className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-                          >
-                            Rename title
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => requestDeletePlan(plan)}
-                            className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-status-error hover:bg-status-error/10"
-                          >
-                            Delete plan
-                          </button>
+                          {permissions.canManagePlans && (
+                            <button
+                              type="button"
+                              onClick={() => requestRenamePlan(plan)}
+                              className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                            >
+                              Rename title
+                            </button>
+                          )}
+                          {permissions.canManagePlans && (
+                            <button
+                              type="button"
+                              onClick={() => requestDeletePlan(plan)}
+                              className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-status-error hover:bg-status-error/10"
+                            >
+                              Delete plan
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>

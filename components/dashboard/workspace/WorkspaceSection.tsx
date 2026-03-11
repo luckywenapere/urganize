@@ -58,6 +58,7 @@ type AssetItem = {
 };
 
 type WorkspaceSectionProps = {
+  canEditWorkspace?: boolean;
   workspaceSyncMode: 'loading' | 'database' | 'local';
   workspaceSyncMessage: string;
   activeWorkspaceTab: WorkspaceTab;
@@ -93,6 +94,7 @@ type WorkspaceSectionProps = {
   onNewMarketingChange: (field: 'platform' | 'contentType' | 'captionIdea' | 'publishDate' | 'owner', value: string) => void;
   onAddMarketing: () => void;
   onRemoveMarketing: (id: string) => void;
+  onUpdateMarketing: (id: string, updates: Partial<MarketingCalendarItem>) => void;
   playlistItems: PlaylistTrackerItem[];
   newPlaylist: {
     curator: string;
@@ -104,6 +106,7 @@ type WorkspaceSectionProps = {
   onAddPlaylist: () => void;
   onRemovePlaylist: (id: string) => void;
   onPlaylistStatusChange: (id: string, status: PlaylistTrackerItem['status']) => void;
+  onUpdatePlaylist: (id: string, updates: Partial<PlaylistTrackerItem>) => void;
   assets: AssetItem[];
   isLoadingAssets: boolean;
   assetCategory: string;
@@ -120,6 +123,7 @@ type WorkspaceSectionProps = {
 };
 
 export function WorkspaceSection({
+  canEditWorkspace = true,
   workspaceSyncMode,
   workspaceSyncMessage,
   activeWorkspaceTab,
@@ -143,12 +147,14 @@ export function WorkspaceSection({
   onNewMarketingChange,
   onAddMarketing,
   onRemoveMarketing,
+  onUpdateMarketing,
   playlistItems,
   newPlaylist,
   onNewPlaylistChange,
   onAddPlaylist,
   onRemovePlaylist,
   onPlaylistStatusChange,
+  onUpdatePlaylist,
   assets,
   isLoadingAssets,
   assetCategory,
@@ -167,7 +173,7 @@ export function WorkspaceSection({
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dropTargetTaskId, setDropTargetTaskId] = useState<string | null>(null);
-  const [customTaskSearch, setCustomTaskSearch] = useState('');
+  const [taskBoardSearch, setTaskBoardSearch] = useState('');
   const [editDraft, setEditDraft] = useState<{
     title: string;
     description: string;
@@ -178,6 +184,21 @@ export function WorkspaceSection({
     description: '',
     priority: 'medium',
     dueDate: '',
+  });
+  const [editingMarketingId, setEditingMarketingId] = useState<string | null>(null);
+  const [marketingEditDraft, setMarketingEditDraft] = useState({
+    platform: '',
+    contentType: '',
+    captionIdea: '',
+    publishDate: '',
+    owner: '',
+  });
+  const [editingPlaylistId, setEditingPlaylistId] = useState<string | null>(null);
+  const [playlistEditDraft, setPlaylistEditDraft] = useState({
+    curator: '',
+    platform: '',
+    submissionDate: '',
+    notes: '',
   });
   const allTaskCount = taskBoardItems.length + customTaskItems.length;
   const completedChecklistCount = distributionItems.filter((item) => item.done).length;
@@ -192,18 +213,30 @@ export function WorkspaceSection({
     if (taskBoardFilter === 'artist') return customTaskItems.filter((task) => task.tagScope === 'artist');
     return [];
   }, [customTaskItems, taskBoardFilter]);
-  const visibleCustomTasks = useMemo(() => {
-    const query = customTaskSearch.trim().toLowerCase();
-    if (!query) return filteredCustomTasks;
-    return filteredCustomTasks.filter((task) => {
+  const normalizedTaskSearch = taskBoardSearch.trim().toLowerCase();
+  const visibleAiTasks = useMemo(() => {
+    if (!normalizedTaskSearch) return filteredAiTasks;
+    return filteredAiTasks.filter((task) => {
       return (
-        task.title.toLowerCase().includes(query) ||
-        task.description.toLowerCase().includes(query) ||
-        task.tagLabel.toLowerCase().includes(query)
+        task.title.toLowerCase().includes(normalizedTaskSearch) ||
+        String(task.description || '')
+          .toLowerCase()
+          .includes(normalizedTaskSearch)
       );
     });
-  }, [customTaskSearch, filteredCustomTasks]);
-  const filteredTaskCount = filteredAiTasks.length + filteredCustomTasks.length;
+  }, [filteredAiTasks, normalizedTaskSearch]);
+  const visibleCustomTasks = useMemo(() => {
+    if (!normalizedTaskSearch) return filteredCustomTasks;
+    return filteredCustomTasks.filter((task) => {
+      return (
+        task.title.toLowerCase().includes(normalizedTaskSearch) ||
+        task.description.toLowerCase().includes(normalizedTaskSearch) ||
+        task.tagLabel.toLowerCase().includes(normalizedTaskSearch)
+      );
+    });
+  }, [filteredCustomTasks, normalizedTaskSearch]);
+  const filteredTaskCount = visibleAiTasks.length + visibleCustomTasks.length;
+  const hasTasksForExport = filteredAiTasks.length + filteredCustomTasks.length > 0;
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const syncClassName =
     workspaceSyncMode === 'database'
@@ -354,6 +387,59 @@ export function WorkspaceSection({
               </button>
             ))}
           </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input
+              value={taskBoardSearch}
+              onChange={(event) => setTaskBoardSearch(event.target.value)}
+              placeholder="Search tasks"
+              className="min-w-[220px] flex-1 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+            />
+            <button
+              type="button"
+              disabled={!hasTasksForExport}
+              onClick={() => {
+                const escapeCsv = (value: string) => `"${String(value || '').replace(/"/g, '""')}"`;
+                const header = ['type', 'title', 'description', 'status', 'priority', 'due_date', 'tag_scope', 'tag_label'];
+                const aiRows = visibleAiTasks.map((task) =>
+                  [
+                    'ai',
+                    task.title,
+                    task.description || '',
+                    task.status,
+                    '',
+                    '',
+                    'release',
+                    releaseTagLabel,
+                  ].map(escapeCsv)
+                );
+                const customRows = visibleCustomTasks.map((task) =>
+                  [
+                    'custom',
+                    task.title,
+                    task.description,
+                    task.status,
+                    task.priority,
+                    task.dueDate,
+                    task.tagScope,
+                    task.tagLabel,
+                  ].map(escapeCsv)
+                );
+                const csv = [header.join(','), ...aiRows.map((row) => row.join(',')), ...customRows.map((row) => row.join(','))].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'task-board.csv';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+              }}
+              className="rounded-lg border border-stroke-default bg-bg-elevated px-2.5 py-2 text-xs text-content-secondary hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Export CSV
+            </button>
+          </div>
           {allTaskCount === 0 ? (
             <div className="mt-3 rounded-lg border border-brand/25 bg-brand/5 px-3 py-3 text-sm text-content-secondary">
               <p>No tasks yet. Generate or add a next step to populate this board.</p>
@@ -365,11 +451,11 @@ export function WorkspaceSection({
             </div>
           ) : (
             <div className="mt-3 space-y-4">
-              {filteredAiTasks.length > 0 && (
+              {visibleAiTasks.length > 0 && (
                 <div>
                   <p className="mb-2 text-[11px] uppercase tracking-[0.18em] text-content-tertiary">AI Tasks</p>
                   <ul className="space-y-2">
-                    {filteredAiTasks.map((task) => (
+                    {visibleAiTasks.map((task) => (
                       <li
                         key={task.id}
                         className={`rounded-lg border bg-bg-surface px-3 py-2 transition hover:-translate-y-[1px] ${
@@ -403,85 +489,57 @@ export function WorkspaceSection({
 
               {filteredCustomTasks.length > 0 && (
                 <div>
-                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-content-tertiary">Custom Tasks</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const header = ['title', 'description', 'status', 'priority', 'due_date', 'tag_scope', 'tag_label'];
-                        const rows = visibleCustomTasks.map((task) =>
-                          [
-                            task.title,
-                            task.description,
-                            task.status,
-                            task.priority,
-                            task.dueDate,
-                            task.tagScope,
-                            task.tagLabel,
-                          ].map((value) => `"${String(value).replace(/"/g, '""')}"`)
-                        );
-                        const csv = [header.join(','), ...rows.map((row) => row.join(','))].join('\n');
-                        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = 'custom-tasks.csv';
-                        document.body.appendChild(link);
-                        link.click();
-                        link.remove();
-                        URL.revokeObjectURL(url);
-                      }}
-                      className="rounded-lg border border-stroke-default bg-bg-elevated px-2.5 py-1 text-xs text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-                    >
-                      Export CSV
-                    </button>
-                  </div>
+                  <p className="mb-2 text-[11px] uppercase tracking-[0.18em] text-content-tertiary">Custom Tasks</p>
                   <p className="mb-2 text-xs text-content-tertiary">Drag and drop cards to reorder.</p>
-                  <input
-                    value={customTaskSearch}
-                    onChange={(event) => setCustomTaskSearch(event.target.value)}
-                    placeholder="Search custom tasks"
-                    className="mb-2 w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-                  />
                   <ul className="space-y-2">
                     {visibleCustomTasks.map((task) => (
-                      <li
-                        key={task.id}
-                        draggable={editingTaskId !== task.id}
-                        onDragStart={() => {
-                          setDraggingTaskId(task.id);
-                          setDropTargetTaskId(null);
-                        }}
-                        onDragOver={(event) => {
-                          event.preventDefault();
-                          if (draggingTaskId && draggingTaskId !== task.id) {
-                            setDropTargetTaskId(task.id);
-                          }
-                        }}
-                        onDragLeave={() => {
-                          if (dropTargetTaskId === task.id) {
+                        <li
+                          key={task.id}
+                          draggable={canEditWorkspace && editingTaskId !== task.id}
+                          onDragStart={() => {
+                            if (!canEditWorkspace) return;
+                            setDraggingTaskId(task.id);
                             setDropTargetTaskId(null);
-                          }
-                        }}
-                        onDrop={(event) => {
-                          event.preventDefault();
-                          if (!draggingTaskId || draggingTaskId === task.id) return;
-                          onReorderCustomTask(draggingTaskId, task.id);
+                          }}
+                          onDragOver={(event) => {
+                            if (!canEditWorkspace) return;
+                            event.preventDefault();
+                            if (draggingTaskId && draggingTaskId !== task.id) {
+                              setDropTargetTaskId(task.id);
+                            }
+                          }}
+                          onDragLeave={() => {
+                            if (!canEditWorkspace) return;
+                            if (dropTargetTaskId === task.id) {
+                              setDropTargetTaskId(null);
+                            }
+                          }}
+                          onDrop={(event) => {
+                            if (!canEditWorkspace) return;
+                            event.preventDefault();
+                            if (!draggingTaskId || draggingTaskId === task.id) return;
+                            onReorderCustomTask(draggingTaskId, task.id);
                           setDraggingTaskId(null);
                           setDropTargetTaskId(null);
                         }}
-                        onDragEnd={() => {
-                          setDraggingTaskId(null);
-                          setDropTargetTaskId(null);
-                        }}
+                          onDragEnd={() => {
+                            setDraggingTaskId(null);
+                            setDropTargetTaskId(null);
+                          }}
                         className={`rounded-lg border bg-bg-surface px-3 py-2 transition hover:-translate-y-[1px] ${
                           dropTargetTaskId === task.id
                             ? 'border-brand/70 ring-1 ring-brand/40'
                             : task.dueDate && task.dueDate < todayIso && task.status !== 'completed'
                               ? 'border-status-error/55 bg-status-error/5'
                               : 'border-brand/30'
-                        } ${editingTaskId === task.id ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}`}
-                      >
+                          } ${
+                            !canEditWorkspace
+                              ? 'cursor-default'
+                              : editingTaskId === task.id
+                                ? 'cursor-default'
+                                : 'cursor-grab active:cursor-grabbing'
+                          }`}
+                        >
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div>
                             {editingTaskId === task.id ? (
@@ -522,53 +580,58 @@ export function WorkspaceSection({
                             <select
                               value={task.status}
                               onChange={(event) => onCustomTaskStatusChange(task.id, event.target.value as CustomTaskItem['status'])}
+                              disabled={!canEditWorkspace}
                               className="rounded border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-primary"
                             >
                               <option value="pending">pending</option>
                               <option value="current">current</option>
                               <option value="completed">completed</option>
                             </select>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (editingTaskId === task.id) {
-                                  onUpdateCustomTask(task.id, {
-                                    title: editDraft.title.trim() || task.title,
-                                    description: editDraft.description,
-                                    priority: editDraft.priority,
-                                    dueDate: editDraft.dueDate,
-                                  });
-                                  setEditingTaskId(null);
-                                  return;
-                                }
-                                setEditingTaskId(task.id);
-                                setEditDraft({
-                                  title: task.title,
-                                  description: task.description,
-                                  priority: task.priority,
-                                  dueDate: task.dueDate,
-                                });
-                              }}
-                              className="text-xs text-content-secondary hover:underline"
-                            >
-                              {editingTaskId === task.id ? 'Save' : 'Edit'}
-                            </button>
-                            {editingTaskId === task.id && (
-                              <button
-                                type="button"
-                                onClick={() => setEditingTaskId(null)}
-                                className="text-xs text-content-secondary hover:underline"
-                              >
-                                Cancel
-                              </button>
+                            {canEditWorkspace && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (editingTaskId === task.id) {
+                                      onUpdateCustomTask(task.id, {
+                                        title: editDraft.title.trim() || task.title,
+                                        description: editDraft.description,
+                                        priority: editDraft.priority,
+                                        dueDate: editDraft.dueDate,
+                                      });
+                                      setEditingTaskId(null);
+                                      return;
+                                    }
+                                    setEditingTaskId(task.id);
+                                    setEditDraft({
+                                      title: task.title,
+                                      description: task.description,
+                                      priority: task.priority,
+                                      dueDate: task.dueDate,
+                                    });
+                                  }}
+                                  className="text-xs text-content-secondary hover:underline"
+                                >
+                                  {editingTaskId === task.id ? 'Save' : 'Edit'}
+                                </button>
+                                {editingTaskId === task.id && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingTaskId(null)}
+                                    className="text-xs text-content-secondary hover:underline"
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => onRemoveCustomTask(task.id)}
+                                  className="text-xs text-status-error hover:underline"
+                                >
+                                  Remove
+                                </button>
+                              </>
                             )}
-                            <button
-                              type="button"
-                              onClick={() => onRemoveCustomTask(task.id)}
-                              className="text-xs text-status-error hover:underline"
-                            >
-                              Remove
-                            </button>
                           </div>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-1">
@@ -577,6 +640,7 @@ export function WorkspaceSection({
                               key={status}
                               type="button"
                               onClick={() => onCustomTaskStatusChange(task.id, status)}
+                              disabled={!canEditWorkspace}
                               className={`rounded-full border px-2 py-0.5 text-[11px] ${
                                 task.status === status
                                   ? 'border-brand/40 bg-brand-muted text-content-primary'
@@ -633,50 +697,56 @@ export function WorkspaceSection({
           )}
           <div className="mt-4 rounded-xl border border-stroke-default bg-bg-surface p-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">Create Custom Task</p>
-            <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-6">
-              <input
-                value={newCustomTask.title}
-                onChange={(event) => onNewCustomTaskChange('title', event.target.value)}
-                placeholder="Task title"
-                className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand md:col-span-2"
-              />
-              <select
-                value={newCustomTask.priority}
-                onChange={(event) => onNewCustomTaskChange('priority', event.target.value)}
-                className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-              >
-                <option value="low">Priority: low</option>
-                <option value="medium">Priority: medium</option>
-                <option value="high">Priority: high</option>
-              </select>
-              <input
-                type="date"
-                value={newCustomTask.dueDate}
-                onChange={(event) => onNewCustomTaskChange('dueDate', event.target.value)}
-                className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-              />
-              <select
-                value={newCustomTask.tagScope}
-                onChange={(event) => onNewCustomTaskChange('tagScope', event.target.value)}
-                className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-              >
-                <option value="release">Tag: release ({releaseTagLabel})</option>
-                <option value="artist">Tag: artist ({artistTagLabel})</option>
-              </select>
-              <button
-                type="button"
-                onClick={onAddCustomTask}
-                className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
-              >
-                Create Custom Task
-              </button>
-            </div>
-            <textarea
-              value={newCustomTask.description}
-              onChange={(event) => onNewCustomTaskChange('description', event.target.value)}
-              placeholder="Optional description"
-              className="mt-2 min-h-[72px] w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-            />
+            {canEditWorkspace ? (
+              <>
+                <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-6">
+                  <input
+                    value={newCustomTask.title}
+                    onChange={(event) => onNewCustomTaskChange('title', event.target.value)}
+                    placeholder="Task title"
+                    className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand md:col-span-2"
+                  />
+                  <select
+                    value={newCustomTask.priority}
+                    onChange={(event) => onNewCustomTaskChange('priority', event.target.value)}
+                    className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                  >
+                    <option value="low">Priority: low</option>
+                    <option value="medium">Priority: medium</option>
+                    <option value="high">Priority: high</option>
+                  </select>
+                  <input
+                    type="date"
+                    value={newCustomTask.dueDate}
+                    onChange={(event) => onNewCustomTaskChange('dueDate', event.target.value)}
+                    className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                  />
+                  <select
+                    value={newCustomTask.tagScope}
+                    onChange={(event) => onNewCustomTaskChange('tagScope', event.target.value)}
+                    className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                  >
+                    <option value="release">Tag: release ({releaseTagLabel})</option>
+                    <option value="artist">Tag: artist ({artistTagLabel})</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={onAddCustomTask}
+                    className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+                  >
+                    Create Custom Task
+                  </button>
+                </div>
+                <textarea
+                  value={newCustomTask.description}
+                  onChange={(event) => onNewCustomTaskChange('description', event.target.value)}
+                  placeholder="Optional description"
+                  className="mt-2 min-h-[72px] w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                />
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-content-secondary">Workspace is read-only for your role.</p>
+            )}
           </div>
         </article>
 
@@ -693,6 +763,7 @@ export function WorkspaceSection({
                 <input
                   type="checkbox"
                   checked={item.done}
+                  disabled={!canEditWorkspace}
                   onChange={() => onToggleDistributionItem(item.id)}
                   className="mt-0.5 h-4 w-4"
                 />
@@ -704,66 +775,151 @@ export function WorkspaceSection({
 
         <article className={`${activeWorkspaceTab !== 'marketing' ? 'hidden' : ''} ${panelCardClassName}`}>
           <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-content-tertiary">Marketing Calendar</h3>
-          <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-5">
-            <input
-              value={newMarketing.platform}
-              onChange={(event) => onNewMarketingChange('platform', event.target.value)}
-              placeholder="Platform"
-              className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-            />
-            <input
-              value={newMarketing.contentType}
-              onChange={(event) => onNewMarketingChange('contentType', event.target.value)}
-              placeholder="Content type"
-              className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-            />
-            <input
-              type="date"
-              value={newMarketing.publishDate}
-              onChange={(event) => onNewMarketingChange('publishDate', event.target.value)}
-              className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-            />
-            <input
-              value={newMarketing.owner}
-              onChange={(event) => onNewMarketingChange('owner', event.target.value)}
-              placeholder="Owner"
-              className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-            />
-            <button
-              type="button"
-              onClick={onAddMarketing}
-              className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
-            >
-              Add
-            </button>
-          </div>
-          <textarea
-            value={newMarketing.captionIdea}
-            onChange={(event) => onNewMarketingChange('captionIdea', event.target.value)}
-            placeholder="Caption idea (optional)"
-            className="mt-2 min-h-[72px] w-full rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-          />
+          {canEditWorkspace ? (
+            <>
+              <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-5">
+                <input
+                  value={newMarketing.platform}
+                  onChange={(event) => onNewMarketingChange('platform', event.target.value)}
+                  placeholder="Platform"
+                  className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                />
+                <input
+                  value={newMarketing.contentType}
+                  onChange={(event) => onNewMarketingChange('contentType', event.target.value)}
+                  placeholder="Content type"
+                  className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                />
+                <input
+                  type="date"
+                  value={newMarketing.publishDate}
+                  onChange={(event) => onNewMarketingChange('publishDate', event.target.value)}
+                  className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                />
+                <input
+                  value={newMarketing.owner}
+                  onChange={(event) => onNewMarketingChange('owner', event.target.value)}
+                  placeholder="Owner"
+                  className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                />
+                <button
+                  type="button"
+                  onClick={onAddMarketing}
+                  className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+                >
+                  Add
+                </button>
+              </div>
+              <textarea
+                value={newMarketing.captionIdea}
+                onChange={(event) => onNewMarketingChange('captionIdea', event.target.value)}
+                placeholder="Caption idea (optional)"
+                className="mt-2 min-h-[72px] w-full rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+              />
+            </>
+          ) : (
+            <p className="mt-3 text-sm text-content-secondary">Read-only access: you can view calendar entries.</p>
+          )}
           {marketingItems.length > 0 ? (
             <div className="mt-3 space-y-2">
               {marketingItems.map((item) => (
                 <div key={item.id} className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2">
                   <div>
-                    <p className="text-sm font-medium text-content-primary">
-                      {item.platform} • {item.contentType}
-                    </p>
-                    <p className="text-xs text-content-secondary">
-                      {item.publishDate}
-                      {item.owner ? ` • ${item.owner}` : ''}
-                    </p>
-                    {item.captionIdea && <p className="mt-1 text-xs text-content-secondary">{item.captionIdea}</p>}
+                    {editingMarketingId === item.id ? (
+                      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                        <input
+                          value={marketingEditDraft.platform}
+                          onChange={(event) => setMarketingEditDraft((current) => ({ ...current, platform: event.target.value }))}
+                          className="rounded border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-primary outline-none focus:border-brand"
+                          placeholder="Platform"
+                        />
+                        <input
+                          value={marketingEditDraft.contentType}
+                          onChange={(event) => setMarketingEditDraft((current) => ({ ...current, contentType: event.target.value }))}
+                          className="rounded border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-primary outline-none focus:border-brand"
+                          placeholder="Content type"
+                        />
+                        <input
+                          type="date"
+                          value={marketingEditDraft.publishDate}
+                          onChange={(event) => setMarketingEditDraft((current) => ({ ...current, publishDate: event.target.value }))}
+                          className="rounded border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-primary outline-none focus:border-brand"
+                        />
+                        <input
+                          value={marketingEditDraft.owner}
+                          onChange={(event) => setMarketingEditDraft((current) => ({ ...current, owner: event.target.value }))}
+                          className="rounded border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-primary outline-none focus:border-brand"
+                          placeholder="Owner"
+                        />
+                        <textarea
+                          value={marketingEditDraft.captionIdea}
+                          onChange={(event) => setMarketingEditDraft((current) => ({ ...current, captionIdea: event.target.value }))}
+                          className="min-h-[68px] rounded border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-primary outline-none focus:border-brand md:col-span-2"
+                          placeholder="Caption idea"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-content-primary">
+                          {item.platform} • {item.contentType}
+                        </p>
+                        <p className="text-xs text-content-secondary">
+                          {item.publishDate}
+                          {item.owner ? ` • ${item.owner}` : ''}
+                        </p>
+                        {item.captionIdea && <p className="mt-1 text-xs text-content-secondary">{item.captionIdea}</p>}
+                      </>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onRemoveMarketing(item.id)}
-                    className="text-xs text-status-error hover:underline"
-                  >
-                    Remove
-                  </button>
+                  <div className="flex items-center gap-2 text-xs">
+                    {canEditWorkspace && editingMarketingId === item.id ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onUpdateMarketing(item.id, marketingEditDraft);
+                            setEditingMarketingId(null);
+                          }}
+                          className="text-content-secondary hover:underline"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingMarketingId(null)}
+                          className="text-content-secondary hover:underline"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : canEditWorkspace ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingMarketingId(item.id);
+                          setMarketingEditDraft({
+                            platform: item.platform,
+                            contentType: item.contentType,
+                            captionIdea: item.captionIdea,
+                            publishDate: item.publishDate,
+                            owner: item.owner,
+                          });
+                        }}
+                        className="text-content-secondary hover:underline"
+                      >
+                        Edit
+                      </button>
+                    ) : null}
+                    {canEditWorkspace && (
+                      <button
+                        type="button"
+                        onClick={() => onRemoveMarketing(item.id)}
+                        className="text-status-error hover:underline"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -774,51 +930,85 @@ export function WorkspaceSection({
 
         <article className={`${activeWorkspaceTab !== 'playlist' ? 'hidden' : ''} ${panelCardClassName}`}>
           <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-content-tertiary">Playlist Tracker</h3>
-          <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-5">
-            <input
-              value={newPlaylist.curator}
-              onChange={(event) => onNewPlaylistChange('curator', event.target.value)}
-              placeholder="Curator / playlist"
-              className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-            />
-            <input
-              value={newPlaylist.platform}
-              onChange={(event) => onNewPlaylistChange('platform', event.target.value)}
-              placeholder="Platform"
-              className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-            />
-            <input
-              type="date"
-              value={newPlaylist.submissionDate}
-              onChange={(event) => onNewPlaylistChange('submissionDate', event.target.value)}
-              className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-            />
-            <input
-              value={newPlaylist.notes}
-              onChange={(event) => onNewPlaylistChange('notes', event.target.value)}
-              placeholder="Notes"
-              className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-            />
-            <button
-              type="button"
-              onClick={onAddPlaylist}
-              className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
-            >
-              Add
-            </button>
-          </div>
+          {canEditWorkspace ? (
+            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-5">
+              <input
+                value={newPlaylist.curator}
+                onChange={(event) => onNewPlaylistChange('curator', event.target.value)}
+                placeholder="Curator / playlist"
+                className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+              />
+              <input
+                value={newPlaylist.platform}
+                onChange={(event) => onNewPlaylistChange('platform', event.target.value)}
+                placeholder="Platform"
+                className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+              />
+              <input
+                type="date"
+                value={newPlaylist.submissionDate}
+                onChange={(event) => onNewPlaylistChange('submissionDate', event.target.value)}
+                className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+              />
+              <input
+                value={newPlaylist.notes}
+                onChange={(event) => onNewPlaylistChange('notes', event.target.value)}
+                placeholder="Notes"
+                className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+              />
+              <button
+                type="button"
+                onClick={onAddPlaylist}
+                className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+              >
+                Add
+              </button>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-content-secondary">Read-only access: you can view tracker entries.</p>
+          )}
           {playlistItems.length > 0 ? (
             <div className="mt-3 space-y-2">
               {playlistItems.map((item) => (
                 <div key={item.id} className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-content-primary">
-                      {item.curator} • {item.platform}
-                    </p>
+                    {editingPlaylistId === item.id ? (
+                      <div className="grid flex-1 grid-cols-1 gap-2 md:grid-cols-2">
+                        <input
+                          value={playlistEditDraft.curator}
+                          onChange={(event) => setPlaylistEditDraft((current) => ({ ...current, curator: event.target.value }))}
+                          className="rounded border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-primary outline-none focus:border-brand"
+                          placeholder="Curator"
+                        />
+                        <input
+                          value={playlistEditDraft.platform}
+                          onChange={(event) => setPlaylistEditDraft((current) => ({ ...current, platform: event.target.value }))}
+                          className="rounded border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-primary outline-none focus:border-brand"
+                          placeholder="Platform"
+                        />
+                        <input
+                          type="date"
+                          value={playlistEditDraft.submissionDate}
+                          onChange={(event) => setPlaylistEditDraft((current) => ({ ...current, submissionDate: event.target.value }))}
+                          className="rounded border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-primary outline-none focus:border-brand"
+                        />
+                        <input
+                          value={playlistEditDraft.notes}
+                          onChange={(event) => setPlaylistEditDraft((current) => ({ ...current, notes: event.target.value }))}
+                          className="rounded border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-primary outline-none focus:border-brand"
+                          placeholder="Notes"
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-sm font-medium text-content-primary">
+                        {item.curator} • {item.platform}
+                      </p>
+                    )}
                     <div className="flex items-center gap-2">
                       <select
                         value={item.status}
                         onChange={(event) => onPlaylistStatusChange(item.id, event.target.value as PlaylistTrackerItem['status'])}
+                        disabled={!canEditWorkspace}
                         className="rounded border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-primary"
                       >
                         <option>Not Submitted</option>
@@ -826,19 +1016,60 @@ export function WorkspaceSection({
                         <option>Accepted</option>
                         <option>Rejected</option>
                       </select>
-                      <button
-                        type="button"
-                        onClick={() => onRemovePlaylist(item.id)}
-                        className="text-xs text-status-error hover:underline"
-                      >
-                        Remove
-                      </button>
+                      {canEditWorkspace && editingPlaylistId === item.id ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onUpdatePlaylist(item.id, playlistEditDraft);
+                              setEditingPlaylistId(null);
+                            }}
+                            className="text-xs text-content-secondary hover:underline"
+                          >
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingPlaylistId(null)}
+                            className="text-xs text-content-secondary hover:underline"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : canEditWorkspace ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingPlaylistId(item.id);
+                            setPlaylistEditDraft({
+                              curator: item.curator,
+                              platform: item.platform,
+                              submissionDate: item.submissionDate,
+                              notes: item.notes,
+                            });
+                          }}
+                          className="text-xs text-content-secondary hover:underline"
+                        >
+                          Edit
+                        </button>
+                      ) : null}
+                      {canEditWorkspace && (
+                        <button
+                          type="button"
+                          onClick={() => onRemovePlaylist(item.id)}
+                          className="text-xs text-status-error hover:underline"
+                        >
+                          Remove
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <p className="text-xs text-content-secondary">
-                    {item.submissionDate || 'No submission date'}
-                    {item.notes ? ` • ${item.notes}` : ''}
-                  </p>
+                  {editingPlaylistId !== item.id && (
+                    <p className="text-xs text-content-secondary">
+                      {item.submissionDate || 'No submission date'}
+                      {item.notes ? ` • ${item.notes}` : ''}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -852,41 +1083,45 @@ export function WorkspaceSection({
             <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-content-tertiary">Asset Panel</h3>
             {isLoadingAssets && <span className="text-xs text-content-tertiary">Loading...</span>}
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-5">
-            <select
-              value={assetCategory}
-              onChange={(event) => onAssetCategoryChange(event.target.value)}
-              className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-            >
-              {assetCategoryOptions.map((category) => (
-                <option key={category} value={category}>
-                  {prettyAssetCategory(category)}
-                </option>
-              ))}
-            </select>
-            <select
-              value={assetOwnerScope}
-              onChange={(event) => onAssetOwnerScopeChange(event.target.value as 'release' | 'artist')}
-              className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-            >
-              <option value="release">Belongs to Release</option>
-              <option value="artist">Belongs to Artist</option>
-            </select>
-            <input
-              ref={assetFileInputRef}
-              type="file"
-              onChange={(event) => onAssetFileSelect(event.target.files?.[0] || null)}
-              className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand md:col-span-2"
-            />
-            <button
-              type="button"
-              disabled={isUploadingAsset}
-              onClick={onUploadAsset}
-              className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-            >
-              {isUploadingAsset ? 'Uploading...' : 'Upload'}
-            </button>
-          </div>
+          {canEditWorkspace ? (
+            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-5">
+              <select
+                value={assetCategory}
+                onChange={(event) => onAssetCategoryChange(event.target.value)}
+                className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+              >
+                {assetCategoryOptions.map((category) => (
+                  <option key={category} value={category}>
+                    {prettyAssetCategory(category)}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={assetOwnerScope}
+                onChange={(event) => onAssetOwnerScopeChange(event.target.value as 'release' | 'artist')}
+                className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+              >
+                <option value="release">Belongs to Release</option>
+                <option value="artist">Belongs to Artist</option>
+              </select>
+              <input
+                ref={assetFileInputRef}
+                type="file"
+                onChange={(event) => onAssetFileSelect(event.target.files?.[0] || null)}
+                className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand md:col-span-2"
+              />
+              <button
+                type="button"
+                disabled={isUploadingAsset}
+                onClick={onUploadAsset}
+                className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+              >
+                {isUploadingAsset ? 'Uploading...' : 'Upload'}
+              </button>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-content-secondary">Read-only access: you can open assets.</p>
+          )}
           {assets.length > 0 ? (
             <div className="mt-3 space-y-2">
               {assets.map((asset) => (
@@ -907,13 +1142,15 @@ export function WorkspaceSection({
                     >
                       Open
                     </a>
-                    <button
-                      type="button"
-                      onClick={() => onDeleteAsset(asset.path)}
-                      className="text-status-error hover:underline"
-                    >
-                      Delete
-                    </button>
+                    {canEditWorkspace && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteAsset(asset.path)}
+                        className="text-status-error hover:underline"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

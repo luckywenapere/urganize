@@ -41,6 +41,24 @@ type PaymentVerifyResponse = {
   trial_ends_at?: string;
 };
 
+type OrganizationInfo = {
+  id: string;
+  name: string;
+  owner_id: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type OrganizationMember = {
+  id: string;
+  user_id: string;
+  role: 'manager' | 'artist' | 'team-member' | 'viewer';
+  name: string;
+  email: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
 const panelClass =
   'rounded-3xl border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-sm sm:p-6';
 
@@ -85,6 +103,18 @@ export default function SettingsPage() {
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
   const [paymentCheckMessage, setPaymentCheckMessage] = useState('');
   const [paymentCheckError, setPaymentCheckError] = useState('');
+  const [organization, setOrganization] = useState<OrganizationInfo | null>(null);
+  const [organizationName, setOrganizationName] = useState('');
+  const [isSavingOrganization, setIsSavingOrganization] = useState(false);
+  const [organizationMessage, setOrganizationMessage] = useState('');
+  const [organizationError, setOrganizationError] = useState('');
+  const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberRole, setNewMemberRole] = useState<'manager' | 'artist' | 'team-member' | 'viewer'>('viewer');
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [memberMessage, setMemberMessage] = useState('');
+  const [memberError, setMemberError] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
@@ -166,6 +196,80 @@ export default function SettingsPage() {
     };
 
     loadSettingsData();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    const getAccessToken = async (): Promise<string> => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      return session?.access_token || '';
+    };
+
+    const loadOrganization = async () => {
+      setIsLoadingMembers(true);
+      setOrganizationError('');
+      setMemberError('');
+      try {
+        const token = await getAccessToken();
+        if (!token) {
+          setOrganizationError('Session expired. Please sign in again.');
+          return;
+        }
+
+        const [orgRes, membersRes] = await Promise.all([
+          fetch('/api/organization', {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+          }),
+          fetch('/api/organization/members', {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+          }),
+        ]);
+
+        const orgPayload = (await orgRes.json().catch(() => ({}))) as {
+          organization?: OrganizationInfo | null;
+          error?: string;
+        };
+        const membersPayload = (await membersRes.json().catch(() => ({}))) as {
+          members?: OrganizationMember[];
+          error?: string;
+        };
+
+        if (!orgRes.ok) {
+          setOrganizationError(orgPayload.error || 'Could not load organization.');
+          return;
+        }
+        if (!membersRes.ok) {
+          setMemberError(membersPayload.error || 'Could not load members.');
+        }
+
+        if (!cancelled) {
+          setOrganization(orgPayload.organization || null);
+          setOrganizationName(orgPayload.organization?.name || '');
+          setMembers(Array.isArray(membersPayload.members) ? membersPayload.members : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setOrganizationError('Could not load organization settings.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingMembers(false);
+        }
+      }
+    };
+
+    loadOrganization();
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   const clearFeedback = () => {
@@ -349,6 +453,150 @@ export default function SettingsPage() {
     }
   };
 
+  const getAccessToken = async (): Promise<string> => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    return session?.access_token || '';
+  };
+
+  const handleSaveOrganization = async () => {
+    const name = organizationName.trim();
+    if (!name) {
+      setOrganizationError('Organization name is required.');
+      return;
+    }
+    setIsSavingOrganization(true);
+    setOrganizationError('');
+    setOrganizationMessage('');
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch('/api/organization', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        organization?: OrganizationInfo;
+        status?: string;
+        error?: string;
+      };
+      if (!response.ok || !payload.organization) {
+        throw new Error(payload.error || 'Could not save organization.');
+      }
+      setOrganization(payload.organization);
+      setOrganizationName(payload.organization.name || name);
+      setOrganizationMessage(payload.status === 'created' ? 'Organization created.' : 'Organization updated.');
+    } catch (err: any) {
+      setOrganizationError(err?.message || 'Could not save organization.');
+    } finally {
+      setIsSavingOrganization(false);
+    }
+  };
+
+  const handleAddMember = async () => {
+    const email = newMemberEmail.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      setMemberError('Enter a valid email.');
+      return;
+    }
+
+    setIsAddingMember(true);
+    setMemberError('');
+    setMemberMessage('');
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch('/api/organization/members', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email,
+          role: newMemberRole,
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        member?: OrganizationMember;
+        error?: string;
+      };
+      if (!response.ok || !payload.member) {
+        throw new Error(payload.error || 'Could not add member.');
+      }
+      setMembers((current) => {
+        const existingIndex = current.findIndex((member) => member.user_id === payload.member?.user_id);
+        if (existingIndex === -1) return [...current, payload.member as OrganizationMember];
+        const next = [...current];
+        next[existingIndex] = payload.member as OrganizationMember;
+        return next;
+      });
+      setNewMemberEmail('');
+      setNewMemberRole('viewer');
+      setMemberMessage('Member saved.');
+    } catch (err: any) {
+      setMemberError(err?.message || 'Could not add member.');
+    } finally {
+      setIsAddingMember(false);
+    }
+  };
+
+  const handleMemberRoleChange = async (memberId: string, role: OrganizationMember['role']) => {
+    setMemberError('');
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch('/api/organization/members', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ memberId, role }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        member?: { role?: OrganizationMember['role'] };
+        error?: string;
+      };
+      if (!response.ok) throw new Error(payload.error || 'Could not update member role.');
+      setMembers((current) =>
+        current.map((member) =>
+          member.id === memberId ? { ...member, role: (payload.member?.role || role) as OrganizationMember['role'] } : member
+        )
+      );
+    } catch (err: any) {
+      setMemberError(err?.message || 'Could not update role.');
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    setMemberError('');
+    setMemberMessage('');
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch('/api/organization/members', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ memberId }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(payload.error || 'Could not remove member.');
+      setMembers((current) => current.filter((member) => member.id !== memberId));
+      setMemberMessage('Member removed.');
+    } catch (err: any) {
+      setMemberError(err?.message || 'Could not remove member.');
+    }
+  };
+
   if (authLoading) {
     return (
       <main className="min-h-screen bg-bg-base text-content-primary">
@@ -496,6 +744,44 @@ export default function SettingsPage() {
 
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <section className={panelClass}>
+            <h2 className="mb-4 text-xl">Organization</h2>
+            <div className="space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-sm text-content-secondary">Organization name</span>
+                <input
+                  value={organizationName}
+                  onChange={(event) => setOrganizationName(event.target.value)}
+                  placeholder="e.g. The Label Group"
+                  className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={handleSaveOrganization}
+                disabled={isSavingOrganization}
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+              >
+                {isSavingOrganization ? 'Saving...' : organization ? 'Update organization' : 'Create organization'}
+              </button>
+              {organization && (
+                <p className="text-xs text-content-tertiary">
+                  Owner ID: {organization.owner_id}
+                </p>
+              )}
+              {organizationMessage && (
+                <p className="rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
+                  {organizationMessage}
+                </p>
+              )}
+              {organizationError && (
+                <p className="rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+                  {organizationError}
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section className={panelClass}>
             <h2 className="mb-4 text-xl">Session</h2>
             <div className="rounded-lg border border-stroke-subtle bg-bg-elevated p-4">
               <p className="text-sm text-content-secondary">Signed in as {user.email}. End your session on this device.</p>
@@ -512,6 +798,103 @@ export default function SettingsPage() {
             </div>
           </section>
         </div>
+
+        <section className={`${panelClass} mt-6`}>
+          <h2 className="mb-4 text-xl">Team Members</h2>
+          {!organization ? (
+            <p className="text-sm text-content-secondary">Create your organization first to manage team members.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+                <input
+                  value={newMemberEmail}
+                  onChange={(event) => setNewMemberEmail(event.target.value)}
+                  placeholder="member@email.com"
+                  className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
+                />
+                <select
+                  value={newMemberRole}
+                  onChange={(event) =>
+                    setNewMemberRole(
+                      ((event.target.value as OrganizationMember['role']) || 'viewer') as OrganizationMember['role']
+                    )
+                  }
+                  className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                >
+                  <option value="manager">Manager</option>
+                  <option value="artist">Artist</option>
+                  <option value="team-member">Team Member</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleAddMember}
+                  disabled={isAddingMember}
+                  className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                >
+                  {isAddingMember ? 'Adding...' : 'Add member'}
+                </button>
+              </div>
+
+              {memberMessage && (
+                <p className="mt-3 rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
+                  {memberMessage}
+                </p>
+              )}
+              {memberError && (
+                <p className="mt-3 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+                  {memberError}
+                </p>
+              )}
+
+              {isLoadingMembers ? (
+                <p className="mt-4 text-sm text-content-secondary">Loading team members...</p>
+              ) : members.length === 0 ? (
+                <p className="mt-4 text-sm text-content-secondary">No members yet.</p>
+              ) : (
+                <div className="mt-4 space-y-2">
+                  {members.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-content-primary">{member.name || 'Unknown'}</p>
+                        <p className="text-xs text-content-secondary">{member.email || 'No email'}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={member.role}
+                          onChange={(event) =>
+                            handleMemberRoleChange(
+                              member.id,
+                              ((event.target.value as OrganizationMember['role']) || 'viewer') as OrganizationMember['role']
+                            )
+                          }
+                          className="rounded border border-stroke-subtle bg-bg-surface px-2 py-1 text-xs text-content-primary"
+                        >
+                          <option value="manager">Manager</option>
+                          <option value="artist">Artist</option>
+                          <option value="team-member">Team Member</option>
+                          <option value="viewer">Viewer</option>
+                        </select>
+                        {member.user_id !== user.id && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMember(member.id)}
+                            className="text-xs text-status-error hover:underline"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </section>
 
           <section className={`${panelClass} mt-6`}>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

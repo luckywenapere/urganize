@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
+import { getRolePermissions } from '@/lib/role-permissions';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 import { WorkspaceSection, type WorkspaceTab } from '@/components/dashboard/workspace/WorkspaceSection';
 
@@ -140,6 +141,7 @@ export default function PlanDashboardPage() {
   const params = useParams<{ planId: string }>();
   const planId = Array.isArray(params?.planId) ? params.planId[0] : params?.planId;
   const { user, logout, setNeedsOnboarding, isLoading: authLoading } = useAuthStore();
+  const permissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -948,13 +950,15 @@ export default function PlanDashboardPage() {
             </button>
             {isPlanMenuOpen && (
               <div className="absolute right-0 top-full z-30 mt-2 min-w-[170px] rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-lg">
-                <button
-                  type="button"
-                  onClick={requestDeletePlan}
-                  className="block w-full rounded-md px-3 py-2 text-left text-sm text-status-error hover:bg-status-error/10"
-                >
-                  Delete plan
-                </button>
+                {permissions.canManagePlans && (
+                  <button
+                    type="button"
+                    onClick={requestDeletePlan}
+                    className="block w-full rounded-md px-3 py-2 text-left text-sm text-status-error hover:bg-status-error/10"
+                  >
+                    Delete plan
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={async () => {
@@ -991,6 +995,10 @@ export default function PlanDashboardPage() {
             <section className="mt-14">
               <h1 className="text-[clamp(2.2rem,4.8vw,3.7rem)] tracking-tight">{plan?.title || 'Plan Dashboard'}</h1>
               <p className="mt-2 text-content-secondary">{plan?.artist_name || 'Unknown Artist'}</p>
+              <p className="mt-2 text-xs text-content-secondary">
+                Role: <span className="font-medium text-content-primary">{permissions.role}</span>
+                {!permissions.canEditWorkspace ? ' • Workspace is read-only' : ''}
+              </p>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <div className="inline-flex items-center rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs font-medium text-content-primary">
                   Created {timelineMetrics.createdAt.toLocaleDateString()}
@@ -1006,14 +1014,18 @@ export default function PlanDashboardPage() {
             <section className="mt-8 rounded-2xl border border-stroke-default bg-bg-surface p-6">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <h2 className="text-xl font-semibold">Edit Plan Basics</h2>
-                <button
-                  type="button"
-                  onClick={savePlanBasics}
-                  disabled={isSavingBasics}
-                  className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-                >
-                  {isSavingBasics ? 'Saving...' : 'Save changes'}
-                </button>
+                {permissions.canManagePlans ? (
+                  <button
+                    type="button"
+                    onClick={savePlanBasics}
+                    disabled={isSavingBasics}
+                    className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                  >
+                    {isSavingBasics ? 'Saving...' : 'Save changes'}
+                  </button>
+                ) : (
+                  <span className="text-xs text-content-tertiary">Read-only for your role</span>
+                )}
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <label className="text-sm">
@@ -1021,6 +1033,7 @@ export default function PlanDashboardPage() {
                   <input
                     value={draftTitle}
                     onChange={(event) => setDraftTitle(event.target.value)}
+                    readOnly={!permissions.canManagePlans}
                     className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
                   />
                 </label>
@@ -1029,6 +1042,7 @@ export default function PlanDashboardPage() {
                   <input
                     value={draftArtistName}
                     onChange={(event) => setDraftArtistName(event.target.value)}
+                    readOnly={!permissions.canManagePlans}
                     className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
                   />
                 </label>
@@ -1038,6 +1052,7 @@ export default function PlanDashboardPage() {
                     type="date"
                     value={draftDeadline}
                     onChange={(event) => setDraftDeadline(event.target.value)}
+                    readOnly={!permissions.canManagePlans}
                     className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
                   />
                 </label>
@@ -1118,6 +1133,7 @@ export default function PlanDashboardPage() {
             </section>
 
             <WorkspaceSection
+              canEditWorkspace={permissions.canEditWorkspace}
               workspaceSyncMode={workspaceSyncMode}
               workspaceSyncMessage={workspaceSyncMessage}
               activeWorkspaceTab={activeWorkspaceTab}
@@ -1179,6 +1195,11 @@ export default function PlanDashboardPage() {
               onRemoveMarketing={(id) =>
                 setMarketingItems((current) => current.filter((entry) => entry.id !== id))
               }
+              onUpdateMarketing={(id, updates) =>
+                setMarketingItems((current) =>
+                  current.map((entry) => (entry.id === id ? { ...entry, ...updates } : entry))
+                )
+              }
               playlistItems={playlistItems}
               newPlaylist={newPlaylist}
               onNewPlaylistChange={(field, value) =>
@@ -1191,6 +1212,11 @@ export default function PlanDashboardPage() {
               onPlaylistStatusChange={(id, status) =>
                 setPlaylistItems((current) =>
                   current.map((entry) => (entry.id === id ? { ...entry, status } : entry))
+                )
+              }
+              onUpdatePlaylist={(id, updates) =>
+                setPlaylistItems((current) =>
+                  current.map((entry) => (entry.id === id ? { ...entry, ...updates } : entry))
                 )
               }
               assets={assets}
@@ -1212,11 +1238,13 @@ export default function PlanDashboardPage() {
               <div className="mt-8">
                 <button
                   type="button"
+                  disabled={!permissions.canEditWorkspace}
                   onClick={() => {
+                    if (!permissions.canEditWorkspace) return;
                     setNeedsOnboarding(true);
                     router.push(`/dashboard?startOnboarding=2&planId=${planId}&flow=resume-plan`);
                   }}
-                  className="rounded-xl border border-brand/35 bg-brand-muted px-5 py-3 text-sm font-semibold text-content-primary transition hover:bg-brand/20"
+                  className="rounded-xl border border-brand/35 bg-brand-muted px-5 py-3 text-sm font-semibold text-content-primary transition hover:bg-brand/20 disabled:opacity-50"
                 >
                   Start Task
                 </button>
@@ -1226,10 +1254,12 @@ export default function PlanDashboardPage() {
               <div className="mt-8">
                 <button
                   type="button"
+                  disabled={!permissions.canEditWorkspace}
                   onClick={() => {
+                    if (!permissions.canEditWorkspace) return;
                     router.push(`/dashboard/plans/${planId}/next-step`);
                   }}
-                  className="rounded-xl border border-brand/35 bg-brand-muted px-5 py-3 text-sm font-semibold text-content-primary transition hover:bg-brand/20"
+                  className="rounded-xl border border-brand/35 bg-brand-muted px-5 py-3 text-sm font-semibold text-content-primary transition hover:bg-brand/20 disabled:opacity-50"
                 >
                   Plan Next Step
                 </button>
