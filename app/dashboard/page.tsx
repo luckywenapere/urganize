@@ -301,6 +301,8 @@ export default function DashboardPage() {
   const [artistForm, setArtistForm] = useState({ name: '', genre: '', primaryPlatform: '', notes: '' });
   const [editingArtistId, setEditingArtistId] = useState<string | null>(null);
   const [showGuideTooltip, setShowGuideTooltip] = useState(false);
+  const [listenerProfileExists, setListenerProfileExists] = useState(false);
+  const [listenerProfileGeneratedAt, setListenerProfileGeneratedAt] = useState<string | null>(null);
   const activePlanForGuide = useMemo(
     () => plans.find((plan) => plan.status !== 'released') || plans[0] || null,
     [plans]
@@ -537,6 +539,50 @@ export default function DashboardPage() {
     if (!artistDirectoryKey) return;
     localStorage.setItem(artistDirectoryKey, JSON.stringify(artists));
   }, [artistDirectoryKey, artists]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadListenerProfileStatus = async () => {
+      if (!user || hasSubscriptionAccess === false) {
+        if (!cancelled) {
+          setListenerProfileExists(false);
+          setListenerProfileGeneratedAt(null);
+        }
+        return;
+      }
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token || '';
+        if (!token) return;
+        const response = await fetch('/api/listener-profile/inputs', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        const payload = (await response.json().catch(() => ({}))) as {
+          exists?: boolean;
+          generatedAt?: string | null;
+        };
+        if (!response.ok) return;
+        if (!cancelled) {
+          setListenerProfileExists(Boolean(payload.exists));
+          setListenerProfileGeneratedAt(payload.generatedAt || null);
+        }
+      } catch {
+        if (!cancelled) {
+          setListenerProfileExists(false);
+          setListenerProfileGeneratedAt(null);
+        }
+      }
+    };
+
+    loadListenerProfileStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasSubscriptionAccess, user]);
 
   const createNewPlan = async () => {
     if (!user || isCreatingPlan) return;
@@ -881,6 +927,13 @@ export default function DashboardPage() {
                   Settings
                 </Link>
                 <Link
+                  href="/dashboard/listener-profile"
+                  className="block rounded-md px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Ideal Listener
+                </Link>
+                <Link
                   href="/admin"
                   className="block rounded-md px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
                   onClick={() => setIsMenuOpen(false)}
@@ -949,6 +1002,36 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
+          )}
+          {hasSubscriptionAccess !== false && (
+            <section className="mt-6 rounded-2xl border border-stroke-default/80 bg-bg-elevated/70 p-4 backdrop-blur-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 rounded-xl border border-stroke-default bg-bg-surface p-2 text-content-secondary">
+                    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">
+                      <circle cx="12" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.4" />
+                      <path d="M5.5 20c0-4.2 2.9-7.5 6.5-7.5s6.5 3.3 6.5 7.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                      <path d="M3.75 12h1.5M18.75 12h1.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-content-tertiary">Ideal Listener Profile</h2>
+                    <p className="mt-1 text-sm text-content-secondary">
+                      Define and generate your most likely fan so campaign decisions stay focused.
+                    </p>
+                    {listenerProfileGeneratedAt && (
+                      <p className="mt-1 text-xs text-content-tertiary">Last generated {new Date(listenerProfileGeneratedAt).toLocaleString()}</p>
+                    )}
+                  </div>
+                </div>
+                <Link
+                  href="/dashboard/listener-profile"
+                  className="rounded-xl border border-brand/40 bg-brand-muted px-4 py-2 text-sm font-semibold text-content-primary transition hover:bg-brand/20"
+                >
+                  {listenerProfileExists ? 'View Ideal Listener Profile' : 'Create Ideal Listener Profile'}
+                </Link>
+              </div>
+            </section>
           )}
           {hasSubscriptionAccess !== false && user?.role === 'manager' && (
             <section className="mt-6 rounded-2xl border border-stroke-default/80 bg-bg-elevated/70 p-4 backdrop-blur-sm">
