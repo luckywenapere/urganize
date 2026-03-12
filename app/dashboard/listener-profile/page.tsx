@@ -34,13 +34,19 @@ type ResultResponse = {
   sql?: string;
 };
 
-const getMissingCount = (inputs: ListenerProfileInputs): number => {
-  return LISTENER_PROFILE_FIELDS.reduce((total, field) => total + (inputs[field.key] ? 0 : 1), 0);
+const getMissingCount = (
+  inputs: ListenerProfileInputs,
+  fields: ReadonlyArray<{ key: keyof ListenerProfileInputs }>
+): number => {
+  return fields.reduce((total, field) => total + (inputs[field.key] ? 0 : 1), 0);
 };
 
-const getFirstUnansweredIndex = (inputs: ListenerProfileInputs): number => {
-  const index = LISTENER_PROFILE_FIELDS.findIndex((field) => !inputs[field.key]);
-  return index < 0 ? LISTENER_PROFILE_FIELDS.length - 1 : index;
+const getFirstUnansweredIndex = (
+  inputs: ListenerProfileInputs,
+  fields: ReadonlyArray<{ key: keyof ListenerProfileInputs }>
+): number => {
+  const index = fields.findIndex((field) => !inputs[field.key]);
+  return index < 0 ? Math.max(0, fields.length - 1) : index;
 };
 
 export default function ListenerProfilePage() {
@@ -58,17 +64,28 @@ export default function ListenerProfilePage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [schemaSql, setSchemaSql] = useState<string | null>(null);
+  const [isEditingManagedArtist, setIsEditingManagedArtist] = useState(false);
+  const [managedArtistDraft, setManagedArtistDraft] = useState('');
 
-  const totalSteps = LISTENER_PROFILE_FIELDS.length;
-  const activeField = LISTENER_PROFILE_FIELDS[stepIndex];
-  const missingCount = useMemo(() => getMissingCount(inputs), [inputs]);
-  const completionPercent = Math.round(((totalSteps - missingCount) / totalSteps) * 100);
+  const flowFields = useMemo(
+    () => (user?.role === 'manager' ? LISTENER_PROFILE_FIELDS : LISTENER_PROFILE_FIELDS.filter((field) => field.key !== 'artist_name')),
+    [user?.role]
+  );
+
+  const totalSteps = flowFields.length;
+  const activeField = flowFields[stepIndex] || null;
+  const missingCount = useMemo(() => getMissingCount(inputs, flowFields), [flowFields, inputs]);
+  const completionPercent = totalSteps === 0 ? 100 : Math.round(((totalSteps - missingCount) / totalSteps) * 100);
   const isArtistLockedName = user?.role === 'artist' && String(user?.artist_name || '').trim().length > 0;
 
   useEffect(() => {
     if (!activeField) return;
     setStepValue(inputs[activeField.key] || '');
   }, [activeField, inputs]);
+
+  useEffect(() => {
+    setStepIndex((current) => Math.min(current, Math.max(0, flowFields.length - 1)));
+  }, [flowFields.length]);
 
   const getToken = useCallback(async (): Promise<string> => {
     const {
@@ -131,7 +148,7 @@ export default function ListenerProfilePage() {
 
       const normalizedInputs = applyArtistNameLock(normalizeListenerProfileInputs((inputsPayload.inputs || null) as Record<string, unknown> | null));
       setInputs(normalizedInputs);
-      setStepIndex(getFirstUnansweredIndex(normalizedInputs));
+      setStepIndex(getFirstUnansweredIndex(normalizedInputs, flowFields));
 
       const parsedPersona = parseListenerPersonaResult(resultPayload.persona);
       setPersona(parsedPersona);
@@ -149,7 +166,7 @@ export default function ListenerProfilePage() {
     } finally {
       setIsLoadingPage(false);
     }
-  }, [applyArtistNameLock, getToken, user]);
+  }, [applyArtistNameLock, flowFields, getToken, user]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -198,12 +215,12 @@ export default function ListenerProfilePage() {
 
   const saveCurrentStepIntoState = useCallback(() => {
     if (!activeField) return;
-    if (isArtistLockedName && activeField.key === 'artist_name') return;
+    if ((isArtistLockedName || user?.role === 'manager') && activeField.key === 'artist_name') return;
     setInputs((current) => ({
       ...current,
       [activeField.key]: stepValue.trim() || null,
     }));
-  }, [activeField, isArtistLockedName, stepValue]);
+  }, [activeField, isArtistLockedName, stepValue, user?.role]);
 
   const goToNextStep = () => {
     if (!activeField) return;
@@ -338,10 +355,10 @@ export default function ListenerProfilePage() {
               Back to Dashboard
             </Link>
             <h1 className="mt-2 text-[clamp(2rem,5vw,3.3rem)] tracking-tight">Ideal Listener Profile</h1>
-            <p className="mt-2 text-sm text-content-secondary">
-              Define your likely fan, then generate an AI persona you can use for release strategy and campaigns.
-            </p>
-          </div>
+                <p className="mt-2 text-sm text-content-secondary">
+                  Define your likely fan, then generate an AI persona you can use for release strategy and campaigns.
+                </p>
+              </div>
           <div className="rounded-2xl border border-stroke-default bg-bg-elevated/75 px-4 py-3 text-right">
             <p className="text-xs uppercase tracking-wide text-content-tertiary">Completion</p>
             <p className="mt-1 text-xl font-semibold text-content-primary">{completionPercent}%</p>
@@ -361,6 +378,62 @@ export default function ListenerProfilePage() {
 
         {mode === 'flow' && activeField && (
           <section className="mt-6 rounded-3xl border border-stroke-default bg-bg-elevated/70 p-6">
+            {user?.role === 'manager' && (
+              <article className="mb-5 rounded-2xl border border-stroke-subtle bg-bg-surface p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">Managed Artist</p>
+                    <p className="mt-1 text-sm text-content-secondary">Add one artist to profile. Maximum: 1 artist.</p>
+                    <p className="mt-2 text-sm text-content-primary">{inputs.artist_name || 'No managed artist added yet.'}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setManagedArtistDraft(inputs.artist_name || '');
+                      setIsEditingManagedArtist((current) => !current);
+                    }}
+                    className="rounded-xl border border-stroke-default bg-bg-surface px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                  >
+                    {inputs.artist_name ? 'Replace Artist' : 'Add Artist'}
+                  </button>
+                </div>
+                {isEditingManagedArtist && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <input
+                      value={managedArtistDraft}
+                      onChange={(event) => setManagedArtistDraft(event.target.value)}
+                      placeholder="Enter managed artist name"
+                      className="w-full min-w-[220px] flex-1 rounded-xl border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextName = managedArtistDraft.trim();
+                        if (!nextName) {
+                          setError('Artist name is required for manager profile context.');
+                          return;
+                        }
+                        setInputs((current) => ({ ...current, artist_name: nextName }));
+                        if (activeField?.key === 'artist_name') setStepValue(nextName);
+                        setIsEditingManagedArtist(false);
+                        setSuccess('Managed artist updated.');
+                        setError('');
+                      }}
+                      className="rounded-xl border border-brand/40 bg-brand-muted px-3 py-2 text-sm font-semibold text-content-primary hover:bg-brand/20"
+                    >
+                      Save Artist
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingManagedArtist(false)}
+                      className="rounded-xl border border-stroke-default bg-bg-surface px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </article>
+            )}
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">{activeField.sectionTitle}</p>
               <p className="text-xs text-content-secondary">
@@ -372,13 +445,20 @@ export default function ListenerProfilePage() {
             </div>
             <h2 className="mt-5 text-2xl tracking-tight text-content-primary">{activeField.label}</h2>
             <p className="mt-2 text-sm text-content-secondary">{activeField.helper}</p>
-            <textarea
-              value={isArtistLockedName && activeField.key === 'artist_name' ? String(user?.artist_name || '') : stepValue}
-              onChange={(event) => setStepValue(event.target.value)}
-              disabled={isArtistLockedName && activeField.key === 'artist_name'}
-              placeholder={activeField.placeholder}
-              className="mt-5 min-h-[115px] w-full rounded-2xl border border-stroke-subtle bg-bg-surface px-4 py-3 text-sm text-content-primary outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-75"
-            />
+            {user?.role === 'manager' && activeField.key === 'artist_name' ? (
+              <div className="mt-5 rounded-2xl border border-stroke-subtle bg-bg-surface px-4 py-4 text-sm">
+                <p className="text-content-secondary">Use the Managed Artist control above to set this value.</p>
+                <p className="mt-2 font-medium text-content-primary">{inputs.artist_name || '-'}</p>
+              </div>
+            ) : (
+              <textarea
+                value={isArtistLockedName && activeField.key === 'artist_name' ? String(user?.artist_name || '') : stepValue}
+                onChange={(event) => setStepValue(event.target.value)}
+                disabled={isArtistLockedName && activeField.key === 'artist_name'}
+                placeholder={activeField.placeholder}
+                className="mt-5 min-h-[115px] w-full rounded-2xl border border-stroke-subtle bg-bg-surface px-4 py-3 text-sm text-content-primary outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-75"
+              />
+            )}
             <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
               <button
                 type="button"
@@ -439,7 +519,7 @@ export default function ListenerProfilePage() {
               <button
                 type="button"
                 onClick={() => {
-                  setStepIndex(getFirstUnansweredIndex(inputs));
+                  setStepIndex(getFirstUnansweredIndex(inputs, flowFields));
                   setMode('flow');
                 }}
                 className="rounded-xl border border-stroke-default bg-bg-surface px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
@@ -521,7 +601,7 @@ export default function ListenerProfilePage() {
               <button
                 type="button"
                 onClick={() => {
-                  setStepIndex(getFirstUnansweredIndex(inputs));
+                  setStepIndex(getFirstUnansweredIndex(inputs, flowFields));
                   setMode('flow');
                 }}
                 className="rounded-xl border border-stroke-default bg-bg-surface px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
