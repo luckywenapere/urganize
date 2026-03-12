@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
+import { getRolePermissions } from '@/lib/role-permissions';
 import { trackEvent } from '@/lib/analytics';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 
@@ -899,6 +900,14 @@ export function PostAuthScreen() {
             // Non-fatal; UI still proceeds with cycle reset.
           }
           setStep(3);
+        } else if (flow === 'first-login' && requestedStartStep === 0 && !requestedPlanId) {
+          const permissions = getRolePermissions(user.role);
+          if (permissions.role === 'viewer') {
+            setNeedsOnboarding(false);
+            router.replace('/dashboard');
+            return;
+          }
+          setStep(canSkipArtistStep ? 3 : 2);
         } else if (requestedStartStep >= 2) {
           setStep((current) => Math.max(current, canSkipArtistStep ? 3 : 2));
         }
@@ -921,7 +930,9 @@ export function PostAuthScreen() {
     refreshCycleNumber,
     requestedPlanId,
     requestedStartStep,
+    router,
     resetCycleInputs,
+    setNeedsOnboarding,
     user,
   ]);
 
@@ -1685,6 +1696,23 @@ export function PostAuthScreen() {
     return new Date(lastDraftSavedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }, [lastDraftSavedAt]);
   const showCycleTimeline = step >= 3 && step <= 6;
+  const roleEntryContext = useMemo(() => {
+    const permissions = getRolePermissions(user?.role);
+    if (flow !== 'first-login' || requestedStartStep !== 0) return null;
+    if (permissions.role === 'manager') {
+      return {
+        title: 'Manager onboarding path',
+        description: 'Set artist and campaign inputs, then generate the first execution task.',
+      };
+    }
+    if (permissions.role === 'artist' || permissions.role === 'team-member') {
+      return {
+        title: 'Contributor onboarding path',
+        description: 'Provide the core release context so your team can execute in one shared workspace.',
+      };
+    }
+    return null;
+  }, [flow, requestedStartStep, user?.role]);
 
   if (isBootstrapping) {
     return (
@@ -1731,6 +1759,13 @@ export function PostAuthScreen() {
           >
             {isPlanSetupFlow ? 'Back to Dashboard' : '...Back'}
           </button>
+        )}
+
+        {roleEntryContext && step >= 2 && step <= 4 && (
+          <section className="mt-5 rounded-xl border border-stroke-default bg-bg-surface px-4 py-3">
+            <p className="text-xs uppercase tracking-wide text-content-tertiary">{roleEntryContext.title}</p>
+            <p className="mt-1 text-sm text-content-secondary">{roleEntryContext.description}</p>
+          </section>
         )}
 
         {showCycleTimeline && (

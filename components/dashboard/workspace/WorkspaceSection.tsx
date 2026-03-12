@@ -288,6 +288,11 @@ export function WorkspaceSection({
       {workspaceSyncMessage && (
         <p className="mt-2 text-xs text-content-secondary">{workspaceSyncMessage}</p>
       )}
+      <div className="mt-3 rounded-xl border border-stroke-default bg-bg-elevated/70 px-3 py-2">
+        <p className="text-xs text-content-secondary">
+          Workspace note: playlist and distribution modules are manual trackers. Use your distributor and pitching channels outside Urganize.
+        </p>
+      </div>
 
       <div className="mt-5 rounded-2xl border border-stroke-default/80 bg-bg-elevated/70 p-2 backdrop-blur-sm">
         <div className="flex flex-wrap gap-2">

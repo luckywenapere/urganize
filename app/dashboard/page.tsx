@@ -36,6 +36,21 @@ type ArtistDirectoryItem = {
   updatedAt: string;
 };
 
+type DashboardGuide = {
+  title: string;
+  subtitle: string;
+  checklist: Array<{
+    item: string;
+    actionLabel: string;
+    action:
+      | 'create-plan'
+      | 'open-active-plan'
+      | 'open-next-step'
+      | 'open-settings'
+      | 'open-first-plan';
+  }>;
+};
+
 const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000;
 const VIRTUALIZED_LIST_THRESHOLD = 12;
 const PLAN_MENU_WIDTH_PX = 190;
@@ -59,6 +74,204 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, logout, setNeedsOnboarding, isLoading: authLoading } = useAuthStore();
   const permissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
+  const dashboardGuide = useMemo<DashboardGuide>(() => {
+    if (permissions.canManagePlans) {
+      return {
+        title: 'Manager flow',
+        subtitle: 'Create plans, assign work, and track execution across artists.',
+        checklist: [
+          {
+            item: 'Create a new plan from dashboard.',
+            actionLabel: 'Create plan',
+            action: 'create-plan',
+          },
+          {
+            item: 'Set artist/release context and generate the first AI task.',
+            actionLabel: 'Open active plan',
+            action: 'open-active-plan',
+          },
+          {
+            item: 'Use Workspace tabs to manage tasks, marketing, playlists, and assets.',
+            actionLabel: 'Open workspace',
+            action: 'open-active-plan',
+          },
+          {
+            item: 'Use Next Step to continue execution cycles until release is complete.',
+            actionLabel: 'Plan next step',
+            action: 'open-next-step',
+          },
+        ],
+      };
+    }
+    if (user?.role === 'artist') {
+      return {
+        title: 'Self-managed artist flow',
+        subtitle: 'Run your own release campaign in one place.',
+        checklist: [
+          {
+            item: 'Open your plan and complete the current task.',
+            actionLabel: 'Open active plan',
+            action: 'open-active-plan',
+          },
+          {
+            item: 'Track outreach in playlist and marketing modules.',
+            actionLabel: 'Open workspace',
+            action: 'open-active-plan',
+          },
+          {
+            item: 'Use checklist + assets to keep release delivery organized.',
+            actionLabel: 'Open workspace',
+            action: 'open-active-plan',
+          },
+          {
+            item: 'Plan next step after each completed task to keep momentum.',
+            actionLabel: 'Plan next step',
+            action: 'open-next-step',
+          },
+        ],
+      };
+    }
+    if (permissions.canEditWorkspace) {
+      return {
+        title: 'Team member flow',
+        subtitle: 'Execute assigned work and keep campaign status updated.',
+        checklist: [
+          {
+            item: 'Open active plans and check the current task.',
+            actionLabel: 'Open active plan',
+            action: 'open-active-plan',
+          },
+          {
+            item: 'Update workspace modules as work is done.',
+            actionLabel: 'Open workspace',
+            action: 'open-active-plan',
+          },
+          {
+            item: 'Upload or link proof in feedback so progress is visible.',
+            actionLabel: 'Open next step',
+            action: 'open-next-step',
+          },
+          {
+            item: 'Flag blockers early so manager can adjust the plan.',
+            actionLabel: 'Open active plan',
+            action: 'open-active-plan',
+          },
+        ],
+      };
+    }
+    return {
+      title: 'Viewer flow',
+      subtitle: 'Monitor progress with read-only visibility.',
+      checklist: [
+        {
+          item: 'Open plans and review status, deadlines, and completion.',
+          actionLabel: 'Open first plan',
+          action: 'open-first-plan',
+        },
+        {
+          item: 'Use workspace tabs to inspect tasks, playlists, and assets.',
+          actionLabel: 'Open first plan',
+          action: 'open-first-plan',
+        },
+        {
+          item: 'Share feedback with your team outside the app when needed.',
+          actionLabel: 'Open settings',
+          action: 'open-settings',
+        },
+        {
+          item: 'Request edit access if you need to update workflow items.',
+          actionLabel: 'Open settings',
+          action: 'open-settings',
+        },
+      ],
+    };
+  }, [permissions.canEditWorkspace, permissions.canManagePlans, user?.role]);
+
+  const canRunGuideAction = (action: DashboardGuide['checklist'][number]['action']) => {
+    const hasGuidePlan = plans.some((plan) => plan.status !== 'released') || plans.length > 0;
+    if (action === 'open-active-plan' || action === 'open-next-step' || action === 'open-first-plan') {
+      return hasGuidePlan;
+    }
+    if (action === 'create-plan') return permissions.canCreatePlans;
+    return true;
+  };
+
+  const runGuideAction = async (action: DashboardGuide['checklist'][number]['action']) => {
+    const guidePlanId = (plans.find((plan) => plan.status !== 'released') || plans[0])?.id;
+    if (action === 'create-plan') {
+      if (!user || isCreatingPlan) return;
+      if (!permissions.canCreatePlans) {
+        setError('Only managers can create plans.');
+        return;
+      }
+      if (hasSubscriptionAccess === false) {
+        router.push('/settings');
+        return;
+      }
+      setError('');
+      setIsCreatingPlan(true);
+      setNeedsOnboarding(true);
+      router.push('/dashboard?startOnboarding=2&flow=create-plan');
+      setIsCreatingPlan(false);
+      return;
+    }
+    if (!guidePlanId && (action === 'open-active-plan' || action === 'open-next-step' || action === 'open-first-plan')) return;
+    if (action === 'open-active-plan' || action === 'open-first-plan') {
+      router.push(`/dashboard/plans/${guidePlanId}`);
+      return;
+    }
+    if (action === 'open-next-step') {
+      router.push(`/dashboard/plans/${guidePlanId}/next-step`);
+      return;
+    }
+    if (action === 'open-settings') {
+      router.push('/settings');
+    }
+  };
+
+  const renderGuideActionIcon = (action: DashboardGuide['checklist'][number]['action']) => {
+    const iconClassName = 'h-3.5 w-3.5 text-content-secondary transition-colors duration-200 group-hover:text-content-primary';
+    if (action === 'create-plan') {
+      return (
+        <svg viewBox="0 0 20 20" fill="none" className={iconClassName} aria-hidden="true">
+          <path d="M5 3.75h7l3 3v9.5H5v-12.5Z" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M12 3.75v3h3" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M10 8.75v4.5M7.75 11h4.5" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+        </svg>
+      );
+    }
+    if (action === 'open-next-step') {
+      return (
+        <svg viewBox="0 0 20 20" fill="none" className={iconClassName} aria-hidden="true">
+          <path d="M3.75 10h12.5" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+          <path d="m11.75 5.5 4.5 4.5-4.5 4.5" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M3.75 5.5h4" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+        </svg>
+      );
+    }
+    if (action === 'open-settings') {
+      return (
+        <svg viewBox="0 0 20 20" fill="none" className={iconClassName} aria-hidden="true">
+          <circle cx="10" cy="10" r="2.75" stroke="currentColor" strokeWidth="1.35" />
+          <path d="M10 4.25v1.5M10 14.25v1.5M4.25 10h1.5M14.25 10h1.5M5.94 5.94l1.06 1.06M12.99 12.99l1.06 1.06M14.05 5.94 12.99 7M7.01 12.99l-1.06 1.06" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+        </svg>
+      );
+    }
+    if (action === 'open-first-plan') {
+      return (
+        <svg viewBox="0 0 20 20" fill="none" className={iconClassName} aria-hidden="true">
+          <rect x="3.75" y="4.25" width="12.5" height="11.5" rx="2.25" stroke="currentColor" strokeWidth="1.35" />
+          <path d="M6.75 8h6.5M6.75 11h4.5" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+        </svg>
+      );
+    }
+    return (
+      <svg viewBox="0 0 20 20" fill="none" className={iconClassName} aria-hidden="true">
+        <rect x="3.75" y="4.25" width="12.5" height="11.5" rx="2.25" stroke="currentColor" strokeWidth="1.35" />
+        <path d="M7 10h6" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+      </svg>
+    );
+  };
 
   const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +303,10 @@ export default function DashboardPage() {
   const [artistSearch, setArtistSearch] = useState('');
   const [artistForm, setArtistForm] = useState({ name: '', genre: '', primaryPlatform: '', notes: '' });
   const [editingArtistId, setEditingArtistId] = useState<string | null>(null);
+  const activePlanForGuide = useMemo(
+    () => plans.find((plan) => plan.status !== 'released') || plans[0] || null,
+    [plans]
+  );
   const menuRef = useRef<HTMLDivElement | null>(null);
   const cacheKey = user ? `urganize.dashboard.plans.${user.id}` : '';
   const artistDirectoryKey = user ? `urganize.artistDirectory.${user.id}` : '';
@@ -1005,6 +1222,38 @@ export default function DashboardPage() {
               </div>
             </div>
           ) : null}
+
+          <section className="mt-5 rounded-2xl border border-stroke-default bg-bg-surface/95 p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">How Urganize Works</p>
+                <h2 className="mt-1 text-xl font-semibold tracking-tight text-content-primary">{dashboardGuide.title}</h2>
+                <p className="mt-1 text-sm text-content-secondary">{dashboardGuide.subtitle}</p>
+              </div>
+              <span className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs text-content-secondary">
+                No auto distribution or auto playlisting
+              </span>
+            </div>
+            <ol className="mt-4 grid grid-cols-1 gap-2 text-sm text-content-secondary md:grid-cols-2">
+              {dashboardGuide.checklist.map((entry, index) => (
+                <li key={entry.item} className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 transition-colors duration-200 hover:border-stroke-default">
+                  <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-muted text-xs font-semibold text-brand">
+                    {index + 1}
+                  </span>
+                  {entry.item}
+                  <button
+                    type="button"
+                    disabled={!canRunGuideAction(entry.action)}
+                    onClick={() => void runGuideAction(entry.action)}
+                    className="group ml-3 inline-flex items-center gap-1.5 rounded-md border border-stroke-default bg-bg-surface px-2.5 py-1 text-xs text-content-primary shadow-[0_1px_0_rgba(255,255,255,0.04)] transition-[transform,background-color,border-color,box-shadow] duration-200 ease-out hover:-translate-y-[1px] hover:bg-bg-hover hover:border-stroke-default/90 hover:shadow-[0_6px_16px_-10px_rgba(0,0,0,0.55)] active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                  >
+                    {renderGuideActionIcon(entry.action)}
+                    <span>{entry.actionLabel}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </section>
 
           {error && (
             <p className="mt-5 rounded-xl border border-status-error/35 bg-status-error/10 px-4 py-3 text-sm text-status-error">
