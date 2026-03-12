@@ -8,6 +8,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { getRolePermissions } from '@/lib/role-permissions';
 import { trackEvent } from '@/lib/analytics';
+import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 
 type RoleOption = 'manager' | 'artist-team' | 'artist';
@@ -112,7 +113,42 @@ const MIN_BUDGET = 100;
 const MAX_BUDGET = 100000000;
 const DEFAULT_PLAN_DURATION_DAYS = 30;
 const MIN_FEEDBACK_CHARS = 1;
-const CREATE_PLAN_DRAFT_TTL_MS = 10 * 60 * 1000;
+const ONBOARDING_DRAFT_VERSION = 2;
+const FEEDBACK_DRAFT_VERSION = 1;
+const WORKFLOW_DRAFT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+type FeedbackDraft = {
+  selectedProof: ProofType;
+  proofLink: string;
+  proofText: string;
+  whatYouTried: string;
+  whatHappened: string;
+  resultsMode: 'tracked' | 'not-tracked';
+  resultsMetrics: string;
+  blockersNext: string;
+};
+
+type OnboardingDraft = {
+  artistName: string;
+  genre: string;
+  primaryPlatform: string;
+  goalText: string;
+  stage: string;
+  audienceSize: string;
+  listenerPlatforms: string[];
+  platformInput: string;
+  budget: string;
+  timeline: string;
+  deadlineDate: string;
+  stepsText: string;
+  selectedManagedArtistId: string | null;
+  showAddManagedArtistForm: boolean;
+  newManagedArtistName: string;
+  newManagedArtistGenre: string;
+  newManagedArtistNotes: string;
+  step: number;
+  started: boolean;
+};
 
 const formatDateInput = (value: Date): string => {
   const year = value.getFullYear();
@@ -157,6 +193,12 @@ const Step0Intro = dynamic(() => import('@/components/onboarding/steps/Step0Intr
 const Step1Role = dynamic(() => import('@/components/onboarding/steps/Step1Role').then((mod) => mod.Step1Role), {
   ssr: false,
 });
+const Step2ArtistSelector = dynamic(
+  () => import('@/components/onboarding/steps/Step2ArtistSelector').then((mod) => mod.Step2ArtistSelector),
+  {
+    ssr: false,
+  }
+);
 const Step2ArtistDetails = dynamic(
   () => import('@/components/onboarding/steps/Step2ArtistDetails').then((mod) => mod.Step2ArtistDetails),
   {
@@ -214,6 +256,57 @@ const FeedbackSubmitStep = dynamic(
   }
 );
 
+type ManagedArtistOption = {
+  id: string;
+  name: string;
+  genre: string;
+  notes: string;
+  imageUrl?: string | null;
+};
+
+const isFeedbackDraft = (value: unknown): value is FeedbackDraft => {
+  if (!value || typeof value !== 'object') return false;
+  const draft = value as Partial<FeedbackDraft>;
+  return (
+    typeof draft.selectedProof === 'string' &&
+    PROOF_TYPE_OPTIONS.includes(draft.selectedProof as ProofType) &&
+    typeof draft.proofLink === 'string' &&
+    typeof draft.proofText === 'string' &&
+    typeof draft.whatYouTried === 'string' &&
+    typeof draft.whatHappened === 'string' &&
+    (draft.resultsMode === 'tracked' || draft.resultsMode === 'not-tracked') &&
+    typeof draft.resultsMetrics === 'string' &&
+    typeof draft.blockersNext === 'string'
+  );
+};
+
+const isOnboardingDraft = (value: unknown): value is OnboardingDraft => {
+  if (!value || typeof value !== 'object') return false;
+  const draft = value as Partial<OnboardingDraft>;
+  return (
+    typeof draft.artistName === 'string' &&
+    typeof draft.genre === 'string' &&
+    typeof draft.primaryPlatform === 'string' &&
+    typeof draft.goalText === 'string' &&
+    typeof draft.stage === 'string' &&
+    typeof draft.audienceSize === 'string' &&
+    Array.isArray(draft.listenerPlatforms) &&
+    typeof draft.platformInput === 'string' &&
+    typeof draft.budget === 'string' &&
+    typeof draft.timeline === 'string' &&
+    typeof draft.deadlineDate === 'string' &&
+    typeof draft.stepsText === 'string' &&
+    (typeof draft.selectedManagedArtistId === 'string' || draft.selectedManagedArtistId === null) &&
+    typeof draft.showAddManagedArtistForm === 'boolean' &&
+    typeof draft.newManagedArtistName === 'string' &&
+    typeof draft.newManagedArtistGenre === 'string' &&
+    typeof draft.newManagedArtistNotes === 'string' &&
+    typeof draft.step === 'number' &&
+    Number.isFinite(draft.step) &&
+    typeof draft.started === 'boolean'
+  );
+};
+
 export function PostAuthScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -259,12 +352,20 @@ export function PostAuthScreen() {
   const [timeline, setTimeline] = useState('');
   const [deadlineDate, setDeadlineDate] = useState('');
   const [stepsText, setStepsText] = useState('');
+  const [managedArtists, setManagedArtists] = useState<ManagedArtistOption[]>([]);
+  const [managedArtistsLoading, setManagedArtistsLoading] = useState(false);
+  const [selectedManagedArtistId, setSelectedManagedArtistId] = useState<string | null>(null);
+  const [showAddManagedArtistForm, setShowAddManagedArtistForm] = useState(false);
+  const [newManagedArtistName, setNewManagedArtistName] = useState('');
+  const [newManagedArtistGenre, setNewManagedArtistGenre] = useState('');
+  const [newManagedArtistNotes, setNewManagedArtistNotes] = useState('');
   const [whatYouTried, setWhatYouTried] = useState('');
   const [whatHappened, setWhatHappened] = useState('');
   const [resultsMode, setResultsMode] = useState<'tracked' | 'not-tracked'>('tracked');
   const [resultsMetrics, setResultsMetrics] = useState('');
   const [blockersNext, setBlockersNext] = useState('');
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<number | null>(null);
+  const [resumeMessage, setResumeMessage] = useState('');
 
   const [taskTitle, setTaskTitle] = useState('Single task');
   const [taskOutcome, setTaskOutcome] = useState('Expected outcome');
@@ -277,21 +378,23 @@ export function PostAuthScreen() {
 
   const feedbackDraftKey = useMemo(() => {
     if (!user?.id || !releaseId || !taskId) return '';
-    return `urganize.feedbackDraft.${user.id}.${releaseId}.${taskId}`;
+    return `urganize.feedbackDraft.v${FEEDBACK_DRAFT_VERSION}.${user.id}.${releaseId}.${taskId}`;
   }, [releaseId, taskId, user?.id]);
 
   const onboardingDraftKey = useMemo(() => {
     if (!user?.id) return '';
     const scope = releaseId || requestedPlanId || (flow === 'create-plan' ? 'new-plan' : '');
     if (!scope) return '';
-    return `urganize.onboardingDraft.${user.id}.${scope}`;
+    return `urganize.onboardingDraft.v${ONBOARDING_DRAFT_VERSION}.${user.id}.${scope}`;
   }, [flow, releaseId, requestedPlanId, user?.id]);
 
   const resetError = () => setError('');
   const isArtistAccount = user?.role === 'artist';
   const profileArtistName = String(user?.artist_name || '').trim();
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
   const isCreatePlanFlow = flow === 'create-plan' && !requestedPlanId;
   const isNextCycleFlow = flow === 'next-cycle';
+  const isManagerCreatePlanFlow = isCreatePlanFlow && rolePermissions.role === 'manager';
   const isPlanSetupFlow =
     flow === 'create-plan' ||
     flow === 'resume-plan' ||
@@ -335,35 +438,29 @@ export function PostAuthScreen() {
     if (feedbackDraftLoadedRef.current === feedbackDraftKey) return;
     feedbackDraftLoadedRef.current = feedbackDraftKey;
 
-    const rawDraft = localStorage.getItem(feedbackDraftKey);
-    if (!rawDraft) return;
+    const draft = readPersistedState<FeedbackDraft>(
+      feedbackDraftKey,
+      FEEDBACK_DRAFT_VERSION,
+      isFeedbackDraft,
+      WORKFLOW_DRAFT_MAX_AGE_MS
+    );
+    if (!draft) return;
 
-    try {
-      const draft = JSON.parse(rawDraft) as Record<string, unknown>;
-      if (typeof draft.selectedProof === 'string' && PROOF_TYPE_OPTIONS.includes(draft.selectedProof as ProofType)) {
-        setSelectedProof(draft.selectedProof as ProofType);
-      }
-      if (typeof draft.proofLink === 'string') setProofLink(draft.proofLink);
-      if (typeof draft.proofText === 'string') setProofText(draft.proofText);
-      if (typeof draft.whatYouTried === 'string') setWhatYouTried(draft.whatYouTried);
-      if (typeof draft.whatHappened === 'string') setWhatHappened(draft.whatHappened);
-      if (draft.resultsMode === 'tracked' || draft.resultsMode === 'not-tracked') {
-        setResultsMode(draft.resultsMode);
-      }
-      if (typeof draft.resultsMetrics === 'string') setResultsMetrics(draft.resultsMetrics);
-      if (typeof draft.blockersNext === 'string') setBlockersNext(draft.blockersNext);
-      if (typeof draft.savedAt === 'number' && Number.isFinite(draft.savedAt)) {
-        setLastDraftSavedAt(draft.savedAt);
-      }
-    } catch {
-      // Ignore malformed local draft payloads.
-    }
+    setSelectedProof(draft.selectedProof);
+    setProofLink(draft.proofLink);
+    setProofText(draft.proofText);
+    setWhatYouTried(draft.whatYouTried);
+    setWhatHappened(draft.whatHappened);
+    setResultsMode(draft.resultsMode);
+    setResultsMetrics(draft.resultsMetrics);
+    setBlockersNext(draft.blockersNext);
+    setLastDraftSavedAt(Date.now());
+    setResumeMessage('Resumed where you left off.');
   }, [feedbackDraftKey]);
 
   useEffect(() => {
     if (!feedbackDraftKey) return;
-    const savedAt = Date.now();
-    const draft = {
+    const draft: FeedbackDraft = {
       selectedProof,
       proofLink,
       proofText,
@@ -372,10 +469,9 @@ export function PostAuthScreen() {
       resultsMode,
       resultsMetrics,
       blockersNext,
-      savedAt,
     };
-    localStorage.setItem(feedbackDraftKey, JSON.stringify(draft));
-    setLastDraftSavedAt(savedAt);
+    writePersistedState(feedbackDraftKey, FEEDBACK_DRAFT_VERSION, draft);
+    setLastDraftSavedAt(Date.now());
   }, [
     feedbackDraftKey,
     selectedProof,
@@ -396,47 +492,42 @@ export function PostAuthScreen() {
     if (onboardingDraftLoadedRef.current === onboardingDraftKey) return;
     onboardingDraftLoadedRef.current = onboardingDraftKey;
     if (isNextCycleFlow) {
-      localStorage.removeItem(onboardingDraftKey);
+      clearPersistedState(onboardingDraftKey);
       return;
     }
 
-    const rawDraft = localStorage.getItem(onboardingDraftKey);
-    if (!rawDraft) return;
-
-    try {
-      const draft = JSON.parse(rawDraft) as Record<string, unknown>;
-      const savedAt = typeof draft.savedAt === 'number' ? draft.savedAt : 0;
-      const started = !!draft.started;
-      if (isCreatePlanFlow) {
-        if (!started) {
-          localStorage.removeItem(onboardingDraftKey);
-          return;
-        }
-        if (!savedAt || Date.now() - savedAt > CREATE_PLAN_DRAFT_TTL_MS) {
-          localStorage.removeItem(onboardingDraftKey);
-          return;
-        }
-      }
-      if (typeof draft.artistName === 'string' && !artistName.trim()) setArtistName(draft.artistName);
-      if (typeof draft.genre === 'string' && !genre.trim()) setGenre(draft.genre);
-      if (typeof draft.primaryPlatform === 'string' && !primaryPlatform.trim()) setPrimaryPlatform(draft.primaryPlatform);
-      if (typeof draft.goalText === 'string' && !goalText.trim()) setGoalText(draft.goalText);
-      if (typeof draft.stage === 'string' && !stage.trim()) setStage(draft.stage);
-      if (typeof draft.audienceSize === 'string' && !audienceSize.trim()) setAudienceSize(draft.audienceSize);
-      if (Array.isArray(draft.listenerPlatforms) && listenerPlatforms.length === 0) {
-        setListenerPlatforms(draft.listenerPlatforms.filter((item: unknown): item is string => typeof item === 'string'));
-      }
-      if (typeof draft.platformInput === 'string' && !platformInput.trim()) setPlatformInput(draft.platformInput);
-      if (typeof draft.budget === 'string' && !budget.trim()) setBudget(draft.budget);
-      if (typeof draft.timeline === 'string' && !timeline.trim()) setTimeline(draft.timeline);
-      if (typeof draft.deadlineDate === 'string' && !deadlineDate.trim()) setDeadlineDate(draft.deadlineDate);
-      if (typeof draft.stepsText === 'string' && !stepsText.trim()) setStepsText(draft.stepsText);
-      if (typeof draft.step === 'number' && Number.isFinite(draft.step)) {
-        setStep(Math.max(2, Math.min(9, draft.step)));
-      }
-    } catch {
-      // Ignore malformed local draft payloads.
+    const draft = readPersistedState<OnboardingDraft>(
+      onboardingDraftKey,
+      ONBOARDING_DRAFT_VERSION,
+      isOnboardingDraft,
+      WORKFLOW_DRAFT_MAX_AGE_MS
+    );
+    if (!draft) return;
+    if (isCreatePlanFlow && !draft.started) {
+      clearPersistedState(onboardingDraftKey);
+      return;
     }
+    if (draft.artistName && !artistName.trim()) setArtistName(draft.artistName);
+    if (draft.genre && !genre.trim()) setGenre(draft.genre);
+    if (draft.primaryPlatform && !primaryPlatform.trim()) setPrimaryPlatform(draft.primaryPlatform);
+    if (draft.goalText && !goalText.trim()) setGoalText(draft.goalText);
+    if (draft.stage && !stage.trim()) setStage(draft.stage);
+    if (draft.audienceSize && !audienceSize.trim()) setAudienceSize(draft.audienceSize);
+    if (draft.listenerPlatforms.length > 0 && listenerPlatforms.length === 0) {
+      setListenerPlatforms(draft.listenerPlatforms.filter((item): item is string => typeof item === 'string'));
+    }
+    if (draft.platformInput && !platformInput.trim()) setPlatformInput(draft.platformInput);
+    if (draft.budget && !budget.trim()) setBudget(draft.budget);
+    if (draft.timeline && !timeline.trim()) setTimeline(draft.timeline);
+    if (draft.deadlineDate && !deadlineDate.trim()) setDeadlineDate(draft.deadlineDate);
+    if (draft.stepsText && !stepsText.trim()) setStepsText(draft.stepsText);
+    if (draft.selectedManagedArtistId && !selectedManagedArtistId) setSelectedManagedArtistId(draft.selectedManagedArtistId);
+    if (draft.showAddManagedArtistForm) setShowAddManagedArtistForm(true);
+    if (draft.newManagedArtistName && !newManagedArtistName.trim()) setNewManagedArtistName(draft.newManagedArtistName);
+    if (draft.newManagedArtistGenre && !newManagedArtistGenre.trim()) setNewManagedArtistGenre(draft.newManagedArtistGenre);
+    if (draft.newManagedArtistNotes && !newManagedArtistNotes.trim()) setNewManagedArtistNotes(draft.newManagedArtistNotes);
+    setStep(Math.max(2, Math.min(9, draft.step === 6 ? 5 : draft.step)));
+    setResumeMessage('Resumed where you left off.');
   }, [
     artistName,
     audienceSize,
@@ -453,6 +544,10 @@ export function PostAuthScreen() {
     timeline,
     isCreatePlanFlow,
     isNextCycleFlow,
+    newManagedArtistGenre,
+    newManagedArtistName,
+    newManagedArtistNotes,
+    selectedManagedArtistId,
   ]);
 
   const hasStartedOnboardingInput =
@@ -472,10 +567,10 @@ export function PostAuthScreen() {
   useEffect(() => {
     if (!onboardingDraftKey) return;
     if (isCreatePlanFlow && !hasStartedOnboardingInput) {
-      localStorage.removeItem(onboardingDraftKey);
+      clearPersistedState(onboardingDraftKey);
       return;
     }
-    const draft = {
+    const draft: OnboardingDraft = {
       artistName,
       genre,
       primaryPlatform,
@@ -488,11 +583,15 @@ export function PostAuthScreen() {
       timeline,
       deadlineDate,
       stepsText,
+      selectedManagedArtistId,
+      showAddManagedArtistForm,
+      newManagedArtistName,
+      newManagedArtistGenre,
+      newManagedArtistNotes,
       step,
       started: hasStartedOnboardingInput,
-      savedAt: Date.now(),
     };
-    localStorage.setItem(onboardingDraftKey, JSON.stringify(draft));
+    writePersistedState(onboardingDraftKey, ONBOARDING_DRAFT_VERSION, draft);
   }, [
     artistName,
     audienceSize,
@@ -508,15 +607,74 @@ export function PostAuthScreen() {
     step,
     stepsText,
     timeline,
+    selectedManagedArtistId,
     isCreatePlanFlow,
     hasStartedOnboardingInput,
+    showAddManagedArtistForm,
+    newManagedArtistName,
+    newManagedArtistGenre,
+    newManagedArtistNotes,
   ]);
+
+  const loadManagedArtists = useCallback(async (): Promise<ManagedArtistOption[]> => {
+    if (!user || !isManagerCreatePlanFlow) return [];
+    setManagedArtistsLoading(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      if (!token) return [];
+      const response = await fetch('/api/managed-artists', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: 'no-store',
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        artists?: ManagedArtistOption[];
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not load managed artists.');
+      }
+      const nextArtists = Array.isArray(payload.artists) ? payload.artists : [];
+      setManagedArtists(nextArtists);
+      return nextArtists;
+    } finally {
+      setManagedArtistsLoading(false);
+    }
+  }, [isManagerCreatePlanFlow, user]);
+
+  const applyManagedArtistToState = useCallback((artist: ManagedArtistOption | null) => {
+    if (!artist) return;
+    setSelectedManagedArtistId(artist.id);
+    setArtistName(artist.name || '');
+    setGenre(artist.genre || '');
+  }, []);
+
+  const moveManagedArtistSelection = useCallback(
+    (direction: 'previous' | 'next') => {
+      if (managedArtists.length <= 1) return;
+      const currentIndex = managedArtists.findIndex((artist) => artist.id === selectedManagedArtistId);
+      const baseIndex = currentIndex >= 0 ? currentIndex : 0;
+      const nextIndex =
+        direction === 'previous'
+          ? (baseIndex - 1 + managedArtists.length) % managedArtists.length
+          : (baseIndex + 1) % managedArtists.length;
+      const nextArtist = managedArtists[nextIndex];
+      if (!nextArtist) return;
+      applyManagedArtistToState(nextArtist);
+    },
+    [applyManagedArtistToState, managedArtists, selectedManagedArtistId]
+  );
 
   useEffect(() => {
     return () => {
       if (!onboardingDraftKey || !isCreatePlanFlow) return;
       if (!hasStartedOnboardingInput) {
-        localStorage.removeItem(onboardingDraftKey);
+        clearPersistedState(onboardingDraftKey);
       }
     };
   }, [hasStartedOnboardingInput, isCreatePlanFlow, onboardingDraftKey]);
@@ -684,6 +842,7 @@ export function PostAuthScreen() {
       });
 
       if (typeof window !== 'undefined') {
+        clearPersistedState(`urganize.onboardingDraft.v${ONBOARDING_DRAFT_VERSION}.${user.id}.new-plan`);
         localStorage.removeItem(`urganize.onboardingDraft.${user.id}.new-plan`);
       }
 
@@ -875,7 +1034,22 @@ export function PostAuthScreen() {
         if (resolvedGenre) setGenre((current) => current || resolvedGenre);
         if (resolvedPrimaryPlatform) setPrimaryPlatform((current) => current || resolvedPrimaryPlatform);
 
-        const canSkipArtistStep = Boolean(resolvedArtistName && resolvedGenre && resolvedPrimaryPlatform);
+        let managerArtists: ManagedArtistOption[] = [];
+        if (isManagerCreatePlanFlow) {
+          managerArtists = await loadManagedArtists();
+          const preferredArtist =
+            managerArtists.find((artist) => artist.id === selectedManagedArtistId) ||
+            managerArtists.find((artist) => artist.name.trim().toLowerCase() === resolvedArtistName.trim().toLowerCase()) ||
+            managerArtists[0] ||
+            null;
+          if (preferredArtist) {
+            applyManagedArtistToState(preferredArtist);
+          } else {
+            setSelectedManagedArtistId(null);
+          }
+        }
+
+        const canSkipArtistStep = Boolean(resolvedArtistName && resolvedGenre && resolvedPrimaryPlatform) && !isManagerCreatePlanFlow;
         if (canSkipArtistStep && artistDefaultsKey) {
           localStorage.setItem(
             artistDefaultsKey,
@@ -895,6 +1069,7 @@ export function PostAuthScreen() {
           setTaskTitle('Single task');
           setTaskOutcome('Expected outcome');
           if (user?.id) {
+            clearPersistedState(`urganize.onboardingDraft.v${ONBOARDING_DRAFT_VERSION}.${user.id}.${activeReleaseIdForCycle}`);
             localStorage.removeItem(`urganize.onboardingDraft.${user.id}.${activeReleaseIdForCycle}`);
           }
           try {
@@ -910,15 +1085,18 @@ export function PostAuthScreen() {
           }
           setStep(3);
         } else if (flow === 'first-login' && requestedStartStep === 0 && !requestedPlanId) {
-          const permissions = getRolePermissions(user.role);
-          if (permissions.role === 'viewer') {
+          if (rolePermissions.role === 'viewer') {
             setNeedsOnboarding(false);
             router.replace('/dashboard');
             return;
           }
           setStep(canSkipArtistStep ? 3 : 2);
         } else if (requestedStartStep >= 2) {
-          setStep((current) => Math.max(current, canSkipArtistStep ? 3 : 2));
+          if (isManagerCreatePlanFlow) {
+            setStep(2);
+          } else {
+            setStep((current) => Math.max(current, canSkipArtistStep ? 3 : 2));
+          }
         }
       } catch (err: any) {
         setError(err?.message || 'Failed to load onboarding');
@@ -930,17 +1108,22 @@ export function PostAuthScreen() {
     bootstrap();
   }, [
     artistDefaultsKey,
+    applyManagedArtistToState,
     bootstrapTargetKey,
     ensureOnboardingRelease,
     flow,
+    isManagerCreatePlanFlow,
     isNextCycleFlow,
     isPlanSetupFlow,
     loadCurrentTask,
+    loadManagedArtists,
     refreshCycleNumber,
     requestedPlanId,
     requestedStartStep,
     router,
     resetCycleInputs,
+    rolePermissions.role,
+    selectedManagedArtistId,
     setNeedsOnboarding,
     user,
   ]);
@@ -1098,6 +1281,104 @@ export function PostAuthScreen() {
       await setStepPersisted(3, activeReleaseId);
     } catch (err: any) {
       setError(err?.message || 'Failed to save artist details');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const handleContinueManagedArtist = async () => {
+    const selectedArtist = managedArtists.find((artist) => artist.id === selectedManagedArtistId) || null;
+    if (!selectedArtist) {
+      setError('Select an artist to continue.');
+      return;
+    }
+
+    setArtistName(selectedArtist.name || '');
+    setGenre(selectedArtist.genre || '');
+      resetError();
+      setIsBusy(true);
+      try {
+      const activeReleaseId = await ensureOnboardingRelease();
+      const { error: releaseUpdateError } = await supabase
+        .from('releases')
+        .update({
+          artist_name: selectedArtist.name,
+          title: `${selectedArtist.name} Goal`,
+        })
+        .eq('id', activeReleaseId);
+      if (releaseUpdateError) throw releaseUpdateError;
+
+      const { error: profileUpdateError } = await supabase
+        .from('release_profiles')
+        .update({
+          genre: selectedArtist.genre || null,
+        })
+        .eq('release_id', activeReleaseId);
+      if (profileUpdateError) throw profileUpdateError;
+
+      if (artistDefaultsKey) {
+        localStorage.setItem(
+          artistDefaultsKey,
+          JSON.stringify({
+            artistName: selectedArtist.name,
+            genre: selectedArtist.genre || '',
+            savedAt: Date.now(),
+          })
+        );
+      }
+      await setStepPersisted(3, activeReleaseId);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to save selected artist.');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const handleSaveManagedArtist = async () => {
+    const name = newManagedArtistName.trim();
+    if (!name) {
+      setError('Artist name is required.');
+      return;
+    }
+
+    resetError();
+    setIsBusy(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      if (!token) throw new Error('Session expired. Please sign in again.');
+
+      const response = await fetch('/api/managed-artists', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name,
+          genre: newManagedArtistGenre.trim(),
+          notes: newManagedArtistNotes.trim(),
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        artist?: ManagedArtistOption;
+        error?: string;
+      };
+      if (!response.ok || !payload.artist) {
+        throw new Error(payload.error || 'Could not save artist.');
+      }
+
+      const nextArtists = [payload.artist, ...managedArtists.filter((artist) => artist.id !== payload.artist?.id)];
+      setManagedArtists(nextArtists);
+      applyManagedArtistToState(payload.artist);
+      setShowAddManagedArtistForm(false);
+      setNewManagedArtistName('');
+      setNewManagedArtistGenre('');
+      setNewManagedArtistNotes('');
+    } catch (err: any) {
+      setError(err?.message || 'Could not save artist.');
     } finally {
       setIsBusy(false);
     }
@@ -1488,6 +1769,43 @@ export function PostAuthScreen() {
     setGenerationAttemptKey((current) => current + 1);
   };
 
+  const clearWorkflowDraft = useCallback(() => {
+    if (feedbackDraftKey) clearPersistedState(feedbackDraftKey);
+    if (onboardingDraftKey) clearPersistedState(onboardingDraftKey);
+
+    setSelectedProof('none');
+    setProofFile(null);
+    setProofLink('');
+    setProofText('');
+    setWhatYouTried('');
+    setWhatHappened('');
+    setResultsMode('tracked');
+    setResultsMetrics('');
+    setBlockersNext('');
+    setShowAddManagedArtistForm(false);
+    setNewManagedArtistName('');
+    setNewManagedArtistGenre('');
+    setNewManagedArtistNotes('');
+    setSelectedManagedArtistId(null);
+    setArtistName(isArtistAccount ? profileArtistName : '');
+    setGenre('');
+    setPrimaryPlatform('');
+    setGoalText('');
+    setStage('');
+    resetCycleInputs();
+    setStep(isManagerCreatePlanFlow ? 2 : 2);
+    setResumeMessage('');
+    setLastDraftSavedAt(null);
+    setError('');
+  }, [
+    feedbackDraftKey,
+    onboardingDraftKey,
+    isArtistAccount,
+    isManagerCreatePlanFlow,
+    profileArtistName,
+    resetCycleInputs,
+  ]);
+
   const handleSelectProof = (proofType: ProofType) => {
     setSelectedProof(proofType);
     setProofFile(null);
@@ -1613,12 +1931,13 @@ export function PostAuthScreen() {
       if (releaseStatusError) throw releaseStatusError;
 
       if (feedbackDraftKey) {
-        localStorage.removeItem(feedbackDraftKey);
+        clearPersistedState(feedbackDraftKey);
       }
       if (onboardingDraftKey) {
-        localStorage.removeItem(onboardingDraftKey);
+        clearPersistedState(onboardingDraftKey);
       }
       if (user?.id) {
+        clearPersistedState(`urganize.onboardingDraft.v${ONBOARDING_DRAFT_VERSION}.${user.id}.${releaseId}`);
         localStorage.removeItem(`urganize.onboardingDraft.${user.id}.${releaseId}`);
       }
 
@@ -1658,9 +1977,10 @@ export function PostAuthScreen() {
   };
 
   useEffect(() => {
+    if (isManagerCreatePlanFlow) return;
     if (step !== 2 || !hasArtistDefaults) return;
     setStep(3);
-  }, [hasArtistDefaults, step]);
+  }, [hasArtistDefaults, isManagerCreatePlanFlow, step]);
 
   const shellClass = 'relative min-h-screen w-full overflow-hidden bg-bg-base text-content-primary';
   const fieldClass =
@@ -1760,14 +2080,33 @@ export function PostAuthScreen() {
   return (
     <main className={shellClass}>
       <div className="mx-auto flex min-h-screen w-full max-w-[980px] flex-col px-6 py-12 sm:px-12">
-        {step > 0 && step <= 9 && (
-          <button
-            type="button"
-            onClick={handleBack}
-            className="w-fit text-[clamp(1.8rem,4.5vw,3rem)] leading-none tracking-tight text-content-primary/90"
-          >
-            {isPlanSetupFlow ? 'Back to Dashboard' : '...Back'}
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {step > 0 && step <= 9 ? (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="w-fit text-[clamp(1.8rem,4.5vw,3rem)] leading-none tracking-tight text-content-primary/90"
+            >
+              {isPlanSetupFlow ? 'Back to Dashboard' : '...Back'}
+            </button>
+          ) : (
+            <div />
+          )}
+          {(isPlanSetupFlow || step === 9) && (
+            <button
+              type="button"
+              onClick={clearWorkflowDraft}
+              className="rounded-full border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+            >
+              Clear Draft
+            </button>
+          )}
+        </div>
+
+        {resumeMessage && (
+          <p className="mt-5 rounded-xl border border-brand/35 bg-brand-muted px-4 py-3 text-sm text-content-primary">
+            {resumeMessage}
+          </p>
         )}
 
         {roleEntryContext && step >= 2 && step <= 4 && (
@@ -1834,22 +2173,48 @@ export function PostAuthScreen() {
         )}
 
         {step === 2 && (
-          <Step2ArtistDetails
-            fieldClass={fieldClass}
-            artistName={artistName}
-            genre={genre}
-            primaryPlatform={primaryPlatform}
-            genreOptions={GENRE_OPTIONS}
-            primaryPlatformOptions={PRIMARY_PLATFORM_OPTIONS}
-            isBusy={isBusy}
-            canContinueArtist={canContinueArtist}
-            isArtistNameLocked={isArtistAccount}
-            onArtistNameChange={setArtistName}
-            onGenreChange={setGenre}
-            onPrimaryPlatformChange={setPrimaryPlatform}
-            onPrimaryPlatformBlur={syncPrimaryPlatformToAudiencePlatforms}
-            onContinue={handleSaveAddArtist}
-          />
+          isManagerCreatePlanFlow ? (
+            <Step2ArtistSelector
+              artists={managedArtists}
+              isLoading={managedArtistsLoading}
+              isBusy={isBusy}
+              selectedArtistId={selectedManagedArtistId}
+              isAddArtistOpen={showAddManagedArtistForm}
+              addArtistName={newManagedArtistName}
+              addArtistGenre={newManagedArtistGenre}
+              addArtistNotes={newManagedArtistNotes}
+              onSelectArtist={(artistId) => {
+                const artist = managedArtists.find((item) => item.id === artistId) || null;
+                applyManagedArtistToState(artist);
+              }}
+              onMovePrevious={() => moveManagedArtistSelection('previous')}
+              onMoveNext={() => moveManagedArtistSelection('next')}
+              onContinue={handleContinueManagedArtist}
+              onOpenAddArtist={() => setShowAddManagedArtistForm(true)}
+              onCloseAddArtist={() => setShowAddManagedArtistForm(false)}
+              onAddArtistNameChange={setNewManagedArtistName}
+              onAddArtistGenreChange={setNewManagedArtistGenre}
+              onAddArtistNotesChange={setNewManagedArtistNotes}
+              onSaveArtist={handleSaveManagedArtist}
+            />
+          ) : (
+            <Step2ArtistDetails
+              fieldClass={fieldClass}
+              artistName={artistName}
+              genre={genre}
+              primaryPlatform={primaryPlatform}
+              genreOptions={GENRE_OPTIONS}
+              primaryPlatformOptions={PRIMARY_PLATFORM_OPTIONS}
+              isBusy={isBusy}
+              canContinueArtist={canContinueArtist}
+              isArtistNameLocked={isArtistAccount}
+              onArtistNameChange={setArtistName}
+              onGenreChange={setGenre}
+              onPrimaryPlatformChange={setPrimaryPlatform}
+              onPrimaryPlatformBlur={syncPrimaryPlatformToAudiencePlatforms}
+              onContinue={handleSaveAddArtist}
+            />
+          )
         )}
 
         {step === 3 && (

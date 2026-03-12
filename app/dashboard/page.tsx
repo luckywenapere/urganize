@@ -8,7 +8,9 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { getRolePermissions } from '@/lib/role-permissions';
+import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
+import { SearchableGenreSelect } from '@/components/ui/SearchableGenreSelect';
 
 type PlanSummary = {
   id: string;
@@ -29,7 +31,6 @@ type ArtistDirectoryItem = {
   id: string;
   name: string;
   genre: string;
-  primaryPlatform: string;
   notes: string;
   createdAt: string;
   updatedAt: string;
@@ -50,10 +51,41 @@ type DashboardGuide = {
   }>;
 };
 
+type DashboardUiState = {
+  planFilter: 'active' | 'archived' | 'all';
+  planSearch: string;
+  planSort: 'newest' | 'oldest' | 'title_asc' | 'title_desc' | 'status';
+  artistSearch: string;
+  artistForm: {
+    name: string;
+    genre: string;
+    notes: string;
+  };
+};
+
 const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000;
 const VIRTUALIZED_LIST_THRESHOLD = 12;
 const PLAN_MENU_WIDTH_PX = 190;
 const PLAN_MENU_SAFE_MARGIN_PX = 12;
+const DASHBOARD_UI_STATE_VERSION = 1;
+const DASHBOARD_UI_STATE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+const isDashboardUiState = (value: unknown): value is DashboardUiState => {
+  if (!value || typeof value !== 'object') return false;
+  const state = value as Partial<DashboardUiState>;
+  return (
+    (state.planFilter === 'active' || state.planFilter === 'archived' || state.planFilter === 'all') &&
+    (state.planSort === 'newest' ||
+      state.planSort === 'oldest' ||
+      state.planSort === 'title_asc' ||
+      state.planSort === 'title_desc' ||
+      state.planSort === 'status') &&
+    typeof state.planSearch === 'string' &&
+    typeof state.artistSearch === 'string' &&
+    !!state.artistForm &&
+    typeof state.artistForm === 'object'
+  );
+};
 
 const VirtualizedPlanList = dynamic(
   () => import('@/components/dashboard/VirtualizedPlanList').then((mod) => mod.VirtualizedPlanList),
@@ -298,7 +330,7 @@ export default function DashboardPage() {
   const [savingInlinePlanId, setSavingInlinePlanId] = useState<string | null>(null);
   const [artists, setArtists] = useState<ArtistDirectoryItem[]>([]);
   const [artistSearch, setArtistSearch] = useState('');
-  const [artistForm, setArtistForm] = useState({ name: '', genre: '', primaryPlatform: '', notes: '' });
+  const [artistForm, setArtistForm] = useState({ name: '', genre: '', notes: '' });
   const [editingArtistId, setEditingArtistId] = useState<string | null>(null);
   const [showGuideTooltip, setShowGuideTooltip] = useState(false);
   const [listenerProfileExists, setListenerProfileExists] = useState(false);
@@ -309,9 +341,9 @@ export default function DashboardPage() {
   );
   const menuRef = useRef<HTMLDivElement | null>(null);
   const cacheKey = user ? `urganize.dashboard.plans.${user.id}` : '';
-  const artistDirectoryKey = user ? `urganize.artistDirectory.${user.id}` : '';
   const artistDefaultsKey = user ? `urganize.artistDefaults.${user.id}` : '';
   const guideTooltipSeenKey = user ? `urganize.dashboard.guideTooltipSeen.${user.id}` : '';
+  const dashboardUiStateKey = user ? `urganize.dashboard.ui.v${DASHBOARD_UI_STATE_VERSION}.${user.id}` : '';
 
   useEffect(() => {
     if (!guideTooltipSeenKey) return;
@@ -319,11 +351,49 @@ export default function DashboardPage() {
     setShowGuideTooltip(!hasSeenGuideTooltip);
   }, [guideTooltipSeenKey]);
 
+  useEffect(() => {
+    if (!dashboardUiStateKey) return;
+    const restored = readPersistedState<DashboardUiState>(
+      dashboardUiStateKey,
+      DASHBOARD_UI_STATE_VERSION,
+      isDashboardUiState,
+      DASHBOARD_UI_STATE_MAX_AGE_MS
+    );
+    if (!restored) return;
+
+    setPlanFilter(restored.planFilter);
+    setPlanSearch(restored.planSearch);
+    setPlanSort(restored.planSort);
+    setArtistSearch(restored.artistSearch);
+    setArtistForm(restored.artistForm);
+  }, [dashboardUiStateKey]);
+
+  useEffect(() => {
+    if (!dashboardUiStateKey) return;
+    writePersistedState<DashboardUiState>(dashboardUiStateKey, DASHBOARD_UI_STATE_VERSION, {
+      planFilter,
+      planSearch,
+      planSort,
+      artistSearch,
+      artistForm,
+    });
+  }, [artistForm, artistSearch, dashboardUiStateKey, planFilter, planSearch, planSort]);
+
   const dismissGuideTooltip = () => {
     setShowGuideTooltip(false);
     if (guideTooltipSeenKey) {
       localStorage.setItem(guideTooltipSeenKey, '1');
     }
+  };
+
+  const clearDashboardDrafts = () => {
+    clearPersistedState(dashboardUiStateKey);
+    setPlanFilter('active');
+    setPlanSearch('');
+    setPlanSort('newest');
+    setArtistSearch('');
+    setArtistForm({ name: '', genre: '', notes: '' });
+    setEditingArtistId(null);
   };
 
   const getPlanStatus = useCallback((plan: PlanSummary): 'Completed' | 'Overdue' | 'In Progress' => {
@@ -378,7 +448,6 @@ export default function DashboardPage() {
       return (
         artist.name.toLowerCase().includes(query) ||
         artist.genre.toLowerCase().includes(query) ||
-        artist.primaryPlatform.toLowerCase().includes(query) ||
         artist.notes.toLowerCase().includes(query)
       );
     });
@@ -395,6 +464,36 @@ export default function DashboardPage() {
     );
     return names;
   }, [artists, plans]);
+
+  const loadManagedArtists = useCallback(async () => {
+    if (!user || !permissions.canManageArtists) {
+      setArtists([]);
+      return;
+    }
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      if (!token) return;
+      const response = await fetch('/api/managed-artists', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        artists?: ArtistDirectoryItem[];
+        error?: string;
+      };
+      if (!response.ok) {
+        setError(payload.error || 'Could not load managed artists.');
+        return;
+      }
+      setArtists(Array.isArray(payload.artists) ? payload.artists : []);
+    } catch {
+      setError('Could not load managed artists.');
+    }
+  }, [permissions.canManageArtists, user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -518,27 +617,12 @@ export default function DashboardPage() {
   }, [authLoading, cacheKey, router, user]);
 
   useEffect(() => {
-    if (!artistDirectoryKey) {
+    if (hasSubscriptionAccess === false) {
       setArtists([]);
       return;
     }
-    const raw = localStorage.getItem(artistDirectoryKey);
-    if (!raw) {
-      setArtists([]);
-      return;
-    }
-    try {
-      const parsed = JSON.parse(raw) as ArtistDirectoryItem[];
-      setArtists(Array.isArray(parsed) ? parsed : []);
-    } catch {
-      setArtists([]);
-    }
-  }, [artistDirectoryKey]);
-
-  useEffect(() => {
-    if (!artistDirectoryKey) return;
-    localStorage.setItem(artistDirectoryKey, JSON.stringify(artists));
-  }, [artistDirectoryKey, artists]);
+    loadManagedArtists();
+  }, [hasSubscriptionAccess, loadManagedArtists]);
 
   useEffect(() => {
     let cancelled = false;
@@ -601,34 +685,48 @@ export default function DashboardPage() {
     setIsCreatingPlan(false);
   };
 
-  const saveArtistDirectoryItem = () => {
+  const saveArtistDirectoryItem = async () => {
     const name = artistForm.name.trim();
     if (!name) {
       setError('Artist name is required.');
       return;
     }
-    const now = new Date().toISOString();
-    const payload = {
-      name,
-      genre: artistForm.genre.trim(),
-      primaryPlatform: artistForm.primaryPlatform.trim(),
-      notes: artistForm.notes.trim(),
-      updatedAt: now,
-    };
-    setArtists((current) => {
-      if (editingArtistId) {
-        return current.map((artist) => (artist.id === editingArtistId ? { ...artist, ...payload } : artist));
-      }
-      const newArtist: ArtistDirectoryItem = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        createdAt: now,
-        ...payload,
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      if (!token) throw new Error('Session expired. Please sign in again.');
+
+      const payload = {
+        name,
+        genre: artistForm.genre.trim(),
+        notes: artistForm.notes.trim(),
       };
-      return [newArtist, ...current];
-    });
-    setArtistForm({ name: '', genre: '', primaryPlatform: '', notes: '' });
-    setEditingArtistId(null);
-    setError('');
+
+      const endpoint = editingArtistId ? `/api/managed-artists/${editingArtistId}` : '/api/managed-artists';
+      const method = editingArtistId ? 'PUT' : 'POST';
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(result.error || 'Could not save artist.');
+      }
+
+      await loadManagedArtists();
+      setArtistForm({ name: '', genre: '', notes: '' });
+      setEditingArtistId(null);
+      setError('');
+    } catch (saveError: any) {
+      setError(saveError?.message || 'Could not save artist.');
+    }
   };
 
   const editArtistDirectoryItem = (artist: ArtistDirectoryItem) => {
@@ -636,16 +734,32 @@ export default function DashboardPage() {
     setArtistForm({
       name: artist.name,
       genre: artist.genre,
-      primaryPlatform: artist.primaryPlatform,
       notes: artist.notes,
     });
   };
 
-  const deleteArtistDirectoryItem = (artistId: string) => {
-    setArtists((current) => current.filter((artist) => artist.id !== artistId));
-    if (editingArtistId === artistId) {
-      setEditingArtistId(null);
-      setArtistForm({ name: '', genre: '', primaryPlatform: '', notes: '' });
+  const deleteArtistDirectoryItem = async (artistId: string) => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch(`/api/managed-artists/${artistId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not remove artist.');
+      }
+      await loadManagedArtists();
+      if (editingArtistId === artistId) {
+        setEditingArtistId(null);
+        setArtistForm({ name: '', genre: '', notes: '' });
+      }
+    } catch (deleteArtistError: any) {
+      setError(deleteArtistError?.message || 'Could not remove artist.');
     }
   };
 
@@ -653,29 +767,40 @@ export default function DashboardPage() {
     if (!artistDefaultsKey) return;
     localStorage.setItem(
       artistDefaultsKey,
-      JSON.stringify({
-        artistName: artist.name,
-        genre: artist.genre,
-        primaryPlatform: artist.primaryPlatform,
-      })
-    );
+        JSON.stringify({
+          artistName: artist.name,
+          genre: artist.genre,
+        })
+      );
     setNeedsOnboarding(true);
     router.push('/dashboard?startOnboarding=2&flow=create-plan');
   };
 
-  const importArtistsFromPlans = () => {
+  const importArtistsFromPlans = async () => {
     if (importablePlanArtists.length === 0) return;
-    const now = new Date().toISOString();
-    const imported = importablePlanArtists.map((name, index) => ({
-      id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
-      name,
-      genre: '',
-      primaryPlatform: '',
-      notes: '',
-      createdAt: now,
-      updatedAt: now,
-    }));
-    setArtists((current) => [...imported, ...current]);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      if (!token) throw new Error('Session expired. Please sign in again.');
+
+      await Promise.all(
+        importablePlanArtists.map((name) =>
+          fetch('/api/managed-artists', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ name }),
+          })
+        )
+      );
+      await loadManagedArtists();
+    } catch (importError: any) {
+      setError(importError?.message || 'Could not import artists from plans.');
+    }
   };
 
   const requestDeletePlan = (plan: PlanSummary) => {
@@ -1055,33 +1180,33 @@ export default function DashboardPage() {
                   </span>
                 </div>
               </div>
-              <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-4">
+              <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
                 <input
                   value={artistForm.name}
                   onChange={(event) => setArtistForm((current) => ({ ...current, name: event.target.value }))}
                   placeholder="Artist name"
                   className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
                 />
-                <input
+                <SearchableGenreSelect
                   value={artistForm.genre}
-                  onChange={(event) => setArtistForm((current) => ({ ...current, genre: event.target.value }))}
-                  placeholder="Genre"
-                  className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                  onChange={(value) => setArtistForm((current) => ({ ...current, genre: value }))}
+                  className="bg-bg-surface"
                 />
-                <input
-                  value={artistForm.primaryPlatform}
-                  onChange={(event) => setArtistForm((current) => ({ ...current, primaryPlatform: event.target.value }))}
-                  placeholder="Primary platform"
-                  className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-                />
-                <button
-                  type="button"
-                  onClick={saveArtistDirectoryItem}
-                  className="rounded-lg border border-brand/40 bg-brand-muted px-3 py-2 text-sm font-semibold text-content-primary hover:bg-brand/20"
-                >
-                  {editingArtistId ? 'Save Artist' : 'Add Artist'}
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={saveArtistDirectoryItem}
+                    className="rounded-lg border border-brand/40 bg-brand-muted px-3 py-2 text-sm font-semibold text-content-primary hover:bg-brand/20"
+                  >
+                    {editingArtistId ? 'Save Artist' : 'Add Artist'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearDashboardDrafts}
+                    className="rounded-lg border border-stroke-default bg-bg-surface px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                  >
+                    Clear Draft
+                  </button>
+                </div>
               <textarea
                 value={artistForm.notes}
                 onChange={(event) => setArtistForm((current) => ({ ...current, notes: event.target.value }))}
@@ -1091,12 +1216,12 @@ export default function DashboardPage() {
               {editingArtistId && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setEditingArtistId(null);
-                    setArtistForm({ name: '', genre: '', primaryPlatform: '', notes: '' });
-                  }}
-                  className="mt-2 text-xs text-content-secondary hover:underline"
-                >
+                    onClick={() => {
+                      setEditingArtistId(null);
+                      setArtistForm({ name: '', genre: '', notes: '' });
+                    }}
+                    className="mt-2 text-xs text-content-secondary hover:underline"
+                  >
                   Cancel editing
                 </button>
               )}
@@ -1112,10 +1237,7 @@ export default function DashboardPage() {
                     <div key={artist.id} className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2">
                       <div>
                         <p className="text-sm font-medium text-content-primary">{artist.name}</p>
-                        <p className="text-xs text-content-secondary">
-                          {artist.genre || 'No genre'}
-                          {artist.primaryPlatform ? ` • ${artist.primaryPlatform}` : ''}
-                        </p>
+                        <p className="text-xs text-content-secondary">{artist.genre || 'No genre'}</p>
                         {artist.notes && <p className="mt-1 text-xs text-content-secondary">{artist.notes}</p>}
                       </div>
                       <div className="flex items-center gap-2 text-xs">

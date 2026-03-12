@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { getRolePermissions } from '@/lib/role-permissions';
+import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 import { WorkspaceSection, type WorkspaceTab } from '@/components/dashboard/workspace/WorkspaceSection';
 
@@ -14,6 +15,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const ONBOARDING_TOTAL_STEPS = 13;
 const DEFAULT_PLAN_DURATION_DAYS = 30;
 const PLAN_CACHE_TTL_MS = 5 * 60 * 1000;
+const WORKSPACE_UI_STATE_VERSION = 1;
+const WORKSPACE_UI_STATE_MAX_AGE_MS = 30 * DAY_MS;
 const ASSET_CATEGORIES = ['cover_art', 'audio', 'promo_image', 'video', 'document'] as const;
 const DEFAULT_DISTRIBUTION_CHECKLIST = [
   { id: 'metadata_complete', label: 'Metadata complete', done: false },
@@ -106,6 +109,33 @@ type CachedPlanPayload = {
   cachedAt: number;
 };
 
+type WorkspaceUiState = {
+  activeWorkspaceTab: WorkspaceTab;
+  newMarketing: {
+    platform: string;
+    contentType: string;
+    captionIdea: string;
+    publishDate: string;
+    owner: string;
+  };
+  newPlaylist: {
+    curator: string;
+    platform: string;
+    submissionDate: string;
+    notes: string;
+  };
+  newCustomTask: {
+    title: string;
+    description: string;
+    owner: string;
+    priority: 'low' | 'medium' | 'high';
+    dueDate: string;
+    tagScope: 'release' | 'artist';
+  };
+  assetCategory: AssetCategory;
+  assetOwnerScope: 'release' | 'artist';
+};
+
 const addDaysIso = (base: string | Date, days: number): string => {
   const date = new Date(base);
   date.setDate(date.getDate() + days);
@@ -115,6 +145,30 @@ const addDaysIso = (base: string | Date, days: number): string => {
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
 const sanitizeFileName = (value: string): string => value.replace(/[^a-zA-Z0-9._-]/g, '_');
 const prettyAssetCategory = (category: AssetCategory): string => category.replace(/_/g, ' ');
+const isWorkspaceUiState = (value: unknown): value is WorkspaceUiState => {
+  if (!value || typeof value !== 'object') return false;
+  const state = value as Partial<WorkspaceUiState>;
+  return (
+    (state.activeWorkspaceTab === 'overview' ||
+      state.activeWorkspaceTab === 'tasks' ||
+      state.activeWorkspaceTab === 'marketing' ||
+      state.activeWorkspaceTab === 'playlist' ||
+      state.activeWorkspaceTab === 'distribution' ||
+      state.activeWorkspaceTab === 'assets') &&
+    !!state.newMarketing &&
+    typeof state.newMarketing === 'object' &&
+    !!state.newPlaylist &&
+    typeof state.newPlaylist === 'object' &&
+    !!state.newCustomTask &&
+    typeof state.newCustomTask === 'object' &&
+    (state.assetCategory === 'cover_art' ||
+      state.assetCategory === 'audio' ||
+      state.assetCategory === 'promo_image' ||
+      state.assetCategory === 'video' ||
+      state.assetCategory === 'document') &&
+    (state.assetOwnerScope === 'release' || state.assetOwnerScope === 'artist')
+  );
+};
 const normalizeCustomTasks = (value: unknown): CustomTaskItem[] => {
   if (!Array.isArray(value)) return [];
   return value
@@ -220,6 +274,7 @@ export default function PlanDashboardPage() {
   const cacheKey = user && planId ? `urganize.planDashboard.${user.id}.${planId}` : '';
   const workspaceStoragePrefix = user && planId ? `urganize.workspace.${user.id}.${planId}` : '';
   const taskBoardFilterStorageKey = workspaceStoragePrefix ? `${workspaceStoragePrefix}.taskBoardFilter` : '';
+  const workspaceUiStateKey = workspaceStoragePrefix ? `${workspaceStoragePrefix}.ui.v${WORKSPACE_UI_STATE_VERSION}` : '';
 
   useEffect(() => {
     let cancelled = false;
@@ -422,22 +477,36 @@ export default function PlanDashboardPage() {
       }
     };
 
-    const savedMarketing = readJson<MarketingCalendarItem[]>('marketing');
-    const savedPlaylist = readJson<PlaylistTrackerItem[]>('playlist');
-    const savedDistribution = readJson<DistributionChecklistItem[]>('distribution');
-    const savedCustomTasks = readJson<CustomTaskItem[]>('customTasks');
+      const savedMarketing = readJson<MarketingCalendarItem[]>('marketing');
+      const savedPlaylist = readJson<PlaylistTrackerItem[]>('playlist');
+      const savedDistribution = readJson<DistributionChecklistItem[]>('distribution');
+      const savedCustomTasks = readJson<CustomTaskItem[]>('customTasks');
+      const savedUiState = readPersistedState<WorkspaceUiState>(
+        workspaceUiStateKey,
+        WORKSPACE_UI_STATE_VERSION,
+        isWorkspaceUiState,
+        WORKSPACE_UI_STATE_MAX_AGE_MS
+      );
 
-    setMarketingItems(Array.isArray(savedMarketing) ? savedMarketing : []);
-    setPlaylistItems(Array.isArray(savedPlaylist) ? savedPlaylist : []);
+      setMarketingItems(Array.isArray(savedMarketing) ? savedMarketing : []);
+      setPlaylistItems(Array.isArray(savedPlaylist) ? savedPlaylist : []);
     setDistributionItems(
       Array.isArray(savedDistribution) && savedDistribution.length > 0
-        ? savedDistribution
-        : DEFAULT_DISTRIBUTION_CHECKLIST.map((item) => ({ ...item }))
-    );
-    setCustomTaskItems(normalizeCustomTasks(savedCustomTasks));
-    workspaceHydratedRef.current = true;
-    setWorkspaceSyncMode((current) => (current === 'loading' ? 'local' : current));
-  }, [workspaceStoragePrefix]);
+          ? savedDistribution
+          : DEFAULT_DISTRIBUTION_CHECKLIST.map((item) => ({ ...item }))
+      );
+      setCustomTaskItems(normalizeCustomTasks(savedCustomTasks));
+      if (savedUiState) {
+        setActiveWorkspaceTab(savedUiState.activeWorkspaceTab);
+        setNewMarketing(savedUiState.newMarketing);
+        setNewPlaylist(savedUiState.newPlaylist);
+        setNewCustomTask(savedUiState.newCustomTask);
+        setAssetCategory(savedUiState.assetCategory);
+        setAssetOwnerScope(savedUiState.assetOwnerScope);
+      }
+      workspaceHydratedRef.current = true;
+      setWorkspaceSyncMode((current) => (current === 'loading' ? 'local' : current));
+    }, [workspaceStoragePrefix, workspaceUiStateKey]);
 
   useEffect(() => {
     if (!workspaceStoragePrefix) return;
@@ -458,6 +527,18 @@ export default function PlanDashboardPage() {
     if (!workspaceStoragePrefix) return;
     localStorage.setItem(`${workspaceStoragePrefix}.customTasks`, JSON.stringify(customTaskItems));
   }, [customTaskItems, workspaceStoragePrefix]);
+
+  useEffect(() => {
+    if (!workspaceUiStateKey) return;
+    writePersistedState<WorkspaceUiState>(workspaceUiStateKey, WORKSPACE_UI_STATE_VERSION, {
+      activeWorkspaceTab,
+      newMarketing,
+      newPlaylist,
+      newCustomTask,
+      assetCategory,
+      assetOwnerScope,
+    });
+  }, [activeWorkspaceTab, assetCategory, assetOwnerScope, newCustomTask, newMarketing, newPlaylist, workspaceUiStateKey]);
 
   useEffect(() => {
     if (!user?.id || !planId || hasSubscriptionAccess !== true) return;

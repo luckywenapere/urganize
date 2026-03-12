@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import {
   EMPTY_LISTENER_PROFILE_INPUTS,
   LISTENER_PROFILE_FIELDS,
@@ -32,6 +33,29 @@ type ResultResponse = {
   generatedAt?: string | null;
   error?: string;
   sql?: string;
+};
+
+type ListenerProfileDraft = {
+  mode: Exclude<RouteMode, 'generating'>;
+  stepIndex: number;
+  inputs: ListenerProfileInputs;
+  managedArtistDraft: string;
+  isEditingManagedArtist: boolean;
+};
+
+const LISTENER_PROFILE_DRAFT_VERSION = 1;
+const LISTENER_PROFILE_DRAFT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+const isListenerProfileDraft = (value: unknown): value is ListenerProfileDraft => {
+  if (!value || typeof value !== 'object') return false;
+  const draft = value as Partial<ListenerProfileDraft>;
+  return (
+    (draft.mode === 'flow' || draft.mode === 'review' || draft.mode === 'result') &&
+    typeof draft.stepIndex === 'number' &&
+    Number.isFinite(draft.stepIndex) &&
+    !!draft.inputs &&
+    typeof draft.inputs === 'object'
+  );
 };
 
 const getMissingCount = (
@@ -66,11 +90,13 @@ export default function ListenerProfilePage() {
   const [schemaSql, setSchemaSql] = useState<string | null>(null);
   const [isEditingManagedArtist, setIsEditingManagedArtist] = useState(false);
   const [managedArtistDraft, setManagedArtistDraft] = useState('');
+  const [resumeMessage, setResumeMessage] = useState('');
 
   const flowFields = useMemo(
     () => (user?.role === 'manager' ? LISTENER_PROFILE_FIELDS : LISTENER_PROFILE_FIELDS.filter((field) => field.key !== 'artist_name')),
     [user?.role]
   );
+  const draftStorageKey = useMemo(() => (user?.id ? `urganize.listenerProfileDraft.v${LISTENER_PROFILE_DRAFT_VERSION}.${user.id}` : ''), [user?.id]);
 
   const totalSteps = flowFields.length;
   const activeField = flowFields[stepIndex] || null;
@@ -106,6 +132,17 @@ export default function ListenerProfilePage() {
     },
     [isArtistLockedName, user?.artist_name]
   );
+
+  const getDraftInputs = useCallback((): ListenerProfileInputs => {
+    if (!activeField) return inputs;
+    if ((isArtistLockedName || user?.role === 'manager') && activeField.key === 'artist_name') {
+      return inputs;
+    }
+    return {
+      ...inputs,
+      [activeField.key]: stepValue.trim() || null,
+    };
+  }, [activeField, inputs, isArtistLockedName, stepValue, user?.role]);
 
   const loadProfile = useCallback(async () => {
     if (!user) return;
@@ -146,27 +183,77 @@ export default function ListenerProfilePage() {
         return;
       }
 
-      const normalizedInputs = applyArtistNameLock(normalizeListenerProfileInputs((inputsPayload.inputs || null) as Record<string, unknown> | null));
+      let normalizedInputs = applyArtistNameLock(normalizeListenerProfileInputs((inputsPayload.inputs || null) as Record<string, unknown> | null));
+      let nextMode: RouteMode = 'flow';
+      let nextStepIndex = getFirstUnansweredIndex(normalizedInputs, flowFields);
+      const restoredDraft = readPersistedState<ListenerProfileDraft>(
+        draftStorageKey,
+        LISTENER_PROFILE_DRAFT_VERSION,
+        isListenerProfileDraft,
+        LISTENER_PROFILE_DRAFT_MAX_AGE_MS
+      );
+
+      if (restoredDraft) {
+        normalizedInputs = applyArtistNameLock(normalizeListenerProfileInputs(restoredDraft.inputs));
+        nextStepIndex = Math.min(Math.max(restoredDraft.stepIndex, 0), Math.max(flowFields.length - 1, 0));
+        setManagedArtistDraft(restoredDraft.managedArtistDraft || '');
+        setIsEditingManagedArtist(Boolean(restoredDraft.isEditingManagedArtist));
+        setResumeMessage('Resumed where you left off.');
+      } else {
+        setManagedArtistDraft('');
+        setIsEditingManagedArtist(false);
+        setResumeMessage('');
+      }
+
       setInputs(normalizedInputs);
-      setStepIndex(getFirstUnansweredIndex(normalizedInputs, flowFields));
+      setStepIndex(nextStepIndex);
 
       const parsedPersona = parseListenerPersonaResult(resultPayload.persona);
       setPersona(parsedPersona);
       setGeneratedAt(resultPayload.generatedAt || inputsPayload.generatedAt || null);
 
       if (parsedPersona) {
-        setMode('result');
+        nextMode = 'result';
       } else if (inputsPayload.exists) {
-        setMode('review');
+        nextMode = restoredDraft?.mode === 'flow' ? 'flow' : 'review';
       } else {
-        setMode('flow');
+        nextMode = restoredDraft?.mode || 'flow';
       }
+      setMode(nextMode);
     } catch {
       setError('Could not load listener profile right now.');
     } finally {
       setIsLoadingPage(false);
     }
-  }, [applyArtistNameLock, flowFields, getToken, user]);
+  }, [applyArtistNameLock, draftStorageKey, flowFields, getToken, user]);
+
+  useEffect(() => {
+    if (!draftStorageKey || isLoadingPage || authLoading || !user) return;
+
+    writePersistedState<ListenerProfileDraft>(draftStorageKey, LISTENER_PROFILE_DRAFT_VERSION, {
+      mode: mode === 'generating' ? 'review' : mode,
+      stepIndex,
+      inputs: getDraftInputs(),
+      managedArtistDraft,
+      isEditingManagedArtist,
+    });
+  }, [authLoading, draftStorageKey, getDraftInputs, isEditingManagedArtist, isLoadingPage, managedArtistDraft, mode, stepIndex, user]);
+
+  const clearDraft = useCallback(() => {
+    clearPersistedState(draftStorageKey);
+    const resetInputs = applyArtistNameLock({ ...EMPTY_LISTENER_PROFILE_INPUTS });
+    setInputs(resetInputs);
+    setStepIndex(getFirstUnansweredIndex(resetInputs, flowFields));
+    setStepValue('');
+    setManagedArtistDraft('');
+    setIsEditingManagedArtist(false);
+    setPersona(null);
+    setGeneratedAt(null);
+    setMode('flow');
+    setError('');
+    setResumeMessage('');
+    setSuccess('Draft cleared.');
+  }, [applyArtistNameLock, draftStorageKey, flowFields]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -359,12 +446,22 @@ export default function ListenerProfilePage() {
                   Define your likely fan, then generate an AI persona you can use for release strategy and campaigns.
                 </p>
               </div>
-          <div className="rounded-2xl border border-stroke-default bg-bg-elevated/75 px-4 py-3 text-right">
-            <p className="text-xs uppercase tracking-wide text-content-tertiary">Completion</p>
-            <p className="mt-1 text-xl font-semibold text-content-primary">{completionPercent}%</p>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={clearDraft}
+              className="rounded-xl border border-stroke-default bg-bg-surface px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+            >
+              Clear Draft
+            </button>
+            <div className="rounded-2xl border border-stroke-default bg-bg-elevated/75 px-4 py-3 text-right">
+              <p className="text-xs uppercase tracking-wide text-content-tertiary">Completion</p>
+              <p className="mt-1 text-xl font-semibold text-content-primary">{completionPercent}%</p>
+            </div>
           </div>
         </div>
 
+        {resumeMessage && <p className="mt-4 rounded-xl border border-brand/35 bg-brand-muted px-4 py-2 text-sm text-content-primary">{resumeMessage}</p>}
         {error && <p className="mt-4 rounded-xl border border-status-error/40 bg-status-error/10 px-4 py-2 text-sm text-status-error">{error}</p>}
         {success && <p className="mt-4 rounded-xl border border-brand/35 bg-brand-muted px-4 py-2 text-sm text-content-primary">{success}</p>}
         {schemaSql && (

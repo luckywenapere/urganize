@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { trackEvent } from '@/lib/analytics';
+import { getRolePermissions } from '@/lib/role-permissions';
+import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import {
   INDIVIDUAL_PLAN_OPTIONS,
   MIN_GROUP_TEAM_SIZE,
@@ -19,6 +21,7 @@ import {
   type IndividualPlanId,
 } from '@/lib/billing';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { SearchableGenreSelect } from '@/components/ui/SearchableGenreSelect';
 
 const PaystackButton = dynamic(
   () => import('@/components/PaystackButton').then((mod) => mod.PaystackButton),
@@ -60,8 +63,45 @@ type OrganizationMember = {
   updated_at?: string;
 };
 
+type ManagedArtist = {
+  id: string;
+  name: string;
+  genre: string;
+  notes: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type SettingsUiState = {
+  organizationName: string;
+  newMemberEmail: string;
+  newMemberRole: 'manager' | 'artist' | 'team-member' | 'viewer';
+  managedArtistForm: {
+    name: string;
+    genre: string;
+    notes: string;
+  };
+};
+
 const panelClass =
   'rounded-3xl border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-sm sm:p-6';
+const SETTINGS_UI_STATE_VERSION = 1;
+const SETTINGS_UI_STATE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+const isSettingsUiState = (value: unknown): value is SettingsUiState => {
+  if (!value || typeof value !== 'object') return false;
+  const state = value as Partial<SettingsUiState>;
+  return (
+    typeof state.organizationName === 'string' &&
+    typeof state.newMemberEmail === 'string' &&
+    (state.newMemberRole === 'manager' ||
+      state.newMemberRole === 'artist' ||
+      state.newMemberRole === 'team-member' ||
+      state.newMemberRole === 'viewer') &&
+    !!state.managedArtistForm &&
+    typeof state.managedArtistForm === 'object'
+  );
+};
 
 const parsePaymentMetadata = (paystackResponse: unknown): Record<string, unknown> => {
   if (!paystackResponse || typeof paystackResponse !== 'object') return {};
@@ -72,7 +112,7 @@ const parsePaymentMetadata = (paystackResponse: unknown): Record<string, unknown
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, logout, checkAuth, updateArtistName, isLoading: authLoading } = useAuthStore();
+  const { user, logout, checkAuth, updateArtistName, updateRole, isLoading: authLoading } = useAuthStore();
 
   const [name, setName] = useState('');
   const [artistProfileName, setArtistProfileName] = useState('');
@@ -117,6 +157,25 @@ export default function SettingsPage() {
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [memberMessage, setMemberMessage] = useState('');
   const [memberError, setMemberError] = useState('');
+  const [managedArtists, setManagedArtists] = useState<ManagedArtist[]>([]);
+  const [isLoadingManagedArtists, setIsLoadingManagedArtists] = useState(false);
+  const [isSavingManagedArtist, setIsSavingManagedArtist] = useState(false);
+  const [editingManagedArtistId, setEditingManagedArtistId] = useState<string | null>(null);
+  const [managedArtistMessage, setManagedArtistMessage] = useState('');
+  const [managedArtistError, setManagedArtistError] = useState('');
+  const [managedArtistForm, setManagedArtistForm] = useState({
+    name: '',
+    genre: '',
+    notes: '',
+  });
+  const [managedArtistSchemaSql, setManagedArtistSchemaSql] = useState('');
+  const [isSwitchingAccountType, setIsSwitchingAccountType] = useState(false);
+  const [switchingToRoleLabel, setSwitchingToRoleLabel] = useState('');
+
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
+  const isManagerAccount = rolePermissions.role === 'manager';
+  const canSwitchAccountType = rolePermissions.role === 'artist' || rolePermissions.role === 'manager';
+  const settingsUiStateKey = user ? `urganize.settings.ui.v${SETTINGS_UI_STATE_VERSION}.${user.id}` : '';
 
   useEffect(() => {
     if (authLoading) return;
@@ -127,6 +186,32 @@ export default function SettingsPage() {
     setName(user.name || '');
     setArtistProfileName(String(user.artist_name || ''));
   }, [authLoading, router, user]);
+
+  useEffect(() => {
+    if (!settingsUiStateKey) return;
+    const restored = readPersistedState<SettingsUiState>(
+      settingsUiStateKey,
+      SETTINGS_UI_STATE_VERSION,
+      isSettingsUiState,
+      SETTINGS_UI_STATE_MAX_AGE_MS
+    );
+    if (!restored) return;
+
+    setOrganizationName(restored.organizationName);
+    setNewMemberEmail(restored.newMemberEmail);
+    setNewMemberRole(restored.newMemberRole);
+    setManagedArtistForm(restored.managedArtistForm);
+  }, [settingsUiStateKey]);
+
+  useEffect(() => {
+    if (!settingsUiStateKey) return;
+    writePersistedState<SettingsUiState>(settingsUiStateKey, SETTINGS_UI_STATE_VERSION, {
+      organizationName,
+      newMemberEmail,
+      newMemberRole,
+      managedArtistForm,
+    });
+  }, [managedArtistForm, newMemberEmail, newMemberRole, organizationName, settingsUiStateKey]);
 
   useEffect(() => {
     if (!user) return;
@@ -200,6 +285,57 @@ export default function SettingsPage() {
 
     loadSettingsData();
   }, [user]);
+
+  useEffect(() => {
+    if (!user || !isManagerAccount) {
+      setManagedArtists([]);
+      return;
+    }
+
+    let cancelled = false;
+    const loadManagedArtists = async () => {
+      setIsLoadingManagedArtists(true);
+      setManagedArtistError('');
+      setManagedArtistSchemaSql('');
+      try {
+        const token = await getAccessToken();
+        if (!token) {
+          if (!cancelled) setManagedArtistError('Session expired. Please sign in again.');
+          return;
+        }
+
+        const response = await fetch('/api/managed-artists', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        const payload = (await response.json().catch(() => ({}))) as {
+          artists?: ManagedArtist[];
+          error?: string;
+          sql?: string;
+        };
+        if (!response.ok) {
+          if (!cancelled) {
+            setManagedArtistError(payload.error || 'Could not load managed artists.');
+            if (response.status === 501 && payload.sql) setManagedArtistSchemaSql(payload.sql);
+          }
+          return;
+        }
+        if (!cancelled) {
+          setManagedArtists(Array.isArray(payload.artists) ? payload.artists : []);
+        }
+      } catch {
+        if (!cancelled) setManagedArtistError('Could not load managed artists.');
+      } finally {
+        if (!cancelled) setIsLoadingManagedArtists(false);
+      }
+    };
+
+    loadManagedArtists();
+    return () => {
+      cancelled = true;
+    };
+  }, [isManagerAccount, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -351,6 +487,40 @@ export default function SettingsPage() {
       setError(err?.message || 'Failed to update artist name');
     } finally {
       setIsSavingName(false);
+    }
+  };
+
+  const handleSwitchAccountType = async (target: 'artist' | 'artist-manager') => {
+    if (!user || !canSwitchAccountType || isSwitchingAccountType) return;
+
+    const targetRoleLabel = target === 'artist' ? 'Artist' : 'Artist Manager';
+    const normalizedCurrent = rolePermissions.role;
+    if ((target === 'artist' && normalizedCurrent === 'artist') || (target === 'artist-manager' && normalizedCurrent === 'manager')) {
+      return;
+    }
+
+    if (target === 'artist') {
+      const artistName = String(user.artist_name || artistProfileName || '').trim();
+      if (!artistName) {
+        setError('Add your Artist name first before switching to Artist account.');
+        return;
+      }
+    }
+
+    clearFeedback();
+    setSwitchingToRoleLabel(targetRoleLabel);
+    setIsSwitchingAccountType(true);
+    try {
+      await updateRole(target);
+      await checkAuth();
+      router.refresh();
+      router.push('/dashboard');
+      setSuccess(`Switched to ${targetRoleLabel} account.`);
+    } catch (err: any) {
+      setError(err?.message || `Could not switch to ${targetRoleLabel} account.`);
+    } finally {
+      setIsSwitchingAccountType(false);
+      setSwitchingToRoleLabel('');
     }
   };
 
@@ -540,6 +710,111 @@ export default function SettingsPage() {
       setOrganizationError(err?.message || 'Could not save organization.');
     } finally {
       setIsSavingOrganization(false);
+    }
+  };
+
+  const resetManagedArtistForm = () => {
+    setManagedArtistForm({ name: '', genre: '', notes: '' });
+    setEditingManagedArtistId(null);
+  };
+
+  const clearSettingsDrafts = () => {
+    clearPersistedState(settingsUiStateKey);
+    setOrganizationName(organization?.name || '');
+    setNewMemberEmail('');
+    setNewMemberRole('viewer');
+    resetManagedArtistForm();
+  };
+
+  const handleSaveManagedArtist = async () => {
+    const name = managedArtistForm.name.trim();
+    if (!name) {
+      setManagedArtistError('Artist name is required.');
+      return;
+    }
+
+    setIsSavingManagedArtist(true);
+    setManagedArtistError('');
+    setManagedArtistMessage('');
+    setManagedArtistSchemaSql('');
+
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+
+      const targetUrl = editingManagedArtistId ? `/api/managed-artists/${editingManagedArtistId}` : '/api/managed-artists';
+      const method = editingManagedArtistId ? 'PUT' : 'POST';
+      const response = await fetch(targetUrl, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(managedArtistForm),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        artist?: ManagedArtist;
+        error?: string;
+        sql?: string;
+      };
+
+      if (!response.ok || !payload.artist) {
+        if (response.status === 501 && payload.sql) setManagedArtistSchemaSql(payload.sql);
+        throw new Error(payload.error || 'Could not save managed artist.');
+      }
+
+      setManagedArtists((current) => {
+        const existingIndex = current.findIndex((artist) => artist.id === payload.artist?.id);
+        if (existingIndex === -1) return [payload.artist as ManagedArtist, ...current];
+        const next = [...current];
+        next[existingIndex] = payload.artist as ManagedArtist;
+        return next;
+      });
+
+      setManagedArtistMessage(editingManagedArtistId ? 'Artist updated.' : 'Artist added.');
+      resetManagedArtistForm();
+    } catch (err: any) {
+      setManagedArtistError(err?.message || 'Could not save managed artist.');
+    } finally {
+      setIsSavingManagedArtist(false);
+    }
+  };
+
+  const handleEditManagedArtist = (artist: ManagedArtist) => {
+    setEditingManagedArtistId(artist.id);
+    setManagedArtistForm({
+      name: artist.name || '',
+      genre: artist.genre || '',
+      notes: artist.notes || '',
+    });
+  };
+
+  const handleDeleteManagedArtist = async (artistId: string) => {
+    setManagedArtistError('');
+    setManagedArtistMessage('');
+    setManagedArtistSchemaSql('');
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch(`/api/managed-artists/${artistId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string; sql?: string };
+      if (!response.ok) {
+        if (response.status === 501 && payload.sql) setManagedArtistSchemaSql(payload.sql);
+        throw new Error(payload.error || 'Could not remove artist.');
+      }
+      setManagedArtists((current) => current.filter((artist) => artist.id !== artistId));
+      if (editingManagedArtistId === artistId) {
+        resetManagedArtistForm();
+      }
+      setManagedArtistMessage('Artist removed.');
+    } catch (err: any) {
+      setManagedArtistError(err?.message || 'Could not remove artist.');
     }
   };
 
@@ -744,6 +1019,38 @@ export default function SettingsPage() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {canSwitchAccountType && (
+            <section className={panelClass}>
+              <h2 className="mb-4 text-xl">Account Type</h2>
+              <div className="rounded-lg border border-stroke-subtle bg-bg-elevated p-4">
+                <p className="text-sm text-content-secondary">
+                  Switch between Artist and Artist Manager modes. The app will immediately update role-based features and permissions.
+                </p>
+                <p className="mt-2 text-sm text-content-primary">
+                  Current: <span className="font-semibold">{isManagerAccount ? 'Artist Manager' : 'Artist'}</span>
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchAccountType('artist')}
+                    disabled={isSwitchingAccountType || !isManagerAccount}
+                    className="rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover disabled:opacity-60"
+                  >
+                    Switch to Artist
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchAccountType('artist-manager')}
+                    disabled={isSwitchingAccountType || isManagerAccount}
+                    className="rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover disabled:opacity-60"
+                  >
+                    Switch to Artist Manager
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+
           <section className={panelClass}>
             <h2 className="mb-4 text-xl">Notifications</h2>
             <div className="space-y-4">
@@ -788,7 +1095,8 @@ export default function SettingsPage() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <section className={panelClass}>
+          {isManagerAccount && (
+            <section className={panelClass}>
             <h2 className="mb-4 text-xl">Organization</h2>
             <div className="space-y-3">
               <label className="block">
@@ -825,6 +1133,7 @@ export default function SettingsPage() {
               )}
             </div>
           </section>
+          )}
 
           <section className={panelClass}>
             <h2 className="mb-4 text-xl">Session</h2>
@@ -872,6 +1181,113 @@ export default function SettingsPage() {
           )}
         </div>
 
+        {isManagerAccount && (
+          <section className={`${panelClass} mt-6`}>
+            <h2 className="mb-4 text-xl">Managed Artists</h2>
+            <details open className="rounded-xl border border-stroke-subtle bg-bg-elevated p-3">
+              <summary className="cursor-pointer select-none text-sm font-semibold text-content-primary">
+                Artist details form
+              </summary>
+              <p className="mt-2 text-sm text-content-secondary">
+                Add and maintain artist records once. These records are stored universally and reused across manager workflows.
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+                <input
+                  value={managedArtistForm.name}
+                  onChange={(event) => setManagedArtistForm((current) => ({ ...current, name: event.target.value }))}
+                  placeholder="Artist name"
+                  className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                />
+                <SearchableGenreSelect
+                  value={managedArtistForm.genre}
+                  onChange={(value) => setManagedArtistForm((current) => ({ ...current, genre: value }))}
+                  label=""
+                  className="bg-bg-surface"
+                />
+                <textarea
+                  value={managedArtistForm.notes}
+                  onChange={(event) => setManagedArtistForm((current) => ({ ...current, notes: event.target.value }))}
+                  placeholder="Notes"
+                  className="min-h-[84px] rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand md:col-span-2"
+                />
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveManagedArtist}
+                    disabled={isSavingManagedArtist}
+                    className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                  >
+                    {isSavingManagedArtist ? 'Saving...' : editingManagedArtistId ? 'Save artist' : 'Add artist'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearSettingsDrafts}
+                    className="rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover"
+                  >
+                    Clear draft
+                  </button>
+                  {editingManagedArtistId && (
+                    <button
+                      type="button"
+                    onClick={resetManagedArtistForm}
+                    className="rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover"
+                  >
+                    Cancel edit
+                  </button>
+                )}
+              </div>
+            </details>
+
+            {managedArtistMessage && (
+              <p className="mt-3 rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">{managedArtistMessage}</p>
+            )}
+            {managedArtistError && (
+              <p className="mt-3 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">{managedArtistError}</p>
+            )}
+            {managedArtistSchemaSql && (
+              <pre className="mt-3 max-h-40 overflow-auto rounded-lg border border-stroke-subtle bg-bg-surface p-3 text-xs text-content-secondary">
+                {managedArtistSchemaSql}
+              </pre>
+            )}
+
+            {isLoadingManagedArtists ? (
+              <p className="mt-3 text-sm text-content-secondary">Loading managed artists...</p>
+            ) : managedArtists.length === 0 ? (
+              <p className="mt-3 text-sm text-content-secondary">No managed artists yet.</p>
+            ) : (
+              <div className="mt-4 space-y-2">
+                {managedArtists.map((artist) => (
+                  <div key={artist.id} className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium text-content-primary">{artist.name}</p>
+                      <p className="text-xs text-content-secondary">{artist.genre || 'No genre'}</p>
+                      {artist.notes && <p className="mt-1 text-xs text-content-secondary">{artist.notes}</p>}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleEditManagedArtist(artist)}
+                        className="rounded-md border border-stroke-default bg-bg-surface px-2 py-1 text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteManagedArtist(artist.id)}
+                        className="rounded-md border border-status-error/35 bg-status-error/10 px-2 py-1 text-status-error hover:bg-status-error/20"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {isManagerAccount && (
         <section className={`${panelClass} mt-6`}>
           <h2 className="mb-4 text-xl">Team Members</h2>
           {!organization ? (
@@ -968,8 +1384,9 @@ export default function SettingsPage() {
             </>
           )}
         </section>
+        )}
 
-          <section className={`${panelClass} mt-6`}>
+        <section className={`${panelClass} mt-6`}>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xl">Billing</h2>
               <div className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs text-content-secondary">
@@ -1193,6 +1610,30 @@ export default function SettingsPage() {
             </button>
           </div>
         </section>
+        {isSwitchingAccountType && (
+          <div className="fixed inset-0 z-[120] grid place-items-center bg-bg-base/80 backdrop-blur-sm">
+            <div className="w-[min(92vw,360px)] rounded-2xl border border-stroke-default bg-bg-surface p-6 text-center shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
+              <div className="relative mx-auto h-20 w-20">
+                <div
+                  className="absolute inset-0 rounded-full border-2 border-brand/40 border-t-brand"
+                  style={{ animation: 'spin 1.15s linear infinite' }}
+                />
+                <div
+                  className="absolute inset-[8px] rounded-full border-2 border-status-info/45 border-b-status-info"
+                  style={{ animation: 'spin 1.6s linear infinite reverse' }}
+                />
+                <div
+                  className="absolute inset-[18px] rounded-full border-2 border-status-warning/45 border-l-status-warning"
+                  style={{ animation: 'spin 0.85s linear infinite' }}
+                />
+              </div>
+              <p className="mt-4 text-sm font-semibold uppercase tracking-[0.14em] text-content-tertiary">Switching Account</p>
+              <p className="mt-2 text-sm text-content-secondary">
+                Applying {switchingToRoleLabel || 'new'} profile properties across your workspace.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
