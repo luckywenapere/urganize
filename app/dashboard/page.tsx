@@ -950,7 +950,7 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
-          {hasSubscriptionAccess !== false && permissions.canManageArtists && (
+          {hasSubscriptionAccess !== false && user?.role === 'manager' && (
             <section className="mt-6 rounded-2xl border border-stroke-default/80 bg-bg-elevated/70 p-4 backdrop-blur-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
