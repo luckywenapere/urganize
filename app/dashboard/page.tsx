@@ -303,6 +303,7 @@ export default function DashboardPage() {
   const [artistSearch, setArtistSearch] = useState('');
   const [artistForm, setArtistForm] = useState({ name: '', genre: '', primaryPlatform: '', notes: '' });
   const [editingArtistId, setEditingArtistId] = useState<string | null>(null);
+  const [showGuideTooltip, setShowGuideTooltip] = useState(false);
   const activePlanForGuide = useMemo(
     () => plans.find((plan) => plan.status !== 'released') || plans[0] || null,
     [plans]
@@ -311,6 +312,20 @@ export default function DashboardPage() {
   const cacheKey = user ? `urganize.dashboard.plans.${user.id}` : '';
   const artistDirectoryKey = user ? `urganize.artistDirectory.${user.id}` : '';
   const artistDefaultsKey = user ? `urganize.artistDefaults.${user.id}` : '';
+  const guideTooltipSeenKey = user ? `urganize.dashboard.guideTooltipSeen.${user.id}` : '';
+
+  useEffect(() => {
+    if (!guideTooltipSeenKey) return;
+    const hasSeenGuideTooltip = localStorage.getItem(guideTooltipSeenKey) === '1';
+    setShowGuideTooltip(!hasSeenGuideTooltip);
+  }, [guideTooltipSeenKey]);
+
+  const dismissGuideTooltip = () => {
+    setShowGuideTooltip(false);
+    if (guideTooltipSeenKey) {
+      localStorage.setItem(guideTooltipSeenKey, '1');
+    }
+  };
 
   const getPlanStatus = useCallback((plan: PlanSummary): 'Completed' | 'Overdue' | 'In Progress' => {
     if (plan.status === 'released') return 'Completed';
@@ -1223,7 +1238,29 @@ export default function DashboardPage() {
             </div>
           ) : null}
 
-          <section className="mt-5 rounded-2xl border border-stroke-default bg-bg-surface/95 p-5 sm:p-6">
+          <section className="relative mt-5 rounded-2xl border border-stroke-default bg-bg-surface/95 p-5 sm:p-6">
+            {showGuideTooltip && (
+              <div className="absolute right-4 top-4 z-20 w-[min(340px,calc(100%-2rem))] rounded-xl border border-brand/35 bg-bg-elevated px-4 py-3 shadow-[0_14px_36px_-24px_rgba(0,0,0,0.65)]">
+                <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">New</p>
+                <p className="mt-1 text-sm text-content-primary">Start here for your role-based flow and quick actions.</p>
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={dismissGuideTooltip}
+                    className="rounded-md bg-brand px-2.5 py-1 text-xs font-semibold text-content-inverse hover:bg-brand-hover"
+                  >
+                    Got it
+                  </button>
+                  <button
+                    type="button"
+                    onClick={dismissGuideTooltip}
+                    className="rounded-md border border-stroke-default bg-bg-surface px-2.5 py-1 text-xs text-content-secondary hover:bg-bg-hover"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">How Urganize Works</p>
