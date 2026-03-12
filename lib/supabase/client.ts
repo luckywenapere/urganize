@@ -21,7 +21,8 @@ export type Profile = {
   id: string;
   name: string;
   email: string;
-  role: 'artist' | 'manager' | 'artist-team' | 'artist-manager';
+  role: 'artist' | 'manager' | 'artist-team' | 'artist-manager' | 'team-member' | 'viewer';
+  artist_name?: string | null;
   created_at: string;
   updated_at: string;
   is_subscribed?: boolean; 

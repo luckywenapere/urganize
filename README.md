@@ -12,6 +12,7 @@ Current scope is:
 ## Documentation
 
 - Product Requirements Document (MVP): [`docs/PRODUCT_REQUIREMENTS.md`](docs/PRODUCT_REQUIREMENTS.md)
+- DB migration for canonical artist profile name: [`docs/DB_MIGRATION_ARTIST_NAME.md`](docs/DB_MIGRATION_ARTIST_NAME.md)
 
 ## Tech Stack
 
@@ -76,6 +77,7 @@ TRIAL_CLAIMS_SALT=
 Core tables used by runtime code:
 
 - `profiles`
+  - includes `artist_name` (canonical artist profile name for artist-role accounts)
 - `releases`
 - `release_profiles`
 - `ai_tasks`

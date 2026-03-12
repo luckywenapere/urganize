@@ -6,6 +6,8 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
 import "./globals.css";
+import { ArtistNameGate } from '@/components/ArtistNameGate';
+import { SchemaWarningBanner } from '@/components/SchemaWarningBanner';
 
 const PostAuthScreen = dynamic(
   () => import('@/components/PostAuthScreen').then((mod) => mod.PostAuthScreen),
@@ -33,6 +35,7 @@ function AppShell({
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthLoading = useAuthStore((state) => state.isLoading);
+  const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -48,6 +51,12 @@ function AppShell({
     !isAuthRoute &&
     isDashboardRootRoute &&
     hasOnboardingIntent;
+  const requiresArtistNameGate =
+    isAuthenticated &&
+    !isAuthLoading &&
+    !isAuthRoute &&
+    user?.role === 'artist' &&
+    !String(user?.artist_name || '').trim();
   const pageLayoutClassName = isDashboardRoute ? 'app-layout app-layout-fluid' : 'app-layout app-layout-centered';
 
   useEffect(() => {
@@ -56,12 +65,15 @@ function AppShell({
 
   return (
     <>
-      {showPostAuthScreen ? (
+      {requiresArtistNameGate ? (
+        <ArtistNameGate />
+      ) : showPostAuthScreen ? (
         <PostAuthScreen />
       ) : (
         <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>{children}</div>
       )}
-      {!showPostAuthScreen && (
+      <SchemaWarningBanner enabled={isAuthenticated && !isAuthRoute} />
+      {!showPostAuthScreen && !requiresArtistNameGate && (
         <div className="keyboard-hint">
           <kbd className="kbd">⌘</kbd>
           <kbd className="kbd">K</kbd>

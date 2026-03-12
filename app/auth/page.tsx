@@ -43,6 +43,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [artistName, setArtistName] = useState('');
   const [hasManager, setHasManager] = useState<boolean | null>(null);
   const [providerHint, setProviderHint] = useState<LoginProviderHint>('unknown');
   const [providerHintEmail, setProviderHintEmail] = useState('');
@@ -145,10 +146,13 @@ export default function AuthPage() {
 
     try {
       const role = hasManager ? 'artist' : 'artist-manager';
-      await signup(email, password, name, role);
+      if (role === 'artist' && !artistName.trim()) {
+        throw new Error('Artist name is required');
+      }
+      await signup(email, password, name, role, role === 'artist' ? artistName.trim() : undefined);
       router.push('/dashboard?startOnboarding=0&flow=first-login');
-    } catch {
-      setError('Signup failed. Please try again.');
+    } catch (signupError: any) {
+      setError(signupError?.message || 'Signup failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -191,7 +195,7 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={handleGoogleLogin}
-                disabled={isGoogleLoading || isLoading}
+                disabled={isGoogleLoading || isLoading || hasManager === true}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-zinc-100 text-black font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isGoogleLoading ? (
@@ -218,6 +222,11 @@ export default function AuthPage() {
                 )}
                 Continue with Google
               </button>
+              {hasManager === true && (
+                <p className="mt-2 text-center text-xs text-content-secondary">
+                  Artist accounts require artist name during signup. Use email signup below.
+                </p>
+              )}
 
               {!showEmailLogin ? (
                 <Button
@@ -403,6 +412,7 @@ export default function AuthPage() {
                     setShowEmailLogin(false);
                     setShowEmailLoginForGoogle(false);
                     setPassword('');
+                    setArtistName('');
                     setError('');
                   }}
                     className="w-full p-4 rounded-2xl border border-stroke-default bg-bg-elevated hover:-translate-y-[1px] hover:bg-bg-hover transition text-left group"
@@ -425,6 +435,7 @@ export default function AuthPage() {
                     setShowEmailLogin(false);
                     setShowEmailLoginForGoogle(false);
                     setPassword('');
+                    setArtistName('');
                     setError('');
                   }}
                     className="w-full p-4 rounded-2xl border border-stroke-default bg-bg-elevated hover:-translate-y-[1px] hover:bg-bg-hover transition text-left group"
@@ -452,6 +463,7 @@ export default function AuthPage() {
                   setShowEmailLogin(false);
                   setShowEmailLoginForGoogle(false);
                   setPassword('');
+                  setArtistName('');
                   setError('');
                 }}
                 className="inline-flex items-center gap-2 text-sm text-content-tertiary hover:text-content-primary transition-colors mb-6"
@@ -520,6 +532,21 @@ export default function AuthPage() {
                   disabled={isLoading || isGoogleLoading}
                   required
                 />
+                {hasManager === true && (
+                  <Input
+                    label="Artist Name"
+                    type="text"
+                    value={artistName}
+                    onChange={(e) => {
+                      setArtistName(e.target.value);
+                      if (error) setError('');
+                    }}
+                    placeholder="e.g. Tems"
+                    leftIcon={<User className="w-4 h-4" />}
+                    disabled={isLoading || isGoogleLoading}
+                    required
+                  />
+                )}
                 <Input
                   label="Email"
                   type="email"
@@ -569,6 +596,7 @@ export default function AuthPage() {
                     setShowEmailLogin(false);
                     setShowEmailLoginForGoogle(false);
                     setPassword('');
+                    setArtistName('');
                     setError('');
                   }}
                   className="text-brand hover:underline font-medium"

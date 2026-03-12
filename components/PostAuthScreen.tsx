@@ -288,6 +288,8 @@ export function PostAuthScreen() {
   }, [flow, releaseId, requestedPlanId, user?.id]);
 
   const resetError = () => setError('');
+  const isArtistAccount = user?.role === 'artist';
+  const profileArtistName = String(user?.artist_name || '').trim();
   const isCreatePlanFlow = flow === 'create-plan' && !requestedPlanId;
   const isNextCycleFlow = flow === 'next-cycle';
   const isPlanSetupFlow =
@@ -307,6 +309,13 @@ export function PostAuthScreen() {
     setDeadlineDate('');
     setStepsText('');
   }, []);
+
+  useEffect(() => {
+    if (!isArtistAccount) return;
+    if (!profileArtistName) return;
+    if (artistName.trim() === profileArtistName) return;
+    setArtistName(profileArtistName);
+  }, [artistName, isArtistAccount, profileArtistName]);
 
   const refreshCycleNumber = useCallback(async (activeReleaseId: string) => {
     const { count, error: countError } = await supabase
@@ -1834,6 +1843,7 @@ export function PostAuthScreen() {
             primaryPlatformOptions={PRIMARY_PLATFORM_OPTIONS}
             isBusy={isBusy}
             canContinueArtist={canContinueArtist}
+            isArtistNameLocked={isArtistAccount}
             onArtistNameChange={setArtistName}
             onGenreChange={setGenre}
             onPrimaryPlatformChange={setPrimaryPlatform}

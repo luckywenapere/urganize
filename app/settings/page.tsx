@@ -72,9 +72,10 @@ const parsePaymentMetadata = (paystackResponse: unknown): Record<string, unknown
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, logout, checkAuth, isLoading: authLoading } = useAuthStore();
+  const { user, logout, checkAuth, updateArtistName, isLoading: authLoading } = useAuthStore();
 
   const [name, setName] = useState('');
+  const [artistProfileName, setArtistProfileName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -124,6 +125,7 @@ export default function SettingsPage() {
       return;
     }
     setName(user.name || '');
+    setArtistProfileName(String(user.artist_name || ''));
   }, [authLoading, router, user]);
 
   useEffect(() => {
@@ -326,6 +328,27 @@ export default function SettingsPage() {
       setSuccess('Profile updated');
     } catch (err: any) {
       setError(err?.message || 'Failed to update profile');
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
+  const handleSaveArtistProfileName = async () => {
+    if (!user || user.role !== 'artist') return;
+    clearFeedback();
+    const normalized = artistProfileName.trim();
+    if (!normalized) {
+      setError('Artist name cannot be empty');
+      return;
+    }
+
+    setIsSavingName(true);
+    try {
+      await updateArtistName(normalized);
+      await checkAuth();
+      setSuccess('Artist name updated');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to update artist name');
     } finally {
       setIsSavingName(false);
     }
@@ -819,6 +842,34 @@ export default function SettingsPage() {
               </button>
             </div>
           </section>
+
+          {user.role === 'artist' && (
+            <section className={`${panelClass} mt-6`}>
+              <h2 className="mb-4 text-xl">Artist Profile</h2>
+              <p className="mb-3 text-sm text-content-secondary">
+                This is your canonical artist name. It is reused and locked in other parts of the app.
+              </p>
+              <div className="space-y-3">
+                <label className="block">
+                  <span className="mb-1 block text-sm text-content-secondary">Artist name</span>
+                  <input
+                    value={artistProfileName}
+                    onChange={(event) => setArtistProfileName(event.target.value)}
+                    className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+                    placeholder="e.g. Tems"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={handleSaveArtistProfileName}
+                  disabled={isSavingName}
+                  className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                >
+                  {isSavingName ? 'Saving...' : 'Save artist name'}
+                </button>
+              </div>
+            </section>
+          )}
         </div>
 
         <section className={`${panelClass} mt-6`}>

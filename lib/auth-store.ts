@@ -22,12 +22,14 @@ const buildFallbackProfile = (authUser: any): Omit<Profile, 'created_at' | 'upda
     metadata.full_name ||
     (email.includes('@') ? email.split('@')[0] : 'User');
   const role = metadata.role || 'artist-manager';
+  const artistName = String(metadata.artist_name || '').trim();
 
   return {
     id: authUser.id,
     name,
     email,
     role,
+    artist_name: artistName || null,
     is_subscribed: false,
   };
 };
@@ -164,7 +166,8 @@ interface AuthState {
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
-  signup: (email: string, password: string, name: string, role: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, role: string, artistName?: string) => Promise<void>;
+  updateArtistName: (artistName: string) => Promise<void>;
   updateRole: (role: Profile['role']) => Promise<void>;
   setNeedsOnboarding: (needsOnboarding: boolean) => void;
   logout: () => Promise<void>;
@@ -313,9 +316,13 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      signup: async (email: string, password: string, name: string, role: string) => {
+      signup: async (email: string, password: string, name: string, role: string, artistName?: string) => {
         try {
           set({ isLoading: true, error: null });
+          const normalizedArtistName = String(artistName || '').trim();
+          if (role === 'artist' && !normalizedArtistName) {
+            throw new Error('Artist name is required for Artist accounts');
+          }
 
           const { data, error: signUpError } = await supabase.auth.signUp({
             email: email.trim().toLowerCase(),
@@ -324,6 +331,7 @@ export const useAuthStore = create<AuthState>()(
               data: {
                 name: name.trim(),
                 role,
+                artist_name: normalizedArtistName || undefined,
               },
             },
           });
@@ -352,6 +360,26 @@ export const useAuthStore = create<AuthState>()(
 
               if (retryError) throw retryError;
 
+              if (role === 'artist' && normalizedArtistName && !retryProfile?.artist_name) {
+                const { data: artistUpdatedProfile, error: artistUpdateError } = await supabase
+                  .from('profiles')
+                  .update({ artist_name: normalizedArtistName, updated_at: new Date().toISOString() })
+                  .eq('id', data.user.id)
+                  .select('*')
+                  .single();
+                if (!artistUpdateError && artistUpdatedProfile) {
+                  persistLastAuthEmail(artistUpdatedProfile.email || data.user.email);
+                  set({
+                    user: artistUpdatedProfile,
+                    isAuthenticated: true,
+                    isLoading: false,
+                    needsOnboarding: true,
+                    error: null,
+                  });
+                  return;
+                }
+              }
+
               if (retryProfile) {
                 persistLastAuthEmail(retryProfile.email || data.user.email);
                 set({ 
@@ -363,6 +391,25 @@ export const useAuthStore = create<AuthState>()(
                 });
               }
             } else if (profile) {
+              if (role === 'artist' && normalizedArtistName && !profile.artist_name) {
+                const { data: artistUpdatedProfile, error: artistUpdateError } = await supabase
+                  .from('profiles')
+                  .update({ artist_name: normalizedArtistName, updated_at: new Date().toISOString() })
+                  .eq('id', data.user.id)
+                  .select('*')
+                  .single();
+                if (!artistUpdateError && artistUpdatedProfile) {
+                  persistLastAuthEmail(artistUpdatedProfile.email || data.user.email);
+                  set({
+                    user: artistUpdatedProfile,
+                    isAuthenticated: true,
+                    isLoading: false,
+                    needsOnboarding: true,
+                    error: null,
+                  });
+                  return;
+                }
+              }
               persistLastAuthEmail(profile.email || data.user.email);
               set({ 
                 user: profile, 
@@ -409,6 +456,37 @@ export const useAuthStore = create<AuthState>()(
           needsOnboarding: true,
           error: null,
         });
+        } catch (error: any) {
+          const errorMessage = handleSupabaseError(error);
+          set({ isLoading: false, error: errorMessage });
+          throw new Error(errorMessage);
+        }
+      },
+
+      updateArtistName: async (artistName: string) => {
+        try {
+          const currentUser = get().user;
+          const normalizedArtistName = String(artistName || '').trim();
+          if (!currentUser) throw new Error('User not found');
+          if (currentUser.role !== 'artist') throw new Error('Only Artist accounts can set artist name');
+          if (!normalizedArtistName) throw new Error('Artist name is required');
+
+          set({ isLoading: true, error: null });
+
+          const { data: updatedProfile, error } = await supabase
+            .from('profiles')
+            .update({ artist_name: normalizedArtistName, updated_at: new Date().toISOString() })
+            .eq('id', currentUser.id)
+            .select('*')
+            .single();
+
+          if (error) throw error;
+
+          set({
+            user: updatedProfile,
+            isLoading: false,
+            error: null,
+          });
         } catch (error: any) {
           const errorMessage = handleSupabaseError(error);
           set({ isLoading: false, error: errorMessage });
