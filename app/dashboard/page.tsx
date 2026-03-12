@@ -8,7 +8,6 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { getRolePermissions } from '@/lib/role-permissions';
-import { clearTrackedEvents, readTrackedEvents, type AnalyticsEvent } from '@/lib/analytics';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 
 type PlanSummary = {
@@ -297,8 +296,6 @@ export default function DashboardPage() {
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editingPlanTitle, setEditingPlanTitle] = useState('');
   const [savingInlinePlanId, setSavingInlinePlanId] = useState<string | null>(null);
-  const [analyticsEvents, setAnalyticsEvents] = useState<AnalyticsEvent[]>([]);
-  const [analyticsSearch, setAnalyticsSearch] = useState('');
   const [artists, setArtists] = useState<ArtistDirectoryItem[]>([]);
   const [artistSearch, setArtistSearch] = useState('');
   const [artistForm, setArtistForm] = useState({ name: '', genre: '', primaryPlatform: '', notes: '' });
@@ -384,20 +381,6 @@ export default function DashboardPage() {
       );
     });
   }, [artistSearch, artists]);
-  const filteredAnalyticsEvents = useMemo(() => {
-    const query = analyticsSearch.trim().toLowerCase();
-    const sorted = [...analyticsEvents].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    if (!query) return sorted;
-    return sorted.filter((event) => {
-      return (
-        event.name.toLowerCase().includes(query) ||
-        String(event.userId || '')
-          .toLowerCase()
-          .includes(query) ||
-        JSON.stringify(event.payload).toLowerCase().includes(query)
-      );
-    });
-  }, [analyticsEvents, analyticsSearch]);
   const importablePlanArtists = useMemo(() => {
     const existing = new Set(artists.map((artist) => artist.name.trim().toLowerCase()).filter(Boolean));
     const names = Array.from(
@@ -554,10 +537,6 @@ export default function DashboardPage() {
     if (!artistDirectoryKey) return;
     localStorage.setItem(artistDirectoryKey, JSON.stringify(artists));
   }, [artistDirectoryKey, artists]);
-
-  useEffect(() => {
-    setAnalyticsEvents(readTrackedEvents());
-  }, []);
 
   const createNewPlan = async () => {
     if (!user || isCreatingPlan) return;
