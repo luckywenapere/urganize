@@ -219,12 +219,18 @@ export default function ListenerProfilePage() {
       setPersona(parsedPersona);
       setGeneratedAt(resultPayload.generatedAt || inputsPayload.generatedAt || null);
 
-      if (parsedPersona) {
+      if (restoredDraft?.mode === 'result' && parsedPersona) {
+        nextMode = 'result';
+      } else if (restoredDraft?.mode === 'review') {
+        nextMode = 'review';
+      } else if (restoredDraft?.mode === 'flow') {
+        nextMode = 'flow';
+      } else if (parsedPersona) {
         nextMode = 'result';
       } else if (inputsPayload.exists) {
-        nextMode = restoredDraft?.mode === 'flow' ? 'flow' : 'review';
+        nextMode = 'review';
       } else {
-        nextMode = restoredDraft?.mode || 'flow';
+        nextMode = 'flow';
       }
       setMode(nextMode);
     } catch {

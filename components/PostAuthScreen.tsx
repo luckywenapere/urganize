@@ -109,7 +109,6 @@ const SONG_STAGE_FALLBACK_CANDIDATES = [
   'released',
 ];
 
-const MIN_GOAL_CHARS = 20;
 const MIN_BUDGET = 100;
 const MAX_BUDGET = 100000000;
 const DEFAULT_PLAN_DURATION_DAYS = 30;
@@ -376,6 +375,7 @@ export function PostAuthScreen() {
   const [taskOutcome, setTaskOutcome] = useState('Expected outcome');
   const feedbackDraftLoadedRef = useRef<string>('');
   const onboardingDraftLoadedRef = useRef<string>('');
+  const restoredOnboardingStepRef = useRef(false);
   const bootstrappedTargetRef = useRef<string>('');
   const nextCycleClearedRef = useRef<string>('');
   const artistDefaultsKey = useMemo(() => (user?.id ? `urganize.artistDefaults.${user.id}` : ''), [user?.id]);
@@ -502,6 +502,7 @@ export function PostAuthScreen() {
   useEffect(() => {
     if (!onboardingDraftKey) {
       onboardingDraftLoadedRef.current = '';
+      restoredOnboardingStepRef.current = false;
       return;
     }
     if (onboardingDraftLoadedRef.current === onboardingDraftKey) return;
@@ -509,6 +510,7 @@ export function PostAuthScreen() {
     if (isNextCycleFlow) {
       clearPersistedState(onboardingDraftKey);
       void deleteUiDraft(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey);
+      restoredOnboardingStepRef.current = false;
       return;
     }
     let cancelled = false;
@@ -525,6 +527,7 @@ export function PostAuthScreen() {
       if (isCreatePlanFlow && !draft.started) {
         clearPersistedState(onboardingDraftKey);
         void deleteUiDraft(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey);
+        restoredOnboardingStepRef.current = false;
         return;
       }
       if (draft.artistName && !artistName.trim()) setArtistName(draft.artistName);
@@ -547,6 +550,7 @@ export function PostAuthScreen() {
       if (draft.newManagedArtistGenre && !newManagedArtistGenre.trim()) setNewManagedArtistGenre(draft.newManagedArtistGenre);
       if (draft.newManagedArtistNotes && !newManagedArtistNotes.trim()) setNewManagedArtistNotes(draft.newManagedArtistNotes);
       setStep(Math.max(2, Math.min(9, draft.step === 6 ? 5 : draft.step)));
+      restoredOnboardingStepRef.current = draft.started;
       setResumeMessage('Resumed where you left off.');
       setShowResumeMessage(true);
     };
@@ -836,7 +840,9 @@ export function PostAuthScreen() {
         setDeadlineDate(parseStoredDate(requestedProfile.hard_deadline));
         setTimeline(requestedProfile.deadline_reason || '');
         setStepsText(requestedProfile.other_goals || '');
-        setStep(Math.min(9, Math.max(requestedProfile.setup_step || 2, 2)));
+        if (!restoredOnboardingStepRef.current) {
+          setStep(Math.min(9, Math.max(requestedProfile.setup_step || 2, 2)));
+        }
         return requestedRelease.id;
       }
 
@@ -851,7 +857,9 @@ export function PostAuthScreen() {
         });
       if (requestedProfileInsertError) throw requestedProfileInsertError;
       setDeadlineDate(parseStoredDate(autoDeadline));
-      setStep(2);
+      if (!restoredOnboardingStepRef.current) {
+        setStep(2);
+      }
       return requestedRelease.id;
     }
 
@@ -937,7 +945,9 @@ export function PostAuthScreen() {
         const release = existingReleases.find((item) => item.id === activeProfile.release_id);
         if (release?.artist_name) setArtistName(release.artist_name);
 
-        setStep(Math.min(9, Math.max(activeProfile.setup_step || 2, 2)));
+        if (!restoredOnboardingStepRef.current) {
+          setStep(Math.min(9, Math.max(activeProfile.setup_step || 2, 2)));
+        }
         return activeProfile.release_id;
       }
     }
@@ -1114,6 +1124,8 @@ export function PostAuthScreen() {
           );
         }
 
+        const shouldPreserveRestoredOnboardingStep = restoredOnboardingStepRef.current;
+
         if (isNextCycleFlow && activeReleaseIdForCycle && nextCycleClearedRef.current !== activeReleaseIdForCycle) {
           nextCycleClearedRef.current = activeReleaseIdForCycle;
           resetCycleInputs();
@@ -1136,14 +1148,14 @@ export function PostAuthScreen() {
             // Non-fatal; UI still proceeds with cycle reset.
           }
           setStep(3);
-        } else if (flow === 'first-login' && requestedStartStep === 0 && !requestedPlanId) {
+        } else if (!shouldPreserveRestoredOnboardingStep && flow === 'first-login' && requestedStartStep === 0 && !requestedPlanId) {
           if (rolePermissions.role === 'viewer') {
             setNeedsOnboarding(false);
             router.replace('/dashboard');
             return;
           }
           setStep(canSkipArtistStep ? 3 : 2);
-        } else if (requestedStartStep >= 2) {
+        } else if (!shouldPreserveRestoredOnboardingStep && requestedStartStep >= 2) {
           if (isManagerCreatePlanFlow) {
             setStep(2);
           } else {
@@ -1440,8 +1452,8 @@ export function PostAuthScreen() {
 
   const handleSaveGoal = async () => {
     const goalValue = goalText.trim();
-    if (goalValue.length < MIN_GOAL_CHARS) {
-      setError(`Add at least ${MIN_GOAL_CHARS} characters so we can generate better tasks.`);
+    if (!goalValue) {
+      setError('Enter your goal before continuing.');
       return;
     }
 
@@ -2029,7 +2041,7 @@ export function PostAuthScreen() {
       return;
     }
 
-    const previous = step === 3 && hasArtistDefaults ? 1 : Math.max(0, step - 1);
+    const previous = isCreatePlanFlow ? Math.max(2, step - 1) : step === 3 && hasArtistDefaults ? 1 : Math.max(0, step - 1);
     try {
       await setStepPersisted(previous);
     } catch (err: any) {
@@ -2038,18 +2050,18 @@ export function PostAuthScreen() {
   };
 
   useEffect(() => {
+    if (isCreatePlanFlow) return;
     if (isManagerCreatePlanFlow) return;
     if (step !== 2 || !hasArtistDefaults) return;
     setStep(3);
-  }, [hasArtistDefaults, isManagerCreatePlanFlow, step]);
+  }, [hasArtistDefaults, isCreatePlanFlow, isManagerCreatePlanFlow, step]);
 
   const shellClass = 'relative min-h-screen w-full overflow-hidden bg-bg-base text-content-primary';
   const fieldClass =
     'w-full rounded-2xl border border-stroke-subtle bg-bg-elevated/70 px-4 py-3 text-lg text-content-primary outline-none placeholder:text-content-quaternary focus:border-brand';
 
   const canContinueArtist = useMemo(() => !!artistName.trim(), [artistName]);
-  const canContinueGoal = useMemo(() => goalText.trim().length >= MIN_GOAL_CHARS, [goalText]);
-  const goalRemainingChars = useMemo(() => Math.max(0, MIN_GOAL_CHARS - goalText.trim().length), [goalText]);
+  const canContinueGoal = useMemo(() => !!goalText.trim(), [goalText]);
   const budgetValue = Number(budget);
   const budgetIsValid =
     budget.trim().length > 0 &&
@@ -2286,12 +2298,11 @@ export function PostAuthScreen() {
         )}
 
         {step === 3 && (
-          <Step3Goal
-            heading={isNextCycleFlow ? 'Set your next objective' : undefined}
-            goalText={goalText}
-            goalRemainingChars={goalRemainingChars}
-            canContinueGoal={canContinueGoal}
-            isBusy={isBusy}
+            <Step3Goal
+              heading={isNextCycleFlow ? 'Set your next objective' : undefined}
+              goalText={goalText}
+              canContinueGoal={canContinueGoal}
+              isBusy={isBusy}
             onGoalTextChange={setGoalText}
             onContinue={handleSaveGoal}
           />

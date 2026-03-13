@@ -3,7 +3,6 @@
 type Step3GoalProps = {
   heading?: string;
   goalText: string;
-  goalRemainingChars: number;
   canContinueGoal: boolean;
   isBusy: boolean;
   onGoalTextChange: (value: string) => void;
@@ -13,7 +12,6 @@ type Step3GoalProps = {
 export function Step3Goal({
   heading,
   goalText,
-  goalRemainingChars,
   canContinueGoal,
   isBusy,
   onGoalTextChange,
@@ -28,11 +26,7 @@ export function Step3Goal({
         onChange={(e) => onGoalTextChange(e.target.value)}
         placeholder="Example: Grow monthly listeners from 5k to 15k before my next single drops."
       />
-      <p className={`mt-3 text-sm ${goalRemainingChars === 0 ? 'text-brand' : 'text-content-secondary'}`}>
-        {goalRemainingChars === 0
-          ? 'Looks good. We can generate better tasks with this level of detail.'
-          : `Add ${goalRemainingChars} more characters for a higher-quality plan.`}
-      </p>
+      <p className="mt-3 text-sm text-content-secondary">Any amount of detail is fine. Add as much context as you have.</p>
       <button type="button" disabled={!canContinueGoal || isBusy} onClick={onContinue} className="mt-12 self-center text-[clamp(2.1rem,4.5vw,3.5rem)] text-content-primary disabled:opacity-40">
         Next..
       </button>
