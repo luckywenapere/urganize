@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { generateStructuredAiOutput, isAiConfigured } from '@/lib/ai/provider';
 
 type GenerateMode = 'onboarding' | 'next-step';
 
@@ -15,11 +16,6 @@ type TaskGeneration = {
   why_it_matters: string;
   measurable_outcome: string;
 };
-
-const DEFAULT_OLLAMA_BASE_URL = 'http://127.0.0.1:11434';
-const DEFAULT_OLLAMA_MODEL = 'qwen2.5:3b';
-const REQUEST_TIMEOUT_MS = 90_000;
-const MAX_RETRIES = 3;
 
 const parseGenerationJson = (raw: string): TaskGeneration | null => {
   const normalized = String(raw || '').trim();
@@ -132,80 +128,16 @@ const buildPrompt = ({
   ].join('\n');
 };
 
-const generateWithOllama = async ({
-  prompt,
-  baseUrl,
-  model,
-}: {
-  prompt: string;
-  baseUrl: string;
-  model: string;
-}): Promise<TaskGeneration> => {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(`${baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        format: 'json',
-        options: {
-          temperature: 0.25,
-        },
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a precise task-generation engine. Output valid JSON only.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const message = await response.text().catch(() => '');
-      throw new Error(message || `Ollama request failed (${response.status})`);
-    }
-
-    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-    const messageContent =
-      typeof (payload.message as Record<string, unknown> | undefined)?.content === 'string'
-        ? String((payload.message as Record<string, unknown>).content)
-        : '';
-    const fallbackResponse = typeof payload.response === 'string' ? payload.response : '';
-    const generated = parseGenerationJson(messageContent || fallbackResponse);
-
-    if (!generated) {
-      throw new Error('Model returned invalid JSON format');
-    }
-
-    return generated;
-  } finally {
-    clearTimeout(timer);
-  }
-};
-
 export async function POST(req: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const ollamaBaseUrl = (process.env.OLLAMA_BASE_URL || DEFAULT_OLLAMA_BASE_URL).trim();
-  const ollamaModel = (process.env.OLLAMA_MODEL || DEFAULT_OLLAMA_MODEL).trim();
 
   if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  if (!ollamaBaseUrl || !ollamaModel) {
+  if (!isAiConfigured()) {
     return NextResponse.json({ error: 'AI model environment is not configured' }, { status: 500 });
   }
 
@@ -284,33 +216,37 @@ export async function POST(req: NextRequest) {
     onboardingInputs,
   });
 
-  let lastError: unknown = null;
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt += 1) {
-    try {
-      const generated = await generateWithOllama({
-        prompt,
-        baseUrl: ollamaBaseUrl,
-        model: ollamaModel,
-      });
+  try {
+    const generated = await generateStructuredAiOutput<TaskGeneration>({
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a precise task-generation engine. Output valid JSON only.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.25,
+      parse: parseGenerationJson,
+    });
 
-      return NextResponse.json({
-        title: generated.title,
-        description: generated.description,
-        why_it_matters: `${generated.why_it_matters}\nMeasurable outcome: ${generated.measurable_outcome}`,
-        measurable_outcome: generated.measurable_outcome,
-      });
-    } catch (error) {
-      lastError = error;
-    }
+    return NextResponse.json({
+      title: generated.title,
+      description: generated.description,
+      why_it_matters: `${generated.why_it_matters}\nMeasurable outcome: ${generated.measurable_outcome}`,
+      measurable_outcome: generated.measurable_outcome,
+    });
+  } catch (error) {
+    const errorMessage = String((error as { message?: string } | null)?.message || 'Unknown AI generation error');
+    return NextResponse.json(
+      {
+        generation_failed: true,
+        error: 'Task generation failed after retries. Please generate again.',
+        detail: errorMessage,
+      },
+      { status: 502 }
+    );
   }
-
-  const errorMessage = String((lastError as { message?: string } | null)?.message || 'Unknown AI generation error');
-  return NextResponse.json(
-    {
-      generation_failed: true,
-      error: 'Task generation failed after retries. Please generate again.',
-      detail: errorMessage,
-    },
-    { status: 502 }
-  );
 }

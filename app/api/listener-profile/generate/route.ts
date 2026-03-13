@@ -5,6 +5,7 @@ import {
   normalizeListenerProfileInputs,
   type ListenerPersonaResult,
 } from '@/lib/listener-profile';
+import { generateStructuredAiOutput, isAiConfigured } from '@/lib/ai/provider';
 import {
   createAdminClient,
   getAuthenticatedUser,
@@ -21,11 +22,6 @@ type GenerateListenerProfileRequest = {
   artistId?: string | null;
   inputs?: Record<string, unknown>;
 };
-
-const DEFAULT_OLLAMA_BASE_URL = 'http://127.0.0.1:11434';
-const DEFAULT_OLLAMA_MODEL = 'qwen2.5:3b';
-const REQUEST_TIMEOUT_MS = 90_000;
-const MAX_RETRIES = 3;
 
 const PERSONA_KEYS: Array<keyof ListenerPersonaResult> = Object.keys(EMPTY_LISTENER_PERSONA_RESULT) as Array<keyof ListenerPersonaResult>;
 
@@ -106,66 +102,6 @@ const buildPrompt = (inputs: Record<string, string | null>): string => {
   ].join('\n');
 };
 
-const generateWithOllama = async ({
-  prompt,
-  baseUrl,
-  model,
-}: {
-  prompt: string;
-  baseUrl: string;
-  model: string;
-}): Promise<ListenerPersonaResult> => {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(`${baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        format: 'json',
-        options: {
-          temperature: 0.35,
-        },
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a precise listener persona generation engine. Output valid JSON only.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const message = await response.text().catch(() => '');
-      throw new Error(message || `Ollama request failed (${response.status})`);
-    }
-
-    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-    const messageContent =
-      typeof (payload.message as Record<string, unknown> | undefined)?.content === 'string'
-        ? String((payload.message as Record<string, unknown>).content)
-        : '';
-    const fallbackResponse = typeof payload.response === 'string' ? payload.response : '';
-    const generated = parsePersonaJson(messageContent || fallbackResponse);
-    if (!generated) {
-      throw new Error('Model returned invalid JSON format');
-    }
-    return generated;
-  } finally {
-    clearTimeout(timer);
-  }
-};
-
 export async function POST(request: NextRequest) {
   const auth = await getAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
@@ -175,9 +111,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ollamaBaseUrl = (process.env.OLLAMA_BASE_URL || DEFAULT_OLLAMA_BASE_URL).trim();
-  const ollamaModel = (process.env.OLLAMA_MODEL || DEFAULT_OLLAMA_MODEL).trim();
-  if (!ollamaBaseUrl || !ollamaModel) {
+  if (!isAiConfigured()) {
     return NextResponse.json({ error: 'AI model environment is not configured' }, { status: 500 });
   }
 
@@ -212,24 +146,24 @@ export async function POST(request: NextRequest) {
   const artistId = bodyArtistId || String(existingRow?.artist_id || '').trim() || null;
 
   const prompt = buildPrompt(mergedInputs);
-  let lastError: unknown = null;
-  let generated: ListenerPersonaResult | null = null;
-
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt += 1) {
-    try {
-      generated = await generateWithOllama({
-        prompt,
-        baseUrl: ollamaBaseUrl,
-        model: ollamaModel,
-      });
-      break;
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  if (!generated) {
-    const errorMessage = String((lastError as { message?: string } | null)?.message || 'Unknown AI generation error');
+  let generated: ListenerPersonaResult;
+  try {
+    generated = await generateStructuredAiOutput<ListenerPersonaResult>({
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a precise listener persona generation engine. Output valid JSON only.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.35,
+      parse: parsePersonaJson,
+    });
+  } catch (error) {
+    const errorMessage = String((error as { message?: string } | null)?.message || 'Unknown AI generation error');
     return NextResponse.json(
       {
         generation_failed: true,
