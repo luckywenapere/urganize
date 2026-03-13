@@ -195,7 +195,15 @@ export function VirtualizedPlanList({
                       {status}
                     </span>
                     <span className="text-content-tertiary">.</span>
-                    <span>{new Date(plan.created_at).toLocaleDateString()}</span>
+                <span>
+                  {new Date(plan.created_at).toLocaleString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </span>
                   </div>
                 </div>
                 <div className="relative ml-2">
