@@ -25,6 +25,21 @@ type GenerateListenerProfileRequest = {
 
 const PERSONA_KEYS: Array<keyof ListenerPersonaResult> = Object.keys(EMPTY_LISTENER_PERSONA_RESULT) as Array<keyof ListenerPersonaResult>;
 
+const buildAiFailureResponse = (error: unknown, fallbackAttempted: boolean) => {
+  const detail = String((error as { message?: string } | null)?.message || 'Unknown AI generation error');
+  const rateLimited = /rate-limited|rate limited/i.test(detail);
+
+  return {
+    generation_failed: true,
+    error: rateLimited
+      ? fallbackAttempted
+        ? 'The current AI model is temporarily rate-limited. Urganize tried a backup model, but listener profile generation still failed. Please try again shortly.'
+        : 'The current AI model is temporarily rate-limited. Please try again shortly.'
+      : 'Listener profile generation failed after retries. Please generate again.',
+    detail,
+  };
+};
+
 const parsePersonaJson = (raw: string): ListenerPersonaResult | null => {
   const normalized = String(raw || '').trim();
   if (!normalized) return null;
@@ -163,15 +178,11 @@ export async function POST(request: NextRequest) {
       parse: parsePersonaJson,
     });
   } catch (error) {
-    const errorMessage = String((error as { message?: string } | null)?.message || 'Unknown AI generation error');
-    return NextResponse.json(
-      {
-        generation_failed: true,
-        error: 'Listener profile generation failed after retries. Please generate again.',
-        detail: errorMessage,
-      },
-      { status: 502 }
-    );
+    const fallbackAttempted = String(process.env.OPENROUTER_MODEL || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean).length > 1;
+    return NextResponse.json(buildAiFailureResponse(error, fallbackAttempted), { status: 502 });
   }
 
   const timestamp = new Date().toISOString();

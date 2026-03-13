@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
+import { AiRecoveryActions } from '@/components/ui/AiRecoveryActions';
 import {
   EMPTY_LISTENER_PROFILE_INPUTS,
   LISTENER_PROFILE_FIELDS,
@@ -73,6 +74,14 @@ const getFirstUnansweredIndex = (
 ): number => {
   const index = fields.findIndex((field) => !inputs[field.key]);
   return index < 0 ? Math.max(0, fields.length - 1) : index;
+};
+
+const toAiUiErrorMessage = (error: string | null | undefined, fallback: string): string => {
+  const message = String(error || '').trim();
+  if (!message) return fallback;
+  if (/rate-limited|rate limited/i.test(message)) return message;
+  if (/temporarily unavailable|try again shortly/i.test(message)) return message;
+  return fallback;
 };
 
 export default function ListenerProfilePage() {
@@ -391,7 +400,9 @@ export default function ListenerProfilePage() {
         sql?: string;
       };
       if (!response.ok) {
-        setError(payload.error || 'Could not generate ideal listener profile.');
+        setError(
+          toAiUiErrorMessage(payload.error, 'Could not generate ideal listener profile.')
+        );
         if (response.status === 501 && payload.sql) setSchemaSql(payload.sql);
         setMode('review');
         return;
@@ -491,7 +502,23 @@ export default function ListenerProfilePage() {
             </button>
           </div>
         )}
-        {error && <p className="mt-4 rounded-xl border border-status-error/40 bg-status-error/10 px-4 py-2 text-sm text-status-error">{error}</p>}
+        {error && (
+          <AiRecoveryActions
+            className="mt-4"
+            message={error}
+            onRetry={mode === 'review' || mode === 'result' ? generatePersona : undefined}
+            onBack={
+              mode === 'review' || mode === 'result'
+                ? () => {
+                    setStepIndex(getFirstUnansweredIndex(inputs, flowFields));
+                    setMode('flow');
+                  }
+                : undefined
+            }
+            onSaveDraft={mode === 'review' || mode === 'result' ? () => void persistInputs() : undefined}
+            saveDraftBusy={isSavingInputs}
+          />
+        )}
         {success && <p className="mt-4 rounded-xl border border-brand/35 bg-brand-muted px-4 py-2 text-sm text-content-primary">{success}</p>}
         {schemaSql && (
           <div className="mt-4 rounded-xl border border-stroke-default bg-bg-elevated/70 p-4">

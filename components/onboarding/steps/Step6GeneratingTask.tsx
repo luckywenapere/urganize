@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { getIndividualPlanAmount } from '@/lib/billing';
+import { AiRecoveryActions } from '@/components/ui/AiRecoveryActions';
 
 const PaystackButton = dynamic(
   () => import('@/components/PaystackButton').then((mod) => mod.PaystackButton),
@@ -15,6 +16,7 @@ type Step6GeneratingTaskProps = {
   isGenerating: boolean;
   generationError: string;
   onRetryGeneration: () => void;
+  onBackToInputs: () => void;
 };
 
 export function Step6GeneratingTask({
@@ -24,6 +26,7 @@ export function Step6GeneratingTask({
   isGenerating,
   generationError,
   onRetryGeneration,
+  onBackToInputs,
 }: Step6GeneratingTaskProps) {
   const monthlyAmount = getIndividualPlanAmount('monthly');
 
@@ -34,15 +37,13 @@ export function Step6GeneratingTask({
           {isGenerating ? 'Generating task...' : 'Task generation paused'}
         </p>
         {generationError && (
-          <div className="mx-auto mt-4 max-w-xl rounded-2xl border border-status-error/35 bg-status-error/10 px-5 py-4">
-            <p className="text-sm text-status-error">{generationError}</p>
-            <button
-              type="button"
-              onClick={onRetryGeneration}
-              className="mt-3 rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm font-semibold text-content-primary hover:bg-bg-hover"
-            >
-              Generate again
-            </button>
+          <div className="mx-auto mt-4 max-w-xl text-left">
+            <AiRecoveryActions
+              message={generationError}
+              helperText="Retry will attempt the configured backup model automatically when available."
+              onRetry={onRetryGeneration}
+              onBack={onBackToInputs}
+            />
           </div>
         )}
       </div>

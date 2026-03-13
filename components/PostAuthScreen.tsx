@@ -266,6 +266,14 @@ type ManagedArtistOption = {
   imageUrl?: string | null;
 };
 
+const toAiUiErrorMessage = (error: string | null | undefined, fallback: string): string => {
+  const message = String(error || '').trim();
+  if (!message) return fallback;
+  if (/rate-limited|rate limited/i.test(message)) return message;
+  if (/temporarily unavailable|try again shortly/i.test(message)) return message;
+  return fallback;
+};
+
 const isFeedbackDraft = (value: unknown): value is FeedbackDraft => {
   if (!value || typeof value !== 'object') return false;
   const draft = value as Partial<FeedbackDraft>;
@@ -1617,10 +1625,9 @@ export function PostAuthScreen() {
     if (!generateResponse.ok) {
       const failurePayload = generatedPayload as { error?: string; detail?: string };
       throw new Error(
-        String(
-          `${failurePayload.error || 'Task generation failed after retries. Please generate again.'}${
-            failurePayload.detail ? ` (${failurePayload.detail})` : ''
-          }`
+        toAiUiErrorMessage(
+          failurePayload.error,
+          'Task generation failed after retries. Please generate again.'
         )
       );
     }
@@ -1749,7 +1756,9 @@ export function PostAuthScreen() {
       } catch (err: any) {
         if (!cancelled) {
           setShowPricingSheet(false);
-          setGenerationError(err?.message || 'Task generation failed after retries. Please generate again.');
+          setGenerationError(
+            toAiUiErrorMessage(err?.message, 'Task generation failed after retries. Please generate again.')
+          );
         }
       } finally {
         if (!cancelled) {
@@ -1833,6 +1842,16 @@ export function PostAuthScreen() {
   const handleRetryGeneration = () => {
     if (step !== 6 || !releaseId || isBusy) return;
     setGenerationAttemptKey((current) => current + 1);
+  };
+
+  const handleBackToGenerationInputs = async () => {
+    if (step !== 6 || isBusy) return;
+    setGenerationError('');
+    try {
+      await setStepPersisted(5);
+    } catch (err: any) {
+      setError(err?.message || 'Could not return to the previous step right now');
+    }
   };
 
   const clearWorkflowDraft = useCallback(() => {
@@ -2358,6 +2377,7 @@ export function PostAuthScreen() {
             isGenerating={isBusy}
             generationError={generationError}
             onRetryGeneration={handleRetryGeneration}
+            onBackToInputs={handleBackToGenerationInputs}
           />
         )}
 
