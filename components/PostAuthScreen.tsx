@@ -316,6 +316,7 @@ export function PostAuthScreen() {
   const requestedPlanId = searchParams.get('planId');
   const requestedStartStep = Number(searchParams.get('startOnboarding') || 0);
   const flow = searchParams.get('flow');
+  const requestedArtistId = searchParams.get('artistId');
   const {
     user,
     updateRole,
@@ -643,6 +644,23 @@ export function PostAuthScreen() {
     newManagedArtistNotes,
   ]);
 
+  const replaceCreatePlanArtistInUrl = useCallback(
+    (artistId: string | null) => {
+      if (typeof window === 'undefined') return;
+      if (!isManagerCreatePlanFlow) return;
+
+      const params = new URLSearchParams(searchParams.toString());
+      if (artistId) {
+        params.set('artistId', artistId);
+      } else {
+        params.delete('artistId');
+      }
+      const query = params.toString();
+      router.replace(query ? `/dashboard?${query}` : '/dashboard', { scroll: false });
+    },
+    [isManagerCreatePlanFlow, router, searchParams]
+  );
+
   const loadManagedArtists = useCallback(async (): Promise<ManagedArtistOption[]> => {
     if (!user || !isManagerCreatePlanFlow) return [];
     setManagedArtistsLoading(true);
@@ -668,18 +686,23 @@ export function PostAuthScreen() {
       }
       const nextArtists = Array.isArray(payload.artists) ? payload.artists : [];
       setManagedArtists(nextArtists);
+      if (selectedManagedArtistId && !nextArtists.some((artist) => artist.id === selectedManagedArtistId)) {
+        setSelectedManagedArtistId(null);
+        replaceCreatePlanArtistInUrl(null);
+      }
       return nextArtists;
     } finally {
       setManagedArtistsLoading(false);
     }
-  }, [isManagerCreatePlanFlow, user]);
+  }, [isManagerCreatePlanFlow, replaceCreatePlanArtistInUrl, selectedManagedArtistId, user]);
 
   const applyManagedArtistToState = useCallback((artist: ManagedArtistOption | null) => {
     if (!artist) return;
     setSelectedManagedArtistId(artist.id);
     setArtistName(artist.name || '');
     setGenre(artist.genre || '');
-  }, []);
+    replaceCreatePlanArtistInUrl(artist.id);
+  }, [replaceCreatePlanArtistInUrl]);
 
   const moveManagedArtistSelection = useCallback(
     (direction: 'previous' | 'next') => {
@@ -1065,6 +1088,7 @@ export function PostAuthScreen() {
         if (isManagerCreatePlanFlow) {
           managerArtists = await loadManagedArtists();
           const preferredArtist =
+            managerArtists.find((artist) => artist.id === requestedArtistId) ||
             managerArtists.find((artist) => artist.id === selectedManagedArtistId) ||
             managerArtists.find((artist) => artist.name.trim().toLowerCase() === resolvedArtistName.trim().toLowerCase()) ||
             managerArtists[0] ||
@@ -1073,6 +1097,7 @@ export function PostAuthScreen() {
             applyManagedArtistToState(preferredArtist);
           } else {
             setSelectedManagedArtistId(null);
+            replaceCreatePlanArtistInUrl(null);
           }
         }
 
@@ -1146,7 +1171,9 @@ export function PostAuthScreen() {
     loadManagedArtists,
     refreshCycleNumber,
     requestedPlanId,
+    requestedArtistId,
     requestedStartStep,
+    replaceCreatePlanArtistInUrl,
     router,
     resetCycleInputs,
     rolePermissions.role,
@@ -1816,6 +1843,7 @@ export function PostAuthScreen() {
     setNewManagedArtistGenre('');
     setNewManagedArtistNotes('');
     setSelectedManagedArtistId(null);
+    replaceCreatePlanArtistInUrl(null);
     setArtistName(isArtistAccount ? profileArtistName : '');
     setGenre('');
     setPrimaryPlatform('');
@@ -1833,6 +1861,7 @@ export function PostAuthScreen() {
     isArtistAccount,
     isManagerCreatePlanFlow,
     profileArtistName,
+    replaceCreatePlanArtistInUrl,
     resetCycleInputs,
   ]);
 

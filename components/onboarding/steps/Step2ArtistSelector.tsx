@@ -10,6 +10,23 @@ type ManagerArtistOption = {
   imageUrl?: string | null;
 };
 
+type SelectorCard =
+  | {
+      slotKey: string;
+      id: string;
+      title: string;
+      subtitle: string;
+      kind: 'support';
+    }
+  | {
+      slotKey: string;
+      id: string;
+      title: string;
+      subtitle: string;
+      kind: 'artist';
+      artist: ManagerArtistOption;
+    };
+
 type Step2ArtistSelectorProps = {
   artists: ManagerArtistOption[];
   isLoading: boolean;
@@ -31,7 +48,8 @@ type Step2ArtistSelectorProps = {
   onSaveArtist: () => Promise<void>;
 };
 
-const buildDecorativeCard = (key: string, title: string, subtitle: string) => ({
+const buildDecorativeCard = (key: string, title: string, subtitle: string): SelectorCard => ({
+  slotKey: key,
   id: key,
   title,
   subtitle,
@@ -65,7 +83,7 @@ export function Step2ArtistSelector({
     return artists.findIndex((artist) => artist.id === selectedArtistId);
   }, [artists, selectedArtistId]);
 
-  const cards = useMemo(() => {
+  const cards = useMemo<SelectorCard[]>(() => {
     if (artists.length === 0) {
       return [
         buildDecorativeCard('support-left', 'Artist Library', 'Save artist records once and reuse them across plans.'),
@@ -79,6 +97,7 @@ export function Step2ArtistSelector({
       return [
         buildDecorativeCard('left-add', 'Add New Artist', 'Keep another artist ready for future plans.'),
         {
+          slotKey: `center-${artist.id}`,
           id: artist.id,
           title: artist.name,
           subtitle: artist.genre || 'Artist profile ready',
@@ -90,11 +109,37 @@ export function Step2ArtistSelector({
     }
 
     const normalizedIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    const currentArtist = artists[normalizedIndex];
+
+    if (artists.length === 2) {
+      const otherArtist = artists[(normalizedIndex + 1) % artists.length];
+      return [
+        {
+          slotKey: `left-${otherArtist.id}`,
+          id: otherArtist.id,
+          title: otherArtist.name,
+          subtitle: otherArtist.genre || 'Artist profile',
+          kind: 'artist' as const,
+          artist: otherArtist,
+        },
+        {
+          slotKey: `center-${currentArtist.id}`,
+          id: currentArtist.id,
+          title: currentArtist.name,
+          subtitle: currentArtist.genre || 'Artist profile',
+          kind: 'artist' as const,
+          artist: currentArtist,
+        },
+        buildDecorativeCard('right-add', 'Add New Artist', 'Keep another artist ready without leaving this flow.'),
+      ];
+    }
+
     const leftIndex = (normalizedIndex - 1 + artists.length) % artists.length;
     const rightIndex = (normalizedIndex + 1) % artists.length;
 
     return [
       {
+        slotKey: `left-${artists[leftIndex].id}`,
         id: artists[leftIndex].id,
         title: artists[leftIndex].name,
         subtitle: artists[leftIndex].genre || 'Artist profile',
@@ -102,13 +147,15 @@ export function Step2ArtistSelector({
         artist: artists[leftIndex],
       },
       {
-        id: artists[normalizedIndex].id,
-        title: artists[normalizedIndex].name,
-        subtitle: artists[normalizedIndex].genre || 'Artist profile',
+        slotKey: `center-${currentArtist.id}`,
+        id: currentArtist.id,
+        title: currentArtist.name,
+        subtitle: currentArtist.genre || 'Artist profile',
         kind: 'artist' as const,
-        artist: artists[normalizedIndex],
+        artist: currentArtist,
       },
       {
+        slotKey: `right-${artists[rightIndex].id}`,
         id: artists[rightIndex].id,
         title: artists[rightIndex].name,
         subtitle: artists[rightIndex].genre || 'Artist profile',
@@ -124,7 +171,7 @@ export function Step2ArtistSelector({
       ? 'We found your artist profile. Confirm to continue.'
       : 'Select the artist you want to build this plan for.';
 
-  const canContinue = artists.length > 0 && !!selectedArtistId;
+  const canContinue = artists.length > 0 && selectedIndex >= 0;
 
   const handleTouchStart = (clientX: number) => {
     touchStartXRef.current = clientX;
@@ -197,7 +244,7 @@ export function Step2ArtistSelector({
 
               return (
                 <button
-                  key={card.id}
+                  key={card.slotKey}
                   type="button"
                   onClick={() => {
                     if (!isArtist) {
