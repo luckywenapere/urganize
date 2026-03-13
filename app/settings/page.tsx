@@ -9,6 +9,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { trackEvent } from '@/lib/analytics';
 import { getRolePermissions } from '@/lib/role-permissions';
 import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
 import {
   INDIVIDUAL_PLAN_OPTIONS,
   MIN_GROUP_TEAM_SIZE,
@@ -87,6 +88,7 @@ const panelClass =
   'rounded-3xl border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-sm sm:p-6';
 const SETTINGS_UI_STATE_VERSION = 1;
 const SETTINGS_UI_STATE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const SETTINGS_UI_STATE_SCOPE = 'settings-ui';
 
 const isSettingsUiState = (value: unknown): value is SettingsUiState => {
   if (!value || typeof value !== 'object') return false;
@@ -189,28 +191,42 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!settingsUiStateKey) return;
-    const restored = readPersistedState<SettingsUiState>(
-      settingsUiStateKey,
-      SETTINGS_UI_STATE_VERSION,
-      isSettingsUiState,
-      SETTINGS_UI_STATE_MAX_AGE_MS
-    );
-    if (!restored) return;
+    let cancelled = false;
 
-    setOrganizationName(restored.organizationName);
-    setNewMemberEmail(restored.newMemberEmail);
-    setNewMemberRole(restored.newMemberRole);
-    setManagedArtistForm(restored.managedArtistForm);
+    const restore = async () => {
+      const localDraft = readPersistedState<SettingsUiState>(
+        settingsUiStateKey,
+        SETTINGS_UI_STATE_VERSION,
+        isSettingsUiState,
+        SETTINGS_UI_STATE_MAX_AGE_MS
+      );
+      const remoteDraft = await fetchUiDraft<SettingsUiState>(SETTINGS_UI_STATE_SCOPE, settingsUiStateKey);
+      const restored =
+        localDraft || (remoteDraft.payload && isSettingsUiState(remoteDraft.payload) ? remoteDraft.payload : null);
+      if (!restored || cancelled) return;
+
+      setOrganizationName(restored.organizationName);
+      setNewMemberEmail(restored.newMemberEmail);
+      setNewMemberRole(restored.newMemberRole);
+      setManagedArtistForm(restored.managedArtistForm);
+    };
+
+    void restore();
+    return () => {
+      cancelled = true;
+    };
   }, [settingsUiStateKey]);
 
   useEffect(() => {
     if (!settingsUiStateKey) return;
-    writePersistedState<SettingsUiState>(settingsUiStateKey, SETTINGS_UI_STATE_VERSION, {
+    const draft: SettingsUiState = {
       organizationName,
       newMemberEmail,
       newMemberRole,
       managedArtistForm,
-    });
+    };
+    writePersistedState<SettingsUiState>(settingsUiStateKey, SETTINGS_UI_STATE_VERSION, draft);
+    void saveUiDraft<SettingsUiState>(SETTINGS_UI_STATE_SCOPE, settingsUiStateKey, draft);
   }, [managedArtistForm, newMemberEmail, newMemberRole, organizationName, settingsUiStateKey]);
 
   useEffect(() => {
@@ -720,6 +736,7 @@ export default function SettingsPage() {
 
   const clearSettingsDrafts = () => {
     clearPersistedState(settingsUiStateKey);
+    void deleteUiDraft(SETTINGS_UI_STATE_SCOPE, settingsUiStateKey);
     setOrganizationName(organization?.name || '');
     setNewMemberEmail('');
     setNewMemberRole('viewer');

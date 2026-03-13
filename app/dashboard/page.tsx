@@ -9,6 +9,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { getRolePermissions } from '@/lib/role-permissions';
 import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 import { SearchableGenreSelect } from '@/components/ui/SearchableGenreSelect';
 
@@ -69,6 +70,7 @@ const PLAN_MENU_WIDTH_PX = 190;
 const PLAN_MENU_SAFE_MARGIN_PX = 12;
 const DASHBOARD_UI_STATE_VERSION = 1;
 const DASHBOARD_UI_STATE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const DASHBOARD_UI_STATE_SCOPE = 'dashboard-ui';
 
 const isDashboardUiState = (value: unknown): value is DashboardUiState => {
   if (!value || typeof value !== 'object') return false;
@@ -353,30 +355,44 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!dashboardUiStateKey) return;
-    const restored = readPersistedState<DashboardUiState>(
-      dashboardUiStateKey,
-      DASHBOARD_UI_STATE_VERSION,
-      isDashboardUiState,
-      DASHBOARD_UI_STATE_MAX_AGE_MS
-    );
-    if (!restored) return;
+    let cancelled = false;
 
-    setPlanFilter(restored.planFilter);
-    setPlanSearch(restored.planSearch);
-    setPlanSort(restored.planSort);
-    setArtistSearch(restored.artistSearch);
-    setArtistForm(restored.artistForm);
+    const restore = async () => {
+      const localDraft = readPersistedState<DashboardUiState>(
+        dashboardUiStateKey,
+        DASHBOARD_UI_STATE_VERSION,
+        isDashboardUiState,
+        DASHBOARD_UI_STATE_MAX_AGE_MS
+      );
+      const remoteDraft = await fetchUiDraft<DashboardUiState>(DASHBOARD_UI_STATE_SCOPE, dashboardUiStateKey);
+      const restored =
+        localDraft || (remoteDraft.payload && isDashboardUiState(remoteDraft.payload) ? remoteDraft.payload : null);
+      if (!restored || cancelled) return;
+
+      setPlanFilter(restored.planFilter);
+      setPlanSearch(restored.planSearch);
+      setPlanSort(restored.planSort);
+      setArtistSearch(restored.artistSearch);
+      setArtistForm(restored.artistForm);
+    };
+
+    void restore();
+    return () => {
+      cancelled = true;
+    };
   }, [dashboardUiStateKey]);
 
   useEffect(() => {
     if (!dashboardUiStateKey) return;
-    writePersistedState<DashboardUiState>(dashboardUiStateKey, DASHBOARD_UI_STATE_VERSION, {
+    const draft: DashboardUiState = {
       planFilter,
       planSearch,
       planSort,
       artistSearch,
       artistForm,
-    });
+    };
+    writePersistedState<DashboardUiState>(dashboardUiStateKey, DASHBOARD_UI_STATE_VERSION, draft);
+    void saveUiDraft<DashboardUiState>(DASHBOARD_UI_STATE_SCOPE, dashboardUiStateKey, draft);
   }, [artistForm, artistSearch, dashboardUiStateKey, planFilter, planSearch, planSort]);
 
   const dismissGuideTooltip = () => {
@@ -388,6 +404,7 @@ export default function DashboardPage() {
 
   const clearDashboardDrafts = () => {
     clearPersistedState(dashboardUiStateKey);
+    void deleteUiDraft(DASHBOARD_UI_STATE_SCOPE, dashboardUiStateKey);
     setPlanFilter('active');
     setPlanSearch('');
     setPlanSort('newest');

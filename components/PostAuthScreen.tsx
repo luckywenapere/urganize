@@ -9,6 +9,7 @@ import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { getRolePermissions } from '@/lib/role-permissions';
 import { trackEvent } from '@/lib/analytics';
 import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 
 type RoleOption = 'manager' | 'artist-team' | 'artist';
@@ -116,6 +117,8 @@ const MIN_FEEDBACK_CHARS = 1;
 const ONBOARDING_DRAFT_VERSION = 2;
 const FEEDBACK_DRAFT_VERSION = 1;
 const WORKFLOW_DRAFT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const ONBOARDING_DRAFT_SCOPE = 'post-auth-onboarding';
+const FEEDBACK_DRAFT_SCOPE = 'post-auth-feedback';
 
 type FeedbackDraft = {
   selectedProof: ProofType;
@@ -366,6 +369,7 @@ export function PostAuthScreen() {
   const [blockersNext, setBlockersNext] = useState('');
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<number | null>(null);
   const [resumeMessage, setResumeMessage] = useState('');
+  const [showResumeMessage, setShowResumeMessage] = useState(false);
 
   const [taskTitle, setTaskTitle] = useState('Single task');
   const [taskOutcome, setTaskOutcome] = useState('Expected outcome');
@@ -437,25 +441,34 @@ export function PostAuthScreen() {
     }
     if (feedbackDraftLoadedRef.current === feedbackDraftKey) return;
     feedbackDraftLoadedRef.current = feedbackDraftKey;
+    let cancelled = false;
+    const restore = async () => {
+      const localDraft = readPersistedState<FeedbackDraft>(
+        feedbackDraftKey,
+        FEEDBACK_DRAFT_VERSION,
+        isFeedbackDraft,
+        WORKFLOW_DRAFT_MAX_AGE_MS
+      );
+      const draftResult = await fetchUiDraft<FeedbackDraft>(FEEDBACK_DRAFT_SCOPE, feedbackDraftKey);
+      const draft = localDraft || (draftResult.payload && isFeedbackDraft(draftResult.payload) ? draftResult.payload : null);
+      if (!draft || cancelled) return;
 
-    const draft = readPersistedState<FeedbackDraft>(
-      feedbackDraftKey,
-      FEEDBACK_DRAFT_VERSION,
-      isFeedbackDraft,
-      WORKFLOW_DRAFT_MAX_AGE_MS
-    );
-    if (!draft) return;
-
-    setSelectedProof(draft.selectedProof);
-    setProofLink(draft.proofLink);
-    setProofText(draft.proofText);
-    setWhatYouTried(draft.whatYouTried);
-    setWhatHappened(draft.whatHappened);
-    setResultsMode(draft.resultsMode);
-    setResultsMetrics(draft.resultsMetrics);
-    setBlockersNext(draft.blockersNext);
-    setLastDraftSavedAt(Date.now());
-    setResumeMessage('Resumed where you left off.');
+      setSelectedProof(draft.selectedProof);
+      setProofLink(draft.proofLink);
+      setProofText(draft.proofText);
+      setWhatYouTried(draft.whatYouTried);
+      setWhatHappened(draft.whatHappened);
+      setResultsMode(draft.resultsMode);
+      setResultsMetrics(draft.resultsMetrics);
+      setBlockersNext(draft.blockersNext);
+      setLastDraftSavedAt(Date.now());
+      setResumeMessage('Resumed where you left off.');
+      setShowResumeMessage(true);
+    };
+    void restore();
+    return () => {
+      cancelled = true;
+    };
   }, [feedbackDraftKey]);
 
   useEffect(() => {
@@ -471,6 +484,7 @@ export function PostAuthScreen() {
       blockersNext,
     };
     writePersistedState(feedbackDraftKey, FEEDBACK_DRAFT_VERSION, draft);
+    void saveUiDraft<FeedbackDraft>(FEEDBACK_DRAFT_SCOPE, feedbackDraftKey, draft);
     setLastDraftSavedAt(Date.now());
   }, [
     feedbackDraftKey,
@@ -493,41 +507,52 @@ export function PostAuthScreen() {
     onboardingDraftLoadedRef.current = onboardingDraftKey;
     if (isNextCycleFlow) {
       clearPersistedState(onboardingDraftKey);
+      void deleteUiDraft(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey);
       return;
     }
-
-    const draft = readPersistedState<OnboardingDraft>(
-      onboardingDraftKey,
-      ONBOARDING_DRAFT_VERSION,
-      isOnboardingDraft,
-      WORKFLOW_DRAFT_MAX_AGE_MS
-    );
-    if (!draft) return;
-    if (isCreatePlanFlow && !draft.started) {
-      clearPersistedState(onboardingDraftKey);
-      return;
-    }
-    if (draft.artistName && !artistName.trim()) setArtistName(draft.artistName);
-    if (draft.genre && !genre.trim()) setGenre(draft.genre);
-    if (draft.primaryPlatform && !primaryPlatform.trim()) setPrimaryPlatform(draft.primaryPlatform);
-    if (draft.goalText && !goalText.trim()) setGoalText(draft.goalText);
-    if (draft.stage && !stage.trim()) setStage(draft.stage);
-    if (draft.audienceSize && !audienceSize.trim()) setAudienceSize(draft.audienceSize);
-    if (draft.listenerPlatforms.length > 0 && listenerPlatforms.length === 0) {
-      setListenerPlatforms(draft.listenerPlatforms.filter((item): item is string => typeof item === 'string'));
-    }
-    if (draft.platformInput && !platformInput.trim()) setPlatformInput(draft.platformInput);
-    if (draft.budget && !budget.trim()) setBudget(draft.budget);
-    if (draft.timeline && !timeline.trim()) setTimeline(draft.timeline);
-    if (draft.deadlineDate && !deadlineDate.trim()) setDeadlineDate(draft.deadlineDate);
-    if (draft.stepsText && !stepsText.trim()) setStepsText(draft.stepsText);
-    if (draft.selectedManagedArtistId && !selectedManagedArtistId) setSelectedManagedArtistId(draft.selectedManagedArtistId);
-    if (draft.showAddManagedArtistForm) setShowAddManagedArtistForm(true);
-    if (draft.newManagedArtistName && !newManagedArtistName.trim()) setNewManagedArtistName(draft.newManagedArtistName);
-    if (draft.newManagedArtistGenre && !newManagedArtistGenre.trim()) setNewManagedArtistGenre(draft.newManagedArtistGenre);
-    if (draft.newManagedArtistNotes && !newManagedArtistNotes.trim()) setNewManagedArtistNotes(draft.newManagedArtistNotes);
-    setStep(Math.max(2, Math.min(9, draft.step === 6 ? 5 : draft.step)));
-    setResumeMessage('Resumed where you left off.');
+    let cancelled = false;
+    const restore = async () => {
+      const localDraft = readPersistedState<OnboardingDraft>(
+        onboardingDraftKey,
+        ONBOARDING_DRAFT_VERSION,
+        isOnboardingDraft,
+        WORKFLOW_DRAFT_MAX_AGE_MS
+      );
+      const draftResult = await fetchUiDraft<OnboardingDraft>(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey);
+      const draft = localDraft || (draftResult.payload && isOnboardingDraft(draftResult.payload) ? draftResult.payload : null);
+      if (!draft || cancelled) return;
+      if (isCreatePlanFlow && !draft.started) {
+        clearPersistedState(onboardingDraftKey);
+        void deleteUiDraft(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey);
+        return;
+      }
+      if (draft.artistName && !artistName.trim()) setArtistName(draft.artistName);
+      if (draft.genre && !genre.trim()) setGenre(draft.genre);
+      if (draft.primaryPlatform && !primaryPlatform.trim()) setPrimaryPlatform(draft.primaryPlatform);
+      if (draft.goalText && !goalText.trim()) setGoalText(draft.goalText);
+      if (draft.stage && !stage.trim()) setStage(draft.stage);
+      if (draft.audienceSize && !audienceSize.trim()) setAudienceSize(draft.audienceSize);
+      if (draft.listenerPlatforms.length > 0 && listenerPlatforms.length === 0) {
+        setListenerPlatforms(draft.listenerPlatforms.filter((item): item is string => typeof item === 'string'));
+      }
+      if (draft.platformInput && !platformInput.trim()) setPlatformInput(draft.platformInput);
+      if (draft.budget && !budget.trim()) setBudget(draft.budget);
+      if (draft.timeline && !timeline.trim()) setTimeline(draft.timeline);
+      if (draft.deadlineDate && !deadlineDate.trim()) setDeadlineDate(draft.deadlineDate);
+      if (draft.stepsText && !stepsText.trim()) setStepsText(draft.stepsText);
+      if (draft.selectedManagedArtistId && !selectedManagedArtistId) setSelectedManagedArtistId(draft.selectedManagedArtistId);
+      if (draft.showAddManagedArtistForm) setShowAddManagedArtistForm(true);
+      if (draft.newManagedArtistName && !newManagedArtistName.trim()) setNewManagedArtistName(draft.newManagedArtistName);
+      if (draft.newManagedArtistGenre && !newManagedArtistGenre.trim()) setNewManagedArtistGenre(draft.newManagedArtistGenre);
+      if (draft.newManagedArtistNotes && !newManagedArtistNotes.trim()) setNewManagedArtistNotes(draft.newManagedArtistNotes);
+      setStep(Math.max(2, Math.min(9, draft.step === 6 ? 5 : draft.step)));
+      setResumeMessage('Resumed where you left off.');
+      setShowResumeMessage(true);
+    };
+    void restore();
+    return () => {
+      cancelled = true;
+    };
   }, [
     artistName,
     audienceSize,
@@ -568,6 +593,7 @@ export function PostAuthScreen() {
     if (!onboardingDraftKey) return;
     if (isCreatePlanFlow && !hasStartedOnboardingInput) {
       clearPersistedState(onboardingDraftKey);
+      void deleteUiDraft(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey);
       return;
     }
     const draft: OnboardingDraft = {
@@ -592,6 +618,7 @@ export function PostAuthScreen() {
       started: hasStartedOnboardingInput,
     };
     writePersistedState(onboardingDraftKey, ONBOARDING_DRAFT_VERSION, draft);
+    void saveUiDraft<OnboardingDraft>(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey, draft);
   }, [
     artistName,
     audienceSize,
@@ -1772,6 +1799,8 @@ export function PostAuthScreen() {
   const clearWorkflowDraft = useCallback(() => {
     if (feedbackDraftKey) clearPersistedState(feedbackDraftKey);
     if (onboardingDraftKey) clearPersistedState(onboardingDraftKey);
+    if (feedbackDraftKey) void deleteUiDraft(FEEDBACK_DRAFT_SCOPE, feedbackDraftKey);
+    if (onboardingDraftKey) void deleteUiDraft(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey);
 
     setSelectedProof('none');
     setProofFile(null);
@@ -1795,6 +1824,7 @@ export function PostAuthScreen() {
     resetCycleInputs();
     setStep(isManagerCreatePlanFlow ? 2 : 2);
     setResumeMessage('');
+    setShowResumeMessage(false);
     setLastDraftSavedAt(null);
     setError('');
   }, [
@@ -1932,9 +1962,11 @@ export function PostAuthScreen() {
 
       if (feedbackDraftKey) {
         clearPersistedState(feedbackDraftKey);
+        void deleteUiDraft(FEEDBACK_DRAFT_SCOPE, feedbackDraftKey);
       }
       if (onboardingDraftKey) {
         clearPersistedState(onboardingDraftKey);
+        void deleteUiDraft(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey);
       }
       if (user?.id) {
         clearPersistedState(`urganize.onboardingDraft.v${ONBOARDING_DRAFT_VERSION}.${user.id}.${releaseId}`);
@@ -2103,10 +2135,17 @@ export function PostAuthScreen() {
           )}
         </div>
 
-        {resumeMessage && (
-          <p className="mt-5 rounded-xl border border-brand/35 bg-brand-muted px-4 py-3 text-sm text-content-primary">
-            {resumeMessage}
-          </p>
+        {showResumeMessage && resumeMessage && (
+          <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-brand/35 bg-brand-muted px-4 py-3 text-sm text-content-primary">
+            <p>{resumeMessage}</p>
+            <button
+              type="button"
+              onClick={() => setShowResumeMessage(false)}
+              className="text-xs uppercase tracking-[0.14em] text-content-secondary hover:text-content-primary"
+            >
+              Dismiss
+            </button>
+          </div>
         )}
 
         {roleEntryContext && step >= 2 && step <= 4 && (

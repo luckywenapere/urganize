@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
 import {
   EMPTY_LISTENER_PROFILE_INPUTS,
   LISTENER_PROFILE_FIELDS,
@@ -45,6 +46,7 @@ type ListenerProfileDraft = {
 
 const LISTENER_PROFILE_DRAFT_VERSION = 1;
 const LISTENER_PROFILE_DRAFT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const LISTENER_PROFILE_DRAFT_SCOPE = 'listener-profile';
 
 const isListenerProfileDraft = (value: unknown): value is ListenerProfileDraft => {
   if (!value || typeof value !== 'object') return false;
@@ -91,6 +93,7 @@ export default function ListenerProfilePage() {
   const [isEditingManagedArtist, setIsEditingManagedArtist] = useState(false);
   const [managedArtistDraft, setManagedArtistDraft] = useState('');
   const [resumeMessage, setResumeMessage] = useState('');
+  const [showResumeMessage, setShowResumeMessage] = useState(false);
 
   const flowFields = useMemo(
     () => (user?.role === 'manager' ? LISTENER_PROFILE_FIELDS : LISTENER_PROFILE_FIELDS.filter((field) => field.key !== 'artist_name')),
@@ -186,12 +189,14 @@ export default function ListenerProfilePage() {
       let normalizedInputs = applyArtistNameLock(normalizeListenerProfileInputs((inputsPayload.inputs || null) as Record<string, unknown> | null));
       let nextMode: RouteMode = 'flow';
       let nextStepIndex = getFirstUnansweredIndex(normalizedInputs, flowFields);
-      const restoredDraft = readPersistedState<ListenerProfileDraft>(
+      const localDraft = readPersistedState<ListenerProfileDraft>(
         draftStorageKey,
         LISTENER_PROFILE_DRAFT_VERSION,
         isListenerProfileDraft,
         LISTENER_PROFILE_DRAFT_MAX_AGE_MS
       );
+      const remoteDraftResult = await fetchUiDraft<ListenerProfileDraft>(LISTENER_PROFILE_DRAFT_SCOPE, draftStorageKey);
+      const restoredDraft = localDraft || (remoteDraftResult.payload && isListenerProfileDraft(remoteDraftResult.payload) ? remoteDraftResult.payload : null);
 
       if (restoredDraft) {
         normalizedInputs = applyArtistNameLock(normalizeListenerProfileInputs(restoredDraft.inputs));
@@ -199,10 +204,12 @@ export default function ListenerProfilePage() {
         setManagedArtistDraft(restoredDraft.managedArtistDraft || '');
         setIsEditingManagedArtist(Boolean(restoredDraft.isEditingManagedArtist));
         setResumeMessage('Resumed where you left off.');
+        setShowResumeMessage(true);
       } else {
         setManagedArtistDraft('');
         setIsEditingManagedArtist(false);
         setResumeMessage('');
+        setShowResumeMessage(false);
       }
 
       setInputs(normalizedInputs);
@@ -237,10 +244,18 @@ export default function ListenerProfilePage() {
       managedArtistDraft,
       isEditingManagedArtist,
     });
+    void saveUiDraft<ListenerProfileDraft>(LISTENER_PROFILE_DRAFT_SCOPE, draftStorageKey, {
+      mode: mode === 'generating' ? 'review' : mode,
+      stepIndex,
+      inputs: getDraftInputs(),
+      managedArtistDraft,
+      isEditingManagedArtist,
+    });
   }, [authLoading, draftStorageKey, getDraftInputs, isEditingManagedArtist, isLoadingPage, managedArtistDraft, mode, stepIndex, user]);
 
   const clearDraft = useCallback(() => {
     clearPersistedState(draftStorageKey);
+    void deleteUiDraft(LISTENER_PROFILE_DRAFT_SCOPE, draftStorageKey);
     const resetInputs = applyArtistNameLock({ ...EMPTY_LISTENER_PROFILE_INPUTS });
     setInputs(resetInputs);
     setStepIndex(getFirstUnansweredIndex(resetInputs, flowFields));
@@ -252,6 +267,7 @@ export default function ListenerProfilePage() {
     setMode('flow');
     setError('');
     setResumeMessage('');
+    setShowResumeMessage(false);
     setSuccess('Draft cleared.');
   }, [applyArtistNameLock, draftStorageKey, flowFields]);
 
@@ -461,7 +477,14 @@ export default function ListenerProfilePage() {
           </div>
         </div>
 
-        {resumeMessage && <p className="mt-4 rounded-xl border border-brand/35 bg-brand-muted px-4 py-2 text-sm text-content-primary">{resumeMessage}</p>}
+        {showResumeMessage && resumeMessage && (
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-brand/35 bg-brand-muted px-4 py-2 text-sm text-content-primary">
+            <p>{resumeMessage}</p>
+            <button type="button" onClick={() => setShowResumeMessage(false)} className="text-xs uppercase tracking-[0.14em] text-content-secondary hover:text-content-primary">
+              Dismiss
+            </button>
+          </div>
+        )}
         {error && <p className="mt-4 rounded-xl border border-status-error/40 bg-status-error/10 px-4 py-2 text-sm text-status-error">{error}</p>}
         {success && <p className="mt-4 rounded-xl border border-brand/35 bg-brand-muted px-4 py-2 text-sm text-content-primary">{success}</p>}
         {schemaSql && (

@@ -8,6 +8,8 @@ import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { trackEvent } from '@/lib/analytics';
 import { getRolePermissions } from '@/lib/role-permissions';
+import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 
 type PlanRow = {
@@ -33,8 +35,34 @@ type AiTaskGenerationPayload = {
 };
 
 type ScreenMode = 'decision' | 'custom' | 'generating' | 'archived';
+type NextStepDraft = {
+  mode: 'decision' | 'custom';
+  customTitle: string;
+  customNotes: string;
+  customOwner: string;
+  customDueDate: string;
+  customPriority: (typeof PRIORITY_OPTIONS)[number];
+  customEstimate: string;
+};
 
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High'] as const;
+const NEXT_STEP_DRAFT_VERSION = 1;
+const NEXT_STEP_DRAFT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const NEXT_STEP_DRAFT_SCOPE = 'plan-next-step';
+
+const isNextStepDraft = (value: unknown): value is NextStepDraft => {
+  if (!value || typeof value !== 'object') return false;
+  const draft = value as Partial<NextStepDraft>;
+  return (
+    (draft.mode === 'decision' || draft.mode === 'custom') &&
+    typeof draft.customTitle === 'string' &&
+    typeof draft.customNotes === 'string' &&
+    typeof draft.customOwner === 'string' &&
+    typeof draft.customDueDate === 'string' &&
+    (draft.customPriority === 'Low' || draft.customPriority === 'Medium' || draft.customPriority === 'High') &&
+    typeof draft.customEstimate === 'string'
+  );
+};
 
 export default function PlanNextStepPage() {
   const router = useRouter();
@@ -61,6 +89,10 @@ export default function PlanNextStepPage() {
   const [customDueDate, setCustomDueDate] = useState('');
   const [customPriority, setCustomPriority] = useState<(typeof PRIORITY_OPTIONS)[number]>('Medium');
   const [customEstimate, setCustomEstimate] = useState('');
+  const [resumeMessage, setResumeMessage] = useState('');
+  const [showResumeMessage, setShowResumeMessage] = useState(false);
+
+  const draftKey = user?.id && planId ? `urganize.nextStepDraft.v${NEXT_STEP_DRAFT_VERSION}.${user.id}.${planId}` : '';
 
   const allTasksCompleted = useMemo(
     () => totalTasks > 0 && completedTasks >= totalTasks && !activeTask,
@@ -78,6 +110,20 @@ export default function PlanNextStepPage() {
       }
     }
     toRemove.forEach((key) => localStorage.removeItem(key));
+  };
+
+  const clearNextStepDraft = () => {
+    if (draftKey) clearPersistedState(draftKey);
+    if (draftKey) void deleteUiDraft(NEXT_STEP_DRAFT_SCOPE, draftKey);
+    setMode('decision');
+    setCustomTitle('');
+    setCustomNotes('');
+    setCustomOwner(user?.name || user?.email || 'Owner');
+    setCustomDueDate('');
+    setCustomPriority('Medium');
+    setCustomEstimate('');
+    setResumeMessage('');
+    setShowResumeMessage(false);
   };
 
   const routeToTaskExecution = (options?: { forceStep7?: boolean }) => {
@@ -170,6 +216,10 @@ export default function PlanNextStepPage() {
     if (profileStepResetError) throw profileStepResetError;
 
     clearPlanFeedbackDrafts();
+    if (draftKey) {
+      clearPersistedState(draftKey);
+      void deleteUiDraft(NEXT_STEP_DRAFT_SCOPE, draftKey);
+    }
     setActiveTask(insertedTask);
     routeToTaskExecution({ forceStep7: true });
   };
@@ -366,8 +416,25 @@ export default function PlanNextStepPage() {
         setActiveTask(task || null);
         setTotalTasks(total || 0);
         setCompletedTasks(done || 0);
-        setCustomOwner(user.name || user.email || 'Owner');
-        setMode(release.status === 'released' ? 'archived' : 'decision');
+        const defaultOwner = user.name || user.email || 'Owner';
+        const localDraft =
+          release.status !== 'released' && !task
+            ? readPersistedState<NextStepDraft>(draftKey, NEXT_STEP_DRAFT_VERSION, isNextStepDraft, NEXT_STEP_DRAFT_MAX_AGE_MS)
+            : null;
+        const remoteDraftResult =
+          release.status !== 'released' && !task ? await fetchUiDraft<NextStepDraft>(NEXT_STEP_DRAFT_SCOPE, draftKey) : { payload: null };
+        const restoredDraft =
+          localDraft || (remoteDraftResult.payload && isNextStepDraft(remoteDraftResult.payload) ? remoteDraftResult.payload : null);
+
+        setCustomOwner(restoredDraft?.customOwner || defaultOwner);
+        setCustomTitle(restoredDraft?.customTitle || '');
+        setCustomNotes(restoredDraft?.customNotes || '');
+        setCustomDueDate(restoredDraft?.customDueDate || '');
+        setCustomPriority(restoredDraft?.customPriority || 'Medium');
+        setCustomEstimate(restoredDraft?.customEstimate || '');
+        setMode(release.status === 'released' ? 'archived' : restoredDraft?.mode || 'decision');
+        setResumeMessage(restoredDraft ? 'Resumed where you left off.' : '');
+        setShowResumeMessage(Boolean(restoredDraft));
       } catch (err: any) {
         if (!cancelled) {
           setError(err?.message || 'Could not load next step screen.');
@@ -383,7 +450,40 @@ export default function PlanNextStepPage() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, planId, router, user]);
+  }, [authLoading, draftKey, planId, router, user]);
+
+  useEffect(() => {
+    if (!draftKey || loading || hasSubscriptionAccess === false) return;
+    if (activeTask || mode === 'archived') {
+      clearPersistedState(draftKey);
+      void deleteUiDraft(NEXT_STEP_DRAFT_SCOPE, draftKey);
+      return;
+    }
+
+    const draft: NextStepDraft = {
+      mode: mode === 'custom' ? 'custom' : 'decision',
+      customTitle,
+      customNotes,
+      customOwner,
+      customDueDate,
+      customPriority,
+      customEstimate,
+    };
+    writePersistedState<NextStepDraft>(draftKey, NEXT_STEP_DRAFT_VERSION, draft);
+    void saveUiDraft<NextStepDraft>(NEXT_STEP_DRAFT_SCOPE, draftKey, draft);
+  }, [
+    activeTask,
+    customDueDate,
+    customEstimate,
+    customNotes,
+    customOwner,
+    customPriority,
+    customTitle,
+    draftKey,
+    hasSubscriptionAccess,
+    loading,
+    mode,
+  ]);
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
@@ -394,10 +494,34 @@ export default function PlanNextStepPage() {
           <Link href={planId ? `/dashboard/plans/${planId}` : '/dashboard'} className="text-sm text-content-secondary hover:text-content-primary">
             Back to Plan
           </Link>
-          <Link href="/dashboard" className="text-sm text-content-secondary hover:text-content-primary">
-            Dashboard
-          </Link>
+          <div className="flex items-center gap-3">
+            {(mode === 'decision' || mode === 'custom') && !activeTask && (
+              <button
+                type="button"
+                onClick={clearNextStepDraft}
+                className="rounded-lg border border-stroke-default bg-bg-elevated px-3 py-1.5 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+              >
+                Clear Draft
+              </button>
+            )}
+            <Link href="/dashboard" className="text-sm text-content-secondary hover:text-content-primary">
+              Dashboard
+            </Link>
+          </div>
         </div>
+
+        {showResumeMessage && resumeMessage && (
+          <div className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-brand/35 bg-brand-muted px-4 py-3 text-sm text-content-primary">
+            <p>{resumeMessage}</p>
+            <button
+              type="button"
+              onClick={() => setShowResumeMessage(false)}
+              className="text-xs uppercase tracking-[0.14em] text-content-secondary hover:text-content-primary"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {loading ? (
           <section className="mt-10 rounded-2xl border border-stroke-default bg-bg-surface p-6">
