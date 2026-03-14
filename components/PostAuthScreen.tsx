@@ -1892,7 +1892,7 @@ export function PostAuthScreen() {
         if (!cancelled) {
           setShowPricingSheet(false);
           setGenerationError(
-            toAiUiErrorMessage(err?.message, 'Task generation failed after retries. Please generate again.')
+            toAiUiErrorMessage(err?.message, 'AI service unavailable')
           );
         }
       } finally {
