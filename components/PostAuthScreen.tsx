@@ -311,6 +311,9 @@ const toAiUiErrorMessage = (error: string | null | undefined, fallback: string):
   if (!message) return fallback;
   if (/rate-limited|rate limited/i.test(message)) return message;
   if (/temporarily unavailable|try again shortly/i.test(message)) return message;
+  if (/ai service unavailable|task generation failed|listener profile generation failed|release plan generation failed/i.test(message)) {
+    return message;
+  }
   return fallback;
 };
 

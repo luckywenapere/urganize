@@ -8,17 +8,18 @@ type ReleasePlanRequest = {
   inputs?: Record<string, unknown>;
 };
 
-const buildAiFailureResponse = (error: unknown, fallbackAttempted: boolean) => {
+const buildAiFailureResponse = (error: unknown) => {
   const detail = String((error as { message?: string } | null)?.message || 'Unknown AI generation error');
   const rateLimited = /rate-limited|rate limited/i.test(detail);
+  const unavailable = /unavailable|failed|timeout|empty content|request failed/i.test(detail);
 
   return {
     generation_failed: true,
     error: rateLimited
-      ? fallbackAttempted
-        ? 'The current AI model is temporarily rate-limited. Urganize tried a backup model, but release plan generation still failed. Please try again shortly.'
-        : 'The current AI model is temporarily rate-limited. Please try again shortly.'
-      : 'Release plan generation failed after retries. Please generate again.',
+      ? 'The current AI model is temporarily rate-limited. Please try again shortly.'
+      : unavailable
+        ? 'AI service unavailable'
+        : detail,
     detail,
   };
 };
@@ -264,10 +265,6 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    const fallbackAttempted = String(process.env.OPENROUTER_MODEL || '')
-      .split(',')
-      .map((value) => value.trim())
-      .filter(Boolean).length > 1;
-    return NextResponse.json(buildAiFailureResponse(error, fallbackAttempted), { status: 502 });
+    return NextResponse.json(buildAiFailureResponse(error), { status: 502 });
   }
 }
