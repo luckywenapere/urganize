@@ -11,6 +11,7 @@ import { trackEvent } from '@/lib/analytics';
 import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
 import type { ReleasePlanResult } from '@/lib/release-plan';
+import type { ReleaseTaskPlanResponse } from '@/lib/task-plan';
 import type { StoredPricingValidationResponse, PricingValidationResponse } from '@/lib/pricing-validation';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 import { PricingValidationPrompt } from '@/components/validation/PricingValidationPrompt';
@@ -25,8 +26,7 @@ type AiTaskGenerationPayload = {
   measurable_outcome: string;
 };
 
-type ReleasePlanApiResponse = {
-  plan?: ReleasePlanResult;
+type ReleasePlanApiResponse = ReleaseTaskPlanResponse & {
   error?: string;
   detail?: string;
 };
@@ -1781,23 +1781,51 @@ export function PostAuthScreen() {
       );
     }
 
-    const plan = generatedPayload.plan || null;
-    if (!plan || !Array.isArray(plan.tasks) || plan.tasks.length === 0) {
-      throw new Error('AI returned an invalid release plan. Please generate again.');
+    if (
+      !generatedPayload.planTitle ||
+      !generatedPayload.planSummary ||
+      !Array.isArray(generatedPayload.tasks) ||
+      generatedPayload.tasks.length === 0
+    ) {
+      throw new Error('We could not generate the task plan right now. Please try again.');
     }
 
-    const generatedTasks = plan.tasks.map((task, index) => {
-      const measurableOutcome = task.measurable_outcome.trim();
+    const plan: ReleasePlanResult = {
+      summary: generatedPayload.planSummary,
+      release_strategy: generatedPayload.planSummary,
+      timeline_phases: [],
+      tasks: generatedPayload.tasks.map((task) => ({
+        title: task.title,
+        phase: task.phase,
+        description: task.description,
+        owner: 'Team',
+        measurable_outcome: task.recommendedTiming,
+        priority: task.priority,
+      })),
+      milestones: [],
+      marketing_ideas: [],
+      audience_profile: {
+        summary: '',
+        age_range: '',
+        locations: '',
+        platforms: '',
+        culture_signals: '',
+      },
+      playlist_suggestions: [],
+      assumptions: [],
+    };
+
+    const generatedTasks = generatedPayload.tasks.map((task, index) => {
+      const recommendedTiming = task.recommendedTiming.trim();
       const description = task.description.trim();
-      const owner = task.owner.trim();
       const priority = task.priority.trim();
       const phaseLabel = task.phase.trim();
       return {
         release_id: activeReleaseId,
         user_id: user.id,
         title: task.title.trim(),
-        description: `${description}\n\nOwner: ${owner || 'Team'}\nPriority: ${priority || 'Medium'}\nMeasurable outcome: ${measurableOutcome}`,
-        why_it_matters: `Phase: ${phaseLabel || 'Plan'}\nMeasurable outcome: ${measurableOutcome}`,
+        description: `${description}\n\nPriority: ${priority || 'Medium'}\nRecommended timing: ${recommendedTiming || 'To be scheduled'}`,
+        why_it_matters: `Phase: ${phaseLabel || 'Strategy'}\nRecommended timing: ${recommendedTiming || 'To be scheduled'}\nPlan summary: ${generatedPayload.planSummary.trim()}`,
         input_type: 'text',
         status: index === 0 ? 'current' : 'pending',
         phase: mapPlanPhaseToTaskPhase(phaseLabel),
@@ -1834,7 +1862,7 @@ export function PostAuthScreen() {
       payload: {
         releaseId: activeReleaseId,
         taskId: currentTask.id,
-        mode: 'onboarding-structured-plan',
+        mode: 'onboarding-task-plan',
         taskCount: insertedTasks.length,
       },
     });

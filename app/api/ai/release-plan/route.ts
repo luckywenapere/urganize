@@ -1,59 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { generateStructuredAiOutput, isAiConfigured } from '@/lib/ai/provider';
-import { parseReleasePlanResult, type ReleasePlanResult } from '@/lib/release-plan';
+import {
+  extractAiAssistantText,
+  normalizeReleaseTaskPlanResponse,
+  parseReleaseTaskPlan,
+  type ReleaseTaskPlan,
+} from '@/lib/task-plan';
 
 type ReleasePlanRequest = {
   releaseId?: string;
   inputs?: Record<string, unknown>;
 };
 
+const DEFAULT_AI_API_BASE = 'https://urganize-main-34fd8f6.d2.zuplo.dev';
+const AI_MODEL = 'qwen2.5:3b';
+const TASK_PLAN_FALLBACK_MESSAGE = 'We could not generate the task plan right now. Please try again.';
+
 const buildAiFailureResponse = (error: unknown) => {
   const detail = String((error as { message?: string } | null)?.message || 'Unknown AI generation error');
   const rateLimited = /rate-limited|rate limited/i.test(detail);
-  const unavailable = /unavailable|failed|timeout|empty content|request failed/i.test(detail);
+  const unavailable = /unavailable|failed|timeout|empty content|request failed|invalid/i.test(detail);
 
   return {
     generation_failed: true,
     error: rateLimited
       ? 'The current AI model is temporarily rate-limited. Please try again shortly.'
       : unavailable
-        ? 'AI service unavailable'
-        : detail,
+        ? TASK_PLAN_FALLBACK_MESSAGE
+        : TASK_PLAN_FALLBACK_MESSAGE,
     detail,
   };
-};
-
-const parseStructuredJson = <T,>(raw: string, parser: (value: unknown) => T | null): T | null => {
-  const normalized = String(raw || '').trim();
-  if (!normalized) return null;
-
-  const cleaned = normalized
-    .replace(/^```json/i, '')
-    .replace(/^```/i, '')
-    .replace(/```$/, '')
-    .trim();
-
-  const parseCandidate = (value: string): T | null => {
-    try {
-      const first = JSON.parse(value) as unknown;
-      const parsed = typeof first === 'string' ? JSON.parse(first) : first;
-      return parser(parsed);
-    } catch {
-      return null;
-    }
-  };
-
-  const direct = parseCandidate(cleaned);
-  if (direct) return direct;
-
-  const firstBrace = cleaned.indexOf('{');
-  const lastBrace = cleaned.lastIndexOf('}');
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    return parseCandidate(cleaned.slice(firstBrace, lastBrace + 1));
-  }
-
-  return null;
 };
 
 const toStringValue = (value: unknown): string => String(value || '').trim();
@@ -64,101 +40,52 @@ const toStringArray = (value: unknown): string[] => {
   return single ? [single] : [];
 };
 
-const ensurePlanHasTasks = (
-  plan: ReleasePlanResult,
-  context: {
-    artistName: string;
-    releaseTitle: string;
-    goal: string;
-    teamType: string;
-  }
-): ReleasePlanResult => {
-  if (Array.isArray(plan.tasks) && plan.tasks.length > 0) {
-    return {
-      ...plan,
-      tasks: plan.tasks.map((task) => ({
-        ...task,
-        phase: task.phase || 'Plan',
-        owner: task.owner || (context.teamType === 'solo artist' ? 'Artist' : 'Team'),
-        priority: task.priority || 'Medium',
-        measurable_outcome: task.measurable_outcome || 'Task completed and reviewed.',
-      })),
-    };
-  }
+const getAiGatewayConfig = () => {
+  const apiKey = String(process.env.AI_API_KEY || '').trim();
+  const apiBase = String(process.env.AI_API_BASE || DEFAULT_AI_API_BASE).trim();
 
-  const subject = context.releaseTitle || context.artistName || 'this release';
-  const objective = context.goal || `build a release plan for ${subject}`;
+  if (!apiKey) {
+    return null;
+  }
 
   return {
-    ...plan,
-    tasks: [
-      {
-        title: `Define the launch message for ${subject}`.slice(0, 120),
-        phase: 'Plan',
-        description: `Write one clear campaign brief for ${subject} focused on this objective: ${objective}.`,
-        owner: context.teamType === 'solo artist' ? 'Artist' : 'Team',
-        measurable_outcome: 'A one-paragraph launch brief is written and ready to guide content and rollout.',
-        priority: 'High',
-      },
-    ],
+    apiKey,
+    apiBase,
   };
 };
 
-const buildPlanPrompt = (context: Record<string, unknown>): string => {
+const buildUserPrompt = (context: Record<string, unknown>): string => {
   return [
-    'You are a release strategy planner for independent music teams.',
-    'Generate a practical release plan that works for Nigerian and global independent artists and managers.',
+    'Generate a release task plan for the following music release.',
     '',
-    'Output JSON only with this exact shape:',
+    'Return JSON only in this exact shape:',
     '{',
-    '  "summary": "string",',
-    '  "release_strategy": "string",',
-    '  "timeline_phases": [',
-    '    { "phase": "string", "window": "string", "objective": "string" }',
-    '  ],',
+    '  "plan_title": "string",',
+    '  "plan_summary": "string",',
     '  "tasks": [',
     '    {',
     '      "title": "string",',
-    '      "phase": "string",',
     '      "description": "string",',
-    '      "owner": "string",',
-    '      "measurable_outcome": "string",',
-    '      "priority": "string"',
+    '      "phase": "string",',
+    '      "priority": "string",',
+    '      "recommended_timing": "string"',
     '    }',
-    '  ],',
-    '  "milestones": [',
-    '    { "title": "string", "timing": "string", "success_metric": "string" }',
-    '  ],',
-    '  "marketing_ideas": [',
-    '    { "idea": "string", "channel": "string", "effort": "string", "why_it_fits": "string" }',
-    '  ],',
-    '  "audience_profile": {',
-    '    "summary": "string",',
-    '    "age_range": "string",',
-    '    "locations": "string",',
-    '    "platforms": "string",',
-    '    "culture_signals": "string"',
-    '  },',
-    '  "playlist_suggestions": [',
-    '    { "playlist_type": "string", "rationale": "string", "pitch_angle": "string" }',
-    '  ],',
-    '  "assumptions": ["string"]',
+    '  ]',
     '}',
     '',
     'Rules:',
     '- No markdown.',
-    '- No additional keys.',
-    '- Use practical actions, not label-industry jargon.',
-    '- If budgetLevel is low, keep tactics lean and realistic.',
-    '- If teamType is solo artist, do not assign everything to a manager.',
-    '- If platforms are missing, still produce a workable plan.',
-    '- If releaseDate is missing, use relative windows like "Week 1", "2 weeks before release", or "Launch week".',
-    '- If contentAvailable is limited, suggest simple content the team can realistically make with a phone and basic editing.',
-    '- Tasks must be easy to convert into in-app tasks.',
-    '- Timeline phases must be concise and renderable as cards or rows.',
-    '- Prefer globally understandable English with practical wording.',
+    '- No extra keys.',
+    '- Tasks must be actionable.',
+    '- Tasks must be useful for real release execution.',
+    '- Keep the plan practical and organized by timing.',
+    '- Make tasks realistic, sequential, and useful for artists and managers.',
+    '- Avoid vague filler tasks.',
+    '- Phase should be one of: Strategy, Preparation, Content, Distribution, Promotion, Launch, Post-Launch.',
+    '- Priority should be one of: High, Medium, Low.',
+    '- recommended_timing must be human-readable.',
     '',
-    'Context JSON:',
+    'Input:',
     JSON.stringify(context),
   ].join('\n');
 };
@@ -172,7 +99,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  if (!isAiConfigured()) {
+  const aiConfig = getAiGatewayConfig();
+  if (!aiConfig) {
     return NextResponse.json({ error: 'AI model environment is not configured' }, { status: 500 });
   }
 
@@ -260,11 +188,13 @@ export async function POST(req: NextRequest) {
         : ''),
     teamType: toStringValue(rawInputs.teamType),
     platforms: toStringArray(rawInputs.platforms),
-    contentAvailable: toStringArray(rawInputs.contentAvailable),
+    contentAvailable: toStringArray(rawInputs.contentAvailable || rawInputs.availableAssets),
     listenerInterests: toStringValue(rawInputs.listenerInterests) || toStringValue(profile?.listener_interests),
     campaignNarrative: toStringValue(rawInputs.campaignNarrative) || toStringValue(profile?.campaign_narrative),
     songStage: toStringValue(rawInputs.songStage) || toStringValue(profile?.song_stage),
     notes: toStringValue(rawInputs.notes),
+    existingSteps: toStringValue(rawInputs.existingSteps || rawInputs.currentSteps || rawInputs.stepsText),
+    availableAssets: toStringArray(rawInputs.availableAssets || rawInputs.contentAvailable),
   };
 
   if (!mergedInputs.artistName && !mergedInputs.releaseTitle && !releaseId) {
@@ -274,44 +204,62 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const prompt = buildPlanPrompt({
+  const prompt = buildUserPrompt({
     release,
     release_profile: profile,
     inputs: mergedInputs,
   });
 
   try {
-    const plan = await generateStructuredAiOutput<ReleasePlanResult>({
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a precise music release planning engine. Output valid JSON only.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.3,
-      parse: (raw) => parseStructuredJson(raw, parseReleasePlanResult),
-      invalidFormatMessage: 'AI returned an invalid release plan format.',
-    });
-
-    const normalizedPlan = ensurePlanHasTasks(plan, {
-      artistName: mergedInputs.artistName,
-      releaseTitle: mergedInputs.releaseTitle,
-      goal: mergedInputs.goal,
-      teamType: mergedInputs.teamType,
-    });
-
-    return NextResponse.json({
-      plan: normalizedPlan,
-      context: {
-        releaseId: releaseId || null,
-        artistName: mergedInputs.artistName || null,
-        releaseTitle: mergedInputs.releaseTitle || null,
+    const response = await fetch(`${aiConfig.apiBase}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': aiConfig.apiKey,
       },
+      body: JSON.stringify({
+        model: AI_MODEL,
+        messages: [
+          {
+            role: 'system',
+            content: [
+              'You are a precise music release planning engine.',
+              'Return valid JSON only.',
+              'Do not use markdown.',
+              'Do not include any text outside the JSON object.',
+              'Generate practical, realistic, sequential release tasks for artists and managers.',
+              'Avoid generic advice and filler.',
+            ].join('\n'),
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        stream: false,
+        format: 'json',
+      }),
+      cache: 'no-store',
     });
+
+    if (!response.ok) {
+      throw new Error(`AI gateway request failed (${response.status})`);
+    }
+
+    const payload = (await response.json().catch(() => null)) as unknown;
+    const assistantText = extractAiAssistantText(payload);
+    if (!assistantText) {
+      throw new Error('AI gateway returned empty content');
+    }
+
+    const parsedPlan = parseReleaseTaskPlan(assistantText);
+    if (!parsedPlan) {
+      throw new Error(`AI returned an invalid task plan format. Raw content: ${assistantText.slice(0, 400)}`);
+    }
+
+    const normalizedPlan = normalizeReleaseTaskPlanResponse(parsedPlan as ReleaseTaskPlan);
+
+    return NextResponse.json(normalizedPlan);
   } catch (error) {
     return NextResponse.json(buildAiFailureResponse(error), { status: 502 });
   }
