@@ -334,7 +334,7 @@ export default function DashboardPage() {
   const [editingPlanTitle, setEditingPlanTitle] = useState('');
   const [savingInlinePlanId, setSavingInlinePlanId] = useState<string | null>(null);
   const [artists, setArtists] = useState<ArtistDirectoryItem[]>([]);
-  const [artistSearch] = useState('');
+  const [artistSearch, setArtistSearch] = useState('');
   const [artistForm, setArtistForm] = useState({ name: '', genre: '', notes: '' });
   const [editingArtistId, setEditingArtistId] = useState<string | null>(null);
   const [showGuideTooltip, setShowGuideTooltip] = useState(false);
@@ -342,7 +342,6 @@ export default function DashboardPage() {
   const [listenerProfileGeneratedAt, setListenerProfileGeneratedAt] = useState<string | null>(null);
   const setPlanFilter = (_value: 'active' | 'archived' | 'all') => {};
   const setPlanSort = (_value: 'newest' | 'oldest' | 'title_asc' | 'title_desc' | 'status') => {};
-  const setArtistSearch = (_value: string) => {};
   const pricingValidation: any = null;
   const pricingValidationLoading = false;
   const pricingValidationSubmitting = false;
@@ -386,6 +385,7 @@ export default function DashboardPage() {
       if (!restored || cancelled) return;
 
       setPlanSearch(restored.planSearch);
+      setArtistSearch(restored.artistSearch);
       setArtistForm(restored.artistForm);
     };
 
@@ -449,6 +449,7 @@ export default function DashboardPage() {
   const clearDashboardDrafts = () => {
     clearPersistedState(dashboardUiStateKey);
     void deleteUiDraft(DASHBOARD_UI_STATE_SCOPE, dashboardUiStateKey);
+    setArtistSearch('');
     setArtistForm({ name: '', genre: '', notes: '' });
     setEditingArtistId(null);
   };
