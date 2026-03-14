@@ -64,9 +64,6 @@ type DashboardUiState = {
   };
 };
 
-type PricingValidationResponse = unknown;
-type StoredPricingValidationResponse = unknown;
-
 const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000;
 const VIRTUALIZED_LIST_THRESHOLD = 12;
 const PLAN_MENU_WIDTH_PX = 190;
@@ -314,9 +311,9 @@ export default function DashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [planFilter] = useState<'active' | 'archived' | 'all'>('active');
+  const [planFilter, setPlanFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [planSearch, setPlanSearch] = useState('');
-  const [planSort] = useState<'newest' | 'oldest' | 'title_asc' | 'title_desc' | 'status'>('newest');
+  const [planSort, setPlanSort] = useState<'newest' | 'oldest' | 'title_asc' | 'title_desc' | 'status'>('newest');
   const [activePlanMenuId, setActivePlanMenuId] = useState<string | null>(null);
   const [activePlanMenuDirection, setActivePlanMenuDirection] = useState<'up' | 'down'>('down');
   const [activePlanMenuOffsetX, setActivePlanMenuOffsetX] = useState(0);
@@ -340,18 +337,6 @@ export default function DashboardPage() {
   const [showGuideTooltip, setShowGuideTooltip] = useState(false);
   const [listenerProfileExists, setListenerProfileExists] = useState(false);
   const [listenerProfileGeneratedAt, setListenerProfileGeneratedAt] = useState<string | null>(null);
-  const setPlanFilter = (_value: 'active' | 'archived' | 'all') => {};
-  const setPlanSort = (_value: 'newest' | 'oldest' | 'title_asc' | 'title_desc' | 'status') => {};
-  const pricingValidation: any = null;
-  const pricingValidationLoading = false;
-  const pricingValidationSubmitting = false;
-  const showPricingValidationEditor = false;
-  const setPricingValidation = (_value: unknown) => {};
-  const setPricingValidationLoading = (_value: boolean) => {};
-  const setPricingValidationSubmitting = (_value: boolean) => {};
-  const setShowPricingValidationEditor = (_value: boolean) => {};
-  const PricingValidationPrompt = (_props: Record<string, unknown>) => null;
-  const handlePricingValidationSubmit = async (_payload: unknown) => {};
   const activePlanForGuide = useMemo(
     () => plans.find((plan) => plan.status !== 'released') || plans[0] || null,
     [plans]
@@ -408,37 +393,6 @@ export default function DashboardPage() {
     void saveUiDraft<DashboardUiState>(DASHBOARD_UI_STATE_SCOPE, dashboardUiStateKey, draft);
   }, [artistForm, artistSearch, dashboardUiStateKey, planFilter, planSearch, planSort]);
 
-  useEffect(() => {
-    const hideDashboardChrome = () => {
-      const root = document.querySelector('main');
-      if (!root) return;
-
-      const cardTexts = ['Active', 'Archived', 'Overdue'];
-      const candidates = Array.from(root.querySelectorAll('section, div'));
-
-      candidates.forEach((element) => {
-        const text = (element.textContent || '').replace(/\s+/g, ' ').trim();
-        const isStatusCard =
-          text === 'Active' ||
-          text === 'Archived' ||
-          text === 'Overdue' ||
-          cardTexts.some((label) => text.startsWith(label) && text.length < 80);
-
-        if (isStatusCard) {
-          (element as HTMLElement).style.display = 'none';
-        }
-      });
-    };
-
-    const frame = window.requestAnimationFrame(hideDashboardChrome);
-    const timer = window.setTimeout(hideDashboardChrome, 400);
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.clearTimeout(timer);
-    };
-  }, []);
-
   const dismissGuideTooltip = () => {
     setShowGuideTooltip(false);
     if (guideTooltipSeenKey) {
@@ -463,10 +417,6 @@ export default function DashboardPage() {
 
   const activePlansCount = useMemo(() => plans.filter((plan) => plan.status !== 'released').length, [plans]);
   const archivedPlansCount = useMemo(() => plans.filter((plan) => plan.status === 'released').length, [plans]);
-  const overduePlansCount = useMemo(
-    () => plans.filter((plan) => getPlanStatus(plan) === 'Overdue').length,
-    [getPlanStatus, plans]
-  );
   const filteredPlans = useMemo(() => {
     const query = planSearch.trim().toLowerCase();
     const filterByStatus = (plan: PlanSummary) => {
@@ -725,83 +675,6 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, [hasSubscriptionAccess, user]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadPricingValidation = async () => {
-      if (!user || hasSubscriptionAccess === false) {
-        if (!cancelled) {
-          setPricingValidation(null);
-          setShowPricingValidationEditor(false);
-        }
-        return;
-      }
-
-      setPricingValidationLoading(true);
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const token = session?.access_token || '';
-        if (!token) return;
-        const response = await fetch('/api/pricing-validation', {
-          method: 'GET',
-          headers: { Authorization: `Bearer ${token}` },
-          cache: 'no-store',
-        });
-        const payload = (await response.json().catch(() => ({}))) as {
-          response?: StoredPricingValidationResponse | null;
-        };
-        if (!response.ok || cancelled) return;
-        setPricingValidation(payload.response || null);
-      } finally {
-        if (!cancelled) {
-          setPricingValidationLoading(false);
-        }
-      }
-    };
-
-    void loadPricingValidation();
-    return () => {
-      cancelled = true;
-    };
-  }, [hasSubscriptionAccess, user]);
-
-  const submitPricingValidation = async (payload: PricingValidationResponse) => {
-    setPricingValidationSubmitting(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token || '';
-      if (!token) throw new Error('Session expired. Please sign in again.');
-
-      const response = await fetch('/api/pricing-validation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      const result = (await response.json().catch(() => ({}))) as {
-        response?: StoredPricingValidationResponse;
-        error?: string;
-      };
-      if (!response.ok || !result.response) {
-        throw new Error(result.error || 'Could not save pricing validation response.');
-      }
-
-      setPricingValidation(result.response);
-      setShowPricingValidationEditor(false);
-      setError('');
-    } catch (saveError: any) {
-      setError(saveError?.message || 'Could not save pricing validation response.');
-    } finally {
-      setPricingValidationSubmitting(false);
-    }
-  };
 
   const createNewPlan = async () => {
     if (!user || isCreatingPlan) return;
@@ -1245,26 +1118,8 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
-          {hasSubscriptionAccess !== false && !loading && (
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="saas-panel-subtle p-4">
-                <p className="text-xs uppercase tracking-wide text-content-tertiary">Active</p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight text-content-primary">{activePlansCount}</p>
-              </div>
-              <div className="saas-panel-subtle p-4">
-                <p className="text-xs uppercase tracking-wide text-content-tertiary">Archived</p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight text-content-primary">{archivedPlansCount}</p>
-              </div>
-              <div className="saas-panel-subtle p-4">
-                <p className="text-xs uppercase tracking-wide text-content-tertiary">Overdue</p>
-                <p className={`mt-1 text-2xl font-semibold tracking-tight ${overduePlansCount > 0 ? 'text-status-warning' : 'text-content-primary'}`}>
-                  {overduePlansCount}
-                </p>
-              </div>
-            </div>
-          )}
-          {hasSubscriptionAccess !== false && (
-            <section className="saas-panel mt-6 p-5">
+            {hasSubscriptionAccess !== false && (
+              <section className="saas-panel mt-6 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 rounded-xl border border-stroke-default bg-bg-surface/90 p-2 text-content-secondary">
@@ -1293,59 +1148,8 @@ export default function DashboardPage() {
               </div>
             </section>
           )}
-          {hasSubscriptionAccess !== false && (
-            <section className="mt-6">
-              {pricingValidation && !showPricingValidationEditor ? (
-                <div className="saas-panel p-5 sm:p-6">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="max-w-2xl">
-                      <p className="saas-eyebrow">Validation research</p>
-                      <h2 className="saas-title mt-2">Monthly subscription intent</h2>
-                      <p className="mt-2 text-sm text-content-secondary">
-                        Saved response: <span className="font-semibold text-content-primary">{pricingValidation.willingness === 'yes' ? 'Yes, monthly' : pricingValidation.willingness === 'maybe' ? 'Maybe' : 'Not right now'}</span>
-                        {' • '}
-                        Price comfort: <span className="font-semibold text-content-primary">{pricingValidation.priceBand ? pricingValidation.priceBand.replace('under-', 'Under NGN ').replace('5000-10000', 'NGN 5,000 - 10,000').replace('10000-plus', 'Above NGN 10,000').replace('not-sure', 'Not sure yet') : 'Not shared yet'}</span>
-                      </p>
-                      <p className="mt-3 text-sm leading-7 text-content-secondary">
-                        This response helps validate whether mastering, release planning, listener insight, consultations, marketing support, and centralized execution justify a monthly subscription.
-                      </p>
-                      {pricingValidation.notes && (
-                        <p className="mt-3 rounded-2xl border border-stroke-default bg-bg-elevated/55 px-4 py-3 text-sm text-content-secondary">
-                          {pricingValidation.notes}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-start gap-2">
-                      <span className="rounded-full border border-stroke-default bg-bg-elevated/85 px-3 py-1.5 text-xs font-medium text-content-secondary">
-                        Updated {new Date(pricingValidation.updatedAt).toLocaleString()}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setShowPricingValidationEditor(true)}
-                        className="rounded-xl border border-brand/45 bg-brand-muted px-4 py-2 text-sm font-semibold text-content-primary transition hover:bg-brand/20"
-                      >
-                        Update response
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <PricingValidationPrompt
-                  placement="dashboard"
-                  variant="dashboard"
-                  title="Would this be worth paying for monthly if it kept release work stress-free?"
-                  subtitle="Best dashboard placement: directly under strategy cards, where users already evaluate plan quality and product usefulness."
-                  submitLabel="Save response"
-                  response={pricingValidation}
-                  isBusy={pricingValidationSubmitting || pricingValidationLoading}
-                  onSkip={() => setShowPricingValidationEditor(false)}
-                  onSubmit={submitPricingValidation}
-                />
-              )}
-            </section>
-          )}
-          {hasSubscriptionAccess !== false && user?.role === 'manager' && (
-            <section className="saas-panel mt-6 p-5">
+            {hasSubscriptionAccess !== false && user?.role === 'manager' && (
+              <section className="saas-panel mt-6 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-content-tertiary">Artist Directory</h2>
