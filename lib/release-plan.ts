@@ -56,6 +56,24 @@ const isStringRecord = (value: unknown): value is Record<string, unknown> => Boo
 
 const parseString = (value: unknown): string => String(value || '').trim();
 
+const pickValue = (record: Record<string, unknown>, keys: string[]): unknown => {
+  for (const key of keys) {
+    if (key in record) {
+      return record[key];
+    }
+  }
+
+  return '';
+};
+
+const parseJoinedString = (value: unknown): string => {
+  if (Array.isArray(value)) {
+    return value.map(parseString).filter(Boolean).join(', ');
+  }
+
+  return parseString(value);
+};
+
 const parseObjectArray = <T>(
   value: unknown,
   map: (item: Record<string, unknown>) => T | null
@@ -68,57 +86,65 @@ const parseObjectArray = <T>(
 
 export const parseReleasePlanResult = (value: unknown): ReleasePlanResult | null => {
   if (!isStringRecord(value)) return null;
+  const audienceProfileValue = pickValue(value, ['audience_profile', 'audienceProfile']);
+  const audienceProfile = isStringRecord(audienceProfileValue) ? audienceProfileValue : null;
 
   const result: ReleasePlanResult = {
-    summary: parseString(value.summary),
-    release_strategy: parseString(value.release_strategy),
-    timeline_phases: parseObjectArray(value.timeline_phases, (item) => {
-      const phase = parseString(item.phase);
-      const window = parseString(item.window);
-      const objective = parseString(item.objective);
+    summary: parseString(pickValue(value, ['summary', 'plan_summary', 'overview'])),
+    release_strategy: parseString(pickValue(value, ['release_strategy', 'releaseStrategy', 'strategy'])),
+    timeline_phases: parseObjectArray(pickValue(value, ['timeline_phases', 'timelinePhases', 'timeline']), (item) => {
+      const phase = parseString(pickValue(item, ['phase', 'title', 'name']));
+      const window = parseString(pickValue(item, ['window', 'timing', 'period']));
+      const objective = parseString(pickValue(item, ['objective', 'goal', 'focus']));
       if (!phase || !window || !objective) return null;
       return { phase, window, objective };
     }),
-    tasks: parseObjectArray(value.tasks, (item) => {
-      const title = parseString(item.title);
-      const phase = parseString(item.phase);
-      const description = parseString(item.description);
-      const owner = parseString(item.owner);
-      const measurable_outcome = parseString(item.measurable_outcome);
-      const priority = parseString(item.priority);
-      if (!title || !phase || !description || !owner || !measurable_outcome || !priority) return null;
+    tasks: parseObjectArray(pickValue(value, ['tasks', 'action_items', 'actions']), (item) => {
+      const title = parseString(pickValue(item, ['title', 'task', 'name']));
+      const phase = parseString(pickValue(item, ['phase', 'stage'])) || 'Plan';
+      const description = parseString(pickValue(item, ['description', 'details', 'action']));
+      const owner = parseString(pickValue(item, ['owner', 'assignee', 'assigned_to'])) || 'Team';
+      const measurable_outcome =
+        parseString(pickValue(item, ['measurable_outcome', 'measurableOutcome', 'outcome', 'success_metric'])) ||
+        'Task completed and ready for review.';
+      const priority = parseString(pickValue(item, ['priority', 'importance'])) || 'Medium';
+      if (!title || !description) return null;
       return { title, phase, description, owner, measurable_outcome, priority };
     }),
-    milestones: parseObjectArray(value.milestones, (item) => {
-      const title = parseString(item.title);
-      const timing = parseString(item.timing);
-      const success_metric = parseString(item.success_metric);
+    milestones: parseObjectArray(pickValue(value, ['milestones', 'checkpoints']), (item) => {
+      const title = parseString(pickValue(item, ['title', 'milestone', 'name']));
+      const timing = parseString(pickValue(item, ['timing', 'window', 'when']));
+      const success_metric = parseString(pickValue(item, ['success_metric', 'successMetric', 'metric']));
       if (!title || !timing || !success_metric) return null;
       return { title, timing, success_metric };
     }),
-    marketing_ideas: parseObjectArray(value.marketing_ideas, (item) => {
-      const idea = parseString(item.idea);
-      const channel = parseString(item.channel);
-      const effort = parseString(item.effort);
-      const why_it_fits = parseString(item.why_it_fits);
+    marketing_ideas: parseObjectArray(pickValue(value, ['marketing_ideas', 'marketingIdeas', 'content_ideas']), (item) => {
+      const idea = parseString(pickValue(item, ['idea', 'title', 'concept']));
+      const channel = parseString(pickValue(item, ['channel', 'platform']));
+      const effort = parseString(pickValue(item, ['effort', 'format', 'level']));
+      const why_it_fits = parseString(pickValue(item, ['why_it_fits', 'whyItFits', 'rationale']));
       if (!idea || !channel || !effort || !why_it_fits) return null;
       return { idea, channel, effort, why_it_fits };
     }),
     audience_profile: {
-      summary: parseString(isStringRecord(value.audience_profile) ? value.audience_profile.summary : ''),
-      age_range: parseString(isStringRecord(value.audience_profile) ? value.audience_profile.age_range : ''),
-      locations: parseString(isStringRecord(value.audience_profile) ? value.audience_profile.locations : ''),
-      platforms: parseString(isStringRecord(value.audience_profile) ? value.audience_profile.platforms : ''),
-      culture_signals: parseString(isStringRecord(value.audience_profile) ? value.audience_profile.culture_signals : ''),
+      summary: parseString(audienceProfile?.summary),
+      age_range: parseString(audienceProfile?.age_range ?? audienceProfile?.ageRange),
+      locations: parseJoinedString(audienceProfile?.locations),
+      platforms: parseJoinedString(audienceProfile?.platforms),
+      culture_signals: parseJoinedString(audienceProfile?.culture_signals ?? audienceProfile?.cultureSignals),
     },
-    playlist_suggestions: parseObjectArray(value.playlist_suggestions, (item) => {
-      const playlist_type = parseString(item.playlist_type);
-      const rationale = parseString(item.rationale);
-      const pitch_angle = parseString(item.pitch_angle);
+    playlist_suggestions: parseObjectArray(
+      pickValue(value, ['playlist_suggestions', 'playlistSuggestions', 'playlists']),
+      (item) => {
+      const playlist_type = parseString(pickValue(item, ['playlist_type', 'playlistType', 'type']));
+      const rationale = parseString(pickValue(item, ['rationale', 'reason']));
+      const pitch_angle = parseString(pickValue(item, ['pitch_angle', 'pitchAngle', 'angle']));
       if (!playlist_type || !rationale || !pitch_angle) return null;
       return { playlist_type, rationale, pitch_angle };
     }),
-    assumptions: Array.isArray(value.assumptions) ? value.assumptions.map(parseString).filter(Boolean) : [],
+    assumptions: Array.isArray(pickValue(value, ['assumptions', 'notes']))
+      ? (pickValue(value, ['assumptions', 'notes']) as unknown[]).map(parseString).filter(Boolean)
+      : [],
   };
 
   const hasCoreContent =

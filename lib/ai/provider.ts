@@ -162,6 +162,8 @@ const requestAiGateway = async ({
       body: JSON.stringify({
         model: AI_MODEL,
         messages,
+        stream: false,
+        format: 'json',
       }),
       signal: controller.signal,
     });

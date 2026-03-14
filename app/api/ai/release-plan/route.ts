@@ -64,6 +64,46 @@ const toStringArray = (value: unknown): string[] => {
   return single ? [single] : [];
 };
 
+const ensurePlanHasTasks = (
+  plan: ReleasePlanResult,
+  context: {
+    artistName: string;
+    releaseTitle: string;
+    goal: string;
+    teamType: string;
+  }
+): ReleasePlanResult => {
+  if (Array.isArray(plan.tasks) && plan.tasks.length > 0) {
+    return {
+      ...plan,
+      tasks: plan.tasks.map((task) => ({
+        ...task,
+        phase: task.phase || 'Plan',
+        owner: task.owner || (context.teamType === 'solo artist' ? 'Artist' : 'Team'),
+        priority: task.priority || 'Medium',
+        measurable_outcome: task.measurable_outcome || 'Task completed and reviewed.',
+      })),
+    };
+  }
+
+  const subject = context.releaseTitle || context.artistName || 'this release';
+  const objective = context.goal || `build a release plan for ${subject}`;
+
+  return {
+    ...plan,
+    tasks: [
+      {
+        title: `Define the launch message for ${subject}`.slice(0, 120),
+        phase: 'Plan',
+        description: `Write one clear campaign brief for ${subject} focused on this objective: ${objective}.`,
+        owner: context.teamType === 'solo artist' ? 'Artist' : 'Team',
+        measurable_outcome: 'A one-paragraph launch brief is written and ready to guide content and rollout.',
+        priority: 'High',
+      },
+    ],
+  };
+};
+
 const buildPlanPrompt = (context: Record<string, unknown>): string => {
   return [
     'You are a release strategy planner for independent music teams.',
@@ -254,10 +294,18 @@ export async function POST(req: NextRequest) {
       ],
       temperature: 0.3,
       parse: (raw) => parseStructuredJson(raw, parseReleasePlanResult),
+      invalidFormatMessage: 'AI returned an invalid release plan format.',
+    });
+
+    const normalizedPlan = ensurePlanHasTasks(plan, {
+      artistName: mergedInputs.artistName,
+      releaseTitle: mergedInputs.releaseTitle,
+      goal: mergedInputs.goal,
+      teamType: mergedInputs.teamType,
     });
 
     return NextResponse.json({
-      plan,
+      plan: normalizedPlan,
       context: {
         releaseId: releaseId || null,
         artistName: mergedInputs.artistName || null,

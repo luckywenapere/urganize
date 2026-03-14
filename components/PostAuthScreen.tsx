@@ -31,6 +31,22 @@ type ReleasePlanApiResponse = {
   detail?: string;
 };
 
+const selectAiErrorMessage = (error: string | null | undefined, detail: string | null | undefined, fallback: string): string => {
+  const normalizedError = String(error || '').trim();
+  const normalizedDetail = String(detail || '').trim();
+
+  if (
+    /^(ai service unavailable|task generation failed|listener profile generation failed|release plan generation failed)$/i.test(
+      normalizedError
+    ) &&
+    normalizedDetail
+  ) {
+    return normalizedDetail;
+  }
+
+  return toAiUiErrorMessage(normalizedError, fallback);
+};
+
 const GENRE_OPTIONS = [
   'Afrobeats',
   'Afro-fusion',
@@ -1757,8 +1773,9 @@ export function PostAuthScreen() {
 
     if (!releasePlanResponse.ok) {
       throw new Error(
-        toAiUiErrorMessage(
+        selectAiErrorMessage(
           generatedPayload.error,
+          generatedPayload.detail,
           'Release plan generation failed after retries. Please generate again.'
         )
       );
