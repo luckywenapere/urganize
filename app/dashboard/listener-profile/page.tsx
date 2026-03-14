@@ -34,6 +34,7 @@ type ResultResponse = {
   persona?: ListenerPersonaResult | null;
   generatedAt?: string | null;
   error?: string;
+  detail?: string;
   sql?: string;
 };
 
@@ -84,6 +85,17 @@ const toAiUiErrorMessage = (error: string | null | undefined, fallback: string):
   if (/we could not generate the listener persona right now\. please try again\./i.test(message)) return message;
   if (/ai service unavailable/i.test(message)) return message;
   return fallback;
+};
+
+const selectPersonaErrorMessage = (error: string | null | undefined, detail: string | null | undefined, fallback: string): string => {
+  const normalizedError = String(error || '').trim();
+  const normalizedDetail = String(detail || '').trim();
+
+  if (/we could not generate the listener persona right now\. please try again\./i.test(normalizedError) && normalizedDetail) {
+    return normalizedDetail;
+  }
+
+  return toAiUiErrorMessage(normalizedError, fallback);
 };
 
 export default function ListenerProfilePage() {
@@ -399,11 +411,12 @@ export default function ListenerProfilePage() {
         persona?: ListenerPersonaResult;
         generatedAt?: string | null;
         error?: string;
+        detail?: string;
         sql?: string;
       };
       if (!response.ok) {
         setError(
-          toAiUiErrorMessage(payload.error, 'Could not generate ideal listener profile.')
+          selectPersonaErrorMessage(payload.error, payload.detail, 'Could not generate ideal listener profile.')
         );
         if (response.status === 501 && payload.sql) setSchemaSql(payload.sql);
         setMode('review');

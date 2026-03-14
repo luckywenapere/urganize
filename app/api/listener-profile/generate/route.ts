@@ -48,6 +48,8 @@ type ZuploChatResponse = {
   message?: {
     content?: string;
   };
+  response?: string;
+  text?: string;
 };
 
 const getAiGatewayConfig = () => {
@@ -61,22 +63,12 @@ const getAiGatewayConfig = () => {
   return { apiKey, apiBase };
 };
 
-const parsePersonaPayload = (rawContent: string): ListenerPersonaResult | null => {
-  const normalized = String(rawContent || '').trim();
-  if (!normalized) return null;
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(normalized);
-  } catch {
+const parsePersonaObject = (value: unknown): ListenerPersonaResult | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
   }
 
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    return null;
-  }
-
-  const record = parsed as Record<string, unknown>;
+  const record = value as Record<string, unknown>;
   const keys = Object.keys(record);
   if (keys.length !== PERSONA_KEYS.length) {
     return null;
@@ -90,14 +82,48 @@ const parsePersonaPayload = (rawContent: string): ListenerPersonaResult | null =
 
   const output = { ...EMPTY_LISTENER_PERSONA_RESULT };
   for (const key of PERSONA_KEYS) {
-    const value = record[key];
-    if (typeof value !== 'string') {
+    const fieldValue = record[key];
+    if (typeof fieldValue !== 'string') {
       return null;
     }
-    output[key] = value.trim();
+    output[key] = fieldValue.trim();
   }
 
   return parseListenerPersonaResult(output);
+};
+
+const parsePersonaPayload = (rawContent: string): ListenerPersonaResult | null => {
+  const normalized = String(rawContent || '').trim();
+  if (!normalized) return null;
+
+  const cleaned = normalized
+    .replace(/^```json/i, '')
+    .replace(/^```/i, '')
+    .replace(/```$/i, '')
+    .trim();
+
+  const parseCandidate = (candidate: string): ListenerPersonaResult | null => {
+    try {
+      const firstPass = JSON.parse(candidate) as unknown;
+      const parsed = typeof firstPass === 'string' ? JSON.parse(firstPass) : firstPass;
+      return parsePersonaObject(parsed);
+    } catch {
+      return null;
+    }
+  };
+
+  const direct = parseCandidate(cleaned);
+  if (direct) {
+    return direct;
+  }
+
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    return parseCandidate(cleaned.slice(firstBrace, lastBrace + 1));
+  }
+
+  return null;
 };
 
 const buildPrompt = (inputs: Record<string, string | null>): string => {
@@ -215,10 +241,10 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = (await response.json().catch(() => null)) as ZuploChatResponse | null;
-    const content = String(payload?.message?.content || '').trim();
+    const content = String(payload?.message?.content || payload?.response || payload?.text || '').trim();
     const parsedPersona = parsePersonaPayload(content);
     if (!parsedPersona) {
-      throw new Error('Listener persona response did not match the expected JSON schema');
+      throw new Error(`Listener persona response did not match the expected JSON schema. Raw content: ${content.slice(0, 400)}`);
     }
     generated = parsedPersona;
   } catch (error) {
