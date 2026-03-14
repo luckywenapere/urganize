@@ -8,6 +8,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { getRolePermissions } from '@/lib/role-permissions';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import type { ReleasePlanResult } from '@/lib/release-plan';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 import { WorkspaceSection, type WorkspaceTab } from '@/components/dashboard/workspace/WorkspaceSection';
 
@@ -87,6 +88,12 @@ type DistributionChecklistItem = {
   done: boolean;
 };
 
+type WorkspacePlanSnapshot = ReleasePlanResult;
+type ReleasePlanApiResponse = {
+  plan?: ReleasePlanResult;
+  error?: string;
+};
+
 type AssetCategory = (typeof ASSET_CATEGORIES)[number];
 
 type AssetItem = {
@@ -145,6 +152,25 @@ const addDaysIso = (base: string | Date, days: number): string => {
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
 const sanitizeFileName = (value: string): string => value.replace(/[^a-zA-Z0-9._-]/g, '_');
 const prettyAssetCategory = (category: AssetCategory): string => category.replace(/_/g, ' ');
+const slugify = (value: string): string =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+const mapPlanPhaseToTaskPhase = (phase: string): 'pre-production' | 'production' | 'promotion' | 'distribution' => {
+  const normalized = phase.toLowerCase();
+  if (normalized.includes('launch') || normalized.includes('release') || normalized.includes('distribution')) {
+    return 'distribution';
+  }
+  if (normalized.includes('promo') || normalized.includes('marketing') || normalized.includes('content')) {
+    return 'promotion';
+  }
+  if (normalized.includes('record') || normalized.includes('mix') || normalized.includes('master') || normalized.includes('production')) {
+    return 'production';
+  }
+  return 'pre-production';
+};
 const isWorkspaceUiState = (value: unknown): value is WorkspaceUiState => {
   if (!value || typeof value !== 'object') return false;
   const state = value as Partial<WorkspaceUiState>;
@@ -208,6 +234,7 @@ export default function PlanDashboardPage() {
   const [nextTask, setNextTask] = useState('No active task');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSavingBasics, setIsSavingBasics] = useState(false);
+  const [isRegeneratingPlan, setIsRegeneratingPlan] = useState(false);
   const [isPlanMenuOpen, setIsPlanMenuOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -224,6 +251,7 @@ export default function PlanDashboardPage() {
   const [distributionItems, setDistributionItems] = useState<DistributionChecklistItem[]>(
     DEFAULT_DISTRIBUTION_CHECKLIST.map((item) => ({ ...item }))
   );
+  const [planSnapshot, setPlanSnapshot] = useState<WorkspacePlanSnapshot | null>(null);
   const [newMarketing, setNewMarketing] = useState({
     platform: '',
     contentType: '',
@@ -481,6 +509,7 @@ export default function PlanDashboardPage() {
       const savedPlaylist = readJson<PlaylistTrackerItem[]>('playlist');
       const savedDistribution = readJson<DistributionChecklistItem[]>('distribution');
       const savedCustomTasks = readJson<CustomTaskItem[]>('customTasks');
+      const savedPlanSnapshot = readJson<WorkspacePlanSnapshot | null>('planSnapshot');
       const savedUiState = readPersistedState<WorkspaceUiState>(
         workspaceUiStateKey,
         WORKSPACE_UI_STATE_VERSION,
@@ -490,12 +519,13 @@ export default function PlanDashboardPage() {
 
       setMarketingItems(Array.isArray(savedMarketing) ? savedMarketing : []);
       setPlaylistItems(Array.isArray(savedPlaylist) ? savedPlaylist : []);
-    setDistributionItems(
-      Array.isArray(savedDistribution) && savedDistribution.length > 0
+      setDistributionItems(
+        Array.isArray(savedDistribution) && savedDistribution.length > 0
           ? savedDistribution
           : DEFAULT_DISTRIBUTION_CHECKLIST.map((item) => ({ ...item }))
       );
       setCustomTaskItems(normalizeCustomTasks(savedCustomTasks));
+      setPlanSnapshot(savedPlanSnapshot && typeof savedPlanSnapshot === 'object' ? savedPlanSnapshot : null);
       if (savedUiState) {
         setActiveWorkspaceTab(savedUiState.activeWorkspaceTab);
         setNewMarketing(savedUiState.newMarketing);
@@ -522,6 +552,11 @@ export default function PlanDashboardPage() {
     if (!workspaceStoragePrefix) return;
     localStorage.setItem(`${workspaceStoragePrefix}.distribution`, JSON.stringify(distributionItems));
   }, [distributionItems, workspaceStoragePrefix]);
+
+  useEffect(() => {
+    if (!workspaceStoragePrefix) return;
+    localStorage.setItem(`${workspaceStoragePrefix}.planSnapshot`, JSON.stringify(planSnapshot));
+  }, [planSnapshot, workspaceStoragePrefix]);
 
   useEffect(() => {
     if (!workspaceStoragePrefix) return;
@@ -598,6 +633,7 @@ export default function PlanDashboardPage() {
             marketingItems,
             playlistItems,
             distributionItems,
+            planSnapshot,
           }),
         });
 
@@ -622,7 +658,7 @@ export default function PlanDashboardPage() {
         clearTimeout(workspaceSyncTimerRef.current);
       }
     };
-  }, [distributionItems, marketingItems, planId, playlistItems, user?.id, workspaceSyncMode]);
+  }, [distributionItems, marketingItems, planId, planSnapshot, playlistItems, user?.id, workspaceSyncMode]);
 
   const timelineMetrics = useMemo(() => {
     const now = Date.now();
@@ -734,6 +770,7 @@ export default function PlanDashboardPage() {
         marketingItems?: MarketingCalendarItem[];
         playlistItems?: PlaylistTrackerItem[];
         distributionItems?: DistributionChecklistItem[];
+        planSnapshot?: WorkspacePlanSnapshot | null;
       };
     };
 
@@ -745,6 +782,7 @@ export default function PlanDashboardPage() {
         ? workspace.distributionItems
         : DEFAULT_DISTRIBUTION_CHECKLIST.map((item) => ({ ...item }))
     );
+    setPlanSnapshot(workspace.planSnapshot && typeof workspace.planSnapshot === 'object' ? workspace.planSnapshot : null);
     setWorkspaceSyncMode('database');
     setWorkspaceSyncMessage('');
     workspaceHydratedRef.current = true;
@@ -836,6 +874,149 @@ export default function PlanDashboardPage() {
       setError(saveError?.message || 'Could not save plan details');
     } finally {
       setIsSavingBasics(false);
+    }
+  };
+
+  const regeneratePlan = async () => {
+    if (!planId || !user?.id || !permissions.canManagePlans || isRegeneratingPlan) return;
+
+    setIsRegeneratingPlan(true);
+    setError('');
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        throw new Error('Session expired. Sign in again and retry.');
+      }
+
+      const response = await fetch('/api/ai/release-plan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ releaseId: planId }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as ReleasePlanApiResponse;
+      if (!response.ok || !payload.plan) {
+        throw new Error(payload.error || 'Could not regenerate release plan.');
+      }
+
+      const nextPlan = payload.plan;
+      const { data: existingTaskRows, error: existingTaskRowsError } = await supabase
+        .from('ai_tasks')
+        .select('id,status,order_index')
+        .eq('release_id', planId);
+      if (existingTaskRowsError) throw existingTaskRowsError;
+
+      const completedExistingCount = (existingTaskRows || []).filter((task) => task.status === 'completed').length;
+      const maxCompletedOrderIndex = (existingTaskRows || [])
+        .filter((task) => task.status === 'completed')
+        .reduce((max, task) => Math.max(max, Number(task.order_index ?? -1)), -1);
+
+      const { error: deleteTasksError } = await supabase
+        .from('ai_tasks')
+        .delete()
+        .eq('release_id', planId)
+        .in('status', ['current', 'pending']);
+      if (deleteTasksError) throw deleteTasksError;
+
+      const generatedTasks = nextPlan.tasks.map((task, index) => {
+        const measurableOutcome = task.measurable_outcome.trim();
+        const description = task.description.trim();
+        const owner = task.owner.trim();
+        const priority = task.priority.trim();
+        const phaseLabel = task.phase.trim();
+        return {
+          release_id: planId,
+          user_id: user.id,
+          title: task.title.trim(),
+          description: `${description}\n\nOwner: ${owner || 'Team'}\nPriority: ${priority || 'Medium'}\nMeasurable outcome: ${measurableOutcome}`,
+          why_it_matters: `Phase: ${phaseLabel || 'Plan'}\nMeasurable outcome: ${measurableOutcome}`,
+          input_type: 'text',
+          status: index === 0 ? 'current' : 'pending',
+          phase: mapPlanPhaseToTaskPhase(phaseLabel),
+          order_index: maxCompletedOrderIndex + 1 + index,
+        };
+      });
+
+      const { error: insertTasksError } = await supabase.from('ai_tasks').insert(generatedTasks);
+      if (insertTasksError) throw insertTasksError;
+
+      const marketingSeed = nextPlan.marketing_ideas.slice(0, 8).map((idea, index) => ({
+        id: `marketing-${index + 1}-${slugify(idea.channel || idea.idea || 'idea')}`,
+        platform: idea.channel || 'Campaign',
+        contentType: idea.effort || 'Execution idea',
+        captionIdea: idea.idea || idea.why_it_fits || '',
+        publishDate: '',
+        owner: 'Team',
+      }));
+
+      const playlistSeed = nextPlan.playlist_suggestions.slice(0, 8).map((entry, index) => ({
+        id: `playlist-${index + 1}-${slugify(entry.playlist_type || 'playlist')}`,
+        curator: entry.playlist_type || `Playlist ${index + 1}`,
+        platform: 'Streaming',
+        submissionDate: '',
+        status: 'Not Submitted' as const,
+        notes: [entry.rationale, entry.pitch_angle].filter(Boolean).join(' | '),
+      }));
+
+      const distributionSeed = [
+        { id: 'metadata_complete', label: 'Metadata complete', done: false },
+        { id: 'cover_art_approved', label: 'Cover art approved', done: false },
+        { id: 'audio_approved', label: 'Audio approved', done: false },
+        { id: 'submission_complete', label: 'Distributor submission complete', done: false },
+        ...nextPlan.timeline_phases.slice(0, 3).map((phase, index) => ({
+          id: `phase-${index + 1}-${slugify(phase.phase)}`,
+          label: `${phase.phase}: ${phase.objective}`,
+          done: false,
+        })),
+      ];
+
+      const workspaceResponse = await fetch(`/api/plans/${planId}/workspace`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          marketingItems: marketingSeed,
+          playlistItems: playlistSeed,
+          distributionItems: distributionSeed,
+          planSnapshot: nextPlan,
+        }),
+      });
+      if (!workspaceResponse.ok && workspaceResponse.status !== 501) {
+        const workspacePayload = (await workspaceResponse.json().catch(() => ({}))) as { error?: string };
+        throw new Error(workspacePayload.error || 'Could not save regenerated workspace plan.');
+      }
+
+      const { data: refreshedTaskRows, error: refreshedTaskRowsError } = await supabase
+        .from('ai_tasks')
+        .select('id,title,description,status,order_index')
+        .eq('release_id', planId)
+        .order('order_index', { ascending: true })
+        .limit(12);
+      if (refreshedTaskRowsError) throw refreshedTaskRowsError;
+
+      setPlanSnapshot(nextPlan);
+      setMarketingItems(marketingSeed);
+      setPlaylistItems(playlistSeed);
+      setDistributionItems(distributionSeed);
+      setTaskBoardItems((refreshedTaskRows || []) as TaskBoardItem[]);
+      setNextTask(nextPlan.tasks[0]?.title || 'No active task');
+      setCompletedTasks(completedExistingCount);
+      setTotalTasks(completedExistingCount + nextPlan.tasks.length);
+      setWorkspaceSyncMode(workspaceResponse.status === 501 ? 'local' : 'database');
+      setWorkspaceSyncMessage(
+        workspaceResponse.status === 501
+          ? 'Workspace table is not configured yet. Using local workspace drafts.'
+          : ''
+      );
+    } catch (regenerationError: any) {
+      setError(regenerationError?.message || 'Could not regenerate release plan.');
+    } finally {
+      setIsRegeneratingPlan(false);
     }
   };
 
@@ -1112,10 +1293,100 @@ export default function PlanDashboardPage() {
                     Refreshing...
                   </div>
                 )}
+                {permissions.canManagePlans && !planSnapshot && (
+                  <button
+                    type="button"
+                    onClick={regeneratePlan}
+                    disabled={isRegeneratingPlan}
+                    className="inline-flex items-center rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs font-medium text-content-primary hover:bg-bg-hover disabled:opacity-60"
+                  >
+                    {isRegeneratingPlan ? 'Generating strategy...' : 'Generate Strategy Snapshot'}
+                  </button>
+                )}
               </div>
             </section>
 
             <section className="mt-8 rounded-2xl border border-stroke-default bg-bg-surface p-6">
+              {planSnapshot && (
+                <section className="mb-8 rounded-2xl border border-stroke-default bg-bg-surface p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-content-tertiary">AI Release Strategy</p>
+                      <h2 className="mt-2 text-2xl font-semibold tracking-tight text-content-primary">Structured Plan Snapshot</h2>
+                      <p className="mt-2 max-w-3xl text-sm text-content-secondary">
+                        {planSnapshot.summary || planSnapshot.release_strategy || 'Structured release plan available.'}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-brand/35 bg-brand-muted px-3 py-1 text-xs font-medium text-content-primary">
+                        {planSnapshot.tasks.length} tasks seeded
+                      </span>
+                      {permissions.canManagePlans && (
+                        <button
+                          type="button"
+                          onClick={regeneratePlan}
+                          disabled={isRegeneratingPlan}
+                          className="rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2 text-xs font-semibold text-content-primary hover:bg-bg-hover disabled:opacity-60"
+                        >
+                          {isRegeneratingPlan ? 'Regenerating...' : 'Regenerate Plan'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {planSnapshot.release_strategy && (
+                    <div className="mt-5 rounded-xl border border-stroke-subtle bg-bg-elevated p-4">
+                      <p className="text-xs uppercase tracking-wide text-content-tertiary">Strategy Angle</p>
+                      <p className="mt-2 text-sm text-content-secondary">{planSnapshot.release_strategy}</p>
+                    </div>
+                  )}
+
+                  {planSnapshot.timeline_phases.length > 0 && (
+                    <div className="mt-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-content-tertiary">Timeline Phases</h3>
+                        <span className="text-xs text-content-secondary">{planSnapshot.timeline_phases.length} phases</span>
+                      </div>
+                      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        {planSnapshot.timeline_phases.map((phase) => (
+                          <article key={`${phase.phase}-${phase.window}`} className="rounded-xl border border-stroke-subtle bg-bg-elevated p-4">
+                            <p className="text-xs uppercase tracking-wide text-content-tertiary">{phase.window}</p>
+                            <h4 className="mt-2 text-base font-semibold text-content-primary">{phase.phase}</h4>
+                            <p className="mt-2 text-sm text-content-secondary">{phase.objective}</p>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+                    <article className="rounded-xl border border-stroke-subtle bg-bg-elevated p-4">
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-content-tertiary">Audience Snapshot</h3>
+                      <div className="mt-3 space-y-2 text-sm text-content-secondary">
+                        <p>{planSnapshot.audience_profile.summary || '-'}</p>
+                        <p><span className="text-content-tertiary">Age:</span> {planSnapshot.audience_profile.age_range || '-'}</p>
+                        <p><span className="text-content-tertiary">Locations:</span> {planSnapshot.audience_profile.locations || '-'}</p>
+                        <p><span className="text-content-tertiary">Platforms:</span> {planSnapshot.audience_profile.platforms || '-'}</p>
+                        <p><span className="text-content-tertiary">Culture:</span> {planSnapshot.audience_profile.culture_signals || '-'}</p>
+                      </div>
+                    </article>
+                    <article className="rounded-xl border border-stroke-subtle bg-bg-elevated p-4">
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-content-tertiary">Assumptions</h3>
+                      <div className="mt-3 space-y-2 text-sm text-content-secondary">
+                        {planSnapshot.assumptions.length > 0 ? (
+                          planSnapshot.assumptions.map((assumption, index) => (
+                            <p key={`${index}-${assumption}`}>{assumption}</p>
+                          ))
+                        ) : (
+                          <p>No assumptions captured.</p>
+                        )}
+                      </div>
+                    </article>
+                  </div>
+                </section>
+              )}
+
+              <section className="rounded-2xl border border-stroke-default bg-bg-surface p-6">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <h2 className="text-xl font-semibold">Edit Plan Basics</h2>
                 {permissions.canManagePlans ? (
@@ -1162,6 +1433,7 @@ export default function PlanDashboardPage() {
                   />
                 </label>
               </div>
+              </section>
             </section>
 
             <section className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-4">

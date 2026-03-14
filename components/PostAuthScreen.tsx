@@ -10,7 +10,10 @@ import { getRolePermissions } from '@/lib/role-permissions';
 import { trackEvent } from '@/lib/analytics';
 import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
+import type { ReleasePlanResult } from '@/lib/release-plan';
+import type { StoredPricingValidationResponse, PricingValidationResponse } from '@/lib/pricing-validation';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
+import { PricingValidationPrompt } from '@/components/validation/PricingValidationPrompt';
 
 type RoleOption = 'manager' | 'artist-team' | 'artist';
 type ProofType = 'none' | 'screenshot' | 'video' | 'link' | 'text';
@@ -20,6 +23,12 @@ type AiTaskGenerationPayload = {
   description: string;
   why_it_matters: string;
   measurable_outcome: string;
+};
+
+type ReleasePlanApiResponse = {
+  plan?: ReleasePlanResult;
+  error?: string;
+  detail?: string;
 };
 
 const GENRE_OPTIONS = [
@@ -172,6 +181,37 @@ const addDaysISO = (base: string | Date, days: number): string => {
   const date = new Date(base);
   date.setDate(date.getDate() + days);
   return date.toISOString();
+};
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+const inferBudgetLevel = (value: string): 'low' | 'medium' | 'high' | '' => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return '';
+  if (amount <= 200000) return 'low';
+  if (amount <= 1000000) return 'medium';
+  return 'high';
+};
+const inferTeamType = (role: string | undefined): string => {
+  if (role === 'manager' || role === 'artist-manager') return 'artist manager';
+  if (role === 'artist-team' || role === 'team-member') return 'artist team';
+  return 'solo artist';
+};
+const mapPlanPhaseToTaskPhase = (phase: string): 'pre-production' | 'production' | 'promotion' | 'distribution' => {
+  const normalized = phase.toLowerCase();
+  if (normalized.includes('launch') || normalized.includes('release') || normalized.includes('distribution')) {
+    return 'distribution';
+  }
+  if (normalized.includes('promo') || normalized.includes('marketing') || normalized.includes('content')) {
+    return 'promotion';
+  }
+  if (normalized.includes('record') || normalized.includes('mix') || normalized.includes('master') || normalized.includes('production')) {
+    return 'production';
+  }
+  return 'pre-production';
 };
 
 const isSongStageConstraintError = (error: unknown): boolean => {
@@ -346,6 +386,10 @@ export function PostAuthScreen() {
   const [taskId, setTaskId] = useState<string | null>(null);
 
   const [showPricingSheet, setShowPricingSheet] = useState(false);
+  const [pricingValidation, setPricingValidation] = useState<StoredPricingValidationResponse | null>(null);
+  const [pricingValidationLoading, setPricingValidationLoading] = useState(false);
+  const [pricingValidationSubmitting, setPricingValidationSubmitting] = useState(false);
+  const [pricingValidationDismissed, setPricingValidationDismissed] = useState(false);
   const [selectedProof, setSelectedProof] = useState<ProofType>('none');
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofLink, setProofLink] = useState('');
@@ -414,6 +458,44 @@ export function PostAuthScreen() {
     flow === 'next-cycle' ||
     requestedStartStep >= 2 ||
     Boolean(requestedPlanId);
+
+  useEffect(() => {
+    if (step !== 7 || !user?.id) return;
+    let cancelled = false;
+
+    const loadPricingValidation = async () => {
+      setPricingValidationLoading(true);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token || '';
+        if (!token) return;
+        const response = await fetch('/api/pricing-validation', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: 'no-store',
+        });
+        const payload = (await response.json().catch(() => ({}))) as {
+          response?: StoredPricingValidationResponse | null;
+        };
+        if (!response.ok || cancelled) return;
+        setPricingValidation(payload.response || null);
+        setPricingValidationDismissed(Boolean(payload.response));
+      } finally {
+        if (!cancelled) {
+          setPricingValidationLoading(false);
+        }
+      }
+    };
+
+    void loadPricingValidation();
+    return () => {
+      cancelled = true;
+    };
+  }, [step, user?.id]);
 
   const resetCycleInputs = useCallback(() => {
     setGoalText('');
@@ -1014,6 +1096,60 @@ export function PostAuthScreen() {
     return null;
   }, []);
 
+  const seedReleaseWorkspace = useCallback(
+    async (activeReleaseId: string, accessToken: string, plan: ReleasePlanResult) => {
+      const marketingItems = plan.marketing_ideas.slice(0, 8).map((idea, index) => ({
+        id: `marketing-${index + 1}-${slugify(idea.channel || idea.idea || 'idea')}`,
+        platform: idea.channel || 'Campaign',
+        contentType: idea.effort || 'Execution idea',
+        captionIdea: idea.idea || idea.why_it_fits || '',
+        publishDate: '',
+        owner: 'Team',
+      }));
+
+      const playlistItems = plan.playlist_suggestions.slice(0, 8).map((entry, index) => ({
+        id: `playlist-${index + 1}-${slugify(entry.playlist_type || 'playlist')}`,
+        curator: entry.playlist_type || `Playlist ${index + 1}`,
+        platform: 'Streaming',
+        submissionDate: '',
+        status: 'Not Submitted' as const,
+        notes: [entry.rationale, entry.pitch_angle].filter(Boolean).join(' | '),
+      }));
+
+      const distributionItems = [
+        { id: 'metadata_complete', label: 'Metadata complete', done: false },
+        { id: 'cover_art_approved', label: 'Cover art approved', done: false },
+        { id: 'audio_approved', label: 'Audio approved', done: false },
+        { id: 'submission_complete', label: 'Distributor submission complete', done: false },
+        ...plan.timeline_phases.slice(0, 3).map((phase, index) => ({
+          id: `phase-${index + 1}-${slugify(phase.phase)}`,
+          label: `${phase.phase}: ${phase.objective}`,
+          done: false,
+        })),
+      ];
+
+      const response = await fetch(`/api/plans/${activeReleaseId}/workspace`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          marketingItems,
+          playlistItems,
+          distributionItems,
+          planSnapshot: plan,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(payload.error || 'Could not save workspace plan');
+      }
+    },
+    []
+  );
+
   const bootstrapTargetKey = `${user?.id || 'anon'}:${requestedPlanId || 'auto'}:${Number.isFinite(requestedStartStep) ? requestedStartStep : 0}`;
 
   useEffect(() => {
@@ -1581,8 +1717,6 @@ export function PostAuthScreen() {
   const generateOnboardingTask = useCallback(async (activeReleaseId: string) => {
     if (!user) throw new Error('User not found');
 
-    const existingTask = await loadCurrentTask(activeReleaseId);
-
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -1591,117 +1725,98 @@ export function PostAuthScreen() {
       throw new Error('Session expired. Sign in again and retry.');
     }
 
-    const generateResponse = await fetch('/api/ai/generate-task', {
+    const releasePlanResponse = await fetch('/api/ai/release-plan', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
-        mode: 'onboarding',
         releaseId: activeReleaseId,
-        onboardingInputs: {
-          role: user.role || '',
-          artist_name: artistName.trim(),
+        inputs: {
+          artistName: artistName.trim(),
           genre: genre.trim(),
-          primary_platform: primaryPlatform.trim(),
-          campaign_goal: goalText.trim(),
-          career_stage: stage.trim(),
-          audience_size: audienceSize.trim(),
-          listener_platforms: listenerPlatforms,
-          listener_platform_input: platformInput.trim(),
-          budget_naira: budget.trim(),
-          timeline: timeline.trim(),
-          hard_deadline: deadlineDate.trim(),
-          existing_steps: stepsText.trim(),
+          goal: goalText.trim(),
+          teamType: inferTeamType(user.role),
+          budgetLevel: inferBudgetLevel(budget),
+          platforms: mergePlatforms(listenerPlatforms, [primaryPlatform.trim(), platformInput.trim()]),
+          releaseDate: deadlineDate.trim(),
+          contentAvailable: stepsText.trim() ? [stepsText.trim()] : [],
+          notes: stepsText.trim(),
+          primaryMarket: primaryPlatform.trim(),
+          listenerInterests: platformInput.trim(),
+          songStage: stage.trim(),
         },
       }),
     });
 
-    const generatedPayload = (await generateResponse.json().catch(() => ({}))) as
-      | Partial<AiTaskGenerationPayload>
-      | { error?: string; detail?: string };
+    const generatedPayload = (await releasePlanResponse.json().catch(() => ({}))) as ReleasePlanApiResponse;
 
-    if (!generateResponse.ok) {
-      const failurePayload = generatedPayload as { error?: string; detail?: string };
+    if (!releasePlanResponse.ok) {
       throw new Error(
         toAiUiErrorMessage(
-          failurePayload.error,
-          'Task generation failed after retries. Please generate again.'
+          generatedPayload.error,
+          'Release plan generation failed after retries. Please generate again.'
         )
       );
     }
 
-    const title = String((generatedPayload as Partial<AiTaskGenerationPayload>).title || '').trim();
-    const description = String((generatedPayload as Partial<AiTaskGenerationPayload>).description || '').trim();
-    const whyItMatters = String((generatedPayload as Partial<AiTaskGenerationPayload>).why_it_matters || '').trim();
-    const measurableOutcome = String((generatedPayload as Partial<AiTaskGenerationPayload>).measurable_outcome || '').trim();
-
-    if (!title || !description || !whyItMatters || !measurableOutcome) {
-      throw new Error('AI returned an invalid task format. Please generate again.');
+    const plan = generatedPayload.plan || null;
+    if (!plan || !Array.isArray(plan.tasks) || plan.tasks.length === 0) {
+      throw new Error('AI returned an invalid release plan. Please generate again.');
     }
 
-    const nextDescription = `${description}\n\nMeasurable outcome: ${measurableOutcome}`;
-    const nextWhy = `${whyItMatters}\nMeasurable outcome: ${measurableOutcome}`;
-
-    if (existingTask?.id) {
-      const { data: updatedTask, error: updateTaskError } = await supabase
-        .from('ai_tasks')
-        .update({
-          title,
-          description: nextDescription,
-          why_it_matters: nextWhy,
-          status: 'current',
-          input_type: 'text',
-          phase: 'pre-production',
-        })
-        .eq('id', existingTask.id)
-        .select('id, title, description')
-        .single();
-      if (updateTaskError || !updatedTask) throw updateTaskError || new Error('Could not update task');
-      setTaskId(updatedTask.id);
-      setTaskTitle(updatedTask.title || 'Single task');
-      setTaskOutcome(updatedTask.description || 'Expected outcome');
-      trackEvent('ai_plan_generated', {
-        userId: user.id,
-        payload: { releaseId: activeReleaseId, taskId: updatedTask.id, mode: 'onboarding-update' },
-      });
-      return;
-    }
-
-    const { data: lastTask, error: lastTaskError } = await supabase
-      .from('ai_tasks')
-      .select('order_index')
-      .eq('release_id', activeReleaseId)
-      .order('order_index', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (lastTaskError) throw lastTaskError;
-    const nextOrderIndex = (lastTask?.order_index ?? -1) + 1;
-
-    const { data: insertedTask, error: insertError } = await supabase
-      .from('ai_tasks')
-      .insert({
+    const generatedTasks = plan.tasks.map((task, index) => {
+      const measurableOutcome = task.measurable_outcome.trim();
+      const description = task.description.trim();
+      const owner = task.owner.trim();
+      const priority = task.priority.trim();
+      const phaseLabel = task.phase.trim();
+      return {
         release_id: activeReleaseId,
         user_id: user.id,
-        title,
-        description: nextDescription,
-        why_it_matters: nextWhy,
+        title: task.title.trim(),
+        description: `${description}\n\nOwner: ${owner || 'Team'}\nPriority: ${priority || 'Medium'}\nMeasurable outcome: ${measurableOutcome}`,
+        why_it_matters: `Phase: ${phaseLabel || 'Plan'}\nMeasurable outcome: ${measurableOutcome}`,
         input_type: 'text',
-        status: 'current',
-        phase: 'pre-production',
-        order_index: nextOrderIndex,
-      })
-      .select('id, title, description')
-      .single();
-    if (insertError || !insertedTask) throw insertError || new Error('Could not create task');
+        status: index === 0 ? 'current' : 'pending',
+        phase: mapPlanPhaseToTaskPhase(phaseLabel),
+        order_index: index,
+      };
+    });
 
-    setTaskId(insertedTask.id);
-    setTaskTitle(insertedTask.title || 'Single task');
-    setTaskOutcome(insertedTask.description || 'Expected outcome');
+    const { error: deleteExistingTasksError } = await supabase
+      .from('ai_tasks')
+      .delete()
+      .eq('release_id', activeReleaseId)
+      .in('status', ['current', 'pending']);
+    if (deleteExistingTasksError) throw deleteExistingTasksError;
+
+    const { data: insertedTasks, error: insertError } = await supabase
+      .from('ai_tasks')
+      .insert(generatedTasks)
+      .select('id, title, description, status, order_index');
+    if (insertError || !insertedTasks || insertedTasks.length === 0) {
+      throw insertError || new Error('Could not create release plan tasks');
+    }
+
+    await seedReleaseWorkspace(activeReleaseId, accessToken, plan);
+
+    const sortedTasks = [...insertedTasks].sort((a, b) => Number(a.order_index ?? 0) - Number(b.order_index ?? 0));
+    const currentTask = sortedTasks.find((task) => String(task.status || '') === 'current') || sortedTasks[0];
+    if (!currentTask) throw new Error('Could not load the first generated task');
+
+    setTaskId(currentTask.id);
+    setTaskTitle(currentTask.title || 'Single task');
+    setTaskOutcome(currentTask.description || 'Expected outcome');
     trackEvent('ai_plan_generated', {
       userId: user.id,
-      payload: { releaseId: activeReleaseId, taskId: insertedTask.id, mode: 'onboarding-create' },
+      payload: {
+        releaseId: activeReleaseId,
+        taskId: currentTask.id,
+        mode: 'onboarding-structured-plan',
+        taskCount: insertedTasks.length,
+      },
     });
   }, [
     artistName,
@@ -1711,12 +1826,12 @@ export function PostAuthScreen() {
     genre,
     goalText,
     listenerPlatforms,
-    loadCurrentTask,
+    mergePlatforms,
     platformInput,
     primaryPlatform,
+    seedReleaseWorkspace,
     stage,
     stepsText,
-    timeline,
     user,
   ]);
 
@@ -1830,6 +1945,50 @@ export function PostAuthScreen() {
     router.push('/dashboard');
   };
 
+  const handleSubmitPricingValidation = async (payload: PricingValidationResponse) => {
+    setPricingValidationSubmitting(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      if (!token) throw new Error('Session expired. Please sign in again.');
+
+      const response = await fetch('/api/pricing-validation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        response?: StoredPricingValidationResponse;
+        error?: string;
+      };
+      if (!response.ok || !result.response) {
+        throw new Error(result.error || 'Could not save pricing validation response.');
+      }
+
+      setPricingValidation(result.response);
+      setPricingValidationDismissed(true);
+      setResumeMessage('Response saved. You can update it later from the dashboard.');
+      setShowResumeMessage(true);
+      trackEvent('pricing_validation_submitted', {
+        userId: user?.id || null,
+        payload: {
+          willingness: result.response.willingness,
+          priceBand: result.response.priceBand,
+          placement: result.response.placement,
+        },
+      });
+    } catch (err: any) {
+      setError(err?.message || 'Could not save pricing validation response.');
+    } finally {
+      setPricingValidationSubmitting(false);
+    }
+  };
+
   const handleLogoutToAuth = async () => {
     await logout();
     router.push('/auth');
@@ -1885,6 +2044,7 @@ export function PostAuthScreen() {
     setResumeMessage('');
     setShowResumeMessage(false);
     setLastDraftSavedAt(null);
+    setPricingValidationDismissed(false);
     setError('');
   }, [
     feedbackDraftKey,
@@ -2035,9 +2195,10 @@ export function PostAuthScreen() {
 
       resetCycleInputs();
       setTaskId(null);
-      setTaskTitle('Single task');
-      setTaskOutcome('Expected outcome');
-      setNeedsOnboarding(true);
+    setTaskTitle('Single task');
+    setTaskOutcome('Expected outcome');
+    setPricingValidationDismissed(false);
+    setNeedsOnboarding(true);
       setIsCycleTransitioning(true);
       await new Promise((resolve) => setTimeout(resolve, NEXT_CYCLE_TRANSITION_MS));
       router.push(`/dashboard?startOnboarding=3&planId=${releaseId}&flow=next-cycle`);
@@ -2386,6 +2547,21 @@ export function PostAuthScreen() {
             isBusy={isBusy}
             taskTitle={taskTitle}
             taskOutcome={taskOutcome}
+            pricingPrompt={
+              !pricingValidationLoading && !pricingValidationDismissed ? (
+                <PricingValidationPrompt
+                  placement="onboarding"
+                  variant="onboarding"
+                  title="Would this feel worth paying for every month?"
+                  subtitle="This sits after the first task is generated because users have already seen concrete product value."
+                  submitLabel="Save answer"
+                  response={pricingValidation}
+                  isBusy={pricingValidationSubmitting}
+                  onSkip={() => setPricingValidationDismissed(true)}
+                  onSubmit={handleSubmitPricingValidation}
+                />
+              ) : undefined
+            }
             onLogout={handleLogoutToAuth}
             onMarkStarted={handleMarkStarted}
             onGoToDashboard={handleGoToDashboard}

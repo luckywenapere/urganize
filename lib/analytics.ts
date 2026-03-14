@@ -4,6 +4,7 @@ type AnalyticsEventName =
   | 'release_created'
   | 'ai_plan_generated'
   | 'task_completed'
+  | 'pricing_validation_submitted'
   | 'trial_started'
   | 'trial_converted';
 

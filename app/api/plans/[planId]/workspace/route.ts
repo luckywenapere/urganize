@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { parseReleasePlanResult, type ReleasePlanResult } from '@/lib/release-plan';
 
 const WORKSPACE_TABLE = 'release_workspaces';
 
@@ -27,6 +28,8 @@ type DistributionChecklistItem = {
   done: boolean;
 };
 
+type WorkspacePlanSnapshot = ReleasePlanResult;
+
 const isOptionalTableMissingError = (error: unknown): boolean => {
   const code = String((error as { code?: string } | null)?.code || '').toUpperCase();
   const message = String((error as { message?: string } | null)?.message || '').toLowerCase();
@@ -46,6 +49,7 @@ const WORKSPACE_SQL = [
   '  marketing_items jsonb not null default \'[]\'::jsonb,',
   '  playlist_items jsonb not null default \'[]\'::jsonb,',
   '  distribution_items jsonb not null default \'[]\'::jsonb,',
+  '  plan_snapshot jsonb null,',
   '  created_at timestamptz not null default now(),',
   '  updated_at timestamptz not null default now()',
   ');',
@@ -101,6 +105,10 @@ const normalizeDistributionItems = (value: unknown): DistributionChecklistItem[]
       };
     })
     .filter((item) => item.id && item.label);
+};
+
+const normalizePlanSnapshot = (value: unknown): WorkspacePlanSnapshot | null => {
+  return parseReleasePlanResult(value);
 };
 
 const getAuthenticatedUser = async (request: NextRequest) => {
@@ -164,7 +172,7 @@ export async function GET(
 
   const { data, error } = await adminClient!
     .from(WORKSPACE_TABLE)
-    .select('marketing_items,playlist_items,distribution_items')
+    .select('marketing_items,playlist_items,distribution_items,plan_snapshot')
     .eq('release_id', planId)
     .maybeSingle();
 
@@ -183,6 +191,7 @@ export async function GET(
       marketingItems: normalizeMarketingItems(data?.marketing_items),
       playlistItems: normalizePlaylistItems(data?.playlist_items),
       distributionItems: normalizeDistributionItems(data?.distribution_items),
+      planSnapshot: normalizePlanSnapshot(data?.plan_snapshot),
     },
   });
 }
@@ -205,6 +214,7 @@ export async function PUT(
   const marketingItems = normalizeMarketingItems(body?.marketingItems);
   const playlistItems = normalizePlaylistItems(body?.playlistItems);
   const distributionItems = normalizeDistributionItems(body?.distributionItems);
+  const planSnapshot = normalizePlanSnapshot(body?.planSnapshot);
 
   const { error } = await adminClient!
     .from(WORKSPACE_TABLE)
@@ -215,6 +225,7 @@ export async function PUT(
         marketing_items: marketingItems,
         playlist_items: playlistItems,
         distribution_items: distributionItems,
+        plan_snapshot: planSnapshot,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'release_id' }

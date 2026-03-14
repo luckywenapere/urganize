@@ -10,8 +10,10 @@ import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { getRolePermissions } from '@/lib/role-permissions';
 import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
+import type { PricingValidationResponse, StoredPricingValidationResponse } from '@/lib/pricing-validation';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 import { SearchableGenreSelect } from '@/components/ui/SearchableGenreSelect';
+import { PricingValidationPrompt } from '@/components/validation/PricingValidationPrompt';
 
 type PlanSummary = {
   id: string;
@@ -337,6 +339,10 @@ export default function DashboardPage() {
   const [showGuideTooltip, setShowGuideTooltip] = useState(false);
   const [listenerProfileExists, setListenerProfileExists] = useState(false);
   const [listenerProfileGeneratedAt, setListenerProfileGeneratedAt] = useState<string | null>(null);
+  const [pricingValidation, setPricingValidation] = useState<StoredPricingValidationResponse | null>(null);
+  const [pricingValidationLoading, setPricingValidationLoading] = useState(false);
+  const [pricingValidationSubmitting, setPricingValidationSubmitting] = useState(false);
+  const [showPricingValidationEditor, setShowPricingValidationEditor] = useState(false);
   const activePlanForGuide = useMemo(
     () => plans.find((plan) => plan.status !== 'released') || plans[0] || null,
     [plans]
@@ -684,6 +690,83 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, [hasSubscriptionAccess, user]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPricingValidation = async () => {
+      if (!user || hasSubscriptionAccess === false) {
+        if (!cancelled) {
+          setPricingValidation(null);
+          setShowPricingValidationEditor(false);
+        }
+        return;
+      }
+
+      setPricingValidationLoading(true);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token || '';
+        if (!token) return;
+        const response = await fetch('/api/pricing-validation', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        const payload = (await response.json().catch(() => ({}))) as {
+          response?: StoredPricingValidationResponse | null;
+        };
+        if (!response.ok || cancelled) return;
+        setPricingValidation(payload.response || null);
+      } finally {
+        if (!cancelled) {
+          setPricingValidationLoading(false);
+        }
+      }
+    };
+
+    void loadPricingValidation();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasSubscriptionAccess, user]);
+
+  const submitPricingValidation = async (payload: PricingValidationResponse) => {
+    setPricingValidationSubmitting(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      if (!token) throw new Error('Session expired. Please sign in again.');
+
+      const response = await fetch('/api/pricing-validation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        response?: StoredPricingValidationResponse;
+        error?: string;
+      };
+      if (!response.ok || !result.response) {
+        throw new Error(result.error || 'Could not save pricing validation response.');
+      }
+
+      setPricingValidation(result.response);
+      setShowPricingValidationEditor(false);
+      setError('');
+    } catch (saveError: any) {
+      setError(saveError?.message || 'Could not save pricing validation response.');
+    } finally {
+      setPricingValidationSubmitting(false);
+    }
+  };
 
   const createNewPlan = async () => {
     if (!user || isCreatingPlan) return;
@@ -1129,15 +1212,15 @@ export default function DashboardPage() {
           </div>
           {hasSubscriptionAccess !== false && !loading && (
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-stroke-default bg-bg-elevated p-3">
+              <div className="saas-panel-subtle p-4">
                 <p className="text-xs uppercase tracking-wide text-content-tertiary">Active</p>
                 <p className="mt-1 text-2xl font-semibold tracking-tight text-content-primary">{activePlansCount}</p>
               </div>
-              <div className="rounded-xl border border-stroke-default bg-bg-elevated p-3">
+              <div className="saas-panel-subtle p-4">
                 <p className="text-xs uppercase tracking-wide text-content-tertiary">Archived</p>
                 <p className="mt-1 text-2xl font-semibold tracking-tight text-content-primary">{archivedPlansCount}</p>
               </div>
-              <div className="rounded-xl border border-stroke-default bg-bg-elevated p-3">
+              <div className="saas-panel-subtle p-4">
                 <p className="text-xs uppercase tracking-wide text-content-tertiary">Overdue</p>
                 <p className={`mt-1 text-2xl font-semibold tracking-tight ${overduePlansCount > 0 ? 'text-status-warning' : 'text-content-primary'}`}>
                   {overduePlansCount}
@@ -1146,10 +1229,10 @@ export default function DashboardPage() {
             </div>
           )}
           {hasSubscriptionAccess !== false && (
-            <section className="mt-6 rounded-2xl border border-stroke-default/80 bg-bg-elevated/70 p-4 backdrop-blur-sm">
+            <section className="saas-panel mt-6 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 rounded-xl border border-stroke-default bg-bg-surface p-2 text-content-secondary">
+                  <div className="mt-0.5 rounded-xl border border-stroke-default bg-bg-surface/90 p-2 text-content-secondary">
                     <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">
                       <circle cx="12" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.4" />
                       <path d="M5.5 20c0-4.2 2.9-7.5 6.5-7.5s6.5 3.3 6.5 7.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -1175,8 +1258,59 @@ export default function DashboardPage() {
               </div>
             </section>
           )}
+          {hasSubscriptionAccess !== false && (
+            <section className="mt-6">
+              {pricingValidation && !showPricingValidationEditor ? (
+                <div className="saas-panel p-5 sm:p-6">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="max-w-2xl">
+                      <p className="saas-eyebrow">Validation research</p>
+                      <h2 className="saas-title mt-2">Monthly subscription intent</h2>
+                      <p className="mt-2 text-sm text-content-secondary">
+                        Saved response: <span className="font-semibold text-content-primary">{pricingValidation.willingness === 'yes' ? 'Yes, monthly' : pricingValidation.willingness === 'maybe' ? 'Maybe' : 'Not right now'}</span>
+                        {' • '}
+                        Price comfort: <span className="font-semibold text-content-primary">{pricingValidation.priceBand ? pricingValidation.priceBand.replace('under-', 'Under NGN ').replace('5000-10000', 'NGN 5,000 - 10,000').replace('10000-plus', 'Above NGN 10,000').replace('not-sure', 'Not sure yet') : 'Not shared yet'}</span>
+                      </p>
+                      <p className="mt-3 text-sm leading-7 text-content-secondary">
+                        This response helps validate whether mastering, release planning, listener insight, consultations, marketing support, and centralized execution justify a monthly subscription.
+                      </p>
+                      {pricingValidation.notes && (
+                        <p className="mt-3 rounded-2xl border border-stroke-default bg-bg-elevated/55 px-4 py-3 text-sm text-content-secondary">
+                          {pricingValidation.notes}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-start gap-2">
+                      <span className="rounded-full border border-stroke-default bg-bg-elevated/85 px-3 py-1.5 text-xs font-medium text-content-secondary">
+                        Updated {new Date(pricingValidation.updatedAt).toLocaleString()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowPricingValidationEditor(true)}
+                        className="rounded-xl border border-brand/45 bg-brand-muted px-4 py-2 text-sm font-semibold text-content-primary transition hover:bg-brand/20"
+                      >
+                        Update response
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <PricingValidationPrompt
+                  placement="dashboard"
+                  variant="dashboard"
+                  title="Would this be worth paying for monthly if it kept release work stress-free?"
+                  subtitle="Best dashboard placement: directly under strategy cards, where users already evaluate plan quality and product usefulness."
+                  submitLabel="Save response"
+                  response={pricingValidation}
+                  isBusy={pricingValidationSubmitting || pricingValidationLoading}
+                  onSkip={() => setShowPricingValidationEditor(false)}
+                  onSubmit={submitPricingValidation}
+                />
+              )}
+            </section>
+          )}
           {hasSubscriptionAccess !== false && user?.role === 'manager' && (
-            <section className="mt-6 rounded-2xl border border-stroke-default/80 bg-bg-elevated/70 p-4 backdrop-blur-sm">
+            <section className="saas-panel mt-6 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-content-tertiary">Artist Directory</h2>
