@@ -10,6 +10,7 @@ type ChatRequestBody = {
 };
 
 type ZuploChatResponse = {
+  done?: boolean;
   message?: {
     content?: string;
   };
@@ -22,10 +23,56 @@ type ZuploChatResponse = {
   }>;
 };
 
+function parseJsonObject(raw: string): ZuploChatResponse | null {
+  try {
+    return JSON.parse(raw) as ZuploChatResponse;
+  } catch {
+    return null;
+  }
+}
+
+function parseStreamingPayload(raw: string): ZuploChatResponse | null {
+  const segments = raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (segments.length === 0) {
+    return null;
+  }
+
+  if (segments.length === 1) {
+    return parseJsonObject(segments[0]);
+  }
+
+  let combinedText = '';
+
+  for (const segment of segments) {
+    const payload = parseJsonObject(segment);
+    if (!payload) {
+      continue;
+    }
+
+    if (typeof payload.message?.content === 'string') {
+      combinedText += payload.message.content;
+    } else if (typeof payload.response === 'string') {
+      combinedText += payload.response;
+    } else if (typeof payload.text === 'string') {
+      combinedText += payload.text;
+    }
+  }
+
+  return combinedText ? { text: combinedText.trim() } : null;
+}
+
 const DEFAULT_AI_API_BASE = 'https://urganize-main-34fd8f6.d2.zuplo.dev';
 const AI_MODEL = 'qwen2.5:3b';
 
-function extractAssistantText(payload: ZuploChatResponse): string | null {
+function extractAssistantText(payload: ZuploChatResponse | null): string | null {
+  if (!payload) {
+    return null;
+  }
+
   if (typeof payload.text === 'string' && payload.text.trim()) {
     return payload.text.trim();
   }
@@ -84,7 +131,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'AI service unavailable' }, { status: 503 });
     }
 
-    const payload = (await response.json()) as ZuploChatResponse;
+    const rawText = await response.text();
+    const payload = parseStreamingPayload(rawText);
     const text = extractAssistantText(payload);
 
     if (!text) {

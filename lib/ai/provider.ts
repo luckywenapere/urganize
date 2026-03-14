@@ -76,6 +76,45 @@ const extractMessageContent = (payload: Record<string, unknown>): string => {
   return '';
 };
 
+const parseJsonObject = (raw: string): Record<string, unknown> | null => {
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
+
+const parseAiGatewayResponse = (rawText: string): Record<string, unknown> | null => {
+  const segments = rawText
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (segments.length === 0) {
+    return null;
+  }
+
+  if (segments.length === 1) {
+    return parseJsonObject(segments[0]);
+  }
+
+  let combinedText = '';
+
+  for (const segment of segments) {
+    const payload = parseJsonObject(segment);
+    if (!payload) {
+      continue;
+    }
+
+    const content = extractMessageContent(payload);
+    if (content) {
+      combinedText += content;
+    }
+  }
+
+  return combinedText ? { text: combinedText.trim() } : null;
+};
+
 const parseProviderError = (status: number, payload: Record<string, unknown> | null, rawText: string): AiProviderError => {
   const errorObject = payload && typeof payload.error === 'object' ? (payload.error as Record<string, unknown>) : null;
   const rawMessage = String(errorObject?.message || payload?.error || rawText || '').trim();
@@ -138,7 +177,8 @@ const requestAiGateway = async ({
       throw parseProviderError(response.status, payload, rawText);
     }
 
-    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    const rawText = await response.text().catch(() => '');
+    const payload = parseAiGatewayResponse(rawText) ?? {};
     const content = extractMessageContent(payload);
     if (!content) {
       throw new Error('Model returned empty content');
