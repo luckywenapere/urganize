@@ -10,10 +10,8 @@ import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { getRolePermissions } from '@/lib/role-permissions';
 import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
-import type { PricingValidationResponse, StoredPricingValidationResponse } from '@/lib/pricing-validation';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 import { SearchableGenreSelect } from '@/components/ui/SearchableGenreSelect';
-import { PricingValidationPrompt } from '@/components/validation/PricingValidationPrompt';
 
 type PlanSummary = {
   id: string;
@@ -65,6 +63,9 @@ type DashboardUiState = {
     notes: string;
   };
 };
+
+type PricingValidationResponse = unknown;
+type StoredPricingValidationResponse = unknown;
 
 const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000;
 const VIRTUALIZED_LIST_THRESHOLD = 12;
@@ -313,9 +314,9 @@ export default function DashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [planFilter, setPlanFilter] = useState<'active' | 'archived' | 'all'>('active');
+  const [planFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [planSearch, setPlanSearch] = useState('');
-  const [planSort, setPlanSort] = useState<'newest' | 'oldest' | 'title_asc' | 'title_desc' | 'status'>('newest');
+  const [planSort] = useState<'newest' | 'oldest' | 'title_asc' | 'title_desc' | 'status'>('newest');
   const [activePlanMenuId, setActivePlanMenuId] = useState<string | null>(null);
   const [activePlanMenuDirection, setActivePlanMenuDirection] = useState<'up' | 'down'>('down');
   const [activePlanMenuOffsetX, setActivePlanMenuOffsetX] = useState(0);
@@ -333,16 +334,25 @@ export default function DashboardPage() {
   const [editingPlanTitle, setEditingPlanTitle] = useState('');
   const [savingInlinePlanId, setSavingInlinePlanId] = useState<string | null>(null);
   const [artists, setArtists] = useState<ArtistDirectoryItem[]>([]);
-  const [artistSearch, setArtistSearch] = useState('');
+  const [artistSearch] = useState('');
   const [artistForm, setArtistForm] = useState({ name: '', genre: '', notes: '' });
   const [editingArtistId, setEditingArtistId] = useState<string | null>(null);
   const [showGuideTooltip, setShowGuideTooltip] = useState(false);
   const [listenerProfileExists, setListenerProfileExists] = useState(false);
   const [listenerProfileGeneratedAt, setListenerProfileGeneratedAt] = useState<string | null>(null);
-  const [pricingValidation, setPricingValidation] = useState<StoredPricingValidationResponse | null>(null);
-  const [pricingValidationLoading, setPricingValidationLoading] = useState(false);
-  const [pricingValidationSubmitting, setPricingValidationSubmitting] = useState(false);
-  const [showPricingValidationEditor, setShowPricingValidationEditor] = useState(false);
+  const setPlanFilter = (_value: 'active' | 'archived' | 'all') => {};
+  const setPlanSort = (_value: 'newest' | 'oldest' | 'title_asc' | 'title_desc' | 'status') => {};
+  const setArtistSearch = (_value: string) => {};
+  const pricingValidation: any = null;
+  const pricingValidationLoading = false;
+  const pricingValidationSubmitting = false;
+  const showPricingValidationEditor = false;
+  const setPricingValidation = (_value: unknown) => {};
+  const setPricingValidationLoading = (_value: boolean) => {};
+  const setPricingValidationSubmitting = (_value: boolean) => {};
+  const setShowPricingValidationEditor = (_value: boolean) => {};
+  const PricingValidationPrompt = (_props: Record<string, unknown>) => null;
+  const handlePricingValidationSubmit = async (_payload: unknown) => {};
   const activePlanForGuide = useMemo(
     () => plans.find((plan) => plan.status !== 'released') || plans[0] || null,
     [plans]
@@ -375,10 +385,7 @@ export default function DashboardPage() {
         localDraft || (remoteDraft.payload && isDashboardUiState(remoteDraft.payload) ? remoteDraft.payload : null);
       if (!restored || cancelled) return;
 
-      setPlanFilter(restored.planFilter);
       setPlanSearch(restored.planSearch);
-      setPlanSort(restored.planSort);
-      setArtistSearch(restored.artistSearch);
       setArtistForm(restored.artistForm);
     };
 
@@ -401,6 +408,37 @@ export default function DashboardPage() {
     void saveUiDraft<DashboardUiState>(DASHBOARD_UI_STATE_SCOPE, dashboardUiStateKey, draft);
   }, [artistForm, artistSearch, dashboardUiStateKey, planFilter, planSearch, planSort]);
 
+  useEffect(() => {
+    const hideDashboardChrome = () => {
+      const root = document.querySelector('main');
+      if (!root) return;
+
+      const cardTexts = ['Active', 'Archived', 'Overdue'];
+      const candidates = Array.from(root.querySelectorAll('section, div'));
+
+      candidates.forEach((element) => {
+        const text = (element.textContent || '').replace(/\s+/g, ' ').trim();
+        const isStatusCard =
+          text === 'Active' ||
+          text === 'Archived' ||
+          text === 'Overdue' ||
+          cardTexts.some((label) => text.startsWith(label) && text.length < 80);
+
+        if (isStatusCard) {
+          (element as HTMLElement).style.display = 'none';
+        }
+      });
+    };
+
+    const frame = window.requestAnimationFrame(hideDashboardChrome);
+    const timer = window.setTimeout(hideDashboardChrome, 400);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, []);
+
   const dismissGuideTooltip = () => {
     setShowGuideTooltip(false);
     if (guideTooltipSeenKey) {
@@ -411,10 +449,6 @@ export default function DashboardPage() {
   const clearDashboardDrafts = () => {
     clearPersistedState(dashboardUiStateKey);
     void deleteUiDraft(DASHBOARD_UI_STATE_SCOPE, dashboardUiStateKey);
-    setPlanFilter('active');
-    setPlanSearch('');
-    setPlanSort('newest');
-    setArtistSearch('');
     setArtistForm({ name: '', genre: '', notes: '' });
     setEditingArtistId(null);
   };
@@ -1521,9 +1555,6 @@ export default function DashboardPage() {
                 <h2 className="mt-1 text-xl font-semibold tracking-tight text-content-primary">{dashboardGuide.title}</h2>
                 <p className="mt-1 text-sm text-content-secondary">{dashboardGuide.subtitle}</p>
               </div>
-              <span className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs text-content-secondary">
-                No auto distribution or auto playlisting
-              </span>
             </div>
             <ol className="mt-4 grid grid-cols-1 gap-2 text-sm text-content-secondary md:grid-cols-2">
               {dashboardGuide.checklist.map((entry, index) => (

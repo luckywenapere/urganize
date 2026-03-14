@@ -35,7 +35,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || isLoading}
         className={clsx(
           // Base
-          'inline-flex items-center justify-center gap-2 font-semibold rounded-lg',
+          'group inline-flex items-center justify-center gap-2 rounded-full font-semibold tracking-[-0.01em]',
           'transition-all duration-fast ease-out',
           'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base',
           'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -44,27 +44,27 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           // Variants
           {
             // Primary
-            'bg-brand text-content-inverse hover:bg-brand-hover hover:shadow-glow-sm active:shadow-none':
+            'border border-transparent bg-brand text-content-inverse shadow-[0_12px_24px_-18px_rgba(32,29,27,0.55)] hover:-translate-y-[1px] hover:bg-brand-hover hover:shadow-[0_20px_36px_-22px_rgba(32,29,27,0.5)] active:translate-y-0 active:shadow-none':
               variant === 'primary',
             
             // Secondary
-            'bg-bg-elevated text-content-primary border border-stroke-default hover:bg-bg-hover hover:border-stroke-strong':
+            'border border-stroke-default bg-white/55 text-content-primary backdrop-blur-sm hover:-translate-y-[1px] hover:border-stroke-strong hover:bg-white/75':
               variant === 'secondary',
             
             // Ghost
-            'bg-transparent text-content-secondary hover:bg-bg-hover hover:text-content-primary':
+            'border border-transparent bg-transparent text-content-secondary hover:bg-brand/5 hover:text-content-primary':
               variant === 'ghost',
             
             // Danger
-            'bg-status-error text-content-primary hover:bg-red-600':
+            'border border-transparent bg-status-error text-content-inverse hover:-translate-y-[1px] hover:brightness-95':
               variant === 'danger',
           },
           
           // Sizes
           {
-            'h-7 px-2.5 text-xs gap-1.5': size === 'sm',
-            'h-9 px-4 text-sm': size === 'md',
-            'h-11 px-5 text-base': size === 'lg',
+            'h-8 px-3 text-xs gap-1.5': size === 'sm',
+            'h-10 px-4 text-sm': size === 'md',
+            'h-12 px-6 text-base': size === 'lg',
           },
           
           className
