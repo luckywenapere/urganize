@@ -81,6 +81,8 @@ const toAiUiErrorMessage = (error: string | null | undefined, fallback: string):
   if (!message) return fallback;
   if (/rate-limited|rate limited/i.test(message)) return message;
   if (/temporarily unavailable|try again shortly/i.test(message)) return message;
+  if (/we could not generate the listener persona right now\. please try again\./i.test(message)) return message;
+  if (/ai service unavailable/i.test(message)) return message;
   return fallback;
 };
 

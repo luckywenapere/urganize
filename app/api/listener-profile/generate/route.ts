@@ -5,7 +5,6 @@ import {
   normalizeListenerProfileInputs,
   type ListenerPersonaResult,
 } from '@/lib/listener-profile';
-import { generateStructuredAiOutput, isAiConfigured } from '@/lib/ai/provider';
 import {
   createAdminClient,
   getAuthenticatedUser,
@@ -24,6 +23,10 @@ type GenerateListenerProfileRequest = {
 };
 
 const PERSONA_KEYS: Array<keyof ListenerPersonaResult> = Object.keys(EMPTY_LISTENER_PERSONA_RESULT) as Array<keyof ListenerPersonaResult>;
+const PERSONA_KEY_SET = new Set<string>(PERSONA_KEYS);
+const DEFAULT_AI_API_BASE = 'https://urganize-main-34fd8f6.d2.zuplo.dev';
+const AI_MODEL = 'qwen2.5:3b';
+const PERSONA_FALLBACK_MESSAGE = 'We could not generate the listener persona right now. Please try again.';
 
 const buildAiFailureResponse = (error: unknown) => {
   const detail = String((error as { message?: string } | null)?.message || 'Unknown AI generation error');
@@ -35,48 +38,66 @@ const buildAiFailureResponse = (error: unknown) => {
     error: rateLimited
       ? 'The current AI model is temporarily rate-limited. Please try again shortly.'
       : unavailable
-        ? 'AI service unavailable'
-        : detail,
+        ? PERSONA_FALLBACK_MESSAGE
+        : PERSONA_FALLBACK_MESSAGE,
     detail,
   };
 };
 
-const parsePersonaJson = (raw: string): ListenerPersonaResult | null => {
-  const normalized = String(raw || '').trim();
-  if (!normalized) return null;
-
-  const cleaned = normalized
-    .replace(/^```json/i, '')
-    .replace(/^```/i, '')
-    .replace(/```$/, '')
-    .trim();
-
-  const parseCandidate = (value: string): ListenerPersonaResult | null => {
-    try {
-      const first = JSON.parse(value) as Record<string, unknown> | string;
-      const parsed = (typeof first === 'string' ? JSON.parse(first) : first) as Record<string, unknown>;
-      const output = { ...EMPTY_LISTENER_PERSONA_RESULT };
-      for (const key of PERSONA_KEYS) {
-        output[key] = String(parsed[key] || '').trim();
-      }
-      return parseListenerPersonaResult(output);
-    } catch {
-      return null;
-    }
+type ZuploChatResponse = {
+  message?: {
+    content?: string;
   };
+};
 
-  const direct = parseCandidate(cleaned);
-  if (direct) return direct;
+const getAiGatewayConfig = () => {
+  const apiKey = String(process.env.AI_API_KEY || '').trim();
+  const apiBase = String(process.env.AI_API_BASE || DEFAULT_AI_API_BASE).trim();
 
-  const firstBrace = cleaned.indexOf('{');
-  const lastBrace = cleaned.lastIndexOf('}');
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    const extracted = cleaned.slice(firstBrace, lastBrace + 1);
-    const extractedParsed = parseCandidate(extracted);
-    if (extractedParsed) return extractedParsed;
+  if (!apiKey) {
+    return null;
   }
 
-  return null;
+  return { apiKey, apiBase };
+};
+
+const parsePersonaPayload = (rawContent: string): ListenerPersonaResult | null => {
+  const normalized = String(rawContent || '').trim();
+  if (!normalized) return null;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(normalized);
+  } catch {
+    return null;
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return null;
+  }
+
+  const record = parsed as Record<string, unknown>;
+  const keys = Object.keys(record);
+  if (keys.length !== PERSONA_KEYS.length) {
+    return null;
+  }
+
+  for (const key of keys) {
+    if (!PERSONA_KEY_SET.has(key)) {
+      return null;
+    }
+  }
+
+  const output = { ...EMPTY_LISTENER_PERSONA_RESULT };
+  for (const key of PERSONA_KEYS) {
+    const value = record[key];
+    if (typeof value !== 'string') {
+      return null;
+    }
+    output[key] = value.trim();
+  }
+
+  return parseListenerPersonaResult(output);
 };
 
 const buildPrompt = (inputs: Record<string, string | null>): string => {
@@ -127,7 +148,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  if (!isAiConfigured()) {
+  const aiConfig = getAiGatewayConfig();
+  if (!aiConfig) {
     return NextResponse.json({ error: 'AI model environment is not configured' }, { status: 500 });
   }
 
@@ -164,20 +186,41 @@ export async function POST(request: NextRequest) {
   const prompt = buildPrompt(mergedInputs);
   let generated: ListenerPersonaResult;
   try {
-    generated = await generateStructuredAiOutput<ListenerPersonaResult>({
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a precise listener persona generation engine. Output valid JSON only.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.35,
-      parse: parsePersonaJson,
+    const response = await fetch(`${aiConfig.apiBase}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': aiConfig.apiKey,
+      },
+      body: JSON.stringify({
+        model: AI_MODEL,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a precise listener persona generation engine. Output valid JSON only.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        stream: false,
+        format: 'json',
+      }),
+      cache: 'no-store',
     });
+
+    if (!response.ok) {
+      throw new Error(`AI gateway request failed (${response.status})`);
+    }
+
+    const payload = (await response.json().catch(() => null)) as ZuploChatResponse | null;
+    const content = String(payload?.message?.content || '').trim();
+    const parsedPersona = parsePersonaPayload(content);
+    if (!parsedPersona) {
+      throw new Error('Listener persona response did not match the expected JSON schema');
+    }
+    generated = parsedPersona;
   } catch (error) {
     return NextResponse.json(buildAiFailureResponse(error), { status: 502 });
   }
