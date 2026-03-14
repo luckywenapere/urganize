@@ -260,14 +260,14 @@ export default function PlanNextStepPage() {
         | { error?: string; detail?: string };
 
       if (!generateResponse.ok) {
-        const failurePayload = generatedPayload as { error?: string; detail?: string };
-        throw new Error(
-          String(
-            `${failurePayload.error || 'Task generation failed after retries. Please generate again.'}${
-              failurePayload.detail ? ` (${failurePayload.detail})` : ''
-            }`
-          )
-        );
+          const failurePayload = generatedPayload as { error?: string; detail?: string };
+          throw new Error(
+            String(
+              `${failurePayload.error || 'AI service unavailable'}${
+                failurePayload.detail ? ` (${failurePayload.detail})` : ''
+              }`
+            )
+          );
       }
 
       const generatedTitle = String((generatedPayload as Partial<AiTaskGenerationPayload>).title || '').trim();

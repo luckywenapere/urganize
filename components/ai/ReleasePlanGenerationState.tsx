@@ -22,13 +22,13 @@ export function ReleasePlanGenerationState({
   return (
     <section className="rounded-3xl border border-stroke-default bg-bg-elevated/75 p-8 text-center">
       <p className="text-[clamp(2rem,5vw,3.6rem)] text-content-primary">
-        {isGenerating ? 'Generating release plan...' : 'Release plan generation paused'}
+        {isGenerating ? 'Generating release plan...' : 'Release plan generation unavailable'}
       </p>
       {error ? (
         <div className="mx-auto mt-4 max-w-xl text-left">
           <AiRecoveryActions
             message={error}
-            helperText="Retry will attempt the configured backup model automatically when available."
+            helperText="Retry will send the request through the AI gateway again when the service is available."
             onRetry={onRetry}
             onBack={onBackToInputs}
             onSaveDraft={onSaveDraft}
