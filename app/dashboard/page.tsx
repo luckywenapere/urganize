@@ -44,6 +44,9 @@ export default function DashboardPage() {
   const { user, isLoading: authLoading, logout } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [releasePendingDelete, setReleasePendingDelete] = useState<ReleaseCard | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
   const [hasSubscriptionAccess, setHasSubscriptionAccess] = useState<boolean | null>(null);
   const [releases, setReleases] = useState<ReleaseCard[]>([]);
@@ -204,6 +207,53 @@ export default function DashboardPage() {
     }
   };
 
+  const closeDeleteModal = () => {
+    if (isDeleting) return;
+    setReleasePendingDelete(null);
+    setDeleteConfirmText('');
+  };
+
+  const confirmDeleteRelease = async () => {
+    if (!releasePendingDelete || !user?.id || isDeleting) return;
+
+    setIsDeleting(true);
+    setError('');
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const accessToken = session?.access_token || '';
+      if (!accessToken) {
+        throw new Error('Session expired. Please sign in again.');
+      }
+
+      const response = await fetch(`/api/plans/${releasePendingDelete.id}/delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          confirmationText: deleteConfirmText,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not delete release.');
+      }
+
+      setReleasePendingDelete(null);
+      setDeleteConfirmText('');
+      await loadDashboard();
+    } catch (deleteError: any) {
+      setError(deleteError?.message || 'Could not delete release.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoading || authLoading) {
     return (
       <main className="min-h-screen bg-bg-base text-content-primary">
@@ -336,44 +386,97 @@ export default function DashboardPage() {
             ) : (
               <div className="mt-6 space-y-3">
                 {sortedReleases.map((release) => (
-                  <button
+                  <div
                     key={release.id}
-                    type="button"
-                    onClick={() => router.push(`/dashboard/plans/${release.id}`)}
-                    className="w-full rounded-3xl border border-stroke-subtle bg-bg-elevated px-5 py-4 text-left transition hover:-translate-y-[1px] hover:border-stroke-default hover:bg-bg-hover"
+                    className="rounded-3xl border border-stroke-subtle bg-bg-elevated px-5 py-4 transition hover:-translate-y-[1px] hover:border-stroke-default hover:bg-bg-hover"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-lg font-semibold text-content-primary">{release.title}</p>
-                        <p className="mt-1 text-sm text-content-secondary">Artist: {release.artist_name}</p>
-                        <p className="mt-1 text-sm text-content-secondary">
-                          Release Date:{' '}
-                          {release.release_date
-                            ? new Date(release.release_date).toLocaleDateString()
-                            : 'Not set'}
-                        </p>
-                      </div>
-                      <div className="min-w-[130px] text-right">
-                        <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">Progress</p>
-                        <p className="mt-1 text-2xl font-semibold text-content-primary">{release.progress}%</p>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/dashboard/plans/${release.id}`)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-lg font-semibold text-content-primary">{release.title}</p>
+                            <p className="mt-1 text-sm text-content-secondary">Artist: {release.artist_name}</p>
+                            <p className="mt-1 text-sm text-content-secondary">
+                              Release Date:{' '}
+                              {release.release_date
+                                ? new Date(release.release_date).toLocaleDateString()
+                                : 'Not set'}
+                            </p>
+                          </div>
+                          <div className="min-w-[130px] text-right">
+                            <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">Progress</p>
+                            <p className="mt-1 text-2xl font-semibold text-content-primary">{release.progress}%</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 h-2 rounded-full bg-bg-overlay">
+                          <div className="h-full rounded-full bg-brand" style={{ width: `${release.progress}%` }} />
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-content-secondary">
+                          <span>
+                            {release.completedTasks} completed / {release.totalTasks} total
+                          </span>
+                          <span>{release.type ? release.type.toUpperCase() : 'RELEASE'}</span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReleasePendingDelete(release);
+                          setDeleteConfirmText('');
+                        }}
+                        className="rounded-2xl border border-status-error/35 bg-status-error/10 px-3 py-2 text-xs font-semibold text-status-error hover:bg-status-error/15"
+                      >
+                        Delete
+                      </button>
                     </div>
-                    <div className="mt-4 h-2 rounded-full bg-bg-overlay">
-                      <div className="h-full rounded-full bg-brand" style={{ width: `${release.progress}%` }} />
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-content-secondary">
-                      <span>
-                        {release.completedTasks} completed / {release.totalTasks} total
-                      </span>
-                      <span>{release.type ? release.type.toUpperCase() : 'RELEASE'}</span>
-                    </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
           </section>
         </section>
       </div>
+      {releasePendingDelete && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-stroke-default bg-bg-surface p-6">
+            <h2 className="text-xl font-semibold text-content-primary">Delete this release?</h2>
+            <p className="mt-2 text-sm text-content-secondary">
+              This will permanently delete <span className="font-semibold text-content-primary">{releasePendingDelete.title}</span> and all checklist progress.
+            </p>
+            <p className="mt-3 text-sm text-content-secondary">
+              Type <span className="font-semibold text-content-primary">DELETE</span> to confirm.
+            </p>
+            <input
+              value={deleteConfirmText}
+              onChange={(event) => setDeleteConfirmText(event.target.value)}
+              className="mt-3 w-full rounded-2xl border border-status-error/35 bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-status-error"
+              placeholder="DELETE"
+            />
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={isDeleting}
+                className="rounded-2xl border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary hover:bg-bg-hover disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteRelease}
+                disabled={isDeleting}
+                className="rounded-2xl bg-status-error px-4 py-2 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:opacity-50"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Release'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
