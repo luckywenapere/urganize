@@ -1,7 +1,7 @@
 export type ReleaseTaskPlanTask = {
   title: string;
   description: string;
-  phase: string;
+  phase: 'Strategy' | 'Preparation' | 'Content' | 'Distribution' | 'Promotion' | 'Launch' | 'Post-Launch';
   priority: 'High' | 'Medium' | 'Low';
   recommended_timing: string;
 };
@@ -37,7 +37,33 @@ const normalizePriority = (value: unknown): ReleaseTaskPlanTask['priority'] | nu
   if (normalized === 'high') return 'High';
   if (normalized === 'medium') return 'Medium';
   if (normalized === 'low') return 'Low';
+  if (normalized.includes('high')) return 'High';
+  if (normalized.includes('med')) return 'Medium';
+  if (normalized.includes('low')) return 'Low';
   return null;
+};
+
+const normalizePhase = (value: unknown): ReleaseTaskPlanTask['phase'] | null => {
+  const normalized = parseString(value).toLowerCase();
+  if (!normalized) return null;
+
+  if (normalized.includes('strategy') || normalized.includes('planning')) return 'Strategy';
+  if (normalized.includes('preparation') || normalized.includes('setup') || normalized.includes('artwork')) return 'Preparation';
+  if (normalized.includes('content') || normalized.includes('teaser') || normalized.includes('creative')) return 'Content';
+  if (normalized.includes('distribution') || normalized.includes('delivery') || normalized.includes('platform')) return 'Distribution';
+  if (
+    normalized.includes('promotion') ||
+    normalized.includes('campaign') ||
+    normalized.includes('media') ||
+    normalized.includes('social') ||
+    normalized.includes('press')
+  ) {
+    return 'Promotion';
+  }
+  if (normalized.includes('launch') || normalized.includes('release')) return 'Launch';
+  if (normalized.includes('post')) return 'Post-Launch';
+
+  return 'Strategy';
 };
 
 const hasExactKeys = (record: Record<string, unknown>, keys: readonly string[]) => {
@@ -53,7 +79,7 @@ const parseTaskPlanTask = (value: unknown): ReleaseTaskPlanTask | null => {
 
   const title = parseString(value.title);
   const description = parseString(value.description);
-  const phase = parseString(value.phase);
+  const phase = normalizePhase(value.phase);
   const priority = normalizePriority(value.priority);
   const recommended_timing = parseString(value.recommended_timing);
 
