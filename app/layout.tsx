@@ -1,31 +1,11 @@
 'use client';
 
 import { Suspense, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
-import "./globals.css";
+import './globals.css';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
-import { SchemaWarningBanner } from '@/components/SchemaWarningBanner';
-
-const PostAuthScreen = dynamic(
-  () => import('@/components/PostAuthScreen').then((mod) => mod.PostAuthScreen),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex min-h-screen items-center justify-center bg-bg-base text-content-primary">
-        <div className="skeleton-card w-full max-w-xl p-8">
-          <div className="h-8 w-48 rounded-lg skeleton-shimmer" />
-          <div className="mt-4 space-y-3">
-            <div className="skeleton-line skeleton-shimmer w-full" />
-            <div className="skeleton-line skeleton-shimmer w-4/5" />
-          </div>
-        </div>
-      </div>
-    ),
-  }
-);
 
 function AppShell({
   children,
@@ -37,20 +17,9 @@ function AppShell({
   const isAuthLoading = useAuthStore((state) => state.isLoading);
   const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   const isAuthRoute = pathname?.startsWith('/auth');
   const isDashboardRoute = pathname?.startsWith('/dashboard');
-  const isDashboardRootRoute = pathname === '/dashboard';
-  const hasOnboardingIntent =
-    isDashboardRootRoute &&
-    (searchParams?.has('startOnboarding') || searchParams?.has('planId'));
-  const showPostAuthScreen =
-    isAuthenticated &&
-    !isAuthLoading &&
-    !isAuthRoute &&
-    isDashboardRootRoute &&
-    hasOnboardingIntent;
   const requiresArtistNameGate =
     isAuthenticated &&
     !isAuthLoading &&
@@ -67,15 +36,12 @@ function AppShell({
     <>
       {requiresArtistNameGate ? (
         <ArtistNameGate />
-      ) : showPostAuthScreen ? (
-        <PostAuthScreen />
       ) : (
         <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>{children}</div>
       )}
-      <SchemaWarningBanner enabled={isAuthenticated && !isAuthRoute} />
-      {!showPostAuthScreen && !requiresArtistNameGate && (
+      {!requiresArtistNameGate && (
         <div className="keyboard-hint">
-          <kbd className="kbd">⌘</kbd>
+          <kbd className="kbd">Cmd</kbd>
           <kbd className="kbd">K</kbd>
           <span>Quick actions</span>
         </div>
@@ -90,7 +56,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-
   return (
     <html lang="en" suppressHydrationWarning data-theme="light" className="light">
       <head>

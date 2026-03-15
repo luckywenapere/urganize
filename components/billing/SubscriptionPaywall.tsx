@@ -427,8 +427,8 @@ export function SubscriptionPaywall({
             <div className="rounded-xl border border-stroke-subtle bg-bg-elevated p-4">
               <p className="text-sm font-semibold text-content-primary">What you get in trial</p>
               <ul className="mt-2 space-y-1 text-sm text-content-secondary">
-                <li>Full onboarding and execution workflow</li>
-                <li>Plan dashboard, pacing insights, and next-step loop</li>
+                <li>Create releases with the full professional checklist workflow</li>
+                <li>Track progress across planning, release week, and post-release</li>
                 <li>Individual or group billing model preserved at renewal</li>
               </ul>
             </div>
