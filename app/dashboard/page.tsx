@@ -341,7 +341,7 @@ export default function DashboardPage() {
                     type="date"
                     value={form.releaseDate}
                     onChange={(event) => setForm((current) => ({ ...current, releaseDate: event.target.value }))}
-                    className="w-full rounded-2xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-content-primary outline-none focus:border-brand"
+                    className="min-w-0 w-full rounded-2xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-content-primary outline-none focus:border-brand"
                   />
                 </label>
                 <label className="block text-sm">
@@ -349,7 +349,7 @@ export default function DashboardPage() {
                   <select
                     value={form.releaseType}
                     onChange={(event) => setForm((current) => ({ ...current, releaseType: event.target.value }))}
-                    className="w-full rounded-2xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-content-primary outline-none focus:border-brand"
+                    className="min-w-0 w-full rounded-2xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-content-primary outline-none focus:border-brand"
                   >
                     <option value="single">Single</option>
                     <option value="ep">EP</option>

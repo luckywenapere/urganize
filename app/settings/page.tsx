@@ -114,7 +114,7 @@ const parsePaymentMetadata = (paystackResponse: unknown): Record<string, unknown
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, logout, checkAuth, updateArtistName, updateRole, isLoading: authLoading } = useAuthStore();
+  const { user, logout, checkAuth, updateArtistName, isLoading: authLoading } = useAuthStore();
 
   const [name, setName] = useState('');
   const [artistProfileName, setArtistProfileName] = useState('');
@@ -171,12 +171,9 @@ export default function SettingsPage() {
     notes: '',
   });
   const [managedArtistSchemaSql, setManagedArtistSchemaSql] = useState('');
-  const [isSwitchingAccountType, setIsSwitchingAccountType] = useState(false);
-  const [switchingToRoleLabel, setSwitchingToRoleLabel] = useState('');
 
   const rolePermissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
   const isManagerAccount = rolePermissions.role === 'manager';
-  const canSwitchAccountType = rolePermissions.role === 'artist' || rolePermissions.role === 'manager';
   const settingsUiStateKey = user ? `urganize.settings.ui.v${SETTINGS_UI_STATE_VERSION}.${user.id}` : '';
 
   useEffect(() => {
@@ -503,40 +500,6 @@ export default function SettingsPage() {
       setError(err?.message || 'Failed to update artist name');
     } finally {
       setIsSavingName(false);
-    }
-  };
-
-  const handleSwitchAccountType = async (target: 'artist' | 'artist-manager') => {
-    if (!user || !canSwitchAccountType || isSwitchingAccountType) return;
-
-    const targetRoleLabel = target === 'artist' ? 'Artist' : 'Artist Manager';
-    const normalizedCurrent = rolePermissions.role;
-    if ((target === 'artist' && normalizedCurrent === 'artist') || (target === 'artist-manager' && normalizedCurrent === 'manager')) {
-      return;
-    }
-
-    if (target === 'artist') {
-      const artistName = String(user.artist_name || artistProfileName || '').trim();
-      if (!artistName) {
-        setError('Add your Artist name first before switching to Artist account.');
-        return;
-      }
-    }
-
-    clearFeedback();
-    setSwitchingToRoleLabel(targetRoleLabel);
-    setIsSwitchingAccountType(true);
-    try {
-      await updateRole(target);
-      await checkAuth();
-      router.refresh();
-      router.push('/dashboard');
-      setSuccess(`Switched to ${targetRoleLabel} account.`);
-    } catch (err: any) {
-      setError(err?.message || `Could not switch to ${targetRoleLabel} account.`);
-    } finally {
-      setIsSwitchingAccountType(false);
-      setSwitchingToRoleLabel('');
     }
   };
 
@@ -958,12 +921,6 @@ export default function SettingsPage() {
           </div>
           <div className="flex items-center gap-2">
             <Link
-              href="/admin"
-              className="rounded-full border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-            >
-              Admin
-            </Link>
-            <Link
               href="/dashboard"
               className="rounded-full border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
             >
@@ -1036,38 +993,6 @@ export default function SettingsPage() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {canSwitchAccountType && (
-            <section className={panelClass}>
-              <h2 className="mb-4 text-xl">Account Type</h2>
-              <div className="rounded-lg border border-stroke-subtle bg-bg-elevated p-4">
-                <p className="text-sm text-content-secondary">
-                  Switch between Artist and Artist Manager modes. The app will immediately update role-based features and permissions.
-                </p>
-                <p className="mt-2 text-sm text-content-primary">
-                  Current: <span className="font-semibold">{isManagerAccount ? 'Artist Manager' : 'Artist'}</span>
-                </p>
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSwitchAccountType('artist')}
-                    disabled={isSwitchingAccountType || !isManagerAccount}
-                    className="rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover disabled:opacity-60"
-                  >
-                    Switch to Artist
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSwitchAccountType('artist-manager')}
-                    disabled={isSwitchingAccountType || isManagerAccount}
-                    className="rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover disabled:opacity-60"
-                  >
-                    Switch to Artist Manager
-                  </button>
-                </div>
-              </div>
-            </section>
-          )}
-
           <section className={panelClass}>
             <h2 className="mb-4 text-xl">Notifications</h2>
             <div className="space-y-4">
@@ -1627,30 +1552,6 @@ export default function SettingsPage() {
             </button>
           </div>
         </section>
-        {isSwitchingAccountType && (
-          <div className="fixed inset-0 z-[120] grid place-items-center bg-bg-base/80 backdrop-blur-sm">
-            <div className="w-[min(92vw,360px)] rounded-2xl border border-stroke-default bg-bg-surface p-6 text-center shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
-              <div className="relative mx-auto h-20 w-20">
-                <div
-                  className="absolute inset-0 rounded-full border-2 border-brand/40 border-t-brand"
-                  style={{ animation: 'spin 1.15s linear infinite' }}
-                />
-                <div
-                  className="absolute inset-[8px] rounded-full border-2 border-status-info/45 border-b-status-info"
-                  style={{ animation: 'spin 1.6s linear infinite reverse' }}
-                />
-                <div
-                  className="absolute inset-[18px] rounded-full border-2 border-status-warning/45 border-l-status-warning"
-                  style={{ animation: 'spin 0.85s linear infinite' }}
-                />
-              </div>
-              <p className="mt-4 text-sm font-semibold uppercase tracking-[0.14em] text-content-tertiary">Switching Account</p>
-              <p className="mt-2 text-sm text-content-secondary">
-                Applying {switchingToRoleLabel || 'new'} profile properties across your workspace.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </main>
   );
