@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import {
   getChecklistProgress,
   groupChecklistByStage,
@@ -174,13 +175,12 @@ export default function ReleaseChecklistPage() {
 
   if (isLoading || authLoading) {
     return (
-      <main className="min-h-screen bg-bg-base text-content-primary">
-        <div className="mx-auto max-w-[1080px] px-6 py-12">
-          <div className="h-10 w-64 rounded-xl skeleton-shimmer" />
-          <div className="mt-6 h-48 rounded-[28px] skeleton-shimmer" />
-          <div className="mt-6 h-[620px] rounded-[28px] skeleton-shimmer" />
-        </div>
-      </main>
+      <LoadingScreen
+        variant="detail"
+        eyebrow="Release Checklist"
+        title="Loading your release plan"
+        description="Arranging the timeline, progress, and task sequence for this release."
+      />
     );
   }
 

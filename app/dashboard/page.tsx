@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { buildReleaseChecklist, formatDateInput, getChecklistProgress } from '@/lib/release-checklist';
 
 type ReleaseRow = {
@@ -256,13 +257,12 @@ export default function DashboardPage() {
 
   if (isLoading || authLoading) {
     return (
-      <main className="min-h-screen bg-bg-base text-content-primary">
-        <div className="mx-auto max-w-[1100px] px-6 py-12">
-          <div className="h-10 w-48 rounded-xl skeleton-shimmer" />
-          <div className="mt-6 h-56 rounded-[28px] skeleton-shimmer" />
-          <div className="mt-6 h-64 rounded-[28px] skeleton-shimmer" />
-        </div>
-      </main>
+      <LoadingScreen
+        variant="dashboard"
+        eyebrow="Dashboard"
+        title="Loading your releases"
+        description="Preparing your release checklist dashboard and saved plans."
+      />
     );
   }
 

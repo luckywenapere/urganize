@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 type PaymentStatus = 'verifying' | 'success' | 'failed';
 
@@ -158,9 +159,14 @@ export default function PaymentCallbackPage() {
         <div className="pointer-events-none absolute -left-20 bottom-0 h-60 w-60 rounded-full bg-status-info/12 blur-3xl" />
         <Suspense
           fallback={
-            <div className="w-full max-w-md rounded-3xl border border-stroke-subtle bg-bg-surface/95 p-6 text-center shadow-[0_12px_32px_rgba(0,0,0,0.18)] backdrop-blur-sm">
-              <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-content-primary border-t-transparent" />
-              <p className="text-content-secondary">Loading payment status...</p>
+            <div className="w-full">
+              <LoadingScreen
+                variant="shell"
+                eyebrow="Billing"
+                title="Checking payment status"
+                description="Confirming your payment and updating access."
+                asPage={false}
+              />
             </div>
           }
         >

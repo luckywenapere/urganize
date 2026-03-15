@@ -6,6 +6,8 @@ import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
 import './globals.css';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
+import { AppSidebar } from '@/components/app/AppSidebar';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 function AppShell({
   children,
@@ -20,6 +22,8 @@ function AppShell({
 
   const isAuthRoute = pathname?.startsWith('/auth');
   const isDashboardRoute = pathname?.startsWith('/dashboard');
+  const isSettingsRoute = pathname === '/settings';
+  const showWorkspaceSidebar = isAuthenticated && !isAuthLoading && (isDashboardRoute || isSettingsRoute);
   const requiresArtistNameGate =
     isAuthenticated &&
     !isAuthLoading &&
@@ -36,6 +40,13 @@ function AppShell({
     <>
       {requiresArtistNameGate ? (
         <ArtistNameGate />
+      ) : showWorkspaceSidebar ? (
+        <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>
+          <div className="mx-auto flex w-full max-w-[1480px] gap-2 px-0 md:px-4">
+            <AppSidebar userName={user?.name || user?.artist_name || user?.email || ''} />
+            <div className="min-w-0 flex-1 pt-14 md:pt-0">{children}</div>
+          </div>
+        </div>
       ) : (
         <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>{children}</div>
       )}
@@ -82,7 +93,11 @@ export default function RootLayout({
       <body className="app-body bg-bg-base text-content-primary antialiased">
         <Suspense
           fallback={
-            <div className="app-layout app-layout-centered lazy-fade lazy-fade-in">{children}</div>
+            <LoadingScreen
+              variant="shell"
+              title="Opening Urganize"
+              description="Loading your release workspace."
+            />
           }
         >
           <AppShell>{children}</AppShell>
