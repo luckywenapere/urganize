@@ -69,6 +69,7 @@ export default function ReleaseChecklistPage() {
   const { user, isLoading: authLoading } = useAuthStore();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [hasSubscriptionAccess, setHasSubscriptionAccess] = useState<boolean | null>(null);
@@ -82,7 +83,9 @@ export default function ReleaseChecklistPage() {
 
   const loadRelease = useCallback(async () => {
     if (!user?.id || !planId) return;
-    setIsLoading(true);
+    if (!hasLoadedOnce && !release && checklist.length === 0) {
+      setIsLoading(true);
+    }
     setError('');
 
     try {
@@ -128,8 +131,9 @@ export default function ReleaseChecklistPage() {
       setError(loadError?.message || 'Could not load release checklist.');
     } finally {
       setIsLoading(false);
+      setHasLoadedOnce(true);
     }
-  }, [planId, user?.id]);
+  }, [checklist.length, hasLoadedOnce, planId, release, user?.id]);
 
   useEffect(() => {
     if (authLoading) return;

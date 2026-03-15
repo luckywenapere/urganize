@@ -44,6 +44,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, isLoading: authLoading, logout } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [releasePendingDelete, setReleasePendingDelete] = useState<ReleaseCard | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -65,7 +66,9 @@ export default function DashboardPage() {
 
   const loadDashboard = useCallback(async () => {
     if (!user) return;
-    setIsLoading(true);
+    if (!hasLoadedOnce && releases.length === 0) {
+      setIsLoading(true);
+    }
     setError('');
 
     try {
@@ -120,8 +123,9 @@ export default function DashboardPage() {
       setError(loadError?.message || 'Could not load releases.');
     } finally {
       setIsLoading(false);
+      setHasLoadedOnce(true);
     }
-  }, [user]);
+  }, [hasLoadedOnce, releases.length, user]);
 
   useEffect(() => {
     if (authLoading) return;

@@ -1,13 +1,12 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
 import './globals.css';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { AppSidebar } from '@/components/app/AppSidebar';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 function AppShell({
   children,
@@ -33,8 +32,10 @@ function AppShell({
   const pageLayoutClassName = isDashboardRoute ? 'app-layout app-layout-fluid' : 'app-layout app-layout-centered';
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    if (!isAuthenticated || !user) {
+      void checkAuth();
+    }
+  }, [checkAuth, isAuthenticated, user]);
 
   return (
     <>
@@ -91,17 +92,7 @@ export default function RootLayout({
         />
       </head>
       <body className="app-body bg-bg-base text-content-primary antialiased">
-        <Suspense
-          fallback={
-            <LoadingScreen
-              variant="shell"
-              title="Opening Urganize"
-              description="Loading your release workspace."
-            />
-          }
-        >
-          <AppShell>{children}</AppShell>
-        </Suspense>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

@@ -194,7 +194,11 @@ export const useAuthStore = create<AuthState>()(
 
         authCheckInFlight = (async () => {
           try {
-          set({ isLoading: true });
+          const currentState = get();
+          const shouldShowLoading = !currentState.isAuthenticated || !currentState.user;
+          if (shouldShowLoading) {
+            set({ isLoading: true });
+          }
           
           const { data: { session }, error: sessionError } = await supabase.auth.getSession();
           
@@ -534,8 +538,16 @@ if (typeof window !== 'undefined') {
         needsOnboarding: true,
         error: null,
       });
-    } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+    } else if (event === 'SIGNED_IN') {
       useAuthStore.getState().checkAuth();
+    } else if (event === 'TOKEN_REFRESHED') {
+      useAuthStore.setState((state) => ({
+        isAuthenticated: state.isAuthenticated,
+        isLoading: false,
+        error: state.error,
+        needsOnboarding: state.needsOnboarding,
+        user: state.user,
+      }));
     }
   });
 }

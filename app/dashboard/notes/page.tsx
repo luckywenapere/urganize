@@ -1,9 +1,10 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
 
 type NoteColor = 'butter' | 'coral' | 'sage' | 'sky';
 
@@ -30,6 +31,9 @@ const colorClassByNote: Record<NoteColor, string> = {
 };
 
 const noteStorageKey = (userId: string) => `urganize.notes.v1.${userId}`;
+const NOTES_SCOPE = 'notes-board';
+const NOTES_SYNC_INTERVAL_MS = 3500;
+const NOTES_SAVE_DEBOUNCE_MS = 500;
 
 const emptyDraft: DraftNote = {
   title: '',
@@ -37,26 +41,40 @@ const emptyDraft: DraftNote = {
   color: 'butter',
 };
 
+type NotesDraftPayload = {
+  notes: Note[];
+};
+
+const isNote = (item: unknown): item is Note => {
+  if (!item || typeof item !== 'object') return false;
+  const note = item as Partial<Note>;
+  return (
+    typeof note.id === 'string' &&
+    typeof note.title === 'string' &&
+    typeof note.body === 'string' &&
+    typeof note.updatedAt === 'string' &&
+    (note.color === 'butter' || note.color === 'coral' || note.color === 'sage' || note.color === 'sky') &&
+    typeof note.pinned === 'boolean'
+  );
+};
+
 const parseNotes = (value: string | null): Note[] => {
   if (!value) return [];
   try {
     const parsed = JSON.parse(value);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item): item is Note => {
-      return (
-        item &&
-        typeof item === 'object' &&
-        typeof item.id === 'string' &&
-        typeof item.title === 'string' &&
-        typeof item.body === 'string' &&
-        typeof item.updatedAt === 'string' &&
-        (item.color === 'butter' || item.color === 'coral' || item.color === 'sage' || item.color === 'sky') &&
-        typeof item.pinned === 'boolean'
-      );
-    });
+    return parsed.filter(isNote);
   } catch {
     return [];
   }
+};
+
+const parseNotesDraftPayload = (value: unknown): NotesDraftPayload | null => {
+  if (!value || typeof value !== 'object') return null;
+  const notes = (value as { notes?: unknown }).notes;
+  if (!Array.isArray(notes)) return null;
+  const validNotes = notes.filter(isNote);
+  return { notes: validNotes };
 };
 
 export default function NotesPage() {
@@ -66,6 +84,10 @@ export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [draft, setDraft] = useState<DraftNote>(emptyDraft);
   const [search, setSearch] = useState('');
+  const lastRemoteUpdatedAtRef = useRef<string | null>(null);
+  const lastSerializedNotesRef = useRef('[]');
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasPendingRemoteSyncRef = useRef(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -74,15 +96,98 @@ export default function NotesPage() {
       return;
     }
 
-    const stored = parseNotes(window.localStorage.getItem(noteStorageKey(user.id)));
-    setNotes(stored);
-    setIsLoading(false);
+    let cancelled = false;
+
+    const loadNotes = async () => {
+      const localNotes = parseNotes(window.localStorage.getItem(noteStorageKey(user.id)));
+      if (!cancelled) {
+        setNotes(localNotes);
+        lastSerializedNotesRef.current = JSON.stringify(localNotes);
+      }
+
+      const remoteDraft = await fetchUiDraft<NotesDraftPayload>(NOTES_SCOPE, noteStorageKey(user.id));
+      if (cancelled) return;
+
+      const remotePayload = parseNotesDraftPayload(remoteDraft.payload);
+      const remoteNotes = remotePayload?.notes || [];
+      const nextNotes = remoteNotes.length > 0 ? remoteNotes : localNotes;
+      setNotes(nextNotes);
+      window.localStorage.setItem(noteStorageKey(user.id), JSON.stringify(nextNotes));
+      lastSerializedNotesRef.current = JSON.stringify(nextNotes);
+      lastRemoteUpdatedAtRef.current = remoteDraft.updatedAt || null;
+      setIsLoading(false);
+    };
+
+    void loadNotes();
+
+    return () => {
+      cancelled = true;
+    };
   }, [authLoading, router, user]);
 
   useEffect(() => {
     if (!user || isLoading) return;
     window.localStorage.setItem(noteStorageKey(user.id), JSON.stringify(notes));
+    const serializedNotes = JSON.stringify(notes);
+    lastSerializedNotesRef.current = serializedNotes;
+    hasPendingRemoteSyncRef.current = true;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      void (async () => {
+        await saveUiDraft<NotesDraftPayload>(NOTES_SCOPE, noteStorageKey(user.id), { notes });
+        hasPendingRemoteSyncRef.current = false;
+      })();
+    }, NOTES_SAVE_DEBOUNCE_MS);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+    };
   }, [isLoading, notes, user]);
+
+  useEffect(() => {
+    if (!user || isLoading) return;
+
+    let cancelled = false;
+
+    const syncFromRemote = async () => {
+      const remoteDraft = await fetchUiDraft<NotesDraftPayload>(NOTES_SCOPE, noteStorageKey(user.id));
+      if (cancelled || !remoteDraft.payload) return;
+
+      const remotePayload = parseNotesDraftPayload(remoteDraft.payload);
+      if (!remotePayload) return;
+
+      const serializedRemoteNotes = JSON.stringify(remotePayload.notes);
+      const remoteUpdatedAt = remoteDraft.updatedAt || null;
+
+      if (remoteUpdatedAt && lastRemoteUpdatedAtRef.current === remoteUpdatedAt) return;
+      if (hasPendingRemoteSyncRef.current) return;
+      if (serializedRemoteNotes === lastSerializedNotesRef.current) {
+        lastRemoteUpdatedAtRef.current = remoteUpdatedAt;
+        return;
+      }
+
+      lastRemoteUpdatedAtRef.current = remoteUpdatedAt;
+      lastSerializedNotesRef.current = serializedRemoteNotes;
+      setNotes(remotePayload.notes);
+      window.localStorage.setItem(noteStorageKey(user.id), serializedRemoteNotes);
+    };
+
+    const interval = setInterval(() => {
+      void syncFromRemote();
+    }, NOTES_SYNC_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [isLoading, user]);
 
   const filteredNotes = useMemo(() => {
     const query = search.trim().toLowerCase();

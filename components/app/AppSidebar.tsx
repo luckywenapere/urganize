@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { Logo } from '@/components/ui/Logo';
 
 type AppSidebarProps = {
   userName?: string;
@@ -58,7 +59,7 @@ export function AppSidebar({ userName }: AppSidebarProps) {
   const sidebar = (
     <div className="flex h-full flex-col">
       <div className="rounded-[28px] border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)] backdrop-blur-sm">
-        <p className="brand-mark text-2xl text-content-primary">urganize</p>
+        <Logo size="lg" priority className="justify-start" />
         <p className="mt-2 text-xs uppercase tracking-[0.16em] text-content-tertiary">Workspace</p>
         <p className="mt-3 text-sm text-content-secondary">
           {userName ? `${userName.split(' ')[0]}'s release control room` : 'Release execution workspace'}
