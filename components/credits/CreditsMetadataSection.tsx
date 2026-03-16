@@ -93,11 +93,6 @@ export function CreditsMetadataSection({ planId }: CreditsMetadataSectionProps) 
     void loadCredits();
   }, [planId]);
 
-  const openResponses = async () => {
-    await loadCredits();
-    setShowResponses(true);
-  };
-
   const handleGenerateLink = async () => {
     setIsGeneratingLink(true);
     setError('');
@@ -323,10 +318,10 @@ export function CreditsMetadataSection({ planId }: CreditsMetadataSectionProps) 
           </button>
           <button
             type="button"
-            onClick={() => void openResponses()}
+            onClick={() => setShowResponses((current) => !current)}
             className="rounded-full border border-stroke-default bg-bg-surface px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
           >
-            View Responses
+            {showResponses ? 'Hide Responses' : 'View Responses'}
           </button>
           <button
             type="button"
@@ -354,84 +349,53 @@ export function CreditsMetadataSection({ planId }: CreditsMetadataSectionProps) 
       </div>
 
       {showResponses ? (
-        <div className="fixed inset-0 z-[135]">
-          <button
-            type="button"
-            onClick={() => {
-              setShowResponses(false);
-              setSelectedSubmission(null);
-            }}
-            className="absolute inset-0 bg-brand/25 backdrop-blur-[2px]"
-          />
-          <div className="absolute inset-x-4 top-6 bottom-6 overflow-hidden rounded-[30px] border border-stroke-default bg-bg-surface shadow-[0_30px_90px_rgba(0,0,0,0.28)] sm:inset-x-8">
-            <div className="flex items-center justify-between gap-4 border-b border-stroke-default px-5 py-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Credits responses</p>
-                <h3 className="mt-1 text-2xl tracking-tight text-content-primary">
-                  View collected contributor metadata
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowResponses(false);
-                  setSelectedSubmission(null);
-                }}
-                className="rounded-full border border-stroke-default bg-bg-surface px-3 py-1 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-              >
-                Close
-              </button>
+        <div className="mt-6 overflow-hidden rounded-[28px] border border-stroke-default bg-bg-surface/95 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.35)]">
+          {isLoading ? (
+            <div className="px-5 py-6 text-sm text-content-secondary">Loading responses...</div>
+          ) : submissions.length === 0 ? (
+            <div className="px-5 py-6 text-sm text-content-secondary">
+              No contributor responses yet. Generate the link and share it with your collaborators.
             </div>
-
-            <div className="h-[calc(100%-81px)] overflow-y-auto">
-              {isLoading ? (
-                <div className="px-5 py-6 text-sm text-content-secondary">Loading responses...</div>
-              ) : submissions.length === 0 ? (
-                <div className="px-5 py-6 text-sm text-content-secondary">
-                  No contributor responses yet. Generate the link and share it with your collaborators.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-stroke-default text-sm">
-                    <thead className="bg-bg-elevated/80 text-left text-content-tertiary">
-                      <tr>
-                        <th className="px-4 py-3 font-medium">Contributor name</th>
-                        <th className="px-4 py-3 font-medium">Credited name</th>
-                        <th className="px-4 py-3 font-medium">Role</th>
-                        <th className="px-4 py-3 font-medium">Email</th>
-                        <th className="px-4 py-3 font-medium">PRO</th>
-                        <th className="px-4 py-3 font-medium">IPI / CAE</th>
-                        <th className="px-4 py-3 font-medium">Split %</th>
-                        <th className="px-4 py-3 font-medium">Submission status</th>
-                        <th className="px-4 py-3 font-medium">Submitted at</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-stroke-default bg-bg-surface/90">
-                      {submissions.map((submission) => (
-                        <tr
-                          key={submission.id}
-                          onClick={() => openSubmission(submission)}
-                          className="cursor-pointer hover:bg-bg-hover/70"
-                        >
-                          <td className="px-4 py-3 text-content-primary">{submission.legalFullName || '—'}</td>
-                          <td className="px-4 py-3 text-content-secondary">{submission.creditedName || '—'}</td>
-                          <td className="px-4 py-3 text-content-secondary">{submission.roleType}</td>
-                          <td className="px-4 py-3 text-content-secondary">{submission.email}</td>
-                          <td className="px-4 py-3 text-content-secondary">{submission.proAffiliation || '—'}</td>
-                          <td className="px-4 py-3 text-content-secondary">{submission.ipiCaeNumber || '—'}</td>
-                          <td className="px-4 py-3 text-content-secondary">{submission.splitPercentage || '—'}</td>
-                          <td className="px-4 py-3 text-content-secondary">{submission.submissionStatus}</td>
-                          <td className="px-4 py-3 text-content-secondary">
-                            {submission.submittedAt ? new Date(submission.submittedAt).toLocaleString() : '—'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-stroke-default text-sm">
+                <thead className="bg-bg-elevated/80 text-left text-content-tertiary">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Contributor name</th>
+                    <th className="px-4 py-3 font-medium">Credited name</th>
+                    <th className="px-4 py-3 font-medium">Role</th>
+                    <th className="px-4 py-3 font-medium">Email</th>
+                    <th className="px-4 py-3 font-medium">PRO</th>
+                    <th className="px-4 py-3 font-medium">IPI / CAE</th>
+                    <th className="px-4 py-3 font-medium">Split %</th>
+                    <th className="px-4 py-3 font-medium">Submission status</th>
+                    <th className="px-4 py-3 font-medium">Submitted at</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stroke-default bg-bg-surface/90">
+                  {submissions.map((submission) => (
+                    <tr
+                      key={submission.id}
+                      onClick={() => openSubmission(submission)}
+                      className="cursor-pointer hover:bg-bg-hover/70"
+                    >
+                      <td className="px-4 py-3 text-content-primary">{submission.legalFullName || '—'}</td>
+                      <td className="px-4 py-3 text-content-secondary">{submission.creditedName || '—'}</td>
+                      <td className="px-4 py-3 text-content-secondary">{submission.roleType}</td>
+                      <td className="px-4 py-3 text-content-secondary">{submission.email}</td>
+                      <td className="px-4 py-3 text-content-secondary">{submission.proAffiliation || '—'}</td>
+                      <td className="px-4 py-3 text-content-secondary">{submission.ipiCaeNumber || '—'}</td>
+                      <td className="px-4 py-3 text-content-secondary">{submission.splitPercentage || '—'}</td>
+                      <td className="px-4 py-3 text-content-secondary">{submission.submissionStatus}</td>
+                      <td className="px-4 py-3 text-content-secondary">
+                        {submission.submittedAt ? new Date(submission.submittedAt).toLocaleString() : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
+          )}
         </div>
       ) : null}
 
