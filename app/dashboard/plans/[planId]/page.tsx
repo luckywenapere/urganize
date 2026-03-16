@@ -255,9 +255,9 @@ export default function ReleaseChecklistPage() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto max-w-[980px] px-6 py-10 sm:px-8">
+      <div className="mx-auto max-w-[980px] px-4 pb-8 pt-20 sm:px-8 sm:py-10">
         <div className="border-b border-stroke-default pb-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <div className="text-sm text-content-secondary">
               <span className="font-medium text-content-primary">Dashboard</span>
               <span className="mx-2 text-content-tertiary">|</span>
@@ -265,7 +265,7 @@ export default function ReleaseChecklistPage() {
             </div>
             <Link
               href="/dashboard"
-              className="text-sm text-content-secondary transition hover:text-content-primary"
+              className="w-full rounded-full border border-stroke-default bg-bg-surface px-4 py-3 text-center text-sm text-content-secondary transition hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
             >
               Back to Dashboard
             </Link>
@@ -325,7 +325,8 @@ export default function ReleaseChecklistPage() {
         <section className="border-b border-stroke-default py-8">
           <div>
             <p className="text-sm font-medium text-content-primary">Current Stage</p>
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+            <div className="-mx-1 mt-4 overflow-x-auto px-1 pb-2 text-sm">
+              <div className="flex min-w-max items-center gap-2">
               {RELEASE_TIMELINE_STAGES.map((stage, index) => {
                 const isActive = stage === currentTimelineStage;
                 return (
@@ -345,6 +346,7 @@ export default function ReleaseChecklistPage() {
                   </div>
                 );
               })}
+              </div>
             </div>
           </div>
         </section>
@@ -362,7 +364,7 @@ export default function ReleaseChecklistPage() {
                   {group.items.map((task) => (
                     <label
                       key={task.id}
-                      className={`flex cursor-pointer items-start gap-4 rounded-[20px] border px-4 py-4 transition ${
+                      className={`flex cursor-pointer items-start gap-4 rounded-[20px] border px-4 py-4 transition active:scale-[0.995] ${
                         task.completed
                           ? 'border-brand/30 bg-brand-muted/45'
                           : 'border-stroke-default bg-bg-surface hover:bg-bg-hover/60'
@@ -373,7 +375,7 @@ export default function ReleaseChecklistPage() {
                         checked={task.completed}
                         onChange={() => void toggleTask(task.id, task.completed)}
                         disabled={isSaving === task.id}
-                        className="mt-1 h-4 w-4 rounded border-stroke-default"
+                        className="mt-1 h-5 w-5 rounded border-stroke-default"
                       />
                       <div className="min-w-0 flex-1">
                         <p className={`text-base font-semibold ${task.completed ? 'text-content-primary line-through' : 'text-content-primary'}`}>

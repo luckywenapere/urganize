@@ -387,8 +387,8 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto max-w-[1100px] px-6 py-10 sm:px-10">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="mx-auto max-w-[1100px] px-4 pb-8 pt-20 sm:px-10 sm:py-10">
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Dashboard</p>
             <h1 className="mt-2 text-[clamp(2.4rem,6vw,4.2rem)] tracking-tight text-content-primary">Release Execution</h1>
@@ -396,14 +396,14 @@ export default function DashboardPage() {
               Create a release, generate the standard checklist automatically, and track completion from planning through post-release.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/settings" className="rounded-full border border-stroke-default bg-bg-surface px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <Link href="/settings" className="w-full rounded-full border border-stroke-default bg-bg-surface px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2">
               Account
             </Link>
             <button
               type="button"
               onClick={() => void logout()}
-              className="rounded-full border border-stroke-default bg-bg-surface px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+              className="w-full rounded-full border border-stroke-default bg-bg-surface px-4 py-3 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
             >
               Logout
             </button>
@@ -417,7 +417,7 @@ export default function DashboardPage() {
         )}
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-          <form onSubmit={handleCreateRelease} className="rounded-[28px] border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)]">
+          <form onSubmit={handleCreateRelease} className="rounded-[28px] border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)] sm:p-6">
             <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Create New Release</p>
             <h2 className="mt-2 text-2xl tracking-tight text-content-primary">Start a professional rollout</h2>
             <p className="mt-2 text-sm text-content-secondary">
@@ -511,15 +511,15 @@ export default function DashboardPage() {
                 {sortedReleases.map((release) => (
                   <div
                     key={release.id}
-                    className="rounded-3xl border border-stroke-subtle bg-bg-elevated px-5 py-4 transition hover:-translate-y-[1px] hover:border-stroke-default hover:bg-bg-hover"
+                    className="rounded-3xl border border-stroke-subtle bg-bg-elevated px-4 py-4 transition hover:-translate-y-[1px] hover:border-stroke-default hover:bg-bg-hover sm:px-5"
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                       <button
                         type="button"
                         onClick={() => router.push(`/dashboard/plans/${release.id}`)}
                         className="min-w-0 flex-1 text-left"
                       >
-                        <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                           <div>
                             <p className="text-lg font-semibold text-content-primary">{release.title}</p>
                             <p className="mt-1 text-sm text-content-secondary">Artist: {release.artist_name}</p>
@@ -530,7 +530,7 @@ export default function DashboardPage() {
                                 : 'Not set'}
                             </p>
                           </div>
-                          <div className="min-w-[130px] text-right">
+                          <div className="min-w-0 text-left sm:min-w-[130px] sm:text-right">
                             <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">Progress</p>
                             <p className="mt-1 text-2xl font-semibold text-content-primary">{release.progress}%</p>
                           </div>
@@ -551,7 +551,7 @@ export default function DashboardPage() {
                           setReleasePendingDelete(release);
                           setDeleteConfirmText('');
                         }}
-                        className="rounded-2xl border border-status-error/35 bg-status-error/10 px-3 py-2 text-xs font-semibold text-status-error hover:bg-status-error/15"
+                        className="w-full rounded-2xl border border-status-error/35 bg-status-error/10 px-3 py-3 text-xs font-semibold text-status-error hover:bg-status-error/15 sm:w-auto sm:py-2"
                       >
                         Delete
                       </button>
@@ -565,7 +565,7 @@ export default function DashboardPage() {
       </div>
       {releasePendingDelete && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-stroke-default bg-bg-surface p-6">
+          <div className="w-full max-w-md rounded-2xl border border-stroke-default bg-bg-surface p-5 sm:p-6">
             <h2 className="text-xl font-semibold text-content-primary">Delete this release?</h2>
             <p className="mt-2 text-sm text-content-secondary">
               This will permanently delete <span className="font-semibold text-content-primary">{releasePendingDelete.title}</span> and all checklist progress.
@@ -579,12 +579,12 @@ export default function DashboardPage() {
               className="mt-3 w-full rounded-2xl border border-status-error/35 bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-status-error"
               placeholder="DELETE"
             />
-            <div className="mt-5 flex items-center justify-end gap-2">
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={closeDeleteModal}
                 disabled={isDeleting}
-                className="rounded-2xl border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary hover:bg-bg-hover disabled:opacity-50"
+                className="w-full rounded-2xl border border-stroke-default bg-bg-elevated px-4 py-3 text-sm text-content-primary hover:bg-bg-hover disabled:opacity-50 sm:w-auto sm:py-2"
               >
                 Cancel
               </button>
@@ -592,7 +592,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={confirmDeleteRelease}
                 disabled={isDeleting}
-                className="rounded-2xl bg-status-error px-4 py-2 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:opacity-50"
+                className="w-full rounded-2xl bg-status-error px-4 py-3 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:opacity-50 sm:w-auto sm:py-2"
               >
                 {isDeleting ? 'Deleting...' : 'Delete Release'}
               </button>

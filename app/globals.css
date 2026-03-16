@@ -883,6 +883,18 @@ body:focus-within .keyboard-hint,
   transform: translateY(0);
 }
 
+.mobile-safe-top-offset {
+  top: calc(env(safe-area-inset-top, 0px) + 1rem);
+}
+
+.mobile-safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.25rem);
+}
+
+.mobile-safe-bottom-offset {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+}
+
 @media (max-width: 768px) {
   :root {
     --text-base: 15px;
@@ -904,6 +916,10 @@ body:focus-within .keyboard-hint,
 
   .app-layout {
     max-width: 100%;
+  }
+
+  .keyboard-hint {
+    display: none;
   }
 }
 

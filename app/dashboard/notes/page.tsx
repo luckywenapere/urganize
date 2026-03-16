@@ -254,8 +254,8 @@ export default function NotesPage() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto max-w-[1220px] px-4 py-20 sm:px-8 sm:py-10 md:py-12">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="mx-auto max-w-[1220px] px-4 pb-8 pt-20 sm:px-8 sm:py-10 md:py-12">
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Notes</p>
             <h1 className="mt-2 text-[clamp(2.4rem,6vw,4.1rem)] tracking-tight text-content-primary">Capture the release as it happens</h1>
@@ -290,7 +290,7 @@ export default function NotesPage() {
                 className="w-full resize-none rounded-[22px] border border-stroke-subtle bg-bg-elevated px-4 py-3 text-sm text-content-primary outline-none focus:border-brand"
               />
             </div>
-            <div className="flex flex-col justify-between gap-4 rounded-[24px] border border-stroke-subtle bg-bg-elevated/80 p-4">
+            <div className="flex flex-col gap-4 rounded-[24px] border border-stroke-subtle bg-bg-elevated/80 p-4 lg:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Card tone</p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -309,7 +309,7 @@ export default function NotesPage() {
 
               <button
                 type="submit"
-                className="rounded-[18px] bg-brand px-4 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+                className="w-full rounded-[18px] bg-brand px-4 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
               >
                 Save note
               </button>
@@ -346,7 +346,7 @@ export default function NotesPage() {
                   <button
                     type="button"
                     onClick={() => updateNote(note.id, { pinned: !note.pinned })}
-                    className={`rounded-full border px-3 py-1 text-xs ${
+                    className={`rounded-full border px-3 py-2 text-xs ${
                       note.pinned
                         ? 'border-brand bg-brand text-content-inverse'
                         : 'border-stroke-default bg-white/45 text-content-secondary'
@@ -382,7 +382,7 @@ export default function NotesPage() {
                   <button
                     type="button"
                     onClick={() => deleteNote(note.id)}
-                    className="rounded-full border border-status-error/25 bg-white/40 px-3 py-1 text-xs text-status-error hover:bg-white/70"
+                    className="rounded-full border border-status-error/25 bg-white/40 px-3 py-2 text-xs text-status-error hover:bg-white/70"
                   >
                     Delete
                   </button>

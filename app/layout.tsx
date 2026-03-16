@@ -45,7 +45,7 @@ function AppShell({
         <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>
           <div className="mx-auto flex w-full max-w-[1480px] gap-2 px-0 md:px-4">
             <AppSidebar userName={user?.name || user?.artist_name || user?.email || ''} />
-            <div className="min-w-0 flex-1 pt-14 md:pt-0">{children}</div>
+            <div className="min-w-0 flex-1 px-0 pb-28 pt-16 md:px-0 md:pb-0 md:pt-0">{children}</div>
           </div>
         </div>
       ) : (

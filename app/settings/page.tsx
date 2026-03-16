@@ -911,18 +911,18 @@ export default function SettingsPage() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10 relative">
+      <div className="relative mx-auto w-full max-w-5xl px-4 pb-8 pt-20 sm:px-6 sm:py-10">
         <div className="pointer-events-none absolute -right-16 -top-12 h-52 w-52 rounded-full bg-brand/15 blur-3xl" />
         <div className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-status-info/12 blur-3xl" />
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl tracking-tight sm:text-4xl">Settings</h1>
             <p className="mt-1 text-xs uppercase tracking-[0.14em] text-content-tertiary">Account, billing, and workflow preferences</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center gap-2 sm:w-auto">
             <Link
               href="/dashboard"
-              className="rounded-full border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+              className="w-full rounded-full border border-stroke-default bg-bg-elevated px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
             >
               Back to dashboard
             </Link>

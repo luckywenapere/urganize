@@ -30,8 +30,8 @@ export function LoadingScreen({
         <div className="absolute left-[8%] top-[-180px] h-[330px] w-[330px] rounded-full bg-brand/10 blur-[130px]" />
         <div className="absolute bottom-[-220px] right-[10%] h-[370px] w-[370px] rounded-full bg-status-info/10 blur-[140px]" />
       </div>
-      <div className={`relative mx-auto min-h-screen w-full px-6 py-10 sm:px-10 ${shellClassByVariant[variant]}`}>
-        <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center">
+      <div className={`relative mx-auto min-h-screen w-full px-4 pb-8 pt-20 sm:px-10 sm:py-10 ${shellClassByVariant[variant]}`}>
+        <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center sm:min-h-[calc(100vh-5rem)]">
           <section className="w-full rounded-[30px] border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:p-8">
             <div className="flex flex-wrap items-start justify-between gap-6">
               <div className="max-w-xl">

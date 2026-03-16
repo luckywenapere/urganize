@@ -106,7 +106,7 @@ export function AppSidebar({ userName }: AppSidebarProps) {
         type="button"
         onClick={() => setIsOpen(true)}
         aria-label="Open workspace menu"
-        className="fixed left-5 top-5 z-[120] grid h-12 w-12 place-items-center rounded-full border border-stroke-default bg-bg-surface/95 text-content-primary shadow-[0_18px_42px_-28px_rgba(0,0,0,0.45)] backdrop-blur-sm md:hidden"
+        className="mobile-safe-top-offset fixed left-4 z-[120] grid h-12 w-12 place-items-center rounded-full border border-stroke-default bg-bg-surface/95 text-content-primary shadow-[0_18px_42px_-28px_rgba(0,0,0,0.45)] backdrop-blur-sm md:hidden"
       >
         <span className="sr-only">Open menu</span>
         <span className="flex flex-col gap-1.5">
@@ -126,11 +126,38 @@ export function AppSidebar({ userName }: AppSidebarProps) {
             aria-label="Close workspace menu"
             className="absolute inset-0 bg-brand/25 backdrop-blur-[2px]"
           />
-          <aside className="absolute left-0 top-0 h-full w-[min(86vw,320px)] p-4">
+          <aside className="absolute left-0 top-0 h-full w-[min(86vw,320px)] p-4 mobile-safe-bottom">
             <div className="h-full">{sidebar}</div>
           </aside>
         </div>
       )}
+
+      <nav className="mobile-safe-bottom fixed inset-x-3 bottom-3 z-[110] rounded-[28px] border border-stroke-default bg-bg-surface/95 p-2 shadow-[0_18px_42px_-28px_rgba(0,0,0,0.45)] backdrop-blur-sm md:hidden">
+        <div className="grid grid-cols-3 gap-1">
+          {navItems.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (item.href === '/dashboard' && pathname?.startsWith('/dashboard/plans/'));
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-2 py-2.5 text-center transition ${
+                  isActive
+                    ? 'bg-brand text-content-inverse'
+                    : 'text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                }`}
+              >
+                <span className={isActive ? 'text-content-inverse' : 'text-content-tertiary'}>{item.icon}</span>
+                <span className="truncate text-[11px] font-semibold tracking-[0.08em] uppercase">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </>
   );
 }

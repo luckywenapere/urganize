@@ -190,7 +190,7 @@ export default function CreditCollectionPage() {
   if (success) {
     return (
       <main className="min-h-screen bg-bg-base text-content-primary">
-        <div className="mx-auto max-w-3xl px-6 py-10">
+        <div className="mx-auto max-w-3xl px-4 pb-8 pt-20 sm:px-6 sm:py-10">
           <div className="rounded-[32px] border border-stroke-default bg-bg-surface/95 p-8 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)]">
             <Logo size="lg" priority />
             <p className="mt-6 text-xs uppercase tracking-[0.16em] text-content-tertiary">Credits submitted</p>
@@ -206,7 +206,7 @@ export default function CreditCollectionPage() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto max-w-4xl px-4 pb-8 pt-20 sm:px-6 sm:py-10">
         <div className="rounded-[32px] border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)] sm:p-8">
           <Logo size="lg" priority />
           <div className="mt-8 grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
@@ -226,7 +226,8 @@ export default function CreditCollectionPage() {
                 ) : null}
               </div>
 
-              <div className="mt-6 space-y-2">
+              <div className="-mx-1 mt-6 overflow-x-auto px-1 pb-2 lg:mx-0 lg:overflow-visible lg:px-0 lg:pb-0">
+                <div className="flex min-w-max gap-2 lg:block lg:min-w-0 lg:space-y-2">
                 {stepTitles.map((stepTitle, index) => {
                   const isActive = index === currentStep;
                   const isComplete = index < currentStep;
@@ -245,6 +246,7 @@ export default function CreditCollectionPage() {
                     </div>
                   );
                 })}
+                </div>
               </div>
             </aside>
 
@@ -439,21 +441,21 @@ export default function CreditCollectionPage() {
                     ) : null}
                   </div>
 
-                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                  <div className="mobile-safe-bottom sticky bottom-3 mt-5 flex flex-col-reverse gap-3 rounded-[24px] border border-stroke-subtle bg-bg-surface/95 p-3 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-0">
                     <button
                       type="button"
                       onClick={() => moveStep(-1)}
                       disabled={currentStep === 0 || isSubmitting}
-                      className="rounded-full border border-stroke-default bg-bg-surface px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover disabled:opacity-60"
+                      className="w-full rounded-full border border-stroke-default bg-bg-surface px-4 py-3 text-sm text-content-secondary hover:bg-bg-hover disabled:opacity-60 sm:w-auto sm:py-2"
                     >
                       Back
                     </button>
-                    <div className="flex items-center gap-3">
+                    <div className="flex w-full items-center gap-3 sm:w-auto">
                       {currentStep < stepTitles.length - 1 ? (
                         <button
                           type="button"
                           onClick={() => moveStep(1)}
-                          className="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+                          className="w-full rounded-full bg-brand px-5 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:w-auto sm:py-2"
                         >
                           Continue
                         </button>
@@ -462,7 +464,7 @@ export default function CreditCollectionPage() {
                           type="button"
                           onClick={() => void handleSubmit()}
                           disabled={isSubmitting}
-                          className="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                          className="w-full rounded-full bg-brand px-5 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60 sm:w-auto sm:py-2"
                         >
                           {isSubmitting ? 'Submitting...' : 'Submit credit details'}
                         </button>
