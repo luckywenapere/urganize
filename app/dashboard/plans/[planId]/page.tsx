@@ -200,29 +200,46 @@ export default function ReleaseChecklistPage() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto max-w-[1080px] px-6 py-10 sm:px-10">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <Link href="/dashboard" className="text-xs uppercase tracking-[0.16em] text-content-tertiary hover:text-content-primary">
+      <div className="mx-auto max-w-[980px] px-6 py-10 sm:px-8">
+        <div className="border-b border-stroke-default pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="text-sm text-content-secondary">
+              <span className="font-medium text-content-primary">Dashboard</span>
+              <span className="mx-2 text-content-tertiary">|</span>
+              <span>Releases</span>
+            </div>
+            <Link
+              href="/dashboard"
+              className="text-sm text-content-secondary transition hover:text-content-primary"
+            >
               Back to Dashboard
             </Link>
-            <h1 className="mt-3 text-[clamp(2.3rem,5vw,4rem)] tracking-tight text-content-primary">
-              {release?.title || 'Release Checklist'}
-            </h1>
-            <p className="mt-2 text-sm text-content-secondary">
-              {release?.artist_name || 'Unknown artist'}
-              {release?.release_date ? ` • Release date ${new Date(release.release_date).toLocaleDateString()}` : ''}
-              {release?.type ? ` • ${release.type.toUpperCase()}` : ''}
-            </p>
-          </div>
-          <div className="rounded-[24px] border border-stroke-default bg-bg-surface/95 px-5 py-4 text-right shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)]">
-            <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">Progress</p>
-            <p className="mt-1 text-3xl font-semibold text-content-primary">{progress}%</p>
-            <p className="mt-1 text-sm text-content-secondary">
-              {completedTasks} completed • {remainingTasks} remaining
-            </p>
           </div>
         </div>
+
+        <section className="border-b border-stroke-default py-8">
+          <h1 className="text-[clamp(2.2rem,5vw,3.6rem)] tracking-tight text-content-primary">
+            {release?.title || 'Release Checklist'}
+          </h1>
+          <div className="mt-3 space-y-1 text-sm text-content-secondary">
+            <p>
+              <span className="font-medium text-content-primary">Artist:</span>{' '}
+              {release?.artist_name || 'Unknown artist'}
+            </p>
+            {release?.release_date ? (
+              <p>
+                <span className="font-medium text-content-primary">Release Date:</span>{' '}
+                {new Date(release.release_date).toLocaleDateString()}
+              </p>
+            ) : null}
+            {release?.type ? (
+              <p>
+                <span className="font-medium text-content-primary">Release Type:</span>{' '}
+                {release.type}
+              </p>
+            ) : null}
+          </div>
+        </section>
 
         {error && (
           <p className="mt-6 rounded-2xl border border-status-error/35 bg-status-error/10 px-4 py-3 text-sm text-status-error">
@@ -230,36 +247,40 @@ export default function ReleaseChecklistPage() {
           </p>
         )}
 
-        <section className="mt-8 rounded-[28px] border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Checklist Overview</p>
-              <h2 className="mt-2 text-2xl tracking-tight text-content-primary">Every major release step in order</h2>
+        <section className="border-b border-stroke-default py-8">
+          <div>
+            <p className="text-sm font-medium text-content-primary">Release Progress</p>
+            <div className="mt-4 h-5 overflow-hidden rounded-full border border-stroke-default bg-bg-overlay">
+              <div
+                className="h-full rounded-full bg-brand transition-[width] duration-300"
+                style={{ width: `${progress}%` }}
+              />
             </div>
-            <div className="min-w-[220px]">
-              <div className="h-2 rounded-full bg-bg-overlay">
-                <div className="h-full rounded-full bg-brand" style={{ width: `${progress}%` }} />
-              </div>
-            </div>
+            <p className="mt-3 text-sm text-content-secondary">
+              <span className="font-medium text-content-primary">{progress}% Complete</span>
+              {' '}
+              • {completedTasks} completed • {remainingTasks} remaining
+            </p>
           </div>
+        </section>
 
-          <div className="mt-8 space-y-8">
+        <section className="py-8">
+          <div className="space-y-10">
             {groupedChecklist.map((group) => (
-              <section key={group.stage}>
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">{group.label}</p>
-                    <p className="mt-1 text-sm text-content-secondary">{group.items.length} tasks in this stage</p>
-                  </div>
+              <section key={group.stage} className="border-b border-stroke-default pb-8 last:border-b-0 last:pb-0">
+                <div className="mb-5">
+                  <p className="text-lg font-semibold uppercase tracking-[0.12em] text-content-primary">
+                    {group.label}
+                  </p>
                 </div>
                 <div className="space-y-3">
                   {group.items.map((task) => (
                     <label
                       key={task.id}
-                      className={`flex cursor-pointer items-start gap-4 rounded-3xl border px-5 py-4 transition ${
+                      className={`flex cursor-pointer items-start gap-4 rounded-[20px] border px-4 py-4 transition ${
                         task.completed
-                          ? 'border-brand/35 bg-brand-muted/70'
-                          : 'border-stroke-subtle bg-bg-elevated hover:border-stroke-default hover:bg-bg-hover'
+                          ? 'border-brand/30 bg-brand-muted/45'
+                          : 'border-stroke-default bg-bg-surface hover:bg-bg-hover/60'
                       }`}
                     >
                       <input
@@ -270,17 +291,13 @@ export default function ReleaseChecklistPage() {
                         className="mt-1 h-4 w-4 rounded border-stroke-default"
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <p className={`text-base font-semibold ${task.completed ? 'text-content-primary line-through' : 'text-content-primary'}`}>
-                              {task.title}
-                            </p>
-                            <p className="mt-2 text-sm text-content-secondary">{task.description}</p>
-                          </div>
-                          <span className="rounded-full border border-stroke-default bg-bg-surface px-3 py-1 text-xs text-content-secondary">
-                            {task.recommendedTiming}
-                          </span>
-                        </div>
+                        <p className={`text-base font-semibold ${task.completed ? 'text-content-primary line-through' : 'text-content-primary'}`}>
+                          {task.title}
+                        </p>
+                        <p className="mt-1.5 text-sm text-content-secondary">{task.description}</p>
+                        <p className="mt-2 text-xs uppercase tracking-[0.12em] text-content-tertiary">
+                          {task.recommendedTiming}
+                        </p>
                       </div>
                     </label>
                   ))}
