@@ -21,6 +21,16 @@ const navItems = [
     ),
   },
   {
+    href: '/dashboard/songs',
+    label: 'Songs',
+    description: 'Metadata library',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M15 5v9.5a2.5 2.5 0 1 1-1.8-2.4V7.2l7-1.7v7a2.5 2.5 0 1 1-1.8-2.4V3.5L15 5Z" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     href: '/dashboard/notes',
     label: 'Notes',
     description: 'Keep-style workspace',
@@ -71,7 +81,8 @@ export function AppSidebar({ userName }: AppSidebarProps) {
           {navItems.map((item) => {
             const isActive =
               pathname === item.href ||
-              (item.href === '/dashboard' && pathname?.startsWith('/dashboard/plans/'));
+              (item.href === '/dashboard' && pathname?.startsWith('/dashboard/plans/')) ||
+              (item.href === '/dashboard/songs' && pathname?.startsWith('/dashboard/songs/'));
 
             return (
               <Link
@@ -133,11 +144,12 @@ export function AppSidebar({ userName }: AppSidebarProps) {
       )}
 
       <nav className="mobile-safe-bottom fixed inset-x-3 bottom-3 z-[110] rounded-[28px] border border-stroke-default bg-bg-surface/95 p-2 shadow-[0_18px_42px_-28px_rgba(0,0,0,0.45)] backdrop-blur-sm md:hidden">
-        <div className="grid grid-cols-3 gap-1">
+        <div className="grid grid-cols-4 gap-1">
           {navItems.map((item) => {
             const isActive =
               pathname === item.href ||
-              (item.href === '/dashboard' && pathname?.startsWith('/dashboard/plans/'));
+              (item.href === '/dashboard' && pathname?.startsWith('/dashboard/plans/')) ||
+              (item.href === '/dashboard/songs' && pathname?.startsWith('/dashboard/songs/'));
 
             return (
               <Link

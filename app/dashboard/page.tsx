@@ -31,11 +31,22 @@ type ArtistOption = {
   name: string;
 };
 
+type SongLibraryOption = {
+  id: string;
+  songTitle: string;
+  primaryArtist: string;
+  isrc: string;
+  duration?: string;
+  contributorCount: number;
+};
+
 type ReleaseFormState = {
   title: string;
   artistName: string;
   releaseDate: string;
   releaseType: string;
+  selectedSongIds: string[];
+  songSearch: string;
 };
 
 const DEFAULT_RELEASE_FORM = (): ReleaseFormState => ({
@@ -43,6 +54,8 @@ const DEFAULT_RELEASE_FORM = (): ReleaseFormState => ({
   artistName: '',
   releaseDate: formatDateInput(new Date()),
   releaseType: 'single',
+  selectedSongIds: [],
+  songSearch: '',
 });
 
 export default function DashboardPage() {
@@ -60,6 +73,8 @@ export default function DashboardPage() {
   const [form, setForm] = useState<ReleaseFormState>(DEFAULT_RELEASE_FORM);
   const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
   const [isLoadingArtists, setIsLoadingArtists] = useState(true);
+  const [songLibraryOptions, setSongLibraryOptions] = useState<SongLibraryOption[]>([]);
+  const [isLoadingSongs, setIsLoadingSongs] = useState(true);
 
   const sortedReleases = useMemo(
     () =>
@@ -69,6 +84,21 @@ export default function DashboardPage() {
         return left - right;
       }),
     [releases]
+  );
+
+  const filteredSongLibraryOptions = useMemo(() => {
+    const query = form.songSearch.trim().toLowerCase();
+    if (!query) return songLibraryOptions;
+    return songLibraryOptions.filter((song) =>
+      [song.songTitle, song.primaryArtist, song.isrc].join(' ').toLowerCase().includes(query)
+    );
+  }, [form.songSearch, songLibraryOptions]);
+  const selectedSongsPreview = useMemo(
+    () =>
+      form.selectedSongIds
+        .map((songId) => songLibraryOptions.find((song) => song.id === songId))
+        .filter(Boolean) as SongLibraryOption[],
+    [form.selectedSongIds, songLibraryOptions]
   );
 
   const loadDashboard = useCallback(async () => {
@@ -236,6 +266,63 @@ export default function DashboardPage() {
     };
   }, [authLoading, user]);
 
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) return;
+
+    let cancelled = false;
+
+    const loadSongOptions = async () => {
+      setIsLoadingSongs(true);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const accessToken = session?.access_token || '';
+        if (!accessToken) {
+          throw new Error('Session expired. Please sign in again.');
+        }
+
+        const response = await fetch('/api/songs', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          cache: 'no-store',
+        });
+
+        const payload = (await response.json().catch(() => ({}))) as {
+          songs?: SongLibraryOption[];
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(payload.error || 'Could not load songs.');
+        }
+
+        if (!cancelled) {
+          setSongLibraryOptions(Array.isArray(payload.songs) ? payload.songs : []);
+        }
+      } catch (songLoadError: any) {
+        if (!cancelled) {
+          setSongLibraryOptions([]);
+          setError((current) => current || songLoadError?.message || 'Could not load songs.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingSongs(false);
+        }
+      }
+    };
+
+    void loadSongOptions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user]);
+
   const handleCreateRelease = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user?.id || isCreating) return;
@@ -306,6 +393,29 @@ export default function DashboardPage() {
         }))
       );
       if (tasksError) throw tasksError;
+
+      if (form.selectedSongIds.length > 0) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const accessToken = session?.access_token || '';
+        if (!accessToken) throw new Error('Session expired. Please sign in again.');
+
+        const attachResponse = await fetch(`/api/plans/${release.id}/songs`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ songIds: form.selectedSongIds }),
+        });
+
+        const attachPayload = (await attachResponse.json().catch(() => ({}))) as { error?: string };
+        if (!attachResponse.ok) {
+          throw new Error(attachPayload.error || 'Could not attach songs to the release.');
+        }
+      }
 
       setForm(DEFAULT_RELEASE_FORM());
       await loadDashboard();
@@ -421,7 +531,7 @@ export default function DashboardPage() {
             <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Create New Release</p>
             <h2 className="mt-2 text-2xl tracking-tight text-content-primary">Start a professional rollout</h2>
             <p className="mt-2 text-sm text-content-secondary">
-              Enter the release basics and Urganize will generate the full timeline-based checklist automatically.
+              Enter the release basics, attach songs from your library, and Urganize will generate the full timeline-based checklist automatically.
             </p>
 
             <div className="mt-6 space-y-4">
@@ -479,6 +589,120 @@ export default function DashboardPage() {
                     <option value="album">Album</option>
                   </select>
                 </label>
+              </div>
+
+              <div className="rounded-[24px] border border-stroke-subtle bg-bg-elevated/70 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="max-w-[26rem]">
+                    <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Attach Songs</p>
+                    <h3 className="mt-2 text-lg font-semibold text-content-primary">Build releases using songs already stored in your library</h3>
+                    <p className="mt-2 text-sm text-content-secondary">
+                      Select songs from your metadata library to keep this release connected to real song information.
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-stroke-default bg-bg-surface px-3 py-1 text-xs text-content-secondary">
+                    {form.selectedSongIds.length} selected
+                  </span>
+                </div>
+
+                {songLibraryOptions.length === 0 && !isLoadingSongs ? (
+                  <div className="mt-4 rounded-[20px] border border-dashed border-stroke-default bg-bg-surface px-4 py-5 text-sm text-content-secondary">
+                    <p className="font-medium text-content-primary">No songs in your library yet.</p>
+                    <p className="mt-2">Create songs in your Song Library, then attach them to releases.</p>
+                    <Link href="/dashboard/songs" className="mt-3 inline-flex rounded-full border border-stroke-default bg-bg-elevated px-4 py-2 text-xs font-semibold text-content-primary hover:bg-bg-hover">
+                      Create Song
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    {form.releaseType === 'single' ? (
+                      <p className="mt-4 rounded-[18px] border border-stroke-subtle bg-bg-surface px-4 py-3 text-xs text-content-secondary">
+                        Singles usually use one song. You can still attach more than one if you need alternate versions later.
+                      </p>
+                    ) : null}
+                    <input
+                      value={form.songSearch}
+                      onChange={(event) => setForm((current) => ({ ...current, songSearch: event.target.value }))}
+                      placeholder="Search songs by title, artist, or ISRC"
+                      className="mt-4 w-full rounded-2xl border border-stroke-subtle bg-bg-surface px-4 py-3 text-content-primary outline-none focus:border-brand"
+                    />
+
+                    <div className="mt-4 max-h-64 space-y-2 overflow-y-auto pr-1">
+                      {isLoadingSongs ? (
+                        <p className="rounded-[20px] border border-stroke-subtle bg-bg-surface px-4 py-4 text-sm text-content-secondary">
+                          Loading songs...
+                        </p>
+                      ) : filteredSongLibraryOptions.length === 0 ? (
+                        <p className="rounded-[20px] border border-stroke-subtle bg-bg-surface px-4 py-4 text-sm text-content-secondary">
+                          No songs match this search yet.
+                        </p>
+                      ) : (
+                        filteredSongLibraryOptions.map((song) => {
+                          const isSelected = form.selectedSongIds.includes(song.id);
+                          return (
+                            <label
+                              key={song.id}
+                              className={`flex cursor-pointer items-start gap-3 rounded-[20px] border px-4 py-3 transition ${
+                                isSelected
+                                  ? 'border-brand bg-brand-muted/60'
+                                  : 'border-stroke-subtle bg-bg-surface hover:bg-bg-hover/50'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(event) =>
+                                  setForm((current) => ({
+                                    ...current,
+                                    selectedSongIds: event.target.checked
+                                      ? [...current.selectedSongIds, song.id]
+                                      : current.selectedSongIds.filter((id) => id !== song.id),
+                                  }))
+                                }
+                                className="mt-1 h-4 w-4 rounded border-stroke-default"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-content-primary">{song.songTitle}</p>
+                                <p className="mt-1 text-sm text-content-secondary">{song.primaryArtist}</p>
+                                <div className="mt-2 flex flex-wrap gap-2 text-xs text-content-tertiary">
+                                  <span>{song.isrc ? `ISRC ${song.isrc}` : 'No ISRC yet'}</span>
+                                  <span>{song.contributorCount} contributors</span>
+                                </div>
+                              </div>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                    <div className="mt-4 rounded-[20px] border border-stroke-subtle bg-bg-surface px-4 py-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Selected Order Preview</p>
+                        <span className="text-xs text-content-tertiary">
+                          Automatically becomes the starting tracklist order
+                        </span>
+                      </div>
+                      {selectedSongsPreview.length === 0 ? (
+                        <p className="mt-3 text-sm text-content-secondary">
+                          No songs selected yet. Pick one or more songs to attach to this release.
+                        </p>
+                      ) : (
+                        <div className="mt-3 space-y-2">
+                          {selectedSongsPreview.map((song, index) => (
+                            <div key={song.id} className="flex items-center justify-between gap-3 rounded-[16px] border border-stroke-subtle bg-bg-elevated px-3 py-3 text-sm">
+                              <div className="min-w-0">
+                                <p className="font-semibold text-content-primary">
+                                  {index + 1}. {song.songTitle}
+                                </p>
+                                <p className="mt-1 text-content-secondary">{song.primaryArtist}</p>
+                              </div>
+                              <span className="text-xs text-content-tertiary">{song.duration || 'Duration not set'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
