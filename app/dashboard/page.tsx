@@ -26,6 +26,11 @@ type ReleaseCard = ReleaseRow & {
   progress: number;
 };
 
+type ArtistOption = {
+  id: string;
+  name: string;
+};
+
 type ReleaseFormState = {
   title: string;
   artistName: string;
@@ -53,6 +58,8 @@ export default function DashboardPage() {
   const [hasSubscriptionAccess, setHasSubscriptionAccess] = useState<boolean | null>(null);
   const [releases, setReleases] = useState<ReleaseCard[]>([]);
   const [form, setForm] = useState<ReleaseFormState>(DEFAULT_RELEASE_FORM);
+  const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
+  const [isLoadingArtists, setIsLoadingArtists] = useState(true);
 
   const sortedReleases = useMemo(
     () =>
@@ -136,6 +143,99 @@ export default function DashboardPage() {
     void loadDashboard();
   }, [authLoading, loadDashboard, router, user]);
 
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) return;
+
+    let cancelled = false;
+
+    const loadArtistOptions = async () => {
+      setIsLoadingArtists(true);
+
+      try {
+        if (user.role === 'artist') {
+          const ownArtistName = String(user.artist_name || '').trim();
+          const nextOptions = ownArtistName ? [{ id: user.id, name: ownArtistName }] : [];
+          if (!cancelled) {
+            setArtistOptions(nextOptions);
+            setForm((current) => ({
+              ...current,
+              artistName: nextOptions[0]?.name || '',
+            }));
+          }
+          return;
+        }
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const accessToken = session?.access_token || '';
+        if (!accessToken) {
+          throw new Error('Session expired. Please sign in again.');
+        }
+
+        const response = await fetch('/api/managed-artists', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          cache: 'no-store',
+        });
+
+        const payload = (await response.json().catch(() => ({}))) as {
+          artists?: Array<{ id: string; name: string }>;
+          error?: string;
+        };
+
+        if (!response.ok) {
+          if (response.status === 403) {
+            if (!cancelled) {
+              setArtistOptions([]);
+              setForm((current) => ({ ...current, artistName: '' }));
+            }
+            return;
+          }
+          throw new Error(payload.error || 'Could not load artists.');
+        }
+
+        const nextOptions = Array.isArray(payload.artists)
+          ? payload.artists
+              .filter((artist) => typeof artist?.id === 'string' && typeof artist?.name === 'string')
+              .map((artist) => ({ id: artist.id, name: artist.name.trim() }))
+              .filter((artist) => artist.name)
+          : [];
+
+        if (!cancelled) {
+          setArtistOptions(nextOptions);
+          setForm((current) => {
+            const hasCurrentSelection = nextOptions.some((artist) => artist.name === current.artistName);
+            return {
+              ...current,
+              artistName: hasCurrentSelection ? current.artistName : nextOptions[0]?.name || '',
+            };
+          });
+        }
+      } catch (artistLoadError: any) {
+        if (!cancelled) {
+          setArtistOptions([]);
+          setForm((current) => ({ ...current, artistName: '' }));
+          setError((current) => current || artistLoadError?.message || 'Could not load artists.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingArtists(false);
+        }
+      }
+    };
+
+    void loadArtistOptions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user]);
+
   const handleCreateRelease = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user?.id || isCreating) return;
@@ -146,7 +246,12 @@ export default function DashboardPage() {
     const releaseType = form.releaseType.trim();
 
     if (!title || !artistName || !releaseDate) {
-      setError('Release title, artist name, and release date are required.');
+      setError('Release title, artist selection, and release date are required.');
+      return;
+    }
+
+    if (!artistOptions.some((artist) => artist.name === artistName)) {
+      setError('Select an artist from your saved account artists before creating a release.');
       return;
     }
 
@@ -331,12 +436,26 @@ export default function DashboardPage() {
               </label>
               <label className="block text-sm">
                 <span className="mb-1.5 block text-content-secondary">Artist Name</span>
-                <input
+                <select
                   value={form.artistName}
                   onChange={(event) => setForm((current) => ({ ...current, artistName: event.target.value }))}
+                  disabled={isLoadingArtists || artistOptions.length === 0}
                   className="w-full rounded-2xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-content-primary outline-none focus:border-brand"
-                  placeholder="e.g. Temi Nova"
-                />
+                >
+                  <option value="">
+                    {isLoadingArtists ? 'Loading artists...' : artistOptions.length === 0 ? 'No saved artists available' : 'Select artist'}
+                  </option>
+                  {artistOptions.map((artist) => (
+                    <option key={artist.id} value={artist.name}>
+                      {artist.name}
+                    </option>
+                  ))}
+                </select>
+                {artistOptions.length === 0 && !isLoadingArtists ? (
+                  <p className="mt-2 text-xs text-content-tertiary">
+                    Add artists in <Link href="/settings" className="underline hover:text-content-primary">Settings</Link> before creating a release.
+                  </p>
+                ) : null}
               </label>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm">
@@ -365,7 +484,7 @@ export default function DashboardPage() {
 
             <button
               type="submit"
-              disabled={isCreating}
+              disabled={isCreating || isLoadingArtists || artistOptions.length === 0}
               className="mt-6 w-full rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
             >
               {isCreating ? 'Generating Checklist...' : 'Create New Release'}
