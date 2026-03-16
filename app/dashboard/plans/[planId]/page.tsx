@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
+import { CreditsMetadataSection } from '@/components/credits/CreditsMetadataSection';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import {
   getChecklistProgress,
@@ -43,6 +44,23 @@ type ChecklistItem = {
   completed: boolean;
 };
 
+type ReleaseTimelineStage =
+  | 'Strategy'
+  | 'Distribution'
+  | 'Marketing'
+  | 'Release Week'
+  | 'Release Day'
+  | 'Post Release';
+
+const RELEASE_TIMELINE_STAGES: ReleaseTimelineStage[] = [
+  'Strategy',
+  'Distribution',
+  'Marketing',
+  'Release Week',
+  'Release Day',
+  'Post Release',
+];
+
 const stageByIndex = (index: number): TimelineStage => {
   if (index <= 4) return '12_weeks_before';
   if (index <= 7) return '8_weeks_before';
@@ -60,6 +78,25 @@ const extractRecommendedTiming = (value: string | null | undefined, stage: Timel
     return message.slice('recommended timing:'.length).trim() || TIMELINE_STAGE_LABELS[stage];
   }
   return message || TIMELINE_STAGE_LABELS[stage];
+};
+
+const resolveCurrentTimelineStage = (releaseDate: string | null | undefined): ReleaseTimelineStage => {
+  if (!releaseDate) return 'Strategy';
+
+  const target = new Date(releaseDate);
+  const today = new Date();
+  target.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  const diffMs = target.getTime() - today.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return 'Post Release';
+  if (diffDays === 0) return 'Release Day';
+  if (diffDays <= 7) return 'Release Week';
+  if (diffDays <= 42) return 'Marketing';
+  if (diffDays <= 56) return 'Distribution';
+  return 'Strategy';
 };
 
 export default function ReleaseChecklistPage() {
@@ -80,6 +117,10 @@ export default function ReleaseChecklistPage() {
   const progress = useMemo(() => getChecklistProgress(checklist.length, completedTasks), [checklist.length, completedTasks]);
   const remainingTasks = Math.max(checklist.length - completedTasks, 0);
   const groupedChecklist = useMemo(() => groupChecklistByStage(checklist), [checklist]);
+  const currentTimelineStage = useMemo(
+    () => resolveCurrentTimelineStage(release?.release_date),
+    [release?.release_date]
+  );
 
   const loadRelease = useCallback(async () => {
     if (!user?.id || !planId) return;
@@ -267,6 +308,33 @@ export default function ReleaseChecklistPage() {
           </div>
         </section>
 
+        <section className="border-b border-stroke-default py-8">
+          <div>
+            <p className="text-sm font-medium text-content-primary">Current Stage</p>
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+              {RELEASE_TIMELINE_STAGES.map((stage, index) => {
+                const isActive = stage === currentTimelineStage;
+                return (
+                  <div key={stage} className="flex items-center gap-2">
+                    <span
+                      className={`rounded-full px-3 py-1.5 transition ${
+                        isActive
+                          ? 'bg-brand text-content-inverse'
+                          : 'border border-stroke-default bg-bg-surface text-content-secondary'
+                      }`}
+                    >
+                      {isActive ? stage.toUpperCase() : stage}
+                    </span>
+                    {index < RELEASE_TIMELINE_STAGES.length - 1 ? (
+                      <span className="text-content-tertiary">→</span>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         <section className="py-8">
           <div className="space-y-10">
             {groupedChecklist.map((group) => (
@@ -309,6 +377,8 @@ export default function ReleaseChecklistPage() {
             ))}
           </div>
         </section>
+
+        {planId ? <CreditsMetadataSection planId={planId} /> : null}
       </div>
     </main>
   );
