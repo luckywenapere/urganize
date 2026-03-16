@@ -400,13 +400,13 @@ export function CreditsMetadataSection({ planId }: CreditsMetadataSectionProps) 
       ) : null}
 
       {selectedSubmission ? (
-        <div className="fixed inset-0 z-[140]">
+        <div className="fixed inset-0 z-[150]">
           <button
             type="button"
             onClick={() => setSelectedSubmission(null)}
-            className="absolute inset-0 bg-brand/25 backdrop-blur-[2px]"
+            className="absolute inset-0 z-0 bg-brand/25 backdrop-blur-[2px]"
           />
-          <div className="absolute right-0 top-0 h-full w-full max-w-[680px] overflow-y-auto border-l border-stroke-default bg-bg-surface p-6 shadow-[0_24px_70px_rgba(0,0,0,0.3)]">
+          <div className="relative z-10 ml-auto h-full w-full max-w-[680px] overflow-y-auto border-l border-stroke-default bg-bg-surface p-6 shadow-[0_24px_70px_rgba(0,0,0,0.3)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Submission detail</p>
