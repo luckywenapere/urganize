@@ -80,16 +80,30 @@ const extractRecommendedTiming = (value: string | null | undefined, stage: Timel
   return message || TIMELINE_STAGE_LABELS[stage];
 };
 
+const parseReleaseDateAsLocalDay = (value: string): Date => {
+  const normalized = String(value || '').trim();
+  const dateOnlyMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  return new Date(normalized);
+};
+
 const resolveCurrentTimelineStage = (releaseDate: string | null | undefined): ReleaseTimelineStage => {
   if (!releaseDate) return 'Strategy';
 
-  const target = new Date(releaseDate);
+  const target = parseReleaseDateAsLocalDay(releaseDate);
   const today = new Date();
   target.setHours(0, 0, 0, 0);
   today.setHours(0, 0, 0, 0);
 
+  if (!Number.isFinite(target.getTime())) return 'Strategy';
+
   const diffMs = target.getTime() - today.getTime();
-  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffDays < 0) return 'Post Release';
   if (diffDays === 0) return 'Release Day';
