@@ -249,7 +249,10 @@ export default function ReleaseChecklistPage() {
 
         <section className="border-b border-stroke-default py-8">
           <div>
-            <p className="text-sm font-medium text-content-primary">Release Progress</p>
+            <p className="text-sm font-medium text-content-primary">Release Readiness</p>
+            <p className="mt-2 text-[clamp(1.6rem,3vw,2.3rem)] font-semibold tracking-tight text-content-primary">
+              {progress}% Ready to Drop
+            </p>
             <div className="mt-4 h-5 overflow-hidden rounded-full border border-stroke-default bg-bg-overlay">
               <div
                 className="h-full rounded-full bg-brand transition-[width] duration-300"
@@ -257,7 +260,7 @@ export default function ReleaseChecklistPage() {
               />
             </div>
             <p className="mt-3 text-sm text-content-secondary">
-              <span className="font-medium text-content-primary">{progress}% Complete</span>
+              <span className="font-medium text-content-primary">{progress}%</span>
               {' '}
               • {completedTasks} completed • {remainingTasks} remaining
             </p>
