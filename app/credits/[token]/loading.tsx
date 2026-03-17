@@ -4,9 +4,9 @@ export default function CreditCollectionLoading() {
   return (
     <LoadingScreen
       variant="form"
-      eyebrow="Credits Collection"
-      title="Opening the credits form"
-      description="Preparing the contributor steps for this song."
+      eyebrow="Submit your credits"
+      title="Opening your credit form"
+      description="Loading the release details and requested role."
     />
   );
 }

@@ -10,7 +10,7 @@ type SectionCardProps = {
 export function SectionCard({ children, className = '' }: SectionCardProps) {
   return (
     <section
-      className={`rounded-[28px] border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.35)] sm:p-6 ${className}`}
+      className={`overflow-hidden rounded-[30px] border border-stroke-default/90 bg-bg-surface/95 p-5 shadow-[0_22px_56px_-34px_rgba(0,0,0,0.34)] backdrop-blur-sm sm:p-6 ${className}`}
     >
       {children}
     </section>

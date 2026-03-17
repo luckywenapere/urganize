@@ -8,13 +8,13 @@ import { useAuthStore } from '@/lib/auth-store';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { SectionCard } from '@/components/shared/SectionCard';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Toast } from '@/components/shared/Toast';
 import { ReleaseHeader } from '@/components/releases/ReleaseHeader';
 import { ReleaseReadinessCard } from '@/components/releases/ReleaseReadinessCard';
 import { CollaboratorStatusTable } from '@/components/releases/CollaboratorStatusTable';
 import { AddCollaboratorModal } from '@/components/releases/AddCollaboratorModal';
 import { MetadataPreviewCard } from '@/components/releases/MetadataPreviewCard';
-import { ReleaseStatsMiniCards } from '@/components/releases/ReleaseStatsMiniCards';
 import { NextStepCard } from '@/components/releases/NextStepCard';
 import type { ReadinessChecklistItem, ReadinessNextAction } from '@/lib/release-ops';
 
@@ -59,6 +59,8 @@ type CommandCenterPayload = {
     producerCredits: Array<Record<string, unknown>>;
     writerCredits: Array<Record<string, unknown>>;
     featuredArtistCredits: Array<Record<string, unknown>>;
+    mixingCredits: Array<Record<string, unknown>>;
+    masteringCredits: Array<Record<string, unknown>>;
     allCredits: Array<Record<string, unknown>>;
   } | null;
   error?: string;
@@ -264,9 +266,12 @@ export default function ReleaseCommandCenterPage() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto max-w-[1120px] px-4 pb-10 pt-20 sm:px-6 sm:py-10">
+      <div className="mx-auto max-w-[1120px] px-4 pb-8 pt-16 sm:px-6 sm:py-10">
         <div className="mb-4">
-          <Link href="/dashboard" className="text-sm text-content-secondary hover:text-content-primary">
+          <Link
+            href="/dashboard"
+            className="inline-flex min-h-10 items-center text-sm text-content-secondary hover:text-content-primary"
+          >
             Back to Dashboard
           </Link>
         </div>
@@ -275,77 +280,88 @@ export default function ReleaseCommandCenterPage() {
         {error ? <div className="mb-4"><Toast message={error} tone="error" /></div> : null}
 
         {data?.release ? (
-          <div className="space-y-6">
-            <SectionCard>
+          <div className="space-y-7">
+            <SectionCard className="sm:p-7">
               <ReleaseHeader release={data.release} onAddCollaborator={() => setShowAddModal(true)} />
             </SectionCard>
 
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-              <SectionCard>
+            <div className="grid gap-7 lg:grid-cols-[minmax(0,1.08fr)_380px] lg:items-start">
+              <SectionCard className="order-1 sm:p-7">
                 <ReleaseReadinessCard readiness={data.readiness} />
               </SectionCard>
-              <NextStepCard
-                nextStep={data.readiness.nextStep}
-                action={data.readiness.nextAction}
-                onAction={() => void handleNextAction()}
-                actionDisabled={
-                  data.readiness.nextAction.type === 'send_reminder' && !firstPendingCollaboratorId
-                }
-              />
-            </div>
 
-            <ReleaseStatsMiniCards
-              invited={collaborators.length}
-              submitted={data.readiness.submittedCollaborators}
-              pending={data.readiness.pendingCollaborators}
-            />
+              <div className="order-2 lg:sticky lg:top-24">
+                <NextStepCard
+                  nextStep={data.readiness.nextStep}
+                  action={data.readiness.nextAction}
+                  onAction={() => void handleNextAction()}
+                  actionDisabled={
+                    data.readiness.nextAction.type === 'send_reminder' && !firstPendingCollaboratorId
+                  }
+                />
+              </div>
 
-            <SectionCard>
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-content-primary">Collaborator status</p>
-                  <p className="mt-2 text-sm text-content-secondary">
-                    Copy public links, nudge pending collaborators, and review submitted credits.
-                  </p>
+              <SectionCard className="order-3 sm:p-7">
+                <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-content-primary">Collaborators</p>
+                    <p className="mt-2 text-sm text-content-secondary">
+                      Add contributors, share public credit links, and keep submissions moving.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(true)}
+                    className="min-h-11 w-full rounded-2xl border border-stroke-default bg-bg-surface px-4 py-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
+                  >
+                    Add Collaborator
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(true)}
-                  className="rounded-full border border-stroke-default bg-bg-surface px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-                >
-                  Add Collaborator
-                </button>
-              </div>
 
-              <div className="mt-5">
-                {collaborators.length === 0 ? (
-                  <EmptyState
-                    title="No collaborators added yet."
-                    description="Add collaborators to start collecting credits"
-                    action={
-                      <button
-                        type="button"
-                        onClick={() => setShowAddModal(true)}
-                        className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
-                      >
-                        Add Collaborator
-                      </button>
-                    }
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <StatusBadge label={`Invited ${collaborators.length}`} size="sm" />
+                  <StatusBadge
+                    label={`Submitted ${data.readiness.submittedCollaborators}`}
+                    tone="success"
+                    size="sm"
                   />
-                ) : (
-                  <CollaboratorStatusTable
-                    collaborators={collaborators}
-                    onCopyLink={handleCopyLink}
-                    onRemind={handleRemind}
-                    onViewSubmission={(id) => setSelectedSubmissionId(id)}
+                  <StatusBadge
+                    label={`Pending ${data.readiness.pendingCollaborators}`}
+                    tone={data.readiness.pendingCollaborators > 0 ? 'warning' : 'neutral'}
+                    size="sm"
                   />
-                )}
-              </div>
-            </SectionCard>
+                </div>
 
-            <SectionCard>
-              <MetadataPreviewCard releaseId={data.release.id} metadata={data.metadata} />
-            </SectionCard>
+                <div className="mt-5">
+                  {collaborators.length === 0 ? (
+                    <EmptyState
+                      title="No collaborators added yet"
+                      description="Add collaborators to start collecting credits"
+                      action={
+                        <button
+                          type="button"
+                          onClick={() => setShowAddModal(true)}
+                          className="min-h-11 w-full rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:w-auto sm:rounded-full sm:py-2"
+                        >
+                          Add Collaborator
+                        </button>
+                      }
+                    />
+                  ) : (
+                    <CollaboratorStatusTable
+                      collaborators={collaborators}
+                      onCopyLink={handleCopyLink}
+                      onRemind={handleRemind}
+                      onViewSubmission={(id) => setSelectedSubmissionId(id)}
+                    />
+                  )}
+                </div>
+              </SectionCard>
+
+              <SectionCard className="order-4 sm:p-7">
+                <MetadataPreviewCard releaseId={data.release.id} metadata={data.metadata} />
+              </SectionCard>
+            </div>
           </div>
         ) : (
           <SectionCard>

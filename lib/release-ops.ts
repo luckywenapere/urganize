@@ -253,6 +253,8 @@ export type CreditSubmissionInput = {
   notes: string;
 };
 
+export type CreditSubmissionFieldErrors = Partial<Record<keyof CreditSubmissionInput, string>>;
+
 const trimString = (value: unknown): string => String(value || '').trim();
 
 export const normalizeReleaseSlug = (value: string): string =>
@@ -304,13 +306,38 @@ export const normalizeCreditSubmissionInput = (value: unknown): CreditSubmission
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const splitPattern = /^\d+(\.\d{1,2})?$/;
 
-export const validateCreditSubmissionInput = (value: CreditSubmissionInput): string => {
-  if (!value.legalName) return 'Legal name is required.';
-  if (!value.role) return 'Role is required.';
-  if (value.email && !emailPattern.test(value.email)) return 'Enter a valid email address.';
-  if (value.splitPercentage && !splitPattern.test(value.splitPercentage)) {
-    return 'Split percentage must be numeric.';
+export const validateCreditSubmissionFields = (value: CreditSubmissionInput): CreditSubmissionFieldErrors => {
+  const errors: CreditSubmissionFieldErrors = {};
+
+  if (!value.legalName) {
+    errors.legalName = 'Legal name is required.';
   }
+
+  if (!value.role) {
+    errors.role = 'Role is required.';
+  }
+
+  if (value.email && !emailPattern.test(value.email)) {
+    errors.email = 'Enter a valid email address.';
+  }
+
+  if (value.splitPercentage && !splitPattern.test(value.splitPercentage)) {
+    errors.splitPercentage = 'Split percentage must be numeric.';
+  }
+
+  return errors;
+};
+
+export const validateCreditSubmissionInput = (value: CreditSubmissionInput): string => {
+  const errors = validateCreditSubmissionFields(value);
+  const orderedFields: Array<keyof CreditSubmissionInput> = ['legalName', 'role', 'email', 'splitPercentage'];
+
+  for (const field of orderedFields) {
+    if (errors[field]) {
+      return errors[field] || '';
+    }
+  }
+
   return '';
 };
 

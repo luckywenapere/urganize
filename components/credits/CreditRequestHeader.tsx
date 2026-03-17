@@ -1,25 +1,21 @@
 'use client';
 
 type CreditRequestHeaderProps = {
-  releaseTitle: string;
-  artistName: string;
-  requestedRole: string;
+  inviteName?: string;
 };
 
-export function CreditRequestHeader({ releaseTitle, artistName, requestedRole }: CreditRequestHeaderProps) {
+export function CreditRequestHeader({ inviteName = '' }: CreditRequestHeaderProps) {
   return (
-    <div className="space-y-3">
-      <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Credit Submission</p>
-      <h1 className="text-[clamp(2rem,5vw,3.1rem)] tracking-tight text-content-primary">
-        Help complete the credits for this song
-      </h1>
-      <p className="text-sm text-content-secondary">
-        Please fill in your details accurately so the release team can finalize metadata and credits.
-      </p>
-      <div className="rounded-[24px] border border-stroke-subtle bg-bg-elevated/70 p-4 text-sm text-content-secondary">
-        <p className="font-semibold text-content-primary">{releaseTitle}</p>
-        <p className="mt-1">{artistName}</p>
-        <p className="mt-1">Requested role: {requestedRole}</p>
+    <div className="space-y-4">
+      <div className="inline-flex rounded-full border border-stroke-default bg-bg-elevated px-3 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-content-tertiary">
+        No login required
+      </div>
+      <div>
+        <h1 className="text-[clamp(2.2rem,6vw,3.4rem)] tracking-tight text-content-primary">Submit your credits</h1>
+        <p className="mt-3 max-w-[36rem] text-sm leading-6 text-content-secondary">
+          You&apos;ve been added as a collaborator on this release
+        </p>
+        {inviteName ? <p className="mt-2 text-sm text-content-tertiary">Requested from: {inviteName}</p> : null}
       </div>
     </div>
   );
