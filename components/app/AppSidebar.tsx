@@ -13,7 +13,7 @@ const navItems = [
   {
     href: '/dashboard',
     label: 'Releases',
-    description: 'Checklist dashboard',
+    description: 'Release command center',
     icon: (
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M4 6.5h16M4 12h16M4 17.5h10" strokeLinecap="round" />
@@ -82,6 +82,7 @@ export function AppSidebar({ userName }: AppSidebarProps) {
             const isActive =
               pathname === item.href ||
               (item.href === '/dashboard' && pathname?.startsWith('/dashboard/plans/')) ||
+              (item.href === '/dashboard' && pathname?.startsWith('/dashboard/releases/')) ||
               (item.href === '/dashboard/songs' && pathname?.startsWith('/dashboard/songs/'));
 
             return (
@@ -149,6 +150,7 @@ export function AppSidebar({ userName }: AppSidebarProps) {
             const isActive =
               pathname === item.href ||
               (item.href === '/dashboard' && pathname?.startsWith('/dashboard/plans/')) ||
+              (item.href === '/dashboard' && pathname?.startsWith('/dashboard/releases/')) ||
               (item.href === '/dashboard/songs' && pathname?.startsWith('/dashboard/songs/'));
 
             return (

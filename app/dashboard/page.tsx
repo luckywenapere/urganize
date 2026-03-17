@@ -507,6 +507,9 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <Link href="/dashboard/releases/new" className="w-full rounded-full bg-brand px-4 py-3 text-center text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:w-auto sm:py-2">
+              New Release
+            </Link>
             <Link href="/settings" className="w-full rounded-full border border-stroke-default bg-bg-surface px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2">
               Account
             </Link>
@@ -740,7 +743,7 @@ export default function DashboardPage() {
                     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                       <button
                         type="button"
-                        onClick={() => router.push(`/dashboard/plans/${release.id}`)}
+                        onClick={() => router.push(`/dashboard/releases/${release.id}`)}
                         className="min-w-0 flex-1 text-left"
                       >
                         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
