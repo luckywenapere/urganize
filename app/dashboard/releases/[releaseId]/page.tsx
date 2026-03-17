@@ -69,6 +69,7 @@ export default function ReleaseCommandCenterPage() {
   const releaseId = Array.isArray(params?.releaseId) ? params.releaseId[0] : params?.releaseId || '';
   const { user, isLoading: authLoading } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isAddingCollaborators, setIsAddingCollaborators] = useState(false);
   const [addCollaboratorError, setAddCollaboratorError] = useState('');
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -107,6 +108,7 @@ export default function ReleaseCommandCenterPage() {
       setError(loadError?.message || 'Could not load release command center.');
     } finally {
       setIsLoading(false);
+      setHasLoadedOnce(true);
     }
   }, [releaseId]);
 
@@ -214,7 +216,7 @@ export default function ReleaseCommandCenterPage() {
     }
   };
 
-  if (isLoading || authLoading) {
+  if ((!hasLoadedOnce && isLoading) || (!user && authLoading)) {
     return (
       <LoadingScreen
         variant="detail"

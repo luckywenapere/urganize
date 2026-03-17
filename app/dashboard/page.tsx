@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
@@ -75,6 +75,10 @@ export default function DashboardPage() {
   const [isLoadingArtists, setIsLoadingArtists] = useState(true);
   const [songLibraryOptions, setSongLibraryOptions] = useState<SongLibraryOption[]>([]);
   const [isLoadingSongs, setIsLoadingSongs] = useState(true);
+  const releaseFormRef = useRef<HTMLFormElement | null>(null);
+  const releaseTitleInputRef = useRef<HTMLInputElement | null>(null);
+  const artistSelectRef = useRef<HTMLSelectElement | null>(null);
+  const releaseDateInputRef = useRef<HTMLInputElement | null>(null);
 
   const sortedReleases = useMemo(
     () =>
@@ -419,12 +423,55 @@ export default function DashboardPage() {
 
       setForm(DEFAULT_RELEASE_FORM());
       await loadDashboard();
-      router.push(`/dashboard/plans/${release.id}`);
+      router.push(`/dashboard/releases/${release.id}`);
     } catch (createError: any) {
       setError(createError?.message || 'Could not create release.');
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const focusReleaseFormField = (field: 'title' | 'artistName' | 'releaseDate') => {
+    releaseFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const focusTarget =
+      field === 'title'
+        ? releaseTitleInputRef.current
+        : field === 'artistName'
+          ? artistSelectRef.current
+          : releaseDateInputRef.current;
+
+    window.setTimeout(() => {
+      focusTarget?.focus();
+    }, 180);
+  };
+
+  const handleTopCreateRelease = () => {
+    if (isCreating) return;
+
+    const title = form.title.trim();
+    const artistName = form.artistName.trim();
+    const releaseDate = form.releaseDate.trim();
+
+    if (!title) {
+      setError('Add a release title before creating the release.');
+      focusReleaseFormField('title');
+      return;
+    }
+
+    if (!artistName || !artistOptions.some((artist) => artist.name === artistName)) {
+      setError('Select an artist from your saved account artists before creating a release.');
+      focusReleaseFormField('artistName');
+      return;
+    }
+
+    if (!releaseDate) {
+      setError('Add a release date before creating the release.');
+      focusReleaseFormField('releaseDate');
+      return;
+    }
+
+    releaseFormRef.current?.requestSubmit();
   };
 
   const closeDeleteModal = () => {
@@ -474,7 +521,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (isLoading || authLoading) {
+  if ((!hasLoadedOnce && isLoading) || (!user && authLoading)) {
     return (
       <LoadingScreen
         variant="dashboard"
@@ -507,9 +554,13 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
-            <Link href="/dashboard/releases/new" className="w-full rounded-full bg-brand px-4 py-3 text-center text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:w-auto sm:py-2">
+            <button
+              type="button"
+              onClick={handleTopCreateRelease}
+              className="w-full rounded-full bg-brand px-4 py-3 text-center text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:w-auto sm:py-2"
+            >
               New Release
-            </Link>
+            </button>
             <Link href="/settings" className="w-full rounded-full border border-stroke-default bg-bg-surface px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2">
               Account
             </Link>
@@ -530,7 +581,7 @@ export default function DashboardPage() {
         )}
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-          <form onSubmit={handleCreateRelease} className="rounded-[28px] border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)] sm:p-6">
+          <form ref={releaseFormRef} onSubmit={handleCreateRelease} className="rounded-[28px] border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)] sm:p-6">
             <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Create New Release</p>
             <h2 className="mt-2 text-2xl tracking-tight text-content-primary">Start a professional rollout</h2>
             <p className="mt-2 text-sm text-content-secondary">
@@ -541,6 +592,7 @@ export default function DashboardPage() {
               <label className="block text-sm">
                 <span className="mb-1.5 block text-content-secondary">Release Title</span>
                 <input
+                  ref={releaseTitleInputRef}
                   value={form.title}
                   onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
                   className="w-full rounded-2xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-content-primary outline-none focus:border-brand"
@@ -550,6 +602,7 @@ export default function DashboardPage() {
               <label className="block text-sm">
                 <span className="mb-1.5 block text-content-secondary">Artist Name</span>
                 <select
+                  ref={artistSelectRef}
                   value={form.artistName}
                   onChange={(event) => setForm((current) => ({ ...current, artistName: event.target.value }))}
                   disabled={isLoadingArtists || artistOptions.length === 0}
@@ -574,6 +627,7 @@ export default function DashboardPage() {
                 <label className="block text-sm">
                   <span className="mb-1.5 block text-content-secondary">Release Date</span>
                   <input
+                    ref={releaseDateInputRef}
                     type="date"
                     value={form.releaseDate}
                     onChange={(event) => setForm((current) => ({ ...current, releaseDate: event.target.value }))}

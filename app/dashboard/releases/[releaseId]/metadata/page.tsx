@@ -61,6 +61,7 @@ export default function ReleaseMetadataPage() {
   const releaseId = Array.isArray(params?.releaseId) ? params.releaseId[0] : params?.releaseId || '';
   const { user, isLoading: authLoading } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [data, setData] = useState<MetadataPayload | null>(null);
   const [error, setError] = useState('');
 
@@ -92,6 +93,7 @@ export default function ReleaseMetadataPage() {
       setError(loadError?.message || 'Could not load metadata.');
     } finally {
       setIsLoading(false);
+      setHasLoadedOnce(true);
     }
   }, [releaseId]);
 
@@ -101,7 +103,7 @@ export default function ReleaseMetadataPage() {
     }
   }, [authLoading, loadData, releaseId, user]);
 
-  if (isLoading || authLoading) {
+  if ((!hasLoadedOnce && isLoading) || (!user && authLoading)) {
     return (
       <LoadingScreen
         variant="detail"
