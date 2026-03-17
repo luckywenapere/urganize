@@ -5,12 +5,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { SectionCard } from '@/components/shared/SectionCard';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { ReleasePlaybookProgressCard } from '@/components/releases/ReleasePlaybookProgressCard';
 import { ReleasePlaybookPhaseCard } from '@/components/releases/ReleasePlaybookPhaseCard';
+import { ReleasePlaybookSkeleton } from '@/components/loading/ReleasePlaybookSkeleton';
 import type { ReleasePlaybookPhase } from '@/lib/release-playbook';
 
 type PlaybookPayload = {
@@ -129,17 +129,10 @@ export default function ReleasePlaybookPage() {
   };
 
   if ((!hasLoadedOnce && isLoading) || (!user && authLoading)) {
-    return (
-      <LoadingScreen
-        variant="detail"
-        eyebrow="Release Playbook"
-        title="Loading release playbook"
-        description="Preparing the phased checklist for this release."
-      />
-    );
+    return <ReleasePlaybookSkeleton />;
   }
 
-  if (!user) return null;
+  if (!user) return <ReleasePlaybookSkeleton />;
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">

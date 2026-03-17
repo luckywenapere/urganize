@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { SongMetadataSkeleton } from '@/components/loading/SongMetadataSkeleton';
 import {
   SONG_ROLE_OPTIONS,
   emptySongAdministrative,
@@ -295,18 +295,42 @@ export default function SongMetadataPage() {
     setShowContributorModal(false);
   };
 
-  if (isLoading || authLoading) {
-    return (
-      <LoadingScreen
-        variant="detail"
-        eyebrow="Song Metadata"
-        title="Loading your metadata sheet"
-        description="Pulling together credits, publishing, production, and admin details for this song."
-      />
-    );
+  if (isLoading || authLoading || !user) {
+    return <SongMetadataSkeleton />;
   }
 
-  if (!user || !song) return null;
+  if (!song) {
+    return (
+      <main className="min-h-screen bg-bg-base text-content-primary">
+        <div className="mx-auto max-w-[1160px] px-4 pb-8 pt-20 sm:px-8 sm:py-10">
+          <div className="flex flex-col gap-4 border-b border-stroke-default pb-5 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+            <div className="max-w-3xl">
+              <div className="text-sm text-content-secondary">
+                <span className="font-medium text-content-primary">Dashboard</span>
+                <span className="mx-2 text-content-tertiary">|</span>
+                <span>Song Library</span>
+              </div>
+              <h1 className="mt-3 text-[clamp(2rem,5vw,3rem)] tracking-tight text-content-primary">
+                Song metadata
+              </h1>
+            </div>
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+              <Link
+                href="/dashboard/songs"
+                className="w-full rounded-full border border-stroke-default bg-bg-surface px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
+              >
+                Back to library
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-status-error/35 bg-status-error/10 px-4 py-3 text-sm text-status-error">
+            {error || 'Could not load song metadata.'}
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">

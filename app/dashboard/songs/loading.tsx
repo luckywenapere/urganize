@@ -1,12 +1,5 @@
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { SongLibrarySkeleton } from '@/components/loading/SongLibrarySkeleton';
 
 export default function SongLibraryLoading() {
-  return (
-    <LoadingScreen
-      variant="dashboard"
-      eyebrow="Song Library"
-      title="Loading your metadata library"
-      description="Preparing your permanent library for song credits, contributors, and release metadata."
-    />
-  );
+  return <SongLibrarySkeleton />;
 }

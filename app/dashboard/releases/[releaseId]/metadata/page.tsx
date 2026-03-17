@@ -5,10 +5,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { SectionCard } from '@/components/shared/SectionCard';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { MetadataPageSkeleton } from '@/components/loading/MetadataPageSkeleton';
 
 type MetadataPayload = {
   release: {
@@ -104,17 +104,10 @@ export default function ReleaseMetadataPage() {
   }, [authLoading, loadData, releaseId, user]);
 
   if ((!hasLoadedOnce && isLoading) || (!user && authLoading)) {
-    return (
-      <LoadingScreen
-        variant="detail"
-        eyebrow="Release Metadata"
-        title="Loading structured metadata"
-        description="Preparing the grouped credits and release summary."
-      />
-    );
+    return <MetadataPageSkeleton />;
   }
 
-  if (!user) return null;
+  if (!user) return <MetadataPageSkeleton />;
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">

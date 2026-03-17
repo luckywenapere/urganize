@@ -9,6 +9,7 @@ import { PublicCreditForm } from '@/components/credits/PublicCreditForm';
 import { SubmissionSuccessState } from '@/components/credits/SubmissionSuccessState';
 import { ClaimProfilePrompt } from '@/components/credits/ClaimProfilePrompt';
 import { InvalidTokenState } from '@/components/credits/InvalidTokenState';
+import { PublicCreditFormSkeleton } from '@/components/loading/PublicCreditFormSkeleton';
 import type { CreditSubmissionInput } from '@/lib/release-ops';
 
 type CreditLookupPayload = {
@@ -139,15 +140,7 @@ export default function PublicCreditSubmissionPage() {
   };
 
   if (isLoading) {
-    return (
-      <main className="min-h-screen bg-bg-base text-content-primary">
-        <div className="mx-auto max-w-[720px] px-4 pb-8 pt-16 sm:px-6 sm:py-10">
-          <div className="rounded-[30px] border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.35)]">
-            <p className="text-sm text-content-secondary">Opening your credit form...</p>
-          </div>
-        </div>
-      </main>
-    );
+    return <PublicCreditFormSkeleton />;
   }
 
   return (

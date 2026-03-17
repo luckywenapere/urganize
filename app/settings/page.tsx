@@ -23,6 +23,11 @@ import {
 } from '@/lib/billing';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { SearchableGenreSelect } from '@/components/ui/SearchableGenreSelect';
+import {
+  SettingsManagedArtistsSectionSkeleton,
+  SettingsPageSkeleton,
+  SettingsTeamMembersSectionSkeleton,
+} from '@/components/loading/SettingsPageSkeleton';
 
 const PaystackButton = dynamic(
   () => import('@/components/PaystackButton').then((mod) => mod.PaystackButton),
@@ -898,16 +903,10 @@ export default function SettingsPage() {
   };
 
   if (authLoading) {
-    return (
-      <main className="min-h-screen bg-bg-base text-content-primary">
-        <div className="mx-auto w-full max-w-5xl px-6 py-10">
-          <p className="text-content-secondary">Loading settings...</p>
-        </div>
-      </main>
-    );
+    return <SettingsPageSkeleton />;
   }
 
-  if (!user) return null;
+  if (!user) return <SettingsPageSkeleton />;
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
@@ -1194,7 +1193,7 @@ export default function SettingsPage() {
             )}
 
             {isLoadingManagedArtists ? (
-              <p className="mt-3 text-sm text-content-secondary">Loading managed artists...</p>
+              <SettingsManagedArtistsSectionSkeleton />
             ) : managedArtists.length === 0 ? (
               <p className="mt-3 text-sm text-content-secondary">No managed artists yet.</p>
             ) : (
@@ -1279,7 +1278,7 @@ export default function SettingsPage() {
               )}
 
               {isLoadingMembers ? (
-                <p className="mt-4 text-sm text-content-secondary">Loading team members...</p>
+                <SettingsTeamMembersSectionSkeleton />
               ) : members.length === 0 ? (
                 <p className="mt-4 text-sm text-content-secondary">No members yet.</p>
               ) : (

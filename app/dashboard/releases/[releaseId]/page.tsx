@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { SectionCard } from '@/components/shared/SectionCard';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -16,6 +15,7 @@ import { CollaboratorStatusTable } from '@/components/releases/CollaboratorStatu
 import { AddCollaboratorModal } from '@/components/releases/AddCollaboratorModal';
 import { MetadataPreviewCard } from '@/components/releases/MetadataPreviewCard';
 import { NextStepCard } from '@/components/releases/NextStepCard';
+import { CommandCenterSkeleton } from '@/components/loading/CommandCenterSkeleton';
 import type { ReadinessChecklistItem, ReadinessNextAction } from '@/lib/release-ops';
 
 type CommandCenterPayload = {
@@ -252,17 +252,10 @@ export default function ReleaseCommandCenterPage() {
   };
 
   if ((!hasLoadedOnce && isLoading) || (!user && authLoading)) {
-    return (
-      <LoadingScreen
-        variant="detail"
-        eyebrow="Release Command Center"
-        title="Loading release operations"
-        description="Pulling collaborator status, metadata readiness, and next actions into one workspace."
-      />
-    );
+    return <CommandCenterSkeleton />;
   }
 
-  if (!user) return null;
+  if (!user) return <CommandCenterSkeleton />;
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">

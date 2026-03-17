@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { SongLibrarySkeleton } from '@/components/loading/SongLibrarySkeleton';
 import {
   buildSongSearchValue,
   emptySongFormInput,
@@ -147,18 +147,9 @@ export default function SongLibraryPage() {
     }
   };
 
-  if (isLoading || authLoading) {
-    return (
-      <LoadingScreen
-        variant="dashboard"
-        eyebrow="Song Library"
-        title="Loading your metadata library"
-        description="Preparing your permanent library for song credits, contributors, and release metadata."
-      />
-    );
+  if (isLoading || authLoading || !user) {
+    return <SongLibrarySkeleton />;
   }
-
-  if (!user) return null;
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">

@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { DashboardPageSkeleton } from '@/components/loading/DashboardPageSkeleton';
 
 type ReleaseCard = {
   id: string;
@@ -200,14 +200,7 @@ export default function DashboardPage() {
   };
 
   if ((!hasLoadedOnce && isLoading) || (!user && authLoading)) {
-    return (
-      <LoadingScreen
-        variant="dashboard"
-        eyebrow="Dashboard"
-        title="Loading release command center"
-        description="Preparing your release workspaces, collaborator progress, and metadata status."
-      />
-    );
+    return <DashboardPageSkeleton />;
   }
 
   if (hasSubscriptionAccess === false) {

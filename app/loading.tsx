@@ -1,5 +1,5 @@
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { RootShellSkeleton } from '@/components/loading/RootShellSkeleton';
 
 export default function RootLoading() {
-  return <LoadingScreen variant="shell" title="Opening Urganize" description="Loading your release workspace." />;
+  return <RootShellSkeleton />;
 }

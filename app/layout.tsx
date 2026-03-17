@@ -7,6 +7,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import './globals.css';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { AppSidebar } from '@/components/app/AppSidebar';
+import { AppSidebarSkeleton } from '@/components/app/AppSidebarSkeleton';
 
 const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === 'true';
 
@@ -25,6 +26,7 @@ function AppShell({
   const isDashboardRoute = pathname?.startsWith('/dashboard');
   const isSettingsRoute = pathname === '/settings';
   const showWorkspaceSidebar = isAuthenticated && !isAuthLoading && (isDashboardRoute || isSettingsRoute);
+  const showWorkspaceSidebarSkeleton = isAuthLoading && (isDashboardRoute || isSettingsRoute);
   const requiresArtistNameGate =
     isAuthenticated &&
     !isAuthLoading &&
@@ -32,6 +34,15 @@ function AppShell({
     user?.role === 'artist' &&
     !String(user?.artist_name || '').trim();
   const pageLayoutClassName = isDashboardRoute ? 'app-layout app-layout-fluid' : 'app-layout app-layout-centered';
+
+  const renderWorkspaceShell = (sidebar: React.ReactNode) => (
+    <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>
+      <div className="mx-auto flex w-full max-w-[1480px] gap-2 px-0 md:px-4">
+        {sidebar}
+        <div className="min-w-0 flex-1 px-0 pb-28 pt-16 md:px-0 md:pb-0 md:pt-0">{children}</div>
+      </div>
+    </div>
+  );
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
@@ -44,12 +55,9 @@ function AppShell({
       {requiresArtistNameGate ? (
         <ArtistNameGate />
       ) : showWorkspaceSidebar ? (
-        <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>
-          <div className="mx-auto flex w-full max-w-[1480px] gap-2 px-0 md:px-4">
-            <AppSidebar userName={user?.name || user?.artist_name || user?.email || ''} />
-            <div className="min-w-0 flex-1 px-0 pb-28 pt-16 md:px-0 md:pb-0 md:pt-0">{children}</div>
-          </div>
-        </div>
+        renderWorkspaceShell(<AppSidebar userName={user?.name || user?.artist_name || user?.email || ''} />)
+      ) : showWorkspaceSidebarSkeleton ? (
+        renderWorkspaceShell(<AppSidebarSkeleton pathname={pathname || ''} />)
       ) : (
         <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>{children}</div>
       )}

@@ -1,12 +1,5 @@
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { DashboardPageSkeleton } from '@/components/loading/DashboardPageSkeleton';
 
 export default function DashboardLoading() {
-  return (
-    <LoadingScreen
-      variant="dashboard"
-      eyebrow="Dashboard"
-      title="Loading your releases"
-      description="Preparing your release checklist dashboard and saved plans."
-    />
-  );
+  return <DashboardPageSkeleton />;
 }

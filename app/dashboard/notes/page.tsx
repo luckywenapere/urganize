@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { NotesBoardSkeleton } from '@/components/loading/NotesBoardSkeleton';
 import { fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
 
 type NoteColor = 'butter' | 'coral' | 'sage' | 'sky';
@@ -239,18 +239,9 @@ export default function NotesPage() {
     setNotes((current) => current.filter((note) => note.id !== noteId));
   };
 
-  if (isLoading || authLoading) {
-    return (
-      <LoadingScreen
-        variant="dashboard"
-        eyebrow="Notes"
-        title="Loading your note board"
-        description="Preparing your capture space for ideas, reminders, and launch fragments."
-      />
-    );
+  if (isLoading || authLoading || !user) {
+    return <NotesBoardSkeleton />;
   }
-
-  if (!user) return null;
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
