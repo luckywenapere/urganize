@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
+  RELEASE_EVENTS_TABLE,
+  buildMissingTableResponse,
   createAdminClient,
   ensureReleaseOwnership,
   getAuthenticatedUser,
+  isOptionalTableMissingError,
   loadReleaseCommandCenterData,
 } from '../../_shared';
 
@@ -19,6 +22,20 @@ export async function GET(
   const adminClient = createAdminClient(auth.supabaseUrl);
   const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
   if ('error' in ownership) return ownership.error;
+
+  const viewEvent = await adminClient!.from(RELEASE_EVENTS_TABLE).insert({
+    release_id: releaseId,
+    type: 'metadata_viewed',
+    payload_json: {
+      viewedAt: new Date().toISOString(),
+      viewerUserId: auth.user.id,
+    },
+  });
+
+  if (viewEvent.error) {
+    if (isOptionalTableMissingError(viewEvent.error)) return buildMissingTableResponse();
+    return NextResponse.json({ error: viewEvent.error.message || 'Could not track metadata review.' }, { status: 500 });
+  }
 
   const commandCenter = await loadReleaseCommandCenterData(adminClient!, ownership.release);
   if ('error' in commandCenter) return commandCenter.error;

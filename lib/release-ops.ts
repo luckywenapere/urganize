@@ -125,7 +125,21 @@ export type ReleaseEventType =
   | 'credit_link_sent'
   | 'credit_submitted'
   | 'reminder_sent'
-  | 'metadata_updated';
+  | 'metadata_updated'
+  | 'metadata_viewed';
+
+export type ReadinessChecklistStatus = 'complete' | 'in_progress' | 'pending' | 'locked';
+export type ReadinessChecklistItem = {
+  id: 'add_collaborators' | 'collect_all_credits' | 'review_metadata' | 'ready_for_distribution';
+  label: string;
+  status: ReadinessChecklistStatus;
+  detail: string;
+};
+
+export type ReadinessNextAction = {
+  type: 'add_collaborators' | 'send_reminder' | 'view_metadata' | 'none';
+  label: string;
+};
 
 export type ReleaseSummary = {
   id: string;
@@ -210,11 +224,14 @@ export type ReadinessState = {
   creditsCollected: boolean;
   metadataComplete: boolean;
   metadataSnapshotBuilt: boolean;
+  metadataReviewed: boolean;
   readyForDistribution: boolean;
   completionPercent: number;
   pendingCollaborators: number;
   submittedCollaborators: number;
   nextStep: string;
+  checklist: ReadinessChecklistItem[];
+  nextAction: ReadinessNextAction;
 };
 
 export type ReleaseCollaboratorInput = {
@@ -359,25 +376,93 @@ export const calculateReleaseReadiness = (input: {
   submittedCount: number;
   metadata: ReleaseMetadataSnapshot | null;
   creditSubmissionCount: number;
+  metadataViewed: boolean;
 }): ReadinessState => {
   const basicsComplete = Boolean(trimString(input.title) && trimString(input.artistName) && trimString(input.releaseDate));
   const collaboratorsAdded = input.collaboratorCount > 0;
   const creditsCollected = collaboratorsAdded && input.submittedCount === input.collaboratorCount;
-  const metadataComplete = basicsComplete && input.creditSubmissionCount > 0;
   const metadataSnapshotBuilt = Boolean(input.metadata && input.creditSubmissionCount > 0);
+  const metadataReviewed = metadataSnapshotBuilt && input.metadataViewed;
+  const metadataComplete = metadataSnapshotBuilt && metadataReviewed;
   const readyForDistribution = creditsCollected && metadataComplete;
-
-  const completeMilestones = [basicsComplete, collaboratorsAdded, creditsCollected, metadataSnapshotBuilt].filter(Boolean).length;
-  const completionPercent = Math.round((completeMilestones / 4) * 100);
   const pendingCollaborators = Math.max(input.collaboratorCount - input.submittedCount, 0);
 
-  let nextStep = 'Release is ready for distribution';
+  const addCollaboratorsStatus: ReadinessChecklistStatus = collaboratorsAdded ? 'complete' : 'pending';
+  const collectCreditsStatus: ReadinessChecklistStatus = !collaboratorsAdded
+    ? 'locked'
+    : creditsCollected
+      ? 'complete'
+      : input.submittedCount > 0
+        ? 'in_progress'
+        : 'pending';
+  const reviewMetadataStatus: ReadinessChecklistStatus = !metadataSnapshotBuilt
+    ? 'locked'
+    : metadataReviewed
+      ? 'complete'
+      : 'pending';
+  const readyForDistributionStatus: ReadinessChecklistStatus = readyForDistribution ? 'complete' : 'pending';
+
+  const checklist: ReadinessChecklistItem[] = [
+    {
+      id: 'add_collaborators',
+      label: 'Add collaborators',
+      status: addCollaboratorsStatus,
+      detail: collaboratorsAdded
+        ? `${input.collaboratorCount} collaborator${input.collaboratorCount === 1 ? '' : 's'} added`
+        : 'Add collaborators to start collecting credits',
+    },
+    {
+      id: 'collect_all_credits',
+      label: 'Collect all credits',
+      status: collectCreditsStatus,
+      detail: !collaboratorsAdded
+        ? 'Waiting for collaborators before credit collection can begin'
+        : `${input.submittedCount} of ${input.collaboratorCount} collaborator${input.collaboratorCount === 1 ? '' : 's'} submitted`,
+    },
+    {
+      id: 'review_metadata',
+      label: 'Review metadata',
+      status: reviewMetadataStatus,
+      detail: !metadataSnapshotBuilt
+        ? 'No credits submitted yet'
+        : metadataReviewed
+          ? 'Metadata reviewed in the full metadata view'
+          : 'Open the metadata page to review grouped credits',
+    },
+    {
+      id: 'ready_for_distribution',
+      label: 'Ready for distribution',
+      status: readyForDistributionStatus,
+      detail: readyForDistribution
+        ? 'This release is ready for distribution'
+        : 'Waiting for credits collection and metadata review',
+    },
+  ];
+
+  const statusWeight: Record<ReadinessChecklistStatus, number> = {
+    complete: 1,
+    in_progress: 0.5,
+    pending: 0,
+    locked: 0,
+  };
+  const completionPercent = Math.round(
+    (checklist.reduce((sum, item) => sum + statusWeight[item.status], 0) / checklist.length) * 100
+  );
+
+  let nextStep = 'Your release is ready for distribution';
+  let nextAction: ReadinessNextAction = {
+    type: 'none',
+    label: '',
+  };
   if (!collaboratorsAdded) {
     nextStep = 'Add collaborators to start collecting credits';
+    nextAction = { type: 'add_collaborators', label: 'Add Collaborators' };
   } else if (!creditsCollected) {
     nextStep = `Waiting for ${pendingCollaborators} collaborator${pendingCollaborators === 1 ? '' : 's'} to submit credits`;
-  } else if (!metadataComplete || !metadataSnapshotBuilt) {
-    nextStep = 'Review structured metadata';
+    nextAction = { type: 'send_reminder', label: 'Send Reminder' };
+  } else if (!metadataComplete) {
+    nextStep = 'Review your metadata before distribution';
+    nextAction = { type: 'view_metadata', label: 'View Metadata' };
   }
 
   return {
@@ -386,10 +471,13 @@ export const calculateReleaseReadiness = (input: {
     creditsCollected,
     metadataComplete,
     metadataSnapshotBuilt,
+    metadataReviewed,
     readyForDistribution,
     completionPercent,
     pendingCollaborators,
     submittedCollaborators: input.submittedCount,
     nextStep,
+    checklist,
+    nextAction,
   };
 };

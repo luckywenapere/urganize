@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
@@ -15,6 +15,8 @@ import { CollaboratorStatusTable } from '@/components/releases/CollaboratorStatu
 import { AddCollaboratorModal } from '@/components/releases/AddCollaboratorModal';
 import { MetadataPreviewCard } from '@/components/releases/MetadataPreviewCard';
 import { ReleaseStatsMiniCards } from '@/components/releases/ReleaseStatsMiniCards';
+import { NextStepCard } from '@/components/releases/NextStepCard';
+import type { ReadinessChecklistItem, ReadinessNextAction } from '@/lib/release-ops';
 
 type CommandCenterPayload = {
   release: {
@@ -28,10 +30,13 @@ type CommandCenterPayload = {
     completionPercent: number;
     creditsCollected: boolean;
     metadataComplete: boolean;
+    metadataReviewed: boolean;
     readyForDistribution: boolean;
     nextStep: string;
     submittedCollaborators: number;
     pendingCollaborators: number;
+    checklist: ReadinessChecklistItem[];
+    nextAction: ReadinessNextAction;
   };
   collaborators: Array<{
     id: string;
@@ -65,6 +70,7 @@ type ToastState = {
 };
 
 export default function ReleaseCommandCenterPage() {
+  const router = useRouter();
   const params = useParams<{ releaseId: string }>();
   const releaseId = Array.isArray(params?.releaseId) ? params.releaseId[0] : params?.releaseId || '';
   const { user, isLoading: authLoading } = useAuthStore();
@@ -128,6 +134,10 @@ export default function ReleaseCommandCenterPage() {
   const selectedSubmission = useMemo(
     () => collaborators.find((item) => item.id === selectedSubmissionId)?.submission || null,
     [collaborators, selectedSubmissionId]
+  );
+  const firstPendingCollaboratorId = useMemo(
+    () => collaborators.find((item) => item.status === 'pending')?.id || '',
+    [collaborators]
   );
 
   const submissionUrlById = useMemo(() => {
@@ -216,6 +226,29 @@ export default function ReleaseCommandCenterPage() {
     }
   };
 
+  const handleNextAction = async () => {
+    const nextAction = data?.readiness.nextAction;
+    if (!nextAction) return;
+
+    if (nextAction.type === 'add_collaborators') {
+      setShowAddModal(true);
+      return;
+    }
+
+    if (nextAction.type === 'send_reminder') {
+      if (!firstPendingCollaboratorId) {
+        setToast({ tone: 'error', message: 'No pending collaborators to remind.' });
+        return;
+      }
+      await handleRemind(firstPendingCollaboratorId);
+      return;
+    }
+
+    if (nextAction.type === 'view_metadata') {
+      router.push(`/dashboard/releases/${releaseId}/metadata`);
+    }
+  };
+
   if ((!hasLoadedOnce && isLoading) || (!user && authLoading)) {
     return (
       <LoadingScreen
@@ -247,9 +280,19 @@ export default function ReleaseCommandCenterPage() {
               <ReleaseHeader release={data.release} onAddCollaborator={() => setShowAddModal(true)} />
             </SectionCard>
 
-            <SectionCard>
-              <ReleaseReadinessCard readiness={data.readiness} />
-            </SectionCard>
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+              <SectionCard>
+                <ReleaseReadinessCard readiness={data.readiness} />
+              </SectionCard>
+              <NextStepCard
+                nextStep={data.readiness.nextStep}
+                action={data.readiness.nextAction}
+                onAction={() => void handleNextAction()}
+                actionDisabled={
+                  data.readiness.nextAction.type === 'send_reminder' && !firstPendingCollaboratorId
+                }
+              />
+            </div>
 
             <ReleaseStatsMiniCards
               invited={collaborators.length}
@@ -278,7 +321,7 @@ export default function ReleaseCommandCenterPage() {
                 {collaborators.length === 0 ? (
                   <EmptyState
                     title="No collaborators added yet."
-                    description="Invite collaborators to start collecting credits and metadata for this release."
+                    description="Add collaborators to start collecting credits"
                     action={
                       <button
                         type="button"
@@ -304,7 +347,14 @@ export default function ReleaseCommandCenterPage() {
               <MetadataPreviewCard releaseId={data.release.id} metadata={data.metadata} />
             </SectionCard>
           </div>
-        ) : null}
+        ) : (
+          <SectionCard>
+            <EmptyState
+              title="Something went wrong. Try again."
+              description="We could not load this release workspace."
+            />
+          </SectionCard>
+        )}
       </div>
 
       <AddCollaboratorModal

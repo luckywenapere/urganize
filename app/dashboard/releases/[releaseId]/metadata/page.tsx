@@ -147,7 +147,10 @@ export default function ReleaseMetadataPage() {
                   <h1 className="mt-2 text-[clamp(2.2rem,5vw,3.5rem)] tracking-tight text-content-primary">{data.release.title}</h1>
                   <p className="mt-3 text-sm text-content-secondary">{data.release.artistName}</p>
                 </div>
-                <StatusBadge label={data.readiness.metadataComplete ? 'Metadata complete' : 'Metadata incomplete'} tone={data.readiness.metadataComplete ? 'success' : 'warning'} />
+                <StatusBadge
+                  label={data.readiness.metadataComplete ? 'Metadata reviewed' : 'Review needed'}
+                  tone={data.readiness.metadataComplete ? 'success' : 'warning'}
+                />
               </div>
             </SectionCard>
 
@@ -179,7 +182,7 @@ export default function ReleaseMetadataPage() {
                 </div>
               ) : (
                 <EmptyState
-                  title="Metadata snapshot is empty."
+                  title="No credits submitted yet"
                   description="Once collaborators submit credits, Urganize will group them here for review."
                 />
               )}

@@ -7,6 +7,7 @@ import { CreditRequestHeader } from '@/components/credits/CreditRequestHeader';
 import { PublicCreditForm } from '@/components/credits/PublicCreditForm';
 import { SubmissionSuccessState } from '@/components/credits/SubmissionSuccessState';
 import { ClaimProfilePrompt } from '@/components/credits/ClaimProfilePrompt';
+import { EmptyState } from '@/components/shared/EmptyState';
 
 type CreditLookupPayload = {
   release?: {
@@ -58,6 +59,7 @@ export default function PublicCreditSubmissionPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [linkUnavailable, setLinkUnavailable] = useState(false);
   const [releaseTitle, setReleaseTitle] = useState('');
   const [artistName, setArtistName] = useState('');
   const [requestedRole, setRequestedRole] = useState('');
@@ -77,11 +79,13 @@ export default function PublicCreditSubmissionPage() {
       if (cancelled) return;
 
       if (!response.ok || !payload.release || !payload.collaboratorRequest) {
-        setError(payload.error || 'This submission link is unavailable.');
+        setError(payload.error || 'This link is no longer valid');
+        setLinkUnavailable(true);
         setIsLoading(false);
         return;
       }
 
+      setLinkUnavailable(false);
       setReleaseTitle(payload.release.title);
       setArtistName(payload.release.artistName);
       setRequestedRole(payload.collaboratorRequest.requestedRole);
@@ -143,7 +147,14 @@ export default function PublicCreditSubmissionPage() {
         <div className="rounded-[32px] border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)] sm:p-8">
           <Logo size="lg" priority />
 
-          {success ? (
+          {linkUnavailable ? (
+            <div className="mt-8">
+              <EmptyState
+                title="This link is no longer valid"
+                description="Something went wrong. Try again."
+              />
+            </div>
+          ) : success ? (
             <div className="mt-8 space-y-5">
               <SubmissionSuccessState releaseTitle={releaseTitle} />
               <ClaimProfilePrompt />

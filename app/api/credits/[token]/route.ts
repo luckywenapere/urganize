@@ -36,7 +36,7 @@ const loadLookup = async (token: string) => {
   }
 
   if (!collaboratorResult.data) {
-    return { error: NextResponse.json({ error: 'This credit link is unavailable.' }, { status: 404 }) };
+    return { error: NextResponse.json({ error: 'This link is no longer valid.' }, { status: 404 }) };
   }
 
   const releaseResult = await adminClient

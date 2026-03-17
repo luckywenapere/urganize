@@ -70,8 +70,92 @@ export const createAdminClient = (supabaseUrl: string) => {
   return createClient(supabaseUrl, serviceRoleKey);
 };
 
-export const buildMissingTableResponse = () =>
-  NextResponse.json({ error: 'Release operations tables are missing.', sql: RELEASE_OPS_SQL }, { status: 501 });
+export const buildMissingTableResponse = (details?: string) =>
+  NextResponse.json(
+    {
+      error: 'Release operations tables are missing.',
+      ...(details ? { details } : {}),
+      sql: RELEASE_OPS_SQL,
+    },
+    { status: 501 }
+  );
+
+export async function ensureReleaseOpsSchema(
+  adminClient: ReturnType<typeof createAdminClient>
+) {
+  if (!adminClient) {
+    return { error: NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 }) };
+  }
+
+  const checks: Array<{ label: string; run: () => Promise<{ error: { message?: string } | null }> }> = [
+    {
+      label: 'releases columns',
+      run: async () =>
+        adminClient
+          .from('releases')
+          .select('id,user_id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
+          .limit(1),
+    },
+    {
+      label: 'artists table',
+      run: async () => adminClient.from(ARTISTS_TABLE).select('id,name,owner_user_id,slug').limit(1),
+    },
+    {
+      label: 'collaborators table',
+      run: async () =>
+        adminClient.from(COLLABORATORS_TABLE).select('id,full_name,stage_name,email,phone,default_role').limit(1),
+    },
+    {
+      label: 'release collaborators table',
+      run: async () =>
+        adminClient
+          .from(RELEASE_COLLABORATORS_TABLE)
+          .select('id,release_id,invite_name,invite_contact,role,status,submission_token,submission_sent_at,submitted_at,last_reminded_at,updated_at')
+          .limit(1),
+    },
+    {
+      label: 'credit submissions table',
+      run: async () =>
+        adminClient
+          .from(CREDIT_SUBMISSIONS_TABLE)
+          .select('id,release_id,release_collaborator_id,legal_name,stage_name,role,email,phone,publishing_info,split_percentage,pro_affiliation,ipi_number,notes,submitted_at,updated_at')
+          .limit(1),
+    },
+    {
+      label: 'release metadata table',
+      run: async () =>
+        adminClient
+          .from(RELEASE_METADATA_TABLE)
+          .select('id,release_id,primary_artist_name,release_title,producer_credits_json,writer_credits_json,featured_artist_credits_json,all_credits_json,updated_at')
+          .limit(1),
+    },
+    {
+      label: 'release events table',
+      run: async () =>
+        adminClient.from(RELEASE_EVENTS_TABLE).select('id,release_id,type,payload_json,created_at').limit(1),
+    },
+  ];
+
+  for (const check of checks) {
+    const result = await check.run();
+    if (!result.error) continue;
+
+    if (isOptionalTableMissingError(result.error)) {
+      return {
+        error: buildMissingTableResponse(`Schema validation failed at ${check.label}.`),
+      };
+    }
+
+    return {
+      error: NextResponse.json(
+        { error: result.error.message || `Could not verify ${check.label}.` },
+        { status: 500 }
+      ),
+    };
+  }
+
+  return { ready: true as const };
+}
 
 export const toReleaseSummary = (row: Record<string, unknown>): ReleaseSummary => ({
   id: String(row.id || ''),
@@ -224,16 +308,24 @@ export async function loadReleaseCommandCenterData(
   adminClient: SupabaseClient,
   release: ReleaseSummary
 ) {
-  const [collaboratorsResult, metadataResult] = await Promise.all([
+  const [collaboratorsResult, metadataResult, metadataViewedResult] = await Promise.all([
     adminClient
       .from(RELEASE_COLLABORATORS_TABLE)
       .select('*, collaborators(id,full_name,stage_name,email,phone)')
       .eq('release_id', release.id)
       .order('created_at', { ascending: true }),
     adminClient.from(RELEASE_METADATA_TABLE).select('*').eq('release_id', release.id).maybeSingle(),
+    adminClient
+      .from(RELEASE_EVENTS_TABLE)
+      .select('id,created_at')
+      .eq('release_id', release.id)
+      .eq('type', 'metadata_viewed')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
-  const error = collaboratorsResult.error || metadataResult.error;
+  const error = collaboratorsResult.error || metadataResult.error || metadataViewedResult.error;
   if (error) {
     if (isOptionalTableMissingError(error)) {
       return { error: buildMissingTableResponse() };
@@ -298,6 +390,7 @@ export async function loadReleaseCommandCenterData(
     submittedCount: collaborators.filter((item) => item.status === 'submitted').length,
     metadata,
     creditSubmissionCount: submissionByCollaboratorId.size,
+    metadataViewed: Boolean(metadataViewedResult.data?.id),
   });
 
   return { collaborators, metadata, readiness };

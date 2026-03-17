@@ -141,7 +141,7 @@ export async function POST(
   }
 
   if (!collaboratorLookup.data) {
-    return NextResponse.json({ error: 'This credit link is unavailable.' }, { status: 404 });
+    return NextResponse.json({ error: 'This link is no longer valid.' }, { status: 404 });
   }
 
   const body = await request.json().catch(() => ({}));
