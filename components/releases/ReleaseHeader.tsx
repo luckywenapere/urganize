@@ -52,6 +52,12 @@ export function ReleaseHeader({ release, onAddCollaborator }: ReleaseHeaderProps
             Add Collaborator
           </button>
           <Link
+            href={`/dashboard/releases/${release.id}/playbook`}
+            className="min-h-11 w-full rounded-2xl border border-stroke-default bg-bg-surface px-5 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+          >
+            View Playbook
+          </Link>
+          <Link
             href={`/dashboard/releases/${release.id}/metadata`}
             className="min-h-11 w-full rounded-2xl border border-stroke-default bg-bg-surface px-5 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
           >

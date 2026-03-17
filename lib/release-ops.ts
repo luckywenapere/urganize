@@ -126,7 +126,8 @@ export type ReleaseEventType =
   | 'credit_submitted'
   | 'reminder_sent'
   | 'metadata_updated'
-  | 'metadata_viewed';
+  | 'metadata_viewed'
+  | 'playbook_state_saved';
 
 export type ReadinessChecklistStatus = 'complete' | 'in_progress' | 'pending' | 'locked';
 export type ReadinessChecklistItem = {
