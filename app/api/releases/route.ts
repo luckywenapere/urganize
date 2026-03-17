@@ -107,6 +107,7 @@ export async function POST(request: NextRequest) {
   const title = trimString(body?.title);
   const releaseDate = trimString(body?.releaseDate);
   const description = trimString(body?.description);
+  const releaseType = trimString(body?.releaseType) || 'single';
 
   if (!title) return NextResponse.json({ error: 'Release title is required.' }, { status: 400 });
   if (!releaseDate) return NextResponse.json({ error: 'Release date is required.' }, { status: 400 });
@@ -195,6 +196,7 @@ export async function POST(request: NextRequest) {
       slug,
       release_date: releaseDate,
       status: 'draft',
+      type: releaseType,
       description: description || null,
       updated_at: now,
     })

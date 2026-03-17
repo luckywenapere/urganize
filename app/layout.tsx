@@ -8,6 +8,8 @@ import './globals.css';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { AppSidebar } from '@/components/app/AppSidebar';
 
+const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === 'true';
+
 function AppShell({
   children,
 }: {
@@ -58,7 +60,7 @@ function AppShell({
           <span>Quick actions</span>
         </div>
       )}
-      <Analytics />
+      {shouldLoadVercelAnalytics ? <Analytics /> : null}
     </>
   );
 }
