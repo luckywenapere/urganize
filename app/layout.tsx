@@ -1,83 +1,62 @@
-'use client';
-
-import { useEffect } from 'react';
-import { usePathname } from 'next/navigation';
-import { Analytics } from '@vercel/analytics/next';
-import { useAuthStore } from '@/lib/auth-store';
+import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
+import { AppShell } from '@/components/app/AppShell';
 import './globals.css';
-import { ArtistNameGate } from '@/components/ArtistNameGate';
-import { AppSidebar } from '@/components/app/AppSidebar';
-import { AppSidebarSkeleton } from '@/components/app/AppSidebarSkeleton';
 
-const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === 'true';
+const appName = 'Urganize';
+const appDescription =
+  'Urganize is a music campaign execution workspace for planning releases, tracking tasks, and keeping your team aligned.';
 
-function AppShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const checkAuth = useAuthStore((state) => state.checkAuth);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const isAuthLoading = useAuthStore((state) => state.isLoading);
-  const user = useAuthStore((state) => state.user);
-  const pathname = usePathname();
+function getMetadataBase() {
+  const configuredUrl =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
+    process.env.VERCEL_URL?.trim();
 
-  const isAuthRoute = pathname?.startsWith('/auth');
-  const isDashboardRoute = pathname?.startsWith('/dashboard');
-  const isSettingsRoute = pathname === '/settings';
-  const showWorkspaceSidebar = isAuthenticated && !isAuthLoading && (isDashboardRoute || isSettingsRoute);
-  const showWorkspaceSidebarSkeleton = isAuthLoading && (isDashboardRoute || isSettingsRoute);
-  const requiresArtistNameGate =
-    isAuthenticated &&
-    !isAuthLoading &&
-    !isAuthRoute &&
-    user?.role === 'artist' &&
-    !String(user?.artist_name || '').trim();
-  const pageLayoutClassName = isDashboardRoute ? 'app-layout app-layout-fluid' : 'app-layout app-layout-centered';
+  if (!configuredUrl) {
+    return new URL('http://localhost:3000');
+  }
 
-  const renderWorkspaceShell = (sidebar: React.ReactNode) => (
-    <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>
-      <div className="mx-auto flex w-full max-w-[1480px] gap-2 px-0 md:px-4">
-        {sidebar}
-        <div className="min-w-0 flex-1 px-0 pb-28 pt-16 md:px-0 md:pb-0 md:pt-0">{children}</div>
-      </div>
-    </div>
-  );
+  const normalizedUrl = configuredUrl.startsWith('http') ? configuredUrl : `https://${configuredUrl}`;
 
-  useEffect(() => {
-    if (!isAuthenticated || !user) {
-      void checkAuth();
-    }
-  }, [checkAuth, isAuthenticated, user]);
-
-  return (
-    <>
-      {requiresArtistNameGate ? (
-        <ArtistNameGate />
-      ) : showWorkspaceSidebar ? (
-        renderWorkspaceShell(<AppSidebar userName={user?.name || user?.artist_name || user?.email || ''} />)
-      ) : showWorkspaceSidebarSkeleton ? (
-        renderWorkspaceShell(<AppSidebarSkeleton pathname={pathname || ''} />)
-      ) : (
-        <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>{children}</div>
-      )}
-      {!requiresArtistNameGate && (
-        <div className="keyboard-hint">
-          <kbd className="kbd">Cmd</kbd>
-          <kbd className="kbd">K</kbd>
-          <span>Quick actions</span>
-        </div>
-      )}
-      {shouldLoadVercelAnalytics ? <Analytics /> : null}
-    </>
-  );
+  try {
+    return new URL(normalizedUrl);
+  } catch {
+    return new URL('http://localhost:3000');
+  }
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const metadata: Metadata = {
+  metadataBase: getMetadataBase(),
+  title: {
+    default: appName,
+    template: `%s | ${appName}`,
+  },
+  description: appDescription,
+  applicationName: appName,
+  openGraph: {
+    type: 'website',
+    siteName: appName,
+    title: appName,
+    description: appDescription,
+    images: [
+      {
+        url: '/opengraph-image.png',
+        width: 1200,
+        height: 630,
+        alt: `${appName} Open Graph image`,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: appName,
+    description: appDescription,
+    images: ['/opengraph-image.png'],
+  },
+};
+
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning data-theme="light" className="light">
       <head>
