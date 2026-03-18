@@ -131,14 +131,14 @@ export type ReleaseEventType =
 
 export type ReadinessChecklistStatus = 'complete' | 'in_progress' | 'pending' | 'locked';
 export type ReadinessChecklistItem = {
-  id: 'add_collaborators' | 'collect_all_credits' | 'review_metadata' | 'ready_for_distribution';
+  id: 'share_credit_link' | 'collect_all_credits' | 'review_metadata' | 'ready_for_distribution';
   label: string;
   status: ReadinessChecklistStatus;
   detail: string;
 };
 
 export type ReadinessNextAction = {
-  type: 'add_collaborators' | 'send_reminder' | 'view_metadata' | 'none';
+  type: 'copy_credit_link' | 'send_reminder' | 'view_metadata' | 'none';
   label: string;
 };
 
@@ -149,7 +149,6 @@ export type ReleaseSummary = {
   artistName: string;
   title: string;
   slug: string;
-  releaseDate: string;
   status: ReleaseStatus;
   description: string;
   createdAt: string;
@@ -257,6 +256,16 @@ export type CreditSubmissionInput = {
 export type CreditSubmissionFieldErrors = Partial<Record<keyof CreditSubmissionInput, string>>;
 
 const trimString = (value: unknown): string => String(value || '').trim();
+export const RELEASE_PUBLIC_COLLECTION_TOKEN_PREFIX = 'release~';
+
+export const createReleasePublicCollectionToken = (releaseId: string): string =>
+  `${RELEASE_PUBLIC_COLLECTION_TOKEN_PREFIX}${trimString(releaseId)}`;
+
+export const parseReleasePublicCollectionToken = (token: string): string => {
+  const normalized = trimString(token);
+  if (!normalized.startsWith(RELEASE_PUBLIC_COLLECTION_TOKEN_PREFIX)) return '';
+  return normalized.slice(RELEASE_PUBLIC_COLLECTION_TOKEN_PREFIX.length);
+};
 
 export const normalizeReleaseSlug = (value: string): string =>
   trimString(value)
@@ -399,14 +408,13 @@ export const buildReleaseMetadataPayload = (
 export const calculateReleaseReadiness = (input: {
   title: string;
   artistName: string;
-  releaseDate: string | null;
   collaboratorCount: number;
   submittedCount: number;
   metadata: ReleaseMetadataSnapshot | null;
   creditSubmissionCount: number;
   metadataViewed: boolean;
 }): ReadinessState => {
-  const basicsComplete = Boolean(trimString(input.title) && trimString(input.artistName) && trimString(input.releaseDate));
+  const basicsComplete = Boolean(trimString(input.title) && trimString(input.artistName));
   const collaboratorsAdded = input.collaboratorCount > 0;
   const creditsCollected = collaboratorsAdded && input.submittedCount === input.collaboratorCount;
   const metadataSnapshotBuilt = Boolean(input.metadata && input.creditSubmissionCount > 0);
@@ -415,7 +423,7 @@ export const calculateReleaseReadiness = (input: {
   const readyForDistribution = creditsCollected && metadataComplete;
   const pendingCollaborators = Math.max(input.collaboratorCount - input.submittedCount, 0);
 
-  const addCollaboratorsStatus: ReadinessChecklistStatus = collaboratorsAdded ? 'complete' : 'pending';
+  const shareCreditLinkStatus: ReadinessChecklistStatus = collaboratorsAdded ? 'complete' : 'pending';
   const collectCreditsStatus: ReadinessChecklistStatus = !collaboratorsAdded
     ? 'locked'
     : creditsCollected
@@ -432,12 +440,12 @@ export const calculateReleaseReadiness = (input: {
 
   const checklist: ReadinessChecklistItem[] = [
     {
-      id: 'add_collaborators',
-      label: 'Add collaborators',
-      status: addCollaboratorsStatus,
+      id: 'share_credit_link',
+      label: 'Share credit link',
+      status: shareCreditLinkStatus,
       detail: collaboratorsAdded
-        ? `${input.collaboratorCount} collaborator${input.collaboratorCount === 1 ? '' : 's'} added`
-        : 'Add collaborators to start collecting credits',
+        ? `${input.collaboratorCount} submission${input.collaboratorCount === 1 ? '' : 's'} received`
+        : 'Copy and share the public credit link to start collecting credits',
     },
     {
       id: 'collect_all_credits',
@@ -483,8 +491,8 @@ export const calculateReleaseReadiness = (input: {
     label: '',
   };
   if (!collaboratorsAdded) {
-    nextStep = 'Add collaborators to start collecting credits';
-    nextAction = { type: 'add_collaborators', label: 'Add Collaborators' };
+    nextStep = 'Copy and share your credit link to start collecting credits';
+    nextAction = { type: 'copy_credit_link', label: 'Copy Credit Link' };
   } else if (!creditsCollected) {
     nextStep = `Waiting for ${pendingCollaborators} collaborator${pendingCollaborators === 1 ? '' : 's'} to submit credits`;
     nextAction = { type: 'send_reminder', label: 'Send Reminder' };

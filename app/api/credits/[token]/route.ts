@@ -5,6 +5,7 @@ import {
   createAdminClient,
   isOptionalTableMissingError,
 } from '@/app/api/releases/_shared';
+import { parseReleasePublicCollectionToken } from '@/lib/release-ops';
 
 const loadLookup = async (token: string) => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -15,6 +16,37 @@ const loadLookup = async (token: string) => {
   const adminClient = createAdminClient(supabaseUrl);
   if (!adminClient) {
     return { error: NextResponse.json({ error: 'Server environment is not configured.' }, { status: 500 }) };
+  }
+
+  const publicReleaseId = parseReleasePublicCollectionToken(token);
+  if (publicReleaseId) {
+    const releaseResult = await adminClient
+      .from('releases')
+      .select('id,title,artist_name,release_date')
+      .eq('id', publicReleaseId)
+      .maybeSingle();
+
+    if (releaseResult.error) {
+      if (isOptionalTableMissingError(releaseResult.error)) {
+        return { error: buildMissingTableResponse() };
+      }
+      return {
+        error: NextResponse.json(
+          { error: releaseResult.error.message || 'Could not load release context.' },
+          { status: 500 }
+        ),
+      };
+    }
+
+    if (!releaseResult.data) {
+      return { error: NextResponse.json({ error: 'This link is no longer valid.' }, { status: 404 }) };
+    }
+
+    return {
+      submissionMode: 'public' as const,
+      collaborator: null,
+      release: releaseResult.data,
+    };
   }
 
   const collaboratorResult = await adminClient
@@ -62,6 +94,7 @@ const loadLookup = async (token: string) => {
   }
 
   return {
+    submissionMode: 'invite' as const,
     collaborator: collaboratorResult.data,
     release: releaseResult.data,
   };
@@ -82,14 +115,16 @@ export async function GET(
       id: String(lookup.release.id || ''),
       title: String(lookup.release.title || ''),
       artistName: String(lookup.release.artist_name || ''),
-      releaseDate: lookup.release.release_date ? String(lookup.release.release_date) : null,
     },
-    collaboratorRequest: {
-      id: String(lookup.collaborator.id || ''),
-      inviteName: String(lookup.collaborator.invite_name || ''),
-      requestedRole: String(lookup.collaborator.role || 'other'),
-      status: String(lookup.collaborator.status || 'pending'),
-      submittedAt: lookup.collaborator.submitted_at ? String(lookup.collaborator.submitted_at) : null,
-    },
+    submissionMode: lookup.submissionMode,
+    collaboratorRequest: lookup.collaborator
+      ? {
+          id: String(lookup.collaborator.id || ''),
+          inviteName: String(lookup.collaborator.invite_name || ''),
+          requestedRole: String(lookup.collaborator.role || 'other'),
+          status: String(lookup.collaborator.status || 'pending'),
+          submittedAt: lookup.collaborator.submitted_at ? String(lookup.collaborator.submitted_at) : null,
+        }
+      : null,
   });
 }

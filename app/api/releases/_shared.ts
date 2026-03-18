@@ -164,7 +164,6 @@ export const toReleaseSummary = (row: Record<string, unknown>): ReleaseSummary =
   artistName: String(row.artist_name || ''),
   title: String(row.title || ''),
   slug: String(row.slug || ''),
-  releaseDate: String(row.release_date || ''),
   status: (String(row.status || 'draft') as ReleaseSummary['status']) || 'draft',
   description: String(row.description || ''),
   createdAt: String(row.created_at || ''),
@@ -385,7 +384,6 @@ export async function loadReleaseCommandCenterData(
   const readiness = calculateReleaseReadiness({
     title: release.title,
     artistName: release.artistName,
-    releaseDate: release.releaseDate,
     collaboratorCount: collaborators.length,
     submittedCount: collaborators.filter((item) => item.status === 'submitted').length,
     metadata,

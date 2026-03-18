@@ -57,7 +57,6 @@ export async function GET(request: NextRequest) {
           id: release.id,
           title: release.title,
           artistName: release.artistName,
-          releaseDate: release.releaseDate,
           status: release.status,
           progress: 0,
           invitedCount: 0,
@@ -236,7 +235,6 @@ export async function POST(request: NextRequest) {
     payload_json: {
       title,
       artistName,
-      releaseDate,
     },
   });
 

@@ -35,8 +35,7 @@ export function ReleaseReadinessCard({ readiness }: ReleaseReadinessCardProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
-        <div className="rounded-[26px] border border-stroke-subtle bg-bg-elevated/75 p-5 sm:p-6">
+      <div className="min-w-0 rounded-[26px] border border-stroke-subtle bg-bg-elevated/75 p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-content-primary">Release Progress</p>
@@ -51,22 +50,13 @@ export function ReleaseReadinessCard({ readiness }: ReleaseReadinessCardProps) {
             />
           </div>
 
-          <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-[3rem] font-semibold tracking-[-0.04em] text-content-primary sm:text-[4.25rem]">
-                {readiness.completionPercent}%
-              </p>
-              <p className="mt-2 text-sm font-semibold text-content-primary">
-                {completedCount} of {readiness.checklist.length} checkpoints complete
-              </p>
-            </div>
-
-            <div className="rounded-[22px] border border-stroke-default bg-bg-surface/90 px-4 py-4 sm:min-w-[220px]">
-              <p className="text-xs uppercase tracking-[0.12em] text-content-tertiary">Completion</p>
-              <p className="mt-2 text-sm leading-6 text-content-secondary">
-                {allComplete ? 'All workflow checkpoints are complete.' : 'Progress updates automatically from live release data.'}
-              </p>
-            </div>
+          <div className="mt-6">
+            <p className="text-[3rem] font-semibold tracking-[-0.04em] text-content-primary sm:text-[4.25rem]">
+              {readiness.completionPercent}%
+            </p>
+            <p className="mt-2 text-sm font-semibold text-content-primary">
+              {completedCount} of {readiness.checklist.length} checkpoints complete
+            </p>
           </div>
 
           <div className="mt-6 space-y-2">
@@ -80,30 +70,6 @@ export function ReleaseReadinessCard({ readiness }: ReleaseReadinessCardProps) {
               fillClassName="bg-brand"
             />
           </div>
-        </div>
-
-        <div className="rounded-[26px] border border-stroke-subtle bg-bg-surface/90 p-5 sm:p-6">
-          <p className="text-xs uppercase tracking-[0.12em] text-content-tertiary">Current focus</p>
-          <p className="mt-3 text-xl font-semibold tracking-tight text-content-primary">{activeItem?.label}</p>
-          <p className="mt-3 text-sm leading-6 text-content-secondary">{activeItem?.detail}</p>
-          <div className="mt-5 rounded-[20px] border border-stroke-subtle bg-bg-elevated/70 px-4 py-4">
-            <p className="text-xs uppercase tracking-[0.12em] text-content-tertiary">Status</p>
-            <div className="mt-3 flex items-center gap-2">
-              <StatusBadge
-                label={statusLabels[activeItem?.status || 'pending']}
-                tone={
-                  activeItem?.status === 'complete'
-                    ? 'success'
-                    : activeItem?.status === 'in_progress'
-                      ? 'warning'
-                      : 'neutral'
-                }
-                size="sm"
-              />
-              {!allComplete ? <StatusBadge label="Current step" tone="warning" size="sm" /> : null}
-            </div>
-          </div>
-        </div>
       </div>
 
       <div className="space-y-3.5">

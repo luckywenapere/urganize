@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   COLLABORATORS_TABLE,
@@ -10,11 +11,16 @@ import {
   rebuildReleaseMetadataSnapshot,
   toReleaseSummary,
 } from '@/app/api/releases/_shared';
-import { normalizeCreditSubmissionInput, validateCreditSubmissionInput } from '@/lib/release-ops';
+import {
+  normalizeCreditSubmissionInput,
+  parseReleasePublicCollectionToken,
+  validateCreditSubmissionInput,
+} from '@/lib/release-ops';
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 10;
 const submissionRateLimit = new Map<string, number[]>();
+const createSubmissionToken = () => randomBytes(24).toString('base64url');
 
 const getRateLimitKey = (request: NextRequest, token: string) => {
   const forwardedFor = request.headers.get('x-forwarded-for') || '';
@@ -129,25 +135,41 @@ export async function POST(
     return NextResponse.json({ error: 'Server environment is not configured.' }, { status: 500 });
   }
 
-  const collaboratorLookup = await adminClient
-    .from(RELEASE_COLLABORATORS_TABLE)
-    .select('id,release_id,role,status,submission_token')
-    .eq('submission_token', token)
-    .maybeSingle();
+  const publicReleaseId = parseReleasePublicCollectionToken(token);
+  const collaboratorLookup = publicReleaseId
+    ? { data: null, error: null }
+    : await adminClient
+        .from(RELEASE_COLLABORATORS_TABLE)
+        .select('id,release_id,role,status,submission_token')
+        .eq('submission_token', token)
+        .maybeSingle();
 
   if (collaboratorLookup.error) {
     if (isOptionalTableMissingError(collaboratorLookup.error)) return buildMissingTableResponse();
     return NextResponse.json({ error: collaboratorLookup.error.message || 'Could not load credit request.' }, { status: 500 });
   }
 
-  if (!collaboratorLookup.data) {
+  if (!publicReleaseId && !collaboratorLookup.data) {
     return NextResponse.json({ error: 'This link is no longer valid.' }, { status: 404 });
+  }
+
+  const existingReleaseCollaborator = publicReleaseId ? null : collaboratorLookup.data;
+  const releaseId = publicReleaseId || String(existingReleaseCollaborator?.release_id || '');
+  const releaseResult = await adminClient
+    .from('releases')
+    .select('id,user_id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
+    .eq('id', releaseId)
+    .maybeSingle();
+
+  if (releaseResult.error || !releaseResult.data) {
+    if (isOptionalTableMissingError(releaseResult.error)) return buildMissingTableResponse();
+    return NextResponse.json({ error: releaseResult.error?.message || 'Could not load release.' }, { status: 500 });
   }
 
   const body = await request.json().catch(() => ({}));
   const submission = normalizeCreditSubmissionInput(body);
-  if (!submission.role) {
-    submission.role = String(collaboratorLookup.data.role || 'other');
+  if (!publicReleaseId && !submission.role) {
+    submission.role = String(existingReleaseCollaborator?.role || 'other');
   }
   const validationError = validateCreditSubmissionInput(submission);
   if (validationError) {
@@ -162,80 +184,103 @@ export async function POST(
   }
 
   const now = new Date().toISOString();
-  const submissionResult = await adminClient
-    .from(CREDIT_SUBMISSIONS_TABLE)
-    .upsert(
-      {
-        release_id: collaboratorLookup.data.release_id,
-        release_collaborator_id: collaboratorLookup.data.id,
-        legal_name: submission.legalName,
-        stage_name: submission.stageName || null,
+  let releaseCollaboratorId = String(existingReleaseCollaborator?.id || '');
+
+  if (publicReleaseId) {
+    const publicCollaboratorInsert = await adminClient
+      .from(RELEASE_COLLABORATORS_TABLE)
+      .insert({
+        release_id: publicReleaseId,
+        collaborator_id: collaboratorRecord.collaboratorId,
+        invite_name: submission.stageName || submission.legalName,
+        invite_contact: submission.email || submission.phone || 'Public submission',
         role: submission.role,
-        email: submission.email || null,
-        phone: submission.phone || null,
-        publishing_info: submission.publishingInfo || null,
-        split_percentage: submission.splitPercentage ? Number(submission.splitPercentage) : null,
-        pro_affiliation: submission.proAffiliation || null,
-        ipi_number: submission.ipiNumber || null,
-        notes: submission.notes || null,
+        status: 'submitted',
+        submission_token: createSubmissionToken(),
         submitted_at: now,
         updated_at: now,
-      },
-      { onConflict: 'release_collaborator_id' }
-    )
-    .select('id')
-    .single();
+      })
+      .select('id')
+      .single();
+
+    if (publicCollaboratorInsert.error) {
+      if (isOptionalTableMissingError(publicCollaboratorInsert.error)) return buildMissingTableResponse();
+      return NextResponse.json(
+        { error: publicCollaboratorInsert.error.message || 'Could not create collaborator submission.' },
+        { status: 500 }
+      );
+    }
+
+    releaseCollaboratorId = String(publicCollaboratorInsert.data.id || '');
+  }
+
+  const submissionPayload = {
+    release_id: releaseId,
+    release_collaborator_id: releaseCollaboratorId,
+    legal_name: submission.legalName,
+    stage_name: submission.stageName || null,
+    role: submission.role,
+    email: submission.email || null,
+    phone: submission.phone || null,
+    publishing_info: submission.publishingInfo || null,
+    split_percentage: submission.splitPercentage ? Number(submission.splitPercentage) : null,
+    pro_affiliation: submission.proAffiliation || null,
+    ipi_number: submission.ipiNumber || null,
+    notes: submission.notes || null,
+    submitted_at: now,
+    updated_at: now,
+  };
+
+  const submissionResult = publicReleaseId
+    ? await adminClient.from(CREDIT_SUBMISSIONS_TABLE).insert(submissionPayload).select('id').single()
+    : await adminClient
+        .from(CREDIT_SUBMISSIONS_TABLE)
+        .upsert(submissionPayload, { onConflict: 'release_collaborator_id' })
+        .select('id')
+        .single();
 
   if (submissionResult.error) {
     if (isOptionalTableMissingError(submissionResult.error)) return buildMissingTableResponse();
     return NextResponse.json({ error: submissionResult.error.message || 'Could not save submission.' }, { status: 500 });
   }
 
-  const workflowUpdate = await adminClient
-    .from(RELEASE_COLLABORATORS_TABLE)
-    .update({
-      collaborator_id: collaboratorRecord.collaboratorId,
-      status: 'submitted',
-      submitted_at: now,
-      updated_at: now,
-    })
-    .eq('id', collaboratorLookup.data.id)
-    .select('release_id')
-    .single();
+  if (!publicReleaseId) {
+    const workflowUpdate = await adminClient
+      .from(RELEASE_COLLABORATORS_TABLE)
+      .update({
+        collaborator_id: collaboratorRecord.collaboratorId,
+        status: 'submitted',
+        submitted_at: now,
+        updated_at: now,
+      })
+      .eq('id', existingReleaseCollaborator?.id || '')
+      .select('release_id')
+      .single();
 
-  if (workflowUpdate.error) {
-    if (isOptionalTableMissingError(workflowUpdate.error)) return buildMissingTableResponse();
-    return NextResponse.json({ error: workflowUpdate.error.message || 'Could not update collaborator status.' }, { status: 500 });
-  }
-
-  const releaseResult = await adminClient
-    .from('releases')
-    .select('id,user_id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
-    .eq('id', collaboratorLookup.data.release_id)
-    .maybeSingle();
-
-  if (releaseResult.error || !releaseResult.data) {
-    if (isOptionalTableMissingError(releaseResult.error)) return buildMissingTableResponse();
-    return NextResponse.json({ error: releaseResult.error?.message || 'Could not load release.' }, { status: 500 });
+    if (workflowUpdate.error) {
+      if (isOptionalTableMissingError(workflowUpdate.error)) return buildMissingTableResponse();
+      return NextResponse.json({ error: workflowUpdate.error.message || 'Could not update collaborator status.' }, { status: 500 });
+    }
   }
 
   const rebuildResult = await rebuildReleaseMetadataSnapshot(adminClient, toReleaseSummary(releaseResult.data as Record<string, unknown>));
   if ('error' in rebuildResult) return rebuildResult.error;
 
   const eventInsert = await adminClient.from(RELEASE_EVENTS_TABLE).insert([
-    {
-      release_id: collaboratorLookup.data.release_id,
-      type: 'credit_submitted',
-      payload_json: {
-        releaseCollaboratorId: collaboratorLookup.data.id,
-        collaboratorId: collaboratorRecord.collaboratorId,
+      {
+        release_id: releaseId,
+        type: 'credit_submitted',
+        payload_json: {
+          releaseCollaboratorId,
+          collaboratorId: collaboratorRecord.collaboratorId,
+          submissionSource: publicReleaseId ? 'public_collection_link' : 'invite_link',
+        },
       },
-    },
-    {
-      release_id: collaboratorLookup.data.release_id,
-      type: 'metadata_updated',
-      payload_json: {
-        rebuiltAt: now,
+      {
+        release_id: releaseId,
+        type: 'metadata_updated',
+        payload_json: {
+          rebuiltAt: now,
         submissionCount: rebuildResult.submissions.length,
       },
     },

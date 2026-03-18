@@ -17,7 +17,6 @@ type CreditLookupPayload = {
     id: string;
     title: string;
     artistName: string;
-    releaseDate: string | null;
   };
   collaboratorRequest?: {
     id: string;
@@ -25,7 +24,8 @@ type CreditLookupPayload = {
     requestedRole: string;
     status: string;
     submittedAt: string | null;
-  };
+  } | null;
+  submissionMode?: 'invite' | 'public';
   error?: string;
 };
 
@@ -55,6 +55,7 @@ export default function PublicCreditSubmissionPage() {
   const [artistName, setArtistName] = useState('');
   const [inviteName, setInviteName] = useState('');
   const [requestedRole, setRequestedRole] = useState('');
+  const [submissionMode, setSubmissionMode] = useState<'invite' | 'public'>('invite');
   const [showClaimPrompt, setShowClaimPrompt] = useState(true);
   const [form, setForm] = useState<CreditSubmissionInput>(emptyForm);
 
@@ -72,7 +73,7 @@ export default function PublicCreditSubmissionPage() {
       const payload = (await response.json().catch(() => ({}))) as CreditLookupPayload;
       if (cancelled) return;
 
-      if (!response.ok || !payload.release || !payload.collaboratorRequest) {
+      if (!response.ok || !payload.release) {
         if (response.status === 404) {
           setLinkUnavailable(true);
           setLookupError(payload.error || 'This link is no longer valid');
@@ -88,9 +89,13 @@ export default function PublicCreditSubmissionPage() {
       setLookupError('');
       setReleaseTitle(payload.release.title);
       setArtistName(payload.release.artistName);
-      setInviteName(payload.collaboratorRequest.inviteName);
-      setRequestedRole(payload.collaboratorRequest.requestedRole);
-      setForm((current) => ({ ...current, role: payload.collaboratorRequest?.requestedRole || current.role }));
+      setSubmissionMode(payload.submissionMode || 'invite');
+      setInviteName(payload.collaboratorRequest?.inviteName || '');
+      setRequestedRole(payload.collaboratorRequest?.requestedRole || '');
+      setForm((current) => ({
+        ...current,
+        role: payload.collaboratorRequest?.requestedRole || current.role,
+      }));
       setIsLoading(false);
     };
 
@@ -170,7 +175,7 @@ export default function PublicCreditSubmissionPage() {
             </div>
           ) : (
             <div className="space-y-5 sm:space-y-6">
-              <CreditRequestHeader inviteName={inviteName} />
+              <CreditRequestHeader inviteName={inviteName} submissionMode={submissionMode} />
               <ReleaseContextCard
                 releaseTitle={releaseTitle}
                 artistName={artistName}

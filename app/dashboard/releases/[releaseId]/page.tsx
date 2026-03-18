@@ -12,18 +12,20 @@ import { Toast } from '@/components/shared/Toast';
 import { ReleaseHeader } from '@/components/releases/ReleaseHeader';
 import { ReleaseReadinessCard } from '@/components/releases/ReleaseReadinessCard';
 import { CollaboratorStatusTable } from '@/components/releases/CollaboratorStatusTable';
-import { AddCollaboratorModal } from '@/components/releases/AddCollaboratorModal';
 import { MetadataPreviewCard } from '@/components/releases/MetadataPreviewCard';
 import { NextStepCard } from '@/components/releases/NextStepCard';
 import { CommandCenterSkeleton } from '@/components/loading/CommandCenterSkeleton';
-import type { ReadinessChecklistItem, ReadinessNextAction } from '@/lib/release-ops';
+import {
+  createReleasePublicCollectionToken,
+  type ReadinessChecklistItem,
+  type ReadinessNextAction,
+} from '@/lib/release-ops';
 
 type CommandCenterPayload = {
   release: {
     id: string;
     title: string;
     artistName: string;
-    releaseDate: string;
     status: string;
   };
   readiness: {
@@ -78,10 +80,7 @@ export default function ReleaseCommandCenterPage() {
   const { user, isLoading: authLoading } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  const [isAddingCollaborators, setIsAddingCollaborators] = useState(false);
-  const [addCollaboratorError, setAddCollaboratorError] = useState('');
   const [toast, setToast] = useState<ToastState | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [data, setData] = useState<CommandCenterPayload | null>(null);
   const [error, setError] = useState('');
   const [selectedSubmissionId, setSelectedSubmissionId] = useState('');
@@ -149,44 +148,11 @@ export default function ReleaseCommandCenterPage() {
     );
     return new Map(entries);
   }, [collaborators]);
-
-  const handleAddCollaborators = async (
-    items: Array<{ inviteName: string; inviteContact: string; role: string }>
-  ) => {
-    if (!releaseId) return;
-    setIsAddingCollaborators(true);
-    setAddCollaboratorError('');
-
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const accessToken = session?.access_token || '';
-      if (!accessToken) throw new Error('Session expired. Please sign in again.');
-
-      const response = await fetch(`/api/releases/${releaseId}/collaborators`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ collaborators: items }),
-      });
-
-      const payload = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error || 'Could not add collaborators.');
-      }
-
-      setShowAddModal(false);
-      setToast({ tone: 'success', message: 'Collaborators added. Links are ready to copy.' });
-      await loadData();
-    } catch (submitError: any) {
-      setAddCollaboratorError(submitError?.message || 'Could not add collaborators.');
-    } finally {
-      setIsAddingCollaborators(false);
-    }
-  };
+  const publicCollectionUrl = useMemo(() => {
+    const origin = typeof window === 'undefined' ? '' : window.location.origin;
+    if (!origin || !releaseId) return '';
+    return `${origin}/credits/${createReleasePublicCollectionToken(releaseId)}`;
+  }, [releaseId]);
 
   const handleCopyLink = async (id: string) => {
     const url = submissionUrlById.get(id);
@@ -228,12 +194,35 @@ export default function ReleaseCommandCenterPage() {
     }
   };
 
+  const handleCopyCreditCollectionLink = async () => {
+    if (!publicCollectionUrl) {
+      setToast({ tone: 'error', message: 'Credit collection link is not ready yet.' });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(publicCollectionUrl);
+      setToast({ tone: 'success', message: 'Credit collection link copied.' });
+    } catch {
+      setToast({ tone: 'error', message: 'Could not copy the credit collection link.' });
+    }
+  };
+
+  const handleOpenCreditCollectionLink = () => {
+    if (!publicCollectionUrl) {
+      setToast({ tone: 'error', message: 'Credit collection link is not ready yet.' });
+      return;
+    }
+
+    window.open(publicCollectionUrl, '_blank', 'noopener,noreferrer');
+  };
+
   const handleNextAction = async () => {
     const nextAction = data?.readiness.nextAction;
     if (!nextAction) return;
 
-    if (nextAction.type === 'add_collaborators') {
-      setShowAddModal(true);
+    if (nextAction.type === 'copy_credit_link') {
+      await handleCopyCreditCollectionLink();
       return;
     }
 
@@ -275,85 +264,138 @@ export default function ReleaseCommandCenterPage() {
         {data?.release ? (
           <div className="space-y-7">
             <SectionCard className="sm:p-7">
-              <ReleaseHeader release={data.release} onAddCollaborator={() => setShowAddModal(true)} />
+              <ReleaseHeader release={data.release} />
             </SectionCard>
 
-            <div className="grid gap-7 lg:grid-cols-[minmax(0,1.08fr)_380px] lg:items-start">
-              <SectionCard className="order-1 sm:p-7">
-                <ReleaseReadinessCard readiness={data.readiness} />
-              </SectionCard>
+            <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] lg:items-start">
+              <div className="contents lg:block lg:min-w-0 lg:space-y-7">
+                <div className="order-1 min-w-0">
+                  <SectionCard className="sm:p-7">
+                    <ReleaseReadinessCard readiness={data.readiness} />
+                  </SectionCard>
+                </div>
 
-              <div className="order-2 lg:sticky lg:top-24">
-                <NextStepCard
-                  nextStep={data.readiness.nextStep}
-                  action={data.readiness.nextAction}
-                  onAction={() => void handleNextAction()}
-                  actionDisabled={
-                    data.readiness.nextAction.type === 'send_reminder' && !firstPendingCollaboratorId
-                  }
-                />
+                <div className="order-4 min-w-0">
+                  <SectionCard className="sm:p-7">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-content-primary">Collaborators</p>
+                        <p className="mt-2 text-sm text-content-secondary">
+                          Share the public credit collection link and watch submissions arrive here.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      <StatusBadge label={`Contributors ${collaborators.length}`} size="sm" />
+                      <StatusBadge
+                        label={`Submitted ${data.readiness.submittedCollaborators}`}
+                        tone="success"
+                        size="sm"
+                      />
+                      <StatusBadge
+                        label={`Pending ${data.readiness.pendingCollaborators}`}
+                        tone={data.readiness.pendingCollaborators > 0 ? 'warning' : 'neutral'}
+                        size="sm"
+                      />
+                    </div>
+
+                    <div className="mt-5">
+                      {collaborators.length === 0 ? (
+                        <EmptyState
+                          title="No credit submissions yet"
+                          description="Share the public credit collection link to start collecting credits"
+                          action={
+                            <button
+                              type="button"
+                              onClick={() => void handleCopyCreditCollectionLink()}
+                              className="min-h-11 w-full rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:w-auto sm:rounded-full sm:py-2"
+                            >
+                              Copy credit link
+                            </button>
+                          }
+                        />
+                      ) : (
+                        <CollaboratorStatusTable
+                          collaborators={collaborators}
+                          onCopyLink={handleCopyLink}
+                          onRemind={handleRemind}
+                          onViewSubmission={(id) => setSelectedSubmissionId(id)}
+                        />
+                      )}
+                    </div>
+                  </SectionCard>
+                </div>
               </div>
 
-              <SectionCard className="order-3 sm:p-7">
-                <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-content-primary">Collaborators</p>
-                    <p className="mt-2 text-sm text-content-secondary">
-                      Add contributors, share public credit links, and keep submissions moving.
+              <div className="contents lg:block lg:min-w-0 lg:space-y-4">
+                <div className="order-2 min-w-0">
+                  <SectionCard className="p-5 sm:p-6">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <h2 className="text-lg font-semibold tracking-tight text-content-primary">
+                          Collect credits
+                        </h2>
+                        <p className="mt-2 text-sm text-content-secondary">
+                          Send this link to everyone involved in the release.
+                        </p>
+                        <p className="mt-1 text-xs uppercase tracking-[0.14em] text-content-tertiary">
+                          Same link for every collaborator
+                        </p>
+                      </div>
+                      <StatusBadge label="Release-wide" size="sm" />
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-stroke-subtle bg-bg-elevated px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">
+                        Credit collection link
+                      </p>
+                      <p className="mt-2 break-all text-sm text-content-secondary">
+                        {publicCollectionUrl || 'Link available after this release finishes loading.'}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={() => void handleCopyCreditCollectionLink()}
+                        className="min-h-11 flex-1 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+                      >
+                        Copy credit link
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleOpenCreditCollectionLink}
+                        className="min-h-11 rounded-2xl border border-stroke-default bg-bg-surface px-4 py-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                      >
+                        Open link
+                      </button>
+                    </div>
+
+                    <p className="mt-4 text-sm text-content-secondary">
+                      {data.readiness.submittedCollaborators} submission
+                      {data.readiness.submittedCollaborators === 1 ? '' : 's'} received so far
                     </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddModal(true)}
-                    className="min-h-11 w-full rounded-2xl border border-stroke-default bg-bg-surface px-4 py-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
-                  >
-                    Add Collaborator
-                  </button>
+                  </SectionCard>
                 </div>
 
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <StatusBadge label={`Invited ${collaborators.length}`} size="sm" />
-                  <StatusBadge
-                    label={`Submitted ${data.readiness.submittedCollaborators}`}
-                    tone="success"
-                    size="sm"
-                  />
-                  <StatusBadge
-                    label={`Pending ${data.readiness.pendingCollaborators}`}
-                    tone={data.readiness.pendingCollaborators > 0 ? 'warning' : 'neutral'}
-                    size="sm"
+                <div className="order-3 min-w-0">
+                  <NextStepCard
+                    nextStep={data.readiness.nextStep}
+                    action={data.readiness.nextAction}
+                    onAction={() => void handleNextAction()}
+                    actionDisabled={
+                      data.readiness.nextAction.type === 'send_reminder' && !firstPendingCollaboratorId
+                    }
                   />
                 </div>
 
-                <div className="mt-5">
-                  {collaborators.length === 0 ? (
-                    <EmptyState
-                      title="No collaborators added yet"
-                      description="Add collaborators to start collecting credits"
-                      action={
-                        <button
-                          type="button"
-                          onClick={() => setShowAddModal(true)}
-                          className="min-h-11 w-full rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:w-auto sm:rounded-full sm:py-2"
-                        >
-                          Add Collaborator
-                        </button>
-                      }
-                    />
-                  ) : (
-                    <CollaboratorStatusTable
-                      collaborators={collaborators}
-                      onCopyLink={handleCopyLink}
-                      onRemind={handleRemind}
-                      onViewSubmission={(id) => setSelectedSubmissionId(id)}
-                    />
-                  )}
+                <div className="order-5 min-w-0">
+                  <SectionCard className="sm:p-7">
+                    <MetadataPreviewCard releaseId={data.release.id} metadata={data.metadata} />
+                  </SectionCard>
                 </div>
-              </SectionCard>
-
-              <SectionCard className="order-4 sm:p-7">
-                <MetadataPreviewCard releaseId={data.release.id} metadata={data.metadata} />
-              </SectionCard>
+              </div>
             </div>
           </div>
         ) : (
@@ -365,14 +407,6 @@ export default function ReleaseCommandCenterPage() {
           </SectionCard>
         )}
       </div>
-
-      <AddCollaboratorModal
-        open={showAddModal}
-        isSubmitting={isAddingCollaborators}
-        error={addCollaboratorError}
-        onClose={() => setShowAddModal(false)}
-        onSubmit={(items) => void handleAddCollaborators(items)}
-      />
 
       {selectedSubmission && data?.release ? (
         <div className="fixed inset-0 z-[145] flex items-center justify-center bg-black/60 p-4">

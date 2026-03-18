@@ -13,7 +13,6 @@ type ReleaseCard = {
   id: string;
   title: string;
   artistName: string;
-  releaseDate: string;
   status: 'draft' | 'in_progress' | 'ready';
   progress: number;
   invitedCount: number;
@@ -33,16 +32,9 @@ const statusClasses: Record<ReleaseCard['status'], string> = {
   ready: 'border-status-success/35 bg-status-success/10 text-status-success',
 };
 
-const formatReleaseDate = (value: string) => {
-  if (!value) return 'Not scheduled yet';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Not scheduled yet';
-  return date.toLocaleDateString();
-};
-
 const buildProgressMessage = (release: ReleaseCard) => {
   if (release.invitedCount === 0) {
-    return 'Add collaborators to start collecting credits.';
+    return 'Share the credit link to start collecting credits.';
   }
 
   if (release.pendingCount > 0) {
@@ -68,15 +60,7 @@ export default function DashboardPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const sortedReleases = useMemo(
-    () =>
-      [...releases].sort((a, b) => {
-        const left = new Date(a.releaseDate || '9999-12-31').getTime();
-        const right = new Date(b.releaseDate || '9999-12-31').getTime();
-        return left - right;
-      }),
-    [releases]
-  );
+  const sortedReleases = useMemo(() => [...releases], [releases]);
 
   const totals = useMemo(
     () => ({
@@ -223,7 +207,7 @@ export default function DashboardPage() {
               Release Command Center
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-content-secondary">
-              Create release workspaces, invite collaborators, collect credits, and keep every rollout ready for
+              Create release workspaces, share one credit link, collect credits, and keep every rollout ready for
               distribution.
             </p>
           </div>
@@ -282,7 +266,7 @@ export default function DashboardPage() {
             <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">New Workspace</p>
             <h2 className="mt-2 text-2xl tracking-tight text-content-primary">Start the next release</h2>
             <p className="mt-3 text-sm text-content-secondary">
-              Create the workspace first, then invite collaborators, gather submissions, and review the structured
+              Create the workspace first, then share the credit link, gather submissions, and review the structured
               metadata snapshot before distribution.
             </p>
 
@@ -297,11 +281,11 @@ export default function DashboardPage() {
             <div className="mt-6 space-y-3 rounded-[24px] border border-stroke-subtle bg-bg-elevated/70 p-4">
               <div>
                 <p className="text-sm font-semibold text-content-primary">1. Create the release</p>
-                <p className="mt-1 text-sm text-content-secondary">Set the title, artist, release date, and workspace context.</p>
+                <p className="mt-1 text-sm text-content-secondary">Set the title, artist, and workspace context.</p>
               </div>
               <div>
-                <p className="text-sm font-semibold text-content-primary">2. Invite collaborators</p>
-                <p className="mt-1 text-sm text-content-secondary">Share secure submission links for writers, producers, and featured artists.</p>
+                <p className="text-sm font-semibold text-content-primary">2. Share the credit link</p>
+                <p className="mt-1 text-sm text-content-secondary">Share one public credit link with everyone involved in the release.</p>
               </div>
               <div>
                 <p className="text-sm font-semibold text-content-primary">3. Finalize metadata</p>
@@ -324,7 +308,7 @@ export default function DashboardPage() {
             {sortedReleases.length === 0 ? (
               <div className="mt-6 rounded-3xl border border-dashed border-stroke-default bg-bg-elevated px-6 py-10 text-center text-sm text-content-secondary">
                 <p className="font-semibold text-content-primary">No release workspaces yet.</p>
-                <p className="mt-2">Create your first release to start collecting collaborator credits.</p>
+                <p className="mt-2">Create your first release to start collecting credits.</p>
                 <button
                   type="button"
                   onClick={handleCreateRelease}
@@ -357,9 +341,6 @@ export default function DashboardPage() {
                               </span>
                             </div>
                             <p className="mt-1 text-sm text-content-secondary">Artist: {release.artistName || 'Unknown artist'}</p>
-                            <p className="mt-1 text-sm text-content-secondary">
-                              Release Date: {formatReleaseDate(release.releaseDate)}
-                            </p>
                           </div>
                           <div className="min-w-0 text-left sm:min-w-[130px] sm:text-right">
                             <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">Readiness</p>
@@ -371,7 +352,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-content-secondary">
                           <span>
-                            {release.submittedCount} submitted / {release.invitedCount} invited
+                            {release.submittedCount} submitted / {release.invitedCount} total entries
                           </span>
                           <span>{buildProgressMessage(release)}</span>
                         </div>
