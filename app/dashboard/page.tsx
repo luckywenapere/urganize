@@ -20,18 +20,6 @@ type ReleaseCard = {
   pendingCount: number;
 };
 
-const statusLabels: Record<ReleaseCard['status'], string> = {
-  draft: 'Draft',
-  in_progress: 'In Progress',
-  ready: 'Ready',
-};
-
-const statusClasses: Record<ReleaseCard['status'], string> = {
-  draft: 'border-stroke-default bg-bg-elevated text-content-secondary',
-  in_progress: 'border-status-warning/35 bg-status-warning/10 text-status-warning',
-  ready: 'border-status-success/35 bg-status-success/10 text-status-success',
-};
-
 const buildProgressMessage = (release: ReleaseCard) => {
   if (release.invitedCount === 0) {
     return 'Share the credit link to start collecting credits.';
@@ -303,14 +291,7 @@ export default function DashboardPage() {
                       >
                         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                           <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-lg font-semibold text-content-primary">{release.title}</p>
-                              <span
-                                className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${statusClasses[release.status]}`}
-                              >
-                                {statusLabels[release.status]}
-                              </span>
-                            </div>
+                            <p className="text-lg font-semibold text-content-primary">{release.title}</p>
                             <p className="mt-1 text-sm text-content-secondary">Artist: {release.artistName || 'Unknown artist'}</p>
                           </div>
                           <div className="min-w-0 text-left sm:min-w-[130px] sm:text-right">
