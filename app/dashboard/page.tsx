@@ -13,7 +13,6 @@ type ReleaseCard = {
   id: string;
   title: string;
   artistName: string;
-  status: 'draft' | 'in_progress' | 'ready';
   progress: number;
   invitedCount: number;
   submittedCount: number;
@@ -27,10 +26,6 @@ const buildProgressMessage = (release: ReleaseCard) => {
 
   if (release.pendingCount > 0) {
     return `${release.pendingCount} collaborator${release.pendingCount === 1 ? '' : 's'} still pending.`;
-  }
-
-  if (release.status === 'ready') {
-    return 'Credits collected and metadata ready for distribution.';
   }
 
   return 'Credits are in. Review the release metadata next.';
@@ -295,8 +290,7 @@ export default function DashboardPage() {
                             <p className="mt-1 text-sm text-content-secondary">Artist: {release.artistName || 'Unknown artist'}</p>
                           </div>
                           <div className="min-w-0 text-left sm:min-w-[130px] sm:text-right">
-                            <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">Readiness</p>
-                            <p className="mt-1 text-2xl font-semibold text-content-primary">{release.progress}%</p>
+                            <p className="text-2xl font-semibold text-content-primary">{release.progress}%</p>
                           </div>
                         </div>
                         <div className="mt-4 h-2 rounded-full bg-bg-overlay">
