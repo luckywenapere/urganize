@@ -19,7 +19,7 @@ export function CreditRequestHeader({
         <p className="mt-3 max-w-[36rem] text-sm leading-6 text-content-secondary">
           {submissionMode === 'public'
             ? 'Submit your credits for this release'
-            : 'You&apos;ve been added as a collaborator on this release'}
+            : 'You&apos;ve been sent a credit request for this release'}
         </p>
         {inviteName ? <p className="mt-2 text-sm text-content-tertiary">Requested from: {inviteName}</p> : null}
       </div>

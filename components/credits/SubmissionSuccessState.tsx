@@ -17,7 +17,7 @@ export function SubmissionSuccessState({ releaseTitle, artistName = '' }: Submis
         ✓
       </div>
 
-      <p className="mt-6 text-xs font-medium uppercase tracking-[0.14em] text-status-success">Submission complete</p>
+      <p className="mt-6 text-xs font-medium uppercase tracking-[0.14em] text-status-success">Credits submitted</p>
       <h2 className="mt-3 text-[clamp(2rem,5vw,2.6rem)] tracking-tight text-content-primary">Credits submitted</h2>
       <p className="mt-3 text-sm leading-6 text-content-secondary">
         Your information has been added to the release

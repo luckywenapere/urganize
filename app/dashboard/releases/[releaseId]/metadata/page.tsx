@@ -47,7 +47,7 @@ const renderCreditGroup = (title: string, entries: Array<Record<string, unknown>
       <div className="mt-3 space-y-3">
         {entries.map((entry, index) => (
           <div key={`${title}-${index}`} className="rounded-[18px] border border-stroke-subtle bg-bg-surface px-4 py-3 text-sm text-content-secondary">
-            <p className="font-medium text-content-primary">{String(entry.stageName || entry.legalName || 'Unnamed collaborator')}</p>
+            <p className="font-medium text-content-primary">{String(entry.stageName || entry.legalName || 'Unnamed credit')}</p>
             <p className="mt-1">{String(entry.role || 'Role not set')}</p>
           </div>
         ))}
@@ -86,11 +86,11 @@ export default function ReleaseMetadataPage() {
       });
       const payload = (await response.json().catch(() => ({}))) as MetadataPayload;
       if (!response.ok) {
-        throw new Error(payload.error || 'Could not load metadata.');
+        throw new Error(payload.error || 'Could not load release info.');
       }
       setData(payload);
     } catch (loadError: any) {
-      setError(loadError?.message || 'Could not load metadata.');
+      setError(loadError?.message || 'Could not load release info.');
     } finally {
       setIsLoading(false);
       setHasLoadedOnce(true);
@@ -114,14 +114,14 @@ export default function ReleaseMetadataPage() {
       <div className="mx-auto max-w-[1040px] px-4 pb-10 pt-20 sm:px-6 sm:py-10">
         <div className="mb-4 flex items-center justify-between gap-3">
           <Link href={`/dashboard/releases/${releaseId}`} className="text-sm text-content-secondary hover:text-content-primary">
-            Back to release
+            Back to release dashboard
           </Link>
           <button
             type="button"
             disabled
             className="rounded-full border border-stroke-default bg-bg-surface px-4 py-2 text-sm text-content-tertiary opacity-70"
           >
-            Export metadata
+            Export release info
           </button>
         </div>
 
@@ -136,12 +136,12 @@ export default function ReleaseMetadataPage() {
             <SectionCard>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Structured metadata</p>
+                  <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Release Info</p>
                   <h1 className="mt-2 text-[clamp(2.2rem,5vw,3.5rem)] tracking-tight text-content-primary">{data.release.title}</h1>
                   <p className="mt-3 text-sm text-content-secondary">{data.release.artistName}</p>
                 </div>
                 <StatusBadge
-                  label={data.readiness.metadataComplete ? 'Metadata reviewed' : 'Review needed'}
+                  label={data.readiness.metadataComplete ? 'Ready' : 'Not ready'}
                   tone={data.readiness.metadataComplete ? 'success' : 'warning'}
                 />
               </div>
@@ -151,7 +151,7 @@ export default function ReleaseMetadataPage() {
               {data.metadata ? (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="rounded-[22px] border border-stroke-subtle bg-bg-elevated/70 p-4 text-sm text-content-secondary">
-                    <p className="text-xs uppercase tracking-[0.12em] text-content-tertiary">Release summary</p>
+                    <p className="text-xs uppercase tracking-[0.12em] text-content-tertiary">Release Info</p>
                     <div className="mt-3 space-y-2">
                       <p><span className="font-medium text-content-primary">Title:</span> {data.metadata.releaseTitle}</p>
                       <p><span className="font-medium text-content-primary">Primary artist:</span> {data.metadata.primaryArtistName}</p>
@@ -175,8 +175,8 @@ export default function ReleaseMetadataPage() {
                 </div>
               ) : (
                 <EmptyState
-                  title="No credits submitted yet"
-                  description="Once collaborators submit credits, Urganize will group them here for review."
+                  title="No credits yet"
+                  description="Once credits are submitted, release info will show up here for review."
                 />
               )}
             </SectionCard>

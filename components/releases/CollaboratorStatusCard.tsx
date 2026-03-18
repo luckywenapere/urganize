@@ -17,10 +17,10 @@ type CollaboratorStatusCardProps = {
 };
 
 const formatSubmittedAt = (value?: string | null) => {
-  if (!value) return 'Awaiting response';
+  if (!value) return 'Waiting on credits';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Submitted';
-  return `Submitted ${date.toLocaleDateString()}`;
+  if (Number.isNaN(date.getTime())) return 'Credits received';
+  return `Credits received ${date.toLocaleDateString()}`;
 };
 
 export function CollaboratorStatusCard({
@@ -35,10 +35,10 @@ export function CollaboratorStatusCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-base font-semibold text-content-primary">{collaborator.inviteName}</p>
-            <p className="mt-2 text-xs uppercase tracking-[0.12em] text-content-tertiary">Collaborator</p>
+            <p className="mt-2 text-xs uppercase tracking-[0.12em] text-content-tertiary">Credit</p>
           </div>
           <StatusBadge
-            label={collaborator.status === 'submitted' ? 'Submitted' : 'Pending'}
+            label={collaborator.status === 'submitted' ? 'Credits received' : 'Waiting on credits'}
             tone={collaborator.status === 'submitted' ? 'success' : 'warning'}
             size="sm"
           />
@@ -57,7 +57,7 @@ export function CollaboratorStatusCard({
         </div>
 
         <div className="rounded-[18px] border border-stroke-subtle bg-bg-surface/70 px-4 py-3">
-          <p className="text-[11px] uppercase tracking-[0.12em] text-content-tertiary">Submission</p>
+          <p className="text-[11px] uppercase tracking-[0.12em] text-content-tertiary">Credit status</p>
           <p className="mt-1.5 text-sm text-content-secondary">{formatSubmittedAt(collaborator.submittedAt)}</p>
         </div>
       </div>
@@ -68,7 +68,7 @@ export function CollaboratorStatusCard({
           onClick={() => onCopyLink(collaborator.id)}
           className="min-h-11 rounded-2xl border border-stroke-default bg-bg-surface px-4 py-3 text-sm font-semibold text-content-primary hover:bg-bg-hover"
         >
-          Copy Link
+          Copy Credit Link
         </button>
         <button
           type="button"
@@ -83,7 +83,7 @@ export function CollaboratorStatusCard({
             onClick={() => onViewSubmission(collaborator.id)}
             className="min-h-11 rounded-2xl border border-stroke-default bg-bg-surface px-4 py-3 text-sm font-semibold text-content-primary hover:bg-bg-hover"
           >
-            View
+            View Credit
           </button>
         ) : null}
       </div>

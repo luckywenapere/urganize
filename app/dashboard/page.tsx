@@ -21,14 +21,14 @@ type ReleaseCard = {
 
 const buildProgressMessage = (release: ReleaseCard) => {
   if (release.invitedCount === 0) {
-    return 'Share the credit link to start collecting credits.';
+    return 'No credits yet - send your link to start collecting.';
   }
 
   if (release.pendingCount > 0) {
-    return `${release.pendingCount} collaborator${release.pendingCount === 1 ? '' : 's'} still pending.`;
+    return 'Waiting on credits';
   }
 
-  return 'Credits are in. Review the release metadata next.';
+  return release.progress >= 100 ? 'Ready' : 'Credits received';
 };
 
 export default function DashboardPage() {
@@ -165,7 +165,7 @@ export default function DashboardPage() {
     return (
       <main className="min-h-screen bg-bg-base text-content-primary">
         <div className="mx-auto max-w-[760px] px-6 py-12">
-          <SubscriptionPaywall title="Unlock Release Manager" />
+          <SubscriptionPaywall title="Unlock Release Dashboard" />
         </div>
       </main>
     );
@@ -178,10 +178,10 @@ export default function DashboardPage() {
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Dashboard</p>
             <h1 className="mt-2 text-[clamp(2.4rem,6vw,4.2rem)] tracking-tight text-content-primary">
-              Release Manager
+              Release Dashboard
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-content-secondary">
-              Create release workspaces, share one credit link, collect credits, and keep every rollout ready for
+              Create release dashboards, share one credit link, collect credits, and keep every rollout ready for
               distribution.
             </p>
           </div>
@@ -217,11 +217,11 @@ export default function DashboardPage() {
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
           <div className="rounded-[28px] border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)]">
-            <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">New Workspace</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">New Release</p>
             <h2 className="mt-2 text-2xl tracking-tight text-content-primary">Start the next release</h2>
             <p className="mt-3 text-sm text-content-secondary">
-              Create the workspace first, then share the credit link, gather submissions, and review the structured
-              metadata snapshot before distribution.
+              Create the release dashboard first, then share the credit link, gather credits, and review the release
+              info before distribution.
             </p>
 
             <button
@@ -229,21 +229,21 @@ export default function DashboardPage() {
               onClick={handleCreateRelease}
               className="mt-6 w-full rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
             >
-              Create Release Workspace
+              Create Release
             </button>
 
             <div className="mt-6 space-y-3 rounded-[24px] border border-stroke-subtle bg-bg-elevated/70 p-4">
               <div>
                 <p className="text-sm font-semibold text-content-primary">1. Create the release</p>
-                <p className="mt-1 text-sm text-content-secondary">Set the title, artist, and workspace context.</p>
+                <p className="mt-1 text-sm text-content-secondary">Set the title, artist, and release context.</p>
               </div>
               <div>
                 <p className="text-sm font-semibold text-content-primary">2. Share the credit link</p>
                 <p className="mt-1 text-sm text-content-secondary">Share one public credit link with everyone involved in the release.</p>
               </div>
               <div>
-                <p className="text-sm font-semibold text-content-primary">3. Finalize metadata</p>
-                <p className="mt-1 text-sm text-content-secondary">Review the generated credits snapshot before delivery.</p>
+                <p className="text-sm font-semibold text-content-primary">3. Finalize release info</p>
+                <p className="mt-1 text-sm text-content-secondary">Review the generated release info before delivery.</p>
               </div>
             </div>
           </div>
@@ -252,7 +252,7 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Releases</p>
-                <h2 className="mt-2 text-2xl tracking-tight text-content-primary">Active command-center workspaces</h2>
+                <h2 className="mt-2 text-2xl tracking-tight text-content-primary">Active release dashboards</h2>
               </div>
               <span className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs text-content-secondary">
                 {sortedReleases.length} release{sortedReleases.length === 1 ? '' : 's'}
@@ -261,7 +261,7 @@ export default function DashboardPage() {
 
             {sortedReleases.length === 0 ? (
               <div className="mt-6 rounded-3xl border border-dashed border-stroke-default bg-bg-elevated px-6 py-10 text-center text-sm text-content-secondary">
-                <p className="font-semibold text-content-primary">No release workspaces yet.</p>
+                <p className="font-semibold text-content-primary">No releases yet.</p>
                 <p className="mt-2">Create your first release to start collecting credits.</p>
                 <button
                   type="button"
@@ -298,7 +298,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-content-secondary">
                           <span>
-                            {release.submittedCount} submitted / {release.invitedCount} total entries
+                            {release.submittedCount} credits received / {release.invitedCount} total credits
                           </span>
                           <span>{buildProgressMessage(release)}</span>
                         </div>

@@ -15,7 +15,7 @@ export function ReleaseHeader({ release }: ReleaseHeaderProps) {
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
       <div className="min-w-0 flex-1">
-        <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Release Manager</p>
+        <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Release Dashboard</p>
         <h1 className="mt-2 text-[clamp(2.2rem,5vw,3.5rem)] tracking-tight text-content-primary">
           {release.title}
         </h1>
@@ -41,7 +41,7 @@ export function ReleaseHeader({ release }: ReleaseHeaderProps) {
             href={`/dashboard/releases/${release.id}/metadata`}
             className="min-h-11 w-full rounded-2xl border border-stroke-default bg-bg-surface px-5 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
           >
-            View Metadata
+            View Release Info
           </Link>
         </div>
       </div>

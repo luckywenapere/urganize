@@ -18,10 +18,10 @@ type CollaboratorStatusTableProps = {
 };
 
 const formatSubmittedAt = (value?: string | null) => {
-  if (!value) return 'Awaiting response';
+  if (!value) return 'Waiting on credits';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Submitted';
-  return `Submitted ${date.toLocaleDateString()}`;
+  if (Number.isNaN(date.getTime())) return 'Credits received';
+  return `Credits received ${date.toLocaleDateString()}`;
 };
 
 export function CollaboratorStatusTable({
@@ -37,7 +37,7 @@ export function CollaboratorStatusTable({
           <table className="min-w-full divide-y divide-stroke-default text-sm">
             <thead className="bg-bg-elevated/80 text-left text-content-tertiary">
               <tr>
-                <th className="px-5 py-3 font-medium">Collaborator</th>
+                <th className="px-5 py-3 font-medium">Credit</th>
                 <th className="px-5 py-3 font-medium">Role</th>
                 <th className="px-5 py-3 font-medium">Contact</th>
                 <th className="px-5 py-3 font-medium">Status</th>
@@ -57,7 +57,7 @@ export function CollaboratorStatusTable({
                   <td className="px-5 py-4">
                     <div className="space-y-2">
                       <StatusBadge
-                        label={collaborator.status === 'submitted' ? 'Submitted' : 'Pending'}
+                        label={collaborator.status === 'submitted' ? 'Credits received' : 'Waiting on credits'}
                         tone={collaborator.status === 'submitted' ? 'success' : 'warning'}
                         size="sm"
                       />
@@ -71,7 +71,7 @@ export function CollaboratorStatusTable({
                         onClick={() => onCopyLink(collaborator.id)}
                         className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-2 text-xs font-semibold text-content-primary hover:bg-bg-hover"
                       >
-                        Copy Link
+                        Copy Credit Link
                       </button>
                       <button
                         type="button"
@@ -86,7 +86,7 @@ export function CollaboratorStatusTable({
                           onClick={() => onViewSubmission(collaborator.id)}
                           className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-2 text-xs font-semibold text-content-primary hover:bg-bg-hover"
                         >
-                          View
+                          View Credit
                         </button>
                       ) : null}
                     </div>

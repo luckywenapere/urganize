@@ -104,12 +104,12 @@ export default function ReleaseCommandCenterPage() {
 
       const payload = (await response.json().catch(() => ({}))) as CommandCenterPayload;
       if (!response.ok || !payload.release) {
-        throw new Error(payload.error || 'Could not load Release Manager.');
+        throw new Error(payload.error || 'Could not load release dashboard.');
       }
 
       setData(payload);
     } catch (loadError: any) {
-      setError(loadError?.message || 'Could not load Release Manager.');
+      setError(loadError?.message || 'Could not load release dashboard.');
     } finally {
       setIsLoading(false);
       setHasLoadedOnce(true);
@@ -152,9 +152,9 @@ export default function ReleaseCommandCenterPage() {
     if (!url) return;
     try {
       await navigator.clipboard.writeText(url);
-      setToast({ tone: 'success', message: 'Submission link copied.' });
+      setToast({ tone: 'success', message: 'Credit request link copied.' });
     } catch {
-      setToast({ tone: 'error', message: 'Could not copy the submission link.' });
+      setToast({ tone: 'error', message: 'Could not copy the credit request link.' });
     }
   };
 
@@ -180,10 +180,10 @@ export default function ReleaseCommandCenterPage() {
       }
 
       await navigator.clipboard.writeText(payload.submissionUrl);
-      setToast({ tone: 'success', message: 'Reminder logged and link copied for sharing.' });
+      setToast({ tone: 'success', message: 'Credit request copied for sharing.' });
       await loadData();
     } catch (remindError: any) {
-      setToast({ tone: 'error', message: remindError?.message || 'Could not send reminder.' });
+      setToast({ tone: 'error', message: remindError?.message || 'Could not send credit request.' });
     }
   };
 
@@ -243,22 +243,22 @@ export default function ReleaseCommandCenterPage() {
                   <SectionCard className="sm:p-7">
                     <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-content-primary">Collaborators</p>
+                        <p className="text-sm font-medium text-content-primary">Credits</p>
                         <p className="mt-2 text-sm text-content-secondary">
-                          Share the public credit collection link and watch submissions arrive here.
+                          Share the public credit link and watch credits appear here.
                         </p>
                       </div>
                     </div>
 
                     <div className="mt-5 flex flex-wrap gap-2">
-                      <StatusBadge label={`Contributors ${collaborators.length}`} size="sm" />
+                      <StatusBadge label={`Credits ${collaborators.length}`} size="sm" />
                       <StatusBadge
-                        label={`Submitted ${data.readiness.submittedCollaborators}`}
+                        label={`Credits received ${data.readiness.submittedCollaborators}`}
                         tone="success"
                         size="sm"
                       />
                       <StatusBadge
-                        label={`Pending ${data.readiness.pendingCollaborators}`}
+                        label={`Waiting on credits ${data.readiness.pendingCollaborators}`}
                         tone={data.readiness.pendingCollaborators > 0 ? 'warning' : 'neutral'}
                         size="sm"
                       />
@@ -267,8 +267,8 @@ export default function ReleaseCommandCenterPage() {
                     <div className="mt-5">
                       {collaborators.length === 0 ? (
                         <EmptyState
-                          title="No credit submissions yet"
-                          description="Share the public credit collection link to start collecting credits"
+                          title="No credits yet"
+                          description="Send your link to start collecting."
                           action={
                             <button
                               type="button"
@@ -298,13 +298,13 @@ export default function ReleaseCommandCenterPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 flex-1 flex-col">
                         <h2 className="text-lg font-semibold tracking-tight text-content-primary">
-                          Collect credits
+                          Collect Credits
                         </h2>
                         <p className="mt-2 text-sm text-content-secondary">
                           Send this link to everyone involved in the release.
                         </p>
                         <p className="mt-1 text-xs uppercase tracking-[0.14em] text-content-tertiary">
-                          Same link for every collaborator
+                          Same link for everyone on the release
                         </p>
                       </div>
                       <StatusBadge label="Release-wide" size="sm" />
@@ -312,7 +312,7 @@ export default function ReleaseCommandCenterPage() {
 
                     <div className="mt-4 rounded-2xl border border-stroke-subtle bg-bg-elevated px-4 py-3">
                       <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">
-                        Credit collection link
+                        Credit link
                       </p>
                       <p className="mt-2 break-all text-sm text-content-secondary">
                         {publicCollectionUrl || 'Link available after this release finishes loading.'}
@@ -337,7 +337,7 @@ export default function ReleaseCommandCenterPage() {
                     </div>
 
                     <p className="mt-4 text-sm text-content-secondary">
-                      {data.readiness.submittedCollaborators} submission
+                      {data.readiness.submittedCollaborators} credit
                       {data.readiness.submittedCollaborators === 1 ? '' : 's'} received so far
                     </p>
                   </SectionCard>
@@ -355,7 +355,7 @@ export default function ReleaseCommandCenterPage() {
           <SectionCard>
             <EmptyState
               title="Something went wrong. Try again."
-              description="We could not load this release workspace."
+              description="We could not load this release dashboard."
             />
           </SectionCard>
         )}
@@ -366,7 +366,7 @@ export default function ReleaseCommandCenterPage() {
           <div className="w-full max-w-xl rounded-[28px] border border-stroke-default bg-bg-surface p-5 shadow-[0_24px_70px_rgba(0,0,0,0.35)] sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Submission detail</p>
+                <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Credit detail</p>
                 <h2 className="mt-2 text-2xl tracking-tight text-content-primary">
                   {selectedSubmission.stageName || selectedSubmission.legalName}
                 </h2>

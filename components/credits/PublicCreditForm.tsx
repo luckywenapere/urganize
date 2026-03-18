@@ -138,7 +138,7 @@ export function PublicCreditForm({ form, error, isSubmitting, onChange, onSubmit
         disabled={isSubmitting}
         className="min-h-12 w-full rounded-[22px] bg-brand px-4 py-3 text-base font-semibold text-content-inverse shadow-[0_18px_36px_-24px_rgba(0,0,0,0.35)] hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isSubmitting ? 'Submitting...' : 'Submit Credits'}
+        {isSubmitting ? 'Submitting Credits...' : 'Submit Credits'}
       </button>
 
       <OptionalDetailsSection

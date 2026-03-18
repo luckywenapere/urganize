@@ -31,14 +31,14 @@ export function MetadataPreviewCard({ releaseId, metadata }: MetadataPreviewCard
     <div className="space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-content-primary">Metadata</p>
-          <p className="mt-2 text-sm text-content-secondary">Structured from submitted credits and ready for review.</p>
+          <p className="text-sm font-medium text-content-primary">Release Info</p>
+          <p className="mt-2 text-sm text-content-secondary">Built from submitted credits and ready to review.</p>
         </div>
         <Link
           href={`/dashboard/releases/${releaseId}/metadata`}
           className="min-h-11 w-full rounded-2xl border border-stroke-default bg-bg-surface px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:rounded-full sm:py-2"
         >
-          View Metadata
+          View Release Info
         </Link>
       </div>
       {hasCredits ? (
@@ -61,8 +61,8 @@ export function MetadataPreviewCard({ releaseId, metadata }: MetadataPreviewCard
         </div>
       ) : (
         <div className="rounded-[24px] border border-dashed border-stroke-default bg-bg-elevated/70 px-5 py-8 text-sm text-content-secondary">
-          <p className="font-medium text-content-primary">No credits submitted yet</p>
-          <p className="mt-2">Metadata structures automatically after collaborators submit their credits.</p>
+          <p className="font-medium text-content-primary">No credits yet</p>
+          <p className="mt-2">Send your link to start collecting. Release info will fill in automatically.</p>
         </div>
       )}
     </div>

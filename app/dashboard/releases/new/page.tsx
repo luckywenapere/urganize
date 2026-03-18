@@ -65,6 +65,7 @@ export default function NewReleasePage() {
     setSetupDetails('');
 
     try {
+      const fallbackReleaseDate = new Date().toISOString().slice(0, 10);
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -84,6 +85,7 @@ export default function NewReleasePage() {
           title: title.trim(),
           artistName: artistName.trim(),
           description: description.trim(),
+          releaseDate: fallbackReleaseDate,
         }),
       });
 
@@ -133,11 +135,11 @@ export default function NewReleasePage() {
         <SectionCard className="sm:p-7">
           <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">New Release</p>
           <h1 className="mt-2 text-[clamp(2.2rem,5vw,3.4rem)] tracking-tight text-content-primary">
-            Start a release workspace
+            Start a release dashboard
           </h1>
           <p className="mt-3 max-w-2xl text-sm text-content-secondary">
             Add the release title, artist name, and any helpful context. You can share the public credit link after
-            the workspace is created.
+            the dashboard is created.
           </p>
 
           <form className="mt-8 space-y-5" onSubmit={(event) => void handleSubmit(event)}>
