@@ -62,15 +62,6 @@ export default function DashboardPage() {
 
   const sortedReleases = useMemo(() => [...releases], [releases]);
 
-  const totals = useMemo(
-    () => ({
-      ready: releases.filter((release) => release.status === 'ready').length,
-      active: releases.filter((release) => release.status === 'in_progress').length,
-      pendingCollaborators: releases.reduce((sum, release) => sum + release.pendingCount, 0),
-    }),
-    [releases]
-  );
-
   const loadDashboard = useCallback(async () => {
     if (!user) return;
     if (!hasLoadedOnce) {
@@ -240,26 +231,6 @@ export default function DashboardPage() {
             {error}
           </p>
         ) : null}
-
-        <section className="mt-8 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-[28px] border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)]">
-            <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Total Releases</p>
-            <p className="mt-3 text-3xl font-semibold text-content-primary">{releases.length}</p>
-            <p className="mt-2 text-sm text-content-secondary">Every active release workspace in one view.</p>
-          </div>
-          <div className="rounded-[28px] border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)]">
-            <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Ready To Deliver</p>
-            <p className="mt-3 text-3xl font-semibold text-content-primary">{totals.ready}</p>
-            <p className="mt-2 text-sm text-content-secondary">Releases with credits collected and metadata complete.</p>
-          </div>
-          <div className="rounded-[28px] border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)]">
-            <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Pending Collaborators</p>
-            <p className="mt-3 text-3xl font-semibold text-content-primary">{totals.pendingCollaborators}</p>
-            <p className="mt-2 text-sm text-content-secondary">
-              {totals.active} release{totals.active === 1 ? '' : 's'} currently moving through collection.
-            </p>
-          </div>
-        </section>
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
           <div className="rounded-[28px] border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.45)]">

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { SectionCard } from '@/components/shared/SectionCard';
@@ -10,10 +10,8 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Toast } from '@/components/shared/Toast';
 import { ReleaseHeader } from '@/components/releases/ReleaseHeader';
-import { ReleaseReadinessCard } from '@/components/releases/ReleaseReadinessCard';
 import { CollaboratorStatusTable } from '@/components/releases/CollaboratorStatusTable';
 import { MetadataPreviewCard } from '@/components/releases/MetadataPreviewCard';
-import { NextStepCard } from '@/components/releases/NextStepCard';
 import { CommandCenterSkeleton } from '@/components/loading/CommandCenterSkeleton';
 import {
   createReleasePublicCollectionToken,
@@ -74,7 +72,6 @@ type ToastState = {
 };
 
 export default function ReleaseCommandCenterPage() {
-  const router = useRouter();
   const params = useParams<{ releaseId: string }>();
   const releaseId = Array.isArray(params?.releaseId) ? params.releaseId[0] : params?.releaseId || '';
   const { user, isLoading: authLoading } = useAuthStore();
@@ -135,10 +132,6 @@ export default function ReleaseCommandCenterPage() {
   const selectedSubmission = useMemo(
     () => collaborators.find((item) => item.id === selectedSubmissionId)?.submission || null,
     [collaborators, selectedSubmissionId]
-  );
-  const firstPendingCollaboratorId = useMemo(
-    () => collaborators.find((item) => item.status === 'pending')?.id || '',
-    [collaborators]
   );
 
   const submissionUrlById = useMemo(() => {
@@ -217,29 +210,6 @@ export default function ReleaseCommandCenterPage() {
     window.open(publicCollectionUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const handleNextAction = async () => {
-    const nextAction = data?.readiness.nextAction;
-    if (!nextAction) return;
-
-    if (nextAction.type === 'copy_credit_link') {
-      await handleCopyCreditCollectionLink();
-      return;
-    }
-
-    if (nextAction.type === 'send_reminder') {
-      if (!firstPendingCollaboratorId) {
-        setToast({ tone: 'error', message: 'No pending collaborators to remind.' });
-        return;
-      }
-      await handleRemind(firstPendingCollaboratorId);
-      return;
-    }
-
-    if (nextAction.type === 'view_metadata') {
-      router.push(`/dashboard/releases/${releaseId}/metadata`);
-    }
-  };
-
   if ((!hasLoadedOnce && isLoading) || (!user && authLoading)) {
     return <CommandCenterSkeleton />;
   }
@@ -269,13 +239,7 @@ export default function ReleaseCommandCenterPage() {
 
             <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] lg:items-start">
               <div className="contents lg:block lg:min-w-0 lg:space-y-7">
-                <div className="order-1 min-w-0">
-                  <SectionCard className="sm:p-7">
-                    <ReleaseReadinessCard readiness={data.readiness} />
-                  </SectionCard>
-                </div>
-
-                <div className="order-4 min-w-0">
+                <div className="order-2 min-w-0">
                   <SectionCard className="sm:p-7">
                     <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                       <div className="min-w-0 flex-1">
@@ -329,7 +293,7 @@ export default function ReleaseCommandCenterPage() {
               </div>
 
               <div className="contents lg:block lg:min-w-0 lg:space-y-4">
-                <div className="order-2 min-w-0">
+                <div className="order-1 min-w-0">
                   <SectionCard className="p-5 sm:p-6">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 flex-1 flex-col">
@@ -380,17 +344,6 @@ export default function ReleaseCommandCenterPage() {
                 </div>
 
                 <div className="order-3 min-w-0">
-                  <NextStepCard
-                    nextStep={data.readiness.nextStep}
-                    action={data.readiness.nextAction}
-                    onAction={() => void handleNextAction()}
-                    actionDisabled={
-                      data.readiness.nextAction.type === 'send_reminder' && !firstPendingCollaboratorId
-                    }
-                  />
-                </div>
-
-                <div className="order-5 min-w-0">
                   <SectionCard className="sm:p-7">
                     <MetadataPreviewCard releaseId={data.release.id} metadata={data.metadata} />
                   </SectionCard>
