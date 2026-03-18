@@ -104,12 +104,12 @@ export default function ReleaseCommandCenterPage() {
 
       const payload = (await response.json().catch(() => ({}))) as CommandCenterPayload;
       if (!response.ok || !payload.release) {
-        throw new Error(payload.error || 'Could not load release command center.');
+        throw new Error(payload.error || 'Could not load Release Manager.');
       }
 
       setData(payload);
     } catch (loadError: any) {
-      setError(loadError?.message || 'Could not load release command center.');
+      setError(loadError?.message || 'Could not load Release Manager.');
     } finally {
       setIsLoading(false);
       setHasLoadedOnce(true);

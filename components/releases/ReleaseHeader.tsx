@@ -15,7 +15,7 @@ export function ReleaseHeader({ release }: ReleaseHeaderProps) {
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
       <div className="min-w-0 flex-1">
-        <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Release Command Center</p>
+        <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Release Manager</p>
         <h1 className="mt-2 text-[clamp(2.2rem,5vw,3.5rem)] tracking-tight text-content-primary">
           {release.title}
         </h1>

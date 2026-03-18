@@ -182,7 +182,7 @@ export default function DashboardPage() {
     return (
       <main className="min-h-screen bg-bg-base text-content-primary">
         <div className="mx-auto max-w-[760px] px-6 py-12">
-          <SubscriptionPaywall title="Unlock the release command center" />
+          <SubscriptionPaywall title="Unlock Release Manager" />
         </div>
       </main>
     );
@@ -195,7 +195,7 @@ export default function DashboardPage() {
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Dashboard</p>
             <h1 className="mt-2 text-[clamp(2.4rem,6vw,4.2rem)] tracking-tight text-content-primary">
-              Release Command Center
+              Release Manager
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-content-secondary">
               Create release workspaces, share one credit link, collect credits, and keep every rollout ready for
