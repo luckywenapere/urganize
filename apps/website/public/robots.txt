@@ -1,0 +1,9 @@
+# Urganize - robots.txt
+# Last Updated: 2024-12-30
+
+# Allow all crawlers for main site
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://urganize.app/sitemap.xml

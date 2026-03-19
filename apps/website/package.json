@@ -1,0 +1,40 @@
+{
+  "name": "urganize-website",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma db push --schema prisma/schema.prisma",
+    "prisma:seed": "node prisma/seed.js"
+  },
+  "dependencies": {
+    "@formbricks/js": "^4.3.0",
+    "@neondatabase/serverless": "^1.0.2",
+    "@prisma/client": "^6.19.1",
+    "@vercel/analytics": "^1.6.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.23.26",
+    "lucide-react": "^0.562.0",
+    "next": "16.0.10",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-icons": "^5.5.0",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "baseline-browser-mapping": "^2.9.19",
+    "eslint": "^9",
+    "eslint-config-next": "^16.0.10",
+    "prisma": "^6.19.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
