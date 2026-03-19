@@ -90,9 +90,10 @@ export default function ResetPasswordPage() {
         <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand/5 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-brand/3 rounded-full blur-[100px]" />
         
-        <div className="w-full max-w-[400px] relative z-10 text-center">
+        <div className="w-full max-w-[420px] relative z-10 text-center">
           <Logo size="xl" className="justify-center mb-4" priority />
-          <p className="text-content-secondary">Verifying reset link...</p>
+          <p className="text-sm uppercase tracking-[0.22em] text-content-tertiary">Release command center</p>
+          <p className="mt-3 text-content-secondary">Verifying reset link...</p>
         </div>
       </div>
     );
@@ -106,15 +107,16 @@ export default function ResetPasswordPage() {
         <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand/5 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-brand/3 rounded-full blur-[100px]" />
         
-        <div className="w-full max-w-[400px] relative z-10">
+        <div className="w-full max-w-[420px] relative z-10">
           <div className="text-center mb-8 animate-in">
             <Logo size="xl" className="justify-center mb-4" priority />
-            <p className="text-content-secondary">
-              The operating system for music careers
-            </p>
+            <p className="text-sm uppercase tracking-[0.22em] text-content-tertiary">Release command center</p>
           </div>
 
-          <Card className="animate-in delay-1" padding="lg">
+          <Card
+            className="animate-in delay-1 rounded-3xl border border-stroke-default bg-bg-surface/95 shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl"
+            padding="lg"
+          >
             <div className="text-center space-y-5">
               <div className="w-12 h-12 rounded-full bg-status-error/15 flex items-center justify-center mx-auto">
                 <AlertCircle className="w-6 h-6 text-status-error" />
@@ -156,17 +158,18 @@ export default function ResetPasswordPage() {
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand/5 rounded-full blur-[120px]" />
       <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-brand/3 rounded-full blur-[100px]" />
       
-      <div className="w-full max-w-[400px] relative z-10">
+      <div className="w-full max-w-[420px] relative z-10">
         {/* Logo */}
         <div className="text-center mb-8 animate-in">
           <Logo size="xl" className="justify-center mb-4" priority />
-          <p className="text-content-secondary">
-            The operating system for music careers
-          </p>
+          <p className="text-sm uppercase tracking-[0.22em] text-content-tertiary">Release command center</p>
         </div>
 
         {/* Reset Password Card */}
-        <Card className="animate-in delay-1" padding="lg">
+        <Card
+          className="animate-in delay-1 rounded-3xl border border-stroke-default bg-bg-surface/95 shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl"
+          padding="lg"
+        >
           {!isSuccess ? (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="text-center mb-6">

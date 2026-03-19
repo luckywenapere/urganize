@@ -5,61 +5,54 @@ import { clsx } from 'clsx';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
-  error?: string;
   hint?: string;
+  error?: string;
   leftIcon?: React.ReactNode;
-  rightElement?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+  inputClassName?: string;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, leftIcon, rightElement, className, ...props }, ref) => {
+  ({ label, hint, error, leftIcon, rightIcon, className, inputClassName, id, ...props }, ref) => {
+    const inputId = id || React.useId();
+
     return (
-      <div className="w-full">
+      <div className={clsx('space-y-2', className)}>
         {label && (
-          <label className="block text-sm font-medium text-content-secondary mb-2">
+          <label htmlFor={inputId} className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
             {label}
           </label>
         )}
-        <div className="relative">
-          {leftIcon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-content-tertiary pointer-events-none">
-              {leftIcon}
-            </div>
+        <div
+          className={clsx(
+            'group flex items-center gap-3 rounded-[22px] border bg-white/60 px-4 py-3 backdrop-blur-sm transition-all duration-fast ease-out',
+            'border-stroke-default focus-within:border-brand focus-within:bg-white/80 focus-within:shadow-[0_0_0_3px_rgba(32,29,27,0.06)]',
+            error && 'border-status-error/50 focus-within:border-status-error focus-within:shadow-[0_0_0_3px_rgba(160,61,45,0.08)]',
+            'dark:bg-white/[0.03] dark:focus-within:bg-white/[0.05]'
           )}
+        >
+          {leftIcon ? <span className="shrink-0 text-content-tertiary">{leftIcon}</span> : null}
           <input
             ref={ref}
+            id={inputId}
             className={clsx(
-              'input',
-              rightElement && 'pr-10',
-              error && 'border-status-error focus:border-status-error focus:ring-status-error/20',
-              className
+              'min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-content-primary outline-none placeholder:text-content-quaternary',
+              inputClassName
             )}
-            style={{ 
-              paddingLeft: leftIcon ? '2.5rem' : undefined,
-              paddingRight: rightElement ? '2.5rem' : undefined 
-            }}
             {...props}
           />
-          {rightElement && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary">
-              {rightElement}
-            </div>
-          )}
+          {rightIcon ? <span className="shrink-0 text-content-tertiary">{rightIcon}</span> : null}
         </div>
-        {error && (
-          <p className="mt-2 text-sm text-status-error flex items-center gap-1.5">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-            {error}
-          </p>
-        )}
-        {hint && !error && (
-          <p className="mt-2 text-sm text-content-tertiary">{hint}</p>
-        )}
+        {error ? (
+          <p className="text-sm text-status-error">{error}</p>
+        ) : hint ? (
+          <p className="text-sm text-content-secondary">{hint}</p>
+        ) : null}
       </div>
     );
   }
 );
 
 Input.displayName = 'Input';
+
+export default Input;

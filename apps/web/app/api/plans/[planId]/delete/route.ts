@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const PROOFS_BUCKET = 'proofs';
+const RELEASE_ASSET_CATEGORIES = ['cover_art', 'audio', 'promo_image', 'video', 'document'] as const;
 
 const extractProofPath = (publicUrl: string): string | null => {
   const marker = `/storage/v1/object/public/${PROOFS_BUCKET}/`;
@@ -86,12 +87,28 @@ export async function POST(
     .map((row) => extractProofPath(String(row.user_input_file_url || '')))
     .filter((path): path is string => !!path);
 
-  if (proofPaths.length > 0) {
-    await supabaseAdmin.storage.from(PROOFS_BUCKET).remove(Array.from(new Set(proofPaths)));
+  const assetPaths: string[] = [];
+  for (const category of RELEASE_ASSET_CATEGORIES) {
+    const assetPrefix = `${user.id}/${planId}/assets/${category}`;
+    const { data: bucketFiles } = await supabaseAdmin.storage.from(PROOFS_BUCKET).list(assetPrefix, {
+      limit: 1000,
+      sortBy: { column: 'created_at', order: 'asc' },
+    });
+    for (const file of bucketFiles || []) {
+      if (file.name) {
+        assetPaths.push(`${assetPrefix}/${file.name}`);
+      }
+    }
+  }
+
+  const allStoragePaths = Array.from(new Set([...proofPaths, ...assetPaths]));
+  if (allStoragePaths.length > 0) {
+    await supabaseAdmin.storage.from(PROOFS_BUCKET).remove(allStoragePaths);
   }
 
   const optionalTables: Array<{ table: string; column: string }> = [
     { table: 'plan_feedback', column: 'release_id' },
+    { table: 'release_workspaces', column: 'release_id' },
     { table: 'release_assets', column: 'release_id' },
     { table: 'files', column: 'release_id' },
   ];

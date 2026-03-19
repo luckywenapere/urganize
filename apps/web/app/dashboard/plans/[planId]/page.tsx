@@ -1,694 +1,757 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
+import { CreditsMetadataSection } from '@/components/credits/CreditsMetadataSection';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import {
+  getChecklistProgress,
+  groupChecklistByStage,
+  TIMELINE_STAGE_LABELS,
+  type TimelineStage,
+} from '@/lib/release-checklist';
+import type { ReleaseSongSummary } from '@/lib/release-songs';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const ONBOARDING_TOTAL_STEPS = 13;
-const DEFAULT_PLAN_DURATION_DAYS = 30;
-const PLAN_CACHE_TTL_MS = 5 * 60 * 1000;
-
-type PlanRow = {
+type ReleaseRow = {
   id: string;
   title: string;
   artist_name: string;
-  created_at: string;
   status: 'draft' | 'in-progress' | 'ready' | 'released';
+  release_date: string | null;
+  type: string | null;
+  created_at: string;
 };
 
-type PlanProfile = {
-  setup_step: number | null;
-  setup_completed: boolean | null;
-  hard_deadline: string | null;
-  deadline_reason: string | null;
+type ReleaseTaskRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  why_it_matters: string | null;
+  status: 'current' | 'pending' | 'completed';
+  order_index: number | null;
 };
 
-type CachedPlanPayload = {
-  plan: PlanRow;
-  profile: PlanProfile;
-  totalTasks: number;
-  completedTasks: number;
-  nextTask: string;
-  cachedAt: number;
+type ChecklistItem = {
+  id: string;
+  title: string;
+  description: string;
+  timelineStage: TimelineStage;
+  recommendedTiming: string;
+  completed: boolean;
 };
 
-const addDaysIso = (base: string | Date, days: number): string => {
-  const date = new Date(base);
-  date.setDate(date.getDate() + days);
-  return date.toISOString();
+type ReleaseTimelineStage =
+  | 'Strategy'
+  | 'Distribution'
+  | 'Marketing'
+  | 'Release Week'
+  | 'Release Day'
+  | 'Post Release';
+
+const RELEASE_TIMELINE_STAGES: ReleaseTimelineStage[] = [
+  'Strategy',
+  'Distribution',
+  'Marketing',
+  'Release Week',
+  'Release Day',
+  'Post Release',
+];
+
+const stageByIndex = (index: number): TimelineStage => {
+  if (index <= 4) return '12_weeks_before';
+  if (index <= 7) return '8_weeks_before';
+  if (index <= 10) return '6_weeks_before';
+  if (index <= 13) return '4_weeks_before';
+  if (index <= 15) return '2_weeks_before';
+  if (index <= 18) return 'release_week';
+  if (index <= 21) return 'release_day';
+  return 'post_release';
 };
 
-const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
+const extractRecommendedTiming = (value: string | null | undefined, stage: TimelineStage): string => {
+  const message = String(value || '').trim();
+  if (message.toLowerCase().startsWith('recommended timing:')) {
+    return message.slice('recommended timing:'.length).trim() || TIMELINE_STAGE_LABELS[stage];
+  }
+  return message || TIMELINE_STAGE_LABELS[stage];
+};
 
-export default function PlanDashboardPage() {
+const parseReleaseDateAsLocalDay = (value: string): Date => {
+  const normalized = String(value || '').trim();
+  const dateOnlyMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  return new Date(normalized);
+};
+
+const resolveCurrentTimelineStage = (releaseDate: string | null | undefined): ReleaseTimelineStage => {
+  if (!releaseDate) return 'Strategy';
+
+  const target = parseReleaseDateAsLocalDay(releaseDate);
+  const today = new Date();
+  target.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  if (!Number.isFinite(target.getTime())) return 'Strategy';
+
+  const diffMs = target.getTime() - today.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return 'Post Release';
+  if (diffDays === 0) return 'Release Day';
+  if (diffDays <= 7) return 'Release Week';
+  if (diffDays <= 42) return 'Marketing';
+  if (diffDays <= 56) return 'Distribution';
+  return 'Strategy';
+};
+
+export default function ReleaseChecklistPage() {
   const router = useRouter();
   const params = useParams<{ planId: string }>();
   const planId = Array.isArray(params?.planId) ? params.planId[0] : params?.planId;
-  const { user, logout, setNeedsOnboarding, isLoading: authLoading } = useAuthStore();
+  const { user, isLoading: authLoading } = useAuthStore();
 
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [isSaving, setIsSaving] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [plan, setPlan] = useState<PlanRow | null>(null);
-  const [profile, setProfile] = useState<PlanProfile | null>(null);
-  const [totalTasks, setTotalTasks] = useState(0);
-  const [completedTasks, setCompletedTasks] = useState(0);
-  const [nextTask, setNextTask] = useState('No active task');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSavingBasics, setIsSavingBasics] = useState(false);
-  const [isPlanMenuOpen, setIsPlanMenuOpen] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
-  const [deleteError, setDeleteError] = useState('');
-  const [isDeletingPlan, setIsDeletingPlan] = useState(false);
-  const [draftTitle, setDraftTitle] = useState('');
-  const [draftArtistName, setDraftArtistName] = useState('');
-  const [draftDeadline, setDraftDeadline] = useState('');
   const [hasSubscriptionAccess, setHasSubscriptionAccess] = useState<boolean | null>(null);
-  const planMenuRef = useRef<HTMLDivElement | null>(null);
-  const cacheKey = user && planId ? `urganize.planDashboard.${user.id}.${planId}` : '';
+  const [release, setRelease] = useState<ReleaseRow | null>(null);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [releaseSongs, setReleaseSongs] = useState<ReleaseSongSummary[]>([]);
+  const [availableSongs, setAvailableSongs] = useState<ReleaseSongSummary[]>([]);
+  const [showSongPicker, setShowSongPicker] = useState(false);
+  const [songSearch, setSongSearch] = useState('');
+  const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
+  const [isSavingSongs, setIsSavingSongs] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
+  const completedTasks = useMemo(() => checklist.filter((item) => item.completed).length, [checklist]);
+  const progress = useMemo(() => getChecklistProgress(checklist.length, completedTasks), [checklist.length, completedTasks]);
+  const remainingTasks = Math.max(checklist.length - completedTasks, 0);
+  const groupedChecklist = useMemo(() => groupChecklistByStage(checklist), [checklist]);
+  const currentTimelineStage = useMemo(
+    () => resolveCurrentTimelineStage(release?.release_date),
+    [release?.release_date]
+  );
+  const filteredAvailableSongs = useMemo(() => {
+    const query = songSearch.trim().toLowerCase();
+    if (!query) return availableSongs;
+    return availableSongs.filter((song) =>
+      [song.songTitle, song.primaryArtist, song.isrc].join(' ').toLowerCase().includes(query)
+    );
+  }, [availableSongs, songSearch]);
+  const tracklistSongs = useMemo(
+    () => [...releaseSongs].sort((a, b) => Number(a.trackNumber || 0) - Number(b.trackNumber || 0)),
+    [releaseSongs]
+  );
 
-    const readCachedPlan = (): CachedPlanPayload | null => {
-      if (!cacheKey) return null;
-      const raw = localStorage.getItem(cacheKey);
-      if (!raw) return null;
-      try {
-        const parsed = JSON.parse(raw) as CachedPlanPayload;
-        if (!parsed?.plan || !parsed?.profile || typeof parsed.cachedAt !== 'number') return null;
-        if (Date.now() - parsed.cachedAt > PLAN_CACHE_TTL_MS) return null;
-        return parsed;
-      } catch {
-        return null;
-      }
-    };
+  const loadRelease = useCallback(async () => {
+    if (!user?.id || !planId) return;
+    if (!hasLoadedOnce && !release && checklist.length === 0) {
+      setIsLoading(true);
+    }
+    setError('');
 
-    const loadPlan = async () => {
-      if (authLoading) return;
-      if (!planId) {
-        setError('Plan not found');
-        setLoading(false);
-        return;
-      }
+    try {
+      const entitlement = await getSubscriptionAccess(user.id);
+      setHasSubscriptionAccess(entitlement.hasAccess);
+      if (!entitlement.hasAccess) return;
 
-      if (!user) {
-        router.replace('/auth');
-        setLoading(false);
-        return;
-      }
-
-      const cached = readCachedPlan();
-      if (cached && !cancelled) {
-        setPlan(cached.plan);
-        setProfile(cached.profile);
-        setTotalTasks(cached.totalTasks);
-        setCompletedTasks(cached.completedTasks);
-        setNextTask(cached.nextTask || 'No active task');
-        setDraftTitle(cached.plan.title || '');
-        setDraftArtistName(cached.plan.artist_name || '');
-        setDraftDeadline((cached.profile.hard_deadline || '').slice(0, 10));
-        setLoading(false);
-      }
-
-      setIsRefreshing(true);
-      try {
-        const entitlement = await getSubscriptionAccess(user.id);
-        if (!cancelled) {
-          setHasSubscriptionAccess(entitlement.hasAccess);
-        }
-        if (!entitlement.hasAccess) {
-          if (!cancelled && cacheKey) localStorage.removeItem(cacheKey);
-          return;
-        }
-
-        const { data: release, error: releaseError } = await supabase
+      const [{ data: releaseData, error: releaseError }, { data: taskData, error: taskError }] = await Promise.all([
+        supabase
           .from('releases')
-          .select('id,title,artist_name,created_at,status')
+          .select('id,title,artist_name,status,release_date,type,created_at')
           .eq('id', planId)
           .eq('user_id', user.id)
-          .maybeSingle();
+          .maybeSingle(),
+        supabase
+          .from('ai_tasks')
+          .select('id,title,description,why_it_matters,status,order_index')
+          .eq('release_id', planId)
+          .order('order_index', { ascending: true }),
+      ]);
 
-        if (releaseError) throw releaseError;
-        if (!release) {
-          setError('Plan not found');
-          if (cacheKey) localStorage.removeItem(cacheKey);
-          return;
-        }
+      if (releaseError) throw releaseError;
+      if (taskError) throw taskError;
+      if (!releaseData) throw new Error('Release not found.');
 
-        const { data: latestProfile, error: profileError } = await supabase
-          .from('release_profiles')
-          .select('setup_step,setup_completed,hard_deadline,deadline_reason')
-          .eq('release_id', release.id)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (profileError) throw profileError;
-
-        const defaultDeadline = addDaysIso(release.created_at || new Date(), DEFAULT_PLAN_DURATION_DAYS);
-        let resolvedProfile: PlanProfile;
-
-        if (!latestProfile) {
-          const { error: insertProfileError } = await supabase
-            .from('release_profiles')
-            .insert({
-              release_id: release.id,
-              setup_step: 2,
-              setup_completed: false,
-              hard_deadline: defaultDeadline,
-            });
-          if (insertProfileError) throw insertProfileError;
-          resolvedProfile = {
-            setup_step: 2,
-            setup_completed: false,
-            hard_deadline: defaultDeadline,
-            deadline_reason: null,
+      const taskRows = (taskData || []) as ReleaseTaskRow[];
+      setRelease(releaseData as ReleaseRow);
+      setChecklist(
+        taskRows.map((task, index) => {
+          const orderIndex = task.order_index ?? index;
+          const timelineStage = stageByIndex(orderIndex);
+          return {
+            id: task.id,
+            title: task.title,
+            description: String(task.description || '').trim(),
+            timelineStage,
+            recommendedTiming: extractRecommendedTiming(task.why_it_matters, timelineStage),
+            completed: task.status === 'completed',
           };
-        } else if (!latestProfile.hard_deadline) {
-          const { error: updateProfileError } = await supabase
-            .from('release_profiles')
-            .update({ hard_deadline: defaultDeadline })
-            .eq('release_id', release.id);
-          if (updateProfileError) throw updateProfileError;
-          resolvedProfile = {
-            ...latestProfile,
-            hard_deadline: defaultDeadline,
+        })
+      );
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || '';
+      if (accessToken) {
+        const songsResponse = await fetch(`/api/plans/${planId}/songs`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          cache: 'no-store',
+        });
+        const songsPayload = (await songsResponse.json().catch(() => ({}))) as {
+          songs?: {
+            attached?: ReleaseSongSummary[];
+            available?: ReleaseSongSummary[];
           };
-        } else {
-          resolvedProfile = latestProfile;
+          error?: string;
+        };
+        if (!songsResponse.ok) {
+          throw new Error(songsPayload.error || 'Could not load release songs.');
         }
-
-        const [{ count: totalCount, error: totalError }, { count: doneCount, error: doneError }, { data: activeTask, error: taskError }] = await Promise.all([
-          supabase.from('ai_tasks').select('id', { count: 'exact', head: true }).eq('release_id', release.id),
-          supabase.from('ai_tasks').select('id', { count: 'exact', head: true }).eq('release_id', release.id).eq('status', 'completed'),
-          supabase
-            .from('ai_tasks')
-            .select('title')
-            .eq('release_id', release.id)
-            .in('status', ['current', 'pending'])
-            .order('order_index', { ascending: true })
-            .limit(1)
-            .maybeSingle(),
-        ]);
-
-        if (totalError) throw totalError;
-        if (doneError) throw doneError;
-        if (taskError) throw taskError;
-
-        if (!cancelled) {
-          setError('');
-          setPlan(release);
-          setProfile(resolvedProfile);
-          setTotalTasks(totalCount || 0);
-          setCompletedTasks(doneCount || 0);
-          setNextTask(activeTask?.title || 'No active task');
-          setDraftTitle(release.title || '');
-          setDraftArtistName(release.artist_name || '');
-          setDraftDeadline((resolvedProfile.hard_deadline || '').slice(0, 10));
-
-          if (cacheKey) {
-            const cachePayload: CachedPlanPayload = {
-              plan: release,
-              profile: resolvedProfile,
-              totalTasks: totalCount || 0,
-              completedTasks: doneCount || 0,
-              nextTask: activeTask?.title || 'No active task',
-              cachedAt: Date.now(),
-            };
-            localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
-          }
-        }
-      } catch (loadError: any) {
-        if (!cancelled) {
-          setError(loadError?.message || 'Could not load plan dashboard');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-          setIsRefreshing(false);
-        }
+        setReleaseSongs(songsPayload.songs?.attached || []);
+        setAvailableSongs(songsPayload.songs?.available || []);
       }
-    };
-
-    loadPlan();
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoading, cacheKey, planId, router, user]);
-
-  const timelineMetrics = useMemo(() => {
-    const now = Date.now();
-    const createdAt = new Date(plan?.created_at || Date.now());
-    const fallbackDeadline = addDaysIso(createdAt, DEFAULT_PLAN_DURATION_DAYS);
-    const deadline = new Date(profile?.hard_deadline || fallbackDeadline);
-
-    const createdTs = Number.isFinite(createdAt.getTime()) ? createdAt.getTime() : now;
-    const deadlineTsRaw = Number.isFinite(deadline.getTime()) ? deadline.getTime() : now + DEFAULT_PLAN_DURATION_DAYS * DAY_MS;
-    const deadlineTs = Math.max(deadlineTsRaw, createdTs + DAY_MS);
-
-    const totalDays = Math.max(1, Math.ceil((deadlineTs - createdTs) / DAY_MS));
-    const elapsedDays = Math.max(0, Math.ceil((now - createdTs) / DAY_MS));
-    const daysLeft = Math.ceil((deadlineTs - now) / DAY_MS);
-
-    const timeProgress = clamp01(elapsedDays / totalDays);
-    const onboardingProgress = clamp01((profile?.setup_step || 0) / ONBOARDING_TOTAL_STEPS);
-    const taskProgress = totalTasks > 0 ? clamp01(completedTasks / totalTasks) : 0;
-    const workProgress = profile?.setup_completed ? 1 : Math.max(onboardingProgress, taskProgress);
-
-    let status: 'Completed' | 'On Track' | 'At Risk' | 'Overdue' = 'On Track';
-    if (profile?.setup_completed) {
-      status = 'Completed';
-    } else if (daysLeft < 0) {
-      status = 'Overdue';
-    } else if (daysLeft <= 7 || workProgress + 0.08 < timeProgress) {
-      status = 'At Risk';
-    }
-
-    const milestones = [
-      { label: 'Kickoff', progress: 0 },
-      { label: 'Plan Locked', progress: 0.25 },
-      { label: 'Execution', progress: 0.5 },
-      { label: 'Optimization', progress: 0.75 },
-      { label: 'Target Date', progress: 1 },
-    ].map((milestone) => {
-      const ts = createdTs + Math.round((deadlineTs - createdTs) * milestone.progress);
-      return {
-        ...milestone,
-        date: new Date(ts),
-        complete: workProgress >= milestone.progress || now >= ts,
-      };
-    });
-
-    return {
-      status,
-      createdAt: new Date(createdTs),
-      deadline: new Date(deadlineTs),
-      totalDays,
-      elapsedDays,
-      daysLeft,
-      timeProgress,
-      workProgress,
-      milestones,
-    };
-  }, [completedTasks, plan?.created_at, profile?.hard_deadline, profile?.setup_completed, profile?.setup_step, totalTasks]);
-
-  const statusBadgeClass =
-    timelineMetrics.status === 'Completed'
-      ? 'bg-brand-muted text-brand'
-      : timelineMetrics.status === 'Overdue'
-        ? 'bg-status-error/20 text-status-error'
-        : timelineMetrics.status === 'At Risk'
-          ? 'bg-status-warning/20 text-status-warning'
-          : 'bg-status-info/20 text-status-info';
-
-  const timelineMessage =
-    timelineMetrics.status === 'Completed'
-      ? 'Plan completed. Keep momentum by launching the next plan today.'
-      : timelineMetrics.status === 'Overdue'
-        ? 'Timeline is overdue. Resume now to recover the launch window.'
-        : timelineMetrics.status === 'At Risk'
-          ? 'You are falling behind the timeline. Complete the next action today.'
-          : 'You are on track. Keep shipping tasks at this pace.';
-
-  const savePlanBasics = async () => {
-    if (!planId) return;
-    const title = draftTitle.trim();
-    const artist = draftArtistName.trim();
-    const deadline = draftDeadline.trim();
-
-    if (!title) {
-      setError('Plan title is required.');
-      return;
-    }
-    if (!artist) {
-      setError('Artist name is required.');
-      return;
-    }
-
-    if (deadline) {
-      const deadlineDate = new Date(deadline);
-      if (Number.isNaN(deadlineDate.getTime())) {
-        setError('Deadline date is invalid.');
-        return;
-      }
-    }
-
-    setIsSavingBasics(true);
-    setError('');
-    try {
-      const { error: releaseUpdateError } = await supabase
-        .from('releases')
-        .update({ title, artist_name: artist, updated_at: new Date().toISOString() })
-        .eq('id', planId)
-        .eq('user_id', user?.id || '');
-      if (releaseUpdateError) throw releaseUpdateError;
-
-      const { error: profileUpdateError } = await supabase
-        .from('release_profiles')
-        .update({ hard_deadline: deadline || null, updated_at: new Date().toISOString() })
-        .eq('release_id', planId);
-      if (profileUpdateError) throw profileUpdateError;
-
-      setPlan((current) => (current ? { ...current, title, artist_name: artist } : current));
-      setProfile((current) => (current ? { ...current, hard_deadline: deadline || null } : current));
-      setError('');
-    } catch (saveError: any) {
-      setError(saveError?.message || 'Could not save plan details');
+    } catch (loadError: any) {
+      setError(loadError?.message || 'Could not load release checklist.');
     } finally {
-      setIsSavingBasics(false);
+      setIsLoading(false);
+      setHasLoadedOnce(true);
     }
-  };
+  }, [checklist.length, hasLoadedOnce, planId, release, user?.id]);
 
-  const requestDeletePlan = () => {
-    setShowDeleteModal(true);
-    setDeleteConfirmText('');
-    setDeleteError('');
-    setIsPlanMenuOpen(false);
-  };
-
-  const closeDeleteModal = () => {
-    if (isDeletingPlan) return;
-    setShowDeleteModal(false);
-    setDeleteConfirmText('');
-    setDeleteError('');
-  };
-
-  const confirmDeletePlan = async () => {
-    if (!planId) return;
-    if (deleteConfirmText.trim() !== 'DELETE') {
-      setDeleteError('Type DELETE exactly to confirm.');
-      return;
-    }
-
-    setIsDeletingPlan(true);
-    setDeleteError('');
-
+  const addSongsToRelease = async () => {
+    if (!planId || selectedSongIds.length === 0 || isSavingSongs) return;
+    setIsSavingSongs(true);
+    setError('');
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error('Session expired. Please sign in again.');
+      const accessToken = session?.access_token || '';
+      if (!accessToken) throw new Error('Session expired. Please sign in again.');
 
-      const response = await fetch(`/api/plans/${planId}/delete`, {
+      const response = await fetch(`/api/plans/${planId}/songs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ confirmationText: deleteConfirmText }),
+        body: JSON.stringify({ songIds: selectedSongIds }),
       });
-      const payload = await response.json().catch(() => ({}));
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) {
-        throw new Error(payload?.error || 'Could not delete plan');
+        throw new Error(payload.error || 'Could not attach songs.');
       }
 
-      if (cacheKey) localStorage.removeItem(cacheKey);
-      router.push('/dashboard');
-    } catch (deletePlanError: any) {
-      setDeleteError(deletePlanError?.message || 'Could not delete plan.');
+      setSelectedSongIds([]);
+      setSongSearch('');
+      setShowSongPicker(false);
+      await loadRelease();
+    } catch (songError: any) {
+      setError(songError?.message || 'Could not attach songs.');
     } finally {
-      setIsDeletingPlan(false);
+      setIsSavingSongs(false);
+    }
+  };
+
+  const removeSongFromRelease = async (songId: string) => {
+    if (!planId || isSavingSongs) return;
+    setIsSavingSongs(true);
+    setError('');
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || '';
+      if (!accessToken) throw new Error('Session expired. Please sign in again.');
+
+      const response = await fetch(`/api/plans/${planId}/songs/${songId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not remove song.');
+      }
+      await loadRelease();
+    } catch (songError: any) {
+      setError(songError?.message || 'Could not remove song.');
+    } finally {
+      setIsSavingSongs(false);
+    }
+  };
+
+  const reorderSongs = async (songId: string, direction: 'up' | 'down') => {
+    if (!planId || isSavingSongs) return;
+    const orderedIds = tracklistSongs.map((song) => song.songId);
+    const currentIndex = orderedIds.findIndex((id) => id === songId);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= orderedIds.length) return;
+
+    const nextOrderedIds = [...orderedIds];
+    const [moved] = nextOrderedIds.splice(currentIndex, 1);
+    nextOrderedIds.splice(targetIndex, 0, moved);
+
+    setIsSavingSongs(true);
+    setError('');
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || '';
+      if (!accessToken) throw new Error('Session expired. Please sign in again.');
+
+      const response = await fetch(`/api/plans/${planId}/songs`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ orderedSongIds: nextOrderedIds }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not update track order.');
+      }
+      await loadRelease();
+    } catch (songError: any) {
+      setError(songError?.message || 'Could not update track order.');
+    } finally {
+      setIsSavingSongs(false);
     }
   };
 
   useEffect(() => {
-    const onPointerDown = (event: MouseEvent) => {
-      if (!planMenuRef.current) return;
-      if (!planMenuRef.current.contains(event.target as Node)) {
-        setIsPlanMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
-  }, []);
+    if (authLoading) return;
+    if (!user) {
+      router.replace('/auth');
+      return;
+    }
+    if (!planId) {
+      setError('Release not found.');
+      setIsLoading(false);
+      return;
+    }
+    void loadRelease();
+  }, [authLoading, loadRelease, planId, router, user]);
+
+  const toggleTask = async (taskId: string, completed: boolean) => {
+    if (!user?.id || !planId || isSaving) return;
+    setIsSaving(taskId);
+    setError('');
+
+    try {
+      const nextStatus = completed ? 'pending' : 'completed';
+      const { error: updateError } = await supabase
+        .from('ai_tasks')
+        .update({
+          status: nextStatus,
+          completed_at: completed ? null : new Date().toISOString(),
+        })
+        .eq('id', taskId)
+        .eq('release_id', planId);
+
+      if (updateError) throw updateError;
+
+      setChecklist((current) =>
+        current.map((item) => (item.id === taskId ? { ...item, completed: !completed } : item))
+      );
+    } catch (toggleError: any) {
+      setError(toggleError?.message || 'Could not update task status.');
+    } finally {
+      setIsSaving(null);
+    }
+  };
+
+  if (isLoading || authLoading) {
+    return (
+      <LoadingScreen
+        variant="detail"
+        eyebrow="Release Checklist"
+        title="Loading your release plan"
+        description="Arranging the timeline, progress, and task sequence for this release."
+      />
+    );
+  }
+
+  if (hasSubscriptionAccess === false) {
+    return (
+      <main className="min-h-screen bg-bg-base text-content-primary">
+        <div className="mx-auto max-w-[760px] px-6 py-12">
+          <SubscriptionPaywall title="Unlock your release checklist" />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto flex min-h-screen w-full max-w-[1120px] flex-col px-6 py-10 lg:px-10 lg:py-12">
-        <div className="flex items-center justify-between">
-          <Link href="/dashboard" className="text-sm text-content-secondary hover:text-content-primary">
-            Back to Plans
-          </Link>
-          <div className="relative" ref={planMenuRef}>
-            <button
-              type="button"
-              onClick={() => setIsPlanMenuOpen((open) => !open)}
-              className="rounded-md border border-stroke-default bg-bg-surface px-2 py-1 text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-              aria-haspopup="menu"
-              aria-expanded={isPlanMenuOpen}
-              aria-label="Plan actions"
+      <div className="mx-auto max-w-[980px] px-4 pb-8 pt-20 sm:px-8 sm:py-10">
+        <div className="border-b border-stroke-default pb-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="text-sm text-content-secondary">
+              <span className="font-medium text-content-primary">Dashboard</span>
+              <span className="mx-2 text-content-tertiary">|</span>
+              <span>Releases</span>
+            </div>
+            <Link
+              href="/dashboard"
+              className="w-full rounded-full border border-stroke-default bg-bg-surface px-4 py-3 text-center text-sm text-content-secondary transition hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
             >
-              ...
-            </button>
-            {isPlanMenuOpen && (
-              <div className="absolute right-0 top-full z-30 mt-2 min-w-[170px] rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-lg">
-                <button
-                  type="button"
-                  onClick={requestDeletePlan}
-                  className="block w-full rounded-md px-3 py-2 text-left text-sm text-status-error hover:bg-status-error/10"
-                >
-                  Delete plan
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setIsPlanMenuOpen(false);
-                    await logout();
-                    router.push('/auth');
-                  }}
-                  className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-                >
-                  Logout
-                </button>
-              </div>
-            )}
+              Back to Dashboard
+            </Link>
           </div>
         </div>
 
-        {loading ? (
-          <div className="mt-16 rounded-2xl border border-stroke-default bg-bg-surface p-6">
-            <p className="text-content-secondary">Loading plan dashboard...</p>
+        <section className="border-b border-stroke-default py-8">
+          <h1 className="text-[clamp(2.2rem,5vw,3.6rem)] tracking-tight text-content-primary">
+            {release?.title || 'Release Checklist'}
+          </h1>
+          <div className="mt-3 space-y-1 text-sm text-content-secondary">
+            <p>
+              <span className="font-medium text-content-primary">Artist:</span>{' '}
+              {release?.artist_name || 'Unknown artist'}
+            </p>
+            {release?.release_date ? (
+              <p>
+                <span className="font-medium text-content-primary">Release Date:</span>{' '}
+                {new Date(release.release_date).toLocaleDateString()}
+              </p>
+            ) : null}
+            {release?.type ? (
+              <p>
+                <span className="font-medium text-content-primary">Release Type:</span>{' '}
+                {release.type}
+              </p>
+            ) : null}
           </div>
-        ) : hasSubscriptionAccess === false ? (
-          <section className="mt-14">
-            <SubscriptionPaywall
-              title="Subscription required to access this plan"
-              description="Billing is inactive. Renew to view and manage this plan."
-            />
-          </section>
-        ) : error ? (
-          <div className="mt-16 rounded-2xl border border-status-error/40 bg-status-error/10 p-6">
-            <p className="text-status-error">{error}</p>
+        </section>
+
+        {error && (
+          <p className="mt-6 rounded-2xl border border-status-error/35 bg-status-error/10 px-4 py-3 text-sm text-status-error">
+            {error}
+          </p>
+        )}
+
+        <section className="border-b border-stroke-default py-8">
+          <div>
+            <p className="text-sm font-medium text-content-primary">Release Readiness</p>
+            <p className="mt-2 text-[clamp(1.6rem,3vw,2.3rem)] font-semibold tracking-tight text-content-primary">
+              {progress}% Ready to Drop
+            </p>
+            <div className="mt-4 h-5 overflow-hidden rounded-full border border-stroke-default bg-bg-overlay">
+              <div
+                className="h-full rounded-full bg-brand transition-[width] duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="mt-3 text-sm text-content-secondary">
+              <span className="font-medium text-content-primary">{progress}%</span>
+              {' '}
+              • {completedTasks} completed • {remainingTasks} remaining
+            </p>
           </div>
-        ) : (
-          <>
-            <section className="mt-14">
-              <h1 className="text-[clamp(2.2rem,4.8vw,3.7rem)] tracking-tight">{plan?.title || 'Plan Dashboard'}</h1>
-              <p className="mt-2 text-content-secondary">{plan?.artist_name || 'Unknown Artist'}</p>
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs font-medium text-content-primary">
-                  Created {timelineMetrics.createdAt.toLocaleDateString()}
-                </div>
-                {isRefreshing && (
-                  <div className="inline-flex items-center rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs text-content-secondary">
-                    Refreshing...
-                  </div>
+        </section>
+
+        <section className="border-b border-stroke-default py-8">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <p className="text-sm font-medium text-content-primary">Songs in This Release</p>
+              <p className="mt-2 text-sm text-content-secondary">
+                Keep releases connected to real song metadata by attaching songs from your library.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSongPicker((current) => !current)}
+              className="rounded-full border border-stroke-default bg-bg-surface px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+            >
+              {showSongPicker ? 'Close Song Picker' : 'Add Songs'}
+            </button>
+          </div>
+
+          {tracklistSongs.length === 0 ? (
+            <div className="mt-5 rounded-[24px] border border-dashed border-stroke-default bg-bg-elevated/70 px-5 py-8 text-sm text-content-secondary">
+              <p className="font-medium text-content-primary">No songs attached to this release yet.</p>
+              <p className="mt-2">Add songs from your library to keep this release connected to real song metadata.</p>
+            </div>
+          ) : (
+            <div className="mt-5 overflow-hidden rounded-[24px] border border-stroke-default bg-bg-surface/95">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-stroke-default text-sm">
+                  <thead className="bg-bg-elevated/80 text-left text-content-tertiary">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Song</th>
+                      <th className="px-4 py-3 font-medium">ISRC</th>
+                      <th className="px-4 py-3 font-medium">Duration</th>
+                      <th className="px-4 py-3 font-medium">Contributors</th>
+                      <th className="px-4 py-3 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stroke-default bg-bg-surface/90">
+                    {tracklistSongs.map((song, index) => (
+                      <tr key={song.id}>
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-content-primary">{song.songTitle}</p>
+                          <p className="mt-1 text-content-secondary">{song.primaryArtist}</p>
+                        </td>
+                        <td className="px-4 py-3 text-content-secondary">{song.isrc || 'Not added'}</td>
+                        <td className="px-4 py-3 text-content-secondary">{song.duration || 'Not added'}</td>
+                        <td className="px-4 py-3 text-content-secondary">{song.contributorCount}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void reorderSongs(song.songId, 'up')}
+                              disabled={isSavingSongs || index === 0}
+                              className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-2 text-xs font-semibold text-content-primary hover:bg-bg-hover disabled:opacity-40"
+                            >
+                              Move Up
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void reorderSongs(song.songId, 'down')}
+                              disabled={isSavingSongs || index === tracklistSongs.length - 1}
+                              className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-2 text-xs font-semibold text-content-primary hover:bg-bg-hover disabled:opacity-40"
+                            >
+                              Move Down
+                            </button>
+                            <Link
+                              href={`/dashboard/songs/${song.songId}`}
+                              className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-2 text-xs font-semibold text-content-primary hover:bg-bg-hover"
+                            >
+                              Open Song
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => void removeSongFromRelease(song.songId)}
+                              disabled={isSavingSongs}
+                              className="rounded-full border border-status-error/25 bg-status-error/10 px-3 py-2 text-xs font-semibold text-status-error hover:bg-status-error/15 disabled:opacity-60"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {showSongPicker ? (
+            <div className="mt-5 rounded-[24px] border border-stroke-subtle bg-bg-elevated/70 p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Attach Songs</p>
+              <h3 className="mt-2 text-lg font-semibold text-content-primary">Select songs from your library</h3>
+              <input
+                value={songSearch}
+                onChange={(event) => setSongSearch(event.target.value)}
+                placeholder="Search by song title, artist, or ISRC"
+                className="mt-4 w-full rounded-2xl border border-stroke-subtle bg-bg-surface px-4 py-3 outline-none focus:border-brand"
+              />
+              <div className="mt-4 max-h-64 space-y-2 overflow-y-auto pr-1">
+                {availableSongs.length === 0 ? (
+                  <p className="rounded-[20px] border border-dashed border-stroke-default bg-bg-surface px-4 py-4 text-sm text-content-secondary">
+                    No songs in your library yet.
+                  </p>
+                ) : filteredAvailableSongs.length === 0 ? (
+                  <p className="rounded-[20px] border border-stroke-subtle bg-bg-surface px-4 py-4 text-sm text-content-secondary">
+                    No songs match this search.
+                  </p>
+                ) : (
+                  filteredAvailableSongs.map((song) => {
+                    const isSelected = selectedSongIds.includes(song.songId);
+                    return (
+                      <label
+                        key={song.songId}
+                        className={`flex cursor-pointer items-start gap-3 rounded-[20px] border px-4 py-3 transition ${
+                          isSelected
+                            ? 'border-brand bg-brand-muted/60'
+                            : 'border-stroke-subtle bg-bg-surface hover:bg-bg-hover/50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(event) =>
+                            setSelectedSongIds((current) =>
+                              event.target.checked
+                                ? [...current, song.songId]
+                                : current.filter((id) => id !== song.songId)
+                            )
+                          }
+                          className="mt-1 h-4 w-4 rounded border-stroke-default"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-content-primary">{song.songTitle}</p>
+                          <p className="mt-1 text-sm text-content-secondary">{song.primaryArtist}</p>
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-content-tertiary">
+                            <span>{song.isrc ? `ISRC ${song.isrc}` : 'No ISRC yet'}</span>
+                            <span>{song.contributorCount} contributors</span>
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })
                 )}
               </div>
-            </section>
-
-            <section className="mt-8 rounded-2xl border border-stroke-default bg-bg-surface p-6">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-xl font-semibold">Edit Plan Basics</h2>
+              <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  onClick={savePlanBasics}
-                  disabled={isSavingBasics}
-                  className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                  onClick={() => {
+                    setSelectedSongIds([]);
+                    setSongSearch('');
+                    setShowSongPicker(false);
+                  }}
+                  className="w-full rounded-full border border-stroke-default bg-bg-surface px-4 py-3 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
                 >
-                  {isSavingBasics ? 'Saving...' : 'Save changes'}
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void addSongsToRelease()}
+                  disabled={selectedSongIds.length === 0 || isSavingSongs}
+                  className="w-full rounded-full bg-brand px-5 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60 sm:w-auto sm:py-2"
+                >
+                  {isSavingSongs ? 'Saving...' : `Attach ${selectedSongIds.length || ''} Song${selectedSongIds.length === 1 ? '' : 's'}`}
                 </button>
               </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <label className="text-sm">
-                  <span className="mb-1 block text-content-secondary">Plan title</span>
-                  <input
-                    value={draftTitle}
-                    onChange={(event) => setDraftTitle(event.target.value)}
-                    className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
-                  />
-                </label>
-                <label className="text-sm">
-                  <span className="mb-1 block text-content-secondary">Artist name</span>
-                  <input
-                    value={draftArtistName}
-                    onChange={(event) => setDraftArtistName(event.target.value)}
-                    className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
-                  />
-                </label>
-                <label className="text-sm">
-                  <span className="mb-1 block text-content-secondary">Target date</span>
-                  <input
-                    type="date"
-                    value={draftDeadline}
-                    onChange={(event) => setDraftDeadline(event.target.value)}
-                    className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
-                  />
-                </label>
-              </div>
-            </section>
+            </div>
+          ) : null}
+        </section>
 
-            <section className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-4">
-              <article className="rounded-xl border border-stroke-default bg-bg-surface p-4">
-                <p className="text-xs uppercase tracking-wide text-content-tertiary">Plan Status</p>
-                <p className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusBadgeClass}`}>
-                  {timelineMetrics.status}
-                </p>
-              </article>
-              <article className="rounded-xl border border-stroke-default bg-bg-surface p-4">
-                <p className="text-xs uppercase tracking-wide text-content-tertiary">Days Left</p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {timelineMetrics.status === 'Completed'
-                    ? 'Done'
-                    : timelineMetrics.daysLeft < 0
-                      ? `${Math.abs(timelineMetrics.daysLeft)} late`
-                      : timelineMetrics.daysLeft}
-                </p>
-              </article>
-              <article className="rounded-xl border border-stroke-default bg-bg-surface p-4">
-                <p className="text-xs uppercase tracking-wide text-content-tertiary">Completed Tasks</p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {completedTasks}/{Math.max(totalTasks, 1)}
-                </p>
-              </article>
-              <article className="rounded-xl border border-stroke-default bg-bg-surface p-4">
-                <p className="text-xs uppercase tracking-wide text-content-tertiary">Next Action</p>
-                <p className="mt-2 text-sm text-content-secondary">{nextTask}</p>
-              </article>
-            </section>
+        <section className="border-b border-stroke-default py-8">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-content-primary">Tracklist</p>
+              <p className="mt-2 text-sm text-content-secondary">
+                Automatically generated from attached songs.
+              </p>
+            </div>
+            <span className="rounded-full border border-stroke-default bg-bg-surface px-3 py-1 text-xs text-content-secondary">
+              {tracklistSongs.length} tracks
+            </span>
+          </div>
 
-            <section className="mt-8 rounded-2xl border border-stroke-default bg-bg-surface p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-xl font-semibold">Timeline Pace</h2>
-                <p className="text-sm text-content-secondary">
-                  Target date: {timelineMetrics.deadline.toLocaleDateString()}
-                </p>
-              </div>
-
-              <div className="mt-6 rounded-xl border border-stroke-default bg-bg-elevated p-4">
-                <div className="relative h-4 w-full rounded-full bg-bg-overlay">
-                  <div
-                    className="absolute left-0 top-0 h-4 rounded-full bg-brand"
-                    style={{ width: `${Math.round(timelineMetrics.workProgress * 100)}%` }}
-                  />
-                  <div
-                    className="absolute top-[-6px] h-7 w-[2px] bg-status-warning"
-                    style={{ left: `${Math.round(timelineMetrics.timeProgress * 100)}%` }}
-                  />
-                </div>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-content-secondary">
-                  <span>Work completed: {Math.round(timelineMetrics.workProgress * 100)}%</span>
-                  <span>Time elapsed: {Math.round(timelineMetrics.timeProgress * 100)}%</span>
-                </div>
-              </div>
-
-              <p className="mt-4 text-sm text-content-secondary">{timelineMessage}</p>
-
-              <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-5">
-                {timelineMetrics.milestones.map((milestone) => (
-                  <div
-                    key={milestone.label}
-                    className={`rounded-lg border p-3 text-xs ${
-                      milestone.complete
-                        ? 'border-brand/40 bg-brand-muted text-content-primary'
-                        : 'border-stroke-default bg-bg-elevated text-content-secondary'
-                    }`}
-                  >
-                    <p className="font-medium">{milestone.label}</p>
-                    <p className="mt-1">{milestone.date.toLocaleDateString()}</p>
+          {tracklistSongs.length === 0 ? (
+            <div className="mt-5 rounded-[24px] border border-dashed border-stroke-default bg-bg-elevated/70 px-5 py-8 text-sm text-content-secondary">
+              <p className="font-medium text-content-primary">No songs attached to this release yet.</p>
+              <p className="mt-2">Add songs from your library to generate a proper tracklist and keep this release connected to song metadata.</p>
+            </div>
+          ) : (
+            <div className="mt-5 rounded-[24px] border border-stroke-default bg-bg-surface/95">
+              <div className="divide-y divide-stroke-default">
+                {tracklistSongs.map((song, index) => (
+                  <div key={song.id} className="flex items-center justify-between gap-4 px-4 py-4 sm:px-5">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-content-primary">
+                        {song.trackNumber || index + 1}. {song.songTitle}
+                      </p>
+                      <p className="mt-1 text-sm text-content-secondary">
+                        {song.primaryArtist}{song.isrc ? ` · ISRC ${song.isrc}` : ''}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-sm text-content-secondary">{song.duration || '—'}</span>
                   </div>
                 ))}
               </div>
-            </section>
+            </div>
+          )}
+        </section>
 
-            {!profile?.setup_completed && (
-              <div className="mt-8">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNeedsOnboarding(true);
-                    router.push(`/dashboard?startOnboarding=2&planId=${planId}&flow=resume-plan`);
-                  }}
-                  className="rounded-xl border border-brand/35 bg-brand-muted px-5 py-3 text-sm font-semibold text-content-primary transition hover:bg-brand/20"
-                >
-                  Resume Onboarding
-                </button>
+        <section className="border-b border-stroke-default py-8">
+          <div>
+            <p className="text-sm font-medium text-content-primary">Current Stage</p>
+            <div className="-mx-1 mt-4 overflow-x-auto px-1 pb-2 text-sm">
+              <div className="flex min-w-max items-center gap-2">
+              {RELEASE_TIMELINE_STAGES.map((stage, index) => {
+                const isActive = stage === currentTimelineStage;
+                return (
+                  <div key={stage} className="flex items-center gap-2">
+                    <span
+                      className={`rounded-full px-3 py-1.5 transition ${
+                        isActive
+                          ? 'bg-brand text-content-inverse'
+                          : 'border border-stroke-default bg-bg-surface text-content-secondary'
+                      }`}
+                    >
+                      {isActive ? stage.toUpperCase() : stage}
+                    </span>
+                    {index < RELEASE_TIMELINE_STAGES.length - 1 ? (
+                      <span className="text-content-tertiary">→</span>
+                    ) : null}
+                  </div>
+                );
+              })}
               </div>
-            )}
-            {profile?.setup_completed && plan?.status !== 'released' && (
-              <div className="mt-8">
-                <button
-                  type="button"
-                  onClick={() => {
-                    router.push(`/dashboard/plans/${planId}/next-step`);
-                  }}
-                  className="rounded-xl border border-brand/35 bg-brand-muted px-5 py-3 text-sm font-semibold text-content-primary transition hover:bg-brand/20"
-                >
-                  Plan Next Step
-                </button>
-              </div>
-            )}
-            {profile?.setup_completed && plan?.status === 'released' && (
-              <div className="mt-8 rounded-xl border border-brand/35 bg-brand-muted p-4 text-sm text-content-secondary">
-                This plan is completed and archived.
-              </div>
-            )}
-          </>
-        )}
-      </div>
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-stroke-default bg-bg-surface p-6">
-            <h2 className="text-xl font-semibold text-content-primary">Delete this plan?</h2>
-            <p className="mt-2 text-sm text-content-secondary">
-              This permanently deletes this plan and all plan assets. This action cannot be undone.
-            </p>
-            <p className="mt-3 text-sm text-content-secondary">
-              Type <span className="font-semibold text-content-primary">DELETE</span> to confirm.
-            </p>
-            <input
-              value={deleteConfirmText}
-              onChange={(event) => setDeleteConfirmText(event.target.value)}
-              className="mt-3 w-full rounded-lg border border-status-error/35 bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-status-error"
-              placeholder="DELETE"
-            />
-            {deleteError && <p className="mt-3 text-sm text-status-error">{deleteError}</p>}
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeDeleteModal}
-                disabled={isDeletingPlan}
-                className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary hover:bg-bg-hover disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmDeletePlan}
-                disabled={isDeletingPlan}
-                className="rounded-lg bg-status-error px-4 py-2 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:opacity-50"
-              >
-                {isDeletingPlan ? 'Deleting...' : 'Delete plan'}
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        </section>
+
+        <section className="py-8">
+          <div className="space-y-10">
+            {groupedChecklist.map((group) => (
+              <section key={group.stage} className="border-b border-stroke-default pb-8 last:border-b-0 last:pb-0">
+                <div className="mb-5">
+                  <p className="text-lg font-semibold uppercase tracking-[0.12em] text-content-primary">
+                    {group.label}
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  {group.items.map((task) => (
+                    <label
+                      key={task.id}
+                      className={`flex cursor-pointer items-start gap-4 rounded-[20px] border px-4 py-4 transition active:scale-[0.995] ${
+                        task.completed
+                          ? 'border-brand/30 bg-brand-muted/45'
+                          : 'border-stroke-default bg-bg-surface hover:bg-bg-hover/60'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={task.completed}
+                        onChange={() => void toggleTask(task.id, task.completed)}
+                        disabled={isSaving === task.id}
+                        className="mt-1 h-5 w-5 rounded border-stroke-default"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-base font-semibold ${task.completed ? 'text-content-primary line-through' : 'text-content-primary'}`}>
+                          {task.title}
+                        </p>
+                        <p className="mt-1.5 text-sm text-content-secondary">{task.description}</p>
+                        <p className="mt-2 text-xs uppercase tracking-[0.12em] text-content-tertiary">
+                          {task.recommendedTiming}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </section>
+
+        {planId ? <CreditsMetadataSection planId={planId} /> : null}
+      </div>
     </main>
   );
 }

@@ -1,86 +1,64 @@
-'use client';
+import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
+import { AppShell } from '@/components/app/AppShell';
+import './globals.css';
 
-import { Suspense, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-import { usePathname, useSearchParams } from 'next/navigation';
-import { Analytics } from '@vercel/analytics/next';
-import { useAuthStore } from '@/lib/auth-store';
-import "./globals.css";
+const appName = 'Urganize';
+const appDescription =
+  'Urganize is a music campaign execution workspace for planning releases, tracking tasks, and keeping your team aligned.';
 
-const PostAuthScreen = dynamic(
-  () => import('@/components/PostAuthScreen').then((mod) => mod.PostAuthScreen),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex min-h-screen items-center justify-center bg-bg-base text-content-primary">
-        <div className="skeleton-card w-full max-w-xl p-8">
-          <div className="h-8 w-48 rounded-lg skeleton-shimmer" />
-          <div className="mt-4 space-y-3">
-            <div className="skeleton-line skeleton-shimmer w-full" />
-            <div className="skeleton-line skeleton-shimmer w-4/5" />
-          </div>
-        </div>
-      </div>
-    ),
+function getMetadataBase() {
+  const configuredUrl =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
+    process.env.VERCEL_URL?.trim();
+
+  if (!configuredUrl) {
+    return new URL('http://localhost:3000');
   }
-);
 
-function AppShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const checkAuth = useAuthStore((state) => state.checkAuth);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const isAuthLoading = useAuthStore((state) => state.isLoading);
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const normalizedUrl = configuredUrl.startsWith('http') ? configuredUrl : `https://${configuredUrl}`;
 
-  const isAuthRoute = pathname?.startsWith('/auth');
-  const isDashboardRoute = pathname?.startsWith('/dashboard');
-  const isDashboardRootRoute = pathname === '/dashboard';
-  const hasOnboardingIntent =
-    isDashboardRootRoute &&
-    (searchParams?.has('startOnboarding') || searchParams?.has('planId'));
-  const showPostAuthScreen =
-    isAuthenticated &&
-    !isAuthLoading &&
-    !isAuthRoute &&
-    isDashboardRootRoute &&
-    hasOnboardingIntent;
-  const pageLayoutClassName = isDashboardRoute ? 'app-layout app-layout-fluid' : 'app-layout app-layout-centered';
-
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
-  return (
-    <>
-      {showPostAuthScreen ? (
-        <PostAuthScreen />
-      ) : (
-        <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>{children}</div>
-      )}
-      {!showPostAuthScreen && (
-        <div className="keyboard-hint">
-          <kbd className="kbd">⌘</kbd>
-          <kbd className="kbd">K</kbd>
-          <span>Quick actions</span>
-        </div>
-      )}
-      <Analytics />
-    </>
-  );
+  try {
+    return new URL(normalizedUrl);
+  } catch {
+    return new URL('http://localhost:3000');
+  }
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const metadata: Metadata = {
+  metadataBase: getMetadataBase(),
+  title: {
+    default: appName,
+    template: `%s | ${appName}`,
+  },
+  description: appDescription,
+  applicationName: appName,
+  openGraph: {
+    type: 'website',
+    siteName: appName,
+    title: appName,
+    description: appDescription,
+    images: [
+      {
+        url: '/opengraph-image.png',
+        width: 1200,
+        height: 630,
+        alt: `${appName} Open Graph image`,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: appName,
+    description: appDescription,
+    images: ['/opengraph-image.png'],
+  },
+};
 
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning data-theme="dark" className="dark">
+    <html lang="en" suppressHydrationWarning data-theme="light" className="light">
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -103,13 +81,7 @@ export default function RootLayout({
         />
       </head>
       <body className="app-body bg-bg-base text-content-primary antialiased">
-        <Suspense
-          fallback={
-            <div className="app-layout app-layout-centered lazy-fade lazy-fade-in">{children}</div>
-          }
-        >
-          <AppShell>{children}</AppShell>
-        </Suspense>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

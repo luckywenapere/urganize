@@ -6,7 +6,15 @@ import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
+import { getRolePermissions } from '@/lib/role-permissions';
+import { trackEvent } from '@/lib/analytics';
+import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
+import type { ReleasePlanResult } from '@/lib/release-plan';
+import type { ReleaseTaskPlanResponse } from '@/lib/task-plan';
+import type { StoredPricingValidationResponse, PricingValidationResponse } from '@/lib/pricing-validation';
 import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
+import { PricingValidationPrompt } from '@/components/validation/PricingValidationPrompt';
 
 type RoleOption = 'manager' | 'artist-team' | 'artist';
 type ProofType = 'none' | 'screenshot' | 'video' | 'link' | 'text';
@@ -16,6 +24,27 @@ type AiTaskGenerationPayload = {
   description: string;
   why_it_matters: string;
   measurable_outcome: string;
+};
+
+type ReleasePlanApiResponse = ReleaseTaskPlanResponse & {
+  error?: string;
+  detail?: string;
+};
+
+const selectAiErrorMessage = (error: string | null | undefined, detail: string | null | undefined, fallback: string): string => {
+  const normalizedError = String(error || '').trim();
+  const normalizedDetail = String(detail || '').trim();
+
+  if (
+    /^(ai service unavailable|task generation failed|listener profile generation failed|release plan generation failed)$/i.test(
+      normalizedError
+    ) &&
+    normalizedDetail
+  ) {
+    return normalizedDetail;
+  }
+
+  return toAiUiErrorMessage(normalizedError, fallback);
 };
 
 const GENRE_OPTIONS = [
@@ -105,12 +134,48 @@ const SONG_STAGE_FALLBACK_CANDIDATES = [
   'released',
 ];
 
-const MIN_GOAL_CHARS = 20;
 const MIN_BUDGET = 100;
 const MAX_BUDGET = 100000000;
 const DEFAULT_PLAN_DURATION_DAYS = 30;
 const MIN_FEEDBACK_CHARS = 1;
-const CREATE_PLAN_DRAFT_TTL_MS = 10 * 60 * 1000;
+const ONBOARDING_DRAFT_VERSION = 2;
+const FEEDBACK_DRAFT_VERSION = 1;
+const WORKFLOW_DRAFT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const ONBOARDING_DRAFT_SCOPE = 'post-auth-onboarding';
+const FEEDBACK_DRAFT_SCOPE = 'post-auth-feedback';
+
+type FeedbackDraft = {
+  selectedProof: ProofType;
+  proofLink: string;
+  proofText: string;
+  whatYouTried: string;
+  whatHappened: string;
+  resultsMode: 'tracked' | 'not-tracked';
+  resultsMetrics: string;
+  blockersNext: string;
+};
+
+type OnboardingDraft = {
+  artistName: string;
+  genre: string;
+  primaryPlatform: string;
+  goalText: string;
+  stage: string;
+  audienceSize: string;
+  listenerPlatforms: string[];
+  platformInput: string;
+  budget: string;
+  timeline: string;
+  deadlineDate: string;
+  stepsText: string;
+  selectedManagedArtistId: string | null;
+  showAddManagedArtistForm: boolean;
+  newManagedArtistName: string;
+  newManagedArtistGenre: string;
+  newManagedArtistNotes: string;
+  step: number;
+  started: boolean;
+};
 
 const formatDateInput = (value: Date): string => {
   const year = value.getFullYear();
@@ -132,6 +197,37 @@ const addDaysISO = (base: string | Date, days: number): string => {
   const date = new Date(base);
   date.setDate(date.getDate() + days);
   return date.toISOString();
+};
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+const inferBudgetLevel = (value: string): 'low' | 'medium' | 'high' | '' => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return '';
+  if (amount <= 200000) return 'low';
+  if (amount <= 1000000) return 'medium';
+  return 'high';
+};
+const inferTeamType = (role: string | undefined): string => {
+  if (role === 'manager' || role === 'artist-manager') return 'artist manager';
+  if (role === 'artist-team' || role === 'team-member') return 'artist team';
+  return 'solo artist';
+};
+const mapPlanPhaseToTaskPhase = (phase: string): 'pre-production' | 'production' | 'promotion' | 'distribution' => {
+  const normalized = phase.toLowerCase();
+  if (normalized.includes('launch') || normalized.includes('release') || normalized.includes('distribution')) {
+    return 'distribution';
+  }
+  if (normalized.includes('promo') || normalized.includes('marketing') || normalized.includes('content')) {
+    return 'promotion';
+  }
+  if (normalized.includes('record') || normalized.includes('mix') || normalized.includes('master') || normalized.includes('production')) {
+    return 'production';
+  }
+  return 'pre-production';
 };
 
 const isSongStageConstraintError = (error: unknown): boolean => {
@@ -155,6 +251,12 @@ const Step0Intro = dynamic(() => import('@/components/onboarding/steps/Step0Intr
 const Step1Role = dynamic(() => import('@/components/onboarding/steps/Step1Role').then((mod) => mod.Step1Role), {
   ssr: false,
 });
+const Step2ArtistSelector = dynamic(
+  () => import('@/components/onboarding/steps/Step2ArtistSelector').then((mod) => mod.Step2ArtistSelector),
+  {
+    ssr: false,
+  }
+);
 const Step2ArtistDetails = dynamic(
   () => import('@/components/onboarding/steps/Step2ArtistDetails').then((mod) => mod.Step2ArtistDetails),
   {
@@ -200,7 +302,7 @@ const FeedbackSubmitStep = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="mx-auto mt-16 w-full max-w-[820px] rounded-2xl border border-stroke-default bg-bg-surface p-6 sm:p-8">
+      <div className="mx-auto mt-16 w-full max-w-[860px] rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl sm:p-8">
         <div className="h-8 w-32 rounded-lg skeleton-shimmer" />
         <div className="mt-4 space-y-3">
           <div className="h-10 rounded-lg skeleton-shimmer" />
@@ -212,12 +314,75 @@ const FeedbackSubmitStep = dynamic(
   }
 );
 
+type ManagedArtistOption = {
+  id: string;
+  name: string;
+  genre: string;
+  notes: string;
+  imageUrl?: string | null;
+};
+
+const toAiUiErrorMessage = (error: string | null | undefined, fallback: string): string => {
+  const message = String(error || '').trim();
+  if (!message) return fallback;
+  if (/rate-limited|rate limited/i.test(message)) return message;
+  if (/temporarily unavailable|try again shortly/i.test(message)) return message;
+  if (/ai service unavailable|task generation failed|listener profile generation failed|release plan generation failed/i.test(message)) {
+    return message;
+  }
+  return fallback;
+};
+
+const isFeedbackDraft = (value: unknown): value is FeedbackDraft => {
+  if (!value || typeof value !== 'object') return false;
+  const draft = value as Partial<FeedbackDraft>;
+  return (
+    typeof draft.selectedProof === 'string' &&
+    PROOF_TYPE_OPTIONS.includes(draft.selectedProof as ProofType) &&
+    typeof draft.proofLink === 'string' &&
+    typeof draft.proofText === 'string' &&
+    typeof draft.whatYouTried === 'string' &&
+    typeof draft.whatHappened === 'string' &&
+    (draft.resultsMode === 'tracked' || draft.resultsMode === 'not-tracked') &&
+    typeof draft.resultsMetrics === 'string' &&
+    typeof draft.blockersNext === 'string'
+  );
+};
+
+const isOnboardingDraft = (value: unknown): value is OnboardingDraft => {
+  if (!value || typeof value !== 'object') return false;
+  const draft = value as Partial<OnboardingDraft>;
+  return (
+    typeof draft.artistName === 'string' &&
+    typeof draft.genre === 'string' &&
+    typeof draft.primaryPlatform === 'string' &&
+    typeof draft.goalText === 'string' &&
+    typeof draft.stage === 'string' &&
+    typeof draft.audienceSize === 'string' &&
+    Array.isArray(draft.listenerPlatforms) &&
+    typeof draft.platformInput === 'string' &&
+    typeof draft.budget === 'string' &&
+    typeof draft.timeline === 'string' &&
+    typeof draft.deadlineDate === 'string' &&
+    typeof draft.stepsText === 'string' &&
+    (typeof draft.selectedManagedArtistId === 'string' || draft.selectedManagedArtistId === null) &&
+    typeof draft.showAddManagedArtistForm === 'boolean' &&
+    typeof draft.newManagedArtistName === 'string' &&
+    typeof draft.newManagedArtistGenre === 'string' &&
+    typeof draft.newManagedArtistNotes === 'string' &&
+    typeof draft.step === 'number' &&
+    Number.isFinite(draft.step) &&
+    typeof draft.started === 'boolean'
+  );
+};
+
 export function PostAuthScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedPlanId = searchParams.get('planId');
   const requestedStartStep = Number(searchParams.get('startOnboarding') || 0);
   const flow = searchParams.get('flow');
+  const requestedArtistId = searchParams.get('artistId');
   const {
     user,
     updateRole,
@@ -240,6 +405,10 @@ export function PostAuthScreen() {
   const [taskId, setTaskId] = useState<string | null>(null);
 
   const [showPricingSheet, setShowPricingSheet] = useState(false);
+  const [pricingValidation, setPricingValidation] = useState<StoredPricingValidationResponse | null>(null);
+  const [pricingValidationLoading, setPricingValidationLoading] = useState(false);
+  const [pricingValidationSubmitting, setPricingValidationSubmitting] = useState(false);
+  const [pricingValidationDismissed, setPricingValidationDismissed] = useState(false);
   const [selectedProof, setSelectedProof] = useState<ProofType>('none');
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofLink, setProofLink] = useState('');
@@ -257,17 +426,27 @@ export function PostAuthScreen() {
   const [timeline, setTimeline] = useState('');
   const [deadlineDate, setDeadlineDate] = useState('');
   const [stepsText, setStepsText] = useState('');
+  const [managedArtists, setManagedArtists] = useState<ManagedArtistOption[]>([]);
+  const [managedArtistsLoading, setManagedArtistsLoading] = useState(false);
+  const [selectedManagedArtistId, setSelectedManagedArtistId] = useState<string | null>(null);
+  const [showAddManagedArtistForm, setShowAddManagedArtistForm] = useState(false);
+  const [newManagedArtistName, setNewManagedArtistName] = useState('');
+  const [newManagedArtistGenre, setNewManagedArtistGenre] = useState('');
+  const [newManagedArtistNotes, setNewManagedArtistNotes] = useState('');
   const [whatYouTried, setWhatYouTried] = useState('');
   const [whatHappened, setWhatHappened] = useState('');
   const [resultsMode, setResultsMode] = useState<'tracked' | 'not-tracked'>('tracked');
   const [resultsMetrics, setResultsMetrics] = useState('');
   const [blockersNext, setBlockersNext] = useState('');
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<number | null>(null);
+  const [resumeMessage, setResumeMessage] = useState('');
+  const [showResumeMessage, setShowResumeMessage] = useState(false);
 
   const [taskTitle, setTaskTitle] = useState('Single task');
   const [taskOutcome, setTaskOutcome] = useState('Expected outcome');
   const feedbackDraftLoadedRef = useRef<string>('');
   const onboardingDraftLoadedRef = useRef<string>('');
+  const restoredOnboardingStepRef = useRef(false);
   const bootstrappedTargetRef = useRef<string>('');
   const nextCycleClearedRef = useRef<string>('');
   const artistDefaultsKey = useMemo(() => (user?.id ? `urganize.artistDefaults.${user.id}` : ''), [user?.id]);
@@ -275,25 +454,67 @@ export function PostAuthScreen() {
 
   const feedbackDraftKey = useMemo(() => {
     if (!user?.id || !releaseId || !taskId) return '';
-    return `urganize.feedbackDraft.${user.id}.${releaseId}.${taskId}`;
+    return `urganize.feedbackDraft.v${FEEDBACK_DRAFT_VERSION}.${user.id}.${releaseId}.${taskId}`;
   }, [releaseId, taskId, user?.id]);
 
   const onboardingDraftKey = useMemo(() => {
     if (!user?.id) return '';
     const scope = releaseId || requestedPlanId || (flow === 'create-plan' ? 'new-plan' : '');
     if (!scope) return '';
-    return `urganize.onboardingDraft.${user.id}.${scope}`;
+    return `urganize.onboardingDraft.v${ONBOARDING_DRAFT_VERSION}.${user.id}.${scope}`;
   }, [flow, releaseId, requestedPlanId, user?.id]);
 
   const resetError = () => setError('');
+  const isArtistAccount = user?.role === 'artist';
+  const profileArtistName = String(user?.artist_name || '').trim();
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
   const isCreatePlanFlow = flow === 'create-plan' && !requestedPlanId;
   const isNextCycleFlow = flow === 'next-cycle';
+  const isManagerCreatePlanFlow = isCreatePlanFlow && rolePermissions.role === 'manager';
   const isPlanSetupFlow =
     flow === 'create-plan' ||
     flow === 'resume-plan' ||
     flow === 'next-cycle' ||
     requestedStartStep >= 2 ||
     Boolean(requestedPlanId);
+
+  useEffect(() => {
+    if (step !== 7 || !user?.id) return;
+    let cancelled = false;
+
+    const loadPricingValidation = async () => {
+      setPricingValidationLoading(true);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token || '';
+        if (!token) return;
+        const response = await fetch('/api/pricing-validation', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: 'no-store',
+        });
+        const payload = (await response.json().catch(() => ({}))) as {
+          response?: StoredPricingValidationResponse | null;
+        };
+        if (!response.ok || cancelled) return;
+        setPricingValidation(payload.response || null);
+        setPricingValidationDismissed(Boolean(payload.response));
+      } finally {
+        if (!cancelled) {
+          setPricingValidationLoading(false);
+        }
+      }
+    };
+
+    void loadPricingValidation();
+    return () => {
+      cancelled = true;
+    };
+  }, [step, user?.id]);
 
   const resetCycleInputs = useCallback(() => {
     setGoalText('');
@@ -305,6 +526,13 @@ export function PostAuthScreen() {
     setDeadlineDate('');
     setStepsText('');
   }, []);
+
+  useEffect(() => {
+    if (!isArtistAccount) return;
+    if (!profileArtistName) return;
+    if (artistName.trim() === profileArtistName) return;
+    setArtistName(profileArtistName);
+  }, [artistName, isArtistAccount, profileArtistName]);
 
   const refreshCycleNumber = useCallback(async (activeReleaseId: string) => {
     const { count, error: countError } = await supabase
@@ -323,36 +551,39 @@ export function PostAuthScreen() {
     }
     if (feedbackDraftLoadedRef.current === feedbackDraftKey) return;
     feedbackDraftLoadedRef.current = feedbackDraftKey;
+    let cancelled = false;
+    const restore = async () => {
+      const localDraft = readPersistedState<FeedbackDraft>(
+        feedbackDraftKey,
+        FEEDBACK_DRAFT_VERSION,
+        isFeedbackDraft,
+        WORKFLOW_DRAFT_MAX_AGE_MS
+      );
+      const draftResult = await fetchUiDraft<FeedbackDraft>(FEEDBACK_DRAFT_SCOPE, feedbackDraftKey);
+      const draft = localDraft || (draftResult.payload && isFeedbackDraft(draftResult.payload) ? draftResult.payload : null);
+      if (!draft || cancelled) return;
 
-    const rawDraft = localStorage.getItem(feedbackDraftKey);
-    if (!rawDraft) return;
-
-    try {
-      const draft = JSON.parse(rawDraft) as Record<string, unknown>;
-      if (typeof draft.selectedProof === 'string' && PROOF_TYPE_OPTIONS.includes(draft.selectedProof as ProofType)) {
-        setSelectedProof(draft.selectedProof as ProofType);
-      }
-      if (typeof draft.proofLink === 'string') setProofLink(draft.proofLink);
-      if (typeof draft.proofText === 'string') setProofText(draft.proofText);
-      if (typeof draft.whatYouTried === 'string') setWhatYouTried(draft.whatYouTried);
-      if (typeof draft.whatHappened === 'string') setWhatHappened(draft.whatHappened);
-      if (draft.resultsMode === 'tracked' || draft.resultsMode === 'not-tracked') {
-        setResultsMode(draft.resultsMode);
-      }
-      if (typeof draft.resultsMetrics === 'string') setResultsMetrics(draft.resultsMetrics);
-      if (typeof draft.blockersNext === 'string') setBlockersNext(draft.blockersNext);
-      if (typeof draft.savedAt === 'number' && Number.isFinite(draft.savedAt)) {
-        setLastDraftSavedAt(draft.savedAt);
-      }
-    } catch {
-      // Ignore malformed local draft payloads.
-    }
+      setSelectedProof(draft.selectedProof);
+      setProofLink(draft.proofLink);
+      setProofText(draft.proofText);
+      setWhatYouTried(draft.whatYouTried);
+      setWhatHappened(draft.whatHappened);
+      setResultsMode(draft.resultsMode);
+      setResultsMetrics(draft.resultsMetrics);
+      setBlockersNext(draft.blockersNext);
+      setLastDraftSavedAt(Date.now());
+      setResumeMessage('Resumed where you left off.');
+      setShowResumeMessage(true);
+    };
+    void restore();
+    return () => {
+      cancelled = true;
+    };
   }, [feedbackDraftKey]);
 
   useEffect(() => {
     if (!feedbackDraftKey) return;
-    const savedAt = Date.now();
-    const draft = {
+    const draft: FeedbackDraft = {
       selectedProof,
       proofLink,
       proofText,
@@ -361,10 +592,10 @@ export function PostAuthScreen() {
       resultsMode,
       resultsMetrics,
       blockersNext,
-      savedAt,
     };
-    localStorage.setItem(feedbackDraftKey, JSON.stringify(draft));
-    setLastDraftSavedAt(savedAt);
+    writePersistedState(feedbackDraftKey, FEEDBACK_DRAFT_VERSION, draft);
+    void saveUiDraft<FeedbackDraft>(FEEDBACK_DRAFT_SCOPE, feedbackDraftKey, draft);
+    setLastDraftSavedAt(Date.now());
   }, [
     feedbackDraftKey,
     selectedProof,
@@ -380,52 +611,62 @@ export function PostAuthScreen() {
   useEffect(() => {
     if (!onboardingDraftKey) {
       onboardingDraftLoadedRef.current = '';
+      restoredOnboardingStepRef.current = false;
       return;
     }
     if (onboardingDraftLoadedRef.current === onboardingDraftKey) return;
     onboardingDraftLoadedRef.current = onboardingDraftKey;
     if (isNextCycleFlow) {
-      localStorage.removeItem(onboardingDraftKey);
+      clearPersistedState(onboardingDraftKey);
+      void deleteUiDraft(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey);
+      restoredOnboardingStepRef.current = false;
       return;
     }
-
-    const rawDraft = localStorage.getItem(onboardingDraftKey);
-    if (!rawDraft) return;
-
-    try {
-      const draft = JSON.parse(rawDraft) as Record<string, unknown>;
-      const savedAt = typeof draft.savedAt === 'number' ? draft.savedAt : 0;
-      const started = !!draft.started;
-      if (isCreatePlanFlow) {
-        if (!started) {
-          localStorage.removeItem(onboardingDraftKey);
-          return;
-        }
-        if (!savedAt || Date.now() - savedAt > CREATE_PLAN_DRAFT_TTL_MS) {
-          localStorage.removeItem(onboardingDraftKey);
-          return;
-        }
+    let cancelled = false;
+    const restore = async () => {
+      const localDraft = readPersistedState<OnboardingDraft>(
+        onboardingDraftKey,
+        ONBOARDING_DRAFT_VERSION,
+        isOnboardingDraft,
+        WORKFLOW_DRAFT_MAX_AGE_MS
+      );
+      const draftResult = await fetchUiDraft<OnboardingDraft>(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey);
+      const draft = localDraft || (draftResult.payload && isOnboardingDraft(draftResult.payload) ? draftResult.payload : null);
+      if (!draft || cancelled) return;
+      if (isCreatePlanFlow && !draft.started) {
+        clearPersistedState(onboardingDraftKey);
+        void deleteUiDraft(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey);
+        restoredOnboardingStepRef.current = false;
+        return;
       }
-      if (typeof draft.artistName === 'string' && !artistName.trim()) setArtistName(draft.artistName);
-      if (typeof draft.genre === 'string' && !genre.trim()) setGenre(draft.genre);
-      if (typeof draft.primaryPlatform === 'string' && !primaryPlatform.trim()) setPrimaryPlatform(draft.primaryPlatform);
-      if (typeof draft.goalText === 'string' && !goalText.trim()) setGoalText(draft.goalText);
-      if (typeof draft.stage === 'string' && !stage.trim()) setStage(draft.stage);
-      if (typeof draft.audienceSize === 'string' && !audienceSize.trim()) setAudienceSize(draft.audienceSize);
-      if (Array.isArray(draft.listenerPlatforms) && listenerPlatforms.length === 0) {
-        setListenerPlatforms(draft.listenerPlatforms.filter((item: unknown): item is string => typeof item === 'string'));
+      if (draft.artistName && !artistName.trim()) setArtistName(draft.artistName);
+      if (draft.genre && !genre.trim()) setGenre(draft.genre);
+      if (draft.primaryPlatform && !primaryPlatform.trim()) setPrimaryPlatform(draft.primaryPlatform);
+      if (draft.goalText && !goalText.trim()) setGoalText(draft.goalText);
+      if (draft.stage && !stage.trim()) setStage(draft.stage);
+      if (draft.audienceSize && !audienceSize.trim()) setAudienceSize(draft.audienceSize);
+      if (draft.listenerPlatforms.length > 0 && listenerPlatforms.length === 0) {
+        setListenerPlatforms(draft.listenerPlatforms.filter((item): item is string => typeof item === 'string'));
       }
-      if (typeof draft.platformInput === 'string' && !platformInput.trim()) setPlatformInput(draft.platformInput);
-      if (typeof draft.budget === 'string' && !budget.trim()) setBudget(draft.budget);
-      if (typeof draft.timeline === 'string' && !timeline.trim()) setTimeline(draft.timeline);
-      if (typeof draft.deadlineDate === 'string' && !deadlineDate.trim()) setDeadlineDate(draft.deadlineDate);
-      if (typeof draft.stepsText === 'string' && !stepsText.trim()) setStepsText(draft.stepsText);
-      if (typeof draft.step === 'number' && Number.isFinite(draft.step)) {
-        setStep(Math.max(2, Math.min(9, draft.step)));
-      }
-    } catch {
-      // Ignore malformed local draft payloads.
-    }
+      if (draft.platformInput && !platformInput.trim()) setPlatformInput(draft.platformInput);
+      if (draft.budget && !budget.trim()) setBudget(draft.budget);
+      if (draft.timeline && !timeline.trim()) setTimeline(draft.timeline);
+      if (draft.deadlineDate && !deadlineDate.trim()) setDeadlineDate(draft.deadlineDate);
+      if (draft.stepsText && !stepsText.trim()) setStepsText(draft.stepsText);
+      if (draft.selectedManagedArtistId && !selectedManagedArtistId) setSelectedManagedArtistId(draft.selectedManagedArtistId);
+      if (draft.showAddManagedArtistForm) setShowAddManagedArtistForm(true);
+      if (draft.newManagedArtistName && !newManagedArtistName.trim()) setNewManagedArtistName(draft.newManagedArtistName);
+      if (draft.newManagedArtistGenre && !newManagedArtistGenre.trim()) setNewManagedArtistGenre(draft.newManagedArtistGenre);
+      if (draft.newManagedArtistNotes && !newManagedArtistNotes.trim()) setNewManagedArtistNotes(draft.newManagedArtistNotes);
+      setStep(Math.max(2, Math.min(9, draft.step === 6 ? 5 : draft.step)));
+      restoredOnboardingStepRef.current = draft.started;
+      setResumeMessage('Resumed where you left off.');
+      setShowResumeMessage(true);
+    };
+    void restore();
+    return () => {
+      cancelled = true;
+    };
   }, [
     artistName,
     audienceSize,
@@ -442,6 +683,10 @@ export function PostAuthScreen() {
     timeline,
     isCreatePlanFlow,
     isNextCycleFlow,
+    newManagedArtistGenre,
+    newManagedArtistName,
+    newManagedArtistNotes,
+    selectedManagedArtistId,
   ]);
 
   const hasStartedOnboardingInput =
@@ -461,10 +706,11 @@ export function PostAuthScreen() {
   useEffect(() => {
     if (!onboardingDraftKey) return;
     if (isCreatePlanFlow && !hasStartedOnboardingInput) {
-      localStorage.removeItem(onboardingDraftKey);
+      clearPersistedState(onboardingDraftKey);
+      void deleteUiDraft(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey);
       return;
     }
-    const draft = {
+    const draft: OnboardingDraft = {
       artistName,
       genre,
       primaryPlatform,
@@ -477,11 +723,16 @@ export function PostAuthScreen() {
       timeline,
       deadlineDate,
       stepsText,
+      selectedManagedArtistId,
+      showAddManagedArtistForm,
+      newManagedArtistName,
+      newManagedArtistGenre,
+      newManagedArtistNotes,
       step,
       started: hasStartedOnboardingInput,
-      savedAt: Date.now(),
     };
-    localStorage.setItem(onboardingDraftKey, JSON.stringify(draft));
+    writePersistedState(onboardingDraftKey, ONBOARDING_DRAFT_VERSION, draft);
+    void saveUiDraft<OnboardingDraft>(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey, draft);
   }, [
     artistName,
     audienceSize,
@@ -497,15 +748,96 @@ export function PostAuthScreen() {
     step,
     stepsText,
     timeline,
+    selectedManagedArtistId,
     isCreatePlanFlow,
     hasStartedOnboardingInput,
+    showAddManagedArtistForm,
+    newManagedArtistName,
+    newManagedArtistGenre,
+    newManagedArtistNotes,
   ]);
+
+  const replaceCreatePlanArtistInUrl = useCallback(
+    (artistId: string | null) => {
+      if (typeof window === 'undefined') return;
+      if (!isManagerCreatePlanFlow) return;
+
+      const params = new URLSearchParams(searchParams.toString());
+      if (artistId) {
+        params.set('artistId', artistId);
+      } else {
+        params.delete('artistId');
+      }
+      const query = params.toString();
+      router.replace(query ? `/dashboard?${query}` : '/dashboard', { scroll: false });
+    },
+    [isManagerCreatePlanFlow, router, searchParams]
+  );
+
+  const loadManagedArtists = useCallback(async (): Promise<ManagedArtistOption[]> => {
+    if (!user || !isManagerCreatePlanFlow) return [];
+    setManagedArtistsLoading(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      if (!token) return [];
+      const response = await fetch('/api/managed-artists', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: 'no-store',
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        artists?: ManagedArtistOption[];
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not load managed artists.');
+      }
+      const nextArtists = Array.isArray(payload.artists) ? payload.artists : [];
+      setManagedArtists(nextArtists);
+      if (selectedManagedArtistId && !nextArtists.some((artist) => artist.id === selectedManagedArtistId)) {
+        setSelectedManagedArtistId(null);
+        replaceCreatePlanArtistInUrl(null);
+      }
+      return nextArtists;
+    } finally {
+      setManagedArtistsLoading(false);
+    }
+  }, [isManagerCreatePlanFlow, replaceCreatePlanArtistInUrl, selectedManagedArtistId, user]);
+
+  const applyManagedArtistToState = useCallback((artist: ManagedArtistOption | null) => {
+    if (!artist) return;
+    setSelectedManagedArtistId(artist.id);
+    setArtistName(artist.name || '');
+    setGenre(artist.genre || '');
+    replaceCreatePlanArtistInUrl(artist.id);
+  }, [replaceCreatePlanArtistInUrl]);
+
+  const moveManagedArtistSelection = useCallback(
+    (direction: 'previous' | 'next') => {
+      if (managedArtists.length <= 1) return;
+      const currentIndex = managedArtists.findIndex((artist) => artist.id === selectedManagedArtistId);
+      const baseIndex = currentIndex >= 0 ? currentIndex : 0;
+      const nextIndex =
+        direction === 'previous'
+          ? (baseIndex - 1 + managedArtists.length) % managedArtists.length
+          : (baseIndex + 1) % managedArtists.length;
+      const nextArtist = managedArtists[nextIndex];
+      if (!nextArtist) return;
+      applyManagedArtistToState(nextArtist);
+    },
+    [applyManagedArtistToState, managedArtists, selectedManagedArtistId]
+  );
 
   useEffect(() => {
     return () => {
       if (!onboardingDraftKey || !isCreatePlanFlow) return;
       if (!hasStartedOnboardingInput) {
-        localStorage.removeItem(onboardingDraftKey);
+        clearPersistedState(onboardingDraftKey);
       }
     };
   }, [hasStartedOnboardingInput, isCreatePlanFlow, onboardingDraftKey]);
@@ -617,7 +949,9 @@ export function PostAuthScreen() {
         setDeadlineDate(parseStoredDate(requestedProfile.hard_deadline));
         setTimeline(requestedProfile.deadline_reason || '');
         setStepsText(requestedProfile.other_goals || '');
-        setStep(Math.min(9, Math.max(requestedProfile.setup_step || 2, 2)));
+        if (!restoredOnboardingStepRef.current) {
+          setStep(Math.min(9, Math.max(requestedProfile.setup_step || 2, 2)));
+        }
         return requestedRelease.id;
       }
 
@@ -632,7 +966,9 @@ export function PostAuthScreen() {
         });
       if (requestedProfileInsertError) throw requestedProfileInsertError;
       setDeadlineDate(parseStoredDate(autoDeadline));
-      setStep(2);
+      if (!restoredOnboardingStepRef.current) {
+        setStep(2);
+      }
       return requestedRelease.id;
     }
 
@@ -667,8 +1003,13 @@ export function PostAuthScreen() {
           hard_deadline: addDaysISO(release.created_at || new Date(), DEFAULT_PLAN_DURATION_DAYS),
         });
       if (profileInsertError) throw profileInsertError;
+      trackEvent('release_created', {
+        userId: user.id,
+        payload: { releaseId: release.id, source: 'create-plan-flow', artistName: resolvedArtistName },
+      });
 
       if (typeof window !== 'undefined') {
+        clearPersistedState(`urganize.onboardingDraft.v${ONBOARDING_DRAFT_VERSION}.${user.id}.new-plan`);
         localStorage.removeItem(`urganize.onboardingDraft.${user.id}.new-plan`);
       }
 
@@ -713,7 +1054,9 @@ export function PostAuthScreen() {
         const release = existingReleases.find((item) => item.id === activeProfile.release_id);
         if (release?.artist_name) setArtistName(release.artist_name);
 
-        setStep(Math.min(9, Math.max(activeProfile.setup_step || 2, 2)));
+        if (!restoredOnboardingStepRef.current) {
+          setStep(Math.min(9, Math.max(activeProfile.setup_step || 2, 2)));
+        }
         return activeProfile.release_id;
       }
     }
@@ -742,6 +1085,10 @@ export function PostAuthScreen() {
         hard_deadline: addDaysISO(release.created_at || new Date(), DEFAULT_PLAN_DURATION_DAYS),
       });
     if (profileInsertError) throw profileInsertError;
+    trackEvent('release_created', {
+      userId: user.id,
+      payload: { releaseId: release.id, source: 'auto-onboarding', artistName: user.name || 'Artist' },
+    });
 
     setReleaseId(release.id);
     return release.id;
@@ -767,6 +1114,60 @@ export function PostAuthScreen() {
     setTaskId(null);
     return null;
   }, []);
+
+  const seedReleaseWorkspace = useCallback(
+    async (activeReleaseId: string, accessToken: string, plan: ReleasePlanResult) => {
+      const marketingItems = plan.marketing_ideas.slice(0, 8).map((idea, index) => ({
+        id: `marketing-${index + 1}-${slugify(idea.channel || idea.idea || 'idea')}`,
+        platform: idea.channel || 'Campaign',
+        contentType: idea.effort || 'Execution idea',
+        captionIdea: idea.idea || idea.why_it_fits || '',
+        publishDate: '',
+        owner: 'Team',
+      }));
+
+      const playlistItems = plan.playlist_suggestions.slice(0, 8).map((entry, index) => ({
+        id: `playlist-${index + 1}-${slugify(entry.playlist_type || 'playlist')}`,
+        curator: entry.playlist_type || `Playlist ${index + 1}`,
+        platform: 'Streaming',
+        submissionDate: '',
+        status: 'Not Submitted' as const,
+        notes: [entry.rationale, entry.pitch_angle].filter(Boolean).join(' | '),
+      }));
+
+      const distributionItems = [
+        { id: 'metadata_complete', label: 'Metadata complete', done: false },
+        { id: 'cover_art_approved', label: 'Cover art approved', done: false },
+        { id: 'audio_approved', label: 'Audio approved', done: false },
+        { id: 'submission_complete', label: 'Distributor submission complete', done: false },
+        ...plan.timeline_phases.slice(0, 3).map((phase, index) => ({
+          id: `phase-${index + 1}-${slugify(phase.phase)}`,
+          label: `${phase.phase}: ${phase.objective}`,
+          done: false,
+        })),
+      ];
+
+      const response = await fetch(`/api/plans/${activeReleaseId}/workspace`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          marketingItems,
+          playlistItems,
+          distributionItems,
+          planSnapshot: plan,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(payload.error || 'Could not save workspace plan');
+      }
+    },
+    []
+  );
 
   const bootstrapTargetKey = `${user?.id || 'anon'}:${requestedPlanId || 'auto'}:${Number.isFinite(requestedStartStep) ? requestedStartStep : 0}`;
 
@@ -856,7 +1257,24 @@ export function PostAuthScreen() {
         if (resolvedGenre) setGenre((current) => current || resolvedGenre);
         if (resolvedPrimaryPlatform) setPrimaryPlatform((current) => current || resolvedPrimaryPlatform);
 
-        const canSkipArtistStep = Boolean(resolvedArtistName && resolvedGenre && resolvedPrimaryPlatform);
+        let managerArtists: ManagedArtistOption[] = [];
+        if (isManagerCreatePlanFlow) {
+          managerArtists = await loadManagedArtists();
+          const preferredArtist =
+            managerArtists.find((artist) => artist.id === requestedArtistId) ||
+            managerArtists.find((artist) => artist.id === selectedManagedArtistId) ||
+            managerArtists.find((artist) => artist.name.trim().toLowerCase() === resolvedArtistName.trim().toLowerCase()) ||
+            managerArtists[0] ||
+            null;
+          if (preferredArtist) {
+            applyManagedArtistToState(preferredArtist);
+          } else {
+            setSelectedManagedArtistId(null);
+            replaceCreatePlanArtistInUrl(null);
+          }
+        }
+
+        const canSkipArtistStep = Boolean(resolvedArtistName && resolvedGenre && resolvedPrimaryPlatform) && !isManagerCreatePlanFlow;
         if (canSkipArtistStep && artistDefaultsKey) {
           localStorage.setItem(
             artistDefaultsKey,
@@ -869,6 +1287,8 @@ export function PostAuthScreen() {
           );
         }
 
+        const shouldPreserveRestoredOnboardingStep = restoredOnboardingStepRef.current;
+
         if (isNextCycleFlow && activeReleaseIdForCycle && nextCycleClearedRef.current !== activeReleaseIdForCycle) {
           nextCycleClearedRef.current = activeReleaseIdForCycle;
           resetCycleInputs();
@@ -876,6 +1296,7 @@ export function PostAuthScreen() {
           setTaskTitle('Single task');
           setTaskOutcome('Expected outcome');
           if (user?.id) {
+            clearPersistedState(`urganize.onboardingDraft.v${ONBOARDING_DRAFT_VERSION}.${user.id}.${activeReleaseIdForCycle}`);
             localStorage.removeItem(`urganize.onboardingDraft.${user.id}.${activeReleaseIdForCycle}`);
           }
           try {
@@ -890,8 +1311,19 @@ export function PostAuthScreen() {
             // Non-fatal; UI still proceeds with cycle reset.
           }
           setStep(3);
-        } else if (requestedStartStep >= 2) {
-          setStep((current) => Math.max(current, canSkipArtistStep ? 3 : 2));
+        } else if (!shouldPreserveRestoredOnboardingStep && flow === 'first-login' && requestedStartStep === 0 && !requestedPlanId) {
+          if (rolePermissions.role === 'viewer') {
+            setNeedsOnboarding(false);
+            router.replace('/dashboard');
+            return;
+          }
+          setStep(canSkipArtistStep ? 3 : 2);
+        } else if (!shouldPreserveRestoredOnboardingStep && requestedStartStep >= 2) {
+          if (isManagerCreatePlanFlow) {
+            setStep(2);
+          } else {
+            setStep((current) => Math.max(current, canSkipArtistStep ? 3 : 2));
+          }
         }
       } catch (err: any) {
         setError(err?.message || 'Failed to load onboarding');
@@ -903,16 +1335,25 @@ export function PostAuthScreen() {
     bootstrap();
   }, [
     artistDefaultsKey,
+    applyManagedArtistToState,
     bootstrapTargetKey,
     ensureOnboardingRelease,
     flow,
+    isManagerCreatePlanFlow,
     isNextCycleFlow,
     isPlanSetupFlow,
     loadCurrentTask,
+    loadManagedArtists,
     refreshCycleNumber,
     requestedPlanId,
+    requestedArtistId,
     requestedStartStep,
+    replaceCreatePlanArtistInUrl,
+    router,
     resetCycleInputs,
+    rolePermissions.role,
+    selectedManagedArtistId,
+    setNeedsOnboarding,
     user,
   ]);
 
@@ -1057,6 +1498,15 @@ export function PostAuthScreen() {
 
       await upsertArtistProfile();
       persistArtistDefaults();
+      trackEvent('artist_created', {
+        userId: user?.id || null,
+        payload: {
+          releaseId: activeReleaseId,
+          artistName: artistName.trim(),
+          genre: genre.trim() || null,
+          primaryPlatform: primaryPlatform.trim() || null,
+        },
+      });
       await setStepPersisted(3, activeReleaseId);
     } catch (err: any) {
       setError(err?.message || 'Failed to save artist details');
@@ -1065,10 +1515,108 @@ export function PostAuthScreen() {
     }
   };
 
+  const handleContinueManagedArtist = async () => {
+    const selectedArtist = managedArtists.find((artist) => artist.id === selectedManagedArtistId) || null;
+    if (!selectedArtist) {
+      setError('Select an artist to continue.');
+      return;
+    }
+
+    setArtistName(selectedArtist.name || '');
+    setGenre(selectedArtist.genre || '');
+      resetError();
+      setIsBusy(true);
+      try {
+      const activeReleaseId = await ensureOnboardingRelease();
+      const { error: releaseUpdateError } = await supabase
+        .from('releases')
+        .update({
+          artist_name: selectedArtist.name,
+          title: `${selectedArtist.name} Goal`,
+        })
+        .eq('id', activeReleaseId);
+      if (releaseUpdateError) throw releaseUpdateError;
+
+      const { error: profileUpdateError } = await supabase
+        .from('release_profiles')
+        .update({
+          genre: selectedArtist.genre || null,
+        })
+        .eq('release_id', activeReleaseId);
+      if (profileUpdateError) throw profileUpdateError;
+
+      if (artistDefaultsKey) {
+        localStorage.setItem(
+          artistDefaultsKey,
+          JSON.stringify({
+            artistName: selectedArtist.name,
+            genre: selectedArtist.genre || '',
+            savedAt: Date.now(),
+          })
+        );
+      }
+      await setStepPersisted(3, activeReleaseId);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to save selected artist.');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const handleSaveManagedArtist = async () => {
+    const name = newManagedArtistName.trim();
+    if (!name) {
+      setError('Artist name is required.');
+      return;
+    }
+
+    resetError();
+    setIsBusy(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      if (!token) throw new Error('Session expired. Please sign in again.');
+
+      const response = await fetch('/api/managed-artists', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name,
+          genre: newManagedArtistGenre.trim(),
+          notes: newManagedArtistNotes.trim(),
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        artist?: ManagedArtistOption;
+        error?: string;
+      };
+      if (!response.ok || !payload.artist) {
+        throw new Error(payload.error || 'Could not save artist.');
+      }
+
+      const nextArtists = [payload.artist, ...managedArtists.filter((artist) => artist.id !== payload.artist?.id)];
+      setManagedArtists(nextArtists);
+      applyManagedArtistToState(payload.artist);
+      setShowAddManagedArtistForm(false);
+      setNewManagedArtistName('');
+      setNewManagedArtistGenre('');
+      setNewManagedArtistNotes('');
+    } catch (err: any) {
+      setError(err?.message || 'Could not save artist.');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
   const handleSaveGoal = async () => {
     const goalValue = goalText.trim();
-    if (goalValue.length < MIN_GOAL_CHARS) {
-      setError(`Add at least ${MIN_GOAL_CHARS} characters so we can generate better tasks.`);
+    if (!goalValue) {
+      setError('Enter your goal before continuing.');
       return;
     }
 
@@ -1188,8 +1736,6 @@ export function PostAuthScreen() {
   const generateOnboardingTask = useCallback(async (activeReleaseId: string) => {
     if (!user) throw new Error('User not found');
 
-    const existingTask = await loadCurrentTask(activeReleaseId);
-
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -1198,111 +1744,128 @@ export function PostAuthScreen() {
       throw new Error('Session expired. Sign in again and retry.');
     }
 
-    const generateResponse = await fetch('/api/ai/generate-task', {
+    const releasePlanResponse = await fetch('/api/ai/release-plan', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
-        mode: 'onboarding',
         releaseId: activeReleaseId,
-        onboardingInputs: {
-          role: user.role || '',
-          artist_name: artistName.trim(),
+        inputs: {
+          artistName: artistName.trim(),
           genre: genre.trim(),
-          primary_platform: primaryPlatform.trim(),
-          campaign_goal: goalText.trim(),
-          career_stage: stage.trim(),
-          audience_size: audienceSize.trim(),
-          listener_platforms: listenerPlatforms,
-          listener_platform_input: platformInput.trim(),
-          budget_naira: budget.trim(),
-          timeline: timeline.trim(),
-          hard_deadline: deadlineDate.trim(),
-          existing_steps: stepsText.trim(),
+          goal: goalText.trim(),
+          teamType: inferTeamType(user.role),
+          budgetLevel: inferBudgetLevel(budget),
+          platforms: mergePlatforms(listenerPlatforms, [primaryPlatform.trim(), platformInput.trim()]),
+          releaseDate: deadlineDate.trim(),
+          contentAvailable: stepsText.trim() ? [stepsText.trim()] : [],
+          notes: stepsText.trim(),
+          primaryMarket: primaryPlatform.trim(),
+          listenerInterests: platformInput.trim(),
+          songStage: stage.trim(),
         },
       }),
     });
 
-    const generatedPayload = (await generateResponse.json().catch(() => ({}))) as
-      | Partial<AiTaskGenerationPayload>
-      | { error?: string; detail?: string };
+    const generatedPayload = (await releasePlanResponse.json().catch(() => ({}))) as ReleasePlanApiResponse;
 
-    if (!generateResponse.ok) {
-      const failurePayload = generatedPayload as { error?: string; detail?: string };
+    if (!releasePlanResponse.ok) {
       throw new Error(
-        String(
-          `${failurePayload.error || 'Task generation failed after retries. Please generate again.'}${
-            failurePayload.detail ? ` (${failurePayload.detail})` : ''
-          }`
+        selectAiErrorMessage(
+          generatedPayload.error,
+          generatedPayload.detail,
+          'Release plan generation failed after retries. Please generate again.'
         )
       );
     }
 
-    const title = String((generatedPayload as Partial<AiTaskGenerationPayload>).title || '').trim();
-    const description = String((generatedPayload as Partial<AiTaskGenerationPayload>).description || '').trim();
-    const whyItMatters = String((generatedPayload as Partial<AiTaskGenerationPayload>).why_it_matters || '').trim();
-    const measurableOutcome = String((generatedPayload as Partial<AiTaskGenerationPayload>).measurable_outcome || '').trim();
-
-    if (!title || !description || !whyItMatters || !measurableOutcome) {
-      throw new Error('AI returned an invalid task format. Please generate again.');
+    if (
+      !generatedPayload.planTitle ||
+      !generatedPayload.planSummary ||
+      !Array.isArray(generatedPayload.tasks) ||
+      generatedPayload.tasks.length === 0
+    ) {
+      throw new Error('We could not generate the task plan right now. Please try again.');
     }
 
-    const nextDescription = `${description}\n\nMeasurable outcome: ${measurableOutcome}`;
-    const nextWhy = `${whyItMatters}\nMeasurable outcome: ${measurableOutcome}`;
+    const plan: ReleasePlanResult = {
+      summary: generatedPayload.planSummary,
+      release_strategy: generatedPayload.planSummary,
+      timeline_phases: [],
+      tasks: generatedPayload.tasks.map((task) => ({
+        title: task.title,
+        phase: task.phase,
+        description: task.description,
+        owner: 'Team',
+        measurable_outcome: task.recommendedTiming,
+        priority: task.priority,
+      })),
+      milestones: [],
+      marketing_ideas: [],
+      audience_profile: {
+        summary: '',
+        age_range: '',
+        locations: '',
+        platforms: '',
+        culture_signals: '',
+      },
+      playlist_suggestions: [],
+      assumptions: [],
+    };
 
-    if (existingTask?.id) {
-      const { data: updatedTask, error: updateTaskError } = await supabase
-        .from('ai_tasks')
-        .update({
-          title,
-          description: nextDescription,
-          why_it_matters: nextWhy,
-          status: 'current',
-          input_type: 'text',
-          phase: 'pre-production',
-        })
-        .eq('id', existingTask.id)
-        .select('id, title, description')
-        .single();
-      if (updateTaskError || !updatedTask) throw updateTaskError || new Error('Could not update task');
-      setTaskId(updatedTask.id);
-      setTaskTitle(updatedTask.title || 'Single task');
-      setTaskOutcome(updatedTask.description || 'Expected outcome');
-      return;
-    }
-
-    const { data: lastTask, error: lastTaskError } = await supabase
-      .from('ai_tasks')
-      .select('order_index')
-      .eq('release_id', activeReleaseId)
-      .order('order_index', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (lastTaskError) throw lastTaskError;
-    const nextOrderIndex = (lastTask?.order_index ?? -1) + 1;
-
-    const { data: insertedTask, error: insertError } = await supabase
-      .from('ai_tasks')
-      .insert({
+    const generatedTasks = generatedPayload.tasks.map((task, index) => {
+      const recommendedTiming = task.recommendedTiming.trim();
+      const description = task.description.trim();
+      const priority = task.priority.trim();
+      const phaseLabel = task.phase.trim();
+      return {
         release_id: activeReleaseId,
         user_id: user.id,
-        title,
-        description: nextDescription,
-        why_it_matters: nextWhy,
+        title: task.title.trim(),
+        description: `${description}\n\nPriority: ${priority || 'Medium'}\nRecommended timing: ${recommendedTiming || 'To be scheduled'}`,
+        why_it_matters: `Phase: ${phaseLabel || 'Strategy'}\nRecommended timing: ${recommendedTiming || 'To be scheduled'}\nPlan summary: ${generatedPayload.planSummary.trim()}`,
         input_type: 'text',
-        status: 'current',
-        phase: 'pre-production',
-        order_index: nextOrderIndex,
-      })
-      .select('id, title, description')
-      .single();
-    if (insertError || !insertedTask) throw insertError || new Error('Could not create task');
+        status: index === 0 ? 'current' : 'pending',
+        phase: mapPlanPhaseToTaskPhase(phaseLabel),
+        order_index: index,
+      };
+    });
 
-    setTaskId(insertedTask.id);
-    setTaskTitle(insertedTask.title || 'Single task');
-    setTaskOutcome(insertedTask.description || 'Expected outcome');
+    const { error: deleteExistingTasksError } = await supabase
+      .from('ai_tasks')
+      .delete()
+      .eq('release_id', activeReleaseId)
+      .in('status', ['current', 'pending']);
+    if (deleteExistingTasksError) throw deleteExistingTasksError;
+
+    const { data: insertedTasks, error: insertError } = await supabase
+      .from('ai_tasks')
+      .insert(generatedTasks)
+      .select('id, title, description, status, order_index');
+    if (insertError || !insertedTasks || insertedTasks.length === 0) {
+      throw insertError || new Error('Could not create release plan tasks');
+    }
+
+    await seedReleaseWorkspace(activeReleaseId, accessToken, plan);
+
+    const sortedTasks = [...insertedTasks].sort((a, b) => Number(a.order_index ?? 0) - Number(b.order_index ?? 0));
+    const currentTask = sortedTasks.find((task) => String(task.status || '') === 'current') || sortedTasks[0];
+    if (!currentTask) throw new Error('Could not load the first generated task');
+
+    setTaskId(currentTask.id);
+    setTaskTitle(currentTask.title || 'Single task');
+    setTaskOutcome(currentTask.description || 'Expected outcome');
+    trackEvent('ai_plan_generated', {
+      userId: user.id,
+      payload: {
+        releaseId: activeReleaseId,
+        taskId: currentTask.id,
+        mode: 'onboarding-task-plan',
+        taskCount: insertedTasks.length,
+      },
+    });
   }, [
     artistName,
     audienceSize,
@@ -1311,12 +1874,12 @@ export function PostAuthScreen() {
     genre,
     goalText,
     listenerPlatforms,
-    loadCurrentTask,
+    mergePlatforms,
     platformInput,
     primaryPlatform,
+    seedReleaseWorkspace,
     stage,
     stepsText,
-    timeline,
     user,
   ]);
 
@@ -1356,7 +1919,9 @@ export function PostAuthScreen() {
       } catch (err: any) {
         if (!cancelled) {
           setShowPricingSheet(false);
-          setGenerationError(err?.message || 'Task generation failed after retries. Please generate again.');
+          setGenerationError(
+            toAiUiErrorMessage(err?.message, 'AI service unavailable')
+          );
         }
       } finally {
         if (!cancelled) {
@@ -1428,6 +1993,50 @@ export function PostAuthScreen() {
     router.push('/dashboard');
   };
 
+  const handleSubmitPricingValidation = async (payload: PricingValidationResponse) => {
+    setPricingValidationSubmitting(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      if (!token) throw new Error('Session expired. Please sign in again.');
+
+      const response = await fetch('/api/pricing-validation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        response?: StoredPricingValidationResponse;
+        error?: string;
+      };
+      if (!response.ok || !result.response) {
+        throw new Error(result.error || 'Could not save pricing validation response.');
+      }
+
+      setPricingValidation(result.response);
+      setPricingValidationDismissed(true);
+      setResumeMessage('Response saved. You can update it later from the dashboard.');
+      setShowResumeMessage(true);
+      trackEvent('pricing_validation_submitted', {
+        userId: user?.id || null,
+        payload: {
+          willingness: result.response.willingness,
+          priceBand: result.response.priceBand,
+          placement: result.response.placement,
+        },
+      });
+    } catch (err: any) {
+      setError(err?.message || 'Could not save pricing validation response.');
+    } finally {
+      setPricingValidationSubmitting(false);
+    }
+  };
+
   const handleLogoutToAuth = async () => {
     await logout();
     router.push('/auth');
@@ -1441,6 +2050,59 @@ export function PostAuthScreen() {
     if (step !== 6 || !releaseId || isBusy) return;
     setGenerationAttemptKey((current) => current + 1);
   };
+
+  const handleBackToGenerationInputs = async () => {
+    if (step !== 6 || isBusy) return;
+    setGenerationError('');
+    try {
+      await setStepPersisted(5);
+    } catch (err: any) {
+      setError(err?.message || 'Could not return to the previous step right now');
+    }
+  };
+
+  const clearWorkflowDraft = useCallback(() => {
+    if (feedbackDraftKey) clearPersistedState(feedbackDraftKey);
+    if (onboardingDraftKey) clearPersistedState(onboardingDraftKey);
+    if (feedbackDraftKey) void deleteUiDraft(FEEDBACK_DRAFT_SCOPE, feedbackDraftKey);
+    if (onboardingDraftKey) void deleteUiDraft(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey);
+
+    setSelectedProof('none');
+    setProofFile(null);
+    setProofLink('');
+    setProofText('');
+    setWhatYouTried('');
+    setWhatHappened('');
+    setResultsMode('tracked');
+    setResultsMetrics('');
+    setBlockersNext('');
+    setShowAddManagedArtistForm(false);
+    setNewManagedArtistName('');
+    setNewManagedArtistGenre('');
+    setNewManagedArtistNotes('');
+    setSelectedManagedArtistId(null);
+    replaceCreatePlanArtistInUrl(null);
+    setArtistName(isArtistAccount ? profileArtistName : '');
+    setGenre('');
+    setPrimaryPlatform('');
+    setGoalText('');
+    setStage('');
+    resetCycleInputs();
+    setStep(isManagerCreatePlanFlow ? 2 : 2);
+    setResumeMessage('');
+    setShowResumeMessage(false);
+    setLastDraftSavedAt(null);
+    setPricingValidationDismissed(false);
+    setError('');
+  }, [
+    feedbackDraftKey,
+    onboardingDraftKey,
+    isArtistAccount,
+    isManagerCreatePlanFlow,
+    profileArtistName,
+    replaceCreatePlanArtistInUrl,
+    resetCycleInputs,
+  ]);
 
   const handleSelectProof = (proofType: ProofType) => {
     setSelectedProof(proofType);
@@ -1546,6 +2208,10 @@ export function PostAuthScreen() {
         })
         .eq('id', taskId);
       if (taskUpdateError) throw taskUpdateError;
+      trackEvent('task_completed', {
+        userId: user?.id || null,
+        payload: { releaseId, taskId, source: 'onboarding-feedback' },
+      });
 
       const { error: profileCompletionError } = await supabase
         .from('release_profiles')
@@ -1563,20 +2229,24 @@ export function PostAuthScreen() {
       if (releaseStatusError) throw releaseStatusError;
 
       if (feedbackDraftKey) {
-        localStorage.removeItem(feedbackDraftKey);
+        clearPersistedState(feedbackDraftKey);
+        void deleteUiDraft(FEEDBACK_DRAFT_SCOPE, feedbackDraftKey);
       }
       if (onboardingDraftKey) {
-        localStorage.removeItem(onboardingDraftKey);
+        clearPersistedState(onboardingDraftKey);
+        void deleteUiDraft(ONBOARDING_DRAFT_SCOPE, onboardingDraftKey);
       }
       if (user?.id) {
+        clearPersistedState(`urganize.onboardingDraft.v${ONBOARDING_DRAFT_VERSION}.${user.id}.${releaseId}`);
         localStorage.removeItem(`urganize.onboardingDraft.${user.id}.${releaseId}`);
       }
 
       resetCycleInputs();
       setTaskId(null);
-      setTaskTitle('Single task');
-      setTaskOutcome('Expected outcome');
-      setNeedsOnboarding(true);
+    setTaskTitle('Single task');
+    setTaskOutcome('Expected outcome');
+    setPricingValidationDismissed(false);
+    setNeedsOnboarding(true);
       setIsCycleTransitioning(true);
       await new Promise((resolve) => setTimeout(resolve, NEXT_CYCLE_TRANSITION_MS));
       router.push(`/dashboard?startOnboarding=3&planId=${releaseId}&flow=next-cycle`);
@@ -1599,7 +2269,7 @@ export function PostAuthScreen() {
       return;
     }
 
-    const previous = step === 3 && hasArtistDefaults ? 1 : Math.max(0, step - 1);
+    const previous = isCreatePlanFlow ? Math.max(2, step - 1) : step === 3 && hasArtistDefaults ? 1 : Math.max(0, step - 1);
     try {
       await setStepPersisted(previous);
     } catch (err: any) {
@@ -1608,17 +2278,18 @@ export function PostAuthScreen() {
   };
 
   useEffect(() => {
+    if (isCreatePlanFlow) return;
+    if (isManagerCreatePlanFlow) return;
     if (step !== 2 || !hasArtistDefaults) return;
     setStep(3);
-  }, [hasArtistDefaults, step]);
+  }, [hasArtistDefaults, isCreatePlanFlow, isManagerCreatePlanFlow, step]);
 
   const shellClass = 'relative min-h-screen w-full overflow-hidden bg-bg-base text-content-primary';
   const fieldClass =
-    'w-full rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-lg text-content-primary outline-none placeholder:text-content-quaternary focus:border-brand';
+    'w-full rounded-2xl border border-stroke-subtle bg-bg-elevated/70 px-4 py-3 text-lg text-content-primary outline-none placeholder:text-content-quaternary focus:border-brand';
 
   const canContinueArtist = useMemo(() => !!artistName.trim(), [artistName]);
-  const canContinueGoal = useMemo(() => goalText.trim().length >= MIN_GOAL_CHARS, [goalText]);
-  const goalRemainingChars = useMemo(() => Math.max(0, MIN_GOAL_CHARS - goalText.trim().length), [goalText]);
+  const canContinueGoal = useMemo(() => !!goalText.trim(), [goalText]);
   const budgetValue = Number(budget);
   const budgetIsValid =
     budget.trim().length > 0 &&
@@ -1655,6 +2326,23 @@ export function PostAuthScreen() {
     return new Date(lastDraftSavedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }, [lastDraftSavedAt]);
   const showCycleTimeline = step >= 3 && step <= 6;
+  const roleEntryContext = useMemo(() => {
+    const permissions = getRolePermissions(user?.role);
+    if (flow !== 'first-login' || requestedStartStep !== 0) return null;
+    if (permissions.role === 'manager') {
+      return {
+        title: 'Manager onboarding path',
+        description: 'Set artist and campaign inputs, then generate the first execution task.',
+      };
+    }
+    if (permissions.role === 'artist' || permissions.role === 'team-member') {
+      return {
+        title: 'Contributor onboarding path',
+        description: 'Provide the core release context so your team can execute in one shared workspace.',
+      };
+    }
+    return null;
+  }, [flow, requestedStartStep, user?.role]);
 
   if (isBootstrapping) {
     return (
@@ -1693,14 +2381,47 @@ export function PostAuthScreen() {
   return (
     <main className={shellClass}>
       <div className="mx-auto flex min-h-screen w-full max-w-[980px] flex-col px-6 py-12 sm:px-12">
-        {step > 0 && step <= 9 && (
-          <button
-            type="button"
-            onClick={handleBack}
-            className="w-fit text-[clamp(1.8rem,4.5vw,3rem)] leading-none tracking-tight text-content-primary/90"
-          >
-            {isPlanSetupFlow ? 'Back to Dashboard' : '...Back'}
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {step > 0 && step <= 9 ? (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="w-fit text-[clamp(1.8rem,4.5vw,3rem)] leading-none tracking-tight text-content-primary/90"
+            >
+              {isPlanSetupFlow ? 'Back to Dashboard' : '...Back'}
+            </button>
+          ) : (
+            <div />
+          )}
+          {(isPlanSetupFlow || step === 9) && (
+            <button
+              type="button"
+              onClick={clearWorkflowDraft}
+              className="rounded-full border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+            >
+              Clear Draft
+            </button>
+          )}
+        </div>
+
+        {showResumeMessage && resumeMessage && (
+          <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-brand/35 bg-brand-muted px-4 py-3 text-sm text-content-primary">
+            <p>{resumeMessage}</p>
+            <button
+              type="button"
+              onClick={() => setShowResumeMessage(false)}
+              className="text-xs uppercase tracking-[0.14em] text-content-secondary hover:text-content-primary"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {roleEntryContext && step >= 2 && step <= 4 && (
+          <section className="mt-5 rounded-xl border border-stroke-default bg-bg-surface px-4 py-3">
+            <p className="text-xs uppercase tracking-wide text-content-tertiary">{roleEntryContext.title}</p>
+            <p className="mt-1 text-sm text-content-secondary">{roleEntryContext.description}</p>
+          </section>
         )}
 
         {showCycleTimeline && (
@@ -1760,30 +2481,56 @@ export function PostAuthScreen() {
         )}
 
         {step === 2 && (
-          <Step2ArtistDetails
-            fieldClass={fieldClass}
-            artistName={artistName}
-            genre={genre}
-            primaryPlatform={primaryPlatform}
-            genreOptions={GENRE_OPTIONS}
-            primaryPlatformOptions={PRIMARY_PLATFORM_OPTIONS}
-            isBusy={isBusy}
-            canContinueArtist={canContinueArtist}
-            onArtistNameChange={setArtistName}
-            onGenreChange={setGenre}
-            onPrimaryPlatformChange={setPrimaryPlatform}
-            onPrimaryPlatformBlur={syncPrimaryPlatformToAudiencePlatforms}
-            onContinue={handleSaveAddArtist}
-          />
+          isManagerCreatePlanFlow ? (
+            <Step2ArtistSelector
+              artists={managedArtists}
+              isLoading={managedArtistsLoading}
+              isBusy={isBusy}
+              selectedArtistId={selectedManagedArtistId}
+              isAddArtistOpen={showAddManagedArtistForm}
+              addArtistName={newManagedArtistName}
+              addArtistGenre={newManagedArtistGenre}
+              addArtistNotes={newManagedArtistNotes}
+              onSelectArtist={(artistId) => {
+                const artist = managedArtists.find((item) => item.id === artistId) || null;
+                applyManagedArtistToState(artist);
+              }}
+              onMovePrevious={() => moveManagedArtistSelection('previous')}
+              onMoveNext={() => moveManagedArtistSelection('next')}
+              onContinue={handleContinueManagedArtist}
+              onOpenAddArtist={() => setShowAddManagedArtistForm(true)}
+              onCloseAddArtist={() => setShowAddManagedArtistForm(false)}
+              onAddArtistNameChange={setNewManagedArtistName}
+              onAddArtistGenreChange={setNewManagedArtistGenre}
+              onAddArtistNotesChange={setNewManagedArtistNotes}
+              onSaveArtist={handleSaveManagedArtist}
+            />
+          ) : (
+            <Step2ArtistDetails
+              fieldClass={fieldClass}
+              artistName={artistName}
+              genre={genre}
+              primaryPlatform={primaryPlatform}
+              genreOptions={GENRE_OPTIONS}
+              primaryPlatformOptions={PRIMARY_PLATFORM_OPTIONS}
+              isBusy={isBusy}
+              canContinueArtist={canContinueArtist}
+              isArtistNameLocked={isArtistAccount}
+              onArtistNameChange={setArtistName}
+              onGenreChange={setGenre}
+              onPrimaryPlatformChange={setPrimaryPlatform}
+              onPrimaryPlatformBlur={syncPrimaryPlatformToAudiencePlatforms}
+              onContinue={handleSaveAddArtist}
+            />
+          )
         )}
 
         {step === 3 && (
-          <Step3Goal
-            heading={isNextCycleFlow ? 'Set your next objective' : undefined}
-            goalText={goalText}
-            goalRemainingChars={goalRemainingChars}
-            canContinueGoal={canContinueGoal}
-            isBusy={isBusy}
+            <Step3Goal
+              heading={isNextCycleFlow ? 'Set your next objective' : undefined}
+              goalText={goalText}
+              canContinueGoal={canContinueGoal}
+              isBusy={isBusy}
             onGoalTextChange={setGoalText}
             onContinue={handleSaveGoal}
           />
@@ -1839,6 +2586,7 @@ export function PostAuthScreen() {
             isGenerating={isBusy}
             generationError={generationError}
             onRetryGeneration={handleRetryGeneration}
+            onBackToInputs={handleBackToGenerationInputs}
           />
         )}
 
@@ -1847,6 +2595,21 @@ export function PostAuthScreen() {
             isBusy={isBusy}
             taskTitle={taskTitle}
             taskOutcome={taskOutcome}
+            pricingPrompt={
+              !pricingValidationLoading && !pricingValidationDismissed ? (
+                <PricingValidationPrompt
+                  placement="onboarding"
+                  variant="onboarding"
+                  title="Would this feel worth paying for every month?"
+                  subtitle="This sits after the first task is generated because users have already seen concrete product value."
+                  submitLabel="Save answer"
+                  response={pricingValidation}
+                  isBusy={pricingValidationSubmitting}
+                  onSkip={() => setPricingValidationDismissed(true)}
+                  onSubmit={handleSubmitPricingValidation}
+                />
+              ) : undefined
+            }
             onLogout={handleLogoutToAuth}
             onMarkStarted={handleMarkStarted}
             onGoToDashboard={handleGoToDashboard}

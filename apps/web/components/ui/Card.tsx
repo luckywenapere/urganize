@@ -3,87 +3,57 @@
 import React from 'react';
 import { clsx } from 'clsx';
 
-interface CardProps {
+type CardPadding = 'none' | 'sm' | 'md' | 'lg';
+
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
-  className?: string;
-  onClick?: () => void;
-  variant?: 'default' | 'interactive' | 'highlighted';
-  padding?: 'none' | 'sm' | 'md' | 'lg';
+  padding?: CardPadding;
+  interactive?: boolean;
+  glass?: boolean;
+  accent?: boolean;
+  as?: 'div' | 'section' | 'article';
 }
 
-export const Card: React.FC<CardProps> = ({ 
-  children, 
-  className, 
-  onClick,
-  variant = 'default',
-  padding = 'md'
-}) => {
-  return (
-    <div
-      onClick={onClick}
-      className={clsx(
-        'card',
-        {
-          // Variants
-          'card-interactive hover-lift': variant === 'interactive',
-          'gradient-border': variant === 'highlighted',
-          
-          // Padding
-          'p-0': padding === 'none',
-          'p-4': padding === 'sm',
-          'p-5': padding === 'md',
-          'p-6': padding === 'lg',
-        },
-        className
-      )}
-    >
-      {children}
-    </div>
-  );
+const paddingClasses: Record<CardPadding, string> = {
+  none: '',
+  sm: 'p-4',
+  md: 'p-6',
+  lg: 'p-8',
 };
 
-// Card sub-components for composition
-export const CardHeader: React.FC<{ 
-  children: React.ReactNode; 
-  className?: string;
-  action?: React.ReactNode;
-}> = ({ children, className, action }) => (
-  <div className={clsx('flex items-center justify-between mb-4', className)}>
-    <div>{children}</div>
-    {action}
-  </div>
-);
+export function Card({
+  children,
+  padding = 'md',
+  interactive = false,
+  glass = false,
+  accent = false,
+  as = 'div',
+  className,
+  ...props
+}: CardProps) {
+  const Component = as;
 
-export const CardTitle: React.FC<{ 
-  children: React.ReactNode; 
-  className?: string;
-}> = ({ children, className }) => (
-  <h3 className={clsx('text-lg font-semibold text-content-primary', className)}>
-    {children}
-  </h3>
-);
+  return (
+    <Component
+      className={clsx(
+        'card relative overflow-hidden',
+        paddingClasses[padding],
+        interactive && 'card-interactive hover-lift',
+        glass && 'glass',
+        accent && 'gradient-border',
+        className
+      )}
+      {...props}
+    >
+      {accent && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top,rgba(176,109,70,0.18),transparent_70%)]"
+        />
+      )}
+      <div className="relative z-[1]">{children}</div>
+    </Component>
+  );
+}
 
-export const CardDescription: React.FC<{ 
-  children: React.ReactNode; 
-  className?: string;
-}> = ({ children, className }) => (
-  <p className={clsx('text-sm text-content-secondary mt-0.5', className)}>
-    {children}
-  </p>
-);
-
-export const CardContent: React.FC<{ 
-  children: React.ReactNode; 
-  className?: string;
-}> = ({ children, className }) => (
-  <div className={clsx(className)}>{children}</div>
-);
-
-export const CardFooter: React.FC<{ 
-  children: React.ReactNode; 
-  className?: string;
-}> = ({ children, className }) => (
-  <div className={clsx('mt-4 pt-4 border-t border-stroke-subtle', className)}>
-    {children}
-  </div>
-);
+export default Card;
