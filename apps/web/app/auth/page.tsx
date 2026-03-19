@@ -43,6 +43,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [artistName, setArtistName] = useState('');
   const [hasManager, setHasManager] = useState<boolean | null>(null);
   const [providerHint, setProviderHint] = useState<LoginProviderHint>('unknown');
   const [providerHintEmail, setProviderHintEmail] = useState('');
@@ -131,8 +132,8 @@ export default function AuthPage() {
         localStorage.setItem(LAST_AUTH_EMAIL_KEY, normalizedLoginEmail);
       }
       router.push('/dashboard');
-    } catch {
-      setError('Invalid email or password');
+    } catch (loginError: any) {
+      setError(loginError?.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -145,10 +146,13 @@ export default function AuthPage() {
 
     try {
       const role = hasManager ? 'artist' : 'artist-manager';
-      await signup(email, password, name, role);
+      if (role === 'artist' && !artistName.trim()) {
+        throw new Error('Artist name is required');
+      }
+      await signup(email, password, name, role, role === 'artist' ? artistName.trim() : undefined);
       router.push('/dashboard?startOnboarding=0&flow=first-login');
-    } catch {
-      setError('Signup failed. Please try again.');
+    } catch (signupError: any) {
+      setError(signupError?.message || 'Signup failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -170,19 +174,20 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-bg-base">
-      <div className="w-full max-w-md">
+    <div className="relative min-h-screen overflow-hidden bg-bg-base p-4">
+      <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand/15 blur-3xl" />
+      <div className="pointer-events-none absolute -left-24 bottom-0 h-72 w-72 rounded-full bg-status-info/15 blur-3xl" />
+      <div className="mx-auto flex min-h-screen w-full max-w-md items-center justify-center">
+      <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo size="lg" priority />
-          {mode !== 'login' && (
-            <p className="text-content-secondary mt-2">
-              Get started for free
-            </p>
-          )}
+          <p className="mt-2 text-xs uppercase tracking-[0.14em] text-content-tertiary">
+            {mode === 'login' ? 'Welcome Back' : 'Get Started For Free'}
+          </p>
         </div>
 
-        <Card padding="lg">
+        <Card padding="lg" className="rounded-3xl border border-stroke-default bg-bg-surface/95 backdrop-blur-sm shadow-[0_10px_40px_rgba(0,0,0,0.18)]">
           {/* Login Mode */}
           {mode === 'login' && (
             <>
@@ -190,8 +195,8 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={handleGoogleLogin}
-                disabled={isGoogleLoading || isLoading}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-zinc-100 text-black font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isGoogleLoading || isLoading || hasManager === true}
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-zinc-100 text-black font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isGoogleLoading ? (
                   <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
@@ -217,6 +222,11 @@ export default function AuthPage() {
                 )}
                 Continue with Google
               </button>
+              {hasManager === true && (
+                <p className="mt-2 text-center text-xs text-content-secondary">
+                  Artist accounts require artist name during signup. Use email signup below.
+                </p>
+              )}
 
               {!showEmailLogin ? (
                 <Button
@@ -345,7 +355,7 @@ export default function AuthPage() {
               )}
 
               <p className="text-center text-sm text-content-tertiary mt-6">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <button
                   onClick={() => {
                     setMode('role');
@@ -395,45 +405,47 @@ export default function AuthPage() {
               </p>
 
               <div className="space-y-3">
-                <button
-                  onClick={() => {
-                    setHasManager(false);
+                  <button
+                    onClick={() => {
+                      setHasManager(false);
                     setMode('signup');
                     setShowEmailLogin(false);
                     setShowEmailLoginForGoogle(false);
                     setPassword('');
+                    setArtistName('');
                     setError('');
                   }}
-                  className="w-full p-4 rounded-xl border border-stroke-default bg-bg-elevated hover:bg-bg-hover transition-colors text-left group"
-                >
+                    className="w-full p-4 rounded-2xl border border-stroke-default bg-bg-elevated hover:-translate-y-[1px] hover:bg-bg-hover transition text-left group"
+                  >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-lg bg-brand/10 flex items-center justify-center">
                       <Users className="w-6 h-6 text-brand" />
                     </div>
                     <div>
-                      <p className="font-medium text-content-primary">I'm an Artist Manager</p>
+                      <p className="font-medium text-content-primary">I&apos;m an Artist Manager</p>
                       <p className="text-sm text-content-tertiary">I manage one or more artists</p>
                     </div>
                   </div>
                 </button>
 
-                <button
-                  onClick={() => {
-                    setHasManager(true);
+                  <button
+                    onClick={() => {
+                      setHasManager(true);
                     setMode('signup');
                     setShowEmailLogin(false);
                     setShowEmailLoginForGoogle(false);
                     setPassword('');
+                    setArtistName('');
                     setError('');
                   }}
-                  className="w-full p-4 rounded-xl border border-stroke-default bg-bg-elevated hover:bg-bg-hover transition-colors text-left group"
-                >
+                    className="w-full p-4 rounded-2xl border border-stroke-default bg-bg-elevated hover:-translate-y-[1px] hover:bg-bg-hover transition text-left group"
+                  >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-lg bg-status-info/12 flex items-center justify-center">
                       <User className="w-6 h-6 text-status-info" />
                     </div>
                     <div>
-                      <p className="font-medium text-content-primary">I'm an Artist</p>
+                      <p className="font-medium text-content-primary">I&apos;m an Artist</p>
                       <p className="text-sm text-content-tertiary">I have a manager who handles my releases</p>
                     </div>
                   </div>
@@ -451,6 +463,7 @@ export default function AuthPage() {
                   setShowEmailLogin(false);
                   setShowEmailLoginForGoogle(false);
                   setPassword('');
+                  setArtistName('');
                   setError('');
                 }}
                 className="inline-flex items-center gap-2 text-sm text-content-tertiary hover:text-content-primary transition-colors mb-6"
@@ -468,7 +481,7 @@ export default function AuthPage() {
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={isGoogleLoading || isLoading}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-zinc-100 text-black font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-zinc-100 text-black font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isGoogleLoading ? (
                   <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
@@ -519,6 +532,21 @@ export default function AuthPage() {
                   disabled={isLoading || isGoogleLoading}
                   required
                 />
+                {hasManager === true && (
+                  <Input
+                    label="Artist Name"
+                    type="text"
+                    value={artistName}
+                    onChange={(e) => {
+                      setArtistName(e.target.value);
+                      if (error) setError('');
+                    }}
+                    placeholder="e.g. Tems"
+                    leftIcon={<User className="w-4 h-4" />}
+                    disabled={isLoading || isGoogleLoading}
+                    required
+                  />
+                )}
                 <Input
                   label="Email"
                   type="email"
@@ -568,6 +596,7 @@ export default function AuthPage() {
                     setShowEmailLogin(false);
                     setShowEmailLoginForGoogle(false);
                     setPassword('');
+                    setArtistName('');
                     setError('');
                   }}
                   className="text-brand hover:underline font-medium"
@@ -578,6 +607,7 @@ export default function AuthPage() {
             </>
           )}
         </Card>
+      </div>
       </div>
     </div>
   );

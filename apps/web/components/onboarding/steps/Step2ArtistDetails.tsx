@@ -9,6 +9,7 @@ type Step2ArtistDetailsProps = {
   primaryPlatformOptions: string[];
   isBusy: boolean;
   canContinueArtist: boolean;
+  isArtistNameLocked?: boolean;
   onArtistNameChange: (value: string) => void;
   onGenreChange: (value: string) => void;
   onPrimaryPlatformChange: (value: string) => void;
@@ -25,6 +26,7 @@ export function Step2ArtistDetails({
   primaryPlatformOptions,
   isBusy,
   canContinueArtist,
+  isArtistNameLocked = false,
   onArtistNameChange,
   onGenreChange,
   onPrimaryPlatformChange,
@@ -42,7 +44,14 @@ export function Step2ArtistDetails({
           onChange={(e) => onArtistNameChange(e.target.value)}
           placeholder="e.g. Tems"
           autoComplete="off"
+          readOnly={isArtistNameLocked}
+          disabled={isArtistNameLocked}
         />
+        {isArtistNameLocked && (
+          <p className="text-sm text-content-tertiary">
+            Artist name is locked from your profile. You can change it in Settings.
+          </p>
+        )}
         <label className="text-[clamp(1.8rem,4vw,3.4rem)]">Genre</label>
         <div>
           <input

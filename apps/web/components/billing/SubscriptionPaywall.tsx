@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+import { trackEvent } from '@/lib/analytics';
 import {
   INDIVIDUAL_PLAN_OPTIONS,
   MIN_GROUP_TEAM_SIZE,
@@ -104,15 +105,18 @@ export function SubscriptionPaywall({
 
   const postTrialAmount = billingMode === 'individual' ? individualPlanMeta.amount : groupPricing.amountDueNow;
 
-  const checkoutMetadata: Record<string, string | number | boolean> =
-    billingMode === 'individual'
-      ? {}
-      : buildGroupPaymentMetadata({
-          billingCycle: groupBillingCycle,
-          paymentMode: groupPaymentMode,
-          teamSize: groupPricing.teamSize,
-          seatsPaidNow: groupPricing.seatsPaidNow,
-        });
+  const checkoutMetadata = useMemo<Record<string, string | number | boolean>>(
+    () =>
+      billingMode === 'individual'
+        ? {}
+        : buildGroupPaymentMetadata({
+            billingCycle: groupBillingCycle,
+            paymentMode: groupPaymentMode,
+            teamSize: groupPricing.teamSize,
+            seatsPaidNow: groupPricing.seatsPaidNow,
+          }),
+    [billingMode, groupBillingCycle, groupPaymentMode, groupPricing.seatsPaidNow, groupPricing.teamSize]
+  );
 
   useEffect(() => {
     setPreparedCheckout(null);
@@ -177,6 +181,15 @@ export function SubscriptionPaywall({
         tokenizationAmount,
         eligibilityToken,
         preparedAt: Date.now(),
+      });
+      trackEvent('trial_started', {
+        userId: user?.id || null,
+        payload: {
+          selectedPlan,
+          trialDays,
+          tokenizationAmount,
+          source: 'subscription-paywall',
+        },
       });
       setMessage('Card authorization is ready. Complete checkout to activate your trial.');
     } catch (prepareError: any) {
@@ -414,8 +427,8 @@ export function SubscriptionPaywall({
             <div className="rounded-xl border border-stroke-subtle bg-bg-elevated p-4">
               <p className="text-sm font-semibold text-content-primary">What you get in trial</p>
               <ul className="mt-2 space-y-1 text-sm text-content-secondary">
-                <li>Full onboarding and execution workflow</li>
-                <li>Plan dashboard, pacing insights, and next-step loop</li>
+                <li>Create releases with the full professional checklist workflow</li>
+                <li>Track progress across planning, release week, and post-release</li>
                 <li>Individual or group billing model preserved at renewal</li>
               </ul>
             </div>

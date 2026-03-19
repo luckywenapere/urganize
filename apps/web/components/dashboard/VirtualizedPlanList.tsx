@@ -17,8 +17,11 @@ type PlanStatus = 'Completed' | 'Overdue' | 'In Progress';
 type VirtualizedPlanListProps = {
   plans: PlanSummary[];
   showArchivedBadge?: boolean;
+  canManagePlans?: boolean;
   getPlanStatus: (plan: PlanSummary) => PlanStatus;
   onSelectPlan: (planId: string) => void;
+  onRenamePlanTitle: (planId: string, nextTitle: string) => Promise<void>;
+  onRequestRenamePlan: (plan: PlanSummary) => void;
   onRequestDeletePlan: (plan: PlanSummary) => void;
 };
 
@@ -28,11 +31,41 @@ const OVERSCAN_ROWS = 4;
 const PLAN_MENU_WIDTH_PX = 190;
 const PLAN_MENU_SAFE_MARGIN_PX = 12;
 
-export function VirtualizedPlanList({ plans, showArchivedBadge = false, getPlanStatus, onSelectPlan, onRequestDeletePlan }: VirtualizedPlanListProps) {
+export function VirtualizedPlanList({
+  plans,
+  showArchivedBadge = false,
+  canManagePlans = true,
+  getPlanStatus,
+  onSelectPlan,
+  onRenamePlanTitle,
+  onRequestRenamePlan,
+  onRequestDeletePlan,
+}: VirtualizedPlanListProps) {
   const [scrollTop, setScrollTop] = useState(0);
   const [activePlanMenuId, setActivePlanMenuId] = useState<string | null>(null);
   const [activePlanMenuDirection, setActivePlanMenuDirection] = useState<'up' | 'down'>('down');
   const [activePlanMenuOffsetX, setActivePlanMenuOffsetX] = useState(0);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editingPlanTitle, setEditingPlanTitle] = useState('');
+  const [savingPlanId, setSavingPlanId] = useState<string | null>(null);
+
+  const commitInlineRename = async (plan: PlanSummary) => {
+    const nextTitle = editingPlanTitle.trim();
+    const currentTitle = (plan.title || '').trim();
+    if (!nextTitle || nextTitle === currentTitle) {
+      setEditingPlanId(null);
+      setEditingPlanTitle('');
+      return;
+    }
+    setSavingPlanId(plan.id);
+    try {
+      await onRenamePlanTitle(plan.id, nextTitle);
+      setEditingPlanId(null);
+      setEditingPlanTitle('');
+    } finally {
+      setSavingPlanId(null);
+    }
+  };
 
   const togglePlanMenu = (planId: string, anchor: HTMLElement) => {
     if (activePlanMenuId === planId) {
@@ -79,7 +112,7 @@ export function VirtualizedPlanList({ plans, showArchivedBadge = false, getPlanS
           return (
             <div
               key={plan.id}
-              className="absolute left-0 right-0 h-[84px] rounded-xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-left transition hover:border-stroke-default hover:bg-bg-hover"
+              className="absolute left-0 right-0 h-[84px] rounded-2xl border border-stroke-subtle bg-bg-elevated px-4 py-3 text-left transition hover:-translate-y-[1px] hover:border-stroke-default hover:bg-bg-hover"
               style={{
                 top: absoluteIndex * ROW_HEIGHT,
                 zIndex: activePlanMenuId === plan.id ? 60 : 1,
@@ -87,14 +120,60 @@ export function VirtualizedPlanList({ plans, showArchivedBadge = false, getPlanS
               data-plan-menu="true"
             >
               <div className="flex h-full items-start justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => onSelectPlan(plan.id)}
+                <div
                   className="flex min-w-0 flex-1 items-start justify-between gap-3 text-left"
+                  onClick={() => {
+                    if (editingPlanId === plan.id) return;
+                    onSelectPlan(plan.id);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && editingPlanId !== plan.id) {
+                      onSelectPlan(plan.id);
+                    }
+                  }}
                 >
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-2">
-                      <p className="truncate text-base font-medium text-content-primary">{plan.title}</p>
+                      {canManagePlans && editingPlanId === plan.id ? (
+                        <input
+                          value={editingPlanTitle}
+                          onChange={(event) => setEditingPlanTitle(event.target.value)}
+                          onBlur={() => {
+                            void commitInlineRename(plan);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault();
+                              void commitInlineRename(plan);
+                            }
+                            if (event.key === 'Escape') {
+                              setEditingPlanId(null);
+                              setEditingPlanTitle('');
+                            }
+                          }}
+                          autoFocus
+                          className="w-full max-w-[260px] rounded border border-stroke-subtle bg-bg-surface px-2 py-1 text-base font-medium text-content-primary outline-none focus:border-brand"
+                        />
+                      ) : canManagePlans ? (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setEditingPlanId(plan.id);
+                            setEditingPlanTitle(plan.title || '');
+                          }}
+                          className="truncate text-left text-base font-medium text-content-primary underline-offset-4 hover:underline"
+                        >
+                          {plan.title}
+                        </button>
+                      ) : (
+                        <p className="truncate text-left text-base font-medium text-content-primary">{plan.title}</p>
+                      )}
+                      {savingPlanId === plan.id && (
+                        <span className="text-[11px] text-content-tertiary">Saving...</span>
+                      )}
                       {showArchivedBadge && plan.status === 'released' && (
                         <span className="rounded-full border border-stroke-default bg-bg-surface px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-content-tertiary">
                           Archived
@@ -116,9 +195,17 @@ export function VirtualizedPlanList({ plans, showArchivedBadge = false, getPlanS
                       {status}
                     </span>
                     <span className="text-content-tertiary">.</span>
-                    <span>{new Date(plan.created_at).toLocaleDateString()}</span>
+                <span>
+                  {new Date(plan.created_at).toLocaleString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </span>
                   </div>
-                </button>
+                </div>
                 <div className="relative ml-2">
                   <button
                     type="button"
@@ -133,6 +220,20 @@ export function VirtualizedPlanList({ plans, showArchivedBadge = false, getPlanS
                       className={`absolute right-0 z-50 min-w-[170px] rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-lg ${activePlanMenuDirection === 'up' ? 'bottom-full mb-2 animate-menu-up' : 'top-full mt-2 animate-menu-down'}`}
                       style={{ transform: `translateX(${activePlanMenuOffsetX}px)` }}
                     >
+                      {canManagePlans && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActivePlanMenuId(null);
+                            setActivePlanMenuDirection('down');
+                            setActivePlanMenuOffsetX(0);
+                            onRequestRenamePlan(plan);
+                          }}
+                          className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                        >
+                          Rename title
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => {
@@ -145,18 +246,20 @@ export function VirtualizedPlanList({ plans, showArchivedBadge = false, getPlanS
                       >
                         Open plan
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActivePlanMenuId(null);
-                          setActivePlanMenuDirection('down');
-                          setActivePlanMenuOffsetX(0);
-                          onRequestDeletePlan(plan);
-                        }}
-                        className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-status-error hover:bg-status-error/10"
-                      >
-                        Delete plan
-                      </button>
+                      {canManagePlans && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActivePlanMenuId(null);
+                            setActivePlanMenuDirection('down');
+                            setActivePlanMenuOffsetX(0);
+                            onRequestDeletePlan(plan);
+                          }}
+                          className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-status-error hover:bg-status-error/10"
+                        >
+                          Delete plan
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

@@ -6,6 +6,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+import { trackEvent } from '@/lib/analytics';
+import { getRolePermissions } from '@/lib/role-permissions';
+import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
 import {
   INDIVIDUAL_PLAN_OPTIONS,
   MIN_GROUP_TEAM_SIZE,
@@ -18,6 +22,12 @@ import {
   type IndividualPlanId,
 } from '@/lib/billing';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { SearchableGenreSelect } from '@/components/ui/SearchableGenreSelect';
+import {
+  SettingsManagedArtistsSectionSkeleton,
+  SettingsPageSkeleton,
+  SettingsTeamMembersSectionSkeleton,
+} from '@/components/loading/SettingsPageSkeleton';
 
 const PaystackButton = dynamic(
   () => import('@/components/PaystackButton').then((mod) => mod.PaystackButton),
@@ -41,7 +51,64 @@ type PaymentVerifyResponse = {
   trial_ends_at?: string;
 };
 
-const panelClass = 'rounded-2xl border border-stroke-default bg-bg-surface p-5 sm:p-6';
+type OrganizationInfo = {
+  id: string;
+  name: string;
+  owner_id: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type OrganizationMember = {
+  id: string;
+  user_id: string;
+  role: 'manager' | 'artist' | 'team-member' | 'viewer';
+  name: string;
+  email: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type ManagedArtist = {
+  id: string;
+  name: string;
+  genre: string;
+  notes: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type SettingsUiState = {
+  organizationName: string;
+  newMemberEmail: string;
+  newMemberRole: 'manager' | 'artist' | 'team-member' | 'viewer';
+  managedArtistForm: {
+    name: string;
+    genre: string;
+    notes: string;
+  };
+};
+
+const panelClass =
+  'rounded-3xl border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-sm sm:p-6';
+const SETTINGS_UI_STATE_VERSION = 1;
+const SETTINGS_UI_STATE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const SETTINGS_UI_STATE_SCOPE = 'settings-ui';
+
+const isSettingsUiState = (value: unknown): value is SettingsUiState => {
+  if (!value || typeof value !== 'object') return false;
+  const state = value as Partial<SettingsUiState>;
+  return (
+    typeof state.organizationName === 'string' &&
+    typeof state.newMemberEmail === 'string' &&
+    (state.newMemberRole === 'manager' ||
+      state.newMemberRole === 'artist' ||
+      state.newMemberRole === 'team-member' ||
+      state.newMemberRole === 'viewer') &&
+    !!state.managedArtistForm &&
+    typeof state.managedArtistForm === 'object'
+  );
+};
 
 const parsePaymentMetadata = (paystackResponse: unknown): Record<string, unknown> => {
   if (!paystackResponse || typeof paystackResponse !== 'object') return {};
@@ -52,9 +119,10 @@ const parsePaymentMetadata = (paystackResponse: unknown): Record<string, unknown
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, logout, checkAuth, isLoading: authLoading } = useAuthStore();
+  const { user, logout, checkAuth, updateArtistName, isLoading: authLoading } = useAuthStore();
 
   const [name, setName] = useState('');
+  const [artistProfileName, setArtistProfileName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -84,6 +152,34 @@ export default function SettingsPage() {
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
   const [paymentCheckMessage, setPaymentCheckMessage] = useState('');
   const [paymentCheckError, setPaymentCheckError] = useState('');
+  const [organization, setOrganization] = useState<OrganizationInfo | null>(null);
+  const [organizationName, setOrganizationName] = useState('');
+  const [isSavingOrganization, setIsSavingOrganization] = useState(false);
+  const [organizationMessage, setOrganizationMessage] = useState('');
+  const [organizationError, setOrganizationError] = useState('');
+  const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberRole, setNewMemberRole] = useState<'manager' | 'artist' | 'team-member' | 'viewer'>('viewer');
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [memberMessage, setMemberMessage] = useState('');
+  const [memberError, setMemberError] = useState('');
+  const [managedArtists, setManagedArtists] = useState<ManagedArtist[]>([]);
+  const [isLoadingManagedArtists, setIsLoadingManagedArtists] = useState(false);
+  const [isSavingManagedArtist, setIsSavingManagedArtist] = useState(false);
+  const [editingManagedArtistId, setEditingManagedArtistId] = useState<string | null>(null);
+  const [managedArtistMessage, setManagedArtistMessage] = useState('');
+  const [managedArtistError, setManagedArtistError] = useState('');
+  const [managedArtistForm, setManagedArtistForm] = useState({
+    name: '',
+    genre: '',
+    notes: '',
+  });
+  const [managedArtistSchemaSql, setManagedArtistSchemaSql] = useState('');
+
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
+  const isManagerAccount = rolePermissions.role === 'manager';
+  const settingsUiStateKey = user ? `urganize.settings.ui.v${SETTINGS_UI_STATE_VERSION}.${user.id}` : '';
 
   useEffect(() => {
     if (authLoading) return;
@@ -92,7 +188,48 @@ export default function SettingsPage() {
       return;
     }
     setName(user.name || '');
+    setArtistProfileName(String(user.artist_name || ''));
   }, [authLoading, router, user]);
+
+  useEffect(() => {
+    if (!settingsUiStateKey) return;
+    let cancelled = false;
+
+    const restore = async () => {
+      const localDraft = readPersistedState<SettingsUiState>(
+        settingsUiStateKey,
+        SETTINGS_UI_STATE_VERSION,
+        isSettingsUiState,
+        SETTINGS_UI_STATE_MAX_AGE_MS
+      );
+      const remoteDraft = await fetchUiDraft<SettingsUiState>(SETTINGS_UI_STATE_SCOPE, settingsUiStateKey);
+      const restored =
+        localDraft || (remoteDraft.payload && isSettingsUiState(remoteDraft.payload) ? remoteDraft.payload : null);
+      if (!restored || cancelled) return;
+
+      setOrganizationName(restored.organizationName);
+      setNewMemberEmail(restored.newMemberEmail);
+      setNewMemberRole(restored.newMemberRole);
+      setManagedArtistForm(restored.managedArtistForm);
+    };
+
+    void restore();
+    return () => {
+      cancelled = true;
+    };
+  }, [settingsUiStateKey]);
+
+  useEffect(() => {
+    if (!settingsUiStateKey) return;
+    const draft: SettingsUiState = {
+      organizationName,
+      newMemberEmail,
+      newMemberRole,
+      managedArtistForm,
+    };
+    writePersistedState<SettingsUiState>(settingsUiStateKey, SETTINGS_UI_STATE_VERSION, draft);
+    void saveUiDraft<SettingsUiState>(SETTINGS_UI_STATE_SCOPE, settingsUiStateKey, draft);
+  }, [managedArtistForm, newMemberEmail, newMemberRole, organizationName, settingsUiStateKey]);
 
   useEffect(() => {
     if (!user) return;
@@ -167,6 +304,131 @@ export default function SettingsPage() {
     loadSettingsData();
   }, [user]);
 
+  useEffect(() => {
+    if (!user || !isManagerAccount) {
+      setManagedArtists([]);
+      return;
+    }
+
+    let cancelled = false;
+    const loadManagedArtists = async () => {
+      setIsLoadingManagedArtists(true);
+      setManagedArtistError('');
+      setManagedArtistSchemaSql('');
+      try {
+        const token = await getAccessToken();
+        if (!token) {
+          if (!cancelled) setManagedArtistError('Session expired. Please sign in again.');
+          return;
+        }
+
+        const response = await fetch('/api/managed-artists', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        const payload = (await response.json().catch(() => ({}))) as {
+          artists?: ManagedArtist[];
+          error?: string;
+          sql?: string;
+        };
+        if (!response.ok) {
+          if (!cancelled) {
+            setManagedArtistError(payload.error || 'Could not load managed artists.');
+            if (response.status === 501 && payload.sql) setManagedArtistSchemaSql(payload.sql);
+          }
+          return;
+        }
+        if (!cancelled) {
+          setManagedArtists(Array.isArray(payload.artists) ? payload.artists : []);
+        }
+      } catch {
+        if (!cancelled) setManagedArtistError('Could not load managed artists.');
+      } finally {
+        if (!cancelled) setIsLoadingManagedArtists(false);
+      }
+    };
+
+    loadManagedArtists();
+    return () => {
+      cancelled = true;
+    };
+  }, [isManagerAccount, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    const getAccessToken = async (): Promise<string> => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      return session?.access_token || '';
+    };
+
+    const loadOrganization = async () => {
+      setIsLoadingMembers(true);
+      setOrganizationError('');
+      setMemberError('');
+      try {
+        const token = await getAccessToken();
+        if (!token) {
+          setOrganizationError('Session expired. Please sign in again.');
+          return;
+        }
+
+        const [orgRes, membersRes] = await Promise.all([
+          fetch('/api/organization', {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+          }),
+          fetch('/api/organization/members', {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+          }),
+        ]);
+
+        const orgPayload = (await orgRes.json().catch(() => ({}))) as {
+          organization?: OrganizationInfo | null;
+          error?: string;
+        };
+        const membersPayload = (await membersRes.json().catch(() => ({}))) as {
+          members?: OrganizationMember[];
+          error?: string;
+        };
+
+        if (!orgRes.ok) {
+          setOrganizationError(orgPayload.error || 'Could not load organization.');
+          return;
+        }
+        if (!membersRes.ok) {
+          setMemberError(membersPayload.error || 'Could not load members.');
+        }
+
+        if (!cancelled) {
+          setOrganization(orgPayload.organization || null);
+          setOrganizationName(orgPayload.organization?.name || '');
+          setMembers(Array.isArray(membersPayload.members) ? membersPayload.members : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setOrganizationError('Could not load organization settings.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingMembers(false);
+        }
+      }
+    };
+
+    loadOrganization();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   const clearFeedback = () => {
     setError('');
     setSuccess('');
@@ -220,6 +482,27 @@ export default function SettingsPage() {
       setSuccess('Profile updated');
     } catch (err: any) {
       setError(err?.message || 'Failed to update profile');
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
+  const handleSaveArtistProfileName = async () => {
+    if (!user || user.role !== 'artist') return;
+    clearFeedback();
+    const normalized = artistProfileName.trim();
+    if (!normalized) {
+      setError('Artist name cannot be empty');
+      return;
+    }
+
+    setIsSavingName(true);
+    try {
+      await updateArtistName(normalized);
+      await checkAuth();
+      setSuccess('Artist name updated');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to update artist name');
     } finally {
       setIsSavingName(false);
     }
@@ -340,6 +623,27 @@ export default function SettingsPage() {
         : '';
 
       setPaymentCheckMessage(`Payment verified for ${planLabel} (${amountLabel}).${trialLabel}`);
+      if (payload.trialing) {
+        trackEvent('trial_started', {
+          userId: user?.id || null,
+          payload: {
+            source: 'settings-payment-verify',
+            reference,
+            plan: payload.plan || null,
+            trialEndsAt: payload.trial_ends_at || null,
+          },
+        });
+      } else {
+        trackEvent('trial_converted', {
+          userId: user?.id || null,
+          payload: {
+            source: 'settings-payment-verify',
+            reference,
+            plan: payload.plan || null,
+            amount: typeof payload.amount === 'number' ? payload.amount : null,
+          },
+        });
+      }
       await checkAuth();
     } catch {
       setPaymentCheckError('Could not verify payment right now.');
@@ -348,36 +652,276 @@ export default function SettingsPage() {
     }
   };
 
+  const getAccessToken = async (): Promise<string> => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    return session?.access_token || '';
+  };
+
+  const handleSaveOrganization = async () => {
+    const name = organizationName.trim();
+    if (!name) {
+      setOrganizationError('Organization name is required.');
+      return;
+    }
+    setIsSavingOrganization(true);
+    setOrganizationError('');
+    setOrganizationMessage('');
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch('/api/organization', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        organization?: OrganizationInfo;
+        status?: string;
+        error?: string;
+      };
+      if (!response.ok || !payload.organization) {
+        throw new Error(payload.error || 'Could not save organization.');
+      }
+      setOrganization(payload.organization);
+      setOrganizationName(payload.organization.name || name);
+      setOrganizationMessage(payload.status === 'created' ? 'Organization created.' : 'Organization updated.');
+    } catch (err: any) {
+      setOrganizationError(err?.message || 'Could not save organization.');
+    } finally {
+      setIsSavingOrganization(false);
+    }
+  };
+
+  const resetManagedArtistForm = () => {
+    setManagedArtistForm({ name: '', genre: '', notes: '' });
+    setEditingManagedArtistId(null);
+  };
+
+  const clearSettingsDrafts = () => {
+    clearPersistedState(settingsUiStateKey);
+    void deleteUiDraft(SETTINGS_UI_STATE_SCOPE, settingsUiStateKey);
+    setOrganizationName(organization?.name || '');
+    setNewMemberEmail('');
+    setNewMemberRole('viewer');
+    resetManagedArtistForm();
+  };
+
+  const handleSaveManagedArtist = async () => {
+    const name = managedArtistForm.name.trim();
+    if (!name) {
+      setManagedArtistError('Artist name is required.');
+      return;
+    }
+
+    setIsSavingManagedArtist(true);
+    setManagedArtistError('');
+    setManagedArtistMessage('');
+    setManagedArtistSchemaSql('');
+
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+
+      const targetUrl = editingManagedArtistId ? `/api/managed-artists/${editingManagedArtistId}` : '/api/managed-artists';
+      const method = editingManagedArtistId ? 'PUT' : 'POST';
+      const response = await fetch(targetUrl, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(managedArtistForm),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        artist?: ManagedArtist;
+        error?: string;
+        sql?: string;
+      };
+
+      if (!response.ok || !payload.artist) {
+        if (response.status === 501 && payload.sql) setManagedArtistSchemaSql(payload.sql);
+        throw new Error(payload.error || 'Could not save managed artist.');
+      }
+
+      setManagedArtists((current) => {
+        const existingIndex = current.findIndex((artist) => artist.id === payload.artist?.id);
+        if (existingIndex === -1) return [payload.artist as ManagedArtist, ...current];
+        const next = [...current];
+        next[existingIndex] = payload.artist as ManagedArtist;
+        return next;
+      });
+
+      setManagedArtistMessage(editingManagedArtistId ? 'Artist updated.' : 'Artist added.');
+      resetManagedArtistForm();
+    } catch (err: any) {
+      setManagedArtistError(err?.message || 'Could not save managed artist.');
+    } finally {
+      setIsSavingManagedArtist(false);
+    }
+  };
+
+  const handleEditManagedArtist = (artist: ManagedArtist) => {
+    setEditingManagedArtistId(artist.id);
+    setManagedArtistForm({
+      name: artist.name || '',
+      genre: artist.genre || '',
+      notes: artist.notes || '',
+    });
+  };
+
+  const handleDeleteManagedArtist = async (artistId: string) => {
+    setManagedArtistError('');
+    setManagedArtistMessage('');
+    setManagedArtistSchemaSql('');
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch(`/api/managed-artists/${artistId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string; sql?: string };
+      if (!response.ok) {
+        if (response.status === 501 && payload.sql) setManagedArtistSchemaSql(payload.sql);
+        throw new Error(payload.error || 'Could not remove artist.');
+      }
+      setManagedArtists((current) => current.filter((artist) => artist.id !== artistId));
+      if (editingManagedArtistId === artistId) {
+        resetManagedArtistForm();
+      }
+      setManagedArtistMessage('Artist removed.');
+    } catch (err: any) {
+      setManagedArtistError(err?.message || 'Could not remove artist.');
+    }
+  };
+
+  const handleAddMember = async () => {
+    const email = newMemberEmail.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      setMemberError('Enter a valid email.');
+      return;
+    }
+
+    setIsAddingMember(true);
+    setMemberError('');
+    setMemberMessage('');
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch('/api/organization/members', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email,
+          role: newMemberRole,
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        member?: OrganizationMember;
+        error?: string;
+      };
+      if (!response.ok || !payload.member) {
+        throw new Error(payload.error || 'Could not add member.');
+      }
+      setMembers((current) => {
+        const existingIndex = current.findIndex((member) => member.user_id === payload.member?.user_id);
+        if (existingIndex === -1) return [...current, payload.member as OrganizationMember];
+        const next = [...current];
+        next[existingIndex] = payload.member as OrganizationMember;
+        return next;
+      });
+      setNewMemberEmail('');
+      setNewMemberRole('viewer');
+      setMemberMessage('Member saved.');
+    } catch (err: any) {
+      setMemberError(err?.message || 'Could not add member.');
+    } finally {
+      setIsAddingMember(false);
+    }
+  };
+
+  const handleMemberRoleChange = async (memberId: string, role: OrganizationMember['role']) => {
+    setMemberError('');
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch('/api/organization/members', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ memberId, role }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        member?: { role?: OrganizationMember['role'] };
+        error?: string;
+      };
+      if (!response.ok) throw new Error(payload.error || 'Could not update member role.');
+      setMembers((current) =>
+        current.map((member) =>
+          member.id === memberId ? { ...member, role: (payload.member?.role || role) as OrganizationMember['role'] } : member
+        )
+      );
+    } catch (err: any) {
+      setMemberError(err?.message || 'Could not update role.');
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    setMemberError('');
+    setMemberMessage('');
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch('/api/organization/members', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ memberId }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(payload.error || 'Could not remove member.');
+      setMembers((current) => current.filter((member) => member.id !== memberId));
+      setMemberMessage('Member removed.');
+    } catch (err: any) {
+      setMemberError(err?.message || 'Could not remove member.');
+    }
+  };
+
   if (authLoading) {
-    return (
-      <main className="min-h-screen bg-bg-base text-content-primary">
-        <div className="mx-auto w-full max-w-5xl px-6 py-10">
-          <p className="text-content-secondary">Loading settings...</p>
-        </div>
-      </main>
-    );
+    return <SettingsPageSkeleton />;
   }
 
-  if (!user) return null;
+  if (!user) return <SettingsPageSkeleton />;
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+      <div className="relative mx-auto w-full max-w-5xl px-4 pb-8 pt-20 sm:px-6 sm:py-10">
+        <div className="pointer-events-none absolute -right-16 -top-12 h-52 w-52 rounded-full bg-brand/15 blur-3xl" />
+        <div className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-status-info/12 blur-3xl" />
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl tracking-tight sm:text-4xl">Settings</h1>
-            <p className="mt-1 text-sm text-content-secondary">Account, billing, and workflow preferences.</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.14em] text-content-tertiary">Account, billing, and workflow preferences</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/admin"
-              className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-            >
-              Admin
-            </Link>
+          <div className="flex w-full items-center gap-2 sm:w-auto">
             <Link
               href="/dashboard"
-              className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+              className="w-full rounded-full border border-stroke-default bg-bg-elevated px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
             >
               Back to dashboard
             </Link>
@@ -492,6 +1036,46 @@ export default function SettingsPage() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {isManagerAccount && (
+            <section className={panelClass}>
+            <h2 className="mb-4 text-xl">Organization</h2>
+            <div className="space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-sm text-content-secondary">Organization name</span>
+                <input
+                  value={organizationName}
+                  onChange={(event) => setOrganizationName(event.target.value)}
+                  placeholder="e.g. The Label Group"
+                  className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={handleSaveOrganization}
+                disabled={isSavingOrganization}
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+              >
+                {isSavingOrganization ? 'Saving...' : organization ? 'Update organization' : 'Create organization'}
+              </button>
+              {organization && (
+                <p className="text-xs text-content-tertiary">
+                  Owner ID: {organization.owner_id}
+                </p>
+              )}
+              {organizationMessage && (
+                <p className="rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
+                  {organizationMessage}
+                </p>
+              )}
+              {organizationError && (
+                <p className="rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+                  {organizationError}
+                </p>
+              )}
+            </div>
+          </section>
+          )}
+
           <section className={panelClass}>
             <h2 className="mb-4 text-xl">Session</h2>
             <div className="rounded-lg border border-stroke-subtle bg-bg-elevated p-4">
@@ -508,12 +1092,245 @@ export default function SettingsPage() {
               </button>
             </div>
           </section>
+
+          {user.role === 'artist' && (
+            <section className={`${panelClass} mt-6`}>
+              <h2 className="mb-4 text-xl">Artist Profile</h2>
+              <p className="mb-3 text-sm text-content-secondary">
+                This is your canonical artist name. It is reused and locked in other parts of the app.
+              </p>
+              <div className="space-y-3">
+                <label className="block">
+                  <span className="mb-1 block text-sm text-content-secondary">Artist name</span>
+                  <input
+                    value={artistProfileName}
+                    onChange={(event) => setArtistProfileName(event.target.value)}
+                    className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+                    placeholder="e.g. Tems"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={handleSaveArtistProfileName}
+                  disabled={isSavingName}
+                  className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                >
+                  {isSavingName ? 'Saving...' : 'Save artist name'}
+                </button>
+              </div>
+            </section>
+          )}
         </div>
 
+        {isManagerAccount && (
+          <section className={`${panelClass} mt-6`}>
+            <h2 className="mb-4 text-xl">Managed Artists</h2>
+            <details open className="rounded-xl border border-stroke-subtle bg-bg-elevated p-3">
+              <summary className="cursor-pointer select-none text-sm font-semibold text-content-primary">
+                Artist details form
+              </summary>
+              <p className="mt-2 text-sm text-content-secondary">
+                Add and maintain artist records once. These records are stored universally and reused across manager workflows.
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+                <input
+                  value={managedArtistForm.name}
+                  onChange={(event) => setManagedArtistForm((current) => ({ ...current, name: event.target.value }))}
+                  placeholder="Artist name"
+                  className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                />
+                <SearchableGenreSelect
+                  value={managedArtistForm.genre}
+                  onChange={(value) => setManagedArtistForm((current) => ({ ...current, genre: value }))}
+                  label=""
+                  className="bg-bg-surface"
+                />
+                <textarea
+                  value={managedArtistForm.notes}
+                  onChange={(event) => setManagedArtistForm((current) => ({ ...current, notes: event.target.value }))}
+                  placeholder="Notes"
+                  className="min-h-[84px] rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand md:col-span-2"
+                />
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveManagedArtist}
+                    disabled={isSavingManagedArtist}
+                    className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                  >
+                    {isSavingManagedArtist ? 'Saving...' : editingManagedArtistId ? 'Save artist' : 'Add artist'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearSettingsDrafts}
+                    className="rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover"
+                  >
+                    Clear draft
+                  </button>
+                  {editingManagedArtistId && (
+                    <button
+                      type="button"
+                    onClick={resetManagedArtistForm}
+                    className="rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover"
+                  >
+                    Cancel edit
+                  </button>
+                )}
+              </div>
+            </details>
+
+            {managedArtistMessage && (
+              <p className="mt-3 rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">{managedArtistMessage}</p>
+            )}
+            {managedArtistError && (
+              <p className="mt-3 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">{managedArtistError}</p>
+            )}
+            {managedArtistSchemaSql && (
+              <pre className="mt-3 max-h-40 overflow-auto rounded-lg border border-stroke-subtle bg-bg-surface p-3 text-xs text-content-secondary">
+                {managedArtistSchemaSql}
+              </pre>
+            )}
+
+            {isLoadingManagedArtists ? (
+              <SettingsManagedArtistsSectionSkeleton />
+            ) : managedArtists.length === 0 ? (
+              <p className="mt-3 text-sm text-content-secondary">No managed artists yet.</p>
+            ) : (
+              <div className="mt-4 space-y-2">
+                {managedArtists.map((artist) => (
+                  <div key={artist.id} className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium text-content-primary">{artist.name}</p>
+                      <p className="text-xs text-content-secondary">{artist.genre || 'No genre'}</p>
+                      {artist.notes && <p className="mt-1 text-xs text-content-secondary">{artist.notes}</p>}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleEditManagedArtist(artist)}
+                        className="rounded-md border border-stroke-default bg-bg-surface px-2 py-1 text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteManagedArtist(artist.id)}
+                        className="rounded-md border border-status-error/35 bg-status-error/10 px-2 py-1 text-status-error hover:bg-status-error/20"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {isManagerAccount && (
         <section className={`${panelClass} mt-6`}>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl">Billing</h2>
-            <div className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs text-content-secondary">
+          <h2 className="mb-4 text-xl">Team Members</h2>
+          {!organization ? (
+            <p className="text-sm text-content-secondary">Create your organization first to manage team members.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+                <input
+                  value={newMemberEmail}
+                  onChange={(event) => setNewMemberEmail(event.target.value)}
+                  placeholder="member@email.com"
+                  className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
+                />
+                <select
+                  value={newMemberRole}
+                  onChange={(event) =>
+                    setNewMemberRole(
+                      ((event.target.value as OrganizationMember['role']) || 'viewer') as OrganizationMember['role']
+                    )
+                  }
+                  className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                >
+                  <option value="manager">Manager</option>
+                  <option value="artist">Artist</option>
+                  <option value="team-member">Team Member</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleAddMember}
+                  disabled={isAddingMember}
+                  className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                >
+                  {isAddingMember ? 'Adding...' : 'Add member'}
+                </button>
+              </div>
+
+              {memberMessage && (
+                <p className="mt-3 rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
+                  {memberMessage}
+                </p>
+              )}
+              {memberError && (
+                <p className="mt-3 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+                  {memberError}
+                </p>
+              )}
+
+              {isLoadingMembers ? (
+                <SettingsTeamMembersSectionSkeleton />
+              ) : members.length === 0 ? (
+                <p className="mt-4 text-sm text-content-secondary">No members yet.</p>
+              ) : (
+                <div className="mt-4 space-y-2">
+                  {members.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-content-primary">{member.name || 'Unknown'}</p>
+                        <p className="text-xs text-content-secondary">{member.email || 'No email'}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={member.role}
+                          onChange={(event) =>
+                            handleMemberRoleChange(
+                              member.id,
+                              ((event.target.value as OrganizationMember['role']) || 'viewer') as OrganizationMember['role']
+                            )
+                          }
+                          className="rounded border border-stroke-subtle bg-bg-surface px-2 py-1 text-xs text-content-primary"
+                        >
+                          <option value="manager">Manager</option>
+                          <option value="artist">Artist</option>
+                          <option value="team-member">Team Member</option>
+                          <option value="viewer">Viewer</option>
+                        </select>
+                        {member.user_id !== user.id && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMember(member.id)}
+                            className="text-xs text-status-error hover:underline"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </section>
+        )}
+
+        <section className={`${panelClass} mt-6`}>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-xl">Billing</h2>
+              <div className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs text-content-secondary">
               Current: {subscription.plan || 'No active plan'} {subscription.status ? `(${subscription.status})` : ''}
             </div>
           </div>
@@ -709,7 +1526,7 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <section className="mt-6 rounded-2xl border border-status-error/35 bg-status-error/10 p-6">
+        <section className="mt-6 rounded-3xl border border-status-error/35 bg-status-error/10 p-6">
           <h2 className="mb-2 text-xl text-status-error">Delete Account</h2>
           <p className="mb-4 text-sm text-content-secondary">
             This permanently deletes your account immediately. This action cannot be undone.
