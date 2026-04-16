@@ -453,9 +453,14 @@ export default function DashboardPage() {
       </div>
 
       {releasePendingDelete ? (
-        <div className="modal-scrim fixed inset-0 z-[120] flex items-center justify-center p-4">
+        <div 
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-release-title"
+          className="modal-scrim fixed inset-0 z-[120] flex items-center justify-center p-4"
+        >
           <div className="modal-shell w-full max-w-md p-5 sm:p-6">
-            <h2 className="text-xl font-semibold text-content-primary">Delete release</h2>
+            <h2 id="delete-release-title" className="text-xl font-semibold text-content-primary">Delete release</h2>
             <p className="mt-2 text-sm text-content-secondary">
               This permanently removes <span className="font-semibold text-content-primary">{releasePendingDelete.title}</span> and its workspace data.
             </p>
