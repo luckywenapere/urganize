@@ -1,0 +1,115 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Missing Supabase environment variables. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local and restart the dev server.'
+  );
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
+
+// Type definitions matching your database schema
+export type Profile = {
+  id: string;
+  name: string;
+  email: string;
+  country?: string | null;
+  locale?: string | null;
+  timezone?: string | null;
+  role: 'artist' | 'manager' | 'artist-team' | 'artist-manager' | 'team-member' | 'viewer';
+  artist_name?: string | null;
+  onboarding_completed?: boolean;
+  onboarding_step?: number;
+  onboarding_completed_at?: string | null;
+  onboarding_role?: 'artist' | 'manager' | 'label' | 'other' | null;
+  onboarding_persona?:
+    | 'independent_artist'
+    | 'music_manager'
+    | 'label_ar'
+    | 'producer_beatmaker'
+    | 'other'
+    | null;
+  onboarding_release_process?:
+    | 'spreadsheets_or_notes'
+    | 'group_chats_and_dms'
+    | 'nothing_structured_yet'
+    | 'another_tool'
+    | null;
+  onboarding_biggest_headache?:
+    | 'keeping_team_aligned'
+    | 'tracking_whats_done_and_whats_next'
+    | 'collecting_credits_and_metadata'
+    | 'managing_multiple_releases_at_once'
+    | null;
+  onboarding_release_id?: string | null;
+  onboarding_task_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  is_subscribed?: boolean; 
+};
+
+export type DbRelease = {
+  id: string;
+  user_id: string;
+  title: string;
+  artist_name: string;
+  type: 'single' | 'ep' | 'album';
+  status: 'draft' | 'in-progress' | 'ready' | 'released';
+  release_date?: string;
+  cover_art?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DbTask = {
+  id: string;
+  release_id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  phase: 'pre-production' | 'production' | 'promotion' | 'distribution';
+  status: 'pending' | 'completed';
+  due_date?: string;
+  is_system_generated: boolean;
+  order?: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DbFile = {
+  id: string;
+  release_id: string;
+  user_id: string;
+  name: string;
+  category: 'audio' | 'stems' | 'artwork' | 'licenses' | 'contracts';
+  size: number;
+  storage_path: string;
+  mime_type?: string;
+  created_at: string;
+};
+
+// Helper function to handle Supabase errors
+export function handleSupabaseError(error: any): string {
+  if (error?.message) {
+    // User-friendly error messages
+    if (error.message.includes('duplicate key')) {
+      return 'This email is already registered';
+    }
+    if (error.message.includes('Invalid login credentials')) {
+      return 'Invalid email or password';
+    }
+    if (error.message.includes('Email not confirmed')) {
+      return 'Please verify your email before logging in';
+    }
+    return error.message;
+  }
+  return 'An unexpected error occurred';
+}

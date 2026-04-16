@@ -1,0 +1,471 @@
+[browser] Image with src "/images/urganize-logo.png" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+⨯ ./apps/web/app/dashboard/page.tsx:8:1
+Module not found: Can't resolve '@/lib/subscription-access'
+  [90m 6 |[0m [36mimport[0m { useAuthStore } [36mfrom[0m [32m'@/lib/auth-store'[0m;
+  [90m 7 |[0m [36mimport[0m { captureAnalyticsEvent } [36mfrom[0m [32m'@/lib/analytics'[0m;
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m { getSubscriptionAccess } [36mfrom[0m [32m'@/lib/subscription-access'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mSubscriptionPaywall[0m } [36mfrom[0m [32m'@/components/billing/SubscriptionPaywall'[0m;
+  [90m10 |[0m [36mimport[0m { [33mDashboardPageSkeleton[0m } [36mfrom[0m [32m'@/components/loading/DashboardPageSkeleton'[0m;
+  [90m11 |[0m [36mimport[0m { [33mEmptyState[0m } [36mfrom[0m [32m'@/components/shared/EmptyState'[0m;
+
+Import map: aliased to relative './lib/subscription-access' inside of [project]/apps/web
+
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./apps/web/app/dashboard/page.tsx:8:1
+Module not found: Can't resolve '@/lib/subscription-access'
+  [90m 6 |[0m [36mimport[0m { useAuthStore } [36mfrom[0m [32m'@/lib/auth-store'[0m;
+  [90m 7 |[0m [36mimport[0m { captureAnalyticsEvent } [36mfrom[0m [32m'@/lib/analytics'[0m;
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m { getSubscriptionAccess } [36mfrom[0m [32m'@/lib/subscription-access'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mSubscriptionPaywall[0m } [36mfrom[0m [32m'@/components/billing/SubscriptionPaywall'[0m;
+  [90m10 |[0m [36mimport[0m { [33mDashboardPageSkeleton[0m } [36mfrom[0m [32m'@/components/loading/DashboardPageSkeleton'[0m;
+  [90m11 |[0m [36mimport[0m { [33mEmptyState[0m } [36mfrom[0m [32m'@/components/shared/EmptyState'[0m;
+
+Import map: aliased to relative './lib/subscription-access' inside of [project]/apps/web
+
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./apps/web/app/dashboard/page.tsx:8:1
+Module not found: Can't resolve '@/lib/subscription-access'
+  [90m 6 |[0m [36mimport[0m { useAuthStore } [36mfrom[0m [32m'@/lib/auth-store'[0m;
+  [90m 7 |[0m [36mimport[0m { captureAnalyticsEvent } [36mfrom[0m [32m'@/lib/analytics'[0m;
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m { getSubscriptionAccess } [36mfrom[0m [32m'@/lib/subscription-access'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mSubscriptionPaywall[0m } [36mfrom[0m [32m'@/components/billing/SubscriptionPaywall'[0m;
+  [90m10 |[0m [36mimport[0m { [33mDashboardPageSkeleton[0m } [36mfrom[0m [32m'@/components/loading/DashboardPageSkeleton'[0m;
+  [90m11 |[0m [36mimport[0m { [33mEmptyState[0m } [36mfrom[0m [32m'@/components/shared/EmptyState'[0m;
+
+Import map: aliased to relative './lib/subscription-access' inside of [project]/apps/web
+
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./apps/web/app/dashboard/page.tsx:8:1
+Module not found: Can't resolve '@/lib/subscription-access'
+  [90m 6 |[0m [36mimport[0m { useAuthStore } [36mfrom[0m [32m'@/lib/auth-store'[0m;
+  [90m 7 |[0m [36mimport[0m { captureAnalyticsEvent } [36mfrom[0m [32m'@/lib/analytics'[0m;
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m { getSubscriptionAccess } [36mfrom[0m [32m'@/lib/subscription-access'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mSubscriptionPaywall[0m } [36mfrom[0m [32m'@/components/billing/SubscriptionPaywall'[0m;
+  [90m10 |[0m [36mimport[0m { [33mDashboardPageSkeleton[0m } [36mfrom[0m [32m'@/components/loading/DashboardPageSkeleton'[0m;
+  [90m11 |[0m [36mimport[0m { [33mEmptyState[0m } [36mfrom[0m [32m'@/components/shared/EmptyState'[0m;
+
+Import map: aliased to relative './lib/subscription-access' inside of [project]/apps/web
+
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./apps/web/app/dashboard/page.tsx:8:1
+Module not found: Can't resolve '@/lib/subscription-access'
+  [90m 6 |[0m [36mimport[0m { useAuthStore } [36mfrom[0m [32m'@/lib/auth-store'[0m;
+  [90m 7 |[0m [36mimport[0m { captureAnalyticsEvent } [36mfrom[0m [32m'@/lib/analytics'[0m;
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m { getSubscriptionAccess } [36mfrom[0m [32m'@/lib/subscription-access'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mSubscriptionPaywall[0m } [36mfrom[0m [32m'@/components/billing/SubscriptionPaywall'[0m;
+  [90m10 |[0m [36mimport[0m { [33mDashboardPageSkeleton[0m } [36mfrom[0m [32m'@/components/loading/DashboardPageSkeleton'[0m;
+  [90m11 |[0m [36mimport[0m { [33mEmptyState[0m } [36mfrom[0m [32m'@/components/shared/EmptyState'[0m;
+
+Import map: aliased to relative './lib/subscription-access' inside of [project]/apps/web
+
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./apps/web/app/dashboard/page.tsx:8:1
+Module not found: Can't resolve '@/lib/subscription-access'
+  [90m 6 |[0m [36mimport[0m { useAuthStore } [36mfrom[0m [32m'@/lib/auth-store'[0m;
+  [90m 7 |[0m [36mimport[0m { captureAnalyticsEvent } [36mfrom[0m [32m'@/lib/analytics'[0m;
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m { getSubscriptionAccess } [36mfrom[0m [32m'@/lib/subscription-access'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mSubscriptionPaywall[0m } [36mfrom[0m [32m'@/components/billing/SubscriptionPaywall'[0m;
+  [90m10 |[0m [36mimport[0m { [33mDashboardPageSkeleton[0m } [36mfrom[0m [32m'@/components/loading/DashboardPageSkeleton'[0m;
+  [90m11 |[0m [36mimport[0m { [33mEmptyState[0m } [36mfrom[0m [32m'@/components/shared/EmptyState'[0m;
+
+Import map: aliased to relative './lib/subscription-access' inside of [project]/apps/web
+
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./apps/web/app/dashboard/page.tsx:8:1
+Module not found: Can't resolve '@/lib/subscription-access'
+  [90m 6 |[0m [36mimport[0m { useAuthStore } [36mfrom[0m [32m'@/lib/auth-store'[0m;
+  [90m 7 |[0m [36mimport[0m { captureAnalyticsEvent } [36mfrom[0m [32m'@/lib/analytics'[0m;
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m { getSubscriptionAccess } [36mfrom[0m [32m'@/lib/subscription-access'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mSubscriptionPaywall[0m } [36mfrom[0m [32m'@/components/billing/SubscriptionPaywall'[0m;
+  [90m10 |[0m [36mimport[0m { [33mDashboardPageSkeleton[0m } [36mfrom[0m [32m'@/components/loading/DashboardPageSkeleton'[0m;
+  [90m11 |[0m [36mimport[0m { [33mEmptyState[0m } [36mfrom[0m [32m'@/components/shared/EmptyState'[0m;
+
+Import map: aliased to relative './lib/subscription-access' inside of [project]/apps/web
+
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./apps/web/app/dashboard/page.tsx:8:1
+Module not found: Can't resolve '@/lib/subscription-access'
+  [90m 6 |[0m [36mimport[0m { useAuthStore } [36mfrom[0m [32m'@/lib/auth-store'[0m;
+  [90m 7 |[0m [36mimport[0m { captureAnalyticsEvent } [36mfrom[0m [32m'@/lib/analytics'[0m;
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m { getSubscriptionAccess } [36mfrom[0m [32m'@/lib/subscription-access'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mSubscriptionPaywall[0m } [36mfrom[0m [32m'@/components/billing/SubscriptionPaywall'[0m;
+  [90m10 |[0m [36mimport[0m { [33mDashboardPageSkeleton[0m } [36mfrom[0m [32m'@/components/loading/DashboardPageSkeleton'[0m;
+  [90m11 |[0m [36mimport[0m { [33mEmptyState[0m } [36mfrom[0m [32m'@/components/shared/EmptyState'[0m;
+
+Import map: aliased to relative './lib/subscription-access' inside of [project]/apps/web
+
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./apps/web/app/dashboard/page.tsx:8:1
+Module not found: Can't resolve '@/lib/subscription-access'
+  [90m 6 |[0m [36mimport[0m { useAuthStore } [36mfrom[0m [32m'@/lib/auth-store'[0m;
+  [90m 7 |[0m [36mimport[0m { captureAnalyticsEvent } [36mfrom[0m [32m'@/lib/analytics'[0m;
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m { getSubscriptionAccess } [36mfrom[0m [32m'@/lib/subscription-access'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mSubscriptionPaywall[0m } [36mfrom[0m [32m'@/components/billing/SubscriptionPaywall'[0m;
+  [90m10 |[0m [36mimport[0m { [33mDashboardPageSkeleton[0m } [36mfrom[0m [32m'@/components/loading/DashboardPageSkeleton'[0m;
+  [90m11 |[0m [36mimport[0m { [33mEmptyState[0m } [36mfrom[0m [32m'@/components/shared/EmptyState'[0m;
+
+Import map: aliased to relative './lib/subscription-access' inside of [project]/apps/web
+
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./apps/web/app/dashboard/page.tsx:8:1
+Module not found: Can't resolve '@/lib/subscription-access'
+  [90m 6 |[0m [36mimport[0m { useAuthStore } [36mfrom[0m [32m'@/lib/auth-store'[0m;
+  [90m 7 |[0m [36mimport[0m { captureAnalyticsEvent } [36mfrom[0m [32m'@/lib/analytics'[0m;
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m { getSubscriptionAccess } [36mfrom[0m [32m'@/lib/subscription-access'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mSubscriptionPaywall[0m } [36mfrom[0m [32m'@/components/billing/SubscriptionPaywall'[0m;
+  [90m10 |[0m [36mimport[0m { [33mDashboardPageSkeleton[0m } [36mfrom[0m [32m'@/components/loading/DashboardPageSkeleton'[0m;
+  [90m11 |[0m [36mimport[0m { [33mEmptyState[0m } [36mfrom[0m [32m'@/components/shared/EmptyState'[0m;
+
+Import map: aliased to relative './lib/subscription-access' inside of [project]/apps/web
+
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./apps/web/app/dashboard/page.tsx:8:1
+Module not found: Can't resolve '@/lib/subscription-access'
+  [90m 6 |[0m [36mimport[0m { useAuthStore } [36mfrom[0m [32m'@/lib/auth-store'[0m;
+  [90m 7 |[0m [36mimport[0m { captureAnalyticsEvent } [36mfrom[0m [32m'@/lib/analytics'[0m;
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m { getSubscriptionAccess } [36mfrom[0m [32m'@/lib/subscription-access'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mSubscriptionPaywall[0m } [36mfrom[0m [32m'@/components/billing/SubscriptionPaywall'[0m;
+  [90m10 |[0m [36mimport[0m { [33mDashboardPageSkeleton[0m } [36mfrom[0m [32m'@/components/loading/DashboardPageSkeleton'[0m;
+  [90m11 |[0m [36mimport[0m { [33mEmptyState[0m } [36mfrom[0m [32m'@/components/shared/EmptyState'[0m;
+
+Import map: aliased to relative './lib/subscription-access' inside of [project]/apps/web
+
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./apps/web/app/dashboard/page.tsx:8:1
+Module not found: Can't resolve '@/lib/subscription-access'
+  [90m 6 |[0m [36mimport[0m { useAuthStore } [36mfrom[0m [32m'@/lib/auth-store'[0m;
+  [90m 7 |[0m [36mimport[0m { captureAnalyticsEvent } [36mfrom[0m [32m'@/lib/analytics'[0m;
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m { getSubscriptionAccess } [36mfrom[0m [32m'@/lib/subscription-access'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m [36mimport[0m { [33mSubscriptionPaywall[0m } [36mfrom[0m [32m'@/components/billing/SubscriptionPaywall'[0m;
+  [90m10 |[0m [36mimport[0m { [33mDashboardPageSkeleton[0m } [36mfrom[0m [32m'@/components/loading/DashboardPageSkeleton'[0m;
+  [90m11 |[0m [36mimport[0m { [33mEmptyState[0m } [36mfrom[0m [32m'@/components/shared/EmptyState'[0m;
+
+Import map: aliased to relative './lib/subscription-access' inside of [project]/apps/web
+
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[browser] ./apps/web/app/dashboard/page.tsx:8:1
+Module not found: Can't resolve '@/lib/subscription-access'
+   6 | import { useAuthStore } from '@/lib/auth-store';
+   7 | import { captureAnalyticsEvent } from '@/lib/analytics';
+>  8 | import { getSubscriptionAccess } from '@/lib/subscription-access';
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 | import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
+  10 | import { DashboardPageSkeleton } from '@/components/loading/DashboardPageSkeleton';
+  11 | import { EmptyState } from '@/components/shared/EmptyState';
+
+Import map: aliased to relative './lib/subscription-access' inside of [project]/apps/web
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found 
+[browser] Uncaught Error: ./apps/web/app/dashboard/page.tsx:8:1
+Module not found: Can't resolve '@/lib/subscription-access'
+   6 | import { useAuthStore } from '@/lib/auth-store';
+   7 | import { captureAnalyticsEvent } from '@/lib/analytics';
+>  8 | import { getSubscriptionAccess } from '@/lib/subscription-access';
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 | import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
+  10 | import { DashboardPageSkeleton } from '@/components/loading/DashboardPageSkeleton';
+  11 | import { EmptyState } from '@/components/shared/EmptyState';
+
+Import map: aliased to relative './lib/subscription-access' inside of [project]/apps/web
+
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (Error: ./apps/web/app/dashboard/page.tsx:8:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (Error: (./apps/web/app/dashboard/page.tsx:8:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+[browser] Uncaught SyntaxError: unexpected token: ']'
+
+[browser] ⨯ unhandledRejection: Error: Module [next]/entry/page-loader.ts { PAGE => "[project]/node_modules/.pnpm/next@16.2.1_@opentelemetry+_2db6aa2e032a2f931f62881ceca5c06e/node_modules/next/app.js [client] (ecmascript)" } [client] (ecmascript) was instantiated because it was required from module [hmr-entry]/hmr-entry.js { ENTRY => "[project]/apps/web/pages/_app" }, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+[browser] ⨯ unhandledRejection: Error: Module [next]/entry/page-loader.ts { PAGE => "[project]/node_modules/.pnpm/next@16.2.1_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/next/dist/pages/_error.js [client] (ecmascript)" } [client] (ecmascript) was instantiated because it was required from module [hmr-entry]/hmr-entry.js { ENTRY => "[project]/apps/web/pages/_error" }, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+[browser] ./apps/web/app/dashboard/page.tsx:8:1
+Export getSubscriptionAccess doesn't exist in target module
+   6 | import { useAuthStore } from '@/lib/auth-store';
+   7 | import { captureAnalyticsEvent } from '@/lib/analytics';
+>  8 | import { getSubscriptionAccess } from '@/lib/subscription-access';
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 | import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
+  10 | import { DashboardPageSkeleton } from '@/components/loading/DashboardPageSkeleton';
+  11 | import { EmptyState } from '@/components/shared/EmptyState';
+
+The export getSubscriptionAccess was not found in module [project]/apps/web/lib/subscription-access.ts [app-client] (ecmascript).
+Did you mean to import getSubscriptionStatus?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component] 
+[browser] ./apps/web/app/dashboard/page.tsx:8:1
+Export getSubscriptionAccess doesn't exist in target module
+   6 | import { useAuthStore } from '@/lib/auth-store';
+   7 | import { captureAnalyticsEvent } from '@/lib/analytics';
+>  8 | import { getSubscriptionAccess } from '@/lib/subscription-access';
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 | import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
+  10 | import { DashboardPageSkeleton } from '@/components/loading/DashboardPageSkeleton';
+  11 | import { EmptyState } from '@/components/shared/EmptyState';
+
+The export getSubscriptionAccess was not found in module [project]/apps/web/lib/subscription-access.ts [app-ssr] (ecmascript).
+Did you mean to import getSubscriptionStatus?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component] 
+[browser] ⨯ unhandledRejection: Error: Module [next]/entry/page-loader.ts { PAGE => "[project]/node_modules/.pnpm/next@16.2.1_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/next/dist/pages/_error.js [client] (ecmascript)" } [client] (ecmascript) was instantiated because it was required from module [hmr-entry]/hmr-entry.js { ENTRY => "[project]/apps/web/pages/_error" }, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+[browser] Uncaught Error: ./apps/web/app/dashboard/page.tsx:8:1
+Export getSubscriptionAccess doesn't exist in target module
+   6 | import { useAuthStore } from '@/lib/auth-store';
+   7 | import { captureAnalyticsEvent } from '@/lib/analytics';
+>  8 | import { getSubscriptionAccess } from '@/lib/subscription-access';
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 | import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
+  10 | import { DashboardPageSkeleton } from '@/components/loading/DashboardPageSkeleton';
+  11 | import { EmptyState } from '@/components/shared/EmptyState';
+
+The export getSubscriptionAccess was not found in module [project]/apps/web/lib/subscription-access.ts [app-client] (ecmascript).
+Did you mean to import getSubscriptionStatus?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./apps/web/app/dashboard/page.tsx [Client Component Browser]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/web/app/dashboard/page.tsx [Client Component SSR]
+    ./apps/web/app/dashboard/page.tsx [Server Component]
+
+
+    at <unknown> (Error: ./apps/web/app/dashboard/page.tsx:8:1)
+    at <unknown> (Error: (./apps/web/app/dashboard/page.tsx:8:1)
+[browser] Image with src "/images/urganize-logo.png" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
+
+<--- Last few GCs --->
+
+[14376:000001FEB3716000]  6238725 ms: Mark-Compact 7510.5 (8082.4) -> 7432.4 (8059.0) MB, pooled: 8 MB, 12616.48 / 57.28 ms  (average mu = 0.249, current mu = 0.154) allocation failure; scavenge might not succeed
+[14376:000001FEB3716000]  6250165 ms: Mark-Compact 7513.2 (8081.1) -> 7446.5 (8073.0) MB, pooled: 0 MB, 9440.15 / 61.88 ms  (average mu = 0.219, current mu = 0.175) task; scavenge might not succeed
+
+FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory
+----- Native stack trace -----
+
+ 1: 00007FF61C02B6AF node::OnFatalError+1343
+ 2: 00007FF61CC73257 v8::Function::NewInstance+423
+ 3: 00007FF61CA73937 v8::base::AddressSpaceReservation::AddressSpaceReservation+322071
+ 4: 00007FF61CA77644 v8::base::AddressSpaceReservation::AddressSpaceReservation+337700
+ 5: 00007FF61CA865DC v8::internal::StrongRootAllocatorBase::deallocate_impl+16604
+ 6: 00007FF61CA85E1B v8::internal::StrongRootAllocatorBase::deallocate_impl+14619
+ 7: 00007FF61DF04BAD v8::base::UnsignedDivisionByConstant<unsigned __int64>+2791405
+ 8: 00007FF61CA71400 v8::base::AddressSpaceReservation::AddressSpaceReservation+312544
+ 9: 00007FF61CA21DB2 EVP_PKEY_asn1_set_get_priv_key+86258
+10: 00007FF61BF7EAAA node::GetNodeReport+99354
+11: 00007FF61BF7D290 node::GetNodeReport+93184
+12: 00007FF61CCDAC3B uv_run+1867
+13: 00007FF61CCDA7AF uv_run+703
+14: 00007FF61C13D07F node::DecodeWrite+351
+15: 00007FF61BFBAB26 node::MultiIsolatePlatform::DisposeIsolate+243542
+16: 00007FF61C085FCC node::Start+1052
+17: 00007FF61D0A24C2 AES_cbc_encrypt+2546
+18: 00007FF61DF0E2B4 v8::base::UnsignedDivisionByConstant<unsigned __int64>+2830068
+19: 00007FFCC411E8D7 BaseThreadInitThunk+23
+20: 00007FFCC4A0C48C RtlUserThreadStart+44
+npm error Lifecycle script `dev` failed with error:
+npm error code 134
+npm error path C:\Users\penta\Documents\urganize\apps\web
+npm error workspace @urganize/web@0.1.0
+npm error location C:\Users\penta\Documents\urganize\apps\web
+npm error command failed
+npm error command C:\windows\system32\cmd.exe /d /s /c next dev

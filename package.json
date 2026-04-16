@@ -1,0 +1,18 @@
+{
+  "name": "urganize",
+  "private": true,
+  "packageManager": "pnpm@10.6.4",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "node scripts/run-turbo.cjs build",
+    "dev": "node scripts/run-turbo.cjs dev",
+    "lint": "node scripts/run-turbo.cjs lint"
+  },
+  "devDependencies": {
+    "next": "^16.1.1",
+    "turbo": "^2.3.3"
+  }
+}

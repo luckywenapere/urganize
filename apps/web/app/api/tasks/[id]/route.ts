@@ -1,0 +1,432 @@
+import { NextRequest, NextResponse } from 'next/server';
+import {
+  TASKS_TABLE,
+  TASK_GROUPS_TABLE,
+  TASK_ATTACHMENTS_TABLE,
+  TASK_ATTACHMENTS_BUCKET,
+  buildTaskMetadata,
+  buildTaskSchemaResponse,
+  createAdminClient,
+  createTaskNotification,
+  ensureTaskAccess,
+  getAuthenticatedUser,
+  isTaskSchemaMissingError,
+  loadTaskDetail,
+  logTaskActivity,
+  resolveReleaseTaskWorkspace,
+} from '@/lib/tasks-server';
+import { type TaskPriority, type TaskStatus } from '@/lib/tasks';
+import {
+  captureServerAnalyticsEvent,
+  createPostHogEvent,
+  createServerPostHogClient,
+  shutdownServerAnalytics,
+} from '@/lib/posthog';
+
+type UpdateTaskBody = {
+  title?: unknown;
+  description?: unknown;
+  status?: unknown;
+  priority?: unknown;
+  dueDate?: unknown;
+  assignedTo?: unknown;
+  releaseId?: unknown;
+  groupId?: unknown;
+  position?: unknown;
+  folderItemId?: unknown;
+  trackId?: unknown;
+};
+
+const TASK_STATUS_OPTIONS: TaskStatus[] = ['backlog', 'todo', 'in_progress', 'in_review', 'done', 'cancelled'];
+const TASK_PRIORITY_OPTIONS: TaskPriority[] = ['urgent', 'high', 'medium', 'low', 'none'];
+
+const readString = (value: unknown): string => String(value || '').trim();
+const readNullableString = (value: unknown): string | null => {
+  const normalized = readString(value);
+  return normalized || null;
+};
+
+const normalizeTaskStatus = (value: unknown): TaskStatus | null => {
+  const normalized = readString(value) as TaskStatus;
+  return TASK_STATUS_OPTIONS.includes(normalized) ? normalized : null;
+};
+
+const normalizeTaskPriority = (value: unknown): TaskPriority | null => {
+  const normalized = readString(value) as TaskPriority;
+  return TASK_PRIORITY_OPTIONS.includes(normalized) ? normalized : null;
+};
+
+const parsePosition = (value: unknown): number | null => {
+  const numericValue = Number(value);
+  return Number.isInteger(numericValue) && numericValue >= 0 ? numericValue : null;
+};
+
+const parseDueDate = (value: unknown): { value: string | null; provided: boolean; error?: string } => {
+  if (value === undefined) {
+    return { value: null, provided: false };
+  }
+
+  const normalized = readString(value);
+  if (!normalized) {
+    return { value: null, provided: true };
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return { value: null, provided: true, error: 'Due date is invalid.' };
+  }
+
+  return { value: parsed.toISOString(), provided: true };
+};
+
+function calculateDaysUntilDue(dueDate: string | null, completedAt: string): number | null {
+  if (!dueDate) {
+    return null;
+  }
+
+  const dueTimestamp = new Date(dueDate).getTime();
+  const completedTimestamp = new Date(completedAt).getTime();
+  if (!Number.isFinite(dueTimestamp) || !Number.isFinite(completedTimestamp)) {
+    return null;
+  }
+
+  return Math.round((dueTimestamp - completedTimestamp) / 86400000);
+}
+
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const auth = await getAuthenticatedUser(request);
+  if ('error' in auth) {
+    return auth.error;
+  }
+
+  const adminClient = createAdminClient(auth.supabaseUrl);
+  if (!adminClient) {
+    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
+  }
+
+  const { id } = await context.params;
+
+  try {
+    const access = await ensureTaskAccess(adminClient, id, auth.user);
+    if ('error' in access) {
+      return access.error;
+    }
+
+    const task = await loadTaskDetail(adminClient, access.task, auth.user.id);
+    return NextResponse.json({ task });
+  } catch (error) {
+    if (isTaskSchemaMissingError(error)) {
+      return buildTaskSchemaResponse();
+    }
+
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Could not load task.' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const posthogServer = createServerPostHogClient();
+
+  try {
+    const auth = await getAuthenticatedUser(request);
+    if ('error' in auth) {
+      return auth.error;
+    }
+
+    const adminClient = createAdminClient(auth.supabaseUrl);
+    if (!adminClient) {
+      return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
+    }
+
+    const { id } = await context.params;
+    const access = await ensureTaskAccess(adminClient, id, auth.user);
+    if ('error' in access) {
+      return access.error;
+    }
+
+    const body = (await request.json().catch(() => ({}))) as UpdateTaskBody;
+    const currentTask = access.task;
+    const nextTitle = readString(body.title);
+    const nextDescription = body.description === undefined ? currentTask.description : readNullableString(body.description);
+    const nextStatus = normalizeTaskStatus(body.status) || currentTask.status;
+    const nextPriority = normalizeTaskPriority(body.priority) || currentTask.priority;
+    const nextAssignedTo = body.assignedTo === undefined ? currentTask.assigned_to : readNullableString(body.assignedTo);
+    const nextPosition = body.position === undefined ? currentTask.position : parsePosition(body.position) ?? currentTask.position;
+    const dueDateResult = parseDueDate(body.dueDate);
+
+    if (body.title !== undefined && !nextTitle) {
+      return NextResponse.json({ error: 'Task title is required.' }, { status: 400 });
+    }
+
+    if (dueDateResult.error) {
+      return NextResponse.json({ error: dueDateResult.error }, { status: 400 });
+    }
+
+    let nextReleaseId = body.releaseId === undefined ? currentTask.release_id : readNullableString(body.releaseId);
+    let nextGroupId = body.groupId === undefined ? currentTask.group_id : readNullableString(body.groupId);
+    let workspaceId = currentTask.workspace_id;
+
+    if (nextReleaseId) {
+      const releaseContext = await resolveReleaseTaskWorkspace(adminClient, nextReleaseId, auth.user);
+      if (releaseContext.workspaceId !== currentTask.workspace_id) {
+        return NextResponse.json(
+          { error: 'Tasks can only be linked to releases in the same workspace.' },
+          { status: 400 }
+        );
+      }
+
+      workspaceId = releaseContext.workspaceId;
+    } else {
+      nextGroupId = null;
+    }
+
+    const membersResult = await adminClient
+      .from('workspace_members')
+      .select('id,user_id,status')
+      .eq('workspace_id', workspaceId)
+      .neq('status', 'removed');
+
+    if (membersResult.error) {
+      return NextResponse.json({ error: membersResult.error.message || 'Could not load workspace members.' }, { status: 500 });
+    }
+
+    const activeAssignee = nextAssignedTo
+      ? (membersResult.data || []).find(
+          (member) => readString((member as { id?: string }).id) === nextAssignedTo && readString((member as { status?: string }).status) === 'active'
+        ) || null
+      : null;
+
+    if (nextAssignedTo && !activeAssignee) {
+      return NextResponse.json({ error: 'Only active workspace members can be assigned.' }, { status: 400 });
+    }
+
+    if (nextGroupId) {
+      const groupResult = await adminClient
+        .from(TASK_GROUPS_TABLE)
+        .select('id,workspace_id,release_id')
+        .eq('id', nextGroupId)
+        .eq('workspace_id', workspaceId)
+        .maybeSingle();
+
+      if (groupResult.error) {
+        return NextResponse.json({ error: groupResult.error.message || 'Could not load task group.' }, { status: 500 });
+      }
+
+      if (!groupResult.data) {
+        return NextResponse.json({ error: 'Task group not found.' }, { status: 404 });
+      }
+
+      const groupReleaseId = readNullableString(groupResult.data.release_id);
+      if ((nextReleaseId || null) !== groupReleaseId) {
+        return NextResponse.json({ error: 'Task group does not belong to this release.' }, { status: 400 });
+      }
+    }
+
+    const completedAt =
+      nextStatus === 'done'
+        ? currentTask.completed_at || new Date().toISOString()
+        : nextStatus === 'cancelled' || nextStatus === 'backlog' || nextStatus === 'todo' || nextStatus === 'in_progress' || nextStatus === 'in_review'
+          ? null
+          : currentTask.completed_at;
+
+    const updateResult = await adminClient
+      .from(TASKS_TABLE)
+      .update({
+        title: body.title === undefined ? currentTask.title : nextTitle,
+        description: nextDescription,
+        status: nextStatus,
+        priority: nextPriority,
+        due_date: dueDateResult.provided ? dueDateResult.value : currentTask.due_date,
+        assigned_to: nextAssignedTo,
+        release_id: nextReleaseId,
+        group_id: nextGroupId,
+        position: nextPosition,
+        completed_at: completedAt,
+        metadata:
+          body.folderItemId === undefined && body.trackId === undefined
+            ? currentTask.metadata
+            : buildTaskMetadata({
+                folderItemId:
+                  body.folderItemId === undefined
+                    ? readNullableString((currentTask.metadata as { folderItemId?: unknown })?.folderItemId)
+                    : readNullableString(body.folderItemId),
+                trackId:
+                  body.trackId === undefined
+                    ? readNullableString((currentTask.metadata as { trackId?: unknown })?.trackId)
+                    : readNullableString(body.trackId),
+              }),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', currentTask.id)
+      .eq('workspace_id', currentTask.workspace_id)
+      .select('id,workspace_id,group_id,release_id,created_by,assigned_to,title,description,status,priority,due_date,completed_at,position,metadata,created_at,updated_at')
+      .maybeSingle();
+
+    if (updateResult.error || !updateResult.data) {
+      if (isTaskSchemaMissingError(updateResult.error)) {
+        return buildTaskSchemaResponse();
+      }
+
+      return NextResponse.json({ error: updateResult.error?.message || 'Could not update task.' }, { status: 500 });
+    }
+
+    if (body.title !== undefined && nextTitle !== currentTask.title) {
+      await logTaskActivity(adminClient, {
+        taskId: currentTask.id,
+        actorId: auth.user.id,
+        message: `renamed this task to "${nextTitle}"`,
+      });
+    }
+
+    if (nextStatus !== currentTask.status) {
+      await logTaskActivity(adminClient, {
+        taskId: currentTask.id,
+        actorId: auth.user.id,
+        message: `changed the status to ${nextStatus.replace(/_/g, ' ')}`,
+      });
+
+      captureServerAnalyticsEvent(
+        posthogServer,
+        auth.user.id,
+        createPostHogEvent('task_status_changed', {
+          task_id: currentTask.id,
+          from_status: currentTask.status,
+          to_status: nextStatus,
+        })
+      );
+
+      if (nextAssignedTo && readString(activeAssignee?.user_id) && readString(activeAssignee?.user_id) !== auth.user.id) {
+        await createTaskNotification(adminClient, {
+          userId: readString(activeAssignee?.user_id),
+          type: 'task_status_changed',
+          taskId: currentTask.id,
+          actorId: auth.user.id,
+        });
+      }
+
+      if (nextStatus === 'done') {
+        captureServerAnalyticsEvent(
+          posthogServer,
+          auth.user.id,
+          createPostHogEvent('task_completed', {
+            task_id: currentTask.id,
+            release_id: nextReleaseId,
+            days_until_due: calculateDaysUntilDue(
+              dueDateResult.provided ? dueDateResult.value : currentTask.due_date,
+              completedAt || new Date().toISOString()
+            ),
+          })
+        );
+      }
+    }
+
+    if (body.assignedTo !== undefined && nextAssignedTo !== currentTask.assigned_to) {
+      await logTaskActivity(adminClient, {
+        taskId: currentTask.id,
+        actorId: auth.user.id,
+        message: nextAssignedTo ? 'updated the assignee' : 'unassigned this task',
+      });
+
+      captureServerAnalyticsEvent(
+        posthogServer,
+        auth.user.id,
+        createPostHogEvent('task_assigned', {
+          task_id: currentTask.id,
+          assigned_to_self: readString(activeAssignee?.user_id) === auth.user.id,
+        })
+      );
+
+      await createTaskNotification(adminClient, {
+        userId: readString(activeAssignee?.user_id) || null,
+        type: 'task_assigned',
+        taskId: currentTask.id,
+        actorId: auth.user.id,
+      });
+    }
+
+    if (dueDateResult.provided && dueDateResult.value !== currentTask.due_date) {
+      await logTaskActivity(adminClient, {
+        taskId: currentTask.id,
+        actorId: auth.user.id,
+        message: dueDateResult.value ? 'updated the due date' : 'cleared the due date',
+      });
+    }
+
+    const task = await loadTaskDetail(adminClient, updateResult.data, auth.user.id);
+    return NextResponse.json({ task });
+  } finally {
+    await shutdownServerAnalytics(posthogServer);
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const auth = await getAuthenticatedUser(request);
+  if ('error' in auth) {
+    return auth.error;
+  }
+
+  const adminClient = createAdminClient(auth.supabaseUrl);
+  if (!adminClient) {
+    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
+  }
+
+  const { id } = await context.params;
+
+  try {
+    const access = await ensureTaskAccess(adminClient, id, auth.user);
+    if ('error' in access) {
+      return access.error;
+    }
+
+    const attachmentResult = await adminClient
+      .from(TASK_ATTACHMENTS_TABLE)
+      .select('id,storage_path')
+      .eq('task_id', access.task.id);
+
+    if (!attachmentResult.error && Array.isArray(attachmentResult.data)) {
+      const storagePaths = attachmentResult.data
+        .map((attachment) => readString((attachment as { storage_path?: string }).storage_path))
+        .filter(Boolean);
+
+      if (storagePaths.length) {
+        await adminClient.storage.from(TASK_ATTACHMENTS_BUCKET).remove(storagePaths);
+      }
+    }
+
+    const deleteResult = await adminClient
+      .from(TASKS_TABLE)
+      .delete()
+      .eq('id', access.task.id)
+      .eq('workspace_id', access.task.workspace_id);
+
+    if (deleteResult.error) {
+      if (isTaskSchemaMissingError(deleteResult.error)) {
+        return buildTaskSchemaResponse();
+      }
+
+      return NextResponse.json({ error: deleteResult.error.message || 'Could not delete task.' }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    if (isTaskSchemaMissingError(error)) {
+      return buildTaskSchemaResponse();
+    }
+
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Could not delete task.' },
+      { status: 500 }
+    );
+  }
+}

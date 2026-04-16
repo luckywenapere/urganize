@@ -1,0 +1,198 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { Logo } from '@urganize/ui';
+import { CreditRequestHeader } from '@/components/credits/CreditRequestHeader';
+import { ReleaseContextCard } from '@/components/credits/ReleaseContextCard';
+import { PublicCreditForm } from '@/components/credits/PublicCreditForm';
+import { SubmissionSuccessState } from '@/components/credits/SubmissionSuccessState';
+import { ClaimProfilePrompt } from '@/components/credits/ClaimProfilePrompt';
+import { InvalidTokenState } from '@/components/credits/InvalidTokenState';
+import { PublicCreditFormSkeleton } from '@/components/loading/PublicCreditFormSkeleton';
+import type { CreditSubmissionInput } from '@/lib/release-ops';
+
+type CreditLookupPayload = {
+  release?: {
+    id: string;
+    title: string;
+    artistName: string;
+  };
+  collaboratorRequest?: {
+    id: string;
+    inviteName: string;
+    requestedRole: string;
+    status: string;
+    submittedAt: string | null;
+  } | null;
+  submissionMode?: 'invite' | 'public';
+  error?: string;
+};
+
+const emptyForm: CreditSubmissionInput = {
+  legalName: '',
+  stageName: '',
+  role: '',
+  email: '',
+  phone: '',
+  publishingInfo: '',
+  splitPercentage: '',
+  proAffiliation: '',
+  ipiNumber: '',
+  notes: '',
+};
+
+export default function PublicCreditSubmissionPage() {
+  const params = useParams<{ token: string }>();
+  const token = Array.isArray(params?.token) ? params.token[0] : params?.token || '';
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lookupError, setLookupError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [linkUnavailable, setLinkUnavailable] = useState(false);
+  const [releaseTitle, setReleaseTitle] = useState('');
+  const [artistName, setArtistName] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [requestedRole, setRequestedRole] = useState('');
+  const [submissionMode, setSubmissionMode] = useState<'invite' | 'public'>('invite');
+  const [showClaimPrompt, setShowClaimPrompt] = useState(true);
+  const [form, setForm] = useState<CreditSubmissionInput>(emptyForm);
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+
+    const load = async () => {
+      setIsLoading(true);
+      setLookupError('');
+      const response = await fetch(`/api/credits/${encodeURIComponent(token)}`, {
+        method: 'GET',
+        cache: 'no-store',
+      });
+      const payload = (await response.json().catch(() => ({}))) as CreditLookupPayload;
+      if (cancelled) return;
+
+      if (!response.ok || !payload.release) {
+        if (response.status === 404) {
+          setLinkUnavailable(true);
+          setLookupError(payload.error || 'This link is no longer valid.');
+        } else {
+          setLinkUnavailable(false);
+          setLookupError(payload.error || 'Could not load this link.');
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      setLinkUnavailable(false);
+      setLookupError('');
+      setReleaseTitle(payload.release.title);
+      setArtistName(payload.release.artistName);
+      setSubmissionMode(payload.submissionMode || 'invite');
+      setInviteName(payload.collaboratorRequest?.inviteName || '');
+      setRequestedRole(payload.collaboratorRequest?.requestedRole || '');
+      setForm((current) => ({
+        ...current,
+        role: payload.collaboratorRequest?.requestedRole || current.role,
+      }));
+      setIsLoading(false);
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setSubmitError('');
+
+    try {
+      const response = await fetch(`/api/credits/${encodeURIComponent(token)}/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(form),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        success?: boolean;
+        message?: string;
+        error?: string;
+      };
+
+      if (response.status === 404) {
+        setLinkUnavailable(true);
+        setSuccess(false);
+        setSubmitError(payload.error || 'This link is no longer valid.');
+        return;
+      }
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error || 'Could not submit credits.');
+      }
+
+      setSuccess(true);
+      setShowClaimPrompt(true);
+    } catch (submitError: any) {
+      setSubmitError(submitError?.message || 'Could not submit credits.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return <PublicCreditFormSkeleton />;
+  }
+
+  return (
+    <main className="min-h-screen bg-bg-base text-content-primary">
+      <div className="mx-auto max-w-[720px] px-4 pb-10 pt-8 sm:px-6 sm:py-10">
+        <div className="mb-5 flex justify-center sm:justify-start">
+          <Logo size="lg" priority />
+        </div>
+
+        <div className="rounded-[34px] border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_22px_56px_-30px_rgba(0,0,0,0.42)] sm:p-8">
+          {linkUnavailable ? (
+            <InvalidTokenState
+              title="Link unavailable"
+              description={lookupError || 'This link is no longer valid.'}
+              hint="Ask the release team to send you a new link."
+            />
+          ) : lookupError ? (
+            <InvalidTokenState
+              title="Could not load this link"
+              description={lookupError}
+              hint="Refresh and try again."
+            />
+          ) : success ? (
+            <div className="space-y-4">
+              <SubmissionSuccessState releaseTitle={releaseTitle} artistName={artistName} />
+              {showClaimPrompt ? <ClaimProfilePrompt onSkip={() => setShowClaimPrompt(false)} /> : null}
+            </div>
+          ) : (
+            <div className="space-y-5 sm:space-y-6">
+              <CreditRequestHeader inviteName={inviteName} submissionMode={submissionMode} />
+              <ReleaseContextCard
+                releaseTitle={releaseTitle}
+                artistName={artistName}
+                requestedRole={requestedRole}
+              />
+              <PublicCreditForm
+                form={form}
+                error={submitError}
+                isSubmitting={isSubmitting}
+                onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+                onSubmit={handleSubmit}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
+
