@@ -3,6 +3,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Columns3,
+  Edit3,
+  LayoutList,
+  Plus,
+  Sparkles,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { SectionCard } from '@/components/shared/SectionCard';
 import { Toast } from '@/components/shared/Toast';
@@ -12,7 +23,14 @@ import { TaskRow } from '@/components/tasks/TaskRow';
 import { TASKS_CHANGED_EVENT, useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { captureAnalyticsEvent } from '@/lib/analytics';
 import { ONBOARDING_TASK_CREATED_EVENT } from '@/lib/onboarding';
-import { sortTasksByPosition, type ReleaseTasksResponse, type Task, type TaskGroup, type TaskViewMode } from '@/lib/tasks';
+import {
+  getRelativeDueLabel,
+  sortTasksByPosition,
+  type ReleaseTasksResponse,
+  type Task,
+  type TaskGroup,
+  type TaskViewMode,
+} from '@/lib/tasks';
 import { supabase } from '@/lib/supabase/client';
 
 type ToastState = {
@@ -35,6 +53,34 @@ function groupTasks(tasks: Task[], groups: TaskGroup[]): Array<{ group: TaskGrou
     group,
     tasks: sortTasksByPosition(tasks.filter((task) => task.groupId === group.id)),
   }));
+}
+
+function getReleaseTaskStats(tasks: Task[]) {
+  const completedTasks = tasks.filter((task) => task.status === 'done').length;
+  const activeTasks = tasks.filter((task) => task.status !== 'done' && task.status !== 'cancelled').length;
+  const overdueTasks = tasks.filter((task) => getRelativeDueLabel(task).isOverdue).length;
+  const assignedTasks = tasks.filter((task) => Boolean(task.assignee)).length;
+  const completionPercent = tasks.length ? Math.round((completedTasks / tasks.length) * 100) : 0;
+
+  return {
+    activeTasks,
+    assignedTasks,
+    completedTasks,
+    completionPercent,
+    overdueTasks,
+    totalTasks: tasks.length,
+  };
+}
+
+function getGroupAccentClass(index: number): string {
+  const accents = [
+    'from-phase-preproduction/20 via-white/[0.035] to-transparent',
+    'from-phase-promotion/20 via-white/[0.035] to-transparent',
+    'from-brand/20 via-white/[0.035] to-transparent',
+    'from-status-info/20 via-white/[0.035] to-transparent',
+  ];
+
+  return accents[index % accents.length];
 }
 
 function buildReorderedTasks(
@@ -170,6 +216,7 @@ export default function ReleaseTasksPage() {
     () => (data ? groupTasks(data.tasks, data.groups) : []),
     [data]
   );
+  const stats = useMemo(() => getReleaseTaskStats(data?.tasks || []), [data?.tasks]);
   const firstGroupId = data?.groups[0]?.id || '';
 
   useEffect(() => {
@@ -436,7 +483,11 @@ export default function ReleaseTasksPage() {
     <main className="min-h-screen bg-bg-base text-content-primary" data-ph-capture-attribute-section="tasks">
       <div className="mx-auto max-w-[1380px] px-4 pb-24 pt-16 sm:px-6 sm:py-10">
         <div className="mb-4">
-          <Link href={`/dashboard/releases/${releaseId}`} className="inline-flex min-h-10 items-center text-sm text-content-secondary hover:text-content-primary">
+          <Link
+            href={`/dashboard/releases/${releaseId}`}
+            className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-content-secondary transition hover:text-content-primary"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Back to release
           </Link>
         </div>
@@ -446,63 +497,107 @@ export default function ReleaseTasksPage() {
 
         {data ? (
           <div className="space-y-6">
-            <SectionCard className="sm:p-7">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Release Tasks</p>
-                  <h1 className="mt-2 text-[clamp(2rem,4vw,3rem)] tracking-tight text-content-primary">
-                    {data.release.title}
-                  </h1>
-                  <p className="mt-3 max-w-2xl text-sm text-content-secondary">
-                    Keep release work sequenced across the rollout.
-                  </p>
-                </div>
+            <SectionCard className="relative overflow-hidden sm:p-0">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_20%_0%,rgba(62,207,142,0.18),transparent_38%),linear-gradient(90deg,rgba(118,124,255,0.08),transparent)]" />
 
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <div className="inline-flex rounded-[18px] border border-stroke-default bg-bg-elevated p-1">
-                    {(['kanban', 'list'] as TaskViewMode[]).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => {
-                          setViewMode(mode);
-                          window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
-                          captureAnalyticsEvent({
-                            name: 'task_view_switched',
-                            properties: { view: mode },
-                          });
-                        }}
-                        className={`min-h-10 rounded-[14px] px-4 py-2 text-sm font-semibold ${
-                          viewMode === mode ? 'bg-bg-surface text-content-primary' : 'text-content-secondary'
-                        }`}
-                      >
-                        {mode === 'kanban' ? 'Kanban' : 'List'}
-                      </button>
-                    ))}
+              <div className="relative p-5 sm:p-7">
+                <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="min-w-0">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-brand">
+                      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                      Release tasks
+                    </div>
+                    <h1 className="mt-4 text-[clamp(2.15rem,4vw,3.25rem)] tracking-tight text-content-primary">
+                      {data.release.title}
+                    </h1>
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-content-secondary">
+                      Sequence rollout work, assign owners, and move every release task from prep to post-launch without losing the thread.
+                    </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => openQuickCreate({ releaseId, source: onboardingTaskMode ? 'onboarding' : 'inline' })}
-                    className="min-h-11 rounded-[18px] bg-brand px-5 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
-                  >
-                    New task
-                  </button>
-                </div>
-              </div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className="grid grid-cols-2 gap-1 rounded-lg border border-stroke-default bg-bg-base/70 p-1">
+                      {(['kanban', 'list'] as TaskViewMode[]).map((mode) => {
+                        const Icon = mode === 'kanban' ? Columns3 : LayoutList;
+                        return (
+                          <button
+                            key={mode}
+                            type="button"
+                            onClick={() => {
+                              setViewMode(mode);
+                              window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+                              captureAnalyticsEvent({
+                                name: 'task_view_switched',
+                                properties: { view: mode },
+                              });
+                            }}
+                            className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition ${
+                              viewMode === mode
+                                ? 'bg-bg-surface text-content-primary shadow-[0_10px_24px_-18px_rgba(0,0,0,0.75)]'
+                                : 'text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                            }`}
+                            aria-pressed={viewMode === mode}
+                          >
+                            <Icon className="h-4 w-4" aria-hidden="true" />
+                            {mode === 'kanban' ? 'Kanban' : 'List'}
+                          </button>
+                        );
+                      })}
+                    </div>
 
-              <div className="mt-6">
-                <ReleaseWorkspaceTabs releaseId={releaseId} />
+                    <button
+                      type="button"
+                      onClick={() => openQuickCreate({ releaseId, source: onboardingTaskMode ? 'onboarding' : 'inline' })}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-content-inverse transition hover:bg-brand-hover hover:shadow-glow-sm"
+                    >
+                      <Plus className="h-4 w-4" aria-hidden="true" />
+                      New task
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    { label: 'Active', value: stats.activeTasks, helper: `${stats.totalTasks} total` },
+                    { label: 'Completed', value: stats.completedTasks, helper: `${stats.completionPercent}% done` },
+                    { label: 'Assigned', value: stats.assignedTasks, helper: `${data.members.length} team members` },
+                    { label: 'Overdue', value: stats.overdueTasks, helper: stats.overdueTasks ? 'Needs attention' : 'Clear' },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-lg border border-stroke-subtle bg-bg-elevated/55 p-4"
+                    >
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-content-tertiary">
+                        {item.label}
+                      </p>
+                      <div className="mt-3 flex items-end justify-between gap-3">
+                        <p className="text-2xl font-semibold tracking-tight text-content-primary">{item.value}</p>
+                        <p className="text-right text-xs text-content-secondary">{item.helper}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-bg-base">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-brand via-status-info to-phase-preproduction transition-all duration-slower"
+                    style={{ width: `${stats.completionPercent}%` }}
+                  />
+                </div>
+
+                <div className="mt-6">
+                  <ReleaseWorkspaceTabs releaseId={releaseId} />
+                </div>
               </div>
             </SectionCard>
 
             {viewMode === 'kanban' ? (
-              <div className="grid gap-5 lg:grid-cols-[repeat(3,minmax(0,1fr))_280px]">
-                {grouped.map(({ group, tasks }) => (
+              <div className="grid gap-4 xl:grid-cols-[repeat(3,minmax(280px,1fr))_260px]">
+                {grouped.map(({ group, tasks }, index) => (
                   <SectionCard
                     key={group.id}
                     data-onboarding-target={group.id === firstGroupId ? 'release-first-task-group' : undefined}
-                    className="flex min-h-[420px] flex-col rounded-[28px] p-4"
+                    className="relative flex min-h-[460px] flex-col rounded-xl p-0"
                     onDragOver={(event) => event.preventDefault()}
                     onDrop={() => {
                       if (!draggedTaskId || !data) {
@@ -514,7 +609,8 @@ export default function ReleaseTasksPage() {
                       setDraggedTaskId('');
                     }}
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className={`h-1.5 bg-gradient-to-r ${getGroupAccentClass(index)}`} />
+                    <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-4">
                       <div className="min-w-0 flex-1">
                         {editingGroupId === group.id ? (
                           <input
@@ -537,8 +633,17 @@ export default function ReleaseTasksPage() {
                           />
                         ) : (
                           <>
-                            <p className="text-sm font-semibold text-content-primary">{group.name}</p>
-                            <p className="mt-1 text-xs text-content-secondary">{tasks.length} task(s)</p>
+                            <p className="truncate text-sm font-semibold text-content-primary">{group.name}</p>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <span className="rounded-full border border-stroke-default bg-bg-elevated px-2 py-0.5 text-xs font-semibold text-content-secondary">
+                                {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+                              </span>
+                              {tasks.some((task) => getRelativeDueLabel(task).isOverdue) ? (
+                                <span className="rounded-full border border-status-error/25 bg-status-error/10 px-2 py-0.5 text-xs font-semibold text-status-error">
+                                  Overdue
+                                </span>
+                              ) : null}
+                            </div>
                           </>
                         )}
                       </div>
@@ -550,25 +655,29 @@ export default function ReleaseTasksPage() {
                             setEditingGroupId(group.id);
                             setEditingGroupName(group.name);
                           }}
-                          className="rounded-full border border-stroke-default px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stroke-default text-content-secondary transition hover:bg-bg-hover hover:text-content-primary"
+                          aria-label={`Rename ${group.name}`}
+                          title="Rename group"
                         >
-                          Rename
+                          <Edit3 className="h-4 w-4" aria-hidden="true" />
                         </button>
                         <button
                           type="button"
                           onClick={() => void deleteGroup(group.id)}
-                          className="rounded-full border border-status-error/35 bg-status-error/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-status-error"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-status-error/30 bg-status-error/10 text-status-error transition hover:bg-status-error/15"
+                          aria-label={`Delete ${group.name}`}
+                          title="Delete group"
                         >
-                          Delete
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </button>
                       </div>
                     </div>
 
-                    <div className="mt-4 flex-1 space-y-3">
+                    <div className="flex-1 space-y-3 px-4 pb-4">
                       {inlineComposerGroupId === group.id ? (
                         <div
                           data-onboarding-target="release-task-inline-row"
-                          className="rounded-[22px] border border-brand/25 bg-brand/8 p-3"
+                          className="rounded-xl border border-brand/25 bg-brand/10 p-3 shadow-[0_16px_32px_-28px_rgba(62,207,142,0.7)]"
                         >
                           <div className="flex flex-col gap-3">
                             <input
@@ -593,16 +702,18 @@ export default function ReleaseTasksPage() {
                                 type="button"
                                 onClick={() => void createInlineTask()}
                                 disabled={isInlineSaving}
-                                className="min-h-10 rounded-[16px] bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
                               >
+                                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                                 {isInlineSaving ? 'Saving...' : 'Save task'}
                               </button>
                               {!onboardingTaskMode ? (
                                 <button
                                   type="button"
                                   onClick={resetInlineComposer}
-                                  className="min-h-10 rounded-[16px] border border-stroke-default px-4 py-2 text-sm font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-stroke-default px-4 py-2 text-sm font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary"
                                 >
+                                  <X className="h-4 w-4" aria-hidden="true" />
                                   Cancel
                                 </button>
                               ) : null}
@@ -612,22 +723,26 @@ export default function ReleaseTasksPage() {
                       ) : null}
 
                       {tasks.length === 0 ? (
-                        <EmptyState
-                          title="No tasks here yet"
-                          description="Add a task or drag one in."
-                          action={
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setInlineComposerGroupId(group.id);
-                                setInlineComposerTitle('');
-                              }}
-                              className="min-h-10 rounded-[16px] bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
-                            >
-                              Add task
-                            </button>
-                          }
-                        />
+                        <div className="flex min-h-[250px] flex-col items-center justify-center rounded-xl border border-dashed border-stroke-default bg-bg-elevated/35 px-5 py-8 text-center">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-brand/20 bg-brand/10 text-brand">
+                            <Plus className="h-5 w-5" aria-hidden="true" />
+                          </div>
+                          <p className="mt-4 text-sm font-semibold text-content-primary">No tasks here yet</p>
+                          <p className="mt-2 max-w-[220px] text-sm leading-6 text-content-secondary">
+                            Start this phase with one concrete next move, or drag a task into the column.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setInlineComposerGroupId(group.id);
+                              setInlineComposerTitle('');
+                            }}
+                            className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+                          >
+                            <Plus className="h-4 w-4" aria-hidden="true" />
+                            Add task
+                          </button>
+                        </div>
                       ) : (
                         tasks.map((task) => (
                           <TaskCard
@@ -662,14 +777,15 @@ export default function ReleaseTasksPage() {
                         setInlineComposerGroupId(group.id);
                         setInlineComposerTitle('');
                       }}
-                      className="mt-4 min-h-11 rounded-[18px] border border-dashed border-stroke-default px-4 py-3 text-sm font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                      className="mx-4 mb-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-dashed border-stroke-default px-4 py-3 text-sm font-semibold text-content-secondary transition hover:bg-bg-hover hover:text-content-primary"
                     >
+                      <Plus className="h-4 w-4" aria-hidden="true" />
                       Add task
                     </button>
                   </SectionCard>
                 ))}
 
-                <SectionCard className="rounded-[28px] p-4">
+                <SectionCard className="rounded-xl p-4">
                   {creatingGroup ? (
                     <div className="space-y-3">
                       <p className="text-sm font-semibold text-content-primary">Add Group</p>
@@ -695,8 +811,9 @@ export default function ReleaseTasksPage() {
                         <button
                           type="button"
                           onClick={() => void createGroup()}
-                          className="min-h-11 rounded-[16px] bg-brand px-4 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+                          className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand px-4 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
                         >
+                          <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                           Save
                         </button>
                         <button
@@ -705,8 +822,9 @@ export default function ReleaseTasksPage() {
                             setCreatingGroup(false);
                             setNewGroupName('');
                           }}
-                          className="min-h-11 rounded-[16px] border border-stroke-default px-4 py-3 text-sm font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                          className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-stroke-default px-4 py-3 text-sm font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary"
                         >
+                          <X className="h-4 w-4" aria-hidden="true" />
                           Cancel
                         </button>
                       </div>
@@ -715,9 +833,12 @@ export default function ReleaseTasksPage() {
                     <button
                       type="button"
                       onClick={() => setCreatingGroup(true)}
-                      className="flex min-h-[220px] w-full items-center justify-center rounded-[22px] border border-dashed border-stroke-default bg-bg-elevated/30 px-4 py-6 text-sm font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                      className="flex min-h-[220px] w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-stroke-default bg-bg-elevated/30 px-4 py-6 text-sm font-semibold text-content-secondary transition hover:bg-bg-hover hover:text-content-primary"
                     >
-                      + Add Group
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full border border-stroke-default bg-bg-surface text-content-primary">
+                        <Plus className="h-5 w-5" aria-hidden="true" />
+                      </span>
+                      Add group
                     </button>
                   )}
                 </SectionCard>
@@ -732,7 +853,7 @@ export default function ReleaseTasksPage() {
                         <p className="mt-2 text-sm text-content-secondary">
                           {tasks.length === 0
                             ? 'Nothing has landed here yet.'
-                            : `${tasks.length} task(s) currently in this phase.`}
+                            : `${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'} currently in this phase.`}
                         </p>
                       </div>
 
@@ -742,16 +863,17 @@ export default function ReleaseTasksPage() {
                           setInlineComposerGroupId(group.id);
                           setInlineComposerTitle('');
                         }}
-                        className="rounded-full border border-stroke-default bg-bg-elevated px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                        className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2 text-sm font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary"
                       >
-                        + Add
+                        <Plus className="h-4 w-4" aria-hidden="true" />
+                        Add
                       </button>
                     </div>
 
                     {inlineComposerGroupId === group.id ? (
                       <div
                         data-onboarding-target="release-task-inline-row"
-                        className="border-b border-stroke-subtle bg-brand/6 px-5 py-4"
+                        className="border-b border-stroke-subtle bg-brand/10 px-5 py-4"
                       >
                         <div className="flex flex-col gap-3 sm:flex-row">
                           <input
@@ -775,8 +897,9 @@ export default function ReleaseTasksPage() {
                             type="button"
                             onClick={() => void createInlineTask()}
                             disabled={isInlineSaving}
-                            className="min-h-12 rounded-[18px] bg-brand px-4 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
                           >
+                            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                             {isInlineSaving ? 'Saving...' : 'Save'}
                           </button>
                         </div>
