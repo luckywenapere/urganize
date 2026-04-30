@@ -7,16 +7,16 @@ Date: February 27, 2026
 - Confirm a defensible team pricing model with paid extra seats.
 
 ## Urganize Proposed Pricing
-- `Monthly`: NGN 8,000
-- `8 Months`: NGN 57,600 (10% less than paying monthly for 8 months)
-- `Yearly`: NGN 80,000 (16.7% less than 12 x monthly)
+- `Monthly`: NGN 10,000
+- `8 Months`: NGN 57,600
+- `Yearly`: NGN 80,000 (33.3% less than 12 x monthly)
 - `Group Monthly (5 seats)`: NGN 32,000
 - `Group Yearly (5 seats)`: NGN 320,000
 - `Extra Seat`: NGN 6,400 monthly or NGN 64,000 yearly
 
 Per-seat economics:
-- Individual monthly seat: NGN 8,000
-- Group monthly seat (5+): NGN 6,400 (20% discount vs individual)
+- Individual monthly seat: NGN 10,000
+- Group monthly seat (5+): NGN 6,400 (36% discount vs individual)
 
 ## Market Benchmark (Public Pricing)
 Illustrative conversion used for comparison only: `USD 1 = NGN 1,500`.
@@ -30,21 +30,21 @@ Illustrative conversion used for comparison only: `USD 1 = NGN 1,500`.
 | Asana | Starter | 10.99 | 16,485 |
 
 Positioning result:
-- Urganize at NGN 8,000/month is close to Trello-level entry and below ClickUp, monday.com, Notion, and Asana equivalents.
+- Urganize at NGN 10,000/month is close to ClickUp-level entry and below monday.com, Notion, and Asana equivalents.
 - Urganize group seat pricing at NGN 6,400/month gives a clear team incentive while keeping margin headroom.
 
 ## Payment Processing Reality (Paystack Nigeria)
 Paystack local fee: `1.5% + NGN 100`, with NGN 100 waived under NGN 2,500 and local cap at NGN 2,000.
 
 Examples:
-- NGN 8,000 charge: fee NGN 220, net NGN 7,780
+- NGN 10,000 charge: fee NGN 250, net NGN 9,750
 - NGN 57,600 charge: fee NGN 964, net NGN 56,636
 - NGN 80,000 charge: fee NGN 1,300, net NGN 78,700
 - NGN 32,000 charge: fee NGN 580, net NGN 31,420
 
 ## Recommendation
 - Keep individual pricing as:
-  - NGN 8,000 monthly
+  - NGN 10,000 monthly
   - NGN 57,600 for 8 months
   - NGN 80,000 yearly
 - Keep group pricing as:

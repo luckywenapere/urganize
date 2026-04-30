@@ -32,7 +32,7 @@ Scope: Auth, onboarding, create plan, dashboard, settings, edit plan, review, pa
 - [ ] Delete account flow requires explicit confirmation text and handles session expiry gracefully.
 
 ## 5) Billing and Payments
-- [ ] Individual plans: monthly (8,000), 8 months (57,600), yearly (80,000).
+- [ ] Individual plans: monthly (10,000), 8 months (57,600), yearly (80,000).
 - [ ] Group plans support 5+ seats and paid extra seats.
 - [ ] Split contribution mode correctly calculates due-now amount.
 - [ ] Metadata sent to Paystack is complete (`plan`, `payment_mode`, `team_size`, `seats_paid_now`).

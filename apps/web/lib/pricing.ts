@@ -1,5 +1,5 @@
 export const PRICING = {
-  monthly: { usd: 9.99, ngn: 15000 },
+  monthly: { usd: 9.99, ngn: 10000 },
   annual: { usd: 59.99, ngn: 89999 },
 } as const;
 
