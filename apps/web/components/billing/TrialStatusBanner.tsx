@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { MONTHLY_PLAN_PRICE } from '@/lib/billing';
+import { formatCurrencyAmount } from '@/lib/pricing';
 import { usePaywall } from '@/hooks/usePaywall';
 
 type TrialStatusBannerProps = {
@@ -28,7 +29,7 @@ export function TrialStatusBanner({ compact = false }: TrialStatusBannerProps) {
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className={isExpired ? 'text-status-error' : 'text-content-primary'}>
           {isExpired
-            ? `Subscribe to continue using Urganize - $${MONTHLY_PLAN_PRICE.toFixed(2)}/month`
+            ? `Subscribe to continue using Urganize - ${formatCurrencyAmount(MONTHLY_PLAN_PRICE, 'NGN')}/month`
             : `3-day free trial - ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} remaining`}
         </span>
         <span className={isExpired ? 'text-status-error/70' : 'text-content-secondary'}>&middot;</span>

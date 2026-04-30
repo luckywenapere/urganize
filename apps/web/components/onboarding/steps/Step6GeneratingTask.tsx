@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { getIndividualPlanAmount } from '@/lib/billing';
+import { formatCurrencyAmount } from '@/lib/pricing';
 import { AiRecoveryActions } from '@urganize/ui';
 
 const PaystackButton = dynamic(
@@ -53,7 +54,9 @@ export function Step6GeneratingTask({
           <div className="mx-auto flex w-full max-w-2xl flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
             <div>
               <p className="text-xl text-content-primary">Unlock unlimited task generation</p>
-              <p className="text-sm text-content-secondary">Start Pro at ${monthlyAmount.toFixed(2)} per month.</p>
+              <p className="text-sm text-content-secondary">
+                Start Pro at {formatCurrencyAmount(monthlyAmount, 'NGN')} per month.
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <button

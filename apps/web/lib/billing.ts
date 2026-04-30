@@ -17,11 +17,11 @@ export type BillingPlanId =
 
 export const MIN_GROUP_TEAM_SIZE = 5;
 export const MAX_GROUP_TEAM_SIZE = 50;
-export const MONTHLY_PLAN_PRICE = PRICING.monthly.usd;
-export const ANNUAL_PLAN_PRICE = PRICING.annual.usd;
+export const MONTHLY_PLAN_PRICE = PRICING.monthly.ngn;
+export const ANNUAL_PLAN_PRICE = PRICING.annual.ngn;
 export const ANNUAL_TRIAL_DAYS = 3;
 export const DEFAULT_INDIVIDUAL_PLAN_ID: IndividualPlanId = 'annual';
-export const ANNUAL_PLAN_MONTHLY_EQUIVALENT = 5.00 // $59.99/yr ÷ 12, rounded
+export const ANNUAL_PLAN_MONTHLY_EQUIVALENT = Math.round(PRICING.annual.ngn / 12);
 
 const LEGACY_INDIVIDUAL_PLAN_AMOUNTS: Record<LegacyIndividualPlanId, number> = {
   '8months': 57600,
@@ -174,7 +174,7 @@ export const isIndividualPlan = (
 export const resolveExpectedAmount = (
   plan: string,
   metadata: SafeMetadata = {},
-  currency: PricingCurrencyCode = 'USD'
+  currency: PricingCurrencyCode = 'NGN'
 ): number | null => {
   if (isIndividualPlan(plan)) return getIndividualPlanAmountForCurrency(plan, currency);
 

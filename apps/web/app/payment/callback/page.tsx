@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
+import { formatCurrencyAmount } from '@/lib/pricing';
 import { LoadingScreen } from '@urganize/ui';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 
@@ -87,7 +88,7 @@ function PaymentCallbackContent() {
           </div>
           <p className="text-xl font-semibold text-content-primary">Payment confirmed</p>
           {typeof result.amount === 'number' && (
-            <p className="mt-2 text-sm text-content-secondary">Amount: ${result.amount.toFixed(2)}</p>
+            <p className="mt-2 text-sm text-content-secondary">Amount: {formatCurrencyAmount(result.amount, 'NGN')}</p>
           )}
           {result.plan && <p className="text-sm text-content-secondary">Plan: {String(result.plan).replace('_', ' ')}</p>}
           {result.trialing && (

@@ -20,6 +20,7 @@ import {
   type PreparedTrialCheckout,
   TRIAL_TOKENIZATION_PLAN,
 } from '@/lib/trial-checkout';
+import { formatCurrencyAmount } from '@/lib/pricing';
 
 const PaystackButton = dynamic(
   () => import('@/components/PaystackButton').then((mod) => mod.PaystackButton),
@@ -162,8 +163,8 @@ export function SubscriptionPaywall({
   const ctaLabel = selectedPlan === 'annual' ? 'Start Free Trial ->' : 'Subscribe Now ->';
   const finePrint =
     selectedPlan === 'annual'
-      ? `${ANNUAL_TRIAL_DAYS}-day free trial, then $${ANNUAL_PLAN_PRICE.toFixed(2)}/year. Cancel anytime.`
-      : `$${MONTHLY_PLAN_PRICE.toFixed(2)}/month. Cancel anytime.`;
+      ? `${ANNUAL_TRIAL_DAYS}-day free trial, then ${formatCurrencyAmount(ANNUAL_PLAN_PRICE, 'NGN')}/year. Cancel anytime.`
+      : `${formatCurrencyAmount(MONTHLY_PLAN_PRICE, 'NGN')}/month. Cancel anytime.`;
   const containerClass = compact
     ? ''
     : 'relative overflow-hidden rounded-[30px] border border-stroke-default bg-bg-surface/96 p-5 shadow-[0_24px_80px_-46px_rgba(0,0,0,0.72)] sm:p-7';
@@ -189,8 +190,8 @@ export function SubscriptionPaywall({
         <div className={`mt-6 grid gap-4 ${compact ? '' : 'md:grid-cols-2'}`}>
           <PlanCard
             title="Annual"
-            price={`$${ANNUAL_PLAN_PRICE.toFixed(2)}/year`}
-            subline={`~$${ANNUAL_PLAN_MONTHLY_EQUIVALENT}/month, billed annually`}
+            price={`${formatCurrencyAmount(ANNUAL_PLAN_PRICE, 'NGN')}/year`}
+            subline={`~${formatCurrencyAmount(ANNUAL_PLAN_MONTHLY_EQUIVALENT, 'NGN')}/month, billed annually`}
             helper={`Starts with a ${ANNUAL_TRIAL_DAYS}-day free trial`}
             badge="Most Popular"
             selected={selectedPlan === 'annual'}
@@ -199,7 +200,7 @@ export function SubscriptionPaywall({
           />
           <PlanCard
             title="Monthly"
-            price={`$${MONTHLY_PLAN_PRICE.toFixed(2)}/month`}
+            price={`${formatCurrencyAmount(MONTHLY_PLAN_PRICE, 'NGN')}/month`}
             subline="Billed monthly"
             selected={selectedPlan === 'monthly'}
             subordinate

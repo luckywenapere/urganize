@@ -22,6 +22,7 @@ import {
   type GroupPaymentMode,
   type IndividualPlanId,
 } from '@/lib/billing';
+import { formatCurrencyAmount } from '@/lib/pricing';
 import { ThemeToggle } from '@urganize/ui';
 import { SearchableGenreSelect } from '@urganize/ui';
 import {
@@ -1396,7 +1397,7 @@ export default function SettingsPage() {
                 >
                   <p className="text-sm font-semibold text-content-primary">{plan.label}</p>
                   <p className="mt-1 text-xs text-content-secondary">{plan.description}</p>
-                  <p className="mt-2 text-sm text-content-primary">${plan.amount.toFixed(2)}</p>
+                  <p className="mt-2 text-sm text-content-primary">{formatCurrencyAmount(plan.amount, 'NGN')}</p>
                 </button>
               ))}
             </div>
