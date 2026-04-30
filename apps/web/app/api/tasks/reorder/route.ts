@@ -56,7 +56,7 @@ export async function PATCH(request: NextRequest) {
 
     const tasksResult = await adminClient
       .from(TASKS_TABLE)
-      .select('id,workspace_id,group_id,release_id,created_by,assigned_to,title,description,status,priority,due_date,completed_at,position,metadata,created_at,updated_at')
+      .select('id,workspace_id,group_id,release_id,created_by,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
       .in('id', taskIds)
       .in('workspace_id', access.workspaceIds);
 
@@ -101,7 +101,7 @@ export async function PATCH(request: NextRequest) {
 
     const refreshedResult = await adminClient
       .from(TASKS_TABLE)
-      .select('id,workspace_id,group_id,release_id,created_by,assigned_to,title,description,status,priority,due_date,completed_at,position,metadata,created_at,updated_at')
+      .select('id,workspace_id,group_id,release_id,created_by,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
       .in('id', taskIds)
       .order('position', { ascending: true });
 

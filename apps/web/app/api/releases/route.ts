@@ -59,6 +59,7 @@ type CreateReleaseBody = {
   releaseType?: unknown;
   coverArtUrl?: unknown;
   source?: unknown;
+  state?: unknown;
 };
 
 type PlaybookProgressSummary = {
@@ -76,6 +77,14 @@ const RELEASE_PLAYBOOK_STEPS_TABLE = 'release_playbook_steps';
 const TASKS_TABLE = 'tasks';
 const TRACKS_TABLE = 'tracks';
 const DEFAULT_PLAYBOOK_TOTAL = RELEASE_PLAYBOOK_PHASES.reduce((sum, phase) => sum + phase.items.length, 0);
+const RELEASE_PIPELINE_STATES = ['idea', 'planning', 'asset_prep', 'distribution', 'campaign', 'post_release'] as const;
+
+const normalizePipelineState = (value: unknown) => {
+  const normalized = trimString(value).toLowerCase();
+  return RELEASE_PIPELINE_STATES.includes(normalized as (typeof RELEASE_PIPELINE_STATES)[number])
+    ? normalized
+    : 'idea';
+};
 
 function toSelectorRelease(
   row: ReleaseRow,
@@ -432,6 +441,7 @@ export async function POST(request: NextRequest) {
     const releaseType = trimString(body?.releaseType) || 'single';
     const coverArtUrl = trimString(body?.coverArtUrl);
     const releaseSource = normalizeReleaseCreatedSource(body?.source);
+    const state = normalizePipelineState(body?.state);
 
     if (!title) return NextResponse.json({ error: 'Release title is required.' }, { status: 400 });
 
@@ -528,6 +538,8 @@ export async function POST(request: NextRequest) {
         slug,
         release_date: releaseDateResult.value,
         status: 'draft',
+        state,
+        readiness_score: 0,
         type: releaseType,
         description: description || null,
         updated_at: now,

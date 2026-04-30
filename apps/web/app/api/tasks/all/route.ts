@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     const filters = normalizeTaskFilters(request.nextUrl.searchParams);
     let query = adminClient
       .from(TASKS_TABLE)
-      .select('id,workspace_id,group_id,release_id,created_by,assigned_to,title,description,status,priority,due_date,completed_at,position,metadata,created_at,updated_at')
+      .select('id,workspace_id,group_id,release_id,created_by,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
       .eq('workspace_id', workspaceId)
       .order('updated_at', { ascending: false });
 

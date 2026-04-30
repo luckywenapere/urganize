@@ -9,9 +9,9 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@urganize/ui": "workspace:*",
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/supabase-js": "^2.90.1",
+    "@urganize/ui": "workspace:*",
     "@vercel/analytics": "^1.6.1",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
@@ -24,14 +24,15 @@
     "react-dom": "^19.2.3",
     "react-dropzone": "^14.3.8",
     "react-paystack": "^6.0.0",
+    "xstate": "5",
     "zustand": "^5.0.2"
   },
   "devDependencies": {
-    "@urganize/config": "workspace:*",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@urganize/config": "workspace:*",
     "autoprefixer": "^10.4.20",
     "eslint": "^9",
     "eslint-config-next": "15.1.3",

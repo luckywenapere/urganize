@@ -25,6 +25,7 @@ const TASKS_TABLE = 'tasks';
 const PRE_SAVE_CAMPAIGNS_TABLE = 'pre_save_campaigns';
 const WORKSPACES_TABLE = 'workspaces';
 const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
+const RELEASE_PIPELINE_STATES = ['idea', 'planning', 'asset_prep', 'distribution', 'campaign', 'post_release'] as const;
 
 type ReleaseSuggestedAction =
   | {
@@ -67,6 +68,12 @@ const isMissingOptionalFeatureTable = (error: unknown) => {
     code === 'PGRST205' ||
     message.includes('does not exist')
   );
+};
+const normalizePipelineState = (value: unknown): string | null => {
+  const normalized = trimString(value).toLowerCase();
+  return RELEASE_PIPELINE_STATES.includes(normalized as (typeof RELEASE_PIPELINE_STATES)[number])
+    ? normalized
+    : null;
 };
 
 async function loadReleaseRetentionSummary(
@@ -279,6 +286,8 @@ export async function PATCH(
     const description = trimString(body?.description);
     const artistName = trimString(body?.artistName) || ownership.release.artistName;
     const status = trimString(body?.status) || ownership.release.status;
+    const state = normalizePipelineState(body?.state);
+    const readinessScore = Number(body?.readinessScore);
 
     if (!title) return NextResponse.json({ error: 'Release title is required.' }, { status: 400 });
     if (!releaseDate) return NextResponse.json({ error: 'Release date is required.' }, { status: 400 });
@@ -292,6 +301,8 @@ export async function PATCH(
         description: description || null,
         artist_name: artistName,
         status,
+        ...(state ? { state } : {}),
+        ...(Number.isFinite(readinessScore) ? { readiness_score: Math.max(0, Math.min(100, Math.round(readinessScore))) } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('id', releaseId)
