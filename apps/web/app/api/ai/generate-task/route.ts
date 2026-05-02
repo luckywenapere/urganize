@@ -138,6 +138,7 @@ const buildPrompt = ({
     '- No additional keys.',
     '- Keep it specific to music campaign execution context.',
     '- Title should be actionable and concise.',
+    '- IMPORTANT: Do not include the release title or artist name in the task title. The title should focus purely on the action (e.g., "Define the core concept" instead of "Idea for Deinde").',
     '',
     'Context JSON:',
     JSON.stringify(contextPayload),

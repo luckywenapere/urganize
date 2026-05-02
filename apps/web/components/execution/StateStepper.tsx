@@ -34,7 +34,7 @@ export function StateStepper({
             type="button"
             disabled={!unlocked}
             onClick={() => onSelect(state)}
-            className={`flex min-h-11 items-center gap-2 rounded-[14px] border px-3 text-left text-xs font-semibold transition ${
+            className={`flex min-h-11 items-center gap-2 rounded-none border px-3 text-left text-xs font-semibold transition ${
               selected
                 ? 'border-brand/40 bg-brand-muted text-content-primary'
                 : complete
@@ -45,7 +45,7 @@ export function StateStepper({
             } ${mobile ? 'justify-center px-1' : ''}`}
             title={getPipelineStateLabel(state)}
           >
-            {!unlocked ? <Lock className="h-3.5 w-3.5" /> : <span className="h-2 w-2 rounded-full bg-current" />}
+            {!unlocked ? <Lock className="h-3.5 w-3.5" /> : <span className="h-2 w-2 rounded-none bg-current" />}
             <span className={mobile ? 'sr-only' : ''}>{getPipelineStateLabel(state)}</span>
           </button>
         );

@@ -47,8 +47,8 @@ const preset = {
         }
       },
       fontFamily: {
-        sans: ["Space Grotesk", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
-        display: ["Syne", "Space Grotesk", "-apple-system", "sans-serif"],
+        sans: ["IBM Plex Sans", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+        display: ["Space Grotesk", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
         mono: ["JetBrains Mono", "Fira Code", "monospace"]
       },
       fontSize: {

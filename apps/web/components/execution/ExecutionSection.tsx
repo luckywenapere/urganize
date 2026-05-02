@@ -31,7 +31,7 @@ export function ExecutionSection({
 }) {
   return (
     <section className="space-y-4">
-      <div className="rounded-[24px] border border-stroke-default bg-bg-surface p-5">
+      <div className="rounded-none border border-stroke-default bg-bg-surface p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="saas-eyebrow">Current State</p>
@@ -41,7 +41,7 @@ export function ExecutionSection({
           <button
             type="button"
             onClick={onGenerateTask}
-            className="rounded-full border border-brand/25 bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+            className="rounded-none border border-brand/25 bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
           >
             Generate Plan
           </button>
@@ -62,7 +62,7 @@ export function ExecutionSection({
             <TaskBlock key={task.id} task={task} allTasks={tasks} onOpen={onOpenTask} onComplete={onCompleteTask} />
           ))
         ) : (
-          <div className="rounded-[20px] border border-stroke-subtle bg-bg-elevated p-5 text-sm text-content-secondary">
+          <div className="rounded-none border border-stroke-subtle bg-bg-elevated p-5 text-sm text-content-secondary">
             No execution blocks in this state yet. Generate a plan or add a task from the workspace.
           </div>
         )}

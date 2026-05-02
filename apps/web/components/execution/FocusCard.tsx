@@ -2,7 +2,7 @@
 
 import { ArrowRight } from 'lucide-react';
 import type { ExecutionRelease, ExecutionTask } from '@/lib/execution-types';
-import { buildReleaseWarnings, getPipelineStateLabel } from '@/lib/release-execution';
+import { buildReleaseWarnings, cleanTaskTitle, formatArtistName, getPipelineStateLabel } from '@/lib/release-execution';
 import { ReadinessBar } from '@/components/execution/ReadinessBar';
 
 export function FocusCard({
@@ -16,10 +16,9 @@ export function FocusCard({
 }) {
   if (!release) {
     return (
-      <section className="panel-shell p-5">
-        <p className="saas-eyebrow">Active Release Focus</p>
-        <h2 className="mt-3 text-2xl text-content-primary">Create your first release</h2>
-        <p className="mt-2 text-sm leading-6 text-content-secondary">Your Command Center will auto-select the most urgent incomplete release once one exists.</p>
+      <section className="panel-shell rounded-none border-t border-white/5 border-l-2 border-green-400 p-6 shadow-none">
+        <h2 className="mt-3 text-2xl font-bold text-content-primary">Create your first operation</h2>
+        <p className="mt-2 text-sm leading-6 text-content-secondary">Standby. Awaiting release parameters.</p>
       </section>
     );
   }
@@ -29,44 +28,47 @@ export function FocusCard({
   const warnings = buildReleaseWarnings(release, tasks);
 
   return (
-    <section className="panel-shell p-5">
+    <section className="panel-shell rounded-sm border-t border-white/5 border-l-2 border-green-400 p-6 shadow-none">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="saas-eyebrow">Active Release Focus</p>
-          <h2 className="mt-3 text-3xl text-content-primary">{release.title}</h2>
-          <p className="mt-1 text-sm text-content-secondary">{release.artistName}</p>
+          <h2 className="text-3xl font-bold text-content-primary tracking-tight">{release.title}</h2>
+          <p className="mt-1 font-mono text-xs text-content-tertiary">{formatArtistName(release.artistName)}</p>
         </div>
-        <span className="rounded-full border border-brand/25 bg-brand-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-brand">
+        <span className="border border-green-400/40 bg-transparent px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-green-400 font-mono">
           {getPipelineStateLabel(release.state)}
         </span>
       </div>
 
-      <div className="mt-5">
-        <ReadinessBar value={release.readinessScore} />
+      <div className="mt-8">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="font-sans text-xs text-white/30">Readiness</span>
+          <span className="font-mono text-xs font-bold text-brand">{release.readinessScore}%</span>
+        </div>
+        <ReadinessBar value={release.readinessScore} showTicks={true} />
       </div>
 
       {warnings.length ? (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-6 flex flex-wrap gap-2">
           {warnings.map((warning) => (
-            <span key={warning} className="rounded-full border border-status-error/25 bg-status-error/10 px-3 py-1 text-xs text-status-error">
+            <span key={warning} className="border border-status-error/30 bg-status-error/5 px-2.5 py-1 text-[10px] font-mono uppercase text-status-error">
               {warning}
             </span>
           ))}
         </div>
       ) : null}
 
-      <div className="mt-5 rounded-[18px] border border-stroke-subtle bg-bg-elevated p-4">
-        <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">Next action</p>
-        <p className="mt-2 text-sm font-semibold text-content-primary">{nextTask?.title || 'Review release readiness'}</p>
+      <div className="mt-8 border-t border-white/5 pt-6">
+        <p className="font-sans text-xs text-white/30 mb-2">What&apos;s next</p>
+        <p className="mt-1 text-lg font-semibold text-content-primary font-display">{nextTask ? cleanTaskTitle(nextTask.title) : 'Review readiness'}</p>
       </div>
 
       <button
         type="button"
         onClick={() => onContinue(release)}
-        className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+        className="group mt-8 inline-flex min-h-11 items-center gap-3 rounded-none border border-green-400/60 bg-brand px-6 text-xs font-bold uppercase tracking-widest text-content-inverse transition-all duration-150 hover:border-green-400 hover:text-white"
       >
-        Continue Execution
-        <ArrowRight className="h-4 w-4" />
+        Keep going
+        <ArrowRight className="h-4 w-4 transition-transform duration-150 ease-out group-hover:translate-x-1" />
       </button>
     </section>
   );

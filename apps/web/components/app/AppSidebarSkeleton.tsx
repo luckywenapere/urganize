@@ -30,7 +30,7 @@ function SidebarItemSkeleton({
 }) {
   return (
     <div
-      className={`flex min-h-[52px] items-center gap-3 rounded-[20px] px-4 ${
+      className={`flex min-h-[52px] items-center gap-3 rounded-none px-4 ${
         active
           ? 'border border-stroke-default bg-bg-sidebar-active text-content-primary shadow-[0_14px_30px_-22px_rgba(0,0,0,0.5)]'
           : 'border border-transparent bg-transparent'
@@ -42,7 +42,7 @@ function SidebarItemSkeleton({
         }`}
       >
         <div
-          className={`rounded-[7px] ${
+          className={`rounded-none ${
             active ? 'h-4 w-4 skeleton-shimmer' : 'h-4 w-4 border border-stroke-subtle bg-bg-elevated/85'
           }`}
         />
@@ -50,7 +50,7 @@ function SidebarItemSkeleton({
 
       <div className="min-w-0 flex-1">
         <div
-          className={`h-3.5 rounded-full ${
+          className={`h-3.5 rounded-none ${
             active ? `${labelWidth} skeleton-shimmer` : `${labelWidth} skeleton-shimmer`
           }`}
         />
@@ -68,10 +68,10 @@ export function AppSidebarSkeleton({ pathname = '' }: AppSidebarSkeletonProps) {
         <div className="nav-shell p-4">
           <div className="flex items-center justify-start">
             <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-full border border-stroke-default bg-bg-elevated/85">
-                <div className="h-4 w-4 rounded-full skeleton-shimmer" />
+              <div className="grid h-10 w-10 place-items-center rounded-none border border-stroke-default bg-bg-elevated/85">
+                <div className="h-4 w-4 rounded-none skeleton-shimmer" />
               </div>
-              <SkeletonBlock className="h-5 w-28 rounded-full" />
+              <SkeletonBlock className="h-5 w-28 rounded-none" />
             </div>
           </div>
         </div>

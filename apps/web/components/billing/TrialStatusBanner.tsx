@@ -20,7 +20,7 @@ export function TrialStatusBanner({ compact = false }: TrialStatusBannerProps) {
 
   return (
     <div
-      className={`rounded-[20px] border px-4 py-3 ${
+      className={`rounded-none border px-4 py-3 ${
         isExpired
           ? 'border-status-error/35 bg-status-error/10'
           : 'border-brand/35 bg-brand-muted'

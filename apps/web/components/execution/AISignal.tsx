@@ -11,27 +11,30 @@ export function AISignal({
   onAction?: (signal: AISignalType) => void;
 }) {
   const isCritical = signal.severity === 'critical';
-  const Icon = isCritical ? TriangleAlert : Sparkles;
+  const isWarning = signal.severity === 'warning';
+
+  const severityBorderClass = isCritical
+    ? 'border-l-status-error'
+    : isWarning
+      ? 'border-l-status-warning'
+      : 'border-l-status-success';
 
   return (
-    <div className={`rounded-[18px] border p-4 ${isCritical ? 'border-status-error/30 bg-status-error/10' : 'border-stroke-subtle bg-bg-elevated'}`}>
-      <div className="flex items-start gap-3">
-        <span className={`mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${isCritical ? 'bg-status-error/15 text-status-error' : 'bg-brand-muted text-brand'}`}>
-          <Icon className="h-4 w-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-content-primary">{signal.title}</p>
-          <p className="mt-1 text-sm leading-6 text-content-secondary">{signal.message}</p>
-          {signal.actionLabel && onAction ? (
-            <button
-              type="button"
-              onClick={() => onAction(signal)}
-              className="mt-3 rounded-full border border-brand/25 bg-brand px-3 py-1.5 text-xs font-semibold text-content-inverse hover:bg-brand-hover"
-            >
-              {signal.actionLabel}
-            </button>
-          ) : null}
+    <div className={`animate-slide-left rounded-sm border border-white/5 border-l-2 p-4 shadow-none ${severityBorderClass} bg-bg-elevated/40 opacity-0`}>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+           <p className="text-sm font-semibold text-content-primary font-display">{signal.title}</p>
         </div>
+        <p className="mt-1 text-xs leading-5 text-content-secondary font-sans opacity-80">{signal.message}</p>
+        {signal.actionLabel && onAction ? (
+          <button
+            type="button"
+            onClick={() => onAction(signal)}
+            className="mt-4 border border-green-400/40 bg-transparent px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-green-400 font-mono hover:bg-green-400/5 transition-all"
+          >
+            {signal.actionLabel}
+          </button>
+        ) : null}
       </div>
     </div>
   );

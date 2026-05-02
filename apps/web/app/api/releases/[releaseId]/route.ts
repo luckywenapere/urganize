@@ -290,14 +290,13 @@ export async function PATCH(
     const readinessScore = Number(body?.readinessScore);
 
     if (!title) return NextResponse.json({ error: 'Release title is required.' }, { status: 400 });
-    if (!releaseDate) return NextResponse.json({ error: 'Release date is required.' }, { status: 400 });
 
     const releaseUpdate = await adminClient!
       .from('releases')
       .update({
         title,
         slug: normalizeReleaseSlug(title) || ownership.release.slug,
-        release_date: releaseDate,
+        release_date: releaseDate || null,
         description: description || null,
         artist_name: artistName,
         status,

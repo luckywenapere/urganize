@@ -53,10 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>
       <div className="mx-auto flex w-full max-w-[1480px] gap-4 px-0 md:px-4 lg:gap-5 lg:px-6">
         {sidebar}
-        <div className="min-w-0 flex-1 px-0 pb-32 pt-16 md:px-0 md:pb-8 md:pt-0">
-          <div className="mb-4 px-4 md:hidden">
-            <TrialStatusBanner />
-          </div>
+        <div className="min-w-0 flex-1 px-0 pb-32 pt-0 md:px-0 md:pb-8 md:pt-0">
           {children}
         </div>
       </div>
@@ -79,13 +76,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         renderWorkspaceShell(<AppSidebarSkeleton pathname={pathname || ''} />)
       ) : (
         <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>{children}</div>
-      )}
-      {!requiresArtistNameGate && pathname === '/dashboard' && (
-        <div className="keyboard-hint">
-          <kbd className="kbd">Cmd</kbd>
-          <kbd className="kbd">K</kbd>
-          <span>Search releases</span>
-        </div>
       )}
       {showHelpMenu ? <HelpMenu /> : null}
       {showHelpMenu ? <SupportChat /> : null}

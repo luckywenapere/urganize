@@ -9,7 +9,8 @@ import { useTaskStore } from '@/stores/useTaskStore';
 
 type ReleaseStore = {
   releases: ExecutionRelease[];
-  isLoading: boolean;
+  isInitialLoading: boolean;
+  isRefreshing: boolean;
   error: string;
   loadCommandCenter: () => Promise<CommandCenterData | null>;
   createRelease: (title: string, state?: ReleasePipelineState) => Promise<ExecutionRelease | null>;
@@ -25,13 +26,20 @@ const getAccessToken = async () => {
 
 export const useReleaseStore = create<ReleaseStore>((set, get) => ({
   releases: [],
-  isLoading: false,
+  isInitialLoading: false,
+  isRefreshing: false,
   error: '',
   loadCommandCenter: async () => {
-    set({ isLoading: true, error: '' });
+    const hasData = get().releases.length > 0;
+    if (!hasData) {
+      set({ isInitialLoading: true, error: '' });
+    } else {
+      set({ isRefreshing: true, error: '' });
+    }
+
     const accessToken = await getAccessToken();
     if (!accessToken) {
-      set({ isLoading: false, error: 'Session expired. Please sign in again.' });
+      set({ isInitialLoading: false, isRefreshing: false, error: 'Session expired. Please sign in again.' });
       return null;
     }
 
@@ -41,13 +49,13 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
     });
     const payload = (await response.json().catch(() => ({}))) as Partial<CommandCenterData> & { error?: string };
     if (!response.ok || !Array.isArray(payload.releases)) {
-      set({ isLoading: false, error: payload.error || 'Could not load Command Center.' });
+      set({ isInitialLoading: false, isRefreshing: false, error: payload.error || 'Could not load Command Center.' });
       return null;
     }
 
     useTaskStore.getState().setTasks((payload.tasks || []) as CommandCenterData['tasks']);
     useActivityStore.getState().setActivity(payload.activity || []);
-    set({ releases: payload.releases, isLoading: false, error: '' });
+    set({ releases: payload.releases, isInitialLoading: false, isRefreshing: false, error: '' });
     return payload as CommandCenterData;
   },
   createRelease: async (title, state = 'idea') => {

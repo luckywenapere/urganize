@@ -20,13 +20,13 @@ export function TaskBlock({
   const done = task.status === TASK_DONE_STATUS;
 
   return (
-    <div className="rounded-[18px] border border-stroke-subtle bg-bg-elevated p-4">
+    <div className="rounded-none border border-stroke-subtle bg-bg-elevated p-4">
       <div className="flex items-start justify-between gap-3">
         <button type="button" onClick={() => onOpen(task)} className="min-w-0 flex-1 text-left">
           <p className="font-semibold text-content-primary">{task.title}</p>
           {task.description ? <p className="mt-1 line-clamp-2 text-sm text-content-secondary">{task.description}</p> : null}
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-content-tertiary">
-            <span className="rounded-full border border-stroke-subtle px-2 py-1">{task.state.replace(/_/g, ' ')}</span>
+            <span className="rounded-none border border-stroke-subtle px-2 py-1">{task.state.replace(/_/g, ' ')}</span>
             {task.dueDate ? <span>Due {new Date(task.dueDate).toLocaleDateString()}</span> : null}
             {task.requirement ? (
               <span className="inline-flex items-center gap-1">
@@ -40,7 +40,7 @@ export function TaskBlock({
           type="button"
           disabled={done || Boolean(blocker)}
           onClick={() => onComplete(task)}
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-45"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-none border border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-45"
           title={blocker || (done ? 'Completed' : 'Mark complete')}
         >
           {blocker ? <Lock className="h-4 w-4" /> : <Check className="h-4 w-4" />}

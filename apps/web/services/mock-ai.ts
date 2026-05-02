@@ -1,5 +1,6 @@
 import type { AISignal, ExecutionRelease, ExecutionTask, ReleasePipelineState } from '@/lib/execution-types';
 import { TASK_DONE_STATUS } from '@/lib/execution-types';
+import { calculateReadinessForState, formatArtistName, getPipelineStateLabel } from '@/lib/release-execution';
 
 const makeId = () => `signal_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
 
@@ -25,6 +26,9 @@ export function requestMockAISignals({
         const daysUntilRelease = release.releaseDate
           ? Math.ceil((new Date(release.releaseDate).getTime() - now) / 86400000)
           : null;
+        const readinessScore = calculateReadinessForState(releaseTasks, release.state);
+        const stateLabel = getPipelineStateLabel(release.state);
+        const formattedDate = release.releaseDate ? new Date(release.releaseDate).toLocaleDateString() : 'no date set';
 
         if (daysUntilRelease !== null && daysUntilRelease <= 5 && daysUntilRelease >= 0) {
           signals.push({
@@ -33,7 +37,7 @@ export function requestMockAISignals({
             state: release.state,
             severity: 'critical',
             title: 'Release date is close',
-            message: `${release.title} is due in ${daysUntilRelease} day${daysUntilRelease === 1 ? '' : 's'}. Tighten the next action queue.`,
+            message: `Due on ${formattedDate} (${daysUntilRelease} day${daysUntilRelease === 1 ? '' : 's'}). Current state: ${stateLabel} (${readinessScore}%). Tighten the next action queue.`,
             actionLabel: 'Generate Plan',
             createdAt: new Date().toISOString(),
           });
@@ -47,7 +51,7 @@ export function requestMockAISignals({
             state: 'campaign',
             severity: 'warning',
             title: 'Campaign not started',
-            message: 'No campaign execution task exists yet. Generate one before rollout windows close.',
+            message: `No campaign execution task exists yet. Readiness is at ${readinessScore}%. Generate one before rollout windows close.`,
             actionLabel: 'Generate Plan',
             createdAt: new Date().toISOString(),
           });
@@ -64,7 +68,7 @@ export function requestMockAISignals({
             state: 'asset_prep',
             severity: 'warning',
             title: 'Artwork or asset still missing',
-            message: `${missingAsset.title} is blocking asset prep readiness.`,
+            message: `Asset prep is blocked by missing ${missingAsset.title.toLowerCase()}. Readiness at ${readinessScore}%.`,
             createdAt: new Date().toISOString(),
           });
         }

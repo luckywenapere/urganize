@@ -21,6 +21,24 @@ export function getPipelineStateLabel(state: ReleasePipelineState): string {
   return STATE_LABELS[state] || 'Idea';
 }
 
+export function formatArtistName(name: string): string {
+  if (!name) return '';
+  if (name.includes(' ')) return name;
+  return name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2').trim();
+}
+
+export function cleanTaskTitle(title: string): string {
+  return title.replace(/^AI Action:\s*/i, '').trim();
+}
+
+export function formatReleaseTitle(title: string): string {
+  if (!title) return '';
+  if (title.startsWith('REL_')) {
+    return title.slice(4).replace(/_/g, ' ').trim();
+  }
+  return title;
+}
+
 export function normalizePipelineState(value: unknown): ReleasePipelineState {
   const normalized = String(value || '').trim().toLowerCase();
   return RELEASE_PIPELINE_STATES.includes(normalized as ReleasePipelineState)

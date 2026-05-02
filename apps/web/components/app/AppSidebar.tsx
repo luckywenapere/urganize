@@ -15,8 +15,8 @@ const navItems = [
     href: '/dashboard',
     label: 'Releases',
     icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M4 6.5h16M4 12h16M4 17.5h10" strokeLinecap="round" />
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M4 6h16M4 12h16M4 18h10" strokeLinecap="round" />
       </svg>
     ),
   },
@@ -24,9 +24,8 @@ const navItems = [
     href: '/dashboard/tasks',
     label: 'Tasks',
     icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M8 7h11M8 12h11M8 17h11" strokeLinecap="round" />
-        <path d="M4.5 7.5h.01M4.5 12h.01M4.5 16.5h.01" strokeLinecap="round" strokeLinejoin="round" />
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
       </svg>
     ),
   },
@@ -34,9 +33,8 @@ const navItems = [
     href: '/dashboard/notes',
     label: 'Notes',
     icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M7 4.5h7l4.5 4.5V19a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5.5 19V6A1.5 1.5 0 0 1 7 4.5Z" />
-        <path d="M14 4.5V9h4.5" strokeLinecap="round" strokeLinejoin="round" />
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M6 4h10l4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
       </svg>
     ),
   },
@@ -44,9 +42,8 @@ const navItems = [
     href: '/dashboard/pre-save',
     label: 'Pre-save',
     icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M6 8.5a6 6 0 0 1 12 0c0 5-6 9-6 9s-6-4-6-9Z" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="12" cy="8.5" r="1.8" />
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M4 8a8 8 0 0 1 16 0c0 5-8 9-8 9s-8-4-8-9Z" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -54,8 +51,8 @@ const navItems = [
     href: '/dashboard/folders',
     label: 'Folders',
     icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M4.5 7.5A1.5 1.5 0 0 1 6 6h4l1.5 2H18A1.5 1.5 0 0 1 19.5 9.5V17A1.5 1.5 0 0 1 18 18.5H6A1.5 1.5 0 0 1 4.5 17V7.5Z" strokeLinecap="round" strokeLinejoin="round" />
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M4 7a1 1 0 0 1 1-1h4l2 2h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7Z" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -72,25 +69,21 @@ const isActivePath = (pathname: string | null, href: string) =>
 export function AppSidebar({ userName }: AppSidebarProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-  const firstName = userName ? userName.split(' ')[0] : '';
 
   useEffect(() => {
     setIsOpen(false);
   }, [pathname]);
 
   const sidebar = (
-    <div className="flex h-full flex-col gap-4">
-      <div className="nav-shell p-4">
-        <Logo size="lg" priority className="justify-start" />
-        {firstName ? <span className="sr-only">{`${firstName}'s workspace navigation`}</span> : null}
+    <div className="flex h-full flex-col bg-[#0a0a0a]">
+      <div className="p-6">
+        <Logo size="lg" priority className="justify-start opacity-80" />
       </div>
 
-      <div className="hidden px-1 md:block">
-        <TrialStatusBanner compact />
-      </div>
+      <div className="border-b border-white/5" />
 
-      <nav className="nav-shell p-2">
-        <div className="space-y-2">
+      <nav className="flex-1 px-0 py-6">
+        <div className="flex flex-col gap-1">
           {navItems.map((item) => {
             const isActive = isActivePath(pathname, item.href);
 
@@ -99,20 +92,23 @@ export function AppSidebar({ userName }: AppSidebarProps) {
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex min-h-[52px] items-center gap-3 rounded-[20px] px-4 transition ${
-                  isActive
-                    ? 'border border-stroke-default bg-bg-sidebar-active text-content-primary shadow-[0_14px_30px_-22px_rgba(0,0,0,0.5)]'
-                    : 'text-content-secondary hover:-translate-y-[1px] hover:bg-bg-hover hover:text-content-primary'
+                className={`group relative flex min-h-[44px] items-center gap-3 px-6 transition-colors duration-150 ease-in-out ${
+                  isActive ? 'text-white font-medium bg-white/5' : 'text-white/40 font-normal hover:text-white/70 hover:bg-white/[0.02]'
                 }`}
               >
+                <div 
+                  className={`absolute left-0 top-0 h-full w-[2px] bg-brand transition-opacity duration-200 ease-in-out ${
+                    isActive ? 'opacity-100' : 'opacity-0'
+                  }`} 
+                />
                 <span
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center ${
-                    isActive ? 'text-content-primary' : 'text-content-tertiary'
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center transition-opacity duration-150 ease-in-out ${
+                    isActive ? 'opacity-100' : 'opacity-40 group-hover:opacity-70'
                   }`}
                 >
                   {item.icon}
                 </span>
-                <span className={`min-w-0 text-sm font-semibold ${isActive ? 'text-content-primary' : 'text-content-secondary'}`}>
+                <span className="font-sans text-sm tracking-tight">
                   {item.label}
                 </span>
               </Link>
@@ -120,6 +116,12 @@ export function AppSidebar({ userName }: AppSidebarProps) {
           })}
         </div>
       </nav>
+
+      <div className="mt-auto p-6">
+        <div className="font-mono text-[10px] text-white/10 uppercase tracking-widest break-all opacity-50">
+          {userName || 'STUDIO_USER'}
+        </div>
+      </div>
     </div>
   );
 
@@ -129,17 +131,19 @@ export function AppSidebar({ userName }: AppSidebarProps) {
         type="button"
         onClick={() => setIsOpen(true)}
         aria-label="Open workspace menu"
-        className="mobile-safe-top-offset nav-shell fixed left-4 z-[120] grid h-12 w-12 place-items-center text-content-primary md:hidden"
+        className="mobile-safe-top-offset fixed left-4 z-[120] grid h-12 w-12 place-items-center bg-[#0a0a0a] text-white/40 md:hidden"
       >
         <span className="sr-only">Open menu</span>
         <span className="flex flex-col gap-1.5">
-          <span className="block h-0.5 w-5 rounded-full bg-current" />
-          <span className="block h-0.5 w-5 rounded-full bg-current" />
-          <span className="block h-0.5 w-5 rounded-full bg-current" />
+          <span className="block h-0.5 w-5 bg-current" />
+          <span className="block h-0.5 w-5 bg-current" />
+          <span className="block h-0.5 w-5 bg-current" />
         </span>
       </button>
 
-      <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 p-4 md:block">{sidebar}</aside>
+      <aside className="sticky top-0 hidden h-screen w-[240px] shrink-0 border-r border-white/5 md:block">
+        {sidebar}
+      </aside>
 
       {isOpen && (
         <div className="fixed inset-0 z-[130] md:hidden">
@@ -147,17 +151,17 @@ export function AppSidebar({ userName }: AppSidebarProps) {
             type="button"
             onClick={() => setIsOpen(false)}
             aria-label="Close workspace menu"
-            className="modal-scrim absolute inset-0"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           />
-          <aside className="absolute left-0 top-0 h-full w-[min(86vw,320px)] p-4 mobile-safe-bottom">
-            <div className="h-full">{sidebar}</div>
+          <aside className="absolute left-0 top-0 h-full w-[min(86vw,280px)] border-r border-white/5">
+            {sidebar}
           </aside>
         </div>
       )}
 
-      <nav className="mobile-safe-bottom nav-shell fixed bottom-4 left-[4.5rem] right-4 z-[110] p-2 md:hidden">
+      <nav className="mobile-safe-bottom fixed bottom-4 left-4 right-4 z-[110] border border-white/5 bg-[#0a0a0a]/90 backdrop-blur-md md:hidden">
         <div
-          className="grid gap-2"
+          className="grid"
           style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
         >
           {navItems.map((item) => {
@@ -168,14 +172,14 @@ export function AppSidebar({ userName }: AppSidebarProps) {
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-[20px] px-2 py-2 text-center transition ${
+                className={`flex flex-col items-center justify-center gap-1.5 py-3 transition-colors ${
                   isActive
-                    ? 'border border-stroke-default bg-bg-sidebar-active text-content-primary'
-                    : 'text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                    ? 'border-t-2 border-green-400 text-white'
+                    : 'text-white/40'
                 }`}
               >
-                <span className={isActive ? 'text-content-primary' : 'text-content-tertiary'}>{item.icon}</span>
-                <span className="truncate text-[11px] font-semibold leading-none tracking-[0.03em]">
+                <span className={`h-4 w-4 ${isActive ? 'opacity-100' : 'opacity-40'}`}>{item.icon}</span>
+                <span className="font-sans text-[10px] truncate px-1">
                   {item.label}
                 </span>
               </Link>
@@ -186,4 +190,3 @@ export function AppSidebar({ userName }: AppSidebarProps) {
     </>
   );
 }
-
