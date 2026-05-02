@@ -11,6 +11,7 @@ import { AppSidebarSkeleton } from '@/components/app/AppSidebarSkeleton';
 import { TrialStatusBanner } from '@/components/billing/TrialStatusBanner';
 import { FirstTimeOnboardingGate } from '@/components/onboarding/FirstTimeOnboardingGate';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
+import { SupportChat } from '@/components/support/SupportChat';
 
 const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === 'true';
 
@@ -87,6 +88,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
       {showHelpMenu ? <HelpMenu /> : null}
+      {showHelpMenu ? <SupportChat /> : null}
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
       <Suspense fallback={null}>
         <FirstTimeOnboardingGate />

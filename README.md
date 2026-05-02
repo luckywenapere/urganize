@@ -137,3 +137,40 @@ lib/
   billing.ts                    # Plan pricing and metadata helpers
   subscription-access.ts        # Access helper (currently stubbed)
 ```
+
+## Support Chat (Tawk.to)
+
+A floating support chat widget is mounted in the dashboard via `apps/web/components/support/SupportChat.tsx`. It:
+
+- Renders a custom bottom-right FAB (matches the in-app design) and hides Tawk's default bubble.
+- Opens the Tawk chat panel on click, with live chat when an agent is online and ticket-style messaging when offline.
+- Identifies the visitor (name, email, user id, role) so chat history persists across sessions.
+- Shows an unread-message badge on the FAB.
+- Only mounts on authenticated, non-public routes (same gate as the help menu).
+
+### Required environment variables
+
+Add to `apps/web/.env.local` and to the deployment environment (e.g. Vercel):
+
+```bash
+NEXT_PUBLIC_TAWK_PROPERTY_ID=
+NEXT_PUBLIC_TAWK_WIDGET_ID=
+```
+
+If either value is missing, the widget renders nothing — the rest of the app keeps working.
+
+### Where to get the Tawk.to values
+
+1. Sign up for a free account at https://www.tawk.to.
+2. Create a property for Urganize. Tawk auto-creates a default chat widget under it.
+3. In the Tawk dashboard go to **Administration → Channels → Chat Widget**, then open **Direct Chat Link**. The link looks like:
+   ```
+   https://tawk.to/chat/<PROPERTY_ID>/<WIDGET_ID>
+   ```
+   The first segment is `NEXT_PUBLIC_TAWK_PROPERTY_ID`, the second is `NEXT_PUBLIC_TAWK_WIDGET_ID`.
+4. Recommended dashboard settings:
+   - **Appearance**: dark theme + brand color to match the app.
+   - **File uploads**: enable in Chat Widget settings (used for proof/screenshot attachments).
+   - **Offline form**: enable so messages submitted while no agent is online become tickets.
+   - Leave the default Tawk bubble enabled — the app hides it at runtime and renders its own FAB.
+5. If the deployment uses a Content Security Policy, allowlist `https://embed.tawk.to`, `https://*.tawk.to`, and `wss://*.tawk.to`.
