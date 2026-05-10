@@ -12,6 +12,8 @@
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/supabase-js": "^2.90.1",
     "@urganize/ui": "workspace:*",
+    "@urganize/lib": "workspace:*",
+    "@urganize/db": "workspace:*",
     "@vercel/analytics": "^1.6.1",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
