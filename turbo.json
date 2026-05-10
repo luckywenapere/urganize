@@ -9,6 +9,20 @@
         ".next/**",
         "dist/**",
         "build/**"
+      ],
+      "env": [
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "PAYSTACK_SECRET_KEY",
+        "TRIAL_CLAIMS_SALT",
+        "PAYSTACK_PLAN_MONTHLY_CODE",
+        "PAYSTACK_PLAN_8MONTHS_CODE",
+        "PAYSTACK_PLAN_YEARLY_CODE",
+        "PAYSTACK_PLAN_GROUP_MONTHLY_CODE",
+        "PAYSTACK_PLAN_GROUP_YEARLY_CODE",
+        "TRIAL_TOKENIZATION_AMOUNT_NGN",
+        "ADMIN_EMAILS",
+        "OLLAMA_BASE_URL",
+        "OLLAMA_MODEL"
       ]
     },
     "dev": {

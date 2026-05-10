@@ -12,8 +12,11 @@ export interface Profile {
   updatedAt: string;
 }
 
-export type WorkspaceMemberRole = 'owner' | 'admin' | 'member' | 'guest';
-export type WorkspaceMemberStatus = 'active' | 'invited' | 'removed';
+export const WORKSPACE_MEMBER_ROLE_OPTIONS = ['owner', 'admin', 'member', 'guest'] as const;
+export const WORKSPACE_MEMBER_STATUS_OPTIONS = ['active', 'invited', 'removed'] as const;
+
+export type WorkspaceMemberRole = (typeof WORKSPACE_MEMBER_ROLE_OPTIONS)[number];
+export type WorkspaceMemberStatus = (typeof WORKSPACE_MEMBER_STATUS_OPTIONS)[number];
 
 export interface Workspace {
   id: string;
