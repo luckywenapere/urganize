@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase/client';
 import type { AISignal, ExecutionRelease, ExecutionTask } from '@/lib/execution-types';
 import { TASK_DONE_STATUS } from '@/lib/execution-types';
 import { calculateOverallReadiness, cleanTaskTitle, formatArtistName, formatReleaseTitle, selectPrimaryRelease } from '@/lib/release-execution';
-import { getPriorityBorderClass } from '@/lib/tasks';
+import { getPriorityBorderClass, type TaskStatus } from '@/lib/tasks';
 import { useActivityStore } from '@/stores/useActivityStore';
 import { useAIStore } from '@/stores/useAIStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -178,7 +178,7 @@ export function CommandCenterPage() {
       });
   }, [myTasks, filter]);
 
-  const handleUpdateStatus = async (taskId: string, status: any) => {
+  const handleUpdateStatus = async (taskId: string, status: TaskStatus) => {
     await updateTaskStatus(taskId, status);
   };
 

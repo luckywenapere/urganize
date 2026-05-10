@@ -11,6 +11,7 @@ import {
   type TaskRequirement,
 } from '@/lib/execution-types';
 import { getTaskCompletionBlocker } from '@/lib/release-execution';
+import { type TaskStatus } from '@/lib/tasks';
 
 type TaskCreateInput = {
   title: string;
