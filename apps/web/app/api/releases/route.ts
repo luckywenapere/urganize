@@ -18,7 +18,7 @@ import {
   type ReleaseSelectorListResponse,
 } from '@/lib/pre-save';
 import { RELEASE_PLAYBOOK_PHASES } from '@/lib/release-playbook';
-import { createDefaultReleaseTaskGroups, ensureOwnedWorkspace, isTaskSchemaMissingError } from '@/lib/tasks-server';
+import { createDefaultReleaseTasks, ensureOwnedWorkspace, isTaskSchemaMissingError } from '@/lib/tasks-server';
 import { type ReleaseCreatedSource } from '@/lib/analytics';
 import { getSubscriptionStatus, hasAccess } from '@/lib/subscription-access';
 import {
@@ -296,15 +296,15 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  if (view === 'selector') {
-    const metadataResult = await loadReleaseMetadataMap(
-      adminClient,
-      releases.map((release) => release.id)
-    );
-    if ('error' in metadataResult) {
-      return metadataResult.error;
-    }
+  const metadataResult = await loadReleaseMetadataMap(
+    adminClient,
+    releases.map((release) => release.id)
+  );
+  if ('error' in metadataResult) {
+    return metadataResult.error;
+  }
 
+  if (view === 'selector') {
     const payload: ReleaseSelectorListResponse = {
       releases: releases.map((release) => toSelectorRelease(release, metadataResult.metadataByReleaseId)),
     };
@@ -334,6 +334,8 @@ export async function GET(request: NextRequest) {
           id: release.id,
           title: release.title,
           artistName: release.artistName,
+          releaseDate: release.releaseDate || null,
+          coverArtUrl: metadataResult.metadataByReleaseId.get(release.id)?.artwork_url || null,
           status: release.status,
           progress: 0,
           invitedCount: 0,
@@ -366,6 +368,7 @@ export async function GET(request: NextRequest) {
         title: release.title,
         artistName: release.artistName,
         releaseDate: release.releaseDate,
+        coverArtUrl: metadataResult.metadataByReleaseId.get(release.id)?.artwork_url || null,
         status: computedStatus,
         progress: commandCenter.readiness.completionPercent,
         invitedCount: commandCenter.collaborators.length,
@@ -415,22 +418,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existingReleaseCount = Number(existingReleaseCountResult.count || 0);
-    if (existingReleaseCount >= 1) {
-      const accessAllowed = await hasAccess(auth.user.id);
-      if (!accessAllowed) {
-        const subscriptionStatus = await getSubscriptionStatus(auth.user.id);
-        return NextResponse.json(
-          {
-            error: 'Upgrade required to create another release.',
-            code: 'PAYWALL_REQUIRED',
-            feature: 'multiple_releases',
-            status: subscriptionStatus,
-          },
-          { status: 402 }
-        );
-      }
-    }
+    const existingReleaseCount = 0;
 
     const body = (await request.json().catch(() => ({}))) as CreateReleaseBody;
     const artistId = trimString(body?.artistId);
@@ -593,7 +581,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const workspace = await ensureOwnedWorkspace(adminClient, auth.user);
-      await createDefaultReleaseTaskGroups(adminClient, workspace.id, releaseId);
+      await createDefaultReleaseTasks(adminClient, workspace.id, releaseId, auth.user.id);
     } catch (taskError) {
       if (!isTaskSchemaMissingError(taskError)) {
         throw taskError;

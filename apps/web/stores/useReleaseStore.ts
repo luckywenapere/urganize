@@ -9,6 +9,7 @@ import { useTaskStore } from '@/stores/useTaskStore';
 
 type ReleaseStore = {
   releases: ExecutionRelease[];
+  todaysDirective: ExecutionTask | null;
   isInitialLoading: boolean;
   isRefreshing: boolean;
   error: string;
@@ -26,6 +27,7 @@ const getAccessToken = async () => {
 
 export const useReleaseStore = create<ReleaseStore>((set, get) => ({
   releases: [],
+  todaysDirective: null,
   isInitialLoading: false,
   isRefreshing: false,
   error: '',
@@ -55,7 +57,7 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
 
     useTaskStore.getState().setTasks((payload.tasks || []) as CommandCenterData['tasks']);
     useActivityStore.getState().setActivity(payload.activity || []);
-    set({ releases: payload.releases, isInitialLoading: false, isRefreshing: false, error: '' });
+    set({ releases: payload.releases, todaysDirective: payload.todaysDirective || null, isInitialLoading: false, isRefreshing: false, error: '' });
     return payload as CommandCenterData;
   },
   createRelease: async (title, state = 'idea') => {

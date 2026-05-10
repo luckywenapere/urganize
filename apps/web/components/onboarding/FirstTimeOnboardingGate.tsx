@@ -16,7 +16,6 @@ import {
   type UpdateOnboardingBody,
 } from '@/lib/onboarding';
 import { supabase } from '@/lib/supabase/client';
-import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
 
 type CreateReleaseResponse = {
   release?: {
@@ -1183,12 +1182,13 @@ export function FirstTimeOnboardingGate() {
                   </span>
                 </div>
 
-                <div className="mt-6">
-                  <SubscriptionPaywall
-                    compact
-                    title="Start free. Ship better."
-                    description="Annual is selected by default so you can start with a 3-day free trial. Monthly is there if you want to subscribe right away."
-                  />
+                <div className="mt-8 flex flex-col items-center">
+                  <p className="text-[clamp(1.5rem,4vw,2.4rem)] font-medium tracking-tight text-content-primary">
+                    Unlock your full potential
+                  </p>
+                  <p className="mt-4 max-w-lg text-center text-lg text-content-secondary">
+                    You have full access to all Urganize Pro features. Start managing your releases with structured workflows, automated credits, and pre-save campaigns today.
+                  </p>
                 </div>
 
                 <button
@@ -1197,9 +1197,9 @@ export function FirstTimeOnboardingGate() {
                     void handleFinishOnboarding();
                   }}
                   disabled={isSaving}
-                  className="mt-4 inline-flex w-full items-center justify-center rounded-full px-4 py-3 text-sm font-medium text-content-secondary transition hover:text-content-primary disabled:opacity-60"
+                  className="mt-10 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-brand px-6 text-sm font-semibold text-content-inverse transition hover:bg-brand-hover disabled:opacity-60"
                 >
-                  I&apos;ll explore my first release first -&gt;
+                  {isSaving ? 'Finishing setup...' : 'Go to Dashboard ->'}
                 </button>
               </div>
             </div>

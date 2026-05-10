@@ -8,11 +8,15 @@ import { ReadinessBar } from '@/components/execution/ReadinessBar';
 export function FocusCard({
   release,
   tasks,
+  todaysDirective,
   onContinue,
+  onSelectTask,
 }: {
   release: ExecutionRelease | null;
   tasks: ExecutionTask[];
+  todaysDirective?: ExecutionTask | null;
   onContinue: (release: ExecutionRelease) => void;
+  onSelectTask?: (taskId: string) => void;
 }) {
   if (!release) {
     return (
@@ -24,8 +28,32 @@ export function FocusCard({
   }
 
   const releaseTasks = tasks.filter((task) => task.releaseId === release.id);
-  const nextTask = releaseTasks.find((task) => task.status !== 'done' && task.status !== 'cancelled');
   const warnings = buildReleaseWarnings(release, tasks);
+  
+  let countdownText = null;
+  let countdownColor = '';
+  if (release.releaseDate) {
+    const rDate = new Date(release.releaseDate);
+    rDate.setHours(0, 0, 0, 0);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const timeDiff = rDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    
+    if (diffDays < 0) {
+      countdownText = 'Drop date passed';
+      countdownColor = 'text-red-400/40';
+    } else if (diffDays <= 7) {
+      countdownText = `${diffDays} days to drop`;
+      countdownColor = 'text-yellow-400/60';
+    } else {
+      countdownText = `${diffDays} days to drop`;
+      countdownColor = 'text-white/30';
+    }
+  }
+
+  const isOverdue = todaysDirective?.dueDate && todaysDirective.dueDate < new Date().toISOString().slice(0, 10);
+  const isDueToday = todaysDirective?.dueDate === new Date().toISOString().slice(0, 10);
 
   return (
     <section className="panel-shell rounded-sm border-t border-white/5 border-l-2 border-green-400 p-6 shadow-none">
@@ -33,6 +61,9 @@ export function FocusCard({
         <div>
           <h2 className="text-3xl font-bold text-content-primary tracking-tight">{release.title}</h2>
           <p className="mt-1 font-mono text-xs text-content-tertiary">{formatArtistName(release.artistName)}</p>
+          {countdownText && (
+            <p className={`mt-2 font-mono text-xs ${countdownColor}`}>{countdownText}</p>
+          )}
         </div>
         <span className="border border-green-400/40 bg-transparent px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-green-400 font-mono">
           {getPipelineStateLabel(release.state)}
@@ -58,13 +89,34 @@ export function FocusCard({
       ) : null}
 
       <div className="mt-8 border-t border-white/5 pt-6">
-        <p className="font-sans text-xs text-white/30 mb-2">What&apos;s next</p>
-        <p className="mt-1 text-lg font-semibold text-content-primary font-display">{nextTask ? cleanTaskTitle(nextTask.title) : 'Review readiness'}</p>
+        {todaysDirective ? (
+          <>
+            <p className="font-mono text-xs text-white/30 mb-2">Today</p>
+            <div className="flex items-center gap-2">
+              {isOverdue && <div className="h-1 w-1 shrink-0 rounded-none bg-red-400" />}
+              {!isOverdue && isDueToday && <div className="h-1 w-1 shrink-0 rounded-none bg-yellow-400" />}
+              <p className="text-lg font-semibold text-white font-display">
+                {cleanTaskTitle(todaysDirective.title)}
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-lg font-semibold text-white font-display">You&apos;re all caught up.</p>
+            <p className="mt-1 font-sans text-xs text-white/40">Add a task or wait for the AI to surface the next move.</p>
+          </>
+        )}
       </div>
 
       <button
         type="button"
-        onClick={() => onContinue(release)}
+        onClick={() => {
+          if (todaysDirective && onSelectTask) {
+            onSelectTask(todaysDirective.id);
+          } else {
+            onContinue(release);
+          }
+        }}
         className="group mt-8 inline-flex min-h-11 items-center gap-3 rounded-none border border-green-400/60 bg-brand px-6 text-xs font-bold uppercase tracking-widest text-content-inverse transition-all duration-150 hover:border-green-400 hover:text-white"
       >
         Keep going

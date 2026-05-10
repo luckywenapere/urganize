@@ -106,5 +106,63 @@ export async function GET(request: NextRequest) {
       ? []
       : activityResult.data.map((row) => toActivity(row as Record<string, unknown>));
 
-  return NextResponse.json({ releases, tasks, activity });
+  let todaysDirective: ExecutionTask | null = null;
+  const incompleteTasks = tasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled');
+  
+  if (incompleteTasks.length > 0) {
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    
+    // 1. Overdue
+    const overdue = incompleteTasks.find(t => t.dueDate && t.dueDate < todayStr);
+    
+    if (overdue) {
+      todaysDirective = overdue;
+    } else {
+      // 2. Release within 7 days
+      let upcomingReleaseTask: ExecutionTask | null = null;
+      for (const release of releases) {
+        if (release.releaseDate) {
+          const rDate = new Date(release.releaseDate);
+          const rDateStr = rDate.toISOString().slice(0, 10);
+          const timeDiff = rDate.getTime() - now.getTime();
+          const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+          
+          if (diffDays >= 0 && diffDays <= 7) {
+            const releaseTasks = incompleteTasks.filter(t => t.releaseId === release.id);
+            if (releaseTasks.length > 0) {
+              const priorityWeights: Record<string, number> = { urgent: 3, high: 2, medium: 1, low: 0 };
+              upcomingReleaseTask = releaseTasks.sort((a, b) => {
+                 const weightA = priorityWeights[a.priority || 'low'] ?? 0;
+                 const weightB = priorityWeights[b.priority || 'low'] ?? 0;
+                 return weightB - weightA;
+              })[0];
+              break;
+            }
+          }
+        }
+      }
+
+      if (upcomingReleaseTask) {
+        todaysDirective = upcomingReleaseTask;
+      } else {
+        // 3. Due today
+        const dueToday = incompleteTasks.find(t => t.dueDate === todayStr);
+        if (dueToday) {
+          todaysDirective = dueToday;
+        } else {
+          // 4. Oldest incomplete with status 'todo'
+          const todos = incompleteTasks.filter(t => t.status === 'todo');
+          if (todos.length > 0) {
+            todaysDirective = todos.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
+          } else {
+             // fallback to oldest incomplete if no 'todo'
+             todaysDirective = incompleteTasks.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
+          }
+        }
+      }
+    }
+  }
+
+  return NextResponse.json({ releases, tasks, activity, todaysDirective });
 }

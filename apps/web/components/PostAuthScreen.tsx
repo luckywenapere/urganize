@@ -13,8 +13,6 @@ import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
 import type { ReleasePlanResult } from '@/lib/release-plan';
 import type { ReleaseTaskPlanResponse } from '@/lib/task-plan';
 import type { StoredPricingValidationResponse, PricingValidationResponse } from '@/lib/pricing-validation';
-import { SubscriptionPaywall } from '@/components/billing/SubscriptionPaywall';
-import { PricingValidationPrompt } from '@/components/validation/PricingValidationPrompt';
 
 type RoleOption = 'manager' | 'artist-team' | 'artist';
 type ProofType = 'none' | 'screenshot' | 'video' | 'link' | 'text';
@@ -412,11 +410,6 @@ export function PostAuthScreen() {
   const [releaseId, setReleaseId] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
 
-  const [showPricingSheet, setShowPricingSheet] = useState(false);
-  const [pricingValidation, setPricingValidation] = useState<StoredPricingValidationResponse | null>(null);
-  const [pricingValidationLoading, setPricingValidationLoading] = useState(false);
-  const [pricingValidationSubmitting, setPricingValidationSubmitting] = useState(false);
-  const [pricingValidationDismissed, setPricingValidationDismissed] = useState(false);
   const [selectedProof, setSelectedProof] = useState<ProofType>('none');
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofLink, setProofLink] = useState('');
@@ -485,44 +478,6 @@ export function PostAuthScreen() {
     flow === 'next-cycle' ||
     requestedStartStep >= 2 ||
     Boolean(requestedPlanId);
-
-  useEffect(() => {
-    if (step !== 7 || !user?.id) return;
-    let cancelled = false;
-
-    const loadPricingValidation = async () => {
-      setPricingValidationLoading(true);
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const token = session?.access_token || '';
-        if (!token) return;
-        const response = await fetch('/api/pricing-validation', {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          cache: 'no-store',
-        });
-        const payload = (await response.json().catch(() => ({}))) as {
-          response?: StoredPricingValidationResponse | null;
-        };
-        if (!response.ok || cancelled) return;
-        setPricingValidation(payload.response || null);
-        setPricingValidationDismissed(Boolean(payload.response));
-      } finally {
-        if (!cancelled) {
-          setPricingValidationLoading(false);
-        }
-      }
-    };
-
-    void loadPricingValidation();
-    return () => {
-      cancelled = true;
-    };
-  }, [step, user?.id]);
 
   const resetCycleInputs = useCallback(() => {
     setGoalText('');
@@ -1938,10 +1893,6 @@ export function PostAuthScreen() {
           .eq('release_id', releaseId);
         if (setupStepError) throw setupStepError;
 
-        pricingTimer = setTimeout(() => {
-          if (!cancelled) setShowPricingSheet(true);
-        }, PRICING_SHEET_MS);
-
         const startedAt = Date.now();
         await generateOnboardingTask(releaseId);
         const elapsed = Date.now() - startedAt;
@@ -1952,7 +1903,6 @@ export function PostAuthScreen() {
         await setStepPersisted(7);
       } catch (err: any) {
         if (!cancelled) {
-          setShowPricingSheet(false);
           setGenerationError(
             toAiUiErrorMessage(err?.message, 'AI service unavailable')
           );
@@ -2027,49 +1977,7 @@ export function PostAuthScreen() {
     router.push('/dashboard');
   };
 
-  const handleSubmitPricingValidation = async (payload: PricingValidationResponse) => {
-    setPricingValidationSubmitting(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token || '';
-      if (!token) throw new Error('Session expired. Please sign in again.');
 
-      const response = await fetch('/api/pricing-validation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      const result = (await response.json().catch(() => ({}))) as {
-        response?: StoredPricingValidationResponse;
-        error?: string;
-      };
-      if (!response.ok || !result.response) {
-        throw new Error(result.error || 'Could not save pricing validation response.');
-      }
-
-      setPricingValidation(result.response);
-      setPricingValidationDismissed(true);
-      setResumeMessage('Response saved. You can update it later from the dashboard.');
-      setShowResumeMessage(true);
-      trackEvent('pricing_validation_submitted', {
-        userId: user?.id || null,
-        payload: {
-          willingness: result.response.willingness,
-          priceBand: result.response.priceBand,
-          placement: result.response.placement,
-        },
-      });
-    } catch (err: any) {
-      setError(err?.message || 'Could not save pricing validation response.');
-    } finally {
-      setPricingValidationSubmitting(false);
-    }
-  };
 
   const handleLogoutToAuth = async () => {
     await logout();
@@ -2388,15 +2296,7 @@ export function PostAuthScreen() {
     );
   }
 
-  if (!hasSubscriptionAccess) {
-    return (
-      <main className={shellClass}>
-        <div className="mx-auto flex min-h-screen w-full max-w-[760px] items-center px-6 py-12 sm:px-10">
-          <SubscriptionPaywall title="Choose a plan to continue" />
-        </div>
-      </main>
-    );
-  }
+
 
   if (isCycleTransitioning) {
     return (
@@ -2614,9 +2514,6 @@ export function PostAuthScreen() {
 
         {step === 6 && (
           <Step6GeneratingTask
-            showPricingSheet={showPricingSheet}
-            userEmail={user?.email || ''}
-            onClosePricingSheet={() => setShowPricingSheet(false)}
             isGenerating={isBusy}
             generationError={generationError}
             onRetryGeneration={handleRetryGeneration}
@@ -2629,21 +2526,6 @@ export function PostAuthScreen() {
             isBusy={isBusy}
             taskTitle={taskTitle}
             taskOutcome={taskOutcome}
-            pricingPrompt={
-              !pricingValidationLoading && !pricingValidationDismissed ? (
-                <PricingValidationPrompt
-                  placement="onboarding"
-                  variant="onboarding"
-                  title="Would this feel worth paying for every month?"
-                  subtitle="This sits after the first task is generated because users have already seen concrete product value."
-                  submitLabel="Save answer"
-                  response={pricingValidation}
-                  isBusy={pricingValidationSubmitting}
-                  onSkip={() => setPricingValidationDismissed(true)}
-                  onSubmit={handleSubmitPricingValidation}
-                />
-              ) : undefined
-            }
             onLogout={handleLogoutToAuth}
             onMarkStarted={handleMarkStarted}
             onGoToDashboard={handleGoToDashboard}

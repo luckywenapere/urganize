@@ -58,14 +58,43 @@ function QuickCreateModal({
   );
 }
 
+function Nudge({ message, onDismiss }: { message: string, onDismiss: () => void }) {
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const t1 = setTimeout(() => setVisible(false), 3000);
+    const t2 = setTimeout(onDismiss, 3300);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [onDismiss]);
+
+  return (
+    <div className={`fixed bottom-0 left-0 right-0 h-10 bg-[#0a0a0a] border-t border-white/5 flex items-center justify-center font-mono text-xs text-white/40 z-[300] transition-opacity duration-300 ${visible ? 'opacity-100 animate-in fade-in duration-150' : 'opacity-0'}`}>
+      {message}
+    </div>
+  );
+}
+
+function getRelativeTime(dateStr: string) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${Math.max(1, diffMins)}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return 'yesterday';
+  return `${diffDays}d ago`;
+}
+
 export function CommandCenterPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
-  const { releases, isInitialLoading, isRefreshing, error, loadCommandCenter, createRelease } = useReleaseStore();
+  const { releases, todaysDirective, isInitialLoading, isRefreshing, error, loadCommandCenter, createRelease } = useReleaseStore();
   const { tasks, selectedTaskId, selectTask, completeTask, updateRequirement, createTask, error: taskError } = useTaskStore();
   const { activity } = useActivityStore();
   const { signals, runCheck } = useAIStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [nudge, setNudge] = useState<{ message: string; id: number } | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -209,7 +238,9 @@ export function CommandCenterPage() {
               <FocusCard
                 release={primaryRelease}
                 tasks={tasks}
+                todaysDirective={todaysDirective}
                 onContinue={(release) => router.push(`/dashboard/releases/${release.id}`)}
+                onSelectTask={selectTask}
               />
             </div>
 
@@ -340,19 +371,29 @@ export function CommandCenterPage() {
             </section>
 
             <section className="panel-shell animate-enter rounded-sm border-t border-white/5 p-6 shadow-none opacity-0 [animation-delay:250ms]">
-              <h2 className="mb-6 font-sans text-sm font-medium text-white/40">Activity</h2>
+              <div className="mb-6 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-sans text-sm font-medium text-white/40">Activity</h2>
+                  {activity.length > 0 && (new Date().getTime() - new Date(activity[0].createdAt).getTime() < 24 * 60 * 60 * 1000) && (
+                    <div className="h-1 w-1 animate-pulse rounded-none bg-green-400" />
+                  )}
+                </div>
+              </div>
               <div className="space-y-3">
                 {activity.length ? (
-                  activity.map((entry) => (
+                  activity.slice(0, 3).map((entry) => (
                     <div key={entry.id} className="border border-white/5 bg-bg-elevated/30 p-4">
-                      <p className="font-mono text-[10px] uppercase tracking-tighter text-content-tertiary mb-2">{new Date(entry.createdAt).toLocaleTimeString([], { hour12: false })}</p>
-                      <p className="text-sm text-content-primary opacity-90">{entry.message}</p>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-mono text-xs text-white/50">{entry.actorName}</span>
+                        <span className="font-sans text-xs text-white/20">{getRelativeTime(entry.createdAt)}</span>
+                      </div>
+                      <p className="text-xs text-white/30">{entry.message}</p>
                     </div>
                   ))
                 ) : (
                   <div className="flex items-center gap-3 border border-white/5 bg-bg-elevated/30 p-6">
                     <div className="h-1 w-1 rounded-none bg-white/20" />
-                    <p className="font-sans text-xs text-content-tertiary">
+                    <p className="font-sans text-xs text-white/30">
                       Quiet for now.
                     </p>
                   </div>
@@ -372,12 +413,22 @@ export function CommandCenterPage() {
         }}
         onComplete={(task) => {
           void completeTask(task.id).then((updated) => {
-            if (updated) void runCheck({ releases, tasks: useTaskStore.getState().tasks, releaseId: updated.releaseId });
+            if (updated) {
+              void runCheck({ releases, tasks: useTaskStore.getState().tasks, releaseId: updated.releaseId });
+              const remaining = useTaskStore.getState().tasks.filter(t => t.status !== 'done' && t.status !== 'cancelled');
+              if (remaining.length > 0) {
+                setNudge({ message: 'Good. Keep the momentum going.', id: Date.now() });
+              } else {
+                setNudge({ message: "That's today sorted. Come back tomorrow to keep this moving.", id: Date.now() });
+              }
+            }
           });
         }}
       />
 
       {showCreateModal ? <QuickCreateModal onClose={() => setShowCreateModal(false)} onCreate={handleCreateRelease} /> : null}
+      
+      {nudge && <Nudge key={nudge.id} message={nudge.message} onDismiss={() => setNudge(null)} />}
     </main>
   );
 }

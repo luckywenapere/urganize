@@ -1,5 +1,5 @@
 export const PAYWALL_SETTING_KEY = 'global_paywall';
-export const DEFAULT_PAYWALL_ENABLED = true;
+export const DEFAULT_PAYWALL_ENABLED = false;
 
 type SettingsRow = {
   value_json?: {
@@ -9,8 +9,7 @@ type SettingsRow = {
 };
 
 export const resolvePaywallEnabled = (row: SettingsRow | null | undefined): boolean => {
-  const enabled = row?.value_json?.enabled;
-  return typeof enabled === 'boolean' ? enabled : DEFAULT_PAYWALL_ENABLED;
+  return false;
 };
 
 export const resolvePaywallUpdatedAt = (row: SettingsRow | null | undefined): string | null => {

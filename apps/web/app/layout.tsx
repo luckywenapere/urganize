@@ -59,7 +59,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning data-theme="light" className="light">
+    <html lang="en" suppressHydrationWarning data-theme="dark" className="dark">
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -68,9 +68,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 try {
                   var key = 'urganize.theme';
                   var stored = localStorage.getItem(key);
-                  var resolved = stored === 'light' || stored === 'dark'
-                    ? stored
-                    : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+                  var resolved = stored === 'light' || stored === 'dark' ? stored : 'dark';
                   var root = document.documentElement;
                   root.dataset.theme = resolved;
                   root.classList.remove('dark', 'light');

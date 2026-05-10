@@ -82,56 +82,23 @@ const resolveSubscriptionSnapshot = (
   const plan = typeof subscription?.plan === 'string' ? subscription.plan : null;
   const expiresAt = typeof subscription?.expires_at === 'string' ? subscription.expires_at : null;
 
-  if (rawStatus === 'cancelled') {
-    return {
-      status: 'cancelled',
-      hasAccess: false,
-      trialEndsAt: null,
-      expiresAt,
-      plan,
-      rawStatus,
-    };
-  }
-
-  if (rawStatus === 'active' && isFutureTimestamp(expiresAt, nowMs)) {
-    return {
-      status: 'active',
-      hasAccess: true,
-      trialEndsAt: null,
-      expiresAt,
-      plan,
-      rawStatus,
-    };
-  }
-
-  if (rawStatus === 'trialing' && isAnnualPlan(plan) && isFutureTimestamp(expiresAt, nowMs)) {
-    return {
-      status: 'free_trial',
-      hasAccess: true,
-      trialEndsAt: expiresAt,
-      expiresAt,
-      plan,
-      rawStatus,
-    };
-  }
-
   return {
-    status: 'expired',
-    hasAccess: false,
-    trialEndsAt: rawStatus === 'trialing' && isAnnualPlan(plan) ? expiresAt : null,
-    expiresAt,
-    plan,
-    rawStatus,
+    status: 'active',
+    hasAccess: true,
+    trialEndsAt: null,
+    expiresAt: null,
+    plan: 'annual',
+    rawStatus: 'active',
   };
 };
 
 const getFallbackSnapshot = (): SubscriptionSnapshot => ({
-  status: 'expired',
-  hasAccess: false,
+  status: 'active',
+  hasAccess: true,
   trialEndsAt: null,
   expiresAt: null,
-  plan: null,
-  rawStatus: null,
+  plan: 'annual',
+  rawStatus: 'active',
 });
 
 async function fetchSnapshotFromApi(userId: string): Promise<SubscriptionSnapshot | null> {
@@ -220,6 +187,5 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
 }
 
 export async function hasAccess(userId: string): Promise<boolean> {
-  const status = await getSubscriptionStatus(userId);
-  return status === 'free_trial' || status === 'active';
+  return true;
 }

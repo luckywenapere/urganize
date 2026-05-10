@@ -67,6 +67,7 @@ export type CommandCenterData = {
   releases: ExecutionRelease[];
   tasks: ExecutionTask[];
   activity: ActivityLogEntry[];
+  todaysDirective: ExecutionTask | null;
 };
 
 export const TASK_DONE_STATUS: TaskStatus = 'done';

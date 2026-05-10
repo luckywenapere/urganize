@@ -86,7 +86,7 @@ export function TaskNotificationBell({ onOpenTask, refreshKey = 0 }: TaskNotific
   };
 
   return (
-    <div className="pointer-events-auto fixed right-4 top-4 z-[150] md:right-6 md:top-6">
+    <div className="pointer-events-auto fixed right-4 top-[4.75rem] z-[150] md:right-6">
       <div className="relative">
         <button
           type="button"

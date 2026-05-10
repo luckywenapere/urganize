@@ -8,18 +8,21 @@ type AppSidebarSkeletonProps = {
 
 const navItems = [
   '/dashboard',
+  '/dashboard/releases',
   '/dashboard/tasks',
-  '/dashboard/notes',
-  '/dashboard/pre-save',
   '/dashboard/folders',
+  '/dashboard/settings/team',
+  '/settings',
 ];
 
 const isActivePath = (pathname: string, href: string) =>
-  pathname === href ||
+  (href === '/dashboard' && pathname === href) ||
+  (href === '/dashboard/releases' && pathname.startsWith('/dashboard/releases')) ||
   (href === '/dashboard/tasks' && pathname.startsWith('/dashboard/tasks')) ||
   (href === '/dashboard/folders' && pathname.startsWith('/dashboard/folders')) ||
-  (href === '/dashboard' && pathname.startsWith('/dashboard/plans/')) ||
-  (href === '/dashboard' && pathname.startsWith('/dashboard/releases/'));
+  (href === '/dashboard/settings/team' && pathname.startsWith('/dashboard/settings/team')) ||
+  (href === '/settings' && pathname.startsWith('/settings')) ||
+  (href === '/dashboard/releases' && pathname.startsWith('/dashboard/plans/'));
 
 function SidebarItemSkeleton({
   active = false,
@@ -63,26 +66,25 @@ export function AppSidebarSkeleton({ pathname = '' }: AppSidebarSkeletonProps) {
   const activeIndex = navItems.findIndex((href) => isActivePath(pathname, href));
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 p-4 md:block" aria-hidden="true">
-      <div className="flex h-full flex-col gap-4">
-        <div className="nav-shell p-4">
-          <div className="flex items-center justify-start">
-            <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-none border border-stroke-default bg-bg-elevated/85">
-                <div className="h-4 w-4 rounded-none skeleton-shimmer" />
-              </div>
-              <SkeletonBlock className="h-5 w-28 rounded-none" />
+    <aside className="sticky top-0 hidden h-screen w-[264px] shrink-0 md:block" aria-hidden="true">
+      <div className="flex h-full flex-col border-r border-stroke-subtle bg-bg-sidebar/95">
+        <div className="flex h-16 items-center border-b border-stroke-subtle px-3">
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center border border-stroke-default bg-bg-elevated/85">
+              <div className="h-4 w-4 skeleton-shimmer" />
             </div>
+            <SkeletonBlock className="h-5 w-28 rounded-none" />
           </div>
         </div>
 
-        <nav className="nav-shell p-2">
-          <div className="space-y-2">
+        <nav className="flex-1 p-2">
+          <div className="space-y-1">
             <SidebarItemSkeleton active={activeIndex === 0} labelWidth="w-20" />
-            <SidebarItemSkeleton active={activeIndex === 1} labelWidth="w-14" />
-            <SidebarItemSkeleton active={activeIndex === 2} labelWidth="w-16" />
-            <SidebarItemSkeleton active={activeIndex === 3} labelWidth="w-24" />
-            <SidebarItemSkeleton active={activeIndex === 4} labelWidth="w-20" />
+            <SidebarItemSkeleton active={activeIndex === 1} labelWidth="w-16" />
+            <SidebarItemSkeleton active={activeIndex === 2} labelWidth="w-14" />
+            <SidebarItemSkeleton active={activeIndex === 3} labelWidth="w-14" />
+            <SidebarItemSkeleton active={activeIndex === 4} labelWidth="w-12" />
+            <SidebarItemSkeleton active={activeIndex === 5} labelWidth="w-16" />
           </div>
         </nav>
       </div>

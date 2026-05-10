@@ -30,28 +30,12 @@ import {
   SettingsPageSkeleton,
   SettingsTeamMembersSectionSkeleton,
 } from '@/components/loading/SettingsPageSkeleton';
-import { PaywallGate } from '@/components/billing/PaywallGate';
-
-const PaystackButton = dynamic(
-  () => import('@/components/PaystackButton').then((mod) => mod.PaystackButton),
-  { ssr: false }
-);
 
 type SubscriptionInfo = {
   plan: string | null;
   status: string | null;
   amount: number | null;
   expires_at: string | null;
-};
-
-type PaymentVerifyResponse = {
-  status?: string;
-  error?: string;
-  message?: string;
-  plan?: string;
-  amount?: number;
-  trialing?: boolean;
-  trial_ends_at?: string;
 };
 
 type OrganizationInfo = {
@@ -113,22 +97,6 @@ const isSettingsUiState = (value: unknown): value is SettingsUiState => {
   );
 };
 
-const parsePaymentMetadata = (paystackResponse: unknown): Record<string, unknown> => {
-  if (!paystackResponse || typeof paystackResponse !== 'object') return {};
-  const metadata = (paystackResponse as { metadata?: unknown }).metadata;
-  if (!metadata || typeof metadata !== 'object') return {};
-  return metadata as Record<string, unknown>;
-};
-
-const formatDisplayedAmount = (amount: number | null | undefined, plan: string | null | undefined): string => {
-  if (typeof amount !== 'number') return 'amount unavailable';
-  if (plan === 'group_monthly' || plan === 'group_yearly') {
-    return `NGN ${amount.toLocaleString()}`;
-  }
-
-  return `$${amount.toFixed(2)}`;
-};
-
 export default function SettingsPage() {
   const router = useRouter();
   const { user, logout, checkAuth, updateArtistName, isLoading: authLoading } = useAuthStore();
@@ -142,28 +110,11 @@ export default function SettingsPage() {
   const [notificationsEmail, setNotificationsEmail] = useState(true);
   const [notificationsProduct, setNotificationsProduct] = useState(false);
   const [isSavingNotifications, setIsSavingNotifications] = useState(false);
-  const [subscription, setSubscription] = useState<SubscriptionInfo>({
-    plan: null,
-    status: null,
-    amount: null,
-    expires_at: null,
-  });
-
-  const [billingMode, setBillingMode] = useState<'individual' | 'group'>('individual');
-  const [selectedIndividualPlan, setSelectedIndividualPlan] = useState<IndividualPlanId>(DEFAULT_INDIVIDUAL_PLAN_ID);
-  const [groupBillingCycle, setGroupBillingCycle] = useState<GroupBillingCycle>('monthly');
-  const [groupTeamSize, setGroupTeamSize] = useState(MIN_GROUP_TEAM_SIZE);
-  const [groupPaymentMode, setGroupPaymentMode] = useState<GroupPaymentMode>('full');
-  const [groupSeatsToPayNow, setGroupSeatsToPayNow] = useState(1);
 
   const [confirmationText, setConfirmationText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [paymentReference, setPaymentReference] = useState('');
-  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
-  const [paymentCheckMessage, setPaymentCheckMessage] = useState('');
-  const [paymentCheckError, setPaymentCheckError] = useState('');
   const [organization, setOrganization] = useState<OrganizationInfo | null>(null);
   const [organizationName, setOrganizationName] = useState('');
   const [isSavingOrganization, setIsSavingOrganization] = useState(false);
@@ -257,59 +208,6 @@ export default function SettingsPage() {
           setNotificationsEmail(true);
           setNotificationsProduct(false);
         }
-      }
-
-      const [subscriptionResult, paymentResult] = await Promise.all([
-        supabase
-          .from('subscriptions')
-          .select('plan,status,amount,expires_at,updated_at')
-          .eq('user_id', user.id)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from('payments')
-          .select('paystack_response')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ]);
-
-      if (subscriptionResult.error) {
-        setError(subscriptionResult.error.message);
-        return;
-      }
-
-      if (subscriptionResult.data) {
-        const plan = subscriptionResult.data.plan || null;
-        setSubscription({
-          plan,
-          status: subscriptionResult.data.status || null,
-          amount: subscriptionResult.data.amount || null,
-          expires_at: subscriptionResult.data.expires_at || null,
-        });
-
-        if (plan === 'monthly' || plan === '8months' || plan === 'yearly') {
-          setSelectedIndividualPlan(plan);
-          setBillingMode('individual');
-        }
-        if (plan === 'group_monthly' || plan === 'group_yearly') {
-          setBillingMode('group');
-          setGroupBillingCycle(plan === 'group_yearly' ? 'yearly' : 'monthly');
-        }
-      }
-
-      const metadata = parsePaymentMetadata(paymentResult.data?.paystack_response);
-      const teamSize = clampTeamSize(metadata.team_size);
-      const paymentMode = metadata.payment_mode === 'split' ? 'split' : 'full';
-      const seatsPaidNow = Math.max(1, Math.min(teamSize, Number(metadata.seats_paid_now || 1)));
-
-      if (teamSize) setGroupTeamSize(teamSize);
-      if (paymentMode) setGroupPaymentMode(paymentMode);
-      if (seatsPaidNow) setGroupSeatsToPayNow(seatsPaidNow);
-      if (metadata.billing_cycle === 'yearly' || metadata.billing_cycle === 'monthly') {
-        setGroupBillingCycle(metadata.billing_cycle);
       }
     };
 
@@ -446,34 +344,6 @@ export default function SettingsPage() {
     setSuccess('');
   };
 
-  const individualPlanMeta = useMemo(
-    () => INDIVIDUAL_PLAN_OPTIONS.find((option) => option.id === selectedIndividualPlan) || INDIVIDUAL_PLAN_OPTIONS[0],
-    [selectedIndividualPlan]
-  );
-
-  const groupPricing = useMemo(
-    () =>
-      calculateGroupPlanPricing({
-        billingCycle: groupBillingCycle,
-        paymentMode: groupPaymentMode,
-        teamSize: groupTeamSize,
-        seatsPaidNow: groupSeatsToPayNow,
-      }),
-    [groupBillingCycle, groupPaymentMode, groupSeatsToPayNow, groupTeamSize]
-  );
-
-  const checkoutPlan = billingMode === 'individual' ? selectedIndividualPlan : groupBillingCycle === 'yearly' ? 'group_yearly' : 'group_monthly';
-  const checkoutAmount = billingMode === 'individual' ? individualPlanMeta.amount : groupPricing.amountDueNow;
-  const checkoutMetadata: Record<string, string | number | boolean> =
-    billingMode === 'individual'
-      ? {}
-      : buildGroupPaymentMetadata({
-          billingCycle: groupBillingCycle,
-          paymentMode: groupPaymentMode,
-          teamSize: groupPricing.teamSize,
-          seatsPaidNow: groupPricing.seatsPaidNow,
-        });
-
   const handleSaveProfile = async () => {
     if (!user) return;
     if (!name.trim()) {
@@ -600,66 +470,6 @@ export default function SettingsPage() {
       setError(err?.message || 'Could not delete account');
     } finally {
       setIsDeleting(false);
-    }
-  };
-
-  const handleCheckPaymentStatus = async () => {
-    const reference = paymentReference.trim();
-    if (!reference) {
-      setPaymentCheckError('Enter a payment reference to check.');
-      setPaymentCheckMessage('');
-      return;
-    }
-
-    setIsCheckingPayment(true);
-    setPaymentCheckError('');
-    setPaymentCheckMessage('');
-
-    try {
-      const response = await fetch(`/api/payments/verify?reference=${encodeURIComponent(reference)}`, {
-        method: 'GET',
-        cache: 'no-store',
-      });
-      const payload = (await response.json().catch(() => ({}))) as PaymentVerifyResponse;
-
-      if (!response.ok || payload.status !== 'success') {
-        setPaymentCheckError(payload.error || payload.message || 'Payment could not be verified.');
-        return;
-      }
-
-      const planLabel = payload.plan ? String(payload.plan).replace('_', ' ') : 'unknown plan';
-      const amountLabel = formatDisplayedAmount(payload.amount, payload.plan);
-      const trialLabel = payload.trialing
-        ? ` 3-day trial active until ${payload.trial_ends_at ? new Date(payload.trial_ends_at).toLocaleDateString() : 'renewal date'}.`
-        : '';
-
-      setPaymentCheckMessage(`Payment verified for ${planLabel} (${amountLabel}).${trialLabel}`);
-      if (payload.trialing) {
-        trackEvent('trial_started', {
-          userId: user?.id || null,
-          payload: {
-            source: 'settings-payment-verify',
-            reference,
-            plan: payload.plan || null,
-            trialEndsAt: payload.trial_ends_at || null,
-          },
-        });
-      } else {
-        trackEvent('trial_converted', {
-          userId: user?.id || null,
-          payload: {
-            source: 'settings-payment-verify',
-            reference,
-            plan: payload.plan || null,
-            amount: typeof payload.amount === 'number' ? payload.amount : null,
-          },
-        });
-      }
-      await checkAuth();
-    } catch {
-      setPaymentCheckError('Could not verify payment right now.');
-    } finally {
-      setIsCheckingPayment(false);
     }
   };
 
@@ -1267,18 +1077,14 @@ export default function SettingsPage() {
                   <option value="team-member">Team Member</option>
                   <option value="viewer">Viewer</option>
                 </select>
-                <PaywallGate>
-                  {({ requireAccess }) => (
-                    <button
-                      type="button"
-                      onClick={() => void requireAccess(() => handleAddMember())}
-                      disabled={isAddingMember}
-                      className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-                    >
-                      {isAddingMember ? 'Adding...' : 'Add member'}
-                    </button>
-                  )}
-                </PaywallGate>
+                <button
+                  type="button"
+                  onClick={() => void handleAddMember()}
+                  disabled={isAddingMember}
+                  className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                >
+                  {isAddingMember ? 'Adding...' : 'Add member'}
+                </button>
               </div>
 
               {memberMessage && (
@@ -1341,207 +1147,6 @@ export default function SettingsPage() {
           )}
         </section>
         )}
-
-        <section className={`${panelClass} mt-6`}>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-xl">Billing</h2>
-              <div className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-1 text-xs text-content-secondary">
-              Plan: {subscription.plan || 'No active plan'} {subscription.status ? `(${subscription.status})` : ''}
-            </div>
-          </div>
-
-          <div className="mb-5 text-sm text-content-secondary">
-            <p>Expires: {subscription.expires_at ? new Date(subscription.expires_at).toLocaleDateString() : 'N/A'}</p>
-            {subscription.amount ? (
-              <p>Last amount: {formatDisplayedAmount(subscription.amount, subscription.plan)}</p>
-            ) : null}
-          </div>
-
-          <div className="mb-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setBillingMode('individual')}
-              className={`rounded-full border px-3 py-1 text-sm ${
-                billingMode === 'individual'
-                  ? 'border-brand/50 bg-brand-muted text-content-primary'
-                  : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover'
-              }`}
-            >
-              Individual
-            </button>
-            <button
-              type="button"
-              onClick={() => setBillingMode('group')}
-              className={`rounded-full border px-3 py-1 text-sm ${
-                billingMode === 'group'
-                  ? 'border-brand/50 bg-brand-muted text-content-primary'
-                  : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover'
-              }`}
-            >
-              Group (5+ seats)
-            </button>
-          </div>
-
-          {billingMode === 'individual' ? (
-            <div className="grid gap-2 sm:grid-cols-3">
-              {INDIVIDUAL_PLAN_OPTIONS.map((plan) => (
-                <button
-                  key={plan.id}
-                  type="button"
-                  onClick={() => setSelectedIndividualPlan(plan.id)}
-                  className={`rounded-lg border px-3 py-3 text-left ${
-                    selectedIndividualPlan === plan.id
-                      ? 'border-brand/40 bg-brand-muted'
-                      : 'border-stroke-subtle bg-bg-elevated hover:border-stroke-default'
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-content-primary">{plan.label}</p>
-                  <p className="mt-1 text-xs text-content-secondary">{plan.description}</p>
-                  <p className="mt-2 text-sm text-content-primary">{formatCurrencyAmount(plan.amount, 'NGN')}</p>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-4 rounded-xl border border-stroke-subtle bg-bg-elevated p-4">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setGroupBillingCycle('monthly')}
-                  className={`rounded-full border px-3 py-1 text-sm ${
-                    groupBillingCycle === 'monthly'
-                      ? 'border-brand/50 bg-brand-muted text-content-primary'
-                      : 'border-stroke-default bg-bg-surface text-content-secondary hover:bg-bg-hover'
-                  }`}
-                >
-                  Monthly
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setGroupBillingCycle('yearly')}
-                  className={`rounded-full border px-3 py-1 text-sm ${
-                    groupBillingCycle === 'yearly'
-                      ? 'border-brand/50 bg-brand-muted text-content-primary'
-                      : 'border-stroke-default bg-bg-surface text-content-secondary hover:bg-bg-hover'
-                  }`}
-                >
-                  Yearly
-                </button>
-              </div>
-
-              <label className="block">
-                <span className="mb-1 block text-sm text-content-secondary">Team size ({MIN_GROUP_TEAM_SIZE}-{MAX_GROUP_TEAM_SIZE})</span>
-                <input
-                  type="number"
-                  min={MIN_GROUP_TEAM_SIZE}
-                  max={MAX_GROUP_TEAM_SIZE}
-                  value={groupTeamSize}
-                  onChange={(event) => setGroupTeamSize(clampTeamSize(event.target.value))}
-                  className="w-full rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-content-primary outline-none focus:border-brand"
-                />
-              </label>
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setGroupPaymentMode('full')}
-                  className={`rounded-full border px-3 py-1 text-sm ${
-                    groupPaymentMode === 'full'
-                      ? 'border-brand/50 bg-brand-muted text-content-primary'
-                      : 'border-stroke-default bg-bg-surface text-content-secondary hover:bg-bg-hover'
-                  }`}
-                >
-                  One payer (full)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setGroupPaymentMode('split')}
-                  className={`rounded-full border px-3 py-1 text-sm ${
-                    groupPaymentMode === 'split'
-                      ? 'border-brand/50 bg-brand-muted text-content-primary'
-                      : 'border-stroke-default bg-bg-surface text-content-secondary hover:bg-bg-hover'
-                  }`}
-                >
-                  Split contribution
-                </button>
-              </div>
-
-              {groupPaymentMode === 'split' && (
-                <label className="block">
-                  <span className="mb-1 block text-sm text-content-secondary">Seats covered in this payment</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={groupPricing.teamSize}
-                    value={groupSeatsToPayNow}
-                    onChange={(event) => {
-                      const parsed = Number(event.target.value || 1);
-                      const clamped = Math.max(1, Math.min(groupPricing.teamSize, Math.round(parsed)));
-                      setGroupSeatsToPayNow(clamped);
-                    }}
-                    className="w-full rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-content-primary outline-none focus:border-brand"
-                  />
-                </label>
-              )}
-
-              <div className="rounded-lg border border-stroke-default bg-bg-surface p-3 text-sm text-content-secondary">
-                <p>Total team amount: <span className="font-semibold text-content-primary">NGN {groupPricing.totalAmount.toLocaleString()}</span></p>
-                <p>Per seat: <span className="font-semibold text-content-primary">NGN {groupPricing.perSeatAmount.toLocaleString()}</span></p>
-                <p>
-                  Due now: <span className="font-semibold text-content-primary">NGN {groupPricing.amountDueNow.toLocaleString()}</span>
-                  {groupPaymentMode === 'split' ? ` for ${groupPricing.seatsPaidNow} seat(s)` : ''}
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-content-secondary">
-              Group pricing includes 5 seats. Extra seats are added automatically.
-            </p>
-            <PaystackButton
-              email={user.email}
-              amount={checkoutAmount}
-              plan={checkoutPlan}
-              metadata={checkoutMetadata}
-              className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
-            >
-              Checkout {billingMode === 'individual' ? individualPlanMeta.label : `Group ${groupBillingCycle === 'yearly' ? 'Yearly' : 'Monthly'}`}
-            </PaystackButton>
-          </div>
-
-          <div className="mt-6 rounded-xl border border-stroke-subtle bg-bg-elevated p-4">
-            <p className="text-sm font-semibold text-content-primary">Check payment status</p>
-            <p className="mt-1 text-xs text-content-secondary">
-              Paste a Paystack reference to confirm payment.
-            </p>
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-              <input
-                value={paymentReference}
-                onChange={(event) => setPaymentReference(event.target.value)}
-                placeholder="e.g. urganize_1740861234_ab12cd"
-                className="w-full rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-content-primary outline-none focus:border-brand"
-              />
-              <button
-                type="button"
-                onClick={handleCheckPaymentStatus}
-                disabled={isCheckingPayment}
-                className="rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm text-content-primary hover:bg-bg-hover disabled:opacity-60"
-              >
-                {isCheckingPayment ? 'Checking...' : 'Check'}
-              </button>
-            </div>
-            {paymentCheckMessage && (
-              <p className="mt-3 rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
-                {paymentCheckMessage}
-              </p>
-            )}
-            {paymentCheckError && (
-              <p className="mt-3 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
-                {paymentCheckError}
-              </p>
-            )}
-          </div>
-        </section>
 
         <section className="mt-6 rounded-3xl border border-status-error/35 bg-status-error/10 p-6">
           <h2 className="mb-2 text-xl text-status-error">Delete account</h2>

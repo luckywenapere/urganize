@@ -1,192 +1,239 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Logo } from '@urganize/ui';
-import { TrialStatusBanner } from '@/components/billing/TrialStatusBanner';
+import {
+  BarChart3,
+  CheckSquare2,
+  ChevronLeft,
+  ChevronRight,
+  FolderKanban,
+  LayoutDashboard,
+  Settings,
+  Users2,
+  X,
+} from 'lucide-react';
 
 type AppSidebarProps = {
   userName?: string;
+  collapsed?: boolean;
+  mobileOpen?: boolean;
+  onToggleCollapsed?: () => void;
+  onCloseMobile?: () => void;
 };
 
-const navItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  description: string;
+  icon: typeof LayoutDashboard;
+  match: (pathname: string | null) => boolean;
+};
+
+const navItems: NavItem[] = [
   {
     href: '/dashboard',
+    label: 'Dashboard',
+    description: 'Command center',
+    icon: LayoutDashboard,
+    match: (pathname) => pathname === '/dashboard',
+  },
+  {
+    href: '/dashboard/releases',
     label: 'Releases',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M4 6h16M4 12h16M4 18h10" strokeLinecap="round" />
-      </svg>
-    ),
+    description: 'Launch pipeline',
+    icon: BarChart3,
+    match: (pathname) =>
+      pathname?.startsWith('/dashboard/releases') === true ||
+      pathname?.startsWith('/dashboard/plans') === true,
   },
   {
     href: '/dashboard/tasks',
     label: 'Tasks',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    href: '/dashboard/notes',
-    label: 'Notes',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M6 4h10l4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/dashboard/pre-save',
-    label: 'Pre-save',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M4 8a8 8 0 0 1 16 0c0 5-8 9-8 9s-8-4-8-9Z" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
+    description: 'Execution queue',
+    icon: CheckSquare2,
+    match: (pathname) => pathname?.startsWith('/dashboard/tasks') === true,
   },
   {
     href: '/dashboard/folders',
-    label: 'Folders',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M4 7a1 1 0 0 1 1-1h4l2 2h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7Z" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
+    label: 'Assets',
+    description: 'Files and notes',
+    icon: FolderKanban,
+    match: (pathname) =>
+      pathname?.startsWith('/dashboard/folders') === true ||
+      pathname?.startsWith('/dashboard/songs') === true,
+  },
+  {
+    href: '/dashboard/settings/team',
+    label: 'Team',
+    description: 'Members and roles',
+    icon: Users2,
+    match: (pathname) => pathname?.startsWith('/dashboard/settings/team') === true,
+  },
+  {
+    href: '/settings',
+    label: 'Settings',
+    description: 'Workspace config',
+    icon: Settings,
+    match: (pathname) => pathname === '/settings' || pathname?.startsWith('/settings/') === true,
   },
 ];
 
-const isActivePath = (pathname: string | null, href: string) =>
-  pathname === href ||
-  (href === '/dashboard/tasks' && pathname?.startsWith('/dashboard/tasks')) ||
-  (href === '/dashboard/pre-save' && pathname?.startsWith('/dashboard/pre-save')) ||
-  (href === '/dashboard/folders' && pathname?.startsWith('/dashboard/folders')) ||
-  (href === '/dashboard' && pathname?.startsWith('/dashboard/plans/')) ||
-  (href === '/dashboard' && pathname?.startsWith('/dashboard/releases/'));
-
-export function AppSidebar({ userName }: AppSidebarProps) {
+function SidebarNav({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
 
-  useEffect(() => {
-    setIsOpen(false);
-  }, [pathname]);
+  return (
+    <nav className="flex-1 px-2 py-3" aria-label="Workspace">
+      <div className="space-y-1">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = item.match(pathname);
 
-  const sidebar = (
-    <div className="flex h-full flex-col bg-[#0a0a0a]">
-      <div className="p-6">
-        <Logo size="lg" priority className="justify-start opacity-80" />
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={collapsed ? item.label : undefined}
+              aria-current={isActive ? 'page' : undefined}
+              className={`group relative flex min-h-[44px] items-center gap-3 border px-3 text-sm transition-colors ${
+                collapsed ? 'justify-center' : ''
+              } ${
+                isActive
+                  ? 'border-stroke-default bg-bg-sidebar-active text-content-primary'
+                  : 'border-transparent text-content-secondary hover:border-stroke-subtle hover:bg-white/[0.03] hover:text-content-primary'
+              }`}
+            >
+              <span
+                className={`grid h-8 w-8 shrink-0 place-items-center ${
+                  isActive ? 'text-brand' : 'text-content-tertiary group-hover:text-content-primary'
+                }`}
+                aria-hidden="true"
+              >
+                <Icon className="h-4 w-4" strokeWidth={1.8} />
+              </span>
+              {!collapsed ? (
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{item.label}</span>
+                  <span className="block truncate text-[11px] leading-4 text-content-tertiary">
+                    {item.description}
+                  </span>
+                </span>
+              ) : null}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+function SidebarFrame({
+  userName,
+  collapsed = false,
+  onToggleCollapsed,
+  onCloseMobile,
+  mobile = false,
+}: {
+  userName?: string;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
+  onCloseMobile?: () => void;
+  mobile?: boolean;
+}) {
+  return (
+    <div className="flex h-full flex-col border-r border-stroke-subtle bg-bg-sidebar/95 backdrop-blur-xl">
+      <div className="flex h-16 items-center justify-between border-b border-stroke-subtle px-3">
+        <Link href="/dashboard" className={`min-w-0 ${collapsed ? 'mx-auto' : ''}`} onClick={mobile ? onCloseMobile : undefined}>
+          {collapsed ? (
+            <div className="grid h-9 w-9 place-items-center border border-stroke-default bg-bg-elevated">
+              <span className="font-display text-sm font-semibold text-brand">U</span>
+            </div>
+          ) : (
+            <Logo size="md" priority className="justify-start opacity-90" />
+          )}
+        </Link>
+
+        {mobile ? (
+          <button
+            type="button"
+            onClick={onCloseMobile}
+            className="grid h-9 w-9 place-items-center border border-stroke-default text-content-secondary hover:bg-white/[0.04] hover:text-content-primary md:hidden"
+            aria-label="Close sidebar"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
       </div>
 
-      <div className="border-b border-white/5" />
+      <SidebarNav collapsed={collapsed} />
 
-      <nav className="flex-1 px-0 py-6">
-        <div className="flex flex-col gap-1">
-          {navItems.map((item) => {
-            const isActive = isActivePath(pathname, item.href);
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={isActive ? 'page' : undefined}
-                className={`group relative flex min-h-[44px] items-center gap-3 px-6 transition-colors duration-150 ease-in-out ${
-                  isActive ? 'text-white font-medium bg-white/5' : 'text-white/40 font-normal hover:text-white/70 hover:bg-white/[0.02]'
-                }`}
-              >
-                <div 
-                  className={`absolute left-0 top-0 h-full w-[2px] bg-brand transition-opacity duration-200 ease-in-out ${
-                    isActive ? 'opacity-100' : 'opacity-0'
-                  }`} 
-                />
-                <span
-                  className={`flex h-4 w-4 shrink-0 items-center justify-center transition-opacity duration-150 ease-in-out ${
-                    isActive ? 'opacity-100' : 'opacity-40 group-hover:opacity-70'
-                  }`}
-                >
-                  {item.icon}
-                </span>
-                <span className="font-sans text-sm tracking-tight">
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
+      <div className="mt-auto border-t border-stroke-subtle p-3">
+        <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
+          <div className="grid h-9 w-9 shrink-0 place-items-center border border-stroke-default bg-bg-elevated text-xs font-semibold text-content-primary">
+            {(userName || 'U').trim().slice(0, 1).toUpperCase()}
+          </div>
+          {!collapsed ? (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-content-primary">{userName || 'Urganize'}</p>
+              <p className="truncate text-[11px] text-content-tertiary">Workspace</p>
+            </div>
+          ) : null}
         </div>
-      </nav>
 
-      <div className="mt-auto p-6">
-        <div className="font-mono text-[10px] text-white/10 uppercase tracking-widest break-all opacity-50">
-          {userName || 'STUDIO_USER'}
-        </div>
+        {!mobile ? (
+          <button
+            type="button"
+            onClick={onToggleCollapsed}
+            className="mt-3 hidden h-9 w-full items-center justify-center gap-2 border border-stroke-default text-xs font-medium text-content-secondary hover:bg-white/[0.04] hover:text-content-primary md:flex"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            {!collapsed ? <span>Collapse</span> : null}
+          </button>
+        ) : null}
       </div>
     </div>
   );
+}
+
+export function AppSidebar({
+  userName,
+  collapsed = false,
+  mobileOpen = false,
+  onToggleCollapsed,
+  onCloseMobile,
+}: AppSidebarProps) {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    onCloseMobile?.();
+  }, [onCloseMobile, pathname]);
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        aria-label="Open workspace menu"
-        className="mobile-safe-top-offset fixed left-4 z-[120] grid h-12 w-12 place-items-center bg-[#0a0a0a] text-white/40 md:hidden"
+      <aside
+        className={`sticky top-0 z-40 hidden h-screen shrink-0 transition-[width] duration-200 md:block ${
+          collapsed ? 'w-[76px]' : 'w-[264px]'
+        }`}
       >
-        <span className="sr-only">Open menu</span>
-        <span className="flex flex-col gap-1.5">
-          <span className="block h-0.5 w-5 bg-current" />
-          <span className="block h-0.5 w-5 bg-current" />
-          <span className="block h-0.5 w-5 bg-current" />
-        </span>
-      </button>
-
-      <aside className="sticky top-0 hidden h-screen w-[240px] shrink-0 border-r border-white/5 md:block">
-        {sidebar}
+        <SidebarFrame userName={userName} collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />
       </aside>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-[130] md:hidden">
+      {mobileOpen ? (
+        <div className="fixed inset-0 z-[180] md:hidden">
           <button
             type="button"
-            onClick={() => setIsOpen(false)}
-            aria-label="Close workspace menu"
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={onCloseMobile}
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            aria-label="Close sidebar"
           />
-          <aside className="absolute left-0 top-0 h-full w-[min(86vw,280px)] border-r border-white/5">
-            {sidebar}
+          <aside className="absolute left-0 top-0 h-full w-[min(88vw,320px)]">
+            <SidebarFrame userName={userName} mobile onCloseMobile={onCloseMobile} />
           </aside>
         </div>
-      )}
-
-      <nav className="mobile-safe-bottom fixed bottom-4 left-4 right-4 z-[110] border border-white/5 bg-[#0a0a0a]/90 backdrop-blur-md md:hidden">
-        <div
-          className="grid"
-          style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
-        >
-          {navItems.map((item) => {
-            const isActive = isActivePath(pathname, item.href);
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={isActive ? 'page' : undefined}
-                className={`flex flex-col items-center justify-center gap-1.5 py-3 transition-colors ${
-                  isActive
-                    ? 'border-t-2 border-green-400 text-white'
-                    : 'text-white/40'
-                }`}
-              >
-                <span className={`h-4 w-4 ${isActive ? 'opacity-100' : 'opacity-40'}`}>{item.icon}</span>
-                <span className="font-sans text-[10px] truncate px-1">
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
+      ) : null}
     </>
   );
 }

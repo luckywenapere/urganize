@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, type ReactNode } from 'react';
+import { Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
@@ -8,7 +8,7 @@ import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { HelpMenu } from '@/components/app/HelpMenu';
 import { AppSidebar } from '@/components/app/AppSidebar';
 import { AppSidebarSkeleton } from '@/components/app/AppSidebarSkeleton';
-import { TrialStatusBanner } from '@/components/billing/TrialStatusBanner';
+import { AppTopbar } from '@/components/app/AppTopbar';
 import { FirstTimeOnboardingGate } from '@/components/onboarding/FirstTimeOnboardingGate';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { SupportChat } from '@/components/support/SupportChat';
@@ -21,6 +21,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isAuthLoading = useAuthStore((state) => state.isLoading);
   const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarCollapsed((value) => !value);
+  }, []);
+  const openMobileSidebar = useCallback(() => {
+    setIsMobileSidebarOpen(true);
+  }, []);
+  const closeMobileSidebar = useCallback(() => {
+    setIsMobileSidebarOpen(false);
+  }, []);
 
   const isAuthRoute = pathname?.startsWith('/auth');
   const isDashboardRoute = pathname?.startsWith('/dashboard');
@@ -49,12 +60,22 @@ export function AppShell({ children }: { children: ReactNode }) {
       ? 'app-layout'
       : 'app-layout app-layout-centered';
 
+  const workspaceUserName = user?.name || user?.artist_name || user?.email || '';
+
   const renderWorkspaceShell = (sidebar: ReactNode) => (
     <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>
-      <div className="mx-auto flex w-full max-w-[1480px] gap-4 px-0 md:px-4 lg:gap-5 lg:px-6">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1680px]">
         {sidebar}
-        <div className="min-w-0 flex-1 px-0 pb-32 pt-0 md:px-0 md:pb-8 md:pt-0">
-          {children}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <AppTopbar
+            userName={workspaceUserName}
+            isSidebarCollapsed={isSidebarCollapsed}
+            onToggleSidebar={toggleSidebar}
+            onOpenMobileSidebar={openMobileSidebar}
+          />
+          <main className="min-w-0 flex-1 px-4 pb-28 pt-5 sm:px-5 md:px-6 md:pb-10 lg:px-8">
+            {children}
+          </main>
         </div>
       </div>
     </div>
@@ -71,7 +92,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       {requiresArtistNameGate ? (
         <ArtistNameGate />
       ) : showWorkspaceSidebar ? (
-        renderWorkspaceShell(<AppSidebar userName={user?.name || user?.artist_name || user?.email || ''} />)
+        renderWorkspaceShell(
+          <AppSidebar
+            userName={workspaceUserName}
+            collapsed={isSidebarCollapsed}
+            mobileOpen={isMobileSidebarOpen}
+            onToggleCollapsed={toggleSidebar}
+            onCloseMobile={closeMobileSidebar}
+          />
+        )
       ) : showWorkspaceSidebarSkeleton ? (
         renderWorkspaceShell(<AppSidebarSkeleton pathname={pathname || ''} />)
       ) : (

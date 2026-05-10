@@ -14,7 +14,14 @@ import type { PreSaveReleaseOption } from '@/lib/pre-save';
  *    Those are distinct from the collaborative team task system built here and should not be treated as the same model.
  */
 
-export const DEFAULT_RELEASE_TASK_GROUPS = ['Pre-Release', 'Release Week', 'Post-Release'] as const;
+export const DEFAULT_RELEASE_TASK_GROUPS = [
+  'PREP',
+  'DISTRIBUTION',
+  'CONTENT',
+  'MARKETING',
+  'RELEASE DAY',
+  'POST RELEASE',
+] as const;
 
 export const TASK_STATUS_OPTIONS = [
   'locked',
