@@ -6,6 +6,7 @@ import {
   getPriorityDotClass,
   getRelativeDueLabel,
   getTaskStatusLabel,
+  getTaskStatusTone,
   type Task,
   type TaskStatus,
   type WorkspaceMember,
@@ -92,7 +93,7 @@ export function KanbanTaskCard({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <StatusBadge label={getTaskStatusLabel(task.status)} tone={task.status === 'done' ? 'success' : 'neutral'} size="sm" />
+        <StatusBadge label={getTaskStatusLabel(task.status)} tone={getTaskStatusTone(task.status)} size="sm" />
         <span
           className={`inline-flex min-h-7 items-center gap-1.5 border border-stroke-default bg-bg-elevated px-2 text-xs ${
             due.isOverdue ? 'font-semibold text-status-error' : 'text-content-secondary'

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, Play, Plus, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
@@ -90,11 +90,12 @@ export function CommandCenterPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
   const { releases, todaysDirective, isInitialLoading, isRefreshing, error, loadCommandCenter, createRelease } = useReleaseStore();
-  const { tasks, selectedTaskId, selectTask, completeTask, updateRequirement, createTask, error: taskError } = useTaskStore();
+  const { tasks, selectedTaskId, selectTask, completeTask, updateTaskStatus, updateRequirement, createTask, error: taskError } = useTaskStore();
   const { activity } = useActivityStore();
   const { signals, runCheck } = useAIStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [nudge, setNudge] = useState<{ message: string; id: number } | null>(null);
+  const [filter, setFilter] = useState<'active' | 'overdue' | 'blocked' | 'completed'>('active');
 
   useEffect(() => {
     if (authLoading) return;
@@ -151,18 +152,35 @@ export function CommandCenterPage() {
 
   const primaryRelease = useMemo(() => selectPrimaryRelease(releases, tasks), [releases, tasks]);
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) || null;
-  const nextActions = useMemo(
-    () =>
-      tasks
-        .filter((task) => task.status !== TASK_DONE_STATUS && task.status !== 'cancelled')
-        .sort((left, right) => {
-          const leftDue = left.dueDate ? new Date(left.dueDate).getTime() : Number.POSITIVE_INFINITY;
-          const rightDue = right.dueDate ? new Date(right.dueDate).getTime() : Number.POSITIVE_INFINITY;
-          return leftDue - rightDue;
-        })
-        .slice(0, 5),
-    [tasks]
-  );
+
+  const myTasks = useMemo(() => {
+    if (!user) return [];
+    return tasks.filter((t) => t.assignedToUserId === user.id);
+  }, [tasks, user]);
+
+  const filteredTasks = useMemo(() => {
+    const now = new Date();
+    return myTasks
+      .filter((t) => {
+        if (filter === 'overdue') return t.status !== TASK_DONE_STATUS && t.status !== 'cancelled' && t.dueDate && new Date(t.dueDate) < now;
+        if (filter === 'active') return t.status === 'todo' || t.status === 'in_progress';
+        if (filter === 'blocked') return t.status === 'blocked';
+        if (filter === 'completed') return t.status === TASK_DONE_STATUS;
+        return true;
+      })
+      .sort((left, right) => {
+        if (left.status === 'in_progress' && right.status !== 'in_progress') return -1;
+        if (left.status !== 'in_progress' && right.status === 'in_progress') return 1;
+        
+        const leftDue = left.dueDate ? new Date(left.dueDate).getTime() : Number.POSITIVE_INFINITY;
+        const rightDue = right.dueDate ? new Date(right.dueDate).getTime() : Number.POSITIVE_INFINITY;
+        return leftDue - rightDue;
+      });
+  }, [myTasks, filter]);
+
+  const handleUpdateStatus = async (taskId: string, status: any) => {
+    await updateTaskStatus(taskId, status);
+  };
 
   const handleSignalAction = async (signal: AISignal) => {
     const release = releases.find((candidate) => candidate.id === signal.releaseId);
@@ -247,53 +265,105 @@ export function CommandCenterPage() {
             </div>
 
             <section className="panel-shell animate-enter rounded-sm border-t border-white/5 p-6 shadow-none opacity-0 [animation-delay:50ms]">
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="font-sans text-sm font-medium text-white/40">Up next</h2>
+              <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="font-sans text-sm font-medium text-white/40">My Tasks</h2>
+                <div className="flex flex-wrap gap-2">
+                  {(['active', 'overdue', 'blocked', 'completed'] as const).map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setFilter(f)}
+                      className={`font-mono text-[10px] uppercase tracking-widest px-2 py-1 transition-colors ${filter === f ? 'bg-brand text-content-inverse' : 'text-white/30 hover:text-white/60'}`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
               </div>
-              {nextActions.length ? (
+              
+              {filteredTasks.length ? (
                 <div className="space-y-3">
-                  {nextActions.map((task, index) => {
+                  {filteredTasks.map((task, index) => {
+                    const isOverdue = task.status !== TASK_DONE_STATUS && task.dueDate && new Date(task.dueDate) < new Date();
                     const priorityClass = 
                       task.priority === 'urgent' || task.priority === 'high' ? 'border-l-status-error' :
                       task.priority === 'medium' ? 'border-l-status-warning' : 'border-l-white/20';
                     
                     return (
-                      <div key={task.id} className={`animate-enter relative rounded-none border border-white/5 border-l-2 bg-bg-elevated/40 p-5 shadow-none transition-all duration-200 hover:bg-bg-elevated/60 opacity-0 ${priorityClass}`} style={{ animationDelay: `${index * 40 + 100}ms` }}>
+                      <div key={task.id} className={`animate-enter group relative rounded-none border border-white/5 border-l-2 bg-bg-elevated/40 p-5 shadow-none transition-all duration-200 hover:bg-bg-elevated/60 opacity-0 ${priorityClass}`} style={{ animationDelay: `${index * 40 + 100}ms` }}>
                         <div className="absolute right-5 top-5 flex items-center gap-2">
                            {task.dueDate && (
                              <>
-                               <span className="font-mono text-[10px] text-content-tertiary">
+                               <span className={`font-mono text-[10px] ${isOverdue ? 'text-status-error' : 'text-content-tertiary'}`}>
                                  {new Date(task.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric' }).toUpperCase()}
                                </span>
-                               <div className="h-1 w-1 rounded-none bg-content-tertiary opacity-30" />
+                               <div className={`h-1 w-1 rounded-none ${isOverdue ? 'bg-status-error' : 'bg-content-tertiary'} opacity-30`} />
                              </>
                            )}
+                           <span className={`font-mono text-[10px] uppercase tracking-widest ${
+                             task.status === 'in_progress' ? 'text-brand' : 
+                             task.status === 'blocked' ? 'text-status-error' : 
+                             task.status === 'done' ? 'text-green-400' : 'text-white/30'
+                           }`}>
+                             {task.status.replace('_', ' ')}
+                           </span>
                         </div>
-                        <div className="pr-20">
-                          <p className="font-display text-base font-semibold tracking-tight text-content-primary">
+                        <div className="pr-20" onClick={() => selectTask(task.id)} role="button">
+                          <p className="font-display text-base font-semibold tracking-tight text-content-primary group-hover:text-brand transition-colors">
                             {cleanTaskTitle(task.title)}
                           </p>
                           <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-content-tertiary">
                             {task.release?.title || 'GLOBAL'}
                           </p>
                         </div>
-                        <div className="mt-4 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => selectTask(task.id)}
-                            className="border border-green-400/40 bg-transparent px-4 py-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-green-400 hover:bg-green-400/10 transition-all duration-150"
-                          >
-                            Start
-                          </button>
+                        
+                        <div className="mt-4 flex flex-wrap gap-2 justify-end">
+                          {task.status !== 'in_progress' && task.status !== TASK_DONE_STATUS && (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateStatus(task.id, 'in_progress')}
+                              className="flex items-center gap-1.5 border border-brand/40 bg-transparent px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-brand hover:bg-brand/10 transition-all duration-150"
+                            >
+                              <Play className="h-3 w-3" />
+                              Start
+                            </button>
+                          )}
+                          {task.status !== 'blocked' && task.status !== TASK_DONE_STATUS && (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateStatus(task.id, 'blocked')}
+                              className="flex items-center gap-1.5 border border-status-error/40 bg-transparent px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-status-error hover:bg-status-error/10 transition-all duration-150"
+                            >
+                              <AlertCircle className="h-3 w-3" />
+                              Block
+                            </button>
+                          )}
+                          {task.status !== TASK_DONE_STATUS && (
+                            <button
+                              type="button"
+                              onClick={() => completeTask(task.id)}
+                              className="flex items-center gap-1.5 border border-green-400/40 bg-transparent px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-green-400 hover:bg-green-400/10 transition-all duration-150"
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              Complete
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <p className="border border-white/5 bg-bg-elevated/40 p-5 font-mono text-[10px] uppercase tracking-widest text-content-tertiary">
-                  QUEUE_EMPTY: AWAITING_PARAMETERS
-                </p>
+                <div className="flex flex-col items-center justify-center border border-white/5 bg-bg-elevated/40 p-12 text-center">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-content-tertiary">
+                    {filter === 'active' ? 'ALL_TASKS_RESOLVED: SYSTEM_NOMINAL' : `NO_${filter.toUpperCase()}_TASKS_FOUND`}
+                  </p>
+                  {filter === 'active' && (
+                    <button onClick={() => setFilter('completed')} className="mt-4 font-mono text-[10px] text-brand hover:underline uppercase tracking-widest">
+                      VIEW_COMPLETED_HISTORY
+                    </button>
+                  )}
+                </div>
               )}
             </section>
 

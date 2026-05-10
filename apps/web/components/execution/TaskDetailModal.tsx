@@ -9,6 +9,10 @@ import {
   formatReleaseTitle,
   getTaskCompletionBlocker,
 } from '@/lib/release-execution';
+import { getTaskStatusLabel, getTaskStatusTone } from '@/lib/tasks';
+import { useAuthStore } from '@/lib/auth-store';
+import { useTaskStore } from '@/stores/useTaskStore';
+import { AlertCircle, CheckCircle2, Play } from 'lucide-react';
 
 export function TaskDetailModal({
   task,
@@ -23,7 +27,11 @@ export function TaskDetailModal({
   onSatisfyRequirement: (task: ExecutionTask) => void;
   onComplete: (task: ExecutionTask) => void;
 }) {
+  const { user } = useAuthStore();
+  const { updateTaskStatus } = useTaskStore();
   if (!task) return null;
+
+  const isAssignedToMe = user && task.assignedToUserId === user.id;
 
   const blocker = getTaskCompletionBlocker(task, allTasks);
   const chain = task.dependencies
@@ -58,15 +66,35 @@ export function TaskDetailModal({
                   GLOBAL
                 </p>
               )}
+              {isAssignedToMe && (
+                <div className="mt-4 inline-flex items-center gap-1.5 border border-brand/30 bg-brand/5 px-2 py-0.5 font-mono text-[9px] uppercase tracking-widest text-brand">
+                  <div className="h-1 w-1 bg-brand animate-pulse" />
+                  Assigned to you
+                </div>
+              )}
               <h2 className="mt-2 font-display text-3xl font-semibold leading-tight text-white">
                 {cleanTaskTitle(task.title)}
               </h2>
-              {task.dueDate && (
-                <div className="mt-2 flex items-center gap-2 font-mono text-xs text-white/30">
-                  <div className="h-1 w-1 rounded-none bg-white/30" />
-                  {new Date(task.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
+              <div className="mt-4 flex flex-wrap items-center gap-4">
+                {task.dueDate && (
+                  <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-white/40">
+                    <Calendar className="h-3 w-3" />
+                    {new Date(task.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
+                  </div>
+                )}
+                <div className={`flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest ${
+                  task.status === 'in_progress' ? 'text-brand' : 
+                  task.status === 'blocked' ? 'text-status-error' : 
+                  task.status === 'done' ? 'text-green-400' : 'text-white/40'
+                }`}>
+                  <div className={`h-1.5 w-1.5 ${
+                    task.status === 'in_progress' ? 'bg-brand' : 
+                    task.status === 'blocked' ? 'bg-status-error' : 
+                    task.status === 'done' ? 'bg-green-400' : 'bg-white/20'
+                  }`} />
+                  {getTaskStatusLabel(task.status)}
                 </div>
-              )}
+              </div>
             </div>
             <button 
               type="button" 
@@ -165,13 +193,35 @@ export function TaskDetailModal({
 
         {/* Footer */}
         <footer className="sticky bottom-0 border-t border-white/5 bg-[#0a0a0a] p-6 shadow-[0_-20px_40px_rgba(0,0,0,0.4)]">
+          <div className="grid grid-cols-2 gap-3 mb-4">
+             {task.status !== 'in_progress' && task.status !== TASK_DONE_STATUS && (
+               <button
+                 type="button"
+                 onClick={() => updateTaskStatus(task.id, 'in_progress')}
+                 className="flex items-center justify-center gap-2 border border-brand/40 bg-transparent py-3 font-mono text-[10px] font-bold uppercase tracking-widest text-brand hover:bg-brand/10 transition-all duration-150"
+               >
+                 <Play className="h-3 w-3" />
+                 Start Execution
+               </button>
+             )}
+             {task.status !== 'blocked' && task.status !== TASK_DONE_STATUS && (
+               <button
+                 type="button"
+                 onClick={() => updateTaskStatus(task.id, 'blocked')}
+                 className="flex items-center justify-center gap-2 border border-status-error/40 bg-transparent py-3 font-mono text-[10px] font-bold uppercase tracking-widest text-status-error hover:bg-status-error/10 transition-all duration-150"
+               >
+                 <AlertCircle className="h-3 w-3" />
+                 Mark Blocked
+               </button>
+             )}
+          </div>
           <button
             type="button"
             onClick={() => onComplete(task)}
             disabled={Boolean(blocker) || task.status === TASK_DONE_STATUS}
-            className="group w-full border border-white/20 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-white/60 transition-all duration-150 hover:border-green-400/60 hover:text-green-400 disabled:cursor-not-allowed disabled:opacity-20"
+            className="group w-full border border-green-400/20 bg-green-400/5 py-4 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-green-400 transition-all duration-150 hover:bg-green-400/10 disabled:cursor-not-allowed disabled:opacity-20"
           >
-            {task.status === TASK_DONE_STATUS ? 'Task complete' : 'Mark complete'}
+            {task.status === TASK_DONE_STATUS ? 'Operation Complete' : 'Mark Complete'}
           </button>
         </footer>
       </div>

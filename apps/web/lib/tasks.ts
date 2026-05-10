@@ -28,6 +28,7 @@ export const TASK_STATUS_OPTIONS = [
   'backlog',
   'todo',
   'in_progress',
+  'blocked',
   'in_review',
   'done',
   'cancelled',
@@ -240,6 +241,8 @@ export function getTaskStatusLabel(status: TaskStatus): string {
       return 'To Do';
     case 'in_progress':
       return 'In Progress';
+    case 'blocked':
+      return 'Blocked';
     case 'in_review':
       return 'In Review';
     case 'done':
@@ -289,6 +292,10 @@ export function getTaskStatusTone(status: TaskStatus): 'neutral' | 'warning' | '
   }
 
   if (status === 'in_review' || status === 'in_progress') {
+    return 'warning';
+  }
+
+  if (status === 'blocked') {
     return 'warning';
   }
 

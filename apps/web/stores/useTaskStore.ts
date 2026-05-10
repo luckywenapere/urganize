@@ -31,6 +31,7 @@ type TaskStore = {
   createTask: (input: TaskCreateInput) => Promise<ExecutionTask | null>;
   updateRequirement: (taskId: string, requirement: TaskRequirement | null) => Promise<void>;
   completeTask: (taskId: string) => Promise<ExecutionTask | null>;
+  updateTaskStatus: (taskId: string, status: TaskStatus) => Promise<ExecutionTask | null>;
   tasksForRelease: (releaseId: string) => ExecutionTask[];
 };
 
@@ -160,6 +161,38 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         }
         return candidate;
       }),
+      error: '',
+    }));
+
+    return payload.task as ExecutionTask;
+  },
+  updateTaskStatus: async (taskId, status) => {
+    const task = get().tasks.find((candidate) => candidate.id === taskId);
+    if (!task) return null;
+
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      set({ error: 'Session expired. Please sign in again.' });
+      return null;
+    }
+
+    const response = await fetch(`/api/tasks/${taskId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ status }),
+    });
+
+    const payload = (await response.json().catch(() => ({}))) as { task?: ExecutionTask; error?: string };
+    if (!response.ok || !payload.task) {
+      set({ error: payload.error || 'Could not update task status.' });
+      return null;
+    }
+
+    set((state) => ({
+      tasks: state.tasks.map((candidate) => (candidate.id === taskId ? (payload.task as ExecutionTask) : candidate)),
       error: '',
     }));
 
