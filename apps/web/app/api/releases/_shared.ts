@@ -58,7 +58,7 @@ export const getAuthenticatedUser = async (request: NextRequest) => {
     error: userError,
   } = await authClient.auth.getUser(token);
   if (userError || !user?.id) {
-    return { error: NextResponse.json({ error: 'Unauthorized: Invalid or expired token' }, { status: 401 }) };
+    return { error: NextResponse.json({ error: `Unauthorized: ${userError?.message || 'Invalid or expired token'}` }, { status: 401 }) };
   }
 
   return { user, supabaseUrl };

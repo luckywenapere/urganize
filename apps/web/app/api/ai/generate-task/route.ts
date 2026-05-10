@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
     error: userError,
   } = await supabaseUserClient.auth.getUser(token);
   if (userError || !user?.id) {
-    return NextResponse.json({ error: 'Unauthorized: Invalid or expired token' }, { status: 401 });
+    return NextResponse.json({ error: `Unauthorized: ${userError?.message || 'Invalid or expired token'}` }, { status: 401 });
   }
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);

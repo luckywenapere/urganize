@@ -175,64 +175,68 @@ export const useAuthStore = create<AuthState>()(
 
         authCheckInFlight = (async () => {
           try {
-          const currentState = get();
-          const shouldShowLoading = !currentState.isAuthenticated || !currentState.user;
-          if (shouldShowLoading) {
-            set({ isLoading: true });
-          }
-          
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          
-          if (sessionError) throw sessionError;
-          
-          if (session?.user) {
-            if (shouldEnforceScheduledDeletion && isScheduledDeletionActive(session.user.user_metadata as Record<string, any>)) {
-              const scheduledAt = getScheduledDeletion(session.user.user_metadata as Record<string, any>);
-              await supabase.auth.signOut();
-              set({
-                user: null,
-                isAuthenticated: false,
-                isLoading: false,
-                needsOnboarding: true,
-                error: `Account is scheduled for deletion on ${new Date(scheduledAt || '').toLocaleString()}. Contact theurganization@gmail.com to recover.`,
-              });
+            const currentState = get();
+            const shouldShowLoading = !currentState.isAuthenticated || !currentState.user;
+            if (shouldShowLoading) {
+              set({ isLoading: true });
+            }
+            
+            // getUser() is more reliable as it forces a check against the server
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (userError) {
+              // If getUser fails, we are definitely not authenticated
+              set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, error: null });
               return;
             }
+            
+            if (user && session) {
+              if (shouldEnforceScheduledDeletion && isScheduledDeletionActive(user.user_metadata as Record<string, any>)) {
+                const scheduledAt = getScheduledDeletion(user.user_metadata as Record<string, any>);
+                await supabase.auth.signOut();
+                set({
+                  user: null,
+                  isAuthenticated: false,
+                  isLoading: false,
+                  needsOnboarding: true,
+                  error: `Account is scheduled for deletion on ${new Date(scheduledAt || '').toLocaleString()}. Contact theurganization@gmail.com to recover.`,
+                });
+                return;
+              }
 
-            const profile = await getOrCreateProfile(session.user);
+              const profile = await getOrCreateProfile(user);
 
-            if (profile) {
-              persistLastAuthEmail(profile.email || session.user.email);
-              const needsOnboarding = resolveNeedsOnboarding(profile);
+              if (profile) {
+                persistLastAuthEmail(profile.email || user.email);
+                const needsOnboarding = resolveNeedsOnboarding(profile);
 
-              set({ 
-                user: profile, 
-                isAuthenticated: true, 
-                isLoading: false,
-                needsOnboarding,
-                error: null 
-              });
-              return;
+                set({ 
+                  user: profile, 
+                  isAuthenticated: true, 
+                  isLoading: false,
+                  needsOnboarding,
+                  error: null 
+                });
+                return;
+              }
             }
-          }
-          
-          set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, error: null });
+            
+            set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, error: null });
           } catch (error: any) {
-          if (isAbortError(error)) {
-            // Parallel auth checks during OAuth callback can cancel each other.
-            // Do not treat cancellation as an auth failure.
-            set((state) => ({ isLoading: false, error: state.error }));
-            return;
-          }
-          console.error('Auth check failed:', error);
-          const errorMessage = handleSupabaseError(error);
-          set({ 
-            user: null, 
-            isAuthenticated: false, 
-            isLoading: false,
-            needsOnboarding: true,
-            error: errorMessage 
-          });
+            if (isAbortError(error)) {
+              set((state) => ({ isLoading: false, error: state.error }));
+              return;
+            }
+            console.error('Auth check failed:', error);
+            const errorMessage = handleSupabaseError(error);
+            set({ 
+              user: null, 
+              isAuthenticated: false, 
+              isLoading: false,
+              needsOnboarding: true,
+              error: errorMessage 
+            });
           } finally {
             authCheckInFlight = null;
           }

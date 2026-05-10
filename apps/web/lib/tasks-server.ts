@@ -442,7 +442,7 @@ export async function getAuthenticatedUser(
   } = await authClient.auth.getUser(token);
 
   if (error || !user?.id) {
-    return { error: NextResponse.json({ error: 'Unauthorized: Invalid or expired token' }, { status: 401 }) };
+    return { error: NextResponse.json({ error: `Unauthorized: ${error?.message || 'Invalid or expired token'}` }, { status: 401 }) };
   }
 
   return { user, supabaseUrl };
