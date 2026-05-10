@@ -32,7 +32,7 @@ import { TaskDetailModal } from '@/components/execution/TaskDetailModal';
 export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
-  const { releases, isLoading, error, loadCommandCenter, updateReleaseState } = useReleaseStore();
+  const { releases, isInitialLoading, error, loadCommandCenter, updateReleaseState } = useReleaseStore();
   const { tasks, selectedTaskId, selectTask, completeTask, updateRequirement, createTask, error: taskError } = useTaskStore();
   const { signals, runCheck } = useAIStore();
   const [selectedState, setSelectedState] = useState<ReleasePipelineState>('idea');
@@ -127,7 +127,7 @@ export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
     }
   };
 
-  if (isLoading || authLoading) {
+  if (isInitialLoading || authLoading) {
     return <main className="min-h-screen bg-bg-base p-6 text-content-primary">Loading release workspace...</main>;
   }
 
@@ -163,7 +163,7 @@ export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
                 </span>
                 <span className="text-sm text-content-secondary">{overallReadiness}% overall</span>
               </div>
-              <ReadinessBar value={readinessByState[release.state]} label="Current state readiness" />
+              <ReadinessBar value={readinessByState[release.state]} />
             </div>
           </div>
 

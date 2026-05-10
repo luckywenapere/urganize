@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
-import type { CommandCenterData, ExecutionRelease, ReleasePipelineState } from '@/lib/execution-types';
+import type { CommandCenterData, ExecutionRelease, ExecutionTask, ReleasePipelineState } from '@/lib/execution-types';
 import { calculateOverallReadiness } from '@/lib/release-execution';
 import { useActivityStore } from '@/stores/useActivityStore';
 import { useTaskStore } from '@/stores/useTaskStore';

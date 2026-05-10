@@ -2034,7 +2034,7 @@ export function PostAuthScreen() {
     setResumeMessage('');
     setShowResumeMessage(false);
     setLastDraftSavedAt(null);
-    setPricingValidationDismissed(false);
+
     setError('');
   }, [
     feedbackDraftKey,
@@ -2187,7 +2187,7 @@ export function PostAuthScreen() {
       setTaskId(null);
     setTaskTitle('Single task');
     setTaskOutcome('Expected outcome');
-    setPricingValidationDismissed(false);
+
     setNeedsOnboarding(true);
       setIsCycleTransitioning(true);
       await new Promise((resolve) => setTimeout(resolve, NEXT_CYCLE_TRANSITION_MS));
