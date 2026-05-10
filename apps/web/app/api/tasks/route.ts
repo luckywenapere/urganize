@@ -108,8 +108,8 @@ export async function GET(request: NextRequest) {
 
     let query = adminClient
       .from(TASKS_TABLE)
-      .select('id,workspace_id,group_id,release_id,created_by,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
-      .in('assigned_to', access.membershipIds)
+      .select('id,workspace_id,group_id,release_id,created_by,assigned_to_user_id,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
+      .eq('assigned_to_user_id', auth.user.id)
       .in('workspace_id', access.workspaceIds)
       .order('due_date', { ascending: true, nullsFirst: false })
       .order('position', { ascending: true });
@@ -284,6 +284,7 @@ export async function POST(request: NextRequest) {
         group_id: groupId,
         release_id: releaseId,
         created_by: auth.user.id,
+        assigned_to_user_id: activeAssignee?.userId || auth.user.id, // Ensure every task has an assignee
         assigned_to: activeAssignee?.id || null,
         title,
         description,
@@ -301,7 +302,7 @@ export async function POST(request: NextRequest) {
         }),
         updated_at: new Date().toISOString(),
       })
-      .select('id,workspace_id,group_id,release_id,created_by,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
+      .select('id,workspace_id,group_id,release_id,created_by,assigned_to_user_id,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
       .maybeSingle();
 
     if (insertResult.error || !insertResult.data) {

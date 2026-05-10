@@ -78,7 +78,8 @@ export async function GET(request: NextRequest) {
     if (access.workspaceIds.length && access.membershipIds.length) {
       const taskResult = await adminClient
         .from(TASKS_TABLE)
-        .select('id,workspace_id,group_id,release_id,created_by,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
+        .select('id,workspace_id,group_id,release_id,created_by,assigned_to_user_id,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
+        .eq('assigned_to_user_id', auth.user.id)
         .in('workspace_id', access.workspaceIds)
         .order('due_date', { ascending: true, nullsFirst: false });
 

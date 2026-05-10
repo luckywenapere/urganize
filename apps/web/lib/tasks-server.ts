@@ -119,6 +119,7 @@ export const TASKS_SQL = [
   '  group_id uuid null references public.task_groups(id) on delete set null,',
   '  release_id uuid null references public.releases(id) on delete set null,',
   '  created_by uuid not null references auth.users(id) on delete cascade,',
+  '  assigned_to_user_id uuid null references auth.users(id) on delete set null,',
   '  assigned_to uuid null references public.workspace_members(id) on delete set null,',
   '  title text not null,',
   '  description text null,',
@@ -139,6 +140,7 @@ export const TASKS_SQL = [
   'create index if not exists tasks_workspace_idx on public.tasks(workspace_id, updated_at desc);',
   'create index if not exists tasks_release_group_idx on public.tasks(release_id, group_id, position);',
   'create index if not exists tasks_release_state_idx on public.tasks(release_id, state, status);',
+  'create index if not exists tasks_assigned_to_user_idx on public.tasks(assigned_to_user_id, due_date);',
   'create index if not exists tasks_assigned_to_idx on public.tasks(assigned_to, due_date);',
   '',
   'create table if not exists public.task_comments (',
@@ -250,6 +252,7 @@ export type TaskRow = {
   group_id: string | null;
   release_id: string | null;
   created_by: string;
+  assigned_to_user_id: string | null;
   assigned_to: string | null;
   title: string;
   description: string | null;
@@ -933,6 +936,7 @@ function toTask(
     groupId: row.group_id,
     releaseId: row.release_id,
     createdBy: row.created_by,
+    assignedToUserId: row.assigned_to_user_id,
     assignedTo: row.assigned_to,
     title: row.title,
     description: row.description,
@@ -945,7 +949,7 @@ function toTask(
     updatedAt: row.updated_at,
     release: row.release_id ? releaseById.get(row.release_id) || null : null,
     group: row.group_id ? groupById.get(row.group_id) || null : null,
-    assignee: row.assigned_to ? memberById.get(row.assigned_to) || null : null,
+    assignee: row.assigned_to_user_id ? memberByUserId.get(row.assigned_to_user_id) || null : (row.assigned_to ? memberById.get(row.assigned_to) || null : null),
     context: normalizeTaskContext(row.metadata),
     requirement: normalizeTaskRequirement(row.requirement),
     dependencies: Array.isArray(row.dependencies) ? row.dependencies.map(String).filter(Boolean) : [],
@@ -972,11 +976,15 @@ export async function loadTasks(
 
   const workspaceIds = Array.from(new Set(rows.map((row) => row.workspace_id).filter(Boolean)));
   const memberById = new Map<string, WorkspaceMember>();
+  const memberByUserId = new Map<string, WorkspaceMember>();
 
   for (const workspaceId of workspaceIds) {
     const members = await loadWorkspaceMembers(adminClient, workspaceId, currentUserId);
     for (const member of members) {
       memberById.set(member.id, member);
+      if (member.userId) {
+        memberByUserId.set(member.userId, member);
+      }
     }
   }
 
@@ -986,7 +994,7 @@ export async function loadTasks(
   ]);
 
   return rows.map((row) =>
-    toTask(row, releaseById, groupById, memberById, commentCountByTaskId, attachmentCountByTaskId)
+    toTask(row, releaseById, groupById, memberByUserId, memberById, commentCountByTaskId, attachmentCountByTaskId)
   );
 }
 
@@ -1177,6 +1185,7 @@ export async function createDefaultReleaseTasks(
       group_id: groupByName.get(task.groupName)?.id || null,
       release_id: releaseId,
       created_by: createdBy,
+      assigned_to_user_id: createdBy, // Assign auto-generated tasks to the creator (release owner)
       assigned_to: null,
       title: task.title,
       description: task.description,
@@ -1501,8 +1510,8 @@ export async function createDueDateNotifications(
 
   const result = await adminClient
     .from(TASKS_TABLE)
-    .select('id,assigned_to,due_date,status')
-    .in('assigned_to', access.membershipIds)
+    .select('id,assigned_to_user_id,due_date,status')
+    .eq('assigned_to_user_id', user.id)
     .not('due_date', 'is', null);
 
   if (result.error || !Array.isArray(result.data)) {

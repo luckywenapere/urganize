@@ -269,6 +269,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Only active workspace members can be assigned.' }, { status: 400 });
     }
 
+    const nextAssignedToUserId = activeAssignee ? readString((activeAssignee as { user_id?: string }).user_id) : null;
+
     if (nextGroupId) {
       const groupResult = await adminClient
         .from(TASK_GROUPS_TABLE)
@@ -307,6 +309,7 @@ export async function PATCH(
         priority: nextPriority,
         due_date: dueDateResult.provided ? dueDateResult.value : currentTask.due_date,
         assigned_to: nextAssignedTo,
+        assigned_to_user_id: nextAssignedToUserId,
         release_id: nextReleaseId,
         group_id: nextGroupId,
         position: nextPosition,
@@ -332,7 +335,7 @@ export async function PATCH(
       })
       .eq('id', currentTask.id)
       .eq('workspace_id', currentTask.workspace_id)
-      .select('id,workspace_id,group_id,release_id,created_by,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
+      .select('id,workspace_id,group_id,release_id,created_by,assigned_to_user_id,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
       .maybeSingle();
 
     if (updateResult.error || !updateResult.data) {

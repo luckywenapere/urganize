@@ -146,7 +146,8 @@ export interface Task {
   groupId: string | null;
   releaseId: string | null;
   createdBy: string;
-  assignedTo: string | null;
+  assignedToUserId: string | null;
+  assignedTo: string | null; // Legacy field, keeping for UI compatibility during transition if needed, but logic will shift to assignedToUserId
   title: string;
   description: string | null;
   status: TaskStatus;
