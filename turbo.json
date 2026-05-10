@@ -12,6 +12,7 @@
       ],
       "env": [
         "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_URL",
         "PAYSTACK_SECRET_KEY",
         "TRIAL_CLAIMS_SALT",
         "PAYSTACK_PLAN_MONTHLY_CODE",
