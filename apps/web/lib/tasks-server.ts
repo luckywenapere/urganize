@@ -432,7 +432,7 @@ export async function getAuthenticatedUser(
   const authHeader = request.headers.get('authorization') || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   if (!token) {
-    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+    return { error: NextResponse.json({ error: 'Unauthorized: No token provided' }, { status: 401 }) };
   }
 
   const authClient = createClient(supabaseUrl, supabaseAnonKey);
@@ -442,7 +442,7 @@ export async function getAuthenticatedUser(
   } = await authClient.auth.getUser(token);
 
   if (error || !user?.id) {
-    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+    return { error: NextResponse.json({ error: 'Unauthorized: Invalid or expired token' }, { status: 401 }) };
   }
 
   return { user, supabaseUrl };

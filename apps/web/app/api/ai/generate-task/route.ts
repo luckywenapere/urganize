@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization') || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized: No token provided' }, { status: 401 });
   }
 
   const body = (await req.json().catch(() => ({}))) as Partial<GenerateTaskRequest>;
@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
     error: userError,
   } = await supabaseUserClient.auth.getUser(token);
   if (userError || !user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized: Invalid or expired token' }, { status: 401 });
   }
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);

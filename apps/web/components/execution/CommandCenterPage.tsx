@@ -112,11 +112,14 @@ export function CommandCenterPage() {
         if (primary) {
           try {
             const { data: authData } = await supabase.auth.getSession();
+            const token = authData.session?.access_token;
+            if (!token) return;
+
             const response = await fetch('/api/ai/generate-task', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${authData.session?.access_token}`,
+                Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({ mode: 'next-step', releaseId: primary.id }),
             });
@@ -144,7 +147,7 @@ export function CommandCenterPage() {
         }
       }
     });
-  }, [authLoading, loadCommandCenter, router, runCheck, user, createTask, tasks]);
+  }, [authLoading, loadCommandCenter, router, runCheck, user, createTask]);
 
   const primaryRelease = useMemo(() => selectPrimaryRelease(releases, tasks), [releases, tasks]);
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) || null;
