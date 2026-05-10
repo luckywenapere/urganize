@@ -44,7 +44,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     isPreSavePublicRoute;
   const hasCompletedOnboarding = user?.onboarding_completed === true;
   const showWorkspaceSidebar = isAuthenticated && !isAuthLoading && (isDashboardRoute || isSettingsRoute);
-  const showWorkspaceSidebarSkeleton = isAuthLoading && (isDashboardRoute || isSettingsRoute);
+  const showWorkspaceSidebarSkeleton =
+    isAuthLoading && !isAuthenticated && (isDashboardRoute || isSettingsRoute);
   const requiresArtistNameGate =
     isAuthenticated &&
     !isAuthLoading &&

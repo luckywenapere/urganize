@@ -59,8 +59,15 @@ export function TaskNotificationBell({ onOpenTask, refreshKey = 0 }: TaskNotific
   }, [loadNotifications, refreshKey]);
 
   useEffect(() => {
+    let lastFetchTime = Date.now();
+
     const handleFocus = () => {
-      void loadNotifications();
+      const now = Date.now();
+      // Only refetch if the last fetch was more than 30 seconds ago to prevent flashing/excessive network activity
+      if (now - lastFetchTime > 30000) {
+        lastFetchTime = now;
+        void loadNotifications();
+      }
     };
 
     window.addEventListener('focus', handleFocus);

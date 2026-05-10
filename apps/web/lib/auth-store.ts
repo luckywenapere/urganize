@@ -176,6 +176,8 @@ export const useAuthStore = create<AuthState>()(
         authCheckInFlight = (async () => {
           try {
             const currentState = get();
+            // Only show loading if we don't have a user yet.
+            // If we are already authenticated, do the check in the background without flickering the UI.
             const shouldShowLoading = !currentState.isAuthenticated || !currentState.user;
             if (shouldShowLoading) {
               set({ isLoading: true });

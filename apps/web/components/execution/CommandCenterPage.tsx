@@ -148,7 +148,7 @@ export function CommandCenterPage() {
         }
       }
     });
-  }, [authLoading, loadCommandCenter, router, runCheck, user, createTask]);
+  }, [authLoading, loadCommandCenter, router, runCheck, user?.id, createTask]);
 
   const primaryRelease = useMemo(() => selectPrimaryRelease(releases, tasks), [releases, tasks]);
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) || null;
