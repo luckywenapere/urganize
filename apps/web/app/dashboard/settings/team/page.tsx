@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { PaywallGate } from '@/components/billing/PaywallGate';
+
 import { EmptyState } from '@/components/shared/EmptyState';
 import { SectionCard } from '@/components/shared/SectionCard';
 import { Toast } from '@/components/shared/Toast';
@@ -253,17 +253,13 @@ export default function TeamSettingsPage() {
             </label>
 
             <div className="flex items-end">
-              <PaywallGate>
-                {({ requireAccess }) => (
-                  <button
-                    type="button"
-                    onClick={() => void requireAccess(() => inviteMember())}
-                    className="min-h-12 rounded-[18px] bg-brand px-5 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
-                  >
-                    Invite teammate
-                  </button>
-                )}
-              </PaywallGate>
+              <button
+                type="button"
+                onClick={() => void inviteMember()}
+                className="min-h-12 rounded-[18px] bg-brand px-5 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+              >
+                Invite teammate
+              </button>
             </div>
           </div>
         </SectionCard>

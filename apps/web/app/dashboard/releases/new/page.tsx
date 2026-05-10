@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { PaywallGate } from '@/components/billing/PaywallGate';
+
 import { DashboardPageSkeleton } from '@/components/loading/DashboardPageSkeleton';
 import { SectionCard } from '@/components/shared/SectionCard';
 import { useAuthStore } from '@/lib/auth-store';
@@ -57,8 +57,7 @@ function NewReleasePageContent() {
   };
 
   const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>,
-    openPaywall: () => void
+    event: FormEvent<HTMLFormElement>
   ) => {
     event.preventDefault();
     if (!title.trim() || !artistName.trim()) {
@@ -108,10 +107,7 @@ function NewReleasePageContent() {
         return;
       }
 
-      if (response.status === 402) {
-        openPaywall();
-        return;
-      }
+
 
       if (!response.ok) {
         throw new Error(payload.error || 'Could not create release.');
@@ -134,30 +130,28 @@ function NewReleasePageContent() {
   }
 
   return (
-    <PaywallGate>
-      {({ openPaywall }) => (
-        <main className="min-h-screen bg-bg-base text-content-primary">
-          <div className="mx-auto max-w-[880px] px-4 pb-10 pt-16 sm:px-6 sm:py-10">
-            <div className="mb-4">
-              <Link
-                href="/dashboard"
-                className="inline-flex min-h-10 items-center text-sm text-content-secondary hover:text-content-primary"
-              >
-                Back to dashboard
-              </Link>
-            </div>
+    <main className="min-h-screen bg-bg-base text-content-primary">
+      <div className="mx-auto max-w-[880px] px-4 pb-10 pt-16 sm:px-6 sm:py-10">
+        <div className="mb-4">
+          <Link
+            href="/dashboard"
+            className="inline-flex min-h-10 items-center text-sm text-content-secondary hover:text-content-primary"
+          >
+            Back to dashboard
+          </Link>
+        </div>
 
-            <SectionCard className="sm:p-7">
-              <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">New Release</p>
-              <h1 className="mt-2 text-[clamp(2.2rem,5vw,3.4rem)] tracking-tight text-content-primary">
-                Start a release dashboard
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm text-content-secondary">
-                Add the release title, artist name, and any helpful context. You can share the public credit link after
-                the dashboard is created.
-              </p>
+        <SectionCard className="sm:p-7">
+          <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">New Release</p>
+          <h1 className="mt-2 text-[clamp(2.2rem,5vw,3.4rem)] tracking-tight text-content-primary">
+            Start a release dashboard
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm text-content-secondary">
+            Add the release title, artist name, and any helpful context. You can share the public credit link after
+            the dashboard is created.
+          </p>
 
-              <form className="mt-8 space-y-5" onSubmit={(event) => void handleSubmit(event, openPaywall)}>
+          <form className="mt-8 space-y-5" onSubmit={(event) => void handleSubmit(event)}>
             <div>
               <label htmlFor="release-title" className="text-sm font-medium text-content-primary">
                 Release title
@@ -239,10 +233,8 @@ function NewReleasePageContent() {
                 </button>
               </SectionCard>
             ) : null}
-          </div>
-        </main>
-      )}
-    </PaywallGate>
+      </div>
+    </main>
   );
 }
 
