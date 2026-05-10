@@ -23,22 +23,55 @@ export const DEFAULT_RELEASE_TASK_GROUPS = [
   'POST RELEASE',
 ] as const;
 
-export const TASK_STATUS_OPTIONS = [
-  'locked',
-  'backlog',
-  'todo',
-  'in_progress',
-  'blocked',
-  'in_review',
-  'done',
-  'cancelled',
-] as const;
+import type { 
+  TaskStatus, 
+  TaskPriority, 
+  TaskRequirement, 
+  TaskReleaseSummary,
+  Task,
+  TaskDetail,
+  TaskAttachment,
+  TaskComment,
+  TaskActivityEntry,
+  TaskContextLink,
+  TaskNotification,
+  TaskSectionKey
+} from '@/types/tasks';
+import type { 
+  WorkspaceMemberRole, 
+  WorkspaceMemberStatus, 
+  Workspace, 
+  WorkspaceMember 
+} from '@/types/auth';
+import type { ReleasePipelineState } from '@/types/releases';
 
-export const TASK_PRIORITY_OPTIONS = ['urgent', 'high', 'medium', 'low', 'none'] as const;
+export { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS } from '@/types/tasks';
+export { WORKSPACE_MEMBER_ROLE_OPTIONS, WORKSPACE_MEMBER_STATUS_OPTIONS } from '@/types/auth';
 
-export const WORKSPACE_MEMBER_ROLE_OPTIONS = ['owner', 'admin', 'member', 'guest'] as const;
-
-export const WORKSPACE_MEMBER_STATUS_OPTIONS = ['active', 'invited', 'removed'] as const;
+export type { 
+  TaskStatus, 
+  TaskPriority, 
+  WorkspaceMemberRole, 
+  WorkspaceMemberStatus, 
+  TaskViewMode, 
+  TaskSortKey, 
+  TaskSectionKey, 
+  TaskCreateSource, 
+  ReleasePipelineState, 
+  TaskRequirementType, 
+  TaskRequirement, 
+  Workspace, 
+  WorkspaceMember, 
+  TaskGroup, 
+  TaskReleaseSummary, 
+  TaskAttachment, 
+  TaskComment, 
+  TaskActivityEntry, 
+  TaskContextLink, 
+  Task, 
+  TaskDetail, 
+  TaskNotification 
+};
 
 export const NOTIFICATION_TYPE_OPTIONS = [
   'task_assigned',
@@ -48,45 +81,12 @@ export const NOTIFICATION_TYPE_OPTIONS = [
   'task_status_changed',
 ] as const;
 
-export type TaskStatus = (typeof TASK_STATUS_OPTIONS)[number];
-export type TaskPriority = (typeof TASK_PRIORITY_OPTIONS)[number];
-export type WorkspaceMemberRole = (typeof WORKSPACE_MEMBER_ROLE_OPTIONS)[number];
-export type WorkspaceMemberStatus = (typeof WORKSPACE_MEMBER_STATUS_OPTIONS)[number];
 export type NotificationType = (typeof NOTIFICATION_TYPE_OPTIONS)[number];
 export type TaskViewMode = 'kanban' | 'list';
 export type TaskSortKey = 'due_date' | 'priority' | 'assignee' | 'status' | 'created_at';
 export type TaskSectionKey = 'overdue' | 'today' | 'week' | 'upcoming' | 'no_due_date';
 export type TaskCreateSource = 'quick_create' | 'inline' | 'detail_panel' | 'onboarding';
-export type ReleasePipelineState = 'idea' | 'planning' | 'asset_prep' | 'distribution' | 'campaign' | 'post_release';
 export type TaskRequirementType = 'file_upload' | 'field_completion' | 'approval' | 'external_action';
-
-export interface TaskRequirement {
-  type: TaskRequirementType;
-  spec: string;
-  satisfied: boolean;
-}
-
-export interface Workspace {
-  id: string;
-  ownerId: string;
-  name: string;
-  createdAt: string;
-}
-
-export interface WorkspaceMember {
-  id: string;
-  workspaceId: string;
-  userId: string | null;
-  email: string;
-  role: WorkspaceMemberRole;
-  status: WorkspaceMemberStatus;
-  invitedAt: string;
-  joinedAt: string | null;
-  name: string;
-  avatarUrl: string | null;
-  initials: string;
-  isCurrentUser: boolean;
-}
 
 export interface TaskGroup {
   id: string;
@@ -96,97 +96,6 @@ export interface TaskGroup {
   position: number;
   taskCount: number;
   createdAt: string;
-}
-
-export interface TaskReleaseSummary {
-  id: string;
-  title: string;
-  artistName: string;
-}
-
-export interface TaskAttachment {
-  id: string;
-  taskId: string;
-  userId: string;
-  fileUrl: string;
-  fileName: string;
-  fileSize: number;
-  createdAt: string;
-}
-
-export interface TaskComment {
-  id: string;
-  taskId: string;
-  userId: string;
-  content: string;
-  createdAt: string;
-  editedAt: string | null;
-  authorName: string;
-  authorEmail: string;
-  authorInitials: string;
-  isOwnComment: boolean;
-}
-
-export interface TaskActivityEntry {
-  id: string;
-  taskId: string;
-  actorId: string | null;
-  actorName: string;
-  message: string;
-  createdAt: string;
-}
-
-export interface TaskContextLink {
-  folderItemId: string | null;
-  trackId: string | null;
-}
-
-export interface Task {
-  id: string;
-  workspaceId: string;
-  groupId: string | null;
-  releaseId: string | null;
-  createdBy: string;
-  assignedToUserId: string | null;
-  assignedTo: string | null; // Legacy field, keeping for UI compatibility during transition if needed, but logic will shift to assignedToUserId
-  title: string;
-  description: string | null;
-  status: TaskStatus;
-  priority: TaskPriority;
-  dueDate: string | null;
-  completedAt: string | null;
-  position: number;
-  createdAt: string;
-  updatedAt: string;
-  release: TaskReleaseSummary | null;
-  group: TaskGroup | null;
-  assignee: WorkspaceMember | null;
-  context: TaskContextLink;
-  requirement: TaskRequirement | null;
-  dependencies: string[];
-  state: ReleasePipelineState;
-  autoGenerated: boolean;
-  commentCount: number;
-  attachmentCount: number;
-}
-
-export interface TaskDetail extends Task {
-  comments: TaskComment[];
-  attachments: TaskAttachment[];
-  activity: TaskActivityEntry[];
-}
-
-export interface TaskNotification {
-  id: string;
-  userId: string;
-  type: NotificationType;
-  taskId: string;
-  actorId: string | null;
-  read: boolean;
-  createdAt: string;
-  taskTitle: string;
-  actorName: string;
-  taskStatus: TaskStatus | null;
 }
 
 export interface MyTasksResponse {
