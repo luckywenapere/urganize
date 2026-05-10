@@ -926,6 +926,7 @@ function toTask(
   row: TaskRow,
   releaseById: Map<string, TaskReleaseSummary>,
   groupById: Map<string, TaskGroup>,
+  memberByUserId: Map<string, WorkspaceMember>,
   memberById: Map<string, WorkspaceMember>,
   commentCountByTaskId: Map<string, number>,
   attachmentCountByTaskId: Map<string, number>

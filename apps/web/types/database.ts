@@ -112,9 +112,12 @@ export type ReleaseCollaboratorUpdate = Partial<Omit<ReleaseCollaboratorInsert, 
 
 export type TaskRow = {
   id: string;
-  release_id: string;
+  workspace_id: string;
+  release_id: string | null;
+  group_id: string | null;
   created_by: string;
-  assigned_collaborator_id: string | null;
+  assigned_to_user_id: string | null;
+  assigned_to: string | null;
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -129,9 +132,12 @@ export type TaskRow = {
 
 export type TaskInsert = {
   id?: string;
-  release_id: string;
+  workspace_id: string;
+  release_id?: string | null;
+  group_id?: string | null;
   created_by: string;
-  assigned_collaborator_id?: string | null;
+  assigned_to_user_id?: string | null;
+  assigned_to?: string | null;
   title: string;
   description?: string | null;
   status?: TaskStatus;
