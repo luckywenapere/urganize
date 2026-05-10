@@ -99,6 +99,8 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       readinessScore: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      ownerUserId: '',
+      metadata: {},
     };
     set((current) => ({ releases: [release, ...current.releases], error: '' }));
     useActivityStore.getState().addLocalActivity({

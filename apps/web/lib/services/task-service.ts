@@ -34,6 +34,27 @@ export class TaskService {
     return loadTasks(this.adminClient, (data || []) as TaskRow[], userId);
   }
 
+  async getWorkspaceTasks(workspaceId: string, userId: string, filters: {
+    releaseId?: string | null;
+    priority?: string;
+    status?: string;
+  } = {}) {
+    let query = this.adminClient
+      .from(TASKS_TABLE)
+      .select('id,workspace_id,group_id,release_id,created_by,assigned_to_user_id,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
+      .eq('workspace_id', workspaceId)
+      .order('updated_at', { ascending: false });
+
+    if (filters.releaseId) query = query.eq('release_id', filters.releaseId);
+    if (filters.priority) query = query.eq('priority', filters.priority);
+    if (filters.status) query = query.eq('status', filters.status);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return loadTasks(this.adminClient, (data || []) as TaskRow[], userId);
+  }
+
   async getTaskById(taskId: string, userId: string) {
     const { data, error } = await this.adminClient
       .from(TASKS_TABLE)
@@ -57,6 +78,9 @@ export class TaskService {
       .eq('id', taskId)
       .select()
       .maybeSingle();
+    if (error) throw error;
+    return data;
+  }
 
   async createTask(userId: string, workspaceId: string, data: {
     title: string;
@@ -94,6 +118,9 @@ export class TaskService {
       })
       .select()
       .maybeSingle();
+    if (error) throw error;
+    return result;
+  }
 
   async deleteTask(taskId: string, workspaceId: string) {
     const { error } = await this.adminClient

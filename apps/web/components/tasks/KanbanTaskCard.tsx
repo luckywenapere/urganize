@@ -127,14 +127,14 @@ export function KanbanTaskCard({
               <UserRound className="h-3.5 w-3.5" />
             </span>
             <select
-              value={task.assignedTo || ''}
-              onChange={(event) => onPatch(task.id, { assignedTo: event.target.value || null })}
+              value={task.assignedToUserId || ''}
+              onChange={(event) => onPatch(task.id, { assignedToUserId: event.target.value || null })}
               className="h-9 w-full border border-stroke-default bg-bg-elevated pl-8 pr-2 text-xs text-content-primary outline-none focus:border-brand"
               aria-label="Assign task"
             >
               <option value="">Unassigned</option>
               {activeMembers.map((member) => (
-                <option key={member.id} value={member.id}>
+                <option key={member.id} value={member.userId || ''}>
                   {member.name || member.email}
                 </option>
               ))}

@@ -127,7 +127,7 @@ export default function ReleaseTasksPage() {
     const tasks = board?.tasks || [];
     const complete = tasks.filter((task) => task.status === 'done').length;
     const active = tasks.filter((task) => task.status !== 'done' && task.status !== 'cancelled').length;
-    const assigned = tasks.filter((task) => Boolean(task.assignedTo)).length;
+    const assigned = tasks.filter((task) => Boolean(task.assignedToUserId)).length;
     const completion = tasks.length ? Math.round((complete / tasks.length) * 100) : 0;
     return { active, assigned, complete, completion, total: tasks.length };
   }, [board?.tasks]);

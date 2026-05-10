@@ -13,7 +13,7 @@ export type ReleaseOperationStage = (typeof RELEASE_OPERATION_STAGES)[number];
 
 export type KanbanTaskPatch = {
   status?: Task['status'];
-  assignedTo?: string | null;
+  assignedToUserId?: string | null;
   dueDate?: string | null;
 };
 

@@ -8,7 +8,7 @@ export class ReleaseService {
   async getReleasesForUser(userId: string) {
     const { data, error } = await this.adminClient
       .from('releases')
-      .select('id,title,artist_name,release_date,description,status,state,readiness_score,created_at,updated_at')
+      .select('id,title,artist_name,release_date,description,status,state,readiness_score,metadata,created_at,updated_at')
       .or(`owner_user_id.eq.${userId},user_id.eq.${userId}`)
       .order('release_date', { ascending: true, nullsFirst: false });
 

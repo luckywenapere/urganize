@@ -62,7 +62,7 @@ export function ReleaseOperationsBoard({ board, onBoardChange, onError }: Releas
         ? {
             ...task,
             status: patch.status || task.status,
-            assignedTo: patch.assignedTo === undefined ? task.assignedTo : patch.assignedTo,
+            assignedToUserId: patch.assignedToUserId === undefined ? task.assignedToUserId : patch.assignedToUserId,
             dueDate: patch.dueDate === undefined ? task.dueDate : patch.dueDate,
           }
         : task

@@ -35,8 +35,14 @@ import type {
   TaskActivityEntry,
   TaskContextLink,
   TaskNotification,
-  TaskSectionKey
+  TaskSectionKey,
+  TaskViewMode,
+  TaskSortKey,
+  TaskCreateSource,
+  TaskRequirementType,
+  TaskGroup
 } from '@/types/tasks';
+import { TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS } from '@/types/tasks';
 import type { 
   WorkspaceMemberRole, 
   WorkspaceMemberStatus, 
@@ -45,7 +51,7 @@ import type {
 } from '@/types/auth';
 import type { ReleasePipelineState } from '@/types/releases';
 
-export { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS } from '@/types/tasks';
+export { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS };
 export { WORKSPACE_MEMBER_ROLE_OPTIONS, WORKSPACE_MEMBER_STATUS_OPTIONS } from '@/types/auth';
 
 export type { 
@@ -82,22 +88,6 @@ export const NOTIFICATION_TYPE_OPTIONS = [
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPE_OPTIONS)[number];
-export type TaskViewMode = 'kanban' | 'list';
-export type TaskSortKey = 'due_date' | 'priority' | 'assignee' | 'status' | 'created_at';
-export type TaskSectionKey = 'overdue' | 'today' | 'week' | 'upcoming' | 'no_due_date';
-export type TaskCreateSource = 'quick_create' | 'inline' | 'detail_panel' | 'onboarding';
-export type TaskRequirementType = 'file_upload' | 'field_completion' | 'approval' | 'external_action';
-
-export interface TaskGroup {
-  id: string;
-  workspaceId: string;
-  releaseId: string | null;
-  name: string;
-  position: number;
-  taskCount: number;
-  createdAt: string;
-}
-
 export interface MyTasksResponse {
   sections: Record<TaskSectionKey, Task[]>;
   totals: Record<TaskSectionKey, number>;

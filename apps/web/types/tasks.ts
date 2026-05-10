@@ -1,4 +1,71 @@
 import { ReleasePipelineState } from './releases';
+import { WorkspaceMember } from './auth';
+
+export type TaskViewMode = 'kanban' | 'list';
+export type TaskSortKey = 'due_date' | 'priority' | 'assignee' | 'status' | 'created_at';
+export type TaskSectionKey = 'overdue' | 'today' | 'week' | 'upcoming' | 'no_due_date';
+export type TaskCreateSource = 'quick_create' | 'inline' | 'detail_panel' | 'onboarding';
+export type TaskRequirementType = 'file_upload' | 'field_completion' | 'approval' | 'external_action';
+
+export interface TaskNotification {
+  id: string;
+  userId: string;
+  type: string; // or NotificationType if I want to be specific
+  taskId: string;
+  actorId: string | null;
+  read: boolean;
+  createdAt: string;
+  taskTitle: string;
+  actorName: string;
+  taskStatus: TaskStatus;
+}
+
+export interface TaskComment {
+  id: string;
+  taskId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+  editedAt: string | null;
+  authorName: string;
+  authorEmail: string | null;
+  authorInitials: string;
+  isOwnComment: boolean;
+}
+
+export interface TaskAttachment {
+  id: string;
+  taskId: string;
+  userId: string;
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  createdAt: string;
+}
+
+export interface TaskActivityEntry {
+  id: string;
+  taskId: string;
+  actorId: string | null;
+  actorName: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface TaskGroup {
+  id: string;
+  workspaceId: string;
+  releaseId: string | null;
+  name: string;
+  position: number;
+  taskCount: number;
+  createdAt: string;
+}
+
+export interface TaskContextLink {
+  folderItemId: string | null;
+  trackId: string | null;
+}
 
 export const TASK_STATUS_OPTIONS = [
   'locked',
@@ -36,6 +103,7 @@ export interface Task {
   releaseId: string | null;
   createdBy: string;
   assignedToUserId: string | null;
+  assignedTo: string | null;
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -52,10 +120,15 @@ export interface Task {
   
   // Relations (optional)
   release?: TaskReleaseSummary | null;
+  group?: TaskGroup | null;
+  assignee?: WorkspaceMember | null;
+  context?: TaskContextLink;
+  commentCount?: number;
+  attachmentCount?: number;
 }
 
 export interface TaskDetail extends Task {
-  comments: any[];
-  attachments: any[];
-  activity: any[];
+  comments: TaskComment[];
+  attachments: TaskAttachment[];
+  activity: TaskActivityEntry[];
 }
