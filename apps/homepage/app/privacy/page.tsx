@@ -12,28 +12,22 @@ export default function PrivacyPolicy() {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-[#050505] text-white overflow-x-hidden font-sans selection:bg-emerald-500/30">
-      {/* Background mesh (matches home) */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[1000px] h-[1000px] bg-emerald-600/10 rounded-full blur-[140px] opacity-50 animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[800px] h-[800px] bg-blue-600/10 rounded-full blur-[140px] opacity-30" />
-      </div>
-
-      <main className="relative z-10 px-6 pt-28 pb-24">
-        <div className="max-w-4xl mx-auto">
+    <div className="relative min-h-screen w-full overflow-x-hidden bg-[var(--marketing-bg)] font-sans text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)]">
+      <main className="relative z-10 px-6 pb-24 pt-28">
+        <div className="mx-auto max-w-4xl">
           {/* Top nav line */}
           <motion.div {...fadeInUp} className="flex items-center justify-between gap-4">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-neutral-500 hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[var(--marketing-text-subtle)] transition-colors hover:text-[var(--marketing-text)]"
             >
-              <span className="text-emerald-400">←</span>
+              <span className="text-[var(--marketing-accent)]">←</span>
               Back to home
             </Link>
 
             <Link
               href="mailto:theurganization@gmail.com?subject=Privacy%20question%20-%20Urganize"
-              className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-500 hover:text-white transition-colors"
+              className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--marketing-text-subtle)] transition-colors hover:text-[var(--marketing-text)]"
             >
               Contact
             </Link>
@@ -42,28 +36,28 @@ export default function PrivacyPolicy() {
           {/* Header card */}
           <motion.div
             {...fadeInUp}
-            className="mt-10 p-10 rounded-[2.5rem] bg-neutral-900/50 border border-white/10 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+            className="mt-10 rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
           >
             <div className="flex flex-col items-start gap-5">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-[0.2em]">
-                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-accent)]">
+                <span className="h-1.5 w-1.5 animate-ping rounded-full bg-[var(--marketing-accent)]" />
                 Privacy Policy
               </div>
 
-              <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-[0.95]">
+              <h1 className="text-4xl font-black leading-[0.95] tracking-tighter md:text-6xl">
                 How Urganize handles your data
               </h1>
 
-              <p className="text-neutral-300 text-lg md:text-xl leading-relaxed max-w-3xl">
+              <p className="max-w-3xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
                 This policy explains what we collect, why we collect it, how we use it, and
                 the choices you have. We aim to keep this simple and transparent.
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
-                <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500">
+                <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-text-subtle)]">
                   Last updated
                 </div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-200">
+                <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-text-muted)]">
                   {new Date().toLocaleDateString()}
                 </div>
               </div>
@@ -72,35 +66,34 @@ export default function PrivacyPolicy() {
 
           {/* Content */}
           <div className="mt-10 space-y-8">
-
             {/* Summary / quick bullets */}
             <motion.div
               {...fadeInUp}
-              className="p-8 rounded-[2rem] bg-neutral-900/40 border border-white/10"
+              className="rounded-[2rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-8"
             >
-              <h2 className="text-xl font-bold tracking-tight mb-4">Quick summary</h2>
-              <ul className="space-y-3 text-neutral-300">
+              <h2 className="mb-4 text-xl font-bold tracking-tight">Quick summary</h2>
+              <ul className="space-y-3 text-[var(--marketing-text-muted)]">
                 <li className="flex items-start gap-3">
-                  <span className="text-emerald-400 font-bold text-2xl leading-none">•</span>
+                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
                   <span>We collect data needed to run Urganize and improve it.</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-emerald-400 font-bold text-2xl leading-none">•</span>
+                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
                   <span>Payments are processed by Paystack. We do not store your card details.</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-emerald-400 font-bold text-2xl leading-none">•</span>
+                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
                   <span>We use analytics (Google Analytics) to understand product usage.</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-emerald-400 font-bold text-2xl leading-none">•</span>
+                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
                   <span>
                     We use AI (including Google Gemini). Inputs may be processed by providers, and
                     may be used to improve Urganize and underlying AI systems.
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-emerald-400 font-bold text-2xl leading-none">•</span>
+                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
                   <span>You can request access, correction, or deletion of your data.</span>
                 </li>
               </ul>
@@ -109,20 +102,20 @@ export default function PrivacyPolicy() {
             {/* Sections */}
             <motion.div
               {...fadeInUp}
-              className="p-10 rounded-[2.5rem] bg-neutral-900/50 border border-white/10"
+              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
             >
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-6">
+              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
                 1. Who we are
               </h2>
-              <p className="text-neutral-300 text-lg leading-relaxed">
-                Urganize (“we”, “our”, “us”) is a release operating system for artist managers.
+              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
+                Urganize (&ldquo;we&rdquo;, &ldquo;our&rdquo;, &ldquo;us&rdquo;) is a release operating system for artist managers.
                 We are not currently registered, but we intend to register in Nigeria.
               </p>
-              <p className="text-neutral-300 text-lg leading-relaxed mt-4">
+              <p className="mt-4 text-lg leading-relaxed text-[var(--marketing-text-muted)]">
                 If you have privacy questions, email{" "}
                 <a
                   href="mailto:theurganization@gmail.com?subject=Privacy%20question%20-%20Urganize"
-                  className="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors"
+                  className="font-semibold text-[var(--marketing-accent)] transition-colors hover:opacity-80"
                 >
                   theurganization@gmail.com
                 </a>
@@ -132,12 +125,12 @@ export default function PrivacyPolicy() {
 
             <motion.div
               {...fadeInUp}
-              className="p-10 rounded-[2.5rem] bg-neutral-900/50 border border-white/10"
+              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
             >
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-6">
+              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
                 2. Who can use Urganize
               </h2>
-              <p className="text-neutral-300 text-lg leading-relaxed">
+              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
                 Urganize is not intended for children under 13. We do not knowingly collect
                 personal information from children under 13. If you believe a child has
                 provided us personal data, contact us and we will take steps to delete it.
@@ -146,43 +139,43 @@ export default function PrivacyPolicy() {
 
             <motion.div
               {...fadeInUp}
-              className="p-10 rounded-[2.5rem] bg-neutral-900/50 border border-white/10"
+              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
             >
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-6">
+              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
                 3. Information we collect
               </h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-6 rounded-[1.75rem] bg-black/30 border border-white/10">
-                  <h3 className="text-lg font-bold text-white mb-3">Account data</h3>
-                  <ul className="space-y-2 text-neutral-300">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="rounded-[1.75rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface)] p-6">
+                  <h3 className="mb-3 text-lg font-bold text-[var(--marketing-text)]">Account data</h3>
+                  <ul className="space-y-2 text-[var(--marketing-text-muted)]">
                     <li>• Email address</li>
                     <li>• Login credentials</li>
                     <li>• Basic profile details (if provided)</li>
                   </ul>
                 </div>
 
-                <div className="p-6 rounded-[1.75rem] bg-black/30 border border-white/10">
-                  <h3 className="text-lg font-bold text-white mb-3">Release data</h3>
-                  <ul className="space-y-2 text-neutral-300">
+                <div className="rounded-[1.75rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface)] p-6">
+                  <h3 className="mb-3 text-lg font-bold text-[var(--marketing-text)]">Release data</h3>
+                  <ul className="space-y-2 text-[var(--marketing-text-muted)]">
                     <li>• Artist and release info</li>
                     <li>• Dates, tasks, plans, notes</li>
                     <li>• Assets you upload or reference</li>
                   </ul>
                 </div>
 
-                <div className="p-6 rounded-[1.75rem] bg-black/30 border border-white/10">
-                  <h3 className="text-lg font-bold text-white mb-3">Usage & device data</h3>
-                  <ul className="space-y-2 text-neutral-300">
+                <div className="rounded-[1.75rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface)] p-6">
+                  <h3 className="mb-3 text-lg font-bold text-[var(--marketing-text)]">Usage & device data</h3>
+                  <ul className="space-y-2 text-[var(--marketing-text-muted)]">
                     <li>• Pages viewed, features used</li>
                     <li>• IP address, browser, device info</li>
                     <li>• Logs for debugging and security</li>
                   </ul>
                 </div>
 
-                <div className="p-6 rounded-[1.75rem] bg-black/30 border border-white/10">
-                  <h3 className="text-lg font-bold text-white mb-3">Payments</h3>
-                  <ul className="space-y-2 text-neutral-300">
+                <div className="rounded-[1.75rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface)] p-6">
+                  <h3 className="mb-3 text-lg font-bold text-[var(--marketing-text)]">Payments</h3>
+                  <ul className="space-y-2 text-[var(--marketing-text-muted)]">
                     <li>• Processed by Paystack</li>
                     <li>• We do not store card details</li>
                     <li>• We may store billing status and receipts</li>
@@ -190,39 +183,39 @@ export default function PrivacyPolicy() {
                 </div>
               </div>
 
-              <p className="text-neutral-400 text-sm mt-6">
-                Note: Some of these may apply “eventually” as Urganize evolves. We aim to
+              <p className="mt-6 text-sm text-[var(--marketing-text-subtle)]">
+                Note: Some of these may apply &ldquo;eventually&rdquo; as Urganize evolves. We aim to
                 collect only what we need.
               </p>
             </motion.div>
 
             <motion.div
               {...fadeInUp}
-              className="p-10 rounded-[2.5rem] bg-neutral-900/50 border border-white/10"
+              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
             >
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-6">
+              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
                 4. How we use your information
               </h2>
 
-              <ul className="space-y-3 text-neutral-300 text-lg">
+              <ul className="space-y-3 text-lg text-[var(--marketing-text-muted)]">
                 <li className="flex items-start gap-3">
-                  <span className="text-emerald-400 font-bold text-2xl leading-none">•</span>
+                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
                   <span>To provide and operate Urganize</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-emerald-400 font-bold text-2xl leading-none">•</span>
+                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
                   <span>To generate AI-guided tasks and workflows</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-emerald-400 font-bold text-2xl leading-none">•</span>
+                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
                   <span>To improve performance, reliability, and user experience</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-emerald-400 font-bold text-2xl leading-none">•</span>
+                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
                   <span>To communicate product updates and announcements (you can unsubscribe)</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-emerald-400 font-bold text-2xl leading-none">•</span>
+                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
                   <span>To prevent fraud, abuse, and security issues</span>
                 </li>
               </ul>
@@ -230,19 +223,19 @@ export default function PrivacyPolicy() {
 
             <motion.div
               {...fadeInUp}
-              className="p-10 rounded-[2.5rem] bg-neutral-900/50 border border-white/10"
+              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
             >
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-6">
+              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
                 5. AI processing
               </h2>
 
-              <p className="text-neutral-300 text-lg leading-relaxed">
+              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
                 Urganize uses third-party AI services (including Google Gemini) to generate
                 recommendations, guidance, and workflows. Your inputs may be processed by
                 those providers to produce outputs.
               </p>
 
-              <p className="text-neutral-300 text-lg leading-relaxed mt-4">
+              <p className="mt-4 text-lg leading-relaxed text-[var(--marketing-text-muted)]">
                 You agree that your data may be used to improve Urganize and underlying AI
                 systems. AI outputs are informational only and do not replace professional
                 advice.
@@ -251,13 +244,13 @@ export default function PrivacyPolicy() {
 
             <motion.div
               {...fadeInUp}
-              className="p-10 rounded-[2.5rem] bg-neutral-900/50 border border-white/10"
+              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
             >
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-6">
+              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
                 6. Cookies & analytics
               </h2>
 
-              <p className="text-neutral-300 text-lg leading-relaxed">
+              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
                 We use Google Analytics to understand how users interact with Urganize.
                 We may use cookies or similar technologies to measure performance and improve
                 the product. We also collect anonymized usage data to improve experience.
@@ -266,13 +259,13 @@ export default function PrivacyPolicy() {
 
             <motion.div
               {...fadeInUp}
-              className="p-10 rounded-[2.5rem] bg-neutral-900/50 border border-white/10"
+              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
             >
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-6">
+              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
                 7. Data storage & international transfers
               </h2>
 
-              <p className="text-neutral-300 text-lg leading-relaxed">
+              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
                 Urganize serves users internationally. Your information may be stored and
                 processed on global cloud infrastructure and may be transferred outside your
                 country of residence.
@@ -281,23 +274,23 @@ export default function PrivacyPolicy() {
 
             <motion.div
               {...fadeInUp}
-              className="p-10 rounded-[2.5rem] bg-neutral-900/50 border border-white/10"
+              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
             >
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-6">
+              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
                 8. Your rights
               </h2>
 
-              <p className="text-neutral-300 text-lg leading-relaxed">
+              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
                 Depending on where you live, you may have the right to access, correct, or
                 delete your personal data. You may also withdraw consent where applicable.
               </p>
 
-              <div className="mt-6 p-6 rounded-[1.75rem] bg-black/30 border border-white/10">
-                <p className="text-neutral-300">
+              <div className="mt-6 rounded-[1.75rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface)] p-6">
+                <p className="text-[var(--marketing-text-muted)]">
                   To make a request, email{" "}
                   <a
                     href="mailto:theurganization@gmail.com?subject=Privacy%20request%20-%20Urganize"
-                    className="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors"
+                    className="font-semibold text-[var(--marketing-accent)] transition-colors hover:opacity-80"
                   >
                     theurganization@gmail.com
                   </a>{" "}
@@ -308,13 +301,13 @@ export default function PrivacyPolicy() {
 
             <motion.div
               {...fadeInUp}
-              className="p-10 rounded-[2.5rem] bg-neutral-900/50 border border-white/10"
+              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
             >
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-6">
+              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
                 9. Account deletion
               </h2>
 
-              <p className="text-neutral-300 text-lg leading-relaxed">
+              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
                 When you delete your account, we remove your data within a reasonable time.
                 Some backups may remain temporarily for security, compliance, or disaster
                 recovery, and will be overwritten over time.
@@ -323,13 +316,13 @@ export default function PrivacyPolicy() {
 
             <motion.div
               {...fadeInUp}
-              className="p-10 rounded-[2.5rem] bg-neutral-900/50 border border-white/10"
+              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
             >
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-6">
+              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
                 10. Security
               </h2>
 
-              <p className="text-neutral-300 text-lg leading-relaxed">
+              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
                 We use reasonable measures to protect your data. No system can guarantee
                 absolute security.
               </p>
@@ -337,34 +330,36 @@ export default function PrivacyPolicy() {
 
             <motion.div
               {...fadeInUp}
-              className="p-10 rounded-[2.5rem] bg-neutral-900/50 border border-white/10"
+              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
             >
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-6">
+              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
                 11. Changes to this policy
               </h2>
 
-              <p className="text-neutral-300 text-lg leading-relaxed">
+              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
                 We may update this policy as Urganize evolves. We will post updates on this
-                page and update the “Last updated” date at the top.
+                page and update the &ldquo;Last updated&rdquo; date at the top.
               </p>
             </motion.div>
 
             {/* Footer line */}
-            <motion.div {...fadeInUp} className="pt-6 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <p className="text-sm text-neutral-500">
+            <motion.div
+              {...fadeInUp}
+              className="flex flex-col items-start justify-between gap-4 border-t border-[var(--marketing-border)] pt-6 sm:flex-row sm:items-center"
+            >
+              <p className="text-sm text-[var(--marketing-text-subtle)]">
                 &copy; {new Date().getFullYear()} The Urganization
               </p>
 
-              <div className="flex gap-4 text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">
-                <Link href="/terms" className="hover:text-white transition-colors">
+              <div className="flex gap-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-text-subtle)]">
+                <Link href="/terms" className="transition-colors hover:text-[var(--marketing-text)]">
                   Terms
                 </Link>
-                <Link href="/subprocessors" className="hover:text-white transition-colors">
+                <Link href="/subprocessors" className="transition-colors hover:text-[var(--marketing-text)]">
                   Subprocessors
                 </Link>
               </div>
             </motion.div>
-
           </div>
         </div>
       </main>
