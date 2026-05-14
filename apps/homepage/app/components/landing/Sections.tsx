@@ -465,7 +465,7 @@ export function FooterTagline() {
               Press
             </Link>
             <a
-              href="mailto:theurganization@gmail.com"
+              href="mailto:contact@urganize.app"
               className="hover:text-[var(--marketing-text)]"
             >
               Contact

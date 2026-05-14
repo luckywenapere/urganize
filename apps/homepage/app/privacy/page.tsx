@@ -26,7 +26,7 @@ export default function PrivacyPolicy() {
             </Link>
 
             <Link
-              href="mailto:theurganization@gmail.com?subject=Privacy%20question%20-%20Urganize"
+              href="mailto:contact@urganize.app?subject=Privacy%20question%20-%20Urganize"
               className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--marketing-text-subtle)] transition-colors hover:text-[var(--marketing-text)]"
             >
               Contact
@@ -114,10 +114,10 @@ export default function PrivacyPolicy() {
               <p className="mt-4 text-lg leading-relaxed text-[var(--marketing-text-muted)]">
                 If you have privacy questions, email{" "}
                 <a
-                  href="mailto:theurganization@gmail.com?subject=Privacy%20question%20-%20Urganize"
+                  href="mailto:contact@urganize.app?subject=Privacy%20question%20-%20Urganize"
                   className="font-semibold text-[var(--marketing-accent)] transition-colors hover:opacity-80"
                 >
-                  theurganization@gmail.com
+                  contact@urganize.app
                 </a>
                 .
               </p>
@@ -289,10 +289,10 @@ export default function PrivacyPolicy() {
                 <p className="text-[var(--marketing-text-muted)]">
                   To make a request, email{" "}
                   <a
-                    href="mailto:theurganization@gmail.com?subject=Privacy%20request%20-%20Urganize"
+                    href="mailto:contact@urganize.app?subject=Privacy%20request%20-%20Urganize"
                     className="font-semibold text-[var(--marketing-accent)] transition-colors hover:opacity-80"
                   >
-                    theurganization@gmail.com
+                    contact@urganize.app
                   </a>{" "}
                   and include the email associated with your Urganize account.
                 </p>

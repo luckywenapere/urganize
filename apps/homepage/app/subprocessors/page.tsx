@@ -117,10 +117,10 @@ export default function SubprocessorsPage() {
             We may add, remove, or replace subprocessors as Urganize evolves. If you have
             questions about this list, contact us at{" "}
             <a
-              href="mailto:theurganization@gmail.com"
+              href="mailto:contact@urganize.app"
               className="font-semibold text-[var(--marketing-accent)] transition-colors hover:opacity-80"
             >
-              theurganization@gmail.com
+              contact@urganize.app
             </a>
             .
           </p>

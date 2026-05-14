@@ -68,7 +68,7 @@ const organizationSchema = {
   ],
   "contactPoint": {
     "@type": "ContactPoint",
-    "email": "theurganization@gmail.com",
+    "email": "contact@urganize.app",
     "contactType": "Customer Support"
   }
 } as const;
@@ -100,18 +100,6 @@ const homepageSchema = {
   }
 } as const;
 
-const marketingThemeScript = `
-  try {
-    const storageKey = "urganize-marketing-theme";
-    const storedTheme = window.localStorage.getItem(storageKey);
-    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    const theme = storedTheme === "dark" || storedTheme === "light" ? storedTheme : systemTheme;
-    document.documentElement.dataset.marketingTheme = theme;
-  } catch (error) {
-    document.documentElement.dataset.marketingTheme = "light";
-  }
-`;
-
 export const metadata: Metadata = {
   title: {
     default: "Urganize",
@@ -134,12 +122,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      suppressHydrationWarning
+      data-marketing-theme="dark"
       className={`${cormorantGaramond.variable} ${instrumentSans.variable} ${ibmPlexMono.variable} ${robotoMono.variable}`}
     >
       <head>
         <meta name="apple-mobile-web-app-title" content="Urganize" />
-        <script dangerouslySetInnerHTML={{ __html: marketingThemeScript }} />
 
         {/* JSON-LD STRUCTURED DATA */}
         <script

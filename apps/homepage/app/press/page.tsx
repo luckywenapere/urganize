@@ -21,7 +21,7 @@ export default function PressPage() {
           <div className="rounded-2xl border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6">
             <h2 className="text-xl font-semibold">Short description</h2>
             <p className="mt-2 text-[var(--marketing-text-muted)]">
-              Urganize is a release operating system for artist managers - AI-guided steps, organized tasks, and a content plan.
+              Urganize is one workspace for music management teams — task assignment, versioned asset storage, and pipeline visibility from demo to drop. Built by music industry veterans for the people actually running the campaigns.
             </p>
           </div>
 
@@ -30,9 +30,9 @@ export default function PressPage() {
             <p className="mt-2 text-[var(--marketing-text-muted)]">
               <a
                 className="text-[var(--marketing-accent)] hover:opacity-80"
-                href="mailto:theurganization@gmail.com?subject=Urganize%20-%20Press"
+                href="mailto:contact@urganize.app?subject=Urganize%20-%20Press"
               >
-                theurganization@gmail.com
+                contact@urganize.app
               </a>
             </p>
           </div>

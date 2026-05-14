@@ -74,10 +74,10 @@ export default function TermsPage() {
             <h2 className="text-2xl font-bold text-[var(--marketing-text)]">Contact</h2>
             <p className="mt-3">
               <a
-                href="mailto:theurganization@gmail.com"
+                href="mailto:contact@urganize.app"
                 className="text-[var(--marketing-accent)] hover:opacity-80"
               >
-                theurganization@gmail.com
+                contact@urganize.app
               </a>
             </p>
           </section>
