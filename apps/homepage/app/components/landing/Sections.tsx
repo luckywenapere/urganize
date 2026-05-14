@@ -239,6 +239,9 @@ export function VideoSection() {
         className="py-0"
       >
         <div className="mx-auto my-12 w-full max-w-4xl px-4 md:px-0">
+          <p className="mono-label mb-6 text-center text-[var(--marketing-text-subtle)]">
+            Three-minute product walkthrough
+          </p>
           <div className="relative aspect-video w-full overflow-hidden rounded-xl">
             <iframe
               className="absolute inset-0 h-full w-full"
@@ -250,10 +253,27 @@ export function VideoSection() {
               allowFullScreen
             />
           </div>
-          <p className="mono-label mt-6 text-center text-[var(--marketing-text-subtle)]">
-            Three-minute product walkthrough
-          </p>
         </div>
+      </SectionShell>
+    </ScrollReveal>
+  );
+}
+
+export function DashboardScreenshotSection() {
+  return (
+    <ScrollReveal>
+      <SectionShell
+        containerClassName="max-w-[84rem] px-6 sm:px-8 lg:px-10"
+        className="py-[40px] lg:py-[60px]"
+      >
+        <Image
+          src="/images/landing/hero-dashboard.png"
+          alt="Urganize dashboard showing releases, search, and readiness progress in one workspace."
+          width={1920}
+          height={1396}
+          className="h-auto w-full"
+          sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
+        />
       </SectionShell>
     </ScrollReveal>
   );

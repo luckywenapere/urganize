@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LandingHeader } from "./components/landing/LandingHeader";
 import {
+  DashboardScreenshotSection,
   FinalCTASection,
   FooterTagline,
   HeroSection,
@@ -64,6 +65,7 @@ export default function Home() {
         <main>
           <HeroSection />
           <TractionStripSection />
+          <DashboardScreenshotSection />
           <MirrorSection />
           <PlaybookSpotlightSection />
           <ThreeFeaturesSection />
