@@ -173,7 +173,7 @@ export function HeroSection() {
           </h1>
 
           <p className="hero-fade-in hero-delay-2 mx-auto block w-full max-w-[44rem] text-balance text-center text-lg leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
-            One workspace for music release workflows — task assignment,
+            One workspace for music release workflows. Task assignment,
             versioned asset storage, and pipeline visibility from demo to drop.
           </p>
         </div>
