@@ -412,7 +412,7 @@ export function FinalCTASection() {
       >
         <div className="text-center">
           <h2 className="text-balance text-[3rem] font-semibold tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem] lg:text-[5rem]">
-            Releases shouldn&apos;t be this hard to run.
+            Releases shouldn&apos;t be hard to run.
           </h2>
 
           <div className="relative z-[60] mt-10 flex justify-center">
