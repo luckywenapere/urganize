@@ -29,6 +29,7 @@
   --marketing-screen-shell: #ffffff;
   --marketing-screen-border: #ddd3c7;
   --marketing-logo-card-bg: rgba(255, 255, 255, 0.82);
+  --marketing-accent: #3f7e5c;
   /* Golden Ratio Constants */
   --phi: 1.618;
   /* Base spacing unit (8px) */
@@ -123,6 +124,7 @@ html[data-marketing-theme="dark"] {
   --marketing-screen-shell: #131817;
   --marketing-screen-border: #2a322e;
   --marketing-logo-card-bg: #f6f0e6;
+  --marketing-accent: #6ee99b;
 }
 
 .marketing-wordmark {

@@ -9,18 +9,19 @@ import {
   PlaybookSpotlightSection,
   TestimonialSection,
   ThreeFeaturesSection,
+  TractionStripSection,
   VideoSection,
 } from "./components/landing/Sections";
 
 export const metadata: Metadata = {
   title: "Urganize — Your release deserves a process.",
   description:
-    "Urganize gives artist teams one place to run every stage of a release — from credits to launch. Join the waitlist.",
+    "One workspace for music release workflows — task assignment, versioned asset storage, and pipeline visibility from demo to drop. Built for music management teams.",
   metadataBase: new URL("https://urganize.app"),
   openGraph: {
     title: "Urganize — Your release deserves a process.",
     description:
-      "Urganize gives artist teams one place to run every stage of a release — from credits to launch.",
+      "One workspace for music release workflows — task assignment, versioned asset storage, and pipeline visibility from demo to drop.",
     url: "https://urganize.app",
     siteName: "Urganize",
     images: [
@@ -38,7 +39,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Urganize — Your release deserves a process.",
     description:
-      "Urganize gives artist teams one place to run every stage of a release — from credits to launch.",
+      "One workspace for music release workflows — task assignment, versioned asset storage, and pipeline visibility from demo to drop.",
     images: ["/images/landing/hero-dashboard.png"],
   },
   keywords: [
@@ -65,6 +66,7 @@ export default function Home() {
         <main>
           <HeroSection />
           <LogoStripSection />
+          <TractionStripSection />
           <VideoSection />
           <MirrorSection />
           <PlaybookSpotlightSection />

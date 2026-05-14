@@ -14,7 +14,7 @@ import { Analytics } from "@vercel/analytics/next";
 const SITE_URL = "https://urganize.app";
 const LANDING_TITLE = "Urganize — Your release deserves a process.";
 const LANDING_DESCRIPTION =
-  "Urganize gives artist teams one place to run every stage of a release — from credits to launch. Join the waitlist.";
+  "One workspace for music release workflows — task assignment, versioned asset storage, and pipeline visibility from demo to drop. Built for music management teams.";
 const LANDING_KEYWORDS = [
   "music release management",
   "artist release tool",
