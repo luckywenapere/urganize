@@ -187,7 +187,7 @@ export function HeroSection() {
         <LogoStrip className="hero-fade-in hero-delay-3 mt-14 w-full sm:mt-16" />
       </div>
 
-      <div className="hero-fade-in hero-delay-3 mt-12 sm:mt-14 lg:mt-16">
+      <div className="hero-fade-in hero-delay-3 mx-auto mt-12 w-full sm:mt-14 lg:mt-16">
         <Image
           src="/images/landing/hero-dashboard.png"
           alt="Urganize dashboard showing releases, search, and readiness progress in one workspace."
@@ -248,21 +248,21 @@ export function VideoSection() {
         containerClassName="max-w-[84rem] px-6 sm:px-8 lg:px-10"
         className="py-0"
       >
-        <div className="mx-auto my-12 w-full max-w-3xl px-4 md:px-0">
-          <p className="mono-label mb-5 text-center text-[var(--marketing-text-subtle)]">
-            Three-minute product walkthrough
-          </p>
-          <div className="relative aspect-video w-full">
+        <div className="mx-auto my-12 w-full max-w-4xl px-4 md:px-0">
+          <div className="relative aspect-video w-full overflow-hidden rounded-xl">
             <iframe
-              className="absolute inset-0 h-full w-full rounded-xl"
+              className="absolute inset-0 h-full w-full"
               src="https://www.youtube.com/embed/nfOjPlmDpFw?start=10"
-              title="YouTube video player"
+              title="Urganize product walkthrough"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
             />
           </div>
+          <p className="mono-label mt-6 text-center text-[var(--marketing-text-subtle)]">
+            Three-minute product walkthrough
+          </p>
         </div>
       </SectionShell>
     </ScrollReveal>
@@ -344,10 +344,6 @@ export function PlaybookSpotlightSection() {
             sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
           />
         </div>
-
-        <p className="mx-auto mt-8 max-w-[42rem] px-6 text-center text-lg leading-8 text-[var(--marketing-text-muted)] sm:px-0">
-          Six stages mapped, every owner named, every deadline visible.
-        </p>
       </SectionShell>
     </ScrollReveal>
   );
@@ -486,7 +482,7 @@ export function FooterTagline() {
         </div>
 
         <p className="mt-6 text-center font-mono text-[0.68rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-          &copy; {currentYear} Urganize Technologies Ltd. All rights reserved.
+          &copy; {currentYear} Urganize Technologies Ltd.
         </p>
       </div>
     </footer>
