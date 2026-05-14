@@ -1,6 +1,4 @@
 {
-  "buildCommand": "pnpm turbo build --filter=@urganize/web",
   "installCommand": "pnpm install",
-  "framework": "nextjs",
-  "outputDirectory": "apps/web/.next"
+  "framework": "nextjs"
 }
