@@ -332,10 +332,6 @@ export function PlaybookSpotlightSection() {
           <h2 className="mt-10 text-balance text-[3rem] font-semibold tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem] lg:text-[5rem]">
             Every release has stages. Now yours does too.
           </h2>
-
-          <p className="mx-auto mt-8 max-w-[40rem] text-lg leading-8 text-[var(--marketing-text-muted)]">
-            Six stages mapped, every owner named, every deadline visible.
-          </p>
         </div>
 
         <div className="mt-16 w-full">
@@ -348,6 +344,10 @@ export function PlaybookSpotlightSection() {
             sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
           />
         </div>
+
+        <p className="mx-auto mt-8 max-w-[42rem] px-6 text-center text-lg leading-8 text-[var(--marketing-text-muted)] sm:px-0">
+          Six stages mapped, every owner named, every deadline visible.
+        </p>
       </SectionShell>
     </ScrollReveal>
   );
