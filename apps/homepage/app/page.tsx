@@ -64,8 +64,8 @@ export default function Home() {
 
         <main>
           <HeroSection />
-          <TractionStripSection />
           <VideoSection />
+          <TractionStripSection />
           <MirrorSection />
           <PlaybookSpotlightSection />
           <ThreeFeaturesSection />

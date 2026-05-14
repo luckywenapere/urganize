@@ -187,17 +187,7 @@ export function HeroSection() {
         <LogoStrip className="hero-fade-in hero-delay-3 mt-14 w-full sm:mt-16" />
       </div>
 
-      <div className="hero-fade-in hero-delay-3 mx-auto mt-12 w-full sm:mt-14 lg:mt-16">
-        <Image
-          src="/images/landing/hero-dashboard.png"
-          alt="Urganize dashboard showing releases, search, and readiness progress in one workspace."
-          width={1920}
-          height={1396}
-          priority
-          className="h-auto w-full"
-          sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
-        />
-      </div>
+      <VideoSection />
     </SectionShell>
   );
 }
