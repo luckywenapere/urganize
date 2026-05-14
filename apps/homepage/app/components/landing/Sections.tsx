@@ -156,7 +156,7 @@ export function HeroSection() {
     >
       <div className="mx-auto flex max-w-[64rem] flex-col items-center text-center">
         <p className="hero-fade-in mono-label text-[var(--marketing-text-subtle)]">
-          Release workflow software · Music management teams
+          Music management teams
         </p>
 
         <div className="mt-10 flex flex-col items-center gap-12 sm:gap-14">
@@ -183,9 +183,11 @@ export function HeroSection() {
             Join the waitlist
           </WaitlistButton>
         </div>
+
+        <LogoStrip className="hero-fade-in hero-delay-3 mt-14 w-full sm:mt-16" />
       </div>
 
-      <div className="hero-fade-in hero-delay-3 mt-14 sm:mt-18 lg:mt-24">
+      <div className="hero-fade-in hero-delay-3 mt-12 sm:mt-14 lg:mt-16">
         <Image
           src="/images/landing/hero-dashboard.png"
           alt="Urganize dashboard showing releases, search, and readiness progress in one workspace."
@@ -200,19 +202,6 @@ export function HeroSection() {
   );
 }
 
-export function LogoStripSection() {
-  return (
-    <ScrollReveal>
-      <SectionShell
-        containerClassName="max-w-[84rem] px-6 sm:px-8 lg:px-10"
-        className="bg-transparent py-[80px] sm:py-[80px] lg:py-[80px]"
-      >
-        <LogoStrip />
-      </SectionShell>
-    </ScrollReveal>
-  );
-}
-
 export function TractionStripSection() {
   return (
     <ScrollReveal>
@@ -222,7 +211,7 @@ export function TractionStripSection() {
       >
         <div className="mx-auto max-w-[60rem]">
           <p className="mono-label mb-10 text-center text-[var(--marketing-text-subtle)]">
-            Traction · live since January 2026
+            Live since January 2026
           </p>
 
           <div className="grid grid-cols-2 divide-x divide-y divide-[color:var(--marketing-border)] border border-[color:var(--marketing-border)] sm:grid-cols-4 sm:divide-y-0">
@@ -266,7 +255,7 @@ export function VideoSection() {
           <div className="relative aspect-video w-full">
             <iframe
               className="absolute inset-0 h-full w-full rounded-xl"
-              src="https://www.youtube.com/embed/hfeXoogShgE?si=2OsOJWGifbQTUve5"
+              src="https://www.youtube.com/embed/nfOjPlmDpFw?start=10"
               title="YouTube video player"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -289,7 +278,7 @@ export function MirrorSection() {
       >
         <div className="mx-auto flex w-full flex-col items-center text-center">
           <p className="mono-label text-[var(--marketing-text-subtle)]">
-            The problem · A duct-taped stack of four tools
+            A duct-taped stack of four tools
           </p>
 
           <p className="mx-auto mt-8 block w-full max-w-[800px] text-center font-display text-[clamp(2rem,4.5vw,3.25rem)] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)]">
@@ -332,7 +321,7 @@ export function PlaybookSpotlightSection() {
       <SectionShell containerClassName="max-w-[84rem] px-6 sm:px-8 lg:px-10">
         <div className="mx-auto max-w-[52rem] text-center">
           <p className="mono-label text-[var(--marketing-text-subtle)]">
-            Pipeline · six stages
+            Six stages
           </p>
 
           <pre className="mx-auto mt-6 inline-block whitespace-pre-wrap text-center font-mono text-[0.78rem] leading-7 tracking-[0.04em] text-[var(--marketing-text-muted)] sm:text-[0.95rem]">
@@ -497,7 +486,7 @@ export function FooterTagline() {
         </div>
 
         <p className="mt-6 text-center font-mono text-[0.68rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-          &copy; {currentYear} Urganize. All rights reserved.
+          &copy; {currentYear} Urganize Technologies Ltd. All rights reserved.
         </p>
       </div>
     </footer>

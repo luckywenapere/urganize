@@ -4,7 +4,6 @@ import {
   FinalCTASection,
   FooterTagline,
   HeroSection,
-  LogoStripSection,
   MirrorSection,
   PlaybookSpotlightSection,
   TestimonialSection,
@@ -65,7 +64,6 @@ export default function Home() {
 
         <main>
           <HeroSection />
-          <LogoStripSection />
           <TractionStripSection />
           <VideoSection />
           <MirrorSection />
