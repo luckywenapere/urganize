@@ -1,0 +1,294 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --marketing-bg: #f7f4ee;
+  --marketing-bg-muted: #fbf8f2;
+  --marketing-surface: #ffffff;
+  --marketing-surface-muted: #f5f0e8;
+  --marketing-text: #171311;
+  --marketing-text-muted: #5c544a;
+  --marketing-text-subtle: #6d6459;
+  --marketing-border: #ece4d8;
+  --marketing-border-strong: #ddd4c7;
+  --marketing-shadow: rgba(23, 19, 17, 0.05);
+  --marketing-shadow-strong: rgba(23, 19, 17, 0.14);
+  --marketing-primary: #171311;
+  --marketing-primary-hover: #2b241f;
+  --marketing-primary-text: #ffffff;
+  --marketing-secondary: #ffffff;
+  --marketing-secondary-hover: #f8f4ed;
+  --marketing-secondary-text: #171311;
+  --marketing-secondary-border: #dcd3c6;
+  --marketing-toggle-bg: rgba(255, 255, 255, 0.82);
+  --marketing-toggle-icon: #171311;
+  --marketing-selection: #ddd2c3;
+  --marketing-glow-left: rgba(228, 220, 208, 0.78);
+  --marketing-glow-right: rgba(255, 255, 255, 0.96);
+  --marketing-screen-shell: #ffffff;
+  --marketing-screen-border: #ddd3c7;
+  --marketing-logo-card-bg: rgba(255, 255, 255, 0.82);
+  /* Golden Ratio Constants */
+  --phi: 1.618;
+  /* Base spacing unit (8px) */
+  --space-unit: 0.5rem;
+  --space-1: calc(var(--space-unit) * 1);
+  --space-2: calc(var(--space-unit) * 2);
+  --space-3: calc(var(--space-unit) * 3);
+  --space-4: calc(var(--space-unit) * 4);
+  --space-6: calc(var(--space-unit) * 6);
+  --space-8: calc(var(--space-unit) * 8);
+  --space-13: calc(var(--space-unit) * 13);
+  --space-21: calc(var(--space-unit) * 21);
+  --space-34: calc(var(--space-unit) * 34);
+  --space-55: calc(var(--space-unit) * 55);
+
+  /* ─── Landing Page Design Tokens (v2) ─── */
+  /* Background */
+  --lp-bg: #050505;
+  --lp-bg-elevated: #0a0a0a;
+  --lp-bg-surface: #111111;
+
+  /* Borders */
+  --lp-border-color: rgba(255, 255, 255, 0.1);
+  --lp-border: 1px solid var(--lp-border-color);
+  --lp-border-strong: rgba(255, 255, 255, 0.18);
+
+  /* Text */
+  --lp-text: #f0f0f0;
+  --lp-text-muted: rgba(255, 255, 255, 0.6);
+  --lp-text-subtle: rgba(255, 255, 255, 0.4);
+
+  /* Heading typography */
+  --lp-heading-font: var(--font-sans);
+  --lp-heading-weight: 700;
+  --lp-heading-tracking: -0.035em;
+  --lp-heading-leading: 1.05;
+
+  /* Data / UI typography (monospace) */
+  --lp-data-font: "Roboto Mono", var(--font-mono);
+  --lp-data-weight: 400;
+  --lp-data-tracking: -0.01em;
+  --lp-data-size: 0.8125rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-data: "Roboto Mono", "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--marketing-bg);
+}
+
+html[data-marketing-theme="light"] {
+  color-scheme: light;
+}
+
+html[data-marketing-theme="dark"] {
+  color-scheme: dark;
+  --marketing-bg: #090c0b;
+  --marketing-bg-muted: #101413;
+  --marketing-surface: #141918;
+  --marketing-surface-muted: #191f1d;
+  --marketing-text: #f6f0e6;
+  --marketing-text-muted: #c8bdaf;
+  --marketing-text-subtle: #a89a89;
+  --marketing-border: #252d29;
+  --marketing-border-strong: #38413d;
+  --marketing-shadow: rgba(0, 0, 0, 0.34);
+  --marketing-shadow-strong: rgba(0, 0, 0, 0.46);
+  --marketing-primary: #f6f0e6;
+  --marketing-primary-hover: #ffffff;
+  --marketing-primary-text: #171311;
+  --marketing-secondary: rgba(255, 255, 255, 0.04);
+  --marketing-secondary-hover: rgba(255, 255, 255, 0.08);
+  --marketing-secondary-text: #f6f0e6;
+  --marketing-secondary-border: rgba(255, 255, 255, 0.16);
+  --marketing-toggle-bg: rgba(255, 255, 255, 0.05);
+  --marketing-toggle-icon: #f6f0e6;
+  --marketing-selection: rgba(246, 240, 230, 0.28);
+  --marketing-glow-left: rgba(38, 45, 42, 0.72);
+  --marketing-glow-right: rgba(18, 23, 21, 0.94);
+  --marketing-screen-shell: #131817;
+  --marketing-screen-border: #2a322e;
+  --marketing-logo-card-bg: #f6f0e6;
+}
+
+.marketing-wordmark {
+  filter: invert(1);
+}
+
+html[data-marketing-theme="dark"] .marketing-wordmark {
+  filter: none;
+}
+
+body {
+  background: var(--marketing-bg);
+  color: var(--marketing-text);
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: -0.015em;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--marketing-text);
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+p {
+  font-size: 1rem;
+  line-height: 1.72;
+  letter-spacing: -0.012em;
+  color: inherit;
+  margin: 0;
+}
+
+::selection {
+  background: var(--marketing-selection);
+  color: var(--marketing-text);
+}
+
+button,
+input,
+a {
+  transition:
+    color 0.25s ease,
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--marketing-text);
+  outline-offset: 4px;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+/* Landing page data/UI monospace utility */
+.lp-data {
+  font-family: var(--lp-data-font);
+  font-weight: var(--lp-data-weight);
+  letter-spacing: var(--lp-data-tracking);
+  font-size: var(--lp-data-size);
+}
+
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+  will-change: opacity, transform;
+}
+
+.scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-fade-in {
+  opacity: 0;
+  animation: hero-fade-up 0.6s ease forwards;
+}
+
+.hero-delay-1 {
+  animation-delay: 0.2s;
+}
+
+.hero-delay-2 {
+  animation-delay: 0.4s;
+}
+
+.hero-delay-3 {
+  animation-delay: 0.6s;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  button,
+  input,
+  a,
+  .scroll-reveal,
+  .hero-fade-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}

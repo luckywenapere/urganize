@@ -20,7 +20,10 @@
       "sharp",
       "protobufjs",
       "core-js",
-      "unrs-resolver"
+      "unrs-resolver",
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma"
     ]
   }
 }

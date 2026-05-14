@@ -23,7 +23,11 @@
         "TRIAL_TOKENIZATION_AMOUNT_NGN",
         "ADMIN_EMAILS",
         "OLLAMA_BASE_URL",
-        "OLLAMA_MODEL"
+        "OLLAMA_MODEL",
+        "DATABASE_URL",
+        "ADMIN_WAITLIST_TOKEN",
+        "NEXT_PUBLIC_POSTHOG_TOKEN",
+        "NEXT_PUBLIC_POSTHOG_HOST"
       ]
     },
     "dev": {

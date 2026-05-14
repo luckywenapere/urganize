@@ -6,6 +6,9 @@
       "@urganize/web/*": [
         "apps/web/*"
       ],
+      "@urganize/homepage/*": [
+        "apps/homepage/*"
+      ],
       "@urganize/ui": [
         "packages/ui/src/index.ts"
       ],
