@@ -61,7 +61,10 @@ const organizationSchema = {
   "sameAs": [
     "https://x.com/urganize",
     "https://linkedin.com/company/urganize",
-    "https://instagram.com/urganize"
+    "https://instagram.com/urganize",
+    "https://tiktok.com/@urganize",
+    "https://youtube.com/@urganize",
+    "https://threads.net/@urganize"
   ],
   "contactPoint": {
     "@type": "ContactPoint",

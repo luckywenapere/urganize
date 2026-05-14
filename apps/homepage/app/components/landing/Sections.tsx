@@ -1,8 +1,45 @@
 import Image from "next/image";
 import Link from "next/link";
+import { FaLinkedin } from "react-icons/fa6";
+import {
+  SiInstagram,
+  SiThreads,
+  SiTiktok,
+  SiX,
+  SiYoutube,
+} from "react-icons/si";
 import { ScrollReveal } from "./ScrollReveal";
 import { SectionShell } from "./SectionShell";
 import { WaitlistButton } from "./WaitlistButton";
+
+const socialLinks = [
+  { href: "https://x.com/urganize", label: "Urganize on X", Icon: SiX },
+  {
+    href: "https://www.linkedin.com/company/urganize",
+    label: "Urganize on LinkedIn",
+    Icon: FaLinkedin,
+  },
+  {
+    href: "https://www.instagram.com/urganize",
+    label: "Urganize on Instagram",
+    Icon: SiInstagram,
+  },
+  {
+    href: "https://www.tiktok.com/@urganize",
+    label: "Urganize on TikTok",
+    Icon: SiTiktok,
+  },
+  {
+    href: "https://www.youtube.com/@urganize",
+    label: "Urganize on YouTube",
+    Icon: SiYoutube,
+  },
+  {
+    href: "https://www.threads.net/@urganize",
+    label: "Urganize on Threads",
+    Icon: SiThreads,
+  },
+] as const;
 
 type SocialProofLogo = {
   src: string;
@@ -345,7 +382,22 @@ export function FooterTagline() {
           </div>
         </div>
 
-        <p className="mt-12 text-center font-mono text-[0.68rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
+        <div className="mt-12 flex flex-wrap items-center justify-center gap-5">
+          {socialLinks.map(({ href, label, Icon }) => (
+            <a
+              key={href}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={label}
+              className="text-[var(--marketing-text-subtle)] transition-colors hover:text-[var(--marketing-text)]"
+            >
+              <Icon className="h-4 w-4" aria-hidden />
+            </a>
+          ))}
+        </div>
+
+        <p className="mt-6 text-center font-mono text-[0.68rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
           &copy; {currentYear} Urganize. All rights reserved.
         </p>
       </div>
