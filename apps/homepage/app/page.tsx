@@ -9,7 +9,6 @@ import {
   TestimonialSection,
   ThreeFeaturesSection,
   TractionStripSection,
-  VideoSection,
 } from "./components/landing/Sections";
 
 export const metadata: Metadata = {
@@ -64,7 +63,6 @@ export default function Home() {
 
         <main>
           <HeroSection />
-          <VideoSection />
           <TractionStripSection />
           <MirrorSection />
           <PlaybookSpotlightSection />
