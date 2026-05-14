@@ -15,25 +15,23 @@ export default function TeamPage() {
         <p className="mt-4 text-[var(--marketing-text-muted)]">The team behind Urganize.</p>
 
         <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6">
-            <div className="text-xl font-bold">Lucky Wenapere</div>
-            <div className="mt-1 font-semibold text-[var(--marketing-accent)]">Co-Founder and CEO</div>
-          </div>
-
-          <div className="rounded-2xl border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6">
-            <div className="text-xl font-bold">Tedum King</div>
-            <div className="mt-1 font-semibold text-[var(--marketing-accent)]">Co-Founder</div>
-          </div>
-
-          <div className="rounded-2xl border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6">
-            <div className="text-xl font-bold">Jacob Ngalato</div>
-            <div className="mt-1 font-semibold text-[var(--marketing-accent)]">Co-Founder and CTO</div>
-          </div>
-
-          <div className="rounded-2xl border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6">
-            <div className="text-xl font-bold">Bobson Prosper</div>
-            <div className="mt-1 font-semibold text-[var(--marketing-accent)]">Founding Engineer</div>
-          </div>
+          {[
+            { name: "Lucky Wenapere", role: "Co-Founder and CEO" },
+            { name: "Tedum King", role: "Co-Founder" },
+            { name: "Bobson Prosper", role: "Founding Engineer" },
+            { name: "Gideon Ugorji", role: "Founding Devops Engineer" },
+            { name: "Adamu Kabiru", role: "Growth" },
+            { name: "Chidera Nnamani", role: "Operations Lead" },
+            { name: "Victoria Emmanuel", role: "Operations" },
+          ].map((member) => (
+            <div
+              key={member.name}
+              className="rounded-2xl border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6"
+            >
+              <div className="text-xl font-bold">{member.name}</div>
+              <div className="mt-1 font-semibold text-[var(--marketing-accent)]">{member.role}</div>
+            </div>
+          ))}
         </div>
       </div>
     </main>
