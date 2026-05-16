@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"c:\\\\Users\\\\penta\\\\Documents\\\\urganize\\\\apps\\\\web\" \"c:\\\\Users\\\\penta\\\\Documents\\\\urganize-homepage\\\\the-urganization\\\\app\" \"c:\\\\Users\\\\penta\\\\Documents\\\\urganize-homepage\\\\the-urganization\\\\lib\" \"c:\\\\Users\\\\penta\\\\Documents\\\\urganize-homepage\\\\the-urganization\\\\prisma\")",
+      "Read(//c/Users/penta/Documents/urganize-homepage/the-urganization/app/**)",
+      "Read(//c/Users/penta/Documents/urganize-homepage/the-urganization/**)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm turbo *)"
+    ]
+  }
+}

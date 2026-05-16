@@ -204,7 +204,7 @@ export function TractionStripSection() {
             Live since January 2026
           </p>
 
-          <div className="grid grid-cols-2 divide-x divide-y divide-[color:var(--marketing-border)] border border-[color:var(--marketing-border)] sm:grid-cols-4 sm:divide-y-0">
+          {/* <div className="grid grid-cols-2 divide-x divide-y divide-[color:var(--marketing-border)] border border-[color:var(--marketing-border)] sm:grid-cols-4 sm:divide-y-0">
             {tractionStats.map((stat) => (
               <div key={stat.label} className="px-5 py-7 sm:px-6 sm:py-8">
                 <p
@@ -224,7 +224,7 @@ export function TractionStripSection() {
                 </p>
               </div>
             ))}
-          </div>
+          </div> */}
         </div>
       </SectionShell>
     </ScrollReveal>
@@ -287,9 +287,9 @@ export function MirrorSection() {
         containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
       >
         <div className="mx-auto flex w-full flex-col items-center text-center">
-          <p className="mono-label text-[var(--marketing-text-subtle)]">
+          {/* <p className="mono-label text-[var(--marketing-text-subtle)]">
             A duct-taped stack of four tools
-          </p>
+          </p> */}
 
           <p className="mx-auto mt-8 block w-full max-w-[800px] text-center font-display text-[clamp(2rem,4.5vw,3.25rem)] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)]">
             Most teams run releases across WhatsApp, Drive, Asana, and Notion —
