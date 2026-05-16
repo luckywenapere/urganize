@@ -105,15 +105,16 @@ const fourTools = [
   { num: "04", name: "Memory", note: "or nothing at all" },
 ] as const;
 
-const tractionStats = [
-  { number: "Jan 28", label: "Live product", subLabel: "since 2026", accent: false },
-  { number: "₦5K/mo", label: "First paying", subLabel: "Apr 22", accent: false },
-  { number: "0%", label: "Churn", subLabel: "to date", accent: true },
-  { number: "12%", label: "Conversion", subLabel: "April launch event", accent: false },
-] as const;
+const wideContainerClass = "max-w-[84rem] px-6 sm:px-8 lg:px-10";
 
 const solidButtonClassName =
   "relative z-[60] inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] pointer-events-auto hover:bg-[var(--marketing-primary-hover)] sm:text-base";
+
+const centeredHeadlineClass =
+  "text-balance text-[3rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem] lg:text-[5rem]";
+
+const mutedLeadClass =
+  "text-balance text-[clamp(1.1rem,2vw,1.4rem)] leading-8 text-[var(--marketing-text-muted)]";
 
 function LogoStrip({
   className = "",
@@ -152,7 +153,7 @@ export function HeroSection() {
   return (
     <SectionShell
       className="pb-20 pt-[120px] sm:pb-24 sm:pt-[140px] lg:pb-32 lg:pt-[168px]"
-      containerClassName="max-w-[84rem] px-6 sm:px-8 lg:px-10"
+      containerClassName={wideContainerClass}
     >
       <div className="mx-auto flex max-w-[64rem] flex-col items-center text-center">
         <p className="hero-fade-in mono-label text-[var(--marketing-text-subtle)]">
@@ -187,58 +188,8 @@ export function HeroSection() {
         <LogoStrip className="hero-fade-in hero-delay-3 mt-14 w-full sm:mt-16" />
       </div>
 
-      <VideoSection />
-    </SectionShell>
-  );
-}
-
-export function TractionStripSection() {
-  return (
-    <ScrollReveal>
-      <SectionShell
-        containerClassName="max-w-[84rem] px-6 sm:px-8 lg:px-10"
-        className="py-[60px] lg:py-[80px]"
-      >
-        <div className="mx-auto max-w-[60rem]">
-          <p className="mono-label mb-10 text-center text-[var(--marketing-text-subtle)]">
-            Live since January 2026
-          </p>
-
-          {/* <div className="grid grid-cols-2 divide-x divide-y divide-[color:var(--marketing-border)] border border-[color:var(--marketing-border)] sm:grid-cols-4 sm:divide-y-0">
-            {tractionStats.map((stat) => (
-              <div key={stat.label} className="px-5 py-7 sm:px-6 sm:py-8">
-                <p
-                  className={`font-mono text-[1.45rem] tracking-[-0.02em] sm:text-[1.65rem] ${
-                    stat.accent
-                      ? "text-[var(--marketing-accent)]"
-                      : "text-[var(--marketing-text)]"
-                  }`}
-                >
-                  {stat.number}
-                </p>
-                <p className="mono-label mt-4 text-[var(--marketing-text)]">
-                  {stat.label}
-                </p>
-                <p className="mt-2 font-mono text-[0.72rem] tracking-[0.04em] text-[var(--marketing-text-subtle)]">
-                  {stat.subLabel}
-                </p>
-              </div>
-            ))}
-          </div> */}
-        </div>
-      </SectionShell>
-    </ScrollReveal>
-  );
-}
-
-export function VideoSection() {
-  return (
-    <ScrollReveal>
-      <SectionShell
-        containerClassName="max-w-[84rem] px-6 sm:px-8 lg:px-10"
-        className="py-0"
-      >
-        <div className="mx-auto my-12 w-full max-w-4xl px-4 md:px-0">
+      <ScrollReveal>
+        <div className="mx-auto mt-16 w-full max-w-4xl sm:mt-20">
           <p className="mono-label mb-6 text-center text-[var(--marketing-text-subtle)]">
             Three-minute product walkthrough
           </p>
@@ -254,8 +205,8 @@ export function VideoSection() {
             />
           </div>
         </div>
-      </SectionShell>
-    </ScrollReveal>
+      </ScrollReveal>
+    </SectionShell>
   );
 }
 
@@ -263,9 +214,12 @@ export function DashboardScreenshotSection() {
   return (
     <ScrollReveal>
       <SectionShell
-        containerClassName="max-w-[84rem] px-6 sm:px-8 lg:px-10"
-        className="py-[40px] lg:py-[60px]"
+        containerClassName={wideContainerClass}
+        className="py-[60px] lg:py-[80px]"
       >
+        <p className="mono-label mb-10 text-center text-[var(--marketing-text-subtle)]">
+          Live since January 2026
+        </p>
         <Image
           src="/images/landing/hero-dashboard.png"
           alt="Urganize dashboard showing releases, search, and readiness progress in one workspace."
@@ -287,20 +241,16 @@ export function MirrorSection() {
         containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
       >
         <div className="mx-auto flex w-full flex-col items-center text-center">
-          {/* <p className="mono-label text-[var(--marketing-text-subtle)]">
-            A duct-taped stack of four tools
-          </p> */}
-
-          <p className="mx-auto mt-8 block w-full max-w-[800px] text-center font-display text-[clamp(2rem,4.5vw,3.25rem)] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)]">
+          <h2 className={`mx-auto max-w-[52rem] ${centeredHeadlineClass}`}>
             Most teams run releases across WhatsApp, Drive, Asana, and Notion —
             or no system at all.
-          </p>
+          </h2>
 
           <div className="mt-14 grid w-full max-w-[60rem] grid-cols-1 gap-px bg-[color:var(--marketing-border)] sm:grid-cols-2 lg:grid-cols-4">
             {fourTools.map((tool) => (
               <div
                 key={tool.num}
-                className="bg-[var(--marketing-bg)] px-5 py-6 text-left sm:px-6"
+                className="bg-[var(--marketing-bg)] px-6 py-7 text-left sm:px-7 sm:py-8"
               >
                 <p className="font-mono text-[0.72rem] font-medium tracking-[0.16em] text-[var(--marketing-accent)]">
                   {tool.num}
@@ -315,7 +265,7 @@ export function MirrorSection() {
             ))}
           </div>
 
-          <p className="mx-auto mt-14 block w-full max-w-[640px] text-center font-sans text-[clamp(1.1rem,2vw,1.4rem)] leading-8 text-[var(--marketing-text-muted)]">
+          <p className={`mx-auto mt-14 block w-full max-w-[40rem] text-center ${mutedLeadClass}`}>
             Urganize replaces all of that with one structured workspace your
             entire team can actually use.
           </p>
@@ -328,7 +278,7 @@ export function MirrorSection() {
 export function PlaybookSpotlightSection() {
   return (
     <ScrollReveal>
-      <SectionShell containerClassName="max-w-[84rem] px-6 sm:px-8 lg:px-10">
+      <SectionShell containerClassName={wideContainerClass}>
         <div className="mx-auto max-w-[52rem] text-center">
           <p className="mono-label text-[var(--marketing-text-subtle)]">
             Six stages
@@ -339,7 +289,7 @@ export function PlaybookSpotlightSection() {
             DEMO ──► MIX ──► MASTER ──► ART ──► DSP ──► DROP
           </pre>
 
-          <h2 className="mt-10 text-balance text-[3rem] font-semibold tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem] lg:text-[5rem]">
+          <h2 className={`mt-10 ${centeredHeadlineClass}`}>
             Every release has stages. Now yours does too.
           </h2>
         </div>
@@ -362,7 +312,7 @@ export function PlaybookSpotlightSection() {
 export function ThreeFeaturesSection() {
   return (
     <ScrollReveal>
-      <SectionShell containerClassName="max-w-[84rem] px-6 sm:px-8 lg:px-10">
+      <SectionShell containerClassName={wideContainerClass}>
         <div className="grid divide-y divide-[color:var(--marketing-border)] border-y border-[color:var(--marketing-border)] lg:grid-cols-3 lg:divide-x lg:divide-y-0">
           {featureColumns.map((feature) => (
             <div key={feature.title} className="py-10 lg:px-10 lg:py-14">
@@ -411,7 +361,7 @@ export function FinalCTASection() {
         containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10"
       >
         <div className="text-center">
-          <h2 className="text-balance text-[3rem] font-semibold tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem] lg:text-[5rem]">
+          <h2 className={centeredHeadlineClass}>
             Releases shouldn&apos;t be hard to run.
           </h2>
 
@@ -420,7 +370,6 @@ export function FinalCTASection() {
               Join the waitlist
             </WaitlistButton>
           </div>
-
         </div>
       </SectionShell>
     </ScrollReveal>
@@ -435,7 +384,7 @@ export function FooterTagline() {
       className="pb-10 pt-14 sm:pb-12 sm:pt-16 lg:pb-14 lg:pt-20"
       style={{ borderTop: "0.5px solid var(--marketing-border)" }}
     >
-      <div className="mx-auto max-w-[84rem] px-6 sm:px-8 lg:px-10">
+      <div className={`mx-auto ${wideContainerClass}`}>
         <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
           <div>
             <Link
@@ -451,7 +400,6 @@ export function FooterTagline() {
                 className="marketing-wordmark mt-[-0.6rem] h-24 w-auto max-w-none"
               />
             </Link>
-
           </div>
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm tracking-[-0.01em] text-[var(--marketing-text-subtle)]">
