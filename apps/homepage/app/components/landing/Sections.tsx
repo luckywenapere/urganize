@@ -85,7 +85,7 @@ function LogoStrip({
   return (
     <div className={className}>
       <p className="mx-auto max-w-[36rem] text-balance text-center font-mono text-[0.82rem] leading-6 tracking-[0.02em] text-[var(--marketing-text-subtle)] sm:text-[0.9rem]">
-        Teams from leading creative institutions trust Urganize to power their
+        Teams from the best institutions trust us to power their
         operations.
       </p>
 
