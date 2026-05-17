@@ -71,13 +71,6 @@ const socialProofLogos: SocialProofLogo[] = [
     height: 160,
     imageClassName: "max-h-10 sm:max-h-11",
   },
-  {
-    src: "/images/logos/logo-4.svg",
-    alt: "Logo 4",
-    width: 240,
-    height: 80,
-    imageClassName: "max-h-7 sm:max-h-8",
-  },
 ];
 
 const featureColumns = [
