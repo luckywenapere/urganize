@@ -41,38 +41,6 @@ const socialLinks = [
   },
 ] as const;
 
-type SocialProofLogo = {
-  src: string;
-  alt: string;
-  width: number;
-  height: number;
-  imageClassName?: string;
-};
-
-const socialProofLogos: SocialProofLogo[] = [
-  {
-    src: "/images/logos/logo-1.svg",
-    alt: "Logo 1",
-    width: 160,
-    height: 160,
-    imageClassName: "max-h-10 sm:max-h-11",
-  },
-  {
-    src: "/images/logos/logo-2.svg",
-    alt: "Logo 2",
-    width: 160,
-    height: 160,
-    imageClassName: "max-h-10 sm:max-h-11",
-  },
-  {
-    src: "/images/logos/logo-3.svg",
-    alt: "Logo 3",
-    width: 160,
-    height: 160,
-    imageClassName: "max-h-10 sm:max-h-11",
-  },
-];
-
 const featureColumns = [
   {
     kicker: "Workflow",
@@ -116,27 +84,19 @@ function LogoStrip({
 }) {
   return (
     <div className={className}>
-      <p className="mono-label text-center text-[var(--marketing-text-subtle)]">
-        Labels already inside.
+      <p className="mx-auto max-w-[36rem] text-balance text-center font-mono text-[0.82rem] leading-6 tracking-[0.02em] text-[var(--marketing-text-subtle)] sm:text-[0.9rem]">
+        Teams from leading creative institutions trust Urganize to power their
+        operations.
       </p>
 
-      <div className="mt-10 overflow-x-auto overscroll-x-contain pb-2">
-        <div className="flex w-max min-w-full items-center justify-center gap-12 px-1 sm:gap-16">
-          {socialProofLogos.map((logo) => (
-            <div
-              key={logo.alt}
-              className="flex min-w-[9rem] shrink-0 items-center justify-center"
-            >
-              <Image
-                src={logo.src}
-                alt={logo.alt}
-                width={logo.width}
-                height={logo.height}
-                className={`h-auto w-auto opacity-70 ${logo.imageClassName ?? ""}`}
-              />
-            </div>
-          ))}
-        </div>
+      <div className="mt-8 flex justify-center">
+        <Image
+          src="/images/logos/anchor-partner.png"
+          alt="Anchor partner"
+          width={97}
+          height={40}
+          className="h-12 w-auto opacity-90 sm:h-14"
+        />
       </div>
     </div>
   );
