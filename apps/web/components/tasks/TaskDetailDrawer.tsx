@@ -117,6 +117,23 @@ export function TaskDetailDrawer({
     setAssigneeQuery(task.assignee?.name || '');
   }, [releases, task]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   const releaseGroups = useMemo(
     () => groups.filter((group) => group.releaseId === (selectedRelease?.id || task?.releaseId || null)),
     [groups, selectedRelease?.id, task?.releaseId]
@@ -125,12 +142,20 @@ export function TaskDetailDrawer({
   const due = task ? getRelativeDueLabel(task) : { label: 'No due date', isOverdue: false };
 
   return (
-    <div
-      className={`pointer-events-none fixed inset-y-0 right-0 z-[165] flex w-full justify-end transition ${
-        isOpen ? 'translate-x-0' : 'translate-x-full'
-      }`}
-    >
-      <div className="pointer-events-auto flex h-full w-full max-w-[560px] flex-col overflow-hidden border-l border-stroke-default bg-bg-surface shadow-[-24px_0_64px_-34px_rgba(0,0,0,0.72)]">
+    <>
+      <div
+        aria-hidden={!isOpen}
+        onClick={onClose}
+        className={`fixed inset-0 z-[160] bg-black/40 backdrop-blur-[2px] transition-opacity duration-200 ${
+          isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+      />
+      <div
+        aria-hidden={!isOpen}
+        className={`fixed inset-y-0 right-0 z-[165] flex w-full max-w-[560px] flex-col overflow-hidden border-l border-stroke-default bg-bg-surface shadow-[-24px_0_64px_-34px_rgba(0,0,0,0.72)] transition-transform duration-200 ease-out ${
+          isOpen ? 'translate-x-0' : 'pointer-events-none translate-x-full'
+        }`}
+      >
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stroke-subtle px-5 py-5">
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Task detail</p>
@@ -484,6 +509,6 @@ export function TaskDetailDrawer({
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
