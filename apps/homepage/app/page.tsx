@@ -63,8 +63,8 @@ export default function Home() {
 
         <main>
           <HeroSection />
-          <DashboardScreenshotSection />
           <MirrorSection />
+          <DashboardScreenshotSection />
           <PlaybookSpotlightSection />
           <ThreeFeaturesSection />
           <TestimonialSection />
