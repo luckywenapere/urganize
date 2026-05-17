@@ -29,6 +29,35 @@ export const FOLDER_COLOR_PRESETS = [
 
 export const FOLDER_ICON_PRESETS = ['🎵', '📁', '📌', '🎤', '📄', '💼'] as const;
 
+export const CONTRACT_TYPES = [
+  'distribution',
+  'producer',
+  'split_sheet_master',
+  'split_sheet_publishing',
+  'other',
+] as const;
+
+export type ContractType = (typeof CONTRACT_TYPES)[number];
+
+export function isContractType(value: unknown): value is ContractType {
+  return CONTRACT_TYPES.includes(String(value || '').trim() as ContractType);
+}
+
+export function formatContractTypeLabel(type: ContractType): string {
+  switch (type) {
+    case 'distribution':
+      return 'Distribution agreement';
+    case 'producer':
+      return 'Producer agreement';
+    case 'split_sheet_master':
+      return 'Split sheet — sound recording';
+    case 'split_sheet_publishing':
+      return 'Split sheet — publishing';
+    case 'other':
+      return 'Other';
+  }
+}
+
 export interface Folder {
   id: string;
   name: string;
@@ -64,6 +93,7 @@ export interface ReleaseFolderItemMetadata {
 export interface ContractFolderItemMetadata extends FileFolderItemMetadata {
   counterpartyName: string | null;
   signedDate: string | null;
+  contractType: ContractType;
 }
 
 export type FolderItemMetadata =
@@ -298,19 +328,24 @@ export function normalizeContractMetadata(value: unknown): {
   mimeType: string;
   counterpartyName: string | null;
   signedDate: string | null;
+  contractType: ContractType;
   error?: string;
 } {
+  const record = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  const rawType = String(record.contractType || '').trim();
+  const contractType: ContractType = isContractType(rawType) ? rawType : 'other';
+
   const fileMetadata = normalizeFileMetadata(value);
   if (fileMetadata.error) {
     return {
       ...fileMetadata,
       counterpartyName: null,
       signedDate: null,
+      contractType,
       error: fileMetadata.error,
     };
   }
 
-  const record = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
   const counterpartyName = sanitizeTextField(String(record.counterpartyName || ''), 140) || null;
   const signedDateResult = parseSignedDate(record.signedDate);
 
@@ -319,6 +354,7 @@ export function normalizeContractMetadata(value: unknown): {
       ...fileMetadata,
       counterpartyName,
       signedDate: null,
+      contractType,
       error: signedDateResult.error,
     };
   }
@@ -328,6 +364,7 @@ export function normalizeContractMetadata(value: unknown): {
       ...fileMetadata,
       counterpartyName: null,
       signedDate: signedDateResult.value,
+      contractType,
       error: 'Counterparty name is required for contract items.',
     };
   }
@@ -336,6 +373,7 @@ export function normalizeContractMetadata(value: unknown): {
     ...fileMetadata,
     counterpartyName,
     signedDate: signedDateResult.value,
+    contractType,
   };
 }
 

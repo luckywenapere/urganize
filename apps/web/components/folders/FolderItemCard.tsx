@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { formatReleaseDate } from '@/lib/pre-save';
 import {
+  formatContractTypeLabel,
   formatFolderItemTypeLabel,
   type ContractFolderItem,
   type FileFolderItem,
@@ -140,6 +141,7 @@ function renderBody(item: FolderItem) {
         <>
           <div className="space-y-2 text-sm text-content-secondary" data-ph-no-capture>
             <p>{formatFileMeta(item)}</p>
+            <p>Type: {formatContractTypeLabel(item.metadata.contractType)}</p>
             {item.metadata.counterpartyName ? <p>Counterparty: {item.metadata.counterpartyName}</p> : null}
             {item.metadata.signedDate ? <p>Signed: {formatReleaseDate(item.metadata.signedDate)}</p> : null}
           </div>

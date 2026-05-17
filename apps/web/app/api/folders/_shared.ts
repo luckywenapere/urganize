@@ -436,6 +436,7 @@ export function toFolderItem(
           mimeType: metadata.mimeType,
           counterpartyName: metadata.counterpartyName,
           signedDate: metadata.signedDate,
+          contractType: metadata.contractType,
         },
       } satisfies ContractFolderItem;
     }

@@ -13,11 +13,14 @@ import { ReleaseCombobox } from '@/components/pre-save/ReleaseCombobox';
 import { useAuthStore } from '@/lib/auth-store';
 import { captureAnalyticsEvent } from '@/lib/analytics';
 import {
+  CONTRACT_TYPES,
   FOLDER_COLOR_PRESETS,
   FOLDER_ICON_PRESETS,
   FOLDER_ITEM_TYPES,
   FOLDER_STORAGE_BUCKET,
+  formatContractTypeLabel,
   formatFolderItemTypeLabel,
+  type ContractType,
   type CreateFolderItemBody,
   type Folder,
   type FolderApiError,
@@ -57,6 +60,7 @@ type FolderItemFormState = {
   contactPhone: string;
   counterpartyName: string;
   signedDate: string;
+  contractType: ContractType;
   selectedRelease: PreSaveReleaseOption | null;
   releaseQuery: string;
   file: File | null;
@@ -92,6 +96,7 @@ function buildEmptyFormState(type: FolderItemType = 'note'): FolderItemFormState
     contactPhone: '',
     counterpartyName: '',
     signedDate: '',
+    contractType: 'distribution',
     selectedRelease: null,
     releaseQuery: '',
     file: null,
@@ -208,6 +213,7 @@ function buildFormStateFromItem(item: FolderItem): FolderItemFormState {
         existingMimeType: item.metadata.mimeType,
         counterpartyName: item.metadata.counterpartyName || '',
         signedDate: item.metadata.signedDate || '',
+        contractType: item.metadata.contractType || 'other',
       };
     default:
       return buildEmptyFormState('note');
@@ -712,6 +718,7 @@ export function FolderDetailClientPage({ folderId }: FolderDetailClientPageProps
             mimeType: upload.mimeType,
             counterpartyName: itemFormState.counterpartyName.trim() || null,
             signedDate: itemFormState.signedDate.trim() || null,
+            contractType: itemFormState.contractType,
           };
         } else {
           url = itemFormState.existingFileUrl || null;
@@ -722,6 +729,7 @@ export function FolderDetailClientPage({ folderId }: FolderDetailClientPageProps
             mimeType: itemFormState.existingMimeType,
             counterpartyName: itemFormState.counterpartyName.trim() || null,
             signedDate: itemFormState.signedDate.trim() || null,
+            contractType: itemFormState.contractType,
           };
         }
         break;
@@ -1074,6 +1082,45 @@ export function FolderDetailClientPage({ folderId }: FolderDetailClientPageProps
                   </Button>
                 ) : null}
               </div>
+            </div>
+          ) : selectedFilter === 'contract' ? (
+            <div className="mt-5 space-y-6">
+              {CONTRACT_TYPES.map((contractType) => {
+                const group = filteredItems.filter(
+                  (item): item is Extract<FolderItem, { type: 'contract' }> =>
+                    item.type === 'contract' && item.metadata.contractType === contractType
+                );
+                if (!group.length) return null;
+                return (
+                  <section key={contractType}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h3 className="text-lg font-semibold text-content-primary">
+                        {formatContractTypeLabel(contractType)}
+                      </h3>
+                      <span className="text-xs font-semibold uppercase tracking-[0.14em] text-content-tertiary">
+                        {group.length} item{group.length === 1 ? '' : 's'}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-4 xl:grid-cols-2">
+                      {group.map((item) => (
+                        <FolderItemCard
+                          key={item.id}
+                          item={item}
+                          folders={folders}
+                          isMenuOpen={openItemMenuId === item.id}
+                          isBusy={busyItemId === item.id}
+                          onToggleMenu={() =>
+                            setOpenItemMenuId((current) => (current === item.id ? null : item.id))
+                          }
+                          onEdit={openEditItemModal}
+                          onDelete={(selectedItem) => void handleDeleteItem(selectedItem)}
+                          onMove={(selectedItem, targetFolderId) => void handleMoveItem(selectedItem, targetFolderId)}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
           ) : (
             <div className="mt-5 grid gap-4 xl:grid-cols-2">
@@ -1447,6 +1494,37 @@ export function FolderDetailClientPage({ folderId }: FolderDetailClientPageProps
 
                 {itemFormState.type === 'contract' ? (
                   <>
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-semibold text-content-primary">Contract type</span>
+                      <select
+                        value={itemFormState.contractType}
+                        onChange={(event) =>
+                          setItemFormState((current) => ({
+                            ...current,
+                            contractType: event.target.value as ContractType,
+                          }))
+                        }
+                        className="input h-12 rounded-[18px]"
+                      >
+                        {CONTRACT_TYPES.map((option) => (
+                          <option key={option} value={option}>
+                            {formatContractTypeLabel(option)}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-2 text-xs leading-5 text-content-secondary">
+                        {itemFormState.contractType === 'split_sheet_master'
+                          ? 'Covers ownership of the master recording. Pair with a separate publishing split sheet for the composition.'
+                          : itemFormState.contractType === 'split_sheet_publishing'
+                            ? 'Covers ownership of the underlying composition. Pair with a master split sheet for the recording side.'
+                            : itemFormState.contractType === 'producer'
+                              ? 'Producer agreements typically include points, advance, and credit terms.'
+                              : itemFormState.contractType === 'distribution'
+                                ? 'Distributor or label deal that pushes the release to DSPs.'
+                                : 'For anything outside the standard recording, producer, distribution, or split sheet categories.'}
+                      </p>
+                    </label>
+
                     <div className="grid gap-4 sm:grid-cols-2">
                       <label className="block">
                         <span className="mb-2 block text-sm font-semibold text-content-primary">Counterparty</span>
