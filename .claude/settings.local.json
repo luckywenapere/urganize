@@ -5,7 +5,11 @@
       "Read(//c/Users/penta/Documents/urganize-homepage/the-urganization/app/**)",
       "Read(//c/Users/penta/Documents/urganize-homepage/the-urganization/**)",
       "Bash(pnpm install *)",
-      "Bash(pnpm turbo *)"
+      "Bash(pnpm turbo *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

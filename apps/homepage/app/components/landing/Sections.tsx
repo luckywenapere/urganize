@@ -157,7 +157,7 @@ export function HeroSection() {
     >
       <div className="mx-auto flex max-w-[64rem] flex-col items-center text-center">
         <p className="hero-fade-in mono-label text-[var(--marketing-text-subtle)]">
-          Music management teams
+          Music teams
         </p>
 
         <div className="mt-10 flex flex-col items-center gap-12 sm:gap-14">
@@ -174,7 +174,7 @@ export function HeroSection() {
           </h1>
 
           <p className="hero-fade-in hero-delay-2 mx-auto block w-full max-w-[44rem] text-balance text-center text-lg leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
-            One workspace for music release workflows. Task assignment,
+            One workspace for music workflows. Task assignment,
             versioned asset storage, and pipeline visibility from demo to drop.
           </p>
         </div>
@@ -210,28 +210,7 @@ export function HeroSection() {
   );
 }
 
-export function DashboardScreenshotSection() {
-  return (
-    <ScrollReveal>
-      <SectionShell
-        containerClassName={wideContainerClass}
-        className="py-[60px] lg:py-[80px]"
-      >
-        <p className="mono-label mb-10 text-center text-[var(--marketing-text-subtle)]">
-          Live since January 2026
-        </p>
-        <Image
-          src="/images/landing/hero-dashboard.png"
-          alt="Urganize dashboard showing releases, search, and readiness progress in one workspace."
-          width={1920}
-          height={1396}
-          className="h-auto w-full"
-          sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
-        />
-      </SectionShell>
-    </ScrollReveal>
-  );
-}
+
 
 export function MirrorSection() {
   return (
@@ -270,6 +249,29 @@ export function MirrorSection() {
             entire team can actually use.
           </p>
         </div>
+      </SectionShell>
+    </ScrollReveal>
+  );
+}
+
+export function DashboardScreenshotSection() {
+  return (
+    <ScrollReveal>
+      <SectionShell
+        containerClassName={wideContainerClass}
+        className="py-[60px] lg:py-[80px]"
+      >
+        <p className="mono-label mb-10 text-center text-[var(--marketing-text-subtle)]">
+          Live since January 2026
+        </p>
+        <Image
+          src="/images/landing/hero-dashboard.png"
+          alt="Urganize dashboard showing releases, search, and readiness progress in one workspace."
+          width={1920}
+          height={1396}
+          className="h-auto w-full"
+          sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
+        />
       </SectionShell>
     </ScrollReveal>
   );
