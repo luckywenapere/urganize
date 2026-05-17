@@ -108,7 +108,7 @@ export function TaskDetailModal({
         </header>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-8 pb-32 pt-2">
+        <div className="min-h-0 flex-1 overflow-y-auto px-8 pb-8 pt-2">
           {/* Description */}
           {task.description && (
             <div className="py-5">
@@ -192,7 +192,7 @@ export function TaskDetailModal({
         </div>
 
         {/* Footer */}
-        <footer className="sticky bottom-0 border-t border-white/5 bg-[#0a0a0a] p-6 shadow-[0_-20px_40px_rgba(0,0,0,0.4)]">
+        <footer className="shrink-0 border-t border-white/5 bg-[#0a0a0a] p-6 shadow-[0_-20px_40px_rgba(0,0,0,0.4)]">
           <div className="grid grid-cols-2 gap-3 mb-4">
              {task.status !== 'in_progress' && task.status !== TASK_DONE_STATUS && (
                <button
