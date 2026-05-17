@@ -19,6 +19,8 @@ import {
   getNextPipelineState,
   getPipelineStateLabel,
 } from '@/lib/release-execution';
+import { supabase } from '@/lib/supabase/client';
+import type { TaskPriority, WorkspaceMember } from '@/lib/tasks';
 import { releaseMachine } from '@/machines/releaseMachine';
 import { useAIStore } from '@/stores/useAIStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -38,6 +40,7 @@ export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
   const [selectedState, setSelectedState] = useState<ReleasePipelineState>('idea');
   const [stateError, setStateError] = useState('');
   const [contextOpen, setContextOpen] = useState(false);
+  const [members, setMembers] = useState<WorkspaceMember[]>([]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -51,6 +54,24 @@ export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
       if (data) void runCheck({ ...data, releaseId });
     });
   }, [authLoading, loadCommandCenter, releaseId, router, runCheck, user]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    const loadMembers = async () => {
+      const { data: authData } = await supabase.auth.getSession();
+      const token = authData.session?.access_token;
+      if (!token) return;
+      const response = await fetch('/api/workspace/members', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      });
+      const payload = (await response.json().catch(() => ({}))) as { members?: WorkspaceMember[] };
+      if (response.ok && Array.isArray(payload.members)) {
+        setMembers(payload.members);
+      }
+    };
+    void loadMembers();
+  }, [authLoading, user]);
 
   const release = releases.find((candidate) => candidate.id === releaseId) || null;
   const releaseTasks = useMemo(() => tasks.filter((task) => task.releaseId === releaseId), [releaseId, tasks]);
@@ -108,12 +129,20 @@ export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
     await runCheck({ releases, tasks, releaseId: release.id, state: expectedNextState });
   };
 
-  const addCustomTask = async (title: string) => {
+  const addCustomTask = async (input: {
+    title: string;
+    assignedTo?: string | null;
+    dueDate?: string | null;
+    priority?: TaskPriority;
+  }) => {
     if (!release) return;
     const created = await createTask({
-      title,
+      title: input.title,
       releaseId: release.id,
       state: selectedState,
+      assignedTo: input.assignedTo,
+      dueDate: input.dueDate,
+      priority: input.priority,
     });
     if (created) {
       selectTask(created.id);
@@ -192,7 +221,8 @@ export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
                 if (updated) void runCheck({ releases, tasks: useTaskStore.getState().tasks, releaseId, state: selectedState });
               });
             }}
-            onAddCustomTask={(title) => void addCustomTask(title)}
+            members={members}
+            onAddCustomTask={(input) => void addCustomTask(input)}
           />
 
           <aside className={`${contextOpen ? 'fixed inset-x-0 bottom-0 z-[130] max-h-[75vh] overflow-y-auto rounded-none border-t border-stroke-default bg-bg-surface p-5 lg:static lg:block lg:max-h-none lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0' : 'hidden lg:block'}`}>

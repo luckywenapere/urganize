@@ -4,6 +4,12 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import type { AISignal, ExecutionTask, ReleasePipelineState } from '@/lib/execution-types';
 import { getPipelineStateLabel } from '@/lib/release-execution';
+import {
+  getTaskPriorityLabel,
+  TASK_PRIORITY_OPTIONS,
+  type TaskPriority,
+  type WorkspaceMember,
+} from '@/lib/tasks';
 import { AISignal as AISignalCard } from '@/components/execution/AISignal';
 import { TaskBlock } from '@/components/execution/TaskBlock';
 
@@ -16,10 +22,18 @@ const STATE_COPY: Record<ReleasePipelineState, string> = {
   post_release: 'Review performance, follow-ups, learnings, and next release actions.',
 };
 
+type AddTaskInput = {
+  title: string;
+  assignedTo?: string | null;
+  dueDate?: string | null;
+  priority?: TaskPriority;
+};
+
 export function ExecutionSection({
   state,
   tasks,
   signals,
+  members,
   onOpenTask,
   onCompleteTask,
   onAddCustomTask,
@@ -27,22 +41,36 @@ export function ExecutionSection({
   state: ReleasePipelineState;
   tasks: ExecutionTask[];
   signals: AISignal[];
+  members: WorkspaceMember[];
   onOpenTask: (task: ExecutionTask) => void;
   onCompleteTask: (task: ExecutionTask) => void;
-  onAddCustomTask: (title: string) => void;
+  onAddCustomTask: (input: AddTaskInput) => void;
 }) {
   const [isAdding, setIsAdding] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
+  const [draftAssignee, setDraftAssignee] = useState('');
+  const [draftDueDate, setDraftDueDate] = useState('');
+  const [draftPriority, setDraftPriority] = useState<TaskPriority>('none');
+
+  const activeMembers = members.filter((member) => member.status === 'active' && member.userId);
 
   const resetForm = () => {
     setDraftTitle('');
+    setDraftAssignee('');
+    setDraftDueDate('');
+    setDraftPriority('none');
     setIsAdding(false);
   };
 
   const submitDraft = () => {
     const trimmed = draftTitle.trim();
     if (!trimmed) return;
-    onAddCustomTask(trimmed);
+    onAddCustomTask({
+      title: trimmed,
+      assignedTo: draftAssignee || null,
+      dueDate: draftDueDate ? new Date(draftDueDate).toISOString() : null,
+      priority: draftPriority,
+    });
     resetForm();
   };
 
@@ -68,7 +96,7 @@ export function ExecutionSection({
         </div>
 
         {isAdding && (
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+          <div className="mt-5 space-y-3">
             <input
               autoFocus
               value={draftTitle}
@@ -78,8 +106,54 @@ export function ExecutionSection({
                 if (event.key === 'Escape') resetForm();
               }}
               placeholder={`New task for ${getPipelineStateLabel(state).toLowerCase()}`}
-              className="input flex-1 rounded-none border-white/10 bg-bg-elevated/50 focus:border-brand/50"
+              className="input w-full rounded-none border-white/10 bg-bg-elevated/50 focus:border-brand/50"
             />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-content-tertiary">
+                  Assignee
+                </span>
+                <select
+                  value={draftAssignee}
+                  onChange={(event) => setDraftAssignee(event.target.value)}
+                  className="input w-full rounded-none border-white/10 bg-bg-elevated/50 focus:border-brand/50"
+                >
+                  <option value="">Unassigned</option>
+                  {activeMembers.map((member) => (
+                    <option key={member.id} value={member.userId || ''}>
+                      {member.name || member.email}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-content-tertiary">
+                  Due date
+                </span>
+                <input
+                  type="datetime-local"
+                  value={draftDueDate}
+                  onChange={(event) => setDraftDueDate(event.target.value)}
+                  className="input w-full rounded-none border-white/10 bg-bg-elevated/50 focus:border-brand/50"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-content-tertiary">
+                  Priority
+                </span>
+                <select
+                  value={draftPriority}
+                  onChange={(event) => setDraftPriority(event.target.value as TaskPriority)}
+                  className="input w-full rounded-none border-white/10 bg-bg-elevated/50 focus:border-brand/50"
+                >
+                  {TASK_PRIORITY_OPTIONS.map((priority) => (
+                    <option key={priority} value={priority}>
+                      {getTaskPriorityLabel(priority)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <div className="flex gap-2">
               <button
                 type="button"
