@@ -103,7 +103,7 @@ function LogoStrip({
 export function HeroSection() {
   return (
     <SectionShell
-      className="pb-20 pt-[120px] sm:pb-24 sm:pt-[140px] lg:pb-32 lg:pt-[168px]"
+      className="pb-20 pt-16 sm:pb-24 sm:pt-20 lg:pb-28 lg:pt-24"
       containerClassName={wideContainerClass}
     >
       <div className="mx-auto flex max-w-[64rem] flex-col items-center text-center">
@@ -111,7 +111,7 @@ export function HeroSection() {
           Music teams
         </p>
 
-        <div className="mt-10 flex flex-col items-center gap-12 sm:gap-14">
+        <div className="mt-8 flex flex-col items-center gap-8 sm:gap-10">
           <h1 className="hero-fade-in hero-delay-1 mx-auto max-w-[22ch] text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.4rem] lg:text-[5.6rem]">
             Stop running releases out of{" "}
             <span className="italic text-[var(--marketing-accent)]">
@@ -130,17 +130,17 @@ export function HeroSection() {
           </p>
         </div>
 
-        <div className="hero-fade-in hero-delay-3 relative z-[60] mt-10 flex justify-center">
+        <div className="hero-fade-in hero-delay-3 relative z-[60] mt-8 flex justify-center">
           <WaitlistButton className={solidButtonClassName} source="hero_waitlist">
             Join the waitlist
           </WaitlistButton>
         </div>
 
-        <LogoStrip className="hero-fade-in hero-delay-3 mt-14 w-full sm:mt-16" />
+        <LogoStrip className="hero-fade-in hero-delay-3 mt-12 w-full sm:mt-14" />
       </div>
 
       <ScrollReveal>
-        <div className="mx-auto mt-16 w-full max-w-4xl sm:mt-20">
+        <div className="mx-auto mt-14 w-full max-w-4xl sm:mt-16">
           <div className="relative aspect-video w-full overflow-hidden rounded-xl">
             <iframe
               className="absolute inset-0 h-full w-full"
