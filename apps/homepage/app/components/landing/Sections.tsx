@@ -84,7 +84,11 @@ function LogoStrip({
 }) {
   return (
     <div className={className}>
-      <div className="mx-auto flex max-w-3xl flex-col items-center justify-center gap-6 sm:flex-row sm:gap-8">
+      {/* w-fit on the inner row makes mx-auto center the VISIBLE content
+          (text + gap + logo), not the reserved max-w. Without it, the
+          right-aligned text leaves invisible whitespace on its left, which
+          visually offsets the whole block to the right. */}
+      <div className="mx-auto flex flex-col items-center gap-6 sm:w-fit sm:flex-row sm:gap-8">
         <p className="max-w-[28rem] text-balance text-center font-mono text-[0.82rem] leading-6 tracking-[0.02em] text-[var(--marketing-text-subtle)] sm:text-right sm:text-[0.9rem]">
           Teams from the best institutions trust us to power their operations.
         </p>
