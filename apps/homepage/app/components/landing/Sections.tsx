@@ -83,18 +83,17 @@ function LogoStrip({
   className?: string;
 }) {
   return (
-    <div className={`text-center ${className}`}>
-      <p className="mx-auto max-w-[36rem] text-balance text-center font-mono text-[0.82rem] leading-6 tracking-[0.02em] text-[var(--marketing-text-subtle)] sm:text-[0.9rem]">
-        Teams from the best institutions trust us to power their operations.
-      </p>
-
-      <div className="mt-8 flex justify-center">
+    <div className={className}>
+      <div className="mx-auto flex max-w-3xl flex-col items-center justify-center gap-6 sm:flex-row sm:gap-8">
+        <p className="max-w-[28rem] text-balance text-center font-mono text-[0.82rem] leading-6 tracking-[0.02em] text-[var(--marketing-text-subtle)] sm:text-right sm:text-[0.9rem]">
+          Teams from the best institutions trust us to power their operations.
+        </p>
         <Image
           src="/images/logos/anchor-partner.png"
           alt="Anchor partner"
           width={97}
           height={40}
-          className="h-12 w-auto opacity-90 sm:h-14"
+          className="h-12 w-auto shrink-0 opacity-90 sm:h-14"
         />
       </div>
     </div>
