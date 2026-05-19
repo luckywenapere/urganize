@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle2, Clock, Play, Plus, Search } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Play, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
-import type { AISignal, ExecutionRelease, ExecutionTask } from '@/lib/execution-types';
+import type { AISignal } from '@/lib/execution-types';
 import { TASK_DONE_STATUS } from '@/lib/execution-types';
-import { calculateOverallReadiness, cleanTaskTitle, formatArtistName, formatReleaseTitle, selectPrimaryRelease } from '@/lib/release-execution';
-import { getPriorityBorderClass, type TaskStatus } from '@/lib/tasks';
+import { calculateOverallReadiness, cleanTaskTitle, formatArtistName, selectPrimaryRelease } from '@/lib/release-execution';
+import { type TaskStatus } from '@/lib/tasks';
 import { useActivityStore } from '@/stores/useActivityStore';
 import { useAIStore } from '@/stores/useAIStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -148,7 +148,7 @@ export function CommandCenterPage() {
         }
       }
     });
-  }, [authLoading, loadCommandCenter, router, runCheck, user?.id, createTask]);
+  }, [authLoading, loadCommandCenter, router, runCheck, user, createTask]);
 
   const primaryRelease = useMemo(() => selectPrimaryRelease(releases, tasks), [releases, tasks]);
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) || null;

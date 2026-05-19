@@ -11,6 +11,7 @@ import { ClaimProfilePrompt } from '@/components/credits/ClaimProfilePrompt';
 import { InvalidTokenState } from '@/components/credits/InvalidTokenState';
 import { PublicCreditFormSkeleton } from '@/components/loading/PublicCreditFormSkeleton';
 import type { CreditSubmissionInput } from '@/lib/release-ops';
+import { errorMessage } from "@/lib/errors";
 
 type CreditLookupPayload = {
   release?: {
@@ -137,8 +138,8 @@ export default function PublicCreditSubmissionPage() {
 
       setSuccess(true);
       setShowClaimPrompt(true);
-    } catch (submitError: any) {
-      setSubmitError(submitError?.message || 'Could not submit credits.');
+    } catch (submitError) {
+      setSubmitError(errorMessage(submitError, 'Could not submit credits.'));
     } finally {
       setIsSubmitting(false);
     }

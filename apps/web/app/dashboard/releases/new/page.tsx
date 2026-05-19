@@ -8,6 +8,7 @@ import { DashboardPageSkeleton } from '@/components/loading/DashboardPageSkeleto
 import { SectionCard } from '@/components/shared/SectionCard';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
+import { errorMessage } from "@/lib/errors";
 
 type CreateReleaseResponse = {
   id?: string;
@@ -118,8 +119,8 @@ function NewReleasePageContent() {
       }
 
       router.push(redirectTarget);
-    } catch (submitError: any) {
-      setError(submitError?.message || 'Could not create release.');
+    } catch (submitError) {
+      setError(errorMessage(submitError, 'Could not create release.'));
     } finally {
       setIsSubmitting(false);
     }

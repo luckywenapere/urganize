@@ -24,7 +24,7 @@ export interface PreSaveCampaign {
   subscriberCount: number;
 }
 
-export interface PublicPreSaveCampaign extends Omit<PreSaveCampaign, 'subscriberCount'> {}
+export type PublicPreSaveCampaign = Omit<PreSaveCampaign, 'subscriberCount'>;
 
 export interface PreSaveReleaseOption {
   id: string;

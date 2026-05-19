@@ -281,7 +281,7 @@ export function ReleaseCombobox({
                       } disabled:cursor-not-allowed disabled:opacity-65`}
                     >
                       <div>
-                        <p className="text-sm font-semibold">Create "{item.value}"</p>
+                        <p className="text-sm font-semibold">Create &ldquo;{item.value}&rdquo;</p>
                         <p className="mt-1 text-xs text-content-secondary">
                           New release will be created inline and selected automatically.
                         </p>

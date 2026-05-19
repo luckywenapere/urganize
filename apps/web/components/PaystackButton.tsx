@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { usePaystackPayment } from 'react-paystack';
 
 interface PaystackButtonProps {
@@ -31,7 +32,11 @@ export function PaystackButton({
 }: PaystackButtonProps) {
   const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '';
   const safeAmount = Math.max(0, Number(amount) || 0);
-  const reference = `urganize_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
+  // Stable per-mount reference. Lazy useState keeps the impure Date.now/
+  // Math.random calls out of every render, satisfying react-hooks/purity.
+  const [reference] = useState(
+    () => `urganize_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
+  );
   const paymentPurpose = String(metadata?.purpose || '').trim().toLowerCase();
   const isTrialTokenization = paymentPurpose === 'trial_tokenization';
 

@@ -30,7 +30,7 @@ type ReleaseOption = {
   artist_name: string;
 };
 
-const toSongResponse = (row: any) => ({
+const toSongResponse = (row: Record<string, unknown>) => ({
   id: String(row?.id || ''),
   userId: String(row?.user_id || ''),
   songTitle: String(row?.song_title || ''),
@@ -46,12 +46,12 @@ const toSongResponse = (row: any) => ({
   updatedAt: String(row?.updated_at || ''),
 });
 
-const toContributorResponse = (row: any): SongContributor => ({
+const toContributorResponse = (row: Record<string, unknown>): SongContributor => ({
   id: String(row?.id || ''),
   songId: String(row?.song_id || ''),
   legalName: String(row?.legal_name || ''),
   creditedName: String(row?.credited_name || ''),
-  role: row?.role || 'Other',
+  role: (row?.role as SongContributor['role'] | undefined) || 'Other',
   email: String(row?.email || ''),
   proAffiliation: String(row?.pro_affiliation || ''),
   ipiNumber: String(row?.ipi_number || ''),

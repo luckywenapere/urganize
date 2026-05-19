@@ -65,7 +65,23 @@ export async function POST(req: NextRequest) {
   }
 
   const nowIso = new Date().toISOString();
-  const appSettingsTable = adminResult.supabaseAdmin.from('app_settings') as any;
+  // app_settings is not in the generated Supabase schema yet (admin-only,
+  // created lazily). Cast through unknown to a typed builder so we don't
+  // depend on `any`.
+  type AppSettingsBuilder = {
+    upsert: (
+      payload: {
+        key: string;
+        value_json: { enabled: boolean };
+        updated_at: string;
+        updated_by: string;
+      },
+      options: { onConflict: string },
+    ) => Promise<{ error: { message?: string; code?: string } | null }>;
+  };
+  const appSettingsTable = adminResult.supabaseAdmin.from(
+    'app_settings',
+  ) as unknown as AppSettingsBuilder;
   const { error: upsertError } = await appSettingsTable.upsert(
     {
       key: PAYWALL_SETTING_KEY,

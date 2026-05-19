@@ -1,7 +1,9 @@
 // lib/auth-store.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { User } from '@supabase/supabase-js';
 import { supabase, type Profile, handleSupabaseError } from './supabase/client';
+import { errorMessage } from "@/lib/errors";
 
 let authCheckInFlight: Promise<void> | null = null;
 const shouldEnforceScheduledDeletion = process.env.NODE_ENV === 'production';
@@ -14,7 +16,7 @@ const persistLastAuthEmail = (email: string | null | undefined) => {
   localStorage.setItem(LAST_AUTH_EMAIL_KEY, normalized);
 };
 
-const buildFallbackProfile = (authUser: any): Omit<Profile, 'created_at' | 'updated_at'> => {
+const buildFallbackProfile = (authUser: User): Omit<Profile, 'created_at' | 'updated_at'> => {
   const email = authUser?.email || '';
   const metadata = authUser?.user_metadata || {};
   const name =
@@ -43,7 +45,7 @@ const buildFallbackProfile = (authUser: any): Omit<Profile, 'created_at' | 'upda
   };
 };
 
-const buildRuntimeFallbackProfile = (authUser: any): Profile => {
+const buildRuntimeFallbackProfile = (authUser: User): Profile => {
   const base = buildFallbackProfile(authUser);
   const nowIso = new Date().toISOString();
   return {
@@ -53,9 +55,9 @@ const buildRuntimeFallbackProfile = (authUser: any): Profile => {
   };
 };
 
-const isNonFatalProfileAccessError = (error: any): boolean => {
-  const code = String(error?.code || '').toLowerCase();
-  const message = String(error?.message || '').toLowerCase();
+const isNonFatalProfileAccessError = (error: unknown): boolean => {
+  const code = String((error as { code?: string } | null)?.code || '').toLowerCase();
+  const message = String(errorMessage(error, '')).toLowerCase();
   return (
     code === '42501' ||
     message.includes('permission denied') ||
@@ -65,7 +67,7 @@ const isNonFatalProfileAccessError = (error: any): boolean => {
   );
 };
 
-const getOrCreateProfile = async (authUser: any): Promise<Profile> => {
+const getOrCreateProfile = async (authUser: User): Promise<Profile> => {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
@@ -113,21 +115,21 @@ const getOrCreateProfile = async (authUser: any): Promise<Profile> => {
   return createdProfile;
 };
 
-const getScheduledDeletion = (metadata: Record<string, any> | undefined | null): string | null => {
+const getScheduledDeletion = (metadata: Record<string, unknown> | undefined | null): string | null => {
   const value = metadata?.scheduled_deletion_at;
   return typeof value === 'string' ? value : null;
 };
 
-const isScheduledDeletionActive = (metadata: Record<string, any> | undefined | null): boolean => {
+const isScheduledDeletionActive = (metadata: Record<string, unknown> | undefined | null): boolean => {
   const scheduled = getScheduledDeletion(metadata);
   if (!scheduled) return false;
   const scheduledTime = new Date(scheduled).getTime();
   return Number.isFinite(scheduledTime) && scheduledTime > Date.now();
 };
 
-const isAbortError = (error: any): boolean => {
-  const message = String(error?.message || '').toLowerCase();
-  const name = String(error?.name || '').toLowerCase();
+const isAbortError = (error: unknown): boolean => {
+  const message = String(errorMessage(error, '')).toLowerCase();
+  const name = String((error as { name?: string } | null)?.name || '').toLowerCase();
   return name === 'aborterror' || message.includes('aborted') || message.includes('operation was aborted');
 };
 
@@ -194,8 +196,8 @@ export const useAuthStore = create<AuthState>()(
             }
             
             if (user && session) {
-              if (shouldEnforceScheduledDeletion && isScheduledDeletionActive(user.user_metadata as Record<string, any>)) {
-                const scheduledAt = getScheduledDeletion(user.user_metadata as Record<string, any>);
+              if (shouldEnforceScheduledDeletion && isScheduledDeletionActive(user.user_metadata as Record<string, unknown>)) {
+                const scheduledAt = getScheduledDeletion(user.user_metadata as Record<string, unknown>);
                 await supabase.auth.signOut();
                 set({
                   user: null,
@@ -225,7 +227,7 @@ export const useAuthStore = create<AuthState>()(
             }
             
             set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, error: null });
-          } catch (error: any) {
+          } catch (error) {
             if (isAbortError(error)) {
               set((state) => ({ isLoading: false, error: state.error }));
               return;
@@ -262,8 +264,8 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('Login failed - no user returned');
           }
 
-          if (shouldEnforceScheduledDeletion && isScheduledDeletionActive(data.user.user_metadata as Record<string, any>)) {
-            const scheduledAt = getScheduledDeletion(data.user.user_metadata as Record<string, any>);
+          if (shouldEnforceScheduledDeletion && isScheduledDeletionActive(data.user.user_metadata as Record<string, unknown>)) {
+            const scheduledAt = getScheduledDeletion(data.user.user_metadata as Record<string, unknown>);
             await supabase.auth.signOut();
             throw new Error(`Account is scheduled for deletion on ${new Date(scheduledAt || '').toLocaleString()}. Contact theurganization@gmail.com to recover.`);
           }
@@ -281,7 +283,7 @@ export const useAuthStore = create<AuthState>()(
               error: null 
             });
           }
-        } catch (error: any) {
+        } catch (error) {
           const errorMessage = handleSupabaseError(error);
           set({ isLoading: false, error: errorMessage });
           throw new Error(errorMessage);
@@ -305,7 +307,7 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (error) throw error;
-        } catch (error: any) {
+        } catch (error) {
           const errorMessage = handleSupabaseError(error);
           set({ isLoading: false, error: errorMessage });
           throw new Error(errorMessage);
@@ -421,7 +423,7 @@ export const useAuthStore = create<AuthState>()(
               error: 'Please check your email to verify your account' 
             });
           }
-        } catch (error: any) {
+        } catch (error) {
           const errorMessage = handleSupabaseError(error);
           set({ isLoading: false, error: errorMessage });
           throw new Error(errorMessage);
@@ -452,7 +454,7 @@ export const useAuthStore = create<AuthState>()(
           needsOnboarding: true,
           error: null,
         });
-        } catch (error: any) {
+        } catch (error) {
           const errorMessage = handleSupabaseError(error);
           set({ isLoading: false, error: errorMessage });
           throw new Error(errorMessage);
@@ -483,7 +485,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             error: null,
           });
-        } catch (error: any) {
+        } catch (error) {
           const errorMessage = handleSupabaseError(error);
           set({ isLoading: false, error: errorMessage });
           throw new Error(errorMessage);
@@ -502,7 +504,7 @@ export const useAuthStore = create<AuthState>()(
             needsOnboarding: true,
             error: null 
           });
-        } catch (error: any) {
+        } catch (error) {
           const errorMessage = handleSupabaseError(error);
           console.error('Logout failed:', error);
           set({ error: errorMessage });

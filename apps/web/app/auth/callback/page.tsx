@@ -13,9 +13,9 @@ export default function AuthCallbackPage() {
   const { checkAuth } = useAuthStore();
   const handledRef = useRef(false);
 
-  const isAbortError = (error: any) => {
-    const name = String(error?.name || '').toLowerCase();
-    const message = String(error?.message || '').toLowerCase();
+  const isAbortError = (error: unknown) => {
+    const name = String((error as { name?: string } | null)?.name || '').toLowerCase();
+    const message = String((error as { message?: string } | null)?.message || '').toLowerCase();
     return name === 'aborterror' || message.includes('aborted') || message.includes('operation was aborted');
   };
 
@@ -97,11 +97,12 @@ export default function AuthCallbackPage() {
           .from('profiles')
           .upsert(profilePayload, { onConflict: 'id', ignoreDuplicates: true });
         if (upsertError) {
+          // PostgrestError from supabase-js exposes code/details/hint directly.
           console.warn('Profile sync warning:', {
             message: upsertError.message,
-            code: (upsertError as any).code,
-            details: (upsertError as any).details,
-            hint: (upsertError as any).hint,
+            code: upsertError.code,
+            details: upsertError.details,
+            hint: upsertError.hint,
           });
         }
 

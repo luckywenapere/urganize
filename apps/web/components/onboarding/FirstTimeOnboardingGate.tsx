@@ -86,7 +86,7 @@ const STEP_FOUR_COMPARISON_ROWS = [
     with: 'A repeatable process',
   },
 ] as const;
-const STEP_FIVE_FEATURES = [
+const _STEP_FIVE_FEATURES = [
   'Unlimited releases after your first',
   'Full task management and playbook',
   'Credits and metadata tools',
@@ -484,6 +484,10 @@ export function FirstTimeOnboardingGate() {
 
   useEffect(() => {
     void loadOnboarding();
+    // Intentionally keyed only on shouldMountGate. loadOnboarding identity
+    // changes each render; adding it would trigger refetch on every state
+    // update inside this component.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldMountGate]);
 
   useEffect(() => {
@@ -579,6 +583,9 @@ export function FirstTimeOnboardingGate() {
     return () => {
       window.clearTimeout(timeoutId);
     };
+    // patchOnboarding closes over component state; adding it to deps would
+    // cause the closing-line animation to retrigger on every state change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, hasCompletedStepTwoQuestions, isAdvancingFromStepTwo]);
 
   useEffect(() => {
@@ -620,7 +627,14 @@ export function FirstTimeOnboardingGate() {
           return;
         }
 
-        const createPromises = data.tasks.map((task: any) =>
+        type GeneratedTask = {
+          title: string;
+          description: string;
+          priority: string;
+          recommendedTiming: string;
+          phase?: string;
+        };
+        const createPromises = data.tasks.map((task: GeneratedTask) =>
           fetch('/api/tasks', {
             method: 'POST',
             headers: {

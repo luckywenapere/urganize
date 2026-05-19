@@ -1,6 +1,5 @@
 'use client';
 
-import { Sparkles, TriangleAlert } from 'lucide-react';
 import type { AISignal as AISignalType } from '@/lib/execution-types';
 
 export function AISignal({

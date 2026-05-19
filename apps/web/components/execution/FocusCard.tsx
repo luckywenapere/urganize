@@ -27,7 +27,6 @@ export function FocusCard({
     );
   }
 
-  const releaseTasks = tasks.filter((task) => task.releaseId === release.id);
   const warnings = buildReleaseWarnings(release, tasks);
   
   let countdownText = null;

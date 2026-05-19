@@ -14,6 +14,7 @@ import {
   type TimelineStage,
 } from '@/lib/release-checklist';
 import type { ReleaseSongSummary } from '@/lib/release-songs';
+import { errorMessage } from "@/lib/errors";
 
 type ReleaseRow = {
   id: string;
@@ -219,8 +220,8 @@ export default function ReleaseChecklistPage() {
         setReleaseSongs(songsPayload.songs?.attached || []);
         setAvailableSongs(songsPayload.songs?.available || []);
       }
-    } catch (loadError: any) {
-      setError(loadError?.message || 'Could not load release checklist.');
+    } catch (loadError) {
+      setError(errorMessage(loadError, 'Could not load release checklist.'));
     } finally {
       setIsLoading(false);
       setHasLoadedOnce(true);
@@ -255,8 +256,8 @@ export default function ReleaseChecklistPage() {
       setSongSearch('');
       setShowSongPicker(false);
       await loadRelease();
-    } catch (songError: any) {
-      setError(songError?.message || 'Could not attach songs.');
+    } catch (songError) {
+      setError(errorMessage(songError, 'Could not attach songs.'));
     } finally {
       setIsSavingSongs(false);
     }
@@ -284,8 +285,8 @@ export default function ReleaseChecklistPage() {
         throw new Error(payload.error || 'Could not remove song.');
       }
       await loadRelease();
-    } catch (songError: any) {
-      setError(songError?.message || 'Could not remove song.');
+    } catch (songError) {
+      setError(errorMessage(songError, 'Could not remove song.'));
     } finally {
       setIsSavingSongs(false);
     }
@@ -325,8 +326,8 @@ export default function ReleaseChecklistPage() {
         throw new Error(payload.error || 'Could not update track order.');
       }
       await loadRelease();
-    } catch (songError: any) {
-      setError(songError?.message || 'Could not update track order.');
+    } catch (songError) {
+      setError(errorMessage(songError, 'Could not update track order.'));
     } finally {
       setIsSavingSongs(false);
     }
@@ -367,8 +368,8 @@ export default function ReleaseChecklistPage() {
       setChecklist((current) =>
         current.map((item) => (item.id === taskId ? { ...item, completed: !completed } : item))
       );
-    } catch (toggleError: any) {
-      setError(toggleError?.message || 'Could not update task status.');
+    } catch (toggleError) {
+      setError(errorMessage(toggleError, 'Could not update task status.'));
     } finally {
       setIsSaving(null);
     }

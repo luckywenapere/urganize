@@ -1,5 +1,3 @@
-import { NextResponse } from 'next/server';
-
 export const PAYWALL_RESPONSE_CODE = 'PAYWALL_REQUIRED';
 
 type RequirePaidAccessOptions = {

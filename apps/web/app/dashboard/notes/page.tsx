@@ -218,6 +218,10 @@ export default function NotesPage() {
     if (!title && !body) return;
 
     const nextNote: Note = {
+      // Runs at submit-time inside an event handler, not during render — the
+      // impurity is fine here. Disable react-hooks/purity for this line so
+      // we don't have to pre-allocate IDs upstream.
+      // eslint-disable-next-line react-hooks/purity
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       title,
       body,

@@ -69,9 +69,9 @@ export interface Folder {
   lastUpdatedAt: string;
 }
 
-export interface NoteFolderItemMetadata {}
+export type NoteFolderItemMetadata = Record<string, never>;
 
-export interface LinkFolderItemMetadata {}
+export type LinkFolderItemMetadata = Record<string, never>;
 
 export interface FileFolderItemMetadata {
   storagePath: string;
@@ -117,19 +117,19 @@ interface FolderItemBase<TType extends FolderItemType, TMetadata extends FolderI
   updatedAt: string;
 }
 
-export interface NoteFolderItem extends FolderItemBase<'note', NoteFolderItemMetadata> {}
+export type NoteFolderItem = FolderItemBase<'note', NoteFolderItemMetadata>;
 
-export interface LinkFolderItem extends FolderItemBase<'link', LinkFolderItemMetadata> {}
+export type LinkFolderItem = FolderItemBase<'link', LinkFolderItemMetadata>;
 
-export interface FileFolderItem extends FolderItemBase<'file', FileFolderItemMetadata> {}
+export type FileFolderItem = FolderItemBase<'file', FileFolderItemMetadata>;
 
-export interface ContactFolderItem extends FolderItemBase<'contact', ContactFolderItemMetadata> {}
+export type ContactFolderItem = FolderItemBase<'contact', ContactFolderItemMetadata>;
 
 export interface ReleaseFolderItem extends FolderItemBase<'release', ReleaseFolderItemMetadata> {
   linkedRelease: PreSaveReleaseOption | null;
 }
 
-export interface ContractFolderItem extends FolderItemBase<'contract', ContractFolderItemMetadata> {}
+export type ContractFolderItem = FolderItemBase<'contract', ContractFolderItemMetadata>;
 
 export type FolderItem =
   | NoteFolderItem

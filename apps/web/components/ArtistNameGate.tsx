@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAuthStore } from '@/lib/auth-store';
+import { errorMessage } from "@/lib/errors";
 
 export function ArtistNameGate() {
   const user = useAuthStore((state) => state.user);
@@ -24,8 +25,8 @@ export function ArtistNameGate() {
     setIsSaving(true);
     try {
       await updateArtistName(value);
-    } catch (submitError: any) {
-      setError(submitError?.message || 'Could not save artist name.');
+    } catch (submitError) {
+      setError(errorMessage(submitError, 'Could not save artist name.'));
     } finally {
       setIsSaving(false);
     }

@@ -97,19 +97,23 @@ export type DbFile = {
 };
 
 // Helper function to handle Supabase errors
-export function handleSupabaseError(error: any): string {
-  if (error?.message) {
+export function handleSupabaseError(error: unknown): string {
+  const message =
+    error && typeof error === 'object' && 'message' in error && typeof (error as { message: unknown }).message === 'string'
+      ? (error as { message: string }).message
+      : '';
+  if (message) {
     // User-friendly error messages
-    if (error.message.includes('duplicate key')) {
+    if (message.includes('duplicate key')) {
       return 'This email is already registered';
     }
-    if (error.message.includes('Invalid login credentials')) {
+    if (message.includes('Invalid login credentials')) {
       return 'Invalid email or password';
     }
-    if (error.message.includes('Email not confirmed')) {
+    if (message.includes('Email not confirmed')) {
       return 'Please verify your email before logging in';
     }
-    return error.message;
+    return message;
   }
   return 'An unexpected error occurred';
 }

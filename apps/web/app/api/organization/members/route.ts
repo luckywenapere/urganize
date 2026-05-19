@@ -121,8 +121,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: profilesError.message || 'Could not load member profiles' }, { status: 500 });
   }
 
-  const profileById = new Map((profiles || []).map((profile: any) => [profile.id, profile]));
-  const normalizedMembers = (members || []).map((member: any) => {
+  type ProfileRow = { id: string; name: string | null; email: string | null };
+  type MemberRow = {
+    id: string;
+    user_id: string;
+    role: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+  };
+  const profileById = new Map(
+    (profiles || []).map((profile: ProfileRow) => [profile.id, profile]),
+  );
+  const normalizedMembers = (members || []).map((member: MemberRow) => {
     const profile = profileById.get(member.user_id);
     return {
       id: member.id,

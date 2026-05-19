@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Chart from "chart.js/auto";
 import type {
   Chart as ChartInstance,
@@ -61,16 +61,16 @@ export default function GrowthDashboard({
 }: {
   weeks: WeeklyUserCount[];
 }) {
-  const [weekRows, setWeekRows] = useState<DashboardWeek[]>(() =>
-    toDashboardWeeks(weeks),
+  // Derive weekRows from the weeks prop instead of mirroring it into state via
+  // an effect — the effect form triggers react-hooks/set-state-in-effect and
+  // causes an extra render on every weeks change.
+  const weekRows = useMemo<DashboardWeek[]>(
+    () => toDashboardWeeks(weeks),
+    [weeks],
   );
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef =
     useRef<ChartInstance<"line", ChartPoint[], string> | null>(null);
-
-  useEffect(() => {
-    setWeekRows(toDashboardWeeks(weeks));
-  }, [weeks]);
 
   const dashboardState = useMemo(() => {
     const n = weekRows.length;

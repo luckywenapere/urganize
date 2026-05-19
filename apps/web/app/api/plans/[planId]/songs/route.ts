@@ -71,7 +71,7 @@ export async function GET(
             .from(SONGS_TABLE)
             .select('id,song_title,primary_artist,isrc,duration,updated_at')
             .in('id', attachedSongIds)
-        : Promise.resolve({ data: [], error: null } as any),
+        : Promise.resolve({ data: [] as never[], error: null as { message?: string } | null }),
       adminClient!
         .from(SONGS_TABLE)
         .select('id,song_title,primary_artist,isrc,duration,updated_at')

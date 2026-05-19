@@ -12,17 +12,10 @@ import { clearPersistedState, readPersistedState, writePersistedState } from '@/
 import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
 import type { ReleasePlanResult } from '@/lib/release-plan';
 import type { ReleaseTaskPlanResponse } from '@/lib/task-plan';
-import type { StoredPricingValidationResponse, PricingValidationResponse } from '@/lib/pricing-validation';
-
+import { errorMessage } from "@/lib/errors";
 type RoleOption = 'manager' | 'artist-team' | 'artist';
 type ProofType = 'none' | 'screenshot' | 'video' | 'link' | 'text';
 const PROOF_TYPE_OPTIONS: ProofType[] = ['none', 'screenshot', 'video', 'link', 'text'];
-type AiTaskGenerationPayload = {
-  title: string;
-  description: string;
-  why_it_matters: string;
-  measurable_outcome: string;
-};
 
 type ReleasePlanApiResponse = ReleaseTaskPlanResponse & {
   error?: string;
@@ -242,7 +235,6 @@ const isSongStageConstraintError = (error: unknown): boolean => {
 };
 
 const MIN_GENERATION_MS = 7000;
-const PRICING_SHEET_MS = 2500;
 const NEXT_CYCLE_TRANSITION_MS = 1800;
 const CYCLE_TIMELINE = [
   { step: 3, label: 'Objective', description: 'Define the exact outcome for this cycle in one clear statement.' },
@@ -405,7 +397,7 @@ export function PostAuthScreen() {
   const [isCycleTransitioning, setIsCycleTransitioning] = useState(false);
   const [cycleNumber, setCycleNumber] = useState(1);
   const [activeTimelineStep, setActiveTimelineStep] = useState<number | null>(null);
-  const [hasSubscriptionAccess, setHasSubscriptionAccess] = useState(true);
+  const [, setHasSubscriptionAccess] = useState(true);
 
   const [releaseId, setReleaseId] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
@@ -1288,8 +1280,8 @@ export function PostAuthScreen() {
             setStep((current) => Math.max(current, canSkipArtistStep ? 3 : 2));
           }
         }
-      } catch (err: any) {
-        setError(err?.message || 'Failed to load onboarding');
+      } catch (err) {
+        setError(errorMessage(err, 'Failed to load onboarding'));
       } finally {
         setIsBootstrapping(false);
       }
@@ -1423,8 +1415,8 @@ export function PostAuthScreen() {
       await updateRole(role);
       const activeReleaseId = await ensureOnboardingRelease();
       await setStepPersisted(hasArtistDefaults ? 3 : 2, activeReleaseId);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to save role');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to save role'));
     } finally {
       setIsBusy(false);
     }
@@ -1471,8 +1463,8 @@ export function PostAuthScreen() {
         },
       });
       await setStepPersisted(3, activeReleaseId);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to save artist details');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to save artist details'));
     } finally {
       setIsBusy(false);
     }
@@ -1519,8 +1511,8 @@ export function PostAuthScreen() {
         );
       }
       await setStepPersisted(3, activeReleaseId);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to save selected artist.');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to save selected artist.'));
     } finally {
       setIsBusy(false);
     }
@@ -1569,8 +1561,8 @@ export function PostAuthScreen() {
       setNewManagedArtistName('');
       setNewManagedArtistGenre('');
       setNewManagedArtistNotes('');
-    } catch (err: any) {
-      setError(err?.message || 'Could not save artist.');
+    } catch (err) {
+      setError(errorMessage(err, 'Could not save artist.'));
     } finally {
       setIsBusy(false);
     }
@@ -1593,8 +1585,8 @@ export function PostAuthScreen() {
         .eq('release_id', activeReleaseId);
       if (goalUpdateError) throw goalUpdateError;
       await setStepPersisted(4, activeReleaseId);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to save goal');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to save goal'));
     } finally {
       setIsBusy(false);
     }
@@ -1671,8 +1663,8 @@ export function PostAuthScreen() {
       if (profileUpdateError) throw profileUpdateError;
       await upsertArtistProfile();
       await setStepPersisted(5, activeReleaseId);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to save profile');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to save profile'));
     } finally {
       setIsBusy(false);
     }
@@ -1689,8 +1681,8 @@ export function PostAuthScreen() {
         .eq('release_id', activeReleaseId);
       if (stepsUpdateError) throw stepsUpdateError;
       await setStepPersisted(6, activeReleaseId);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to save steps');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to save steps'));
     } finally {
       setIsBusy(false);
     }
@@ -1857,7 +1849,6 @@ export function PostAuthScreen() {
     });
   }, [
     artistName,
-    audienceSize,
     budget,
     deadlineDate,
     genre,
@@ -1880,7 +1871,7 @@ export function PostAuthScreen() {
   useEffect(() => {
     if (step !== 6 || !releaseId || generationAttemptKey === 0) return;
 
-    let pricingTimer: ReturnType<typeof setTimeout> | null = null;
+    const pricingTimer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
 
     const runGeneration = async () => {
@@ -1901,10 +1892,10 @@ export function PostAuthScreen() {
         }
         if (cancelled) return;
         await setStepPersisted(7);
-      } catch (err: any) {
+      } catch (err) {
         if (!cancelled) {
           setGenerationError(
-            toAiUiErrorMessage(err?.message, 'AI service unavailable')
+            toAiUiErrorMessage(errorMessage(err, 'AI service unavailable'), 'AI service unavailable')
           );
         }
       } finally {
@@ -1946,8 +1937,8 @@ export function PostAuthScreen() {
         .eq('id', taskId);
       if (startError) throw startError;
       await setStepPersisted(8);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to mark task as started');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to mark task as started'));
     } finally {
       setIsBusy(false);
     }
@@ -1965,8 +1956,8 @@ export function PostAuthScreen() {
         .eq('id', taskId);
       if (doneError) throw doneError;
       await setStepPersisted(9);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to mark task as done');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to mark task as done'));
     } finally {
       setIsBusy(false);
     }
@@ -1998,8 +1989,8 @@ export function PostAuthScreen() {
     setGenerationError('');
     try {
       await setStepPersisted(5);
-    } catch (err: any) {
-      setError(err?.message || 'Could not return to the previous step right now');
+    } catch (err) {
+      setError(errorMessage(err, 'Could not return to the previous step right now'));
     }
   };
 
@@ -2192,8 +2183,8 @@ export function PostAuthScreen() {
       setIsCycleTransitioning(true);
       await new Promise((resolve) => setTimeout(resolve, NEXT_CYCLE_TRANSITION_MS));
       router.push(`/dashboard?startOnboarding=3&planId=${releaseId}&flow=next-cycle`);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to submit feedback');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to submit feedback'));
     } finally {
       setIsBusy(false);
       setIsCycleTransitioning(false);
@@ -2214,8 +2205,8 @@ export function PostAuthScreen() {
     const previous = isCreatePlanFlow ? Math.max(2, step - 1) : step === 3 && hasArtistDefaults ? 1 : Math.max(0, step - 1);
     try {
       await setStepPersisted(previous);
-    } catch (err: any) {
-      setError(err?.message || 'Could not move back right now');
+    } catch (err) {
+      setError(errorMessage(err, 'Could not move back right now'));
     }
   };
 

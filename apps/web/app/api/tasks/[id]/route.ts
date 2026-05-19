@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  TASKS_TABLE,
   TASK_ATTACHMENTS_TABLE,
   TASK_ATTACHMENTS_BUCKET,
   buildTaskSchemaResponse,
@@ -61,7 +60,7 @@ export async function PATCH(
     if ('error' in access) return access.error;
 
     const body = await request.json();
-    const updated = await taskService.updateTask(id, auth.user.id, body);
+    await taskService.updateTask(id, auth.user.id, body);
     const task = await taskService.getTaskById(id, auth.user.id);
 
     return NextResponse.json({ task });

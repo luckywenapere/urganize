@@ -200,6 +200,60 @@ function hasDraftData(form: WaitlistForm, step: number) {
   return step > 0 || Object.values(form).some((value) => value.length > 0);
 }
 
+type StoredDraft = {
+  form: WaitlistForm;
+  step: number;
+  restored: boolean;
+};
+
+// Read any persisted draft synchronously so we can hydrate state via lazy
+// useState initializers instead of a setState-in-effect. Returns the empty
+// initial form on the server, on missing/corrupt data, or when the draft is
+// past its TTL. Stale or unparseable entries are evicted as a side effect.
+function loadStoredDraft(): StoredDraft {
+  const empty: StoredDraft = { form: initialForm, step: 0, restored: false };
+
+  if (typeof window === "undefined") {
+    return empty;
+  }
+
+  try {
+    const storedDraft = window.sessionStorage.getItem(draftKey);
+
+    if (!storedDraft) {
+      return empty;
+    }
+
+    const parsed = JSON.parse(storedDraft) as {
+      form?: WaitlistForm;
+      step?: number;
+      savedAt?: number;
+    };
+
+    if (
+      !parsed.savedAt ||
+      Date.now() - parsed.savedAt > draftTtlMs ||
+      !parsed.form
+    ) {
+      window.sessionStorage.removeItem(draftKey);
+      return empty;
+    }
+
+    return {
+      form: { ...initialForm, ...parsed.form },
+      step: Math.min(Math.max(parsed.step ?? 0, 0), lastQuestionStep),
+      restored: true,
+    };
+  } catch {
+    try {
+      window.sessionStorage.removeItem(draftKey);
+    } catch {
+      // Ignore — storage may be disabled (private mode, blocked cookies).
+    }
+    return empty;
+  }
+}
+
 function SocialIcon({ name }: { name: SocialIconName }) {
   const baseClassName = "h-4 w-4 shrink-0";
 
@@ -284,15 +338,19 @@ export function WaitlistModal({
   ctaSource: string;
   onClose: () => void;
 }) {
-  const [step, setStep] = useState(0);
-  const [form, setForm] = useState<WaitlistForm>(initialForm);
+  // Single lazy read of any persisted draft. Lets us seed form/step/restored
+  // state synchronously and avoid a setState-in-effect on mount (which the
+  // react-hooks/set-state-in-effect rule rejects in React 19).
+  const [initialDraft] = useState(loadStoredDraft);
+  const [step, setStep] = useState(initialDraft.step);
+  const [form, setForm] = useState<WaitlistForm>(initialDraft.form);
   const [error, setError] = useState("");
   const [submissionState, setSubmissionState] =
     useState<SubmissionState>("idle");
   const [isOnline, setIsOnline] = useState(true);
   const [connectionHint, setConnectionHint] = useState("");
   const [isSlowSubmit, setIsSlowSubmit] = useState(false);
-  const [restoredDraft, setRestoredDraft] = useState(false);
+  const [restoredDraft, setRestoredDraft] = useState(initialDraft.restored);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   const progress = Math.round((Math.max(step, 1) / lastQuestionStep) * 100);
@@ -342,37 +400,6 @@ export function WaitlistModal({
       window.removeEventListener("offline", updateNetworkState);
       connection?.removeEventListener?.("change", updateNetworkState);
     };
-  }, []);
-
-  useEffect(() => {
-    try {
-      const storedDraft = window.sessionStorage.getItem(draftKey);
-
-      if (!storedDraft) {
-        return;
-      }
-
-      const parsed = JSON.parse(storedDraft) as {
-        form?: WaitlistForm;
-        step?: number;
-        savedAt?: number;
-      };
-
-      if (
-        !parsed.savedAt ||
-        Date.now() - parsed.savedAt > draftTtlMs ||
-        !parsed.form
-      ) {
-        window.sessionStorage.removeItem(draftKey);
-        return;
-      }
-
-      setForm({ ...initialForm, ...parsed.form });
-      setStep(Math.min(Math.max(parsed.step ?? 0, 0), lastQuestionStep));
-      setRestoredDraft(true);
-    } catch {
-      window.sessionStorage.removeItem(draftKey);
-    }
   }, []);
 
   useEffect(() => {

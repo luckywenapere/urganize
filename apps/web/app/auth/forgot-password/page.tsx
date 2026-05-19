@@ -8,6 +8,7 @@ import { Card } from '@urganize/ui';
 import { Logo } from '@urganize/ui';
 import { ArrowLeft, Mail, CheckCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
+import { errorMessage } from "@/lib/errors";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -28,8 +29,8 @@ export default function ForgotPasswordPage() {
       if (resetError) throw resetError;
 
       setIsSubmitted(true);
-    } catch (err: any) {
-      setError(err.message || 'Failed to send reset email. Please try again.');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to send reset email. Please try again.'));
     } finally {
       setIsLoading(false);
     }

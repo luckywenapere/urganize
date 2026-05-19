@@ -395,7 +395,7 @@ export function ReleaseTracksSection({
         setToast({ message: 'No tracks were uploaded.', tone: 'error' });
       }
     },
-    [loadTracks, tracks.length, updateUploadTask, uploadFileWithProgress]
+    [loadTracks, releaseId, tracks.length, updateUploadTask, uploadFileWithProgress]
   );
 
   const persistTrackUpdate = useCallback(

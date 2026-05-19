@@ -8,7 +8,7 @@ type SettingsRow = {
   updated_at?: string | null;
 };
 
-export const resolvePaywallEnabled = (row: SettingsRow | null | undefined): boolean => {
+export const resolvePaywallEnabled = (_row: SettingsRow | null | undefined): boolean => {
   return false;
 };
 

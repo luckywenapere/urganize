@@ -1,6 +1,6 @@
 import type { AISignal, ExecutionRelease, ExecutionTask, ReleasePipelineState } from '@/lib/execution-types';
 import { TASK_DONE_STATUS } from '@/lib/execution-types';
-import { calculateReadinessForState, formatArtistName, getPipelineStateLabel } from '@/lib/release-execution';
+import { calculateReadinessForState, getPipelineStateLabel } from '@/lib/release-execution';
 
 const makeId = () => `signal_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
 

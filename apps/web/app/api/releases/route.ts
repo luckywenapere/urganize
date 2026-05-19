@@ -20,7 +20,6 @@ import {
 import { RELEASE_PLAYBOOK_PHASES } from '@/lib/release-playbook';
 import { createDefaultReleaseTasks, ensureOwnedWorkspace, isTaskSchemaMissingError } from '@/lib/tasks-server';
 import { type ReleaseCreatedSource } from '@/lib/analytics';
-import { getSubscriptionStatus, hasAccess } from '@/lib/subscription-access';
 import {
   captureServerAnalyticsEvent,
   createPostHogEvent,
@@ -417,8 +416,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    const existingReleaseCount = 0;
 
     const body = (await request.json().catch(() => ({}))) as CreateReleaseBody;
     const artistId = trimString(body?.artistId);

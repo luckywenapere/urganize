@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { isAnnualPlan } from '@/lib/billing';
 
 export type SubscriptionStatus = 'free_trial' | 'active' | 'expired' | 'cancelled';
 
@@ -51,11 +50,6 @@ const parseTimestamp = (value: string | null | undefined): Date | null => {
   return Number.isFinite(parsed.getTime()) ? parsed : null;
 };
 
-const isFutureTimestamp = (value: string | null | undefined, nowMs: number): boolean => {
-  const parsed = parseTimestamp(value);
-  return Boolean(parsed && parsed.getTime() > nowMs);
-};
-
 export const calculateTrialDaysLeft = (
   trialEndsAt: string | null,
   now = new Date()
@@ -73,15 +67,13 @@ export const calculateTrialDaysLeft = (
   return Math.ceil(diffMs / DAY_MS);
 };
 
+// Stubbed snapshot resolver — the paywall is currently disabled product-wide,
+// so this always returns the unlocked "active" state regardless of the row.
+// Keep the signature so callers don't need to change when paywall returns.
 const resolveSubscriptionSnapshot = (
-  subscription: SubscriptionRow | null,
-  now = new Date()
+  _subscription: SubscriptionRow | null,
+  _now = new Date()
 ): SubscriptionSnapshot => {
-  const nowMs = now.getTime();
-  const rawStatus = String(subscription?.status || '').trim().toLowerCase() || null;
-  const plan = typeof subscription?.plan === 'string' ? subscription.plan : null;
-  const expiresAt = typeof subscription?.expires_at === 'string' ? subscription.expires_at : null;
-
   return {
     status: 'active',
     hasAccess: true,
@@ -186,6 +178,6 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
   return snapshot.status;
 }
 
-export async function hasAccess(userId: string): Promise<boolean> {
+export async function hasAccess(_userId: string): Promise<boolean> {
   return true;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, Check, X } from 'lucide-react';
+import { Calendar, Check } from 'lucide-react';
 import type { ExecutionTask } from '@/lib/execution-types';
 import { TASK_DONE_STATUS } from '@/lib/execution-types';
 import {
@@ -9,10 +9,10 @@ import {
   formatReleaseTitle,
   getTaskCompletionBlocker,
 } from '@/lib/release-execution';
-import { getTaskStatusLabel, getTaskStatusTone } from '@/lib/tasks';
+import { getTaskStatusLabel } from '@/lib/tasks';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTaskStore } from '@/stores/useTaskStore';
-import { AlertCircle, CheckCircle2, Play } from 'lucide-react';
+import { AlertCircle, Play } from 'lucide-react';
 
 export function TaskDetailModal({
   task,

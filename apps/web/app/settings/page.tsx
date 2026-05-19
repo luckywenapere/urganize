@@ -1,28 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
-import { trackEvent } from '@/lib/analytics';
 import { getRolePermissions } from '@/lib/role-permissions';
 import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
-import {
-  DEFAULT_INDIVIDUAL_PLAN_ID,
-  INDIVIDUAL_PLAN_OPTIONS,
-  MIN_GROUP_TEAM_SIZE,
-  MAX_GROUP_TEAM_SIZE,
-  buildGroupPaymentMetadata,
-  calculateGroupPlanPricing,
-  clampTeamSize,
-  type GroupBillingCycle,
-  type GroupPaymentMode,
-  type IndividualPlanId,
-} from '@/lib/billing';
-import { formatCurrencyAmount } from '@/lib/pricing';
 import { ThemeToggle } from '@urganize/ui';
 import { SearchableGenreSelect } from '@urganize/ui';
 import {
@@ -30,13 +15,7 @@ import {
   SettingsPageSkeleton,
   SettingsTeamMembersSectionSkeleton,
 } from '@/components/loading/SettingsPageSkeleton';
-
-type SubscriptionInfo = {
-  plan: string | null;
-  status: string | null;
-  amount: number | null;
-  expires_at: string | null;
-};
+import { errorMessage } from "@/lib/errors";
 
 type OrganizationInfo = {
   id: string;
@@ -214,6 +193,15 @@ export default function SettingsPage() {
     loadSettingsData();
   }, [user]);
 
+  // Hoisted above the effects that call it so the static analyzer (and
+  // react-hooks/immutability) don't see a forward-reference TDZ slot.
+  const getAccessToken = async (): Promise<string> => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    return session?.access_token || '';
+  };
+
   useEffect(() => {
     if (!user || !isManagerAccount) {
       setManagedArtists([]);
@@ -268,13 +256,6 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-
-    const getAccessToken = async (): Promise<string> => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      return session?.access_token || '';
-    };
 
     const loadOrganization = async () => {
       setIsLoadingMembers(true);
@@ -362,8 +343,8 @@ export default function SettingsPage() {
 
       await checkAuth();
       setSuccess('Profile updated');
-    } catch (err: any) {
-      setError(err?.message || 'Failed to update profile');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to update profile'));
     } finally {
       setIsSavingName(false);
     }
@@ -383,8 +364,8 @@ export default function SettingsPage() {
       await updateArtistName(normalized);
       await checkAuth();
       setSuccess('Artist name updated');
-    } catch (err: any) {
-      setError(err?.message || 'Failed to update artist name');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to update artist name'));
     } finally {
       setIsSavingName(false);
     }
@@ -411,8 +392,8 @@ export default function SettingsPage() {
       setNewPassword('');
       setConfirmPassword('');
       setSuccess('Password updated');
-    } catch (err: any) {
-      setError(err?.message || 'Failed to update password');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to update password'));
     } finally {
       setIsSavingPassword(false);
     }
@@ -466,18 +447,11 @@ export default function SettingsPage() {
 
       await logout();
       router.push('/auth');
-    } catch (err: any) {
-      setError(err?.message || 'Could not delete account');
+    } catch (err) {
+      setError(errorMessage(err, 'Could not delete account'));
     } finally {
       setIsDeleting(false);
     }
-  };
-
-  const getAccessToken = async (): Promise<string> => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    return session?.access_token || '';
   };
 
   const handleSaveOrganization = async () => {
@@ -511,8 +485,8 @@ export default function SettingsPage() {
       setOrganization(payload.organization);
       setOrganizationName(payload.organization.name || name);
       setOrganizationMessage(payload.status === 'created' ? 'Organization created.' : 'Organization updated.');
-    } catch (err: any) {
-      setOrganizationError(err?.message || 'Could not save organization.');
+    } catch (err) {
+      setOrganizationError(errorMessage(err, 'Could not save organization.'));
     } finally {
       setIsSavingOrganization(false);
     }
@@ -580,8 +554,8 @@ export default function SettingsPage() {
 
       setManagedArtistMessage(editingManagedArtistId ? 'Artist updated.' : 'Artist added.');
       resetManagedArtistForm();
-    } catch (err: any) {
-      setManagedArtistError(err?.message || 'Could not save managed artist.');
+    } catch (err) {
+      setManagedArtistError(errorMessage(err, 'Could not save managed artist.'));
     } finally {
       setIsSavingManagedArtist(false);
     }
@@ -619,8 +593,8 @@ export default function SettingsPage() {
         resetManagedArtistForm();
       }
       setManagedArtistMessage('Artist removed.');
-    } catch (err: any) {
-      setManagedArtistError(err?.message || 'Could not remove artist.');
+    } catch (err) {
+      setManagedArtistError(errorMessage(err, 'Could not remove artist.'));
     }
   };
 
@@ -665,8 +639,8 @@ export default function SettingsPage() {
       setNewMemberEmail('');
       setNewMemberRole('viewer');
       setMemberMessage('Member saved.');
-    } catch (err: any) {
-      setMemberError(err?.message || 'Could not add member.');
+    } catch (err) {
+      setMemberError(errorMessage(err, 'Could not add member.'));
     } finally {
       setIsAddingMember(false);
     }
@@ -695,8 +669,8 @@ export default function SettingsPage() {
           member.id === memberId ? { ...member, role: (payload.member?.role || role) as OrganizationMember['role'] } : member
         )
       );
-    } catch (err: any) {
-      setMemberError(err?.message || 'Could not update role.');
+    } catch (err) {
+      setMemberError(errorMessage(err, 'Could not update role.'));
     }
   };
 
@@ -718,8 +692,8 @@ export default function SettingsPage() {
       if (!response.ok) throw new Error(payload.error || 'Could not remove member.');
       setMembers((current) => current.filter((member) => member.id !== memberId));
       setMemberMessage('Member removed.');
-    } catch (err: any) {
-      setMemberError(err?.message || 'Could not remove member.');
+    } catch (err) {
+      setMemberError(errorMessage(err, 'Could not remove member.'));
     }
   };
 

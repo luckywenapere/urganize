@@ -30,11 +30,11 @@ export interface Release {
   releaseDate: string | null;
   description: string | null;
   readinessScore: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ExecutionRelease extends Release {
-  // Add any execution-specific fields if they differ from core Release
-}
+// Currently identical to Release; kept as a named alias so execution-side
+// callers can adopt extra fields without refactoring all import sites.
+export type ExecutionRelease = Release;

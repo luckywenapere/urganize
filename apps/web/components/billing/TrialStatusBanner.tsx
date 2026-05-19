@@ -4,6 +4,6 @@ type TrialStatusBannerProps = {
   compact?: boolean;
 };
 
-export function TrialStatusBanner({ compact = false }: TrialStatusBannerProps) {
+export function TrialStatusBanner({ compact: _compact = false }: TrialStatusBannerProps) {
   return null;
 }

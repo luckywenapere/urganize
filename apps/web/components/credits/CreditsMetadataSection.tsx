@@ -11,6 +11,7 @@ import {
   type CreditCollectionLink,
   type CreditFinalization,
 } from '@/lib/credits';
+import { errorMessage } from "@/lib/errors";
 
 type CreditsMetadataSectionProps = {
   planId: string;
@@ -83,8 +84,8 @@ export function CreditsMetadataSection({ planId }: CreditsMetadataSectionProps) 
       setLink(payload.credits.link);
       setSubmissions(payload.credits.submissions || []);
       setFinalization(payload.credits.finalization || null);
-    } catch (loadError: any) {
-      setError(loadError?.message || 'Could not load credits and metadata.');
+    } catch (loadError) {
+      setError(errorMessage(loadError, 'Could not load credits and metadata.'));
     } finally {
       setIsLoading(false);
     }
@@ -92,6 +93,10 @@ export function CreditsMetadataSection({ planId }: CreditsMetadataSectionProps) 
 
   useEffect(() => {
     void loadCredits();
+    // loadCredits is a stable closure over planId via its own scope, so we
+    // intentionally key only on planId. Adding loadCredits to deps would
+    // re-fire on every render since the function identity changes each time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planId]);
 
   const handleGenerateLink = async () => {
@@ -119,8 +124,8 @@ export function CreditsMetadataSection({ planId }: CreditsMetadataSectionProps) 
 
       setLink(payload.link);
       setSuccess('Credit collection link is active and ready to share.');
-    } catch (generateError: any) {
-      setError(generateError?.message || 'Could not generate a credit collection link.');
+    } catch (generateError) {
+      setError(errorMessage(generateError, 'Could not generate a credit collection link.'));
     } finally {
       setIsGeneratingLink(false);
     }
@@ -178,8 +183,8 @@ export function CreditsMetadataSection({ planId }: CreditsMetadataSectionProps) 
       setSelectedSubmission(payload.submission);
       setEditableSubmission(toEditableSubmission(payload.submission));
       setSuccess('Submission updated.');
-    } catch (saveError: any) {
-      setError(saveError?.message || 'Could not update submission.');
+    } catch (saveError) {
+      setError(errorMessage(saveError, 'Could not update submission.'));
     } finally {
       setIsSavingSubmission(false);
     }
@@ -217,8 +222,8 @@ export function CreditsMetadataSection({ planId }: CreditsMetadataSectionProps) 
       setSelectedSubmission(null);
       setEditableSubmission(emptyContributorSubmissionInput());
       setSuccess('Submission deleted.');
-    } catch (deleteError: any) {
-      setError(deleteError?.message || 'Could not delete submission.');
+    } catch (deleteError) {
+      setError(errorMessage(deleteError, 'Could not delete submission.'));
     } finally {
       setIsDeletingSubmission(false);
     }
@@ -260,8 +265,8 @@ export function CreditsMetadataSection({ planId }: CreditsMetadataSectionProps) 
 
       setFinalization(payload.finalization);
       setSuccess(action === 'finalize' ? 'Credits finalized.' : 'Credits unlocked.');
-    } catch (finalizeError: any) {
-      setError(finalizeError?.message || 'Could not update finalization state.');
+    } catch (finalizeError) {
+      setError(errorMessage(finalizeError, 'Could not update finalization state.'));
     } finally {
       setIsUpdatingFinalization(false);
     }

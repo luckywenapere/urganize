@@ -9,6 +9,7 @@ import { Card } from '@urganize/ui';
 import { Logo } from '@urganize/ui';
 import { ArrowLeft, Lock, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
+import { errorMessage } from "@/lib/errors";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function ResetPasswordPage() {
     checkSession();
 
     // Listen for auth state changes (when user clicks reset link)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, _session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setIsValidSession(true);
       }
@@ -75,8 +76,8 @@ export default function ResetPasswordPage() {
       setTimeout(() => {
         router.push('/auth');
       }, 3000);
-    } catch (err: any) {
-      setError(err.message || 'Failed to reset password. Please try again.');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to reset password. Please try again.'));
     } finally {
       setIsLoading(false);
     }

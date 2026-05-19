@@ -14,7 +14,6 @@ import {
 } from '@/lib/execution-types';
 import {
   calculateReadinessForState,
-  cleanTaskTitle,
   formatArtistName,
   getNextPipelineState,
   getPipelineStateLabel,

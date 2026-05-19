@@ -20,7 +20,6 @@ import {
   normalizeSongNotes,
   normalizeSongPublishing,
   normalizeSongProduction,
-  type SongContributor,
 } from '@/lib/song-library';
 import { RELEASE_SONGS_TABLE } from '@/lib/release-songs';
 
@@ -29,19 +28,6 @@ type ReleaseOption = {
   title: string;
   artist_name: string;
 };
-
-const toContributorResponse = (row: any): SongContributor => ({
-  id: String(row?.id || ''),
-  songId: String(row?.song_id || ''),
-  legalName: String(row?.legal_name || ''),
-  creditedName: String(row?.credited_name || ''),
-  role: row?.role || 'Other',
-  email: String(row?.email || ''),
-  proAffiliation: String(row?.pro_affiliation || ''),
-  ipiNumber: String(row?.ipi_number || ''),
-  splitPercentage: row?.split_percentage == null ? '' : String(row.split_percentage),
-  notes: String(row?.notes || ''),
-});
 
 export async function GET(request: NextRequest) {
   const auth = await getAuthenticatedUser(request);

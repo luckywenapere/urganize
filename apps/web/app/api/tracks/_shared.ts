@@ -449,7 +449,7 @@ export async function removeTrackFromStorage(
 export async function loadTrackByShareToken(
   adminClient: SupabaseClient,
   token: string,
-  origin?: string
+  _origin?: string
 ): Promise<
   | {
       shareLink: ShareLinkRecord;

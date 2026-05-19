@@ -328,6 +328,10 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
               <label className="group block cursor-pointer border border-dashed border-stroke-default bg-bg-elevated/80 p-3 transition hover:border-stroke-strong">
                 <div className="aspect-square overflow-hidden border border-stroke-subtle bg-bg-surface">
                   {coverPreviewUrl ? (
+                    // coverPreviewUrl is a blob: URL from URL.createObjectURL,
+                    // not a remote asset — next/image's loader cannot optimize
+                    // it. A plain <img> is the right primitive here.
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={coverPreviewUrl}
                       alt="Selected cover preview"

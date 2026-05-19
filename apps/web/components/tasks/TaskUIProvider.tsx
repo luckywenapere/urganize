@@ -126,7 +126,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const [releases, setReleases] = useState<PreSaveReleaseOption[]>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
-  const [isOptionsLoaded, setIsOptionsLoaded] = useState(false);
+  const [, setIsOptionsLoaded] = useState(false);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
 

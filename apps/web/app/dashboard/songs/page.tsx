@@ -14,6 +14,7 @@ import {
   validateSongFormInput,
   type SongFormInput,
 } from '@/lib/song-library';
+import { errorMessage } from "@/lib/errors";
 
 type ReleaseOption = {
   id: string;
@@ -81,8 +82,8 @@ export default function SongLibraryPage() {
 
       setSongs(payload.songs);
       setReleaseOptions(payload.releaseOptions || []);
-    } catch (loadError: any) {
-      setError(loadError?.message || 'Could not load the song library.');
+    } catch (loadError) {
+      setError(errorMessage(loadError, 'Could not load the song library.'));
     } finally {
       setIsLoading(false);
     }
@@ -141,8 +142,8 @@ export default function SongLibraryPage() {
       setShowCreateModal(false);
       setForm(emptySongFormInput);
       router.push(`/dashboard/songs/${payload.songId}`);
-    } catch (createSongError: any) {
-      setCreateError(createSongError?.message || 'Could not create song.');
+    } catch (createSongError) {
+      setCreateError(errorMessage(createSongError, 'Could not create song.'));
     } finally {
       setIsCreating(false);
     }

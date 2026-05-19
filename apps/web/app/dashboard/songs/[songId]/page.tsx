@@ -31,6 +31,7 @@ import {
   type SongPublishing,
   type SongRecord,
 } from '@/lib/song-library';
+import { errorMessage } from "@/lib/errors";
 
 type ReleaseOption = {
   id: string;
@@ -160,8 +161,8 @@ export default function SongMetadataPage() {
       setNotes(payload.detail.notes || emptySongNotes);
       setReleaseOptions(payload.releaseOptions || []);
       didHydrateRef.current = true;
-    } catch (loadError: any) {
-      setError(loadError?.message || 'Could not load song metadata.');
+    } catch (loadError) {
+      setError(errorMessage(loadError, 'Could not load song metadata.'));
     } finally {
       setIsLoading(false);
     }
@@ -244,9 +245,9 @@ export default function SongMetadataPage() {
             }
           : current
       );
-    } catch (saveError: any) {
+    } catch (saveError) {
       setSaveState('error');
-      setError(saveError?.message || 'Could not save song metadata.');
+      setError(errorMessage(saveError, 'Could not save song metadata.'));
     } finally {
       setIsSaving(false);
     }

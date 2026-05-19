@@ -1,7 +1,7 @@
 "use client";
 
 import { clsx } from "clsx";
-import { ComponentType, ReactNode, useEffect, useMemo, useState } from "react";
+import { ComponentType, ReactNode, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 type WaitlistModalProps = {
@@ -52,11 +52,12 @@ export function WaitlistButton({
   const [isLoading, setIsLoading] = useState(false);
   const [ModalComponent, setModalComponent] =
     useState<WaitlistModalComponent | null>(null);
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    setPortalTarget(document.body);
-  }, []);
+  // Lazy initializer keeps document.body resolution out of an effect so we
+  // don't trigger the react-hooks/set-state-in-effect rule. On the server the
+  // initializer returns null; on the client it captures document.body once.
+  const [portalTarget] = useState<HTMLElement | null>(() =>
+    typeof document !== "undefined" ? document.body : null,
+  );
 
   const ctaSource = useMemo(() => {
     if (source) {

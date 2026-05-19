@@ -1,5 +1,5 @@
-import type { ReleasePipelineState, ReleaseStatus, Release } from '@/types/releases';
-import type { Task, TaskStatus, TaskRequirement, TaskReleaseSummary } from '@/types/tasks';
+import type { ReleasePipelineState, Release } from '@/types/releases';
+import type { Task, TaskStatus, TaskRequirement } from '@/types/tasks';
 
 export { RELEASE_PIPELINE_STATES } from '@/types/releases';
 export type { ReleasePipelineState };

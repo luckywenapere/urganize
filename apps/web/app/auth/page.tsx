@@ -9,6 +9,7 @@ import { Input } from '@urganize/ui';
 import { Card } from '@urganize/ui';
 import { Logo } from '@urganize/ui';
 import { ArrowLeft, User, Users, Mail, Lock, UserCircle } from 'lucide-react';
+import { errorMessage } from "@/lib/errors";
 
 type AuthMode = 'login' | 'role' | 'signup';
 type LoginProviderHint = 'unknown' | 'google' | 'email';
@@ -139,8 +140,8 @@ export default function AuthPage() {
         localStorage.setItem(LAST_AUTH_EMAIL_KEY, normalizedLoginEmail);
       }
       router.push(nextPath);
-    } catch (loginError: any) {
-      setError(loginError?.message || 'Login failed. Please try again.');
+    } catch (loginError) {
+      setError(errorMessage(loginError, 'Login failed. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -158,8 +159,8 @@ export default function AuthPage() {
       }
       await signup(email, password, name, role, role === 'artist' ? artistName.trim() : undefined);
       router.push(nextPath);
-    } catch (signupError: any) {
-      setError(signupError?.message || 'Signup failed. Please try again.');
+    } catch (signupError) {
+      setError(errorMessage(signupError, 'Signup failed. Please try again.'));
     } finally {
       setIsLoading(false);
     }

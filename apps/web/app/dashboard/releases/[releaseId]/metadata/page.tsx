@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { ReleaseWorkspaceTabs } from '@/components/releases/ReleaseWorkspaceTabs';
 import { MetadataPageSkeleton } from '@/components/loading/MetadataPageSkeleton';
+import { errorMessage } from "@/lib/errors";
 
 type MetadataPayload = {
   release: {
@@ -90,8 +91,8 @@ export default function ReleaseMetadataPage() {
         throw new Error(payload.error || 'Could not load release info.');
       }
       setData(payload);
-    } catch (loadError: any) {
-      setError(loadError?.message || 'Could not load release info.');
+    } catch (loadError) {
+      setError(errorMessage(loadError, 'Could not load release info.'));
     } finally {
       setIsLoading(false);
       setHasLoadedOnce(true);
