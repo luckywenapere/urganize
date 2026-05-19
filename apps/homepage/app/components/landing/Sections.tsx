@@ -83,10 +83,9 @@ function LogoStrip({
   className?: string;
 }) {
   return (
-    <div className={className}>
+    <div className={`text-center ${className}`}>
       <p className="mx-auto max-w-[36rem] text-balance text-center font-mono text-[0.82rem] leading-6 tracking-[0.02em] text-[var(--marketing-text-subtle)] sm:text-[0.9rem]">
-        Teams from the best institutions trust us to power their
-        operations.
+        Teams from the best institutions trust us to power their operations.
       </p>
 
       <div className="mt-8 flex justify-center">
@@ -143,9 +142,6 @@ export function HeroSection() {
 
       <ScrollReveal>
         <div className="mx-auto mt-16 w-full max-w-4xl sm:mt-20">
-          <p className="mono-label mb-6 text-center text-[var(--marketing-text-subtle)]">
-            Three-minute product walkthrough
-          </p>
           <div className="relative aspect-video w-full overflow-hidden rounded-xl">
             <iframe
               className="absolute inset-0 h-full w-full"
