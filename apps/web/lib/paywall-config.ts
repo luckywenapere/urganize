@@ -8,8 +8,11 @@ type SettingsRow = {
   updated_at?: string | null;
 };
 
-export const resolvePaywallEnabled = (_row: SettingsRow | null | undefined): boolean => {
-  return false;
+export const resolvePaywallEnabled = (row: SettingsRow | null | undefined): boolean => {
+  if (!row?.value_json || typeof row.value_json.enabled !== 'boolean') {
+    return DEFAULT_PAYWALL_ENABLED;
+  }
+  return row.value_json.enabled;
 };
 
 export const resolvePaywallUpdatedAt = (row: SettingsRow | null | undefined): string | null => {
