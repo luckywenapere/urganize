@@ -1,4 +1,4 @@
-import type { PreSaveReleaseOption } from '@/lib/pre-save';
+import type { ReleaseOption } from '@/lib/release-helpers';
 
 /**
  * Audit findings before building collaborative tasks:
@@ -467,8 +467,8 @@ export function sortTasks(tasks: Task[], sort: TaskSortKey): Task[] {
   });
 }
 
-export function isReleaseOption(value: PreSaveReleaseOption | TaskReleaseSummary | null | undefined): value is
-  | PreSaveReleaseOption
+export function isReleaseOption(value: ReleaseOption | TaskReleaseSummary | null | undefined): value is
+  | ReleaseOption
   | TaskReleaseSummary {
   return Boolean(value?.id);
 }

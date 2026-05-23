@@ -21,10 +21,8 @@ import {
 import { supabase } from '@/lib/supabase/client';
 import type { TaskPriority, WorkspaceMember } from '@/lib/tasks';
 import { releaseMachine } from '@/machines/releaseMachine';
-import { useAIStore } from '@/stores/useAIStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
-import { AISignal as AISignalCard } from '@/components/execution/AISignal';
 import { ExecutionSection } from '@/components/execution/ExecutionSection';
 import { ReadinessBar } from '@/components/execution/ReadinessBar';
 import { StateStepper } from '@/components/execution/StateStepper';
@@ -35,7 +33,6 @@ export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
   const { user, isLoading: authLoading } = useAuthStore();
   const { releases, isInitialLoading, error, loadCommandCenter, updateReleaseState } = useReleaseStore();
   const { tasks, selectedTaskId, selectTask, completeTask, updateRequirement, createTask, error: taskError } = useTaskStore();
-  const { signals, runCheck } = useAIStore();
   const [selectedState, setSelectedState] = useState<ReleasePipelineState>('idea');
   const [stateError, setStateError] = useState('');
   const [contextOpen, setContextOpen] = useState(false);
@@ -50,9 +47,8 @@ export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
     void loadCommandCenter().then((data) => {
       const release = data?.releases.find((candidate) => candidate.id === releaseId);
       if (release) setSelectedState(release.state);
-      if (data) void runCheck({ ...data, releaseId });
     });
-  }, [authLoading, loadCommandCenter, releaseId, router, runCheck, user]);
+  }, [authLoading, loadCommandCenter, releaseId, router, user]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -93,10 +89,6 @@ export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
   const overallReadiness = release
     ? Math.round(RELEASE_PIPELINE_STATES.reduce((sum, state) => sum + readinessByState[state], 0) / RELEASE_PIPELINE_STATES.length)
     : 0;
-  const scopedSignals = signals.filter(
-    (signal) => signal.releaseId === releaseId && (!signal.state || signal.state === selectedState)
-  );
-
   const advanceState = async () => {
     if (!release) return;
     setStateError('');
@@ -125,7 +117,6 @@ export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
 
     await updateReleaseState(release.id, expectedNextState);
     setSelectedState(expectedNextState);
-    await runCheck({ releases, tasks, releaseId: release.id, state: expectedNextState });
   };
 
   const addCustomTask = async (input: {
@@ -145,7 +136,6 @@ export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
     });
     if (created) {
       selectTask(created.id);
-      await runCheck({ releases, tasks: useTaskStore.getState().tasks, releaseId: release.id, state: selectedState });
     }
   };
 
@@ -213,12 +203,10 @@ export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
           <ExecutionSection
             state={selectedState}
             tasks={stateTasks}
-            signals={scopedSignals}
+            signals={[]}
             onOpenTask={(task) => selectTask(task.id)}
             onCompleteTask={(task) => {
-              void completeTask(task.id).then((updated) => {
-                if (updated) void runCheck({ releases, tasks: useTaskStore.getState().tasks, releaseId, state: selectedState });
-              });
+              void completeTask(task.id);
             }}
             members={members}
             onAddCustomTask={(input) => void addCustomTask(input)}
@@ -240,16 +228,6 @@ export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
                 </button>
               </section>
 
-              <section className="rounded-sm border border-stroke-default bg-bg-surface p-4">
-                <h2 className="font-semibold text-content-primary">AI Insights</h2>
-                <div className="mt-3 space-y-3">
-                  {scopedSignals.length ? (
-                    scopedSignals.map((signal) => <AISignalCard key={signal.id} signal={signal} />)
-                  ) : (
-                    <p className="text-sm text-content-secondary">No inline insights for this state yet.</p>
-                  )}
-                </div>
-              </section>
             </div>
           </aside>
         </div>
@@ -275,9 +253,7 @@ export function ReleaseWorkspacePage({ releaseId }: { releaseId: string }) {
           void updateRequirement(task.id, task.requirement ? { ...task.requirement, satisfied: true } : null);
         }}
         onComplete={(task) => {
-          void completeTask(task.id).then((updated) => {
-            if (updated) void runCheck({ releases, tasks: useTaskStore.getState().tasks, releaseId, state: selectedState });
-          });
+          void completeTask(task.id);
         }}
       />
     </main>

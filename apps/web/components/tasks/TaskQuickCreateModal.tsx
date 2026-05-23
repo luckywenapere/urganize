@@ -1,28 +1,28 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { ReleaseCombobox } from '@/components/pre-save/ReleaseCombobox';
+import { ReleaseCombobox } from '@/components/shared/ReleaseCombobox';
 import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
-import { type PreSaveReleaseOption } from '@/lib/pre-save';
+import { type ReleaseOption } from '@/lib/release-helpers';
 import { TASK_PRIORITY_OPTIONS, getTaskPriorityLabel, type TaskPriority, type WorkspaceMember } from '@/lib/tasks';
 
 type TaskQuickCreateModalProps = {
   isOpen: boolean;
   title: string;
   releaseQuery: string;
-  selectedRelease: PreSaveReleaseOption | null;
+  selectedRelease: ReleaseOption | null;
   assigneeQuery: string;
   selectedAssignee: WorkspaceMember | null;
   dueDate: string;
   priority: TaskPriority;
-  releases: PreSaveReleaseOption[];
+  releases: ReleaseOption[];
   members: WorkspaceMember[];
   isLoadingReleases: boolean;
   isSaving: boolean;
   onClose: () => void;
   onTitleChange: (value: string) => void;
   onReleaseQueryChange: (value: string) => void;
-  onSelectRelease: (release: PreSaveReleaseOption | null) => void;
+  onSelectRelease: (release: ReleaseOption | null) => void;
   onAssigneeQueryChange: (value: string) => void;
   onSelectAssignee: (member: WorkspaceMember | null) => void;
   onDueDateChange: (value: string) => void;

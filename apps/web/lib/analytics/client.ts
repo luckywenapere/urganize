@@ -19,9 +19,6 @@ const featureRouteMatchers: Array<{ pattern: RegExp; feature: string }> = [
   { pattern: /^\/dashboard\/releases\/[^/]+\/playbook$/, feature: 'playbook' },
   { pattern: /^\/dashboard\/releases\/[^/]+\/metadata$/, feature: 'release_metadata' },
   { pattern: /^\/dashboard\/releases\/[^/]+$/, feature: 'release_workspace' },
-  { pattern: /^\/dashboard\/pre-save/, feature: 'pre_save' },
-  { pattern: /^\/dashboard\/folders\/[^/]+$/, feature: 'folder_detail' },
-  { pattern: /^\/dashboard\/folders$/, feature: 'folders' },
   { pattern: /^\/dashboard$/, feature: 'dashboard' },
   { pattern: /^\/settings$/, feature: 'settings' },
 ];

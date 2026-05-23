@@ -14,14 +14,12 @@ type EmptyAnalyticsProperties = Record<string, never>;
 
 export type ReleaseCreatedSource = 'onboarding' | 'dashboard' | 'empty_state';
 export type TaskCreatedSource = 'quick_create' | 'inline' | 'detail_panel' | 'onboarding';
-export type OnboardingFeature = 'presave' | 'audio' | 'folders';
 
 export interface AnalyticsEventPropertiesMap {
   onboarding_started: EmptyAnalyticsProperties;
   onboarding_role_selected: { role: 'artist' | 'manager' | 'label' | 'other' };
   onboarding_release_created: {
     release_id: string;
-    has_cover_art: boolean;
     has_release_date: boolean;
   };
   onboarding_step_skipped: { step: number };
@@ -36,10 +34,8 @@ export interface AnalyticsEventPropertiesMap {
     task_created: boolean;
     invite_sent: boolean;
   };
-  onboarding_feature_pill_clicked: { feature: OnboardingFeature };
   release_created: { release_id: string; source: ReleaseCreatedSource };
   release_opened: { release_id: string };
-  release_cover_art_uploaded: { release_id: string };
   release_date_set: { release_id: string };
   release_deleted: { release_id: string };
   playbook_step_completed: {
@@ -53,35 +49,6 @@ export interface AnalyticsEventPropertiesMap {
   playbook_step_deleted: { release_id: string; was_default: boolean };
   playbook_reordered: { release_id: string };
   playbook_defaults_restored: { release_id: string };
-  track_upload_started: { release_id: string; file_type: string; file_size_mb: number };
-  track_upload_completed: {
-    release_id: string | null;
-    track_id: string;
-    duration_seconds: number | null;
-  };
-  track_upload_failed: { release_id: string; error: string };
-  track_share_link_created: { track_id: string; has_expiry: boolean };
-  track_share_link_revoked: { track_id: string };
-  track_listen_page_opened: { token: string };
-  track_played: { token: string; seconds_into_track: number };
-  presave_campaign_created: {
-    campaign_id: string;
-    has_cover_art: boolean;
-    has_streaming_links: boolean;
-  };
-  presave_link_copied: { campaign_id: string };
-  presave_email_submitted: { campaign_id: string };
-  presave_csv_exported: { campaign_id: string; subscriber_count: number };
-  folder_created: { folder_id: string };
-  folder_item_added: {
-    folder_id: string;
-    item_type: 'note' | 'link' | 'file' | 'contact' | 'release' | 'contract';
-  };
-  folder_item_moved: {
-    from_folder_id: string;
-    to_folder_id: string;
-    item_type: 'note' | 'link' | 'file' | 'contact' | 'release' | 'contract';
-  };
   task_created: {
     release_id: string | null;
     has_assignee: boolean;
@@ -106,7 +73,6 @@ export interface AnalyticsEventPropertiesMap {
   next_action_banner_dismissed: { release_id: string; action: string };
   signup_completed: Record<string, unknown>;
   artist_created: Record<string, unknown>;
-  ai_plan_generated: Record<string, unknown>;
   pricing_validation_submitted: Record<string, unknown>;
   trial_started: Record<string, unknown>;
   trial_converted: Record<string, unknown>;

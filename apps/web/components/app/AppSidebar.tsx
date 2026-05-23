@@ -9,7 +9,6 @@ import {
   CheckSquare2,
   ChevronLeft,
   ChevronRight,
-  FolderKanban,
   LayoutDashboard,
   Settings,
   Users2,
@@ -55,15 +54,6 @@ const navItems: NavItem[] = [
     description: 'Execution queue',
     icon: CheckSquare2,
     match: (pathname) => pathname?.startsWith('/dashboard/tasks') === true,
-  },
-  {
-    href: '/dashboard/folders',
-    label: 'Assets',
-    description: 'Files and notes',
-    icon: FolderKanban,
-    match: (pathname) =>
-      pathname?.startsWith('/dashboard/folders') === true ||
-      pathname?.startsWith('/dashboard/songs') === true,
   },
   {
     href: '/dashboard/settings/team',

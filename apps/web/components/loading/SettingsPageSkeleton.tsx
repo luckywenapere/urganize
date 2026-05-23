@@ -34,29 +34,6 @@ function SettingsPanelSkeleton({
   );
 }
 
-export function SettingsManagedArtistsSectionSkeleton() {
-  return (
-    <div className="mt-4 space-y-2">
-      {Array.from({ length: 3 }).map((_, index) => (
-        <div
-          key={`managed-artist-skeleton-${index}`}
-          className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2"
-        >
-          <div>
-            <SkeletonBlock className="h-4 w-28 rounded-full" />
-            <SkeletonBlock className="mt-2 h-3 w-20 rounded-full" />
-            <SkeletonBlock className="mt-2 h-3 w-40 rounded-full" />
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <SkeletonBlock className="h-7 w-12 rounded-md" />
-            <SkeletonBlock className="h-7 w-16 rounded-md" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function SettingsTeamMembersSectionSkeleton() {
   return (
     <div className="mt-4 space-y-2">
@@ -138,19 +115,6 @@ export function SettingsPageSkeleton() {
             </div>
           </SectionCardSkeleton>
         </div>
-
-        <SectionCardSkeleton className="mt-6 rounded-3xl p-5 shadow-[0_10px_30px_rgba(0,0,0,0.14)] sm:p-6">
-          <SkeletonBlock className="mb-4 h-7 w-32 rounded-full" />
-          <div className="space-y-3">
-            <SkeletonBlock className="h-10 w-full rounded-lg" />
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-              <SkeletonBlock className="h-10 w-full rounded-lg sm:col-span-2" />
-              <SkeletonBlock className="h-10 w-full rounded-lg" />
-              <SkeletonBlock className="h-10 w-full rounded-lg" />
-            </div>
-          </div>
-          <SettingsManagedArtistsSectionSkeleton />
-        </SectionCardSkeleton>
 
         <SectionCardSkeleton className="mt-6 rounded-3xl p-5 shadow-[0_10px_30px_rgba(0,0,0,0.14)] sm:p-6">
           <SkeletonBlock className="mb-4 h-7 w-36 rounded-full" />

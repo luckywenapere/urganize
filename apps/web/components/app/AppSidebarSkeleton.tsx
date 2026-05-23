@@ -10,7 +10,6 @@ const navItems = [
   '/dashboard',
   '/dashboard/releases',
   '/dashboard/tasks',
-  '/dashboard/folders',
   '/dashboard/settings/team',
   '/settings',
 ];
@@ -19,7 +18,6 @@ const isActivePath = (pathname: string, href: string) =>
   (href === '/dashboard' && pathname === href) ||
   (href === '/dashboard/releases' && pathname.startsWith('/dashboard/releases')) ||
   (href === '/dashboard/tasks' && pathname.startsWith('/dashboard/tasks')) ||
-  (href === '/dashboard/folders' && pathname.startsWith('/dashboard/folders')) ||
   (href === '/dashboard/settings/team' && pathname.startsWith('/dashboard/settings/team')) ||
   (href === '/settings' && pathname.startsWith('/settings')) ||
   (href === '/dashboard/releases' && pathname.startsWith('/dashboard/plans/'));
@@ -82,9 +80,8 @@ export function AppSidebarSkeleton({ pathname = '' }: AppSidebarSkeletonProps) {
             <SidebarItemSkeleton active={activeIndex === 0} labelWidth="w-20" />
             <SidebarItemSkeleton active={activeIndex === 1} labelWidth="w-16" />
             <SidebarItemSkeleton active={activeIndex === 2} labelWidth="w-14" />
-            <SidebarItemSkeleton active={activeIndex === 3} labelWidth="w-14" />
-            <SidebarItemSkeleton active={activeIndex === 4} labelWidth="w-12" />
-            <SidebarItemSkeleton active={activeIndex === 5} labelWidth="w-16" />
+            <SidebarItemSkeleton active={activeIndex === 3} labelWidth="w-12" />
+            <SidebarItemSkeleton active={activeIndex === 4} labelWidth="w-16" />
           </div>
         </nav>
       </div>

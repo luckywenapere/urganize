@@ -1,7 +1,6 @@
 export const ARTISTS_TABLE = 'artists';
 export const COLLABORATORS_TABLE = 'collaborators';
 export const RELEASE_COLLABORATORS_TABLE = 'release_collaborators';
-export const CREDIT_SUBMISSIONS_TABLE = 'credit_submissions';
 export const RELEASE_METADATA_TABLE = 'release_metadata';
 export const RELEASE_EVENTS_TABLE = 'release_events';
 
@@ -56,27 +55,6 @@ export const RELEASE_OPS_SQL = [
   ');',
   `create index if not exists ${RELEASE_COLLABORATORS_TABLE}_release_idx on public.${RELEASE_COLLABORATORS_TABLE}(release_id, status, created_at);`,
   '',
-  `create table if not exists public.${CREDIT_SUBMISSIONS_TABLE} (`,
-  '  id uuid primary key default gen_random_uuid(),',
-  '  release_id uuid not null references public.releases(id) on delete cascade,',
-  `  release_collaborator_id uuid not null references public.${RELEASE_COLLABORATORS_TABLE}(id) on delete cascade,`,
-  '  legal_name text not null default \'\',',
-  '  stage_name text null,',
-  '  role text not null default \'other\',',
-  '  email text null,',
-  '  phone text null,',
-  '  publishing_info text null,',
-  '  split_percentage numeric(5,2) null,',
-  '  pro_affiliation text null,',
-  '  ipi_number text null,',
-  '  notes text null,',
-  '  submitted_at timestamptz not null default now(),',
-  '  created_at timestamptz not null default now(),',
-  '  updated_at timestamptz not null default now(),',
-  '  unique (release_collaborator_id)',
-  ');',
-  `create index if not exists ${CREDIT_SUBMISSIONS_TABLE}_release_idx on public.${CREDIT_SUBMISSIONS_TABLE}(release_id, submitted_at desc);`,
-  '',
   `create table if not exists public.${RELEASE_METADATA_TABLE} (`,
   '  id uuid primary key default gen_random_uuid(),',
   '  release_id uuid not null unique references public.releases(id) on delete cascade,',
@@ -112,7 +90,6 @@ export const RELEASE_OPS_SQL = [
   `alter table public.${ARTISTS_TABLE} enable row level security;`,
   `alter table public.${COLLABORATORS_TABLE} enable row level security;`,
   `alter table public.${RELEASE_COLLABORATORS_TABLE} enable row level security;`,
-  `alter table public.${CREDIT_SUBMISSIONS_TABLE} enable row level security;`,
   `alter table public.${RELEASE_METADATA_TABLE} enable row level security;`,
   `alter table public.${RELEASE_EVENTS_TABLE} enable row level security;`,
 ].join('\n');
@@ -122,8 +99,6 @@ export type CollaboratorStatus = 'pending' | 'submitted';
 export type ReleaseEventType =
   | 'release_created'
   | 'collaborator_added'
-  | 'credit_link_sent'
-  | 'credit_submitted'
   | 'reminder_sent'
   | 'metadata_updated'
   | 'metadata_viewed'
@@ -132,14 +107,14 @@ export type ReleaseEventType =
 
 export type ReadinessChecklistStatus = 'complete' | 'in_progress' | 'pending' | 'locked';
 export type ReadinessChecklistItem = {
-  id: 'share_credit_link' | 'collect_all_credits' | 'review_metadata' | 'ready_for_distribution';
+  id: 'review_metadata' | 'ready_for_distribution';
   label: string;
   status: ReadinessChecklistStatus;
   detail: string;
 };
 
 export type ReadinessNextAction = {
-  type: 'copy_credit_link' | 'send_reminder' | 'view_metadata' | 'none';
+  type: 'send_reminder' | 'view_metadata' | 'none';
   label: string;
 };
 
@@ -174,26 +149,6 @@ export type ReleaseCollaborator = {
   stageName: string;
   email: string;
   phone: string;
-  submission: CreditSubmission | null;
-};
-
-export type CreditSubmission = {
-  id: string;
-  releaseId: string;
-  releaseCollaboratorId: string;
-  legalName: string;
-  stageName: string;
-  role: string;
-  email: string;
-  phone: string;
-  publishingInfo: string;
-  splitPercentage: string;
-  proAffiliation: string;
-  ipiNumber: string;
-  notes: string;
-  submittedAt: string;
-  createdAt: string;
-  updatedAt: string;
 };
 
 export type ReleaseMetadataSnapshot = {
@@ -209,12 +164,6 @@ export type ReleaseMetadataSnapshot = {
   language: string;
   explicit: boolean | null;
   artworkUrl: string;
-  producerCredits: Array<Record<string, unknown>>;
-  writerCredits: Array<Record<string, unknown>>;
-  featuredArtistCredits: Array<Record<string, unknown>>;
-  mixingCredits: Array<Record<string, unknown>>;
-  masteringCredits: Array<Record<string, unknown>>;
-  allCredits: Array<Record<string, unknown>>;
   createdAt: string;
   updatedAt: string;
 };
@@ -222,7 +171,6 @@ export type ReleaseMetadataSnapshot = {
 export type ReadinessState = {
   basicsComplete: boolean;
   collaboratorsAdded: boolean;
-  creditsCollected: boolean;
   metadataComplete: boolean;
   metadataSnapshotBuilt: boolean;
   metadataReviewed: boolean;
@@ -241,33 +189,7 @@ export type ReleaseCollaboratorInput = {
   role: string;
 };
 
-export type CreditSubmissionInput = {
-  legalName: string;
-  stageName: string;
-  role: string;
-  email: string;
-  phone: string;
-  publishingInfo: string;
-  splitPercentage: string;
-  proAffiliation: string;
-  ipiNumber: string;
-  notes: string;
-};
-
-export type CreditSubmissionFieldErrors = Partial<Record<keyof CreditSubmissionInput, string>>;
-
 const trimString = (value: unknown): string => String(value || '').trim();
-export const RELEASE_PUBLIC_COLLECTION_TOKEN_PREFIX = 'release~';
-
-export const createReleasePublicCollectionToken = (releaseId: string): string =>
-  `${RELEASE_PUBLIC_COLLECTION_TOKEN_PREFIX}${trimString(releaseId)}`;
-
-export const parseReleasePublicCollectionToken = (token: string): string => {
-  const normalized = trimString(token);
-  if (!normalized.startsWith(RELEASE_PUBLIC_COLLECTION_TOKEN_PREFIX)) return '';
-  return normalized.slice(RELEASE_PUBLIC_COLLECTION_TOKEN_PREFIX.length);
-};
-
 export const normalizeReleaseSlug = (value: string): string =>
   trimString(value)
     .toLowerCase()
@@ -298,140 +220,22 @@ export const validateCollaboratorInput = (value: ReleaseCollaboratorInput): stri
   return '';
 };
 
-export const normalizeCreditSubmissionInput = (value: unknown): CreditSubmissionInput => {
-  const raw = (value || {}) as Partial<CreditSubmissionInput>;
-  return {
-    legalName: trimString(raw.legalName),
-    stageName: trimString(raw.stageName),
-    role: trimString(raw.role) || 'other',
-    email: trimString(raw.email).toLowerCase(),
-    phone: trimString(raw.phone),
-    publishingInfo: trimString(raw.publishingInfo),
-    splitPercentage: trimString(raw.splitPercentage),
-    proAffiliation: trimString(raw.proAffiliation),
-    ipiNumber: trimString(raw.ipiNumber),
-    notes: trimString(raw.notes),
-  };
-};
-
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const splitPattern = /^\d+(\.\d{1,2})?$/;
-
-export const validateCreditSubmissionFields = (value: CreditSubmissionInput): CreditSubmissionFieldErrors => {
-  const errors: CreditSubmissionFieldErrors = {};
-
-  if (!value.legalName) {
-    errors.legalName = 'Legal name is required.';
-  }
-
-  if (!value.role) {
-    errors.role = 'Role is required.';
-  }
-
-  if (value.email && !emailPattern.test(value.email)) {
-    errors.email = 'Enter a valid email address.';
-  }
-
-  if (value.splitPercentage && !splitPattern.test(value.splitPercentage)) {
-    errors.splitPercentage = 'Split percentage must be numeric.';
-  }
-
-  return errors;
-};
-
-export const validateCreditSubmissionInput = (value: CreditSubmissionInput): string => {
-  const errors = validateCreditSubmissionFields(value);
-  const orderedFields: Array<keyof CreditSubmissionInput> = ['legalName', 'role', 'email', 'splitPercentage'];
-
-  for (const field of orderedFields) {
-    if (errors[field]) {
-      return errors[field] || '';
-    }
-  }
-
-  return '';
-};
-
-const roleGroupFor = (role: string): 'producers' | 'writers' | 'featured' | 'mixing' | 'mastering' | 'others' => {
-  const normalized = trimString(role).toLowerCase();
-  if (normalized.includes('producer')) return 'producers';
-  if (normalized.includes('writer') || normalized.includes('composer')) return 'writers';
-  if (normalized.includes('featured')) return 'featured';
-  if (normalized.includes('mix')) return 'mixing';
-  if (normalized.includes('master')) return 'mastering';
-  return 'others';
-};
-
-const toCreditEntry = (submission: CreditSubmission) => ({
-  legalName: submission.legalName,
-  stageName: submission.stageName,
-  role: submission.role,
-  email: submission.email,
-  phone: submission.phone,
-  publishingInfo: submission.publishingInfo,
-  splitPercentage: submission.splitPercentage,
-  proAffiliation: submission.proAffiliation,
-  ipiNumber: submission.ipiNumber,
-  notes: submission.notes,
-  submittedAt: submission.submittedAt,
-});
-
-export const buildReleaseMetadataPayload = (
-  release: Pick<ReleaseSummary, 'title' | 'artistName'>,
-  submissions: CreditSubmission[]
-) => {
-  const grouped = {
-    producers: [] as Array<Record<string, unknown>>,
-    writers: [] as Array<Record<string, unknown>>,
-    featured: [] as Array<Record<string, unknown>>,
-    mixing: [] as Array<Record<string, unknown>>,
-    mastering: [] as Array<Record<string, unknown>>,
-    others: [] as Array<Record<string, unknown>>,
-  };
-
-  for (const submission of submissions) {
-    const entry = toCreditEntry(submission);
-    grouped[roleGroupFor(submission.role)].push(entry);
-  }
-
-  return {
-    primary_artist_name: release.artistName,
-    release_title: release.title,
-    producer_credits_json: grouped.producers,
-    writer_credits_json: grouped.writers,
-    featured_artist_credits_json: grouped.featured,
-    mixing_credits_json: grouped.mixing,
-    mastering_credits_json: grouped.mastering,
-    all_credits_json: submissions.map((submission) => toCreditEntry(submission)),
-  };
-};
-
 export const calculateReleaseReadiness = (input: {
   title: string;
   artistName: string;
   collaboratorCount: number;
   submittedCount: number;
   metadata: ReleaseMetadataSnapshot | null;
-  creditSubmissionCount: number;
   metadataViewed: boolean;
 }): ReadinessState => {
   const basicsComplete = Boolean(trimString(input.title) && trimString(input.artistName));
   const collaboratorsAdded = input.collaboratorCount > 0;
-  const creditsCollected = collaboratorsAdded && input.submittedCount === input.collaboratorCount;
-  const metadataSnapshotBuilt = Boolean(input.metadata && input.creditSubmissionCount > 0);
+  const metadataSnapshotBuilt = Boolean(input.metadata);
   const metadataReviewed = metadataSnapshotBuilt && input.metadataViewed;
   const metadataComplete = metadataSnapshotBuilt && metadataReviewed;
-  const readyForDistribution = creditsCollected && metadataComplete;
+  const readyForDistribution = collaboratorsAdded && metadataComplete;
   const pendingCollaborators = Math.max(input.collaboratorCount - input.submittedCount, 0);
 
-  const shareCreditLinkStatus: ReadinessChecklistStatus = collaboratorsAdded ? 'complete' : 'pending';
-  const collectCreditsStatus: ReadinessChecklistStatus = !collaboratorsAdded
-    ? 'locked'
-    : creditsCollected
-      ? 'complete'
-      : input.submittedCount > 0
-        ? 'in_progress'
-        : 'pending';
   const reviewMetadataStatus: ReadinessChecklistStatus = !metadataSnapshotBuilt
     ? 'locked'
     : metadataReviewed
@@ -441,30 +245,14 @@ export const calculateReleaseReadiness = (input: {
 
   const checklist: ReadinessChecklistItem[] = [
     {
-      id: 'share_credit_link',
-      label: 'Share credit link',
-      status: shareCreditLinkStatus,
-      detail: collaboratorsAdded
-        ? `${input.collaboratorCount} submission${input.collaboratorCount === 1 ? '' : 's'} received`
-        : 'Copy and share the public credit link to start collecting credits',
-    },
-    {
-      id: 'collect_all_credits',
-      label: 'Collect all credits',
-      status: collectCreditsStatus,
-      detail: !collaboratorsAdded
-        ? 'Waiting for collaborators before credit collection can begin'
-        : `${input.submittedCount} of ${input.collaboratorCount} collaborator${input.collaboratorCount === 1 ? '' : 's'} submitted`,
-    },
-    {
       id: 'review_metadata',
       label: 'Review metadata',
       status: reviewMetadataStatus,
       detail: !metadataSnapshotBuilt
-        ? 'No credits submitted yet'
+        ? 'No metadata available yet'
         : metadataReviewed
           ? 'Metadata reviewed in the full metadata view'
-          : 'Open the metadata page to review grouped credits',
+          : 'Open the metadata page to review',
     },
     {
       id: 'ready_for_distribution',
@@ -472,7 +260,7 @@ export const calculateReleaseReadiness = (input: {
       status: readyForDistributionStatus,
       detail: readyForDistribution
         ? 'This release is ready for distribution'
-        : 'Waiting for credits collection and metadata review',
+        : 'Waiting for metadata review',
     },
   ];
 
@@ -492,10 +280,7 @@ export const calculateReleaseReadiness = (input: {
     label: '',
   };
   if (!collaboratorsAdded) {
-    nextStep = 'Copy and share your credit link to start collecting credits';
-    nextAction = { type: 'copy_credit_link', label: 'Copy Credit Link' };
-  } else if (!creditsCollected) {
-    nextStep = `Waiting for ${pendingCollaborators} collaborator${pendingCollaborators === 1 ? '' : 's'} to submit credits`;
+    nextStep = 'Add collaborators to your release';
     nextAction = { type: 'send_reminder', label: 'Send Reminder' };
   } else if (!metadataComplete) {
     nextStep = 'Review your metadata before distribution';
@@ -505,7 +290,6 @@ export const calculateReleaseReadiness = (input: {
   return {
     basicsComplete,
     collaboratorsAdded,
-    creditsCollected,
     metadataComplete,
     metadataSnapshotBuilt,
     metadataReviewed,

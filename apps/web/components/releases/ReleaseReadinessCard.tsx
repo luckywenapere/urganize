@@ -40,7 +40,7 @@ export function ReleaseReadinessCard({ readiness }: ReleaseReadinessCardProps) {
             <div>
               <p className="text-sm font-medium text-content-primary">Release Progress</p>
               <p className="mt-2 text-sm leading-6 text-content-secondary">
-                Track collaborators, credits, metadata, and delivery readiness.
+                Track collaborators, metadata, and delivery readiness.
               </p>
             </div>
             <StatusBadge

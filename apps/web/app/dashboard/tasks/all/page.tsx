@@ -7,7 +7,7 @@ import { SectionCard } from '@/components/shared/SectionCard';
 import { Toast } from '@/components/shared/Toast';
 import { TaskRow } from '@/components/tasks/TaskRow';
 import { TASKS_CHANGED_EVENT, useTaskUI } from '@/components/tasks/TaskUIProvider';
-import { type PreSaveReleaseOption } from '@/lib/pre-save';
+import { type ReleaseOption } from '@/lib/release-helpers';
 import {
   getTaskPriorityLabel,
   getTaskStatusLabel,
@@ -29,7 +29,7 @@ type AllTasksPayload = {
 };
 
 type ReleaseSelectorPayload = {
-  releases?: PreSaveReleaseOption[];
+  releases?: ReleaseOption[];
 };
 
 type WorkspaceMembersPayload = {
@@ -84,7 +84,7 @@ export default function AllTasksPage() {
   const searchParams = useSearchParams();
   const { openTask, openQuickCreate } = useTaskUI();
   const [grouped, setGrouped] = useState<AllTasksPayload['grouped']>([]);
-  const [releases, setReleases] = useState<PreSaveReleaseOption[]>([]);
+  const [releases, setReleases] = useState<ReleaseOption[]>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState<TaskStatus>('todo');

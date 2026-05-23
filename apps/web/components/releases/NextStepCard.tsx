@@ -12,12 +12,10 @@ type NextStepCardProps = {
 
 export function NextStepCard({ nextStep, action, onAction, actionDisabled = false }: NextStepCardProps) {
   const helperText =
-    action.type === 'copy_credit_link'
-      ? 'Share the public credit link from this page.'
-      : action.type === 'send_reminder'
-        ? 'Keep collection moving from this page.'
+    action.type === 'send_reminder'
+      ? 'Keep collection moving from this page.'
       : action.type === 'view_metadata'
-        ? 'Review structured credits before delivery.'
+        ? 'Review metadata before delivery.'
         : 'This release can move forward without any missing steps.';
 
   return (

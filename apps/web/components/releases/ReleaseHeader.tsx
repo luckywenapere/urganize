@@ -45,13 +45,6 @@ export function ReleaseHeader({ release }: ReleaseHeaderProps) {
             View Playbook
           </Link>
           <Link
-            href={`/dashboard/pre-save?releaseId=${release.id}`}
-            data-onboarding-target="pre-save"
-            className="min-h-11 w-full rounded-2xl border border-stroke-default bg-bg-surface px-5 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-          >
-            Open Pre-Save
-          </Link>
-          <Link
             href={`/dashboard/releases/${release.id}/metadata`}
             className="min-h-11 w-full rounded-2xl border border-stroke-default bg-bg-surface px-5 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
           >

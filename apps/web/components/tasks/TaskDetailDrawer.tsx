@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ReleaseCombobox } from '@/components/pre-save/ReleaseCombobox';
+import { ReleaseCombobox } from '@/components/shared/ReleaseCombobox';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
 import {
@@ -18,7 +18,7 @@ import {
   type TaskStatus,
   type WorkspaceMember,
 } from '@/lib/tasks';
-import { type PreSaveReleaseOption } from '@/lib/pre-save';
+import { type ReleaseOption } from '@/lib/release-helpers';
 
 type TaskPatchInput = {
   title?: string;
@@ -37,7 +37,7 @@ type TaskDetailDrawerProps = {
   error: string;
   task: TaskDetail | null;
   members: WorkspaceMember[];
-  releases: PreSaveReleaseOption[];
+  releases: ReleaseOption[];
   groups: TaskGroup[];
   isUploadingAttachment: boolean;
   onClose: () => void;
@@ -86,7 +86,7 @@ export function TaskDetailDrawer({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [releaseQuery, setReleaseQuery] = useState('');
-  const [selectedRelease, setSelectedRelease] = useState<PreSaveReleaseOption | null>(null);
+  const [selectedRelease, setSelectedRelease] = useState<ReleaseOption | null>(null);
   const [assigneeQuery, setAssigneeQuery] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState<WorkspaceMember | null>(null);
   const [commentDraft, setCommentDraft] = useState('');

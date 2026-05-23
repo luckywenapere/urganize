@@ -1,6 +1,5 @@
 export type ReleasePlaybookPhaseKey =
   | 'foundation'
-  | 'credits_metadata'
   | 'distribution_prep'
   | 'rollout_prep'
   | 'release_day'
@@ -71,7 +70,6 @@ export type ReleasePlaybookState = {
 
 export const RELEASE_PLAYBOOK_PHASE_ORDER: ReleasePlaybookPhaseKey[] = [
   'foundation',
-  'credits_metadata',
   'distribution_prep',
   'rollout_prep',
   'release_day',
@@ -90,23 +88,6 @@ export const RELEASE_PLAYBOOK_PHASES: ReleasePlaybookTemplatePhase[] = [
       { itemKey: buildItemKey('foundation', 'release_title_confirmed'), title: 'Release title confirmed' },
       { itemKey: buildItemKey('foundation', 'main_collaborators_identified'), title: 'Main collaborators identified' },
       { itemKey: buildItemKey('foundation', 'release_date_selected'), title: 'Release date selected' },
-    ],
-  },
-  {
-    key: 'credits_metadata',
-    title: 'Credits & Metadata',
-    description: 'Make sure credits, artwork, and metadata are organized before delivery.',
-    items: [
-      {
-        itemKey: buildItemKey('credits_metadata', 'collect_all_collaborator_credits'),
-        title: 'Collect all collaborator credits',
-      },
-      { itemKey: buildItemKey('credits_metadata', 'review_metadata'), title: 'Review metadata' },
-      {
-        itemKey: buildItemKey('credits_metadata', 'confirm_producer_and_songwriter_credits'),
-        title: 'Confirm producer and songwriter credits',
-      },
-      { itemKey: buildItemKey('credits_metadata', 'artwork_ready'), title: 'Artwork ready' },
     ],
   },
   {
@@ -138,10 +119,6 @@ export const RELEASE_PLAYBOOK_PHASES: ReleasePlaybookTemplatePhase[] = [
       {
         itemKey: buildItemKey('rollout_prep', 'cover_art_assets_resized_for_social'),
         title: 'Cover art assets resized for social',
-      },
-      {
-        itemKey: buildItemKey('rollout_prep', 'pre_save_or_pre_release_plan_ready'),
-        title: 'Pre-save or pre-release plan ready',
       },
       { itemKey: buildItemKey('rollout_prep', 'outreach_list_prepared'), title: 'Outreach list prepared' },
     ],

@@ -2,24 +2,24 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { formatReleaseDate, type PreSaveReleaseOption } from '@/lib/pre-save';
+import { formatReleaseDate, type ReleaseOption } from '@/lib/release-helpers';
 
 type ReleaseComboboxProps = {
-  releases: PreSaveReleaseOption[];
-  selectedRelease: PreSaveReleaseOption | null;
+  releases: ReleaseOption[];
+  selectedRelease: ReleaseOption | null;
   query: string;
   isLoading: boolean;
   isCreating: boolean;
   allowCreate?: boolean;
   onQueryChange: (value: string) => void;
-  onSelectRelease: (release: PreSaveReleaseOption) => void;
-  onCreateRelease: (title: string) => Promise<PreSaveReleaseOption | null>;
+  onSelectRelease: (release: ReleaseOption) => void;
+  onCreateRelease: (title: string) => Promise<ReleaseOption | null>;
 };
 
 type ComboboxItem =
   | {
       kind: 'release';
-      release: PreSaveReleaseOption;
+      release: ReleaseOption;
     }
   | {
       kind: 'create';
@@ -30,7 +30,7 @@ function normalizeValue(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function getCoverFallbackMonogram(release: PreSaveReleaseOption): string {
+function getCoverFallbackMonogram(release: ReleaseOption): string {
   const source = `${release.artistName} ${release.title}`.trim();
   const letters = source
     .split(/\s+/)
@@ -105,7 +105,7 @@ export function ReleaseCombobox({
     });
   }, [isOpen, items]);
 
-  const commitTypedValue = async (): Promise<PreSaveReleaseOption | null> => {
+  const commitTypedValue = async (): Promise<ReleaseOption | null> => {
     const trimmedValue = query.trim();
     if (!trimmedValue || isCreating) {
       setIsOpen(false);
