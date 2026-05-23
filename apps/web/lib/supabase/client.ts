@@ -16,7 +16,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// Type definitions matching your database schema
+// Profile type used by analytics and auth contexts.
 export type Profile = {
   id: string;
   name: string;
@@ -54,46 +54,6 @@ export type Profile = {
   created_at: string;
   updated_at: string;
   is_subscribed?: boolean; 
-};
-
-export type DbRelease = {
-  id: string;
-  user_id: string;
-  title: string;
-  artist_name: string;
-  type: 'single' | 'ep' | 'album';
-  status: 'draft' | 'in-progress' | 'ready' | 'released';
-  release_date?: string;
-  cover_art?: string;
-  created_at: string;
-  updated_at: string;
-};
-
-export type DbTask = {
-  id: string;
-  release_id: string;
-  user_id: string;
-  title: string;
-  description?: string;
-  phase: 'pre-production' | 'production' | 'promotion' | 'distribution';
-  status: 'pending' | 'completed';
-  due_date?: string;
-  is_system_generated: boolean;
-  order?: number;
-  created_at: string;
-  updated_at: string;
-};
-
-export type DbFile = {
-  id: string;
-  release_id: string;
-  user_id: string;
-  name: string;
-  category: 'audio' | 'stems' | 'artwork' | 'licenses' | 'contracts';
-  size: number;
-  storage_path: string;
-  mime_type?: string;
-  created_at: string;
 };
 
 // Helper function to handle Supabase errors

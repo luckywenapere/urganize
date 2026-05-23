@@ -67,20 +67,71 @@ export const calculateTrialDaysLeft = (
   return Math.ceil(diffMs / DAY_MS);
 };
 
-// Stubbed snapshot resolver — the paywall is currently disabled product-wide,
-// so this always returns the unlocked "active" state regardless of the row.
-// Keep the signature so callers don't need to change when paywall returns.
 const resolveSubscriptionSnapshot = (
-  _subscription: SubscriptionRow | null,
-  _now = new Date()
+  subscription: SubscriptionRow | null,
+  now = new Date()
 ): SubscriptionSnapshot => {
+  if (!subscription || !subscription.status) {
+    return {
+      status: 'expired',
+      hasAccess: false,
+      trialEndsAt: null,
+      expiresAt: null,
+      plan: null,
+      rawStatus: null,
+    };
+  }
+
+  const rawStatus = subscription.status;
+  const expiresAt = parseTimestamp(subscription.expires_at);
+  const plan = subscription.plan || null;
+  const expiresAtStr = subscription.expires_at || null;
+  const isExpired = expiresAt !== null && expiresAt.getTime() <= now.getTime();
+
+  // Active trial
+  if ((rawStatus === 'trialing' || rawStatus === 'free_trial') && !isExpired) {
+    return {
+      status: 'free_trial',
+      hasAccess: true,
+      trialEndsAt: expiresAtStr,
+      expiresAt: expiresAtStr,
+      plan,
+      rawStatus,
+    };
+  }
+
+  // Active subscription (expires_at in future or null = no expiry)
+  if (rawStatus === 'active' && !isExpired) {
+    return {
+      status: 'active',
+      hasAccess: true,
+      trialEndsAt: null,
+      expiresAt: expiresAtStr,
+      plan,
+      rawStatus,
+    };
+  }
+
+  // Cancelled but still within grace period
+  if (rawStatus === 'cancelled' && !isExpired) {
+    return {
+      status: 'active',
+      hasAccess: true,
+      trialEndsAt: null,
+      expiresAt: expiresAtStr,
+      plan,
+      rawStatus,
+    };
+  }
+
+  // Everything else — expired
   return {
-    status: 'active',
-    hasAccess: true,
+    status: 'expired',
+    hasAccess: false,
     trialEndsAt: null,
-    expiresAt: null,
-    plan: 'annual',
-    rawStatus: 'active',
+    expiresAt: expiresAtStr,
+    plan,
+    rawStatus,
   };
 };
 
@@ -178,6 +229,7 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
   return snapshot.status;
 }
 
-export async function hasAccess(_userId: string): Promise<boolean> {
-  return true;
+export async function hasAccess(userId: string): Promise<boolean> {
+  const snapshot = await getSubscriptionSnapshot(userId);
+  return snapshot.hasAccess;
 }
