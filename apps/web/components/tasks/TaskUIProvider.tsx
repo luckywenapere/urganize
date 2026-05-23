@@ -13,7 +13,7 @@ import { usePathname } from 'next/navigation';
 import { TaskDetailDrawer } from '@/components/tasks/TaskDetailDrawer';
 import { TaskNotificationBell } from '@/components/tasks/TaskNotificationBell';
 import { TaskQuickCreateModal } from '@/components/tasks/TaskQuickCreateModal';
-import { type PreSaveReleaseOption } from '@/lib/pre-save';
+import { type ReleaseOption } from '@/lib/release-helpers';
 import { isTypingTarget, type TaskCreateSource, type TaskDetail, type TaskGroup, type TaskPriority, type WorkspaceMember } from '@/lib/tasks';
 import { supabase } from '@/lib/supabase/client';
 
@@ -28,7 +28,7 @@ type WorkspaceMembersPayload = {
 };
 
 type ReleaseSelectorPayload = {
-  releases?: PreSaveReleaseOption[];
+  releases?: ReleaseOption[];
   error?: string;
 };
 
@@ -88,7 +88,7 @@ function dispatchTasksChanged() {
   window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
 }
 
-function toReleaseQuery(release: PreSaveReleaseOption | null): string {
+function toReleaseQuery(release: ReleaseOption | null): string {
   return release?.title || '';
 }
 
@@ -117,13 +117,13 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const [quickCreateDefaults, setQuickCreateDefaults] = useState<QuickCreateDefaults>({});
   const [quickTitle, setQuickTitle] = useState('');
   const [quickReleaseQuery, setQuickReleaseQuery] = useState('');
-  const [quickSelectedRelease, setQuickSelectedRelease] = useState<PreSaveReleaseOption | null>(null);
+  const [quickSelectedRelease, setQuickSelectedRelease] = useState<ReleaseOption | null>(null);
   const [quickAssigneeQuery, setQuickAssigneeQuery] = useState('');
   const [quickSelectedAssignee, setQuickSelectedAssignee] = useState<WorkspaceMember | null>(null);
   const [quickDueDate, setQuickDueDate] = useState('');
   const [quickPriority, setQuickPriority] = useState<TaskPriority>('none');
   const [isQuickSaving, setIsQuickSaving] = useState(false);
-  const [releases, setReleases] = useState<PreSaveReleaseOption[]>([]);
+  const [releases, setReleases] = useState<ReleaseOption[]>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [, setIsOptionsLoaded] = useState(false);

@@ -12,7 +12,6 @@ const buildTabs = (releaseId: string) => [
   { href: `/dashboard/releases/${releaseId}/tasks`, label: 'Tasks' },
   { href: `/dashboard/releases/${releaseId}/playbook`, label: 'Playbook' },
   { href: `/dashboard/releases/${releaseId}/metadata`, label: 'Release Info' },
-  { href: `/dashboard/pre-save?releaseId=${releaseId}`, label: 'Pre-Save' },
 ];
 
 export function ReleaseWorkspaceTabs({ releaseId }: ReleaseWorkspaceTabsProps) {
@@ -27,8 +26,7 @@ export function ReleaseWorkspaceTabs({ releaseId }: ReleaseWorkspaceTabsProps) {
             pathname === tab.href ||
             (tab.href.includes('/tasks') && pathname?.startsWith(`/dashboard/releases/${releaseId}/tasks`)) ||
             (tab.href.includes('/playbook') && pathname?.startsWith(`/dashboard/releases/${releaseId}/playbook`)) ||
-            (tab.href.includes('/metadata') && pathname?.startsWith(`/dashboard/releases/${releaseId}/metadata`)) ||
-            (tab.href.includes('/pre-save') && pathname?.startsWith('/dashboard/pre-save'));
+            (tab.href.includes('/metadata') && pathname?.startsWith(`/dashboard/releases/${releaseId}/metadata`));
 
           return (
             <Link

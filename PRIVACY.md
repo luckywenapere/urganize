@@ -5,8 +5,7 @@ Urganize records authenticated product sessions with PostHog session replays for
 Operational safeguards:
 
 - Password and payment-style inputs are masked in the PostHog browser init config
-- Sensitive sections such as private notes, contact details, and contract details use `data-ph-no-capture`
-- Pre-save subscriber emails are never sent as browser analytics properties
-- Private server-side analytics events only send campaign, release, track, and folder identifiers needed for aggregate product analysis
+- Sensitive sections such as contact details and contract details use `data-ph-no-capture`
+- Private server-side analytics events only send campaign and release identifiers needed for aggregate product analysis
 
 This note should be reflected in the product privacy policy or terms shown to users before production rollout.

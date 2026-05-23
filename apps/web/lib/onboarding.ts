@@ -1,6 +1,5 @@
 export type UserRole = 'artist' | 'manager' | 'label' | 'other';
 export type OnboardingStep = 1 | 2 | 3 | 4 | 5;
-export type OnboardingFeature = 'presave' | 'audio' | 'folders';
 export type OnboardingPersona =
   | 'independent_artist'
   | 'music_manager'

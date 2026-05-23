@@ -9,7 +9,16 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(ls \"apps/homepage/public/images/logos/\" 2>/dev/null; ls \"C:/Users/penta/Downloads/\" 2>/dev/null | head -20)",
+      "Read(//c/Users/penta/Downloads/**)",
+      "Bash(node -e \"const fs=require\\('fs'\\);const b=fs.readFileSync\\('apps/homepage/public/images/logos/anchor-partner.png'\\);console.log\\('W:',b.readUInt32BE\\(16\\),'H:',b.readUInt32BE\\(20\\)\\);\")",
+      "Bash(xargs grep:*)",
+      "Bash(grep:*)",
+      "Bash(rm:*)",
+      "Bash(pnpm:*)",
+      "Bash(npx next:*)",
+      "Bash(npx eslint:*)"
     ]
   }
 }

@@ -9,7 +9,7 @@ import { TaskService } from '@/lib/services/task-service';
 import { ReleaseService } from '@/lib/services/release-service';
 import type { ActivityLogEntry, ExecutionTask } from '@/lib/execution-types';
 
-const ACTIVITY_LOG_TABLE = 'activity_log';
+const ACTIVITY_LOG_TABLE = 'activity_logs';
 
 const toActivity = (row: Record<string, unknown>): ActivityLogEntry => ({
   id: String(row.id || ''),

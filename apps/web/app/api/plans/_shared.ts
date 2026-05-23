@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { RELEASE_SONGS_SQL, RELEASE_SONGS_TABLE } from '@/lib/release-songs';
-
-export { RELEASE_SONGS_SQL, RELEASE_SONGS_TABLE };
 
 export const isOptionalTableMissingError = (error: unknown): boolean => {
   const code = String((error as { code?: string } | null)?.code || '').toUpperCase();

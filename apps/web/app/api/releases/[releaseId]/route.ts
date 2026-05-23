@@ -9,7 +9,6 @@ import {
   getAuthenticatedUser,
   isOptionalTableMissingError,
   loadReleaseCommandCenterData,
-  rebuildReleaseMetadataSnapshot,
 } from '../_shared';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
 import {
@@ -20,27 +19,18 @@ import {
 } from '@/lib/posthog';
 
 const trimString = (value: unknown): string => String(value || '').trim();
-const TRACKS_TABLE = 'tracks';
 const TASKS_TABLE = 'tasks';
-const PRE_SAVE_CAMPAIGNS_TABLE = 'pre_save_campaigns';
 const WORKSPACES_TABLE = 'workspaces';
 const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
 const RELEASE_PIPELINE_STATES = ['idea', 'planning', 'asset_prep', 'distribution', 'campaign', 'post_release'] as const;
 
 type ReleaseSuggestedAction =
   | {
-      type: 'add_task' | 'invite_team' | 'launch_pre_save';
+      type: 'add_task' | 'invite_team';
       title: string;
       description: string;
       ctaLabel: string;
       href: string;
-    }
-  | {
-      type: 'upload_track';
-      title: string;
-      description: string;
-      ctaLabel: string;
-      target: 'tracks';
     }
   | {
       type: 'none';
@@ -52,8 +42,6 @@ type ReleaseSuggestedAction =
 type ReleaseRetentionSummary = {
   taskCount: number;
   teamMemberCount: number;
-  trackCount: number;
-  preSaveCampaignCount: number;
   suggestedAction: ReleaseSuggestedAction;
 };
 
@@ -82,23 +70,7 @@ async function loadReleaseRetentionSummary(
   userId: string
 ): Promise<ReleaseRetentionSummary> {
   const tasksResult = await adminClient.from(TASKS_TABLE).select('id').eq('release_id', releaseId);
-  const tracksResult = await adminClient
-    .from(TRACKS_TABLE)
-    .select('id')
-    .eq('release_id', releaseId)
-    .eq('user_id', userId);
-
-  const trackRows =
-    !tracksResult.error && Array.isArray(tracksResult.data)
-      ? tracksResult.data.map((row) => String(row.id || '')).filter(Boolean)
-      : [];
-  const trackCount = trackRows.length;
   const taskCount = !tasksResult.error && Array.isArray(tasksResult.data) ? tasksResult.data.length : 0;
-  const preSaveResult = await adminClient
-    .from(PRE_SAVE_CAMPAIGNS_TABLE)
-    .select('id')
-    .eq('user_id', userId)
-    .eq('release_id', releaseId);
   const workspaceResult = await adminClient
     .from(WORKSPACES_TABLE)
     .select('id')
@@ -115,17 +87,11 @@ async function loadReleaseRetentionSummary(
           .in('status', ['active', 'invited'])
       : { data: [], error: workspaceResult.error };
 
-  const preSaveCampaignCount =
-    !preSaveResult.error && Array.isArray(preSaveResult.data) ? preSaveResult.data.length : 0;
   const teamMemberCount =
     !teamMembersResult.error && Array.isArray(teamMembersResult.data) ? teamMembersResult.data.length : 0;
 
   if (tasksResult.error && !isMissingOptionalFeatureTable(tasksResult.error)) {
     throw new Error(tasksResult.error.message || 'Could not load release tasks.');
-  }
-
-  if (tracksResult.error && !isMissingOptionalFeatureTable(tracksResult.error)) {
-    throw new Error(tracksResult.error.message || 'Could not load release tracks.');
   }
 
   if (workspaceResult.error && !isMissingOptionalFeatureTable(workspaceResult.error)) {
@@ -136,16 +102,10 @@ async function loadReleaseRetentionSummary(
     throw new Error(teamMembersResult.error.message || 'Could not load workspace members.');
   }
 
-  if (preSaveResult.error && !isMissingOptionalFeatureTable(preSaveResult.error)) {
-    throw new Error(preSaveResult.error.message || 'Could not load pre-save campaigns.');
-  }
-
   if (taskCount === 0) {
     return {
       taskCount,
       teamMemberCount,
-      trackCount,
-      preSaveCampaignCount,
       suggestedAction: {
         type: 'add_task',
         title: 'Add your first task to stay on track',
@@ -160,8 +120,6 @@ async function loadReleaseRetentionSummary(
     return {
       taskCount,
       teamMemberCount,
-      trackCount,
-      preSaveCampaignCount,
       suggestedAction: {
         type: 'invite_team',
         title: 'Invite your team to assign work',
@@ -172,43 +130,9 @@ async function loadReleaseRetentionSummary(
     };
   }
 
-  if (trackCount === 0) {
-    return {
-      taskCount,
-      teamMemberCount,
-      trackCount,
-      preSaveCampaignCount,
-      suggestedAction: {
-        type: 'upload_track',
-        title: 'Upload your first track',
-        description: 'Tracks unlock private sharing and turn the release workspace into something your team can actually use.',
-        ctaLabel: 'Go to tracks',
-        target: 'tracks',
-      },
-    };
-  }
-
-  if (preSaveCampaignCount === 0) {
-    return {
-      taskCount,
-      teamMemberCount,
-      trackCount,
-      preSaveCampaignCount,
-      suggestedAction: {
-        type: 'launch_pre_save',
-        title: 'Start a pre-save campaign',
-        description: 'A pre-save page gives this release a clear fan capture destination before launch day arrives.',
-        ctaLabel: 'Open pre-save',
-        href: `/dashboard/pre-save?releaseId=${releaseId}`,
-      },
-    };
-  }
-
   return {
     taskCount,
     teamMemberCount,
-    trackCount,
-    preSaveCampaignCount,
     suggestedAction: {
       type: 'none',
       title: '',
@@ -328,18 +252,6 @@ export async function PATCH(
       if (isOptionalTableMissingError(metadataUpdate.error)) return buildMissingTableResponse();
       return NextResponse.json({ error: metadataUpdate.error.message || 'Could not update metadata.' }, { status: 500 });
     }
-
-    const refreshedRelease = {
-      ...ownership.release,
-      title,
-      artistName,
-      releaseDate,
-      description,
-      status: status as typeof ownership.release.status,
-    };
-
-    const rebuildResult = await rebuildReleaseMetadataSnapshot(adminClient!, refreshedRelease);
-    if ('error' in rebuildResult) return rebuildResult.error;
 
     const eventResult = await adminClient!.from(RELEASE_EVENTS_TABLE).insert({
       release_id: releaseId,

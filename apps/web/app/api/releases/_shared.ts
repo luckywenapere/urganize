@@ -3,14 +3,11 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
   ARTISTS_TABLE,
   COLLABORATORS_TABLE,
-  CREDIT_SUBMISSIONS_TABLE,
   RELEASE_COLLABORATORS_TABLE,
   RELEASE_EVENTS_TABLE,
   RELEASE_METADATA_TABLE,
   RELEASE_OPS_SQL,
-  buildReleaseMetadataPayload,
   calculateReleaseReadiness,
-  type CreditSubmission,
   type ReleaseMetadataSnapshot,
   type ReleaseSummary,
 } from '@/lib/release-ops';
@@ -18,7 +15,6 @@ import {
 export {
   ARTISTS_TABLE,
   COLLABORATORS_TABLE,
-  CREDIT_SUBMISSIONS_TABLE,
   RELEASE_COLLABORATORS_TABLE,
   RELEASE_EVENTS_TABLE,
   RELEASE_METADATA_TABLE,
@@ -114,19 +110,11 @@ export async function ensureReleaseOpsSchema(
           .limit(1),
     },
     {
-      label: 'credit submissions table',
-      run: async () =>
-        adminClient
-          .from(CREDIT_SUBMISSIONS_TABLE)
-          .select('id,release_id,release_collaborator_id,legal_name,stage_name,role,email,phone,publishing_info,split_percentage,pro_affiliation,ipi_number,notes,submitted_at,updated_at')
-          .limit(1),
-    },
-    {
       label: 'release metadata table',
       run: async () =>
         adminClient
           .from(RELEASE_METADATA_TABLE)
-          .select('id,release_id,primary_artist_name,release_title,producer_credits_json,writer_credits_json,featured_artist_credits_json,all_credits_json,updated_at')
+          .select('id,release_id,primary_artist_name,release_title,updated_at')
           .limit(1),
     },
     {
@@ -200,25 +188,6 @@ export async function ensureReleaseOwnership(
   return { release: toReleaseSummary(release as Record<string, unknown>) };
 }
 
-export const toCreditSubmission = (row: Record<string, unknown>): CreditSubmission => ({
-  id: String(row.id || ''),
-  releaseId: String(row.release_id || ''),
-  releaseCollaboratorId: String(row.release_collaborator_id || ''),
-  legalName: String(row.legal_name || ''),
-  stageName: String(row.stage_name || ''),
-  role: String(row.role || 'other'),
-  email: String(row.email || ''),
-  phone: String(row.phone || ''),
-  publishingInfo: String(row.publishing_info || ''),
-  splitPercentage: row.split_percentage == null ? '' : String(row.split_percentage),
-  proAffiliation: String(row.pro_affiliation || ''),
-  ipiNumber: String(row.ipi_number || ''),
-  notes: String(row.notes || ''),
-  submittedAt: String(row.submitted_at || ''),
-  createdAt: String(row.created_at || ''),
-  updatedAt: String(row.updated_at || ''),
-});
-
 export const toMetadataSnapshot = (row: Record<string, unknown> | null | undefined): ReleaseMetadataSnapshot | null => {
   if (!row) return null;
   return {
@@ -234,74 +203,10 @@ export const toMetadataSnapshot = (row: Record<string, unknown> | null | undefin
     language: String(row.language || ''),
     explicit: row.explicit === null || row.explicit === undefined ? null : Boolean(row.explicit),
     artworkUrl: String(row.artwork_url || ''),
-    producerCredits: Array.isArray(row.producer_credits_json) ? (row.producer_credits_json as Array<Record<string, unknown>>) : [],
-    writerCredits: Array.isArray(row.writer_credits_json) ? (row.writer_credits_json as Array<Record<string, unknown>>) : [],
-    featuredArtistCredits: Array.isArray(row.featured_artist_credits_json) ? (row.featured_artist_credits_json as Array<Record<string, unknown>>) : [],
-    mixingCredits: Array.isArray(row.mixing_credits_json) ? (row.mixing_credits_json as Array<Record<string, unknown>>) : [],
-    masteringCredits: Array.isArray(row.mastering_credits_json) ? (row.mastering_credits_json as Array<Record<string, unknown>>) : [],
-    allCredits: Array.isArray(row.all_credits_json) ? (row.all_credits_json as Array<Record<string, unknown>>) : [],
     createdAt: String(row.created_at || ''),
     updatedAt: String(row.updated_at || ''),
   };
 };
-
-export async function rebuildReleaseMetadataSnapshot(
-  adminClient: SupabaseClient,
-  release: ReleaseSummary
-) {
-  const submissionsResult = await adminClient
-    .from(CREDIT_SUBMISSIONS_TABLE)
-    .select('*')
-    .eq('release_id', release.id)
-    .order('submitted_at', { ascending: true });
-
-  if (submissionsResult.error) {
-    if (isOptionalTableMissingError(submissionsResult.error)) {
-      return { error: buildMissingTableResponse() };
-    }
-    return {
-      error: NextResponse.json(
-        { error: submissionsResult.error.message || 'Could not rebuild release metadata.' },
-        { status: 500 }
-      ),
-    };
-  }
-
-  const submissions = Array.isArray(submissionsResult.data)
-    ? submissionsResult.data.map((row) => toCreditSubmission(row as Record<string, unknown>))
-    : [];
-
-  const payload = buildReleaseMetadataPayload(release, submissions);
-  const upsertResult = await adminClient
-    .from(RELEASE_METADATA_TABLE)
-    .upsert(
-      {
-        release_id: release.id,
-        ...payload,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'release_id' }
-    )
-    .select('*')
-    .single();
-
-  if (upsertResult.error) {
-    if (isOptionalTableMissingError(upsertResult.error)) {
-      return { error: buildMissingTableResponse() };
-    }
-    return {
-      error: NextResponse.json(
-        { error: upsertResult.error.message || 'Could not rebuild release metadata.' },
-        { status: 500 }
-      ),
-    };
-  }
-
-  return {
-    metadata: toMetadataSnapshot(upsertResult.data as Record<string, unknown>),
-    submissions,
-  };
-}
 
 export async function loadReleaseCommandCenterData(
   adminClient: SupabaseClient,
@@ -333,28 +238,6 @@ export async function loadReleaseCommandCenterData(
   }
 
   const collaboratorRows = Array.isArray(collaboratorsResult.data) ? collaboratorsResult.data : [];
-  const collaboratorIds = collaboratorRows.map((row) => String(row.id || '')).filter(Boolean);
-  const submissionsResult = collaboratorIds.length
-    ? await adminClient
-        .from(CREDIT_SUBMISSIONS_TABLE)
-        .select('*')
-        .in('release_collaborator_id', collaboratorIds)
-    : { data: [], error: null };
-
-  if (submissionsResult.error) {
-    if (isOptionalTableMissingError(submissionsResult.error)) {
-      return { error: buildMissingTableResponse() };
-    }
-    return {
-      error: NextResponse.json({ error: submissionsResult.error.message || 'Could not load submissions.' }, { status: 500 }),
-    };
-  }
-
-  const submissionByCollaboratorId = new Map<string, CreditSubmission>();
-  for (const row of submissionsResult.data || []) {
-    const submission = toCreditSubmission(row as Record<string, unknown>);
-    submissionByCollaboratorId.set(submission.releaseCollaboratorId, submission);
-  }
 
   const collaborators = collaboratorRows.map((row) => {
     const collaboratorRecord = Array.isArray(row.collaborators) ? row.collaborators[0] : row.collaborators;
@@ -376,7 +259,6 @@ export async function loadReleaseCommandCenterData(
       stageName: String(collaboratorRecord?.stage_name || ''),
       email: String(collaboratorRecord?.email || ''),
       phone: String(collaboratorRecord?.phone || ''),
-      submission: submissionByCollaboratorId.get(String(row.id || '')) || null,
     };
   });
 
@@ -387,7 +269,6 @@ export async function loadReleaseCommandCenterData(
     collaboratorCount: collaborators.length,
     submittedCount: collaborators.filter((item) => item.status === 'submitted').length,
     metadata,
-    creditSubmissionCount: submissionByCollaboratorId.size,
     metadataViewed: Boolean(metadataViewedResult.data?.id),
   });
 

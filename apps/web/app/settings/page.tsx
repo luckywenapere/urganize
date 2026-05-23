@@ -6,12 +6,10 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getRolePermissions } from '@/lib/role-permissions';
-import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
-import { deleteUiDraft, fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
+import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
 import { ThemeToggle } from '@urganize/ui';
-import { SearchableGenreSelect } from '@urganize/ui';
 import {
-  SettingsManagedArtistsSectionSkeleton,
   SettingsPageSkeleton,
   SettingsTeamMembersSectionSkeleton,
 } from '@/components/loading/SettingsPageSkeleton';
@@ -35,24 +33,10 @@ type OrganizationMember = {
   updated_at?: string;
 };
 
-type ManagedArtist = {
-  id: string;
-  name: string;
-  genre: string;
-  notes: string;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
 type SettingsUiState = {
   organizationName: string;
   newMemberEmail: string;
   newMemberRole: 'manager' | 'artist' | 'team-member' | 'viewer';
-  managedArtistForm: {
-    name: string;
-    genre: string;
-    notes: string;
-  };
 };
 
 const panelClass =
@@ -70,9 +54,7 @@ const isSettingsUiState = (value: unknown): value is SettingsUiState => {
     (state.newMemberRole === 'manager' ||
       state.newMemberRole === 'artist' ||
       state.newMemberRole === 'team-member' ||
-      state.newMemberRole === 'viewer') &&
-    !!state.managedArtistForm &&
-    typeof state.managedArtistForm === 'object'
+      state.newMemberRole === 'viewer')
   );
 };
 
@@ -106,19 +88,6 @@ export default function SettingsPage() {
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [memberMessage, setMemberMessage] = useState('');
   const [memberError, setMemberError] = useState('');
-  const [managedArtists, setManagedArtists] = useState<ManagedArtist[]>([]);
-  const [isLoadingManagedArtists, setIsLoadingManagedArtists] = useState(false);
-  const [isSavingManagedArtist, setIsSavingManagedArtist] = useState(false);
-  const [editingManagedArtistId, setEditingManagedArtistId] = useState<string | null>(null);
-  const [managedArtistMessage, setManagedArtistMessage] = useState('');
-  const [managedArtistError, setManagedArtistError] = useState('');
-  const [managedArtistForm, setManagedArtistForm] = useState({
-    name: '',
-    genre: '',
-    notes: '',
-  });
-  const [managedArtistSchemaSql, setManagedArtistSchemaSql] = useState('');
-
   const rolePermissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
   const isManagerAccount = rolePermissions.role === 'manager';
   const settingsUiStateKey = user ? `urganize.settings.ui.v${SETTINGS_UI_STATE_VERSION}.${user.id}` : '';
@@ -152,7 +121,6 @@ export default function SettingsPage() {
       setOrganizationName(restored.organizationName);
       setNewMemberEmail(restored.newMemberEmail);
       setNewMemberRole(restored.newMemberRole);
-      setManagedArtistForm(restored.managedArtistForm);
     };
 
     void restore();
@@ -167,11 +135,10 @@ export default function SettingsPage() {
       organizationName,
       newMemberEmail,
       newMemberRole,
-      managedArtistForm,
     };
     writePersistedState<SettingsUiState>(settingsUiStateKey, SETTINGS_UI_STATE_VERSION, draft);
     void saveUiDraft<SettingsUiState>(SETTINGS_UI_STATE_SCOPE, settingsUiStateKey, draft);
-  }, [managedArtistForm, newMemberEmail, newMemberRole, organizationName, settingsUiStateKey]);
+  }, [newMemberEmail, newMemberRole, organizationName, settingsUiStateKey]);
 
   useEffect(() => {
     if (!user) return;
@@ -201,57 +168,6 @@ export default function SettingsPage() {
     } = await supabase.auth.getSession();
     return session?.access_token || '';
   };
-
-  useEffect(() => {
-    if (!user || !isManagerAccount) {
-      setManagedArtists([]);
-      return;
-    }
-
-    let cancelled = false;
-    const loadManagedArtists = async () => {
-      setIsLoadingManagedArtists(true);
-      setManagedArtistError('');
-      setManagedArtistSchemaSql('');
-      try {
-        const token = await getAccessToken();
-        if (!token) {
-          if (!cancelled) setManagedArtistError('Session expired. Please sign in again.');
-          return;
-        }
-
-        const response = await fetch('/api/managed-artists', {
-          method: 'GET',
-          headers: { Authorization: `Bearer ${token}` },
-          cache: 'no-store',
-        });
-        const payload = (await response.json().catch(() => ({}))) as {
-          artists?: ManagedArtist[];
-          error?: string;
-          sql?: string;
-        };
-        if (!response.ok) {
-          if (!cancelled) {
-            setManagedArtistError(payload.error || 'Could not load managed artists.');
-            if (response.status === 501 && payload.sql) setManagedArtistSchemaSql(payload.sql);
-          }
-          return;
-        }
-        if (!cancelled) {
-          setManagedArtists(Array.isArray(payload.artists) ? payload.artists : []);
-        }
-      } catch {
-        if (!cancelled) setManagedArtistError('Could not load managed artists.');
-      } finally {
-        if (!cancelled) setIsLoadingManagedArtists(false);
-      }
-    };
-
-    loadManagedArtists();
-    return () => {
-      cancelled = true;
-    };
-  }, [isManagerAccount, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -489,112 +405,6 @@ export default function SettingsPage() {
       setOrganizationError(errorMessage(err, 'Could not save organization.'));
     } finally {
       setIsSavingOrganization(false);
-    }
-  };
-
-  const resetManagedArtistForm = () => {
-    setManagedArtistForm({ name: '', genre: '', notes: '' });
-    setEditingManagedArtistId(null);
-  };
-
-  const clearSettingsDrafts = () => {
-    clearPersistedState(settingsUiStateKey);
-    void deleteUiDraft(SETTINGS_UI_STATE_SCOPE, settingsUiStateKey);
-    setOrganizationName(organization?.name || '');
-    setNewMemberEmail('');
-    setNewMemberRole('viewer');
-    resetManagedArtistForm();
-  };
-
-  const handleSaveManagedArtist = async () => {
-    const name = managedArtistForm.name.trim();
-    if (!name) {
-      setManagedArtistError('Artist name is required.');
-      return;
-    }
-
-    setIsSavingManagedArtist(true);
-    setManagedArtistError('');
-    setManagedArtistMessage('');
-    setManagedArtistSchemaSql('');
-
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Session expired. Please sign in again.');
-
-      const targetUrl = editingManagedArtistId ? `/api/managed-artists/${editingManagedArtistId}` : '/api/managed-artists';
-      const method = editingManagedArtistId ? 'PUT' : 'POST';
-      const response = await fetch(targetUrl, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(managedArtistForm),
-      });
-
-      const payload = (await response.json().catch(() => ({}))) as {
-        artist?: ManagedArtist;
-        error?: string;
-        sql?: string;
-      };
-
-      if (!response.ok || !payload.artist) {
-        if (response.status === 501 && payload.sql) setManagedArtistSchemaSql(payload.sql);
-        throw new Error(payload.error || 'Could not save managed artist.');
-      }
-
-      setManagedArtists((current) => {
-        const existingIndex = current.findIndex((artist) => artist.id === payload.artist?.id);
-        if (existingIndex === -1) return [payload.artist as ManagedArtist, ...current];
-        const next = [...current];
-        next[existingIndex] = payload.artist as ManagedArtist;
-        return next;
-      });
-
-      setManagedArtistMessage(editingManagedArtistId ? 'Artist updated.' : 'Artist added.');
-      resetManagedArtistForm();
-    } catch (err) {
-      setManagedArtistError(errorMessage(err, 'Could not save managed artist.'));
-    } finally {
-      setIsSavingManagedArtist(false);
-    }
-  };
-
-  const handleEditManagedArtist = (artist: ManagedArtist) => {
-    setEditingManagedArtistId(artist.id);
-    setManagedArtistForm({
-      name: artist.name || '',
-      genre: artist.genre || '',
-      notes: artist.notes || '',
-    });
-  };
-
-  const handleDeleteManagedArtist = async (artistId: string) => {
-    setManagedArtistError('');
-    setManagedArtistMessage('');
-    setManagedArtistSchemaSql('');
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Session expired. Please sign in again.');
-      const response = await fetch(`/api/managed-artists/${artistId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const payload = (await response.json().catch(() => ({}))) as { error?: string; sql?: string };
-      if (!response.ok) {
-        if (response.status === 501 && payload.sql) setManagedArtistSchemaSql(payload.sql);
-        throw new Error(payload.error || 'Could not remove artist.');
-      }
-      setManagedArtists((current) => current.filter((artist) => artist.id !== artistId));
-      if (editingManagedArtistId === artistId) {
-        resetManagedArtistForm();
-      }
-      setManagedArtistMessage('Artist removed.');
-    } catch (err) {
-      setManagedArtistError(errorMessage(err, 'Could not remove artist.'));
     }
   };
 
@@ -916,112 +726,6 @@ export default function SettingsPage() {
             </section>
           )}
         </div>
-
-        {isManagerAccount && (
-          <section className={`${panelClass} mt-6`}>
-            <h2 className="mb-4 text-xl">Managed artists</h2>
-            <details open className="rounded-xl border border-stroke-subtle bg-bg-elevated p-3">
-              <summary className="cursor-pointer select-none text-sm font-semibold text-content-primary">
-                Artist form
-              </summary>
-              <p className="mt-2 text-sm text-content-secondary">
-                Add artist records once and reuse them across manager workflows.
-              </p>
-              <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
-                <input
-                  value={managedArtistForm.name}
-                  onChange={(event) => setManagedArtistForm((current) => ({ ...current, name: event.target.value }))}
-                  placeholder="Artist name"
-                  className="rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-                />
-                <SearchableGenreSelect
-                  value={managedArtistForm.genre}
-                  onChange={(value) => setManagedArtistForm((current) => ({ ...current, genre: value }))}
-                  label=""
-                  className="bg-bg-surface"
-                />
-                <textarea
-                  value={managedArtistForm.notes}
-                  onChange={(event) => setManagedArtistForm((current) => ({ ...current, notes: event.target.value }))}
-                  placeholder="Notes"
-                  className="min-h-[84px] rounded-lg border border-stroke-subtle bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand md:col-span-2"
-                />
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSaveManagedArtist}
-                    disabled={isSavingManagedArtist}
-                    className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-                  >
-                    {isSavingManagedArtist ? 'Saving...' : editingManagedArtistId ? 'Save artist' : 'Add artist'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearSettingsDrafts}
-                    className="rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover"
-                  >
-                    Clear draft
-                  </button>
-                  {editingManagedArtistId && (
-                    <button
-                      type="button"
-                    onClick={resetManagedArtistForm}
-                    className="rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover"
-                  >
-                    Cancel edit
-                  </button>
-                )}
-              </div>
-            </details>
-
-            {managedArtistMessage && (
-              <p className="mt-3 rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">{managedArtistMessage}</p>
-            )}
-            {managedArtistError && (
-              <p className="mt-3 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">{managedArtistError}</p>
-            )}
-            {managedArtistSchemaSql && (
-              <pre className="mt-3 max-h-40 overflow-auto rounded-lg border border-stroke-subtle bg-bg-surface p-3 text-xs text-content-secondary">
-                {managedArtistSchemaSql}
-              </pre>
-            )}
-
-            {isLoadingManagedArtists ? (
-              <SettingsManagedArtistsSectionSkeleton />
-            ) : managedArtists.length === 0 ? (
-              <p className="mt-3 text-sm text-content-secondary">No artists yet.</p>
-            ) : (
-              <div className="mt-4 space-y-2">
-                {managedArtists.map((artist) => (
-                  <div key={artist.id} className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2">
-                    <div>
-                      <p className="text-sm font-medium text-content-primary">{artist.name}</p>
-                      <p className="text-xs text-content-secondary">{artist.genre || 'No genre'}</p>
-                      {artist.notes && <p className="mt-1 text-xs text-content-secondary">{artist.notes}</p>}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => handleEditManagedArtist(artist)}
-                        className="rounded-md border border-stroke-default bg-bg-surface px-2 py-1 text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteManagedArtist(artist.id)}
-                        className="rounded-md border border-status-error/35 bg-status-error/10 px-2 py-1 text-status-error hover:bg-status-error/20"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
 
         {isManagerAccount && (
         <section id="billing" className={`${panelClass} mt-6`}>

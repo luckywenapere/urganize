@@ -16,8 +16,6 @@ const routeTitles = [
   { match: (pathname: string) => pathname === '/dashboard', title: 'Dashboard', eyebrow: 'Command center' },
   { match: (pathname: string) => pathname.startsWith('/dashboard/releases'), title: 'Releases', eyebrow: 'Launch pipeline' },
   { match: (pathname: string) => pathname.startsWith('/dashboard/tasks'), title: 'Tasks', eyebrow: 'Execution queue' },
-  { match: (pathname: string) => pathname.startsWith('/dashboard/folders'), title: 'Assets', eyebrow: 'Files, notes, references' },
-  { match: (pathname: string) => pathname.startsWith('/dashboard/songs'), title: 'Assets', eyebrow: 'Song library' },
   { match: (pathname: string) => pathname.startsWith('/dashboard/settings/team'), title: 'Team', eyebrow: 'Workspace members' },
   { match: (pathname: string) => pathname.startsWith('/settings'), title: 'Settings', eyebrow: 'Workspace config' },
 ];

@@ -66,18 +66,8 @@ const CHECKLIST_TEMPLATE: ReleaseChecklistTemplateItem[] = [
     timelineStage: '12_weeks_before',
   },
   {
-    title: 'Finalize Song Master',
-    description: 'Approve the final master and make sure the release audio is ready for delivery.',
-    timelineStage: '12_weeks_before',
-  },
-  {
     title: 'Register ISRC Codes',
     description: 'Assign and verify the ISRC codes needed for the release assets.',
-    timelineStage: '12_weeks_before',
-  },
-  {
-    title: 'Confirm Song Splits and Ownership',
-    description: 'Document writer, producer, and ownership splits clearly before the release is submitted anywhere.',
     timelineStage: '12_weeks_before',
   },
   {
@@ -96,23 +86,8 @@ const CHECKLIST_TEMPLATE: ReleaseChecklistTemplateItem[] = [
     timelineStage: '12_weeks_before',
   },
   {
-    title: 'Upload Music to Distributor',
-    description: 'Deliver the release files to the selected distributor with enough lead time.',
-    timelineStage: '8_weeks_before',
-  },
-  {
     title: 'Prepare Cover Artwork',
     description: 'Finalize release artwork in the correct format for distribution and promotion.',
-    timelineStage: '8_weeks_before',
-  },
-  {
-    title: 'Write Song Metadata',
-    description: 'Complete all writer, producer, and credit metadata for accurate release setup.',
-    timelineStage: '8_weeks_before',
-  },
-  {
-    title: 'Register UPC and Release Credits',
-    description: 'Verify the UPC and confirm that release-level credits, contributors, and identifiers are properly recorded.',
     timelineStage: '8_weeks_before',
   },
   {
@@ -138,11 +113,6 @@ const CHECKLIST_TEMPLATE: ReleaseChecklistTemplateItem[] = [
   {
     title: 'Submit to Spotify Playlist Pitching',
     description: 'Pitch the release early enough to meet Spotify editorial timing requirements.',
-    timelineStage: '4_weeks_before',
-  },
-  {
-    title: 'Launch Pre-Save Campaign',
-    description: 'Set up and promote a pre-save link to build early intent before release.',
     timelineStage: '4_weeks_before',
   },
   {

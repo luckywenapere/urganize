@@ -37,7 +37,6 @@ Suggested breakdowns:
 
 - `role`
 - `has_release_date`
-- `has_cover_art`
 
 Suggested cohorts:
 
@@ -45,59 +44,17 @@ Suggested cohorts:
 - `role = manager`
 - `role = label`
 
-### Track Share Funnel
-
-Event sequence:
-
-1. `track_upload_completed`
-2. `track_share_link_created`
-3. `track_listen_page_opened`
-4. `track_played`
-
-Suggested breakdowns:
-
-- `has_expiry`
-- `release_id`
-
-Suggested cohorts:
-
-- Users with at least one release created in the last 30 days
-- Users whose role is `manager` or `label`
-
-### Pre-Save Funnel
-
-Event sequence:
-
-1. `presave_campaign_created`
-2. `presave_link_copied`
-3. `presave_email_submitted`
-
-Suggested breakdowns:
-
-- `has_cover_art`
-- `has_streaming_links`
-- `campaign_id`
-
-Suggested cohorts:
-
-- `role = artist`
-- users who completed onboarding
-
 ### Feature Adoption Funnel
 
 Event sequence:
 
 1. `release_created`
 2. `playbook_step_completed`
-3. `track_upload_completed`
-4. `presave_campaign_created`
-5. `folder_item_added`
 
 Suggested breakdowns:
 
 - `source`
 - `role`
-- `item_type`
 
 Suggested cohorts:
 
@@ -111,4 +68,4 @@ After deployment, verify in PostHog Live Events:
 1. `$pageview` appears on every client-side route change
 2. `identify` resolves users by email and role
 3. Session recordings are visible for authenticated sessions
-4. Server-side events appear for listen hits, CSV exports, and pre-save submissions
+4. Server-side events appear for listen hits and CSV exports

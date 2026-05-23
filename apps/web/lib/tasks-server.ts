@@ -1138,7 +1138,7 @@ const DEFAULT_RELEASE_TASKS: Array<{
   {
     groupName: 'DISTRIBUTION',
     title: 'Verify distribution links',
-    description: 'Confirm DSP links, pre-save destination, smart links, and playlist pitching materials.',
+    description: 'Confirm DSP links, smart links, and playlist pitching materials.',
     priority: 'high',
     state: 'distribution',
     requirement: {

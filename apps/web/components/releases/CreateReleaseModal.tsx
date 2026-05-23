@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { AlertCircle, CalendarDays, ImagePlus, Loader2, X } from 'lucide-react';
+import { AlertCircle, CalendarDays, Loader2, X } from 'lucide-react';
 import { Button, IconButton } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
 
@@ -21,16 +21,9 @@ type CreateReleaseResponse = {
   error?: string;
 };
 
-type CoverUploadResponse = {
-  coverArtUrl?: string;
-  error?: string;
-};
-
-type FieldErrors = Partial<Record<'title' | 'releaseDate' | 'description' | 'coverImage', string>>;
+type FieldErrors = Partial<Record<'title' | 'releaseDate' | 'description', string>>;
 
 const MAX_DESCRIPTION_LENGTH = 500;
-const MAX_COVER_SIZE_BYTES = 8 * 1024 * 1024;
-const ACCEPTED_COVER_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 async function getAccessToken(): Promise<string> {
   const {
@@ -53,29 +46,11 @@ function validateReleaseDate(value: string): string {
   return '';
 }
 
-function validateCoverImage(file: File | null): string {
-  if (!file) {
-    return '';
-  }
-
-  if (!ACCEPTED_COVER_TYPES.has(file.type)) {
-    return 'Cover image must be JPG, PNG, or WebP.';
-  }
-
-  if (file.size > MAX_COVER_SIZE_BYTES) {
-    return 'Cover image must be smaller than 8MB.';
-  }
-
-  return '';
-}
-
 export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseModalProps) {
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState('');
   const [releaseDate, setReleaseDate] = useState('');
   const [description, setDescription] = useState('');
-  const [coverImage, setCoverImage] = useState<File | null>(null);
-  const [coverPreviewUrl, setCoverPreviewUrl] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,17 +63,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     const timer = window.setTimeout(() => titleInputRef.current?.focus(), 80);
     return () => window.clearTimeout(timer);
   }, [open]);
-
-  useEffect(() => {
-    if (!coverImage) {
-      setCoverPreviewUrl('');
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(coverImage);
-    setCoverPreviewUrl(previewUrl);
-    return () => URL.revokeObjectURL(previewUrl);
-  }, [coverImage]);
 
   useEffect(() => {
     if (!open) {
@@ -140,37 +104,8 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
       nextErrors.description = `Description must be ${MAX_DESCRIPTION_LENGTH} characters or fewer.`;
     }
 
-    const coverError = validateCoverImage(coverImage);
-    if (coverError) {
-      nextErrors.coverImage = coverError;
-    }
-
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
-  };
-
-  const uploadCoverImage = async (accessToken: string) => {
-    if (!coverImage) {
-      return '';
-    }
-
-    const formData = new FormData();
-    formData.set('file', coverImage);
-
-    const response = await fetch('/api/releases/cover-art', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: formData,
-    });
-
-    const payload = (await response.json().catch(() => ({}))) as CoverUploadResponse;
-    if (!response.ok) {
-      throw new Error(payload.error || 'Could not upload cover image.');
-    }
-
-    return payload.coverArtUrl || '';
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -188,7 +123,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
         throw new Error('Session expired. Please sign in again.');
       }
 
-      const coverArtUrl = await uploadCoverImage(accessToken);
       const response = await fetch('/api/releases', {
         method: 'POST',
         headers: {
@@ -199,7 +133,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
           title: title.trim(),
           releaseDate: releaseDate || undefined,
           description: description.trim(),
-          coverArtUrl,
           source: 'dashboard',
         }),
       });
@@ -217,7 +150,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
       setTitle('');
       setReleaseDate('');
       setDescription('');
-      setCoverImage(null);
       setErrors({});
       onCreated(releaseId);
     } catch (error) {
@@ -273,8 +205,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
             </IconButton>
           </div>
 
-          <div className="grid gap-5 p-4 sm:p-5 md:grid-cols-[minmax(0,1fr)_240px]">
-            <div className="space-y-4">
+          <div className="space-y-4 p-4 sm:p-5">
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-content-primary">Release title</span>
                 <input
@@ -321,54 +252,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                   </span>
                 </span>
               </label>
-            </div>
-
-            <div>
-              <span className="mb-2 block text-sm font-medium text-content-primary">Cover image</span>
-              <label className="group block cursor-pointer border border-dashed border-stroke-default bg-bg-elevated/80 p-3 transition hover:border-stroke-strong">
-                <div className="aspect-square overflow-hidden border border-stroke-subtle bg-bg-surface">
-                  {coverPreviewUrl ? (
-                    // coverPreviewUrl is a blob: URL from URL.createObjectURL,
-                    // not a remote asset — next/image's loader cannot optimize
-                    // it. A plain <img> is the right primitive here.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={coverPreviewUrl}
-                      alt="Selected cover preview"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="grid h-full place-items-center p-4 text-center">
-                      <div>
-                        <ImagePlus className="mx-auto h-8 w-8 text-content-tertiary" />
-                        <p className="mt-3 text-sm font-medium text-content-primary">Upload cover</p>
-                        <p className="mt-1 text-xs leading-5 text-content-tertiary">JPG, PNG, or WebP under 8MB</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="sr-only"
-                  onChange={(event) => {
-                    const nextFile = event.target.files?.[0] || null;
-                    setCoverImage(nextFile);
-                    setErrors((current) => ({ ...current, coverImage: validateCoverImage(nextFile) || undefined }));
-                  }}
-                />
-              </label>
-              {coverImage ? (
-                <button
-                  type="button"
-                  onClick={() => setCoverImage(null)}
-                  className="mt-2 text-xs font-medium text-content-secondary hover:text-content-primary"
-                >
-                  Remove image
-                </button>
-              ) : null}
-              {errors.coverImage ? <p className="mt-2 text-xs text-status-error">{errors.coverImage}</p> : null}
-            </div>
           </div>
 
           {submitError ? (

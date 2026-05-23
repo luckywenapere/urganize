@@ -12,11 +12,13 @@ import {
   loadReleaseCommandCenterData,
 } from './_shared';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
-import {
-  sanitizeTextField,
-  type PreSaveReleaseOption,
-  type ReleaseSelectorListResponse,
-} from '@/lib/pre-save';
+import { type ReleaseOption } from '@/lib/release-helpers';
+
+type ReleaseSelectorListResponse = { releases: ReleaseOption[] };
+
+function sanitizeTextField(value: string, maxLength: number): string {
+  return value.trim().replace(/\s+/g, ' ').slice(0, maxLength);
+}
 import { RELEASE_PLAYBOOK_PHASES } from '@/lib/release-playbook';
 import { createDefaultReleaseTasks, ensureOwnedWorkspace, isTaskSchemaMissingError } from '@/lib/tasks-server';
 import { type ReleaseCreatedSource } from '@/lib/analytics';
@@ -88,7 +90,7 @@ const normalizePipelineState = (value: unknown) => {
 function toSelectorRelease(
   row: ReleaseRow,
   metadataByReleaseId: Map<string, ReleaseMetadataRow>
-): PreSaveReleaseOption {
+): ReleaseOption {
   return {
     id: row.id,
     artistName: row.artist_name || '',
@@ -594,16 +596,6 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    if (coverArtUrl) {
-      captureServerAnalyticsEvent(
-        posthogServer,
-        auth.user.id,
-        createPostHogEvent('release_cover_art_uploaded', {
-          release_id: releaseId,
-        })
-      );
-    }
-
     if (releaseDateResult.value) {
       captureServerAnalyticsEvent(
         posthogServer,
@@ -620,7 +612,6 @@ export async function POST(request: NextRequest) {
         auth.user.id,
         createPostHogEvent('onboarding_release_created', {
           release_id: releaseId,
-          has_cover_art: Boolean(coverArtUrl),
           has_release_date: Boolean(releaseDateResult.value),
         })
       );
@@ -637,7 +628,7 @@ export async function POST(request: NextRequest) {
         coverArtUrl: coverArtUrl || null,
         createdAt: String(releaseResult.data.created_at || now),
         updatedAt: String(releaseResult.data.updated_at || now),
-      } satisfies PreSaveReleaseOption,
+      } satisfies ReleaseOption,
     });
   } finally {
     await shutdownServerAnalytics(posthogServer);

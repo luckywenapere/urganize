@@ -13,7 +13,6 @@ export const ONBOARDING_ANALYTICS_EVENT_NAMES = [
   'onboarding_task_created_during_flow',
   'onboarding_invite_sent_during_flow',
   'onboarding_completion_screen_shown',
-  'onboarding_feature_pill_clicked',
 ] as const;
 
 export const TASK_ANALYTICS_EVENT_NAMES = [

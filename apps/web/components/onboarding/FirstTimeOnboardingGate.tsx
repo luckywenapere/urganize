@@ -26,22 +26,12 @@ type CreateReleaseResponse = {
   error?: string;
 };
 
-const PUBLIC_ROUTE_PREFIXES = ['/auth', '/p/', '/listen/', '/credits/'];
+const PUBLIC_ROUTE_PREFIXES = ['/auth'];
 const EDUCATION_CARDS = [
   {
     headline: 'Every release gets a workspace.',
-    copy: 'Tasks, tracks, credits, and timelines - all in one place.',
+    copy: 'Tasks, tracks, timelines, and collaboration - all in one place.',
     label: 'Release Workspace',
-  },
-  {
-    headline: 'Collect credits without the back-and-forth.',
-    copy: 'Send one link. Everything comes back structured.',
-    label: 'Credits Without Chasing',
-  },
-  {
-    headline: 'Build your audience before release day.',
-    copy: 'Pre-save campaigns that run themselves.',
-    label: 'Pre-Save Campaigns',
   },
 ] as const;
 const STEP_TWO_ANIMATION_STYLE = { animationDuration: '200ms' } as const;
@@ -76,10 +66,6 @@ const STEP_FOUR_COMPARISON_ROWS = [
   {
     without: "Team confusion about what's next",
     with: 'Everyone sees the same plan',
-  },
-  {
-    without: 'Manually building pre-save pages',
-    with: 'Campaigns live in minutes',
   },
   {
     without: 'Release chaos every single time',
@@ -120,28 +106,6 @@ const getStepThreePrompt = (persona: OnboardingPersona | null) => {
   }
 
   return "What's your first release?";
-};
-
-const mapPlanPhaseToTaskPhase = (phase: string): 'pre-production' | 'production' | 'promotion' | 'distribution' => {
-  const normalized = phase.toLowerCase();
-  if (normalized.includes('launch') || normalized.includes('release') || normalized.includes('distribution')) {
-    return 'distribution';
-  }
-  if (normalized.includes('promo') || normalized.includes('marketing') || normalized.includes('content')) {
-    return 'promotion';
-  }
-  if (normalized.includes('record') || normalized.includes('mix') || normalized.includes('master') || normalized.includes('production')) {
-    return 'production';
-  }
-  return 'pre-production';
-};
-
-const mapPlanPhaseToPipelineState = (phase: string): 'idea' | 'planning' | 'asset_prep' | 'distribution' | 'campaign' | 'post_release' => {
-  const normalized = phase.toLowerCase();
-  if (normalized.includes('launch') || normalized.includes('release') || normalized.includes('distribution')) return 'distribution';
-  if (normalized.includes('promo') || normalized.includes('marketing') || normalized.includes('content') || normalized.includes('campaign')) return 'campaign';
-  if (normalized.includes('record') || normalized.includes('mix') || normalized.includes('master') || normalized.includes('asset')) return 'asset_prep';
-  return 'planning';
 };
 
 function EducationCardPreview({
@@ -204,99 +168,7 @@ function EducationCardPreview({
     );
   }
 
-  if (cardIndex === 1) {
-    const completedCredits = (tick % 3) + 1;
-    return (
-      <div className="relative overflow-hidden rounded-[28px] border border-stroke-default bg-bg-surface/90 p-5 shadow-[0_26px_70px_-40px_rgba(0,0,0,0.8)] sm:p-6">
-        <div className="pointer-events-none absolute right-8 top-10 h-24 w-24 rounded-full bg-brand/12 blur-3xl" />
-        <div className="relative grid gap-4 sm:grid-cols-[0.85fr_0.2fr_0.95fr] sm:items-center">
-          <div className="rounded-[24px] border border-brand/20 bg-brand-muted p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Request</p>
-            <div className="mt-3 rounded-[20px] border border-stroke-default bg-bg-base/55 px-4 py-3">
-              <p className="text-sm font-semibold text-content-primary">Credits form</p>
-              <p className="mt-1 text-xs text-content-secondary">urganize.app/credits/release</p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-center">
-            <div className="relative h-10 w-10">
-              <span className="absolute inset-y-1/2 left-0 right-0 h-px -translate-y-1/2 bg-brand/45" />
-              <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand animate-pulse-glow" />
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-stroke-default bg-bg-elevated/90 p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Structured credits</p>
-            <div className="mt-4 space-y-3">
-              {['Songwriter', 'Producer', 'Engineer'].map((credit, index) => (
-                <div
-                  key={credit}
-                  className={`rounded-[20px] border px-4 py-3 transition-all duration-500 ${
-                    index < completedCredits
-                      ? 'border-brand/30 bg-brand/10'
-                      : 'border-stroke-subtle bg-bg-base/55'
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-content-primary">{credit}</p>
-                  <p className="mt-1 text-xs text-content-secondary">
-                    {index < completedCredits ? 'Received automatically' : 'Waiting on collaborator'}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const fanCount = 124 + (tick % 6) * 37;
-  return (
-    <div className="relative overflow-hidden rounded-[28px] border border-stroke-default bg-bg-surface/90 p-5 shadow-[0_26px_70px_-40px_rgba(0,0,0,0.8)] sm:p-6">
-      <div className="pointer-events-none absolute left-8 top-10 h-24 w-24 rounded-full bg-status-info/10 blur-3xl" />
-      <div className="relative grid gap-4">
-        <div className="rounded-[24px] border border-stroke-default bg-bg-elevated/90 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Campaign link</p>
-              <p className="mt-2 text-sm font-semibold text-content-primary">urganize.app/p/midnight-drive</p>
-            </div>
-            <div className="rounded-full border border-brand/20 bg-brand-muted px-3 py-1 text-xs font-semibold text-brand">
-              Copied
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-[24px] border border-stroke-default bg-bg-elevated/90 p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Fans captured</p>
-            <p className="mt-4 text-4xl font-semibold tracking-tight text-content-primary">{fanCount}</p>
-            <p className="mt-2 text-sm text-content-secondary">Live pre-save signups rising before release day.</p>
-          </div>
-
-          <div className="rounded-[24px] border border-brand/20 bg-brand-muted/70 p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Momentum</p>
-            <div className="mt-4 space-y-3">
-              {[38, 58, 78].map((width, index) => (
-                <div key={width} className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-content-secondary">
-                    <span>{index === 0 ? 'Shares' : index === 1 ? 'Clicks' : 'Pre-saves'}</span>
-                    <span>{width}%</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-bg-base/60">
-                    <div
-                      className="h-full rounded-full bg-brand transition-all duration-700"
-                      style={{ width: `${Math.min(100, width + (tick % 3) * 6)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 }
 
 function StepQuestion<TValue extends string>({
@@ -354,7 +226,6 @@ export function FirstTimeOnboardingGate() {
   const [releaseDate, setReleaseDate] = useState('');
   const [workspaceCreationName, setWorkspaceCreationName] = useState('');
   const hasStartedStepOneAutoAdvance = useRef(false);
-  const hasTriggeredAiRef = useRef(false);
   const releaseInputRef = useRef<HTMLInputElement | null>(null);
 
   const shouldMountGate = useMemo(() => {
@@ -587,80 +458,6 @@ export function FirstTimeOnboardingGate() {
     // cause the closing-line animation to retrigger on every state change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, hasCompletedStepTwoQuestions, isAdvancingFromStepTwo]);
-
-  useEffect(() => {
-    if (visibleStep !== 4 || hasTriggeredAiRef.current || !onboarding?.releaseId) {
-      return;
-    }
-
-    hasTriggeredAiRef.current = true;
-
-    const runAiGeneration = async () => {
-      try {
-        const accessToken = await getAccessToken();
-        const response = await fetch('/api/ai/release-plan', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            releaseId: onboarding.releaseId,
-            inputs: {
-              artistName: user?.artist_name || user?.name || 'Artist',
-              releaseTitle: releaseName,
-              releaseDate: releaseDate,
-              genre: 'general',
-              budgetLevel: 'low',
-              songStage: 'idea',
-              teamType: onboarding.onboardingRole || 'artist',
-            },
-          }),
-        });
-
-        if (!response.ok) {
-          return;
-        }
-
-        const data = await response.json();
-        if (!data.tasks || !Array.isArray(data.tasks)) {
-          return;
-        }
-
-        type GeneratedTask = {
-          title: string;
-          description: string;
-          priority: string;
-          recommendedTiming: string;
-          phase?: string;
-        };
-        const createPromises = data.tasks.map((task: GeneratedTask) =>
-          fetch('/api/tasks', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              title: task.title,
-              releaseId: onboarding.releaseId,
-              description: `${task.description}\n\nPriority: ${task.priority}\nTiming: ${task.recommendedTiming}`,
-              state: mapPlanPhaseToPipelineState(task.phase || ''),
-              phase: mapPlanPhaseToTaskPhase(task.phase || ''),
-              autoGenerated: true,
-              source: 'onboarding',
-            }),
-          })
-        );
-
-        await Promise.all(createPromises);
-      } catch (e) {
-        console.error('AI plan generation failed silently', e);
-      }
-    };
-
-    void runAiGeneration();
-  }, [visibleStep, onboarding?.releaseId, releaseName, releaseDate, user, onboarding?.onboardingRole]);
 
   const handleGoBack = async () => {
     if (currentStep === 1 && educationIndex > 0) {
@@ -1201,7 +998,7 @@ export function FirstTimeOnboardingGate() {
                     Unlock your full potential
                   </p>
                   <p className="mt-4 max-w-lg text-center text-lg text-content-secondary">
-                    You have full access to all Urganize Pro features. Start managing your releases with structured workflows, automated credits, and pre-save campaigns today.
+                    You have full access to all Urganize Pro features. Start managing your releases with structured workflows and collaboration tools today.
                   </p>
                 </div>
 
