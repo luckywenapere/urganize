@@ -319,13 +319,6 @@ export default function MyTasksPage() {
             <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
-                onClick={() => router.push('/dashboard/tasks/all')}
-                className="min-h-11 rounded-[18px] border border-stroke-default bg-bg-elevated px-5 py-3 text-sm font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-              >
-                Workspace
-              </button>
-              <button
-                type="button"
                 onClick={() => openQuickCreate({ source: 'quick_create' })}
                 className="min-h-11 rounded-[18px] bg-brand px-5 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
               >
