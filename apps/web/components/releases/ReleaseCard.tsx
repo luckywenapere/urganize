@@ -13,6 +13,8 @@ export type ReleaseDashboardItem = {
   coverArtUrl: string | null;
   status: 'draft' | 'in_progress' | 'ready' | string;
   progress: number;
+  tasksDone: number;
+  tasksTotal: number;
   invitedCount: number;
   submittedCount: number;
   pendingCount: number;
@@ -122,8 +124,10 @@ export function ReleaseCard({ release }: ReleaseCardProps) {
 
         <div>
           <div className="mb-2 flex items-center justify-between text-xs">
-            <span className="font-medium text-content-secondary">Release readiness</span>
-            <span className="font-semibold text-content-primary">{progress}%</span>
+            <span className="font-medium text-content-secondary">Task progress</span>
+            <span className="font-semibold text-content-primary">
+              {release.tasksDone ?? 0} of {release.tasksTotal ?? 0} done
+            </span>
           </div>
           <ProgressBar value={progress} className="h-2 rounded-none" fillClassName="rounded-none" />
         </div>

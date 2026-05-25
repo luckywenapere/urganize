@@ -229,6 +229,7 @@ export async function GET(request: NextRequest) {
   const releases = Array.isArray(releasesResult.data) ? (releasesResult.data as ReleaseRow[]) : [];
   const playbookProgressByReleaseId = new Map<string, PlaybookProgressSummary>();
   const taskCountByReleaseId = new Map<string, number>();
+  const taskDoneCountByReleaseId = new Map<string, number>();
   const trackCountByReleaseId = new Map<string, number>();
 
   if (releases.length > 0) {
@@ -269,18 +270,22 @@ export async function GET(request: NextRequest) {
 
     const releaseIds = releases.map((release) => release.id);
     const [taskResult, trackResult] = await Promise.all([
-      adminClient.from(TASKS_TABLE).select('release_id').in('release_id', releaseIds),
+      adminClient.from(TASKS_TABLE).select('release_id,status').in('release_id', releaseIds),
       adminClient.from(TRACKS_TABLE).select('release_id').in('release_id', releaseIds),
     ]);
 
     if (!taskResult.error && Array.isArray(taskResult.data)) {
       for (const row of taskResult.data) {
-        const releaseId = String((row as { release_id?: string | null }).release_id || '');
+        const typed = row as { release_id?: string | null; status?: string | null };
+        const releaseId = String(typed.release_id || '');
         if (!releaseId) {
           continue;
         }
 
         taskCountByReleaseId.set(releaseId, (taskCountByReleaseId.get(releaseId) || 0) + 1);
+        if (typed.status === 'done') {
+          taskDoneCountByReleaseId.set(releaseId, (taskDoneCountByReleaseId.get(releaseId) || 0) + 1);
+        }
       }
     }
 
@@ -338,6 +343,8 @@ export async function GET(request: NextRequest) {
           coverArtUrl: metadataResult.metadataByReleaseId.get(release.id)?.artwork_url || null,
           status: release.status,
           progress: 0,
+          tasksDone: 0,
+          tasksTotal: 0,
           invitedCount: 0,
           submittedCount: 0,
           pendingCount: 0,
@@ -371,6 +378,8 @@ export async function GET(request: NextRequest) {
         coverArtUrl: metadataResult.metadataByReleaseId.get(release.id)?.artwork_url || null,
         status: computedStatus,
         progress: commandCenter.readiness.completionPercent,
+        tasksDone: taskDoneCountByReleaseId.get(release.id) || 0,
+        tasksTotal: taskCountByReleaseId.get(release.id) || 0,
         invitedCount: commandCenter.collaborators.length,
         submittedCount: commandCenter.readiness.submittedCollaborators,
         pendingCount: commandCenter.readiness.pendingCollaborators,
