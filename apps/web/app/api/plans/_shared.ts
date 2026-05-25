@@ -55,7 +55,7 @@ export async function ensureReleaseOwnership(
 
   const { data: release, error } = await adminClient
     .from('releases')
-    .select('id,owner_user_id,title,artist_name,release_date,type')
+    .select('id,owner_user_id,title,artist_name,release_date,release_type')
     .eq('id', planId)
     .maybeSingle();
 

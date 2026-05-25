@@ -525,7 +525,7 @@ export async function POST(request: NextRequest) {
         status: 'draft',
         state,
         readiness_score: 0,
-        type: releaseType,
+        release_type: releaseType,
         description: description || null,
         updated_at: now,
       })
