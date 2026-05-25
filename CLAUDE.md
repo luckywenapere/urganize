@@ -56,7 +56,7 @@ When a feature request lands that's on this "out of scope" list — even if it's
 
 These are the principles that govern v1 build decisions. When in doubt, return to these.
 
-1. **The release is the spine.** Every feature serves a release. If you find yourself building something that doesn't tie back to a specific release, stop and ask whether it belongs in v1.
+1. **The release is the spine.** Every feature serves a release. If you find yourself building something that doesn't tie back to a specific release, stop and ask whether it belongs in v1. The release detail page is where the product converges — Dashboard, Releases list, and Tasks are navigational surfaces; the work happens on the release detail page. New features attach to the release, not to standalone surfaces.
 
 2. **Templates carry domain knowledge; AI is a removable polish layer.** Hand-crafted release templates are the product's IP. AI adjusts them and writes prose around them. If AI failed tomorrow, the product would still work — users pick a template, get a plan, edit it, run their release. Build it so AI is *removable* without the product dying.
 
@@ -169,8 +169,7 @@ REST-style Next.js Route Handlers at `app/api/**/route.ts`. No tRPC, no GraphQL.
 **State management (web only):**
 
 - **Zustand** for auth, releases, tasks, activity. Stores in `apps/web/stores/` and `apps/web/lib/auth-store.ts`.
-- **XState v5** for the release lifecycle state machine (`machines/releaseMachine.ts`). Keep this — it models the release lifecycle correctly.
-- localStorage caches for perceived speed on dashboard/plan pages.
+- localStorage caches for perceived speed on dashboard pages.
 
 **Styling:**
 
@@ -320,7 +319,7 @@ The template provides the structure. The AI provides the tailoring. Never let th
 
 Post-cut build sequence. Do not jump ahead.
 
-1. **Template infrastructure** — TypeScript types for `Template` and `TemplateTask`, template loader, template-to-tasks function. ← **start here**
+1. **Template infrastructure** — TypeScript types for `Template` and `TemplateTask`, template loader, template-to-tasks function. ← **resume here** (Step 3: template-to-tasks function)
 2. **Single release template content** — waits on design partner feedback for missing pieces.
 3. **Release creation → task generation flow end-to-end** — user picks template, system generates concrete tasks, user edits before commit.
 4. **Internal use** — founder runs own two artists' releases through the product for 4–6 weeks.
@@ -346,12 +345,16 @@ Post-cut build sequence. Do not jump ahead.
 
 This section is for state that changes during the v1 build. Keep it current.
 
-**Current build phase:** Schema reconciliation complete. Database and migration files in sync. Ready to resume Phase 1 (template infrastructure) — Step 3 (template-to-tasks function) was paused at the audit stage.
+**Current build phase:** UI cut complete and deployed (2026-05-25). Schema reconciliation complete. Database and migration files in sync. Resume Phase 1 (template infrastructure) — Step 3 (template-to-tasks function). The release detail page is ready to display generated tasks; the "Generate status update" button is a placeholder waiting to be wired.
 
-**What exists post-cut:**
-- **API routes:** releases (CRUD, metadata, collaborators, playbook, steps, task-groups, tasks), tasks (CRUD, attachments, comments, reorder), payments/subscriptions, auth, admin, command-center, notifications, onboarding, workspace/org members, ui-drafts.
-- **Dashboard pages:** releases (list, new, detail, metadata, playbook, tasks), tasks (my tasks, all tasks), team settings.
+**What exists post-UI-cut:**
+- **Pages (4 + modals):** Dashboard (greeting, release cards, due-soon tasks), Releases list, Release detail (header, task progress, task list, status update placeholder), Settings (profile, teammates via workspace members, subscription). Modals: CreateReleaseModal, TaskQuickCreateModal, TaskDetailDrawer.
+- **Sidebar nav:** Dashboard, Releases, Tasks, Settings. No descriptions, no Team page.
+- **API routes:** releases (CRUD, metadata, collaborators, playbook, steps, task-groups, tasks), tasks (CRUD, attachments, comments, reorder), payments/subscriptions, auth, admin, notifications, onboarding, workspace members, ui-drafts.
 - **Stores:** auth, releases, tasks, activity.
+- **Removed from UI:** six-stage release pipeline (StateStepper, ExecutionSection, ReadinessBar, FocusCard), command center framing, readiness scores, full-page release creation form, workspace tasks view (`/dashboard/tasks/all`), standalone team page, organization card. XState release machine (`machines/releaseMachine.ts`) deleted.
+- **Release lifecycle:** now implicit — a `status` field (draft/planning/in_progress/ready/released/archived) plus task completion progress. No staged pipeline UI.
+- **Workspace members:** used for task assignment; surfaced via Settings → Teammates section. Organization management removed from UI (tables remain in DB).
 
 **Paying users:** 1 (₦5,000/year). 1 contract in legal review (₦100k/year). 1 design partner team meeting scheduled.
 
@@ -377,4 +380,13 @@ This section is for state that changes during the v1 build. Keep it current.
 
 ---
 
-*Last updated: 2026-05-25. Schema reconciliation complete. Template infrastructure phase resumes.*
+**UI cut deployed (2026-05-25):**
+- Removed: six-stage release pipeline, readiness scores, command center framing, workspace tasks view, full-page release creation, standalone team page, organization card, XState release machine.
+- Kept surface: Dashboard, Releases list, Release detail, Settings — plus CreateReleaseModal, TaskQuickCreateModal, TaskDetailDrawer.
+- 19 component/page files deleted, ~28k lines removed, ~3.5k lines added.
+- Two post-deploy bugs caught and fixed: (1) release detail params unwrapping broke in client component on Next.js 16 — fixed by switching to `useParams()` hook; (2) TaskUIProvider `loadOptions` callback had `isLoadingOptions` in its dependency array, creating an unstable reference chain that caused a re-render loop in the task drawer — fixed by switching the reentrancy guard to a ref.
+- No database changes. DB columns (`state`, `readiness_score`) remain; UI just stopped surfacing them.
+
+---
+
+*Last updated: 2026-05-25. UI cut deployed. Template infrastructure phase resumes.*
