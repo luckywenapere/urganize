@@ -30,7 +30,6 @@ export const RELEASE_OPS_SQL = [
   '  email text null,',
   '  phone text null,',
   '  default_role text null,',
-  '  claimed_user_id uuid null references auth.users(id) on delete set null,',
   '  created_at timestamptz not null default now(),',
   '  updated_at timestamptz not null default now()',
   ');',
@@ -41,14 +40,7 @@ export const RELEASE_OPS_SQL = [
   '  id uuid primary key default gen_random_uuid(),',
   '  release_id uuid not null references public.releases(id) on delete cascade,',
   `  collaborator_id uuid null references public.${COLLABORATORS_TABLE}(id) on delete set null,`,
-  '  invite_name text not null default \'\',',
-  '  invite_contact text not null default \'\',',
   '  role text not null default \'other\',',
-  '  status text not null default \'pending\',',
-  '  submission_token text not null unique,',
-  '  submission_sent_at timestamptz null,',
-  '  submitted_at timestamptz null,',
-  '  last_reminded_at timestamptz null,',
   '  created_at timestamptz not null default now(),',
   '  updated_at timestamptz not null default now()',
   ');',
@@ -94,11 +86,9 @@ export const RELEASE_OPS_SQL = [
 ].join('\n');
 
 export type ReleaseStatus = 'draft' | 'in_progress' | 'ready';
-export type CollaboratorStatus = 'pending' | 'submitted';
 export type ReleaseEventType =
   | 'release_created'
   | 'collaborator_added'
-  | 'reminder_sent'
   | 'metadata_updated'
   | 'metadata_viewed'
   | 'playbook_state_saved'
@@ -113,7 +103,7 @@ export type ReadinessChecklistItem = {
 };
 
 export type ReadinessNextAction = {
-  type: 'send_reminder' | 'view_metadata' | 'none';
+  type: 'view_metadata' | 'none';
   label: string;
 };
 
@@ -134,14 +124,7 @@ export type ReleaseCollaborator = {
   id: string;
   releaseId: string;
   collaboratorId: string;
-  inviteName: string;
-  inviteContact: string;
   role: string;
-  status: CollaboratorStatus;
-  submissionToken: string;
-  submissionSentAt: string | null;
-  submittedAt: string | null;
-  lastRemindedAt: string | null;
   createdAt: string;
   updatedAt: string;
   collaboratorName: string;
@@ -182,12 +165,6 @@ export type ReadinessState = {
   nextAction: ReadinessNextAction;
 };
 
-export type ReleaseCollaboratorInput = {
-  inviteName: string;
-  inviteContact: string;
-  role: string;
-};
-
 const trimString = (value: unknown): string => String(value || '').trim();
 export const normalizeReleaseSlug = (value: string): string =>
   trimString(value)
@@ -195,29 +172,6 @@ export const normalizeReleaseSlug = (value: string): string =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
-
-export const normalizeReleaseCollaboratorInput = (value: unknown): ReleaseCollaboratorInput => {
-  const raw = (value || {}) as Partial<ReleaseCollaboratorInput>;
-  return {
-    inviteName: trimString(raw.inviteName),
-    inviteContact: trimString(raw.inviteContact),
-    role: trimString(raw.role) || 'other',
-  };
-};
-
-export const normalizeCollaboratorInputs = (value: unknown): ReleaseCollaboratorInput[] => {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => normalizeReleaseCollaboratorInput(item))
-    .filter((item) => item.inviteName || item.inviteContact || item.role);
-};
-
-export const validateCollaboratorInput = (value: ReleaseCollaboratorInput): string => {
-  if (!value.inviteName) return 'Collaborator name is required.';
-  if (!value.inviteContact) return 'Invite contact is required.';
-  if (!value.role) return 'Collaborator role is required.';
-  return '';
-};
 
 export const calculateReleaseReadiness = (input: {
   title: string;
@@ -280,7 +234,6 @@ export const calculateReleaseReadiness = (input: {
   };
   if (!collaboratorsAdded) {
     nextStep = 'Add collaborators to your release';
-    nextAction = { type: 'send_reminder', label: 'Send Reminder' };
   } else if (!metadataComplete) {
     nextStep = 'Review your metadata before distribution';
     nextAction = { type: 'view_metadata', label: 'View Metadata' };
