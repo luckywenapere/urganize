@@ -133,11 +133,6 @@ export async function POST(
       return NextResponse.json({ error: tasksDelete.error.message || 'Failed to delete plan tasks' }, { status: 500 });
     }
 
-    const profileDelete = await supabaseAdmin.from('release_profiles').delete().eq('release_id', planId);
-    if (profileDelete.error) {
-      return NextResponse.json({ error: profileDelete.error.message || 'Failed to delete plan profile' }, { status: 500 });
-    }
-
     const releaseDelete = await supabaseAdmin
       .from('releases')
       .delete()
