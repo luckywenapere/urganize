@@ -47,8 +47,6 @@ Enable a manager to create a release, generate an AI-assisted strategy, and exec
 - `organization_members`
 - `artists`
 - `releases`
-- `release_profiles`
-- `ai_tasks`
 - `release_workspaces` (marketing, playlist, checklist, custom task workspace state)
 - `assets` (storage metadata)
 - `subscriptions` / `trial_state`

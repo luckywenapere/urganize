@@ -12,11 +12,8 @@ Use this before production launch. Run top to bottom.
 - Confirm these exist:
   - `profiles`
   - `releases`
-  - `release_profiles`
-  - `ai_tasks`
   - `subscriptions`
   - `payments`
-  - `artist_profiles`
   - `release_workspaces`
   - `organizations`
   - `organization_members`
@@ -154,26 +151,13 @@ Expected:
 - entered data restores
 - selected artist restores
 
-### 5.2 Next-step restore
-Steps:
-1. open `/dashboard/plans/[planId]/next-step`
-2. choose custom step
-3. fill fields
-4. refresh
-
-Expected:
-- custom mode restores
-- custom draft restores
-- destructive confirmation modal does not restore
-- generating state does not restore
-
-### 5.3 Dashboard/settings restore
+### 5.2 Dashboard/settings restore
 Expected:
 - dashboard filters/search/drafts restore
 - settings drafts restore
 - clear draft clears both local and backend draft state
 
-### 5.4 Cross-device restore
+### 5.3 Cross-device restore
 Prerequisite:
 - `ui_state_drafts` migration applied
 

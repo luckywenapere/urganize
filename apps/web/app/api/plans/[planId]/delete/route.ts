@@ -10,13 +10,6 @@ import {
 const PROOFS_BUCKET = 'proofs';
 const RELEASE_ASSET_CATEGORIES = ['cover_art', 'audio', 'promo_image', 'video', 'document'] as const;
 
-const extractProofPath = (publicUrl: string): string | null => {
-  const marker = `/storage/v1/object/public/${PROOFS_BUCKET}/`;
-  const index = publicUrl.indexOf(marker);
-  if (index < 0) return null;
-  return decodeURIComponent(publicUrl.slice(index + marker.length));
-};
-
 const isOptionalTableMissingError = (error: unknown): boolean => {
   const code = String((error as { code?: string } | null)?.code || '').toUpperCase();
   const message = String((error as { message?: string } | null)?.message || '').toLowerCase();
@@ -85,16 +78,6 @@ export async function POST(
       return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
     }
 
-    const { data: taskFiles } = await supabaseAdmin
-      .from('ai_tasks')
-      .select('user_input_file_url')
-      .eq('release_id', planId)
-      .not('user_input_file_url', 'is', null);
-
-    const proofPaths = (taskFiles || [])
-      .map((row) => extractProofPath(String(row.user_input_file_url || '')))
-      .filter((path): path is string => !!path);
-
     const assetPaths: string[] = [];
     for (const category of RELEASE_ASSET_CATEGORIES) {
       const assetPrefix = `${user.id}/${planId}/assets/${category}`;
@@ -109,7 +92,7 @@ export async function POST(
       }
     }
 
-    const allStoragePaths = Array.from(new Set([...proofPaths, ...assetPaths]));
+    const allStoragePaths = Array.from(new Set(assetPaths));
     if (allStoragePaths.length > 0) {
       await supabaseAdmin.storage.from(PROOFS_BUCKET).remove(allStoragePaths);
     }
@@ -126,16 +109,6 @@ export async function POST(
       if (result.error && !isOptionalTableMissingError(result.error)) {
         return NextResponse.json({ error: result.error.message || `Failed to delete ${item.table}` }, { status: 500 });
       }
-    }
-
-    const tasksDelete = await supabaseAdmin.from('ai_tasks').delete().eq('release_id', planId);
-    if (tasksDelete.error) {
-      return NextResponse.json({ error: tasksDelete.error.message || 'Failed to delete plan tasks' }, { status: 500 });
-    }
-
-    const profileDelete = await supabaseAdmin.from('release_profiles').delete().eq('release_id', planId);
-    if (profileDelete.error) {
-      return NextResponse.json({ error: profileDelete.error.message || 'Failed to delete plan profile' }, { status: 500 });
     }
 
     const releaseDelete = await supabaseAdmin

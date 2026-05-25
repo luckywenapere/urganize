@@ -19,8 +19,7 @@ const isActivePath = (pathname: string, href: string) =>
   (href === '/dashboard/releases' && pathname.startsWith('/dashboard/releases')) ||
   (href === '/dashboard/tasks' && pathname.startsWith('/dashboard/tasks')) ||
   (href === '/dashboard/settings/team' && pathname.startsWith('/dashboard/settings/team')) ||
-  (href === '/settings' && pathname.startsWith('/settings')) ||
-  (href === '/dashboard/releases' && pathname.startsWith('/dashboard/plans/'));
+  (href === '/settings' && pathname.startsWith('/settings'));
 
 function SidebarItemSkeleton({
   active = false,
