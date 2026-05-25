@@ -12,11 +12,9 @@ type NextStepCardProps = {
 
 export function NextStepCard({ nextStep, action, onAction, actionDisabled = false }: NextStepCardProps) {
   const helperText =
-    action.type === 'send_reminder'
-      ? 'Keep collection moving from this page.'
-      : action.type === 'view_metadata'
-        ? 'Review metadata before delivery.'
-        : 'This release can move forward without any missing steps.';
+    action.type === 'view_metadata'
+      ? 'Review metadata before delivery.'
+      : 'This release can move forward without any missing steps.';
 
   return (
     <div className="relative overflow-hidden rounded-[32px] border border-brand/20 bg-brand-muted/35 p-5 shadow-[0_24px_60px_-34px_rgba(0,0,0,0.36)] sm:p-6">
