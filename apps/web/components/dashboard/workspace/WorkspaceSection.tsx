@@ -277,7 +277,7 @@ export function WorkspaceSection({
             Release Workspace
           </h2>
           <p className="mt-1 text-xs uppercase tracking-[0.14em] text-content-tertiary">
-            Command center for execution modules
+            Release management
           </p>
         </div>
         <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${syncClassName}`}>
