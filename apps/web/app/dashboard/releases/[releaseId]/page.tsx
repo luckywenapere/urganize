@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AlertCircle, CalendarDays, FileText, ListChecks, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
@@ -44,20 +44,13 @@ function ReleaseDetailSkeleton() {
   );
 }
 
-export default function ReleaseDetailPage({ params }: { params: Promise<{ releaseId: string }> }) {
+export default function ReleaseDetailPage() {
+  const { releaseId } = useParams<{ releaseId: string }>();
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
   const tasks = useTaskStore((s) => s.tasks);
   const { openTask } = useTaskUI();
-
-  // Unwrap params — Next.js 16 async params in client components
-  const releaseId = useMemo(() => {
-    // params is a Promise in Next.js 16, but in client components we get the resolved value
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const p = params as any;
-    return typeof p.then === 'function' ? '' : (p.releaseId as string);
-  }, [params]);
 
   useEffect(() => {
     if (authLoading || !releaseId) return;
