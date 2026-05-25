@@ -10,8 +10,8 @@ import type { ReleaseOption } from '@/lib/release-helpers';
  *    `/settings`, so task notifications need to introduce the first real notification feed.
  * 4. `@urganize/ui` only exposes low-level primitives (Button/Input/Card/Logo/etc.). More advanced patterns such as the
  *    release selector combobox live in app code and can be reused directly.
- * 5. The repo already has legacy `ai_tasks` and old `types/index.ts` task types tied to onboarding/release-plan output.
- *    Those are distinct from the collaborative team task system built here and should not be treated as the same model.
+ * 5. The legacy `ai_tasks` table and old `types/index.ts` task types have been dropped.
+ *    The collaborative team task system built here is the canonical task model.
  */
 
 export const DEFAULT_RELEASE_TASK_GROUPS = [
