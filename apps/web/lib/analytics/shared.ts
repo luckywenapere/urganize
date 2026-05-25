@@ -3,7 +3,7 @@ import type { Profile } from '@/lib/supabase/client';
 /**
  * Audit findings before the PostHog integration:
  * 1. `apps/web/package.json` already included `@vercel/analytics`, but no Mixpanel/PostHog/Segment/Amplitude/Hotjar/FullStory/LogRocket SDKs were installed.
- * 2. The app already had a lightweight local helper at `apps/web/lib/analytics.ts` that stored a small event log in `localStorage`, plus legacy call sites in settings, billing, and `PostAuthScreen`.
+ * 2. The app already had a lightweight local helper at `apps/web/lib/analytics.ts` that stored a small event log in `localStorage`, plus legacy call sites in settings and billing.
  * 3. `apps/web/.env.example` and `apps/web/.env.local` only exposed `NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS`; no PostHog keys or hosts were configured yet.
  * 4. Third-party analytics were not injected via `<Script>` tags. The active shell mounted optional Vercel Analytics from `components/app/AppShell.tsx`, while `app/layout.tsx` only injected the theme bootstrap script.
  * 5. Because Windows cannot have both `lib/analytics.ts` and `lib/analytics/events.ts`, the old file-based helper was replaced with a folder-based analytics entrypoint.

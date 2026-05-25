@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   const { data: releases } = await supabaseAdmin
     .from('releases')
     .select('id')
-    .eq('user_id', user.id);
+    .eq('owner_user_id', user.id);
   const releaseIds = (releases || []).map((item) => item.id);
 
   await supabaseAdmin
@@ -51,14 +51,12 @@ export async function POST(req: NextRequest) {
 
   await supabaseAdmin.from('payments').delete().eq('user_id', user.id).neq('plan', 'trial_claim');
   await supabaseAdmin.from('subscriptions').delete().eq('user_id', user.id);
-  await supabaseAdmin.from('artist_profiles').delete().eq('user_id', user.id);
-
   if (releaseIds.length > 0) {
     await supabaseAdmin.from('ai_tasks').delete().in('release_id', releaseIds);
     await supabaseAdmin.from('release_profiles').delete().in('release_id', releaseIds);
   }
 
-  await supabaseAdmin.from('releases').delete().eq('user_id', user.id);
+  await supabaseAdmin.from('releases').delete().eq('owner_user_id', user.id);
   await supabaseAdmin.from('profiles').delete().eq('id', user.id);
 
   const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(user.id, false);

@@ -93,7 +93,6 @@ export type ReleaseCollaboratorRow = {
   release_id: string;
   collaborator_id: string;
   role: CollaboratorRole;
-  status: CollaboratorStatus;
   created_at: string;
   updated_at: string;
 };
@@ -103,7 +102,6 @@ export type ReleaseCollaboratorInsert = {
   release_id: string;
   collaborator_id: string;
   role?: CollaboratorRole;
-  status?: CollaboratorStatus;
   created_at?: string;
   updated_at?: string;
 };

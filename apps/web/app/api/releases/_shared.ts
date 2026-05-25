@@ -89,7 +89,7 @@ export async function ensureReleaseOpsSchema(
       run: async () =>
         adminClient
           .from('releases')
-          .select('id,user_id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
+          .select('id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
           .limit(1),
     },
     {
@@ -106,7 +106,7 @@ export async function ensureReleaseOpsSchema(
       run: async () =>
         adminClient
           .from(RELEASE_COLLABORATORS_TABLE)
-          .select('id,release_id,invite_name,invite_contact,role,status,submission_token,submission_sent_at,submitted_at,last_reminded_at,updated_at')
+          .select('id,release_id,collaborator_id,role,created_at,updated_at')
           .limit(1),
     },
     {
@@ -147,7 +147,7 @@ export async function ensureReleaseOpsSchema(
 
 export const toReleaseSummary = (row: Record<string, unknown>): ReleaseSummary => ({
   id: String(row.id || ''),
-  ownerUserId: String(row.owner_user_id || row.user_id || ''),
+  ownerUserId: String(row.owner_user_id || ''),
   artistId: String(row.artist_id || ''),
   artistName: String(row.artist_name || ''),
   title: String(row.title || ''),
@@ -169,7 +169,7 @@ export async function ensureReleaseOwnership(
 
   const { data: release, error } = await adminClient
     .from('releases')
-    .select('id,user_id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
+    .select('id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
     .eq('id', releaseId)
     .maybeSingle();
 
@@ -180,7 +180,7 @@ export async function ensureReleaseOwnership(
     return { error: NextResponse.json({ error: error.message || 'Could not load release.' }, { status: 500 }) };
   }
 
-  const ownerId = String(release?.owner_user_id || release?.user_id || '');
+  const ownerId = String(release?.owner_user_id || '');
   if (!release || ownerId !== userId) {
     return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
   }
@@ -215,7 +215,7 @@ export async function loadReleaseCommandCenterData(
   const [collaboratorsResult, metadataResult, metadataViewedResult] = await Promise.all([
     adminClient
       .from(RELEASE_COLLABORATORS_TABLE)
-      .select('*, collaborators(id,full_name,stage_name,email,phone)')
+      .select('id,release_id,collaborator_id,role,created_at,updated_at, collaborators(id,full_name,stage_name,email,phone)')
       .eq('release_id', release.id)
       .order('created_at', { ascending: true }),
     adminClient.from(RELEASE_METADATA_TABLE).select('*').eq('release_id', release.id).maybeSingle(),
@@ -245,14 +245,7 @@ export async function loadReleaseCommandCenterData(
       id: String(row.id || ''),
       releaseId: String(row.release_id || ''),
       collaboratorId: String(row.collaborator_id || ''),
-      inviteName: String(row.invite_name || ''),
-      inviteContact: String(row.invite_contact || ''),
       role: String(row.role || 'other'),
-      status: String(row.status || 'pending') as 'pending' | 'submitted',
-      submissionToken: String(row.submission_token || ''),
-      submissionSentAt: row.submission_sent_at ? String(row.submission_sent_at) : null,
-      submittedAt: row.submitted_at ? String(row.submitted_at) : null,
-      lastRemindedAt: row.last_reminded_at ? String(row.last_reminded_at) : null,
       createdAt: String(row.created_at || ''),
       updatedAt: String(row.updated_at || ''),
       collaboratorName: String(collaboratorRecord?.full_name || ''),
@@ -267,7 +260,7 @@ export async function loadReleaseCommandCenterData(
     title: release.title,
     artistName: release.artistName,
     collaboratorCount: collaborators.length,
-    submittedCount: collaborators.filter((item) => item.status === 'submitted').length,
+    submittedCount: collaborators.length,
     metadata,
     metadataViewed: Boolean(metadataViewedResult.data?.id),
   });

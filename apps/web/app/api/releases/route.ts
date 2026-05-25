@@ -33,8 +33,7 @@ const trimString = (value: unknown): string => String(value || '').trim();
 
 type ReleaseRow = {
   id: string;
-  user_id: string | null;
-  owner_user_id: string | null;
+  owner_user_id: string;
   artist_id: string | null;
   artist_name: string;
   title: string;
@@ -218,8 +217,8 @@ export async function GET(request: NextRequest) {
   const view = request.nextUrl.searchParams.get('view');
   const releasesResult = await adminClient
     .from('releases')
-    .select('id,user_id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
-    .or(`owner_user_id.eq.${auth.user.id},user_id.eq.${auth.user.id}`)
+    .select('id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
+    .eq('owner_user_id', auth.user.id)
     .order('release_date', { ascending: true, nullsFirst: false });
 
   if (releasesResult.error) {
@@ -317,7 +316,7 @@ export async function GET(request: NextRequest) {
     releases.map(async (row) => {
       const release = {
         id: String(row.id || ''),
-        ownerUserId: String(row.owner_user_id || row.user_id || ''),
+        ownerUserId: String(row.owner_user_id || ''),
         artistId: String(row.artist_id || ''),
         artistName: String(row.artist_name || ''),
         title: String(row.title || ''),
@@ -406,7 +405,7 @@ export async function POST(request: NextRequest) {
     const existingReleaseCountResult = await adminClient
       .from('releases')
       .select('id', { count: 'exact', head: true })
-      .or(`owner_user_id.eq.${auth.user.id},user_id.eq.${auth.user.id}`);
+      .eq('owner_user_id', auth.user.id);
 
     if (existingReleaseCountResult.error) {
       if (isOptionalTableMissingError(existingReleaseCountResult.error)) {
@@ -517,7 +516,6 @@ export async function POST(request: NextRequest) {
     const releaseResult = await adminClient
       .from('releases')
       .insert({
-        user_id: auth.user.id,
         owner_user_id: auth.user.id,
         artist_id: artistIdToUse || null,
         artist_name: artistName,
@@ -527,7 +525,7 @@ export async function POST(request: NextRequest) {
         status: 'draft',
         state,
         readiness_score: 0,
-        type: releaseType,
+        release_type: releaseType,
         description: description || null,
         updated_at: now,
       })

@@ -9,7 +9,7 @@ export class ReleaseService {
     const { data, error } = await this.adminClient
       .from('releases')
       .select('id,title,artist_name,release_date,description,status,state,readiness_score,metadata,created_at,updated_at')
-      .or(`owner_user_id.eq.${userId},user_id.eq.${userId}`)
+      .eq('owner_user_id', userId)
       .order('release_date', { ascending: true, nullsFirst: false });
 
     if (error) throw error;

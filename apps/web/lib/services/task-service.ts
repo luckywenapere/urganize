@@ -85,7 +85,7 @@ export class TaskService {
   async createTask(userId: string, workspaceId: string, data: {
     title: string;
     description?: string | null;
-    releaseId?: string | null;
+    releaseId: string;
     groupId?: string | null;
     priority?: TaskPriority;
     dueDate?: string | null;
