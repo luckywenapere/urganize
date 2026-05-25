@@ -55,7 +55,7 @@ export async function ensureReleaseOwnership(
 
   const { data: release, error } = await adminClient
     .from('releases')
-    .select('id,user_id,title,artist_name,release_date,type')
+    .select('id,owner_user_id,title,artist_name,release_date,type')
     .eq('id', planId)
     .maybeSingle();
 
@@ -63,7 +63,7 @@ export async function ensureReleaseOwnership(
     return { error: NextResponse.json({ error: error.message || 'Could not load release.' }, { status: 500 }) };
   }
 
-  if (!release || release.user_id !== userId) {
+  if (!release || release.owner_user_id !== userId) {
     return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
   }
 

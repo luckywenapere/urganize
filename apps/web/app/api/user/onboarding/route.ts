@@ -212,7 +212,7 @@ const resolveExistingReleaseId = async (
     .from('releases')
     .select('id')
     .eq('id', normalizedReleaseId)
-    .or(`owner_user_id.eq.${userId},user_id.eq.${userId}`)
+    .eq('owner_user_id', userId)
     .maybeSingle();
 
   if (currentReleaseResult.error || !currentReleaseResult.data?.id) {
@@ -461,7 +461,7 @@ export async function PATCH(request: NextRequest) {
         .from('releases')
         .select('id')
         .eq('id', normalizedReleaseId)
-        .or(`owner_user_id.eq.${auth.user.id},user_id.eq.${auth.user.id}`)
+        .eq('owner_user_id', auth.user.id)
         .maybeSingle();
 
       if (releaseResult.error) {

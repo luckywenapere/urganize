@@ -74,14 +74,14 @@ export async function POST(
 
     const { data: release, error: releaseError } = await supabaseAdmin
       .from('releases')
-      .select('id,user_id,title')
+      .select('id,owner_user_id,title')
       .eq('id', planId)
       .maybeSingle();
 
     if (releaseError) {
       return NextResponse.json({ error: releaseError.message || 'Could not load plan' }, { status: 500 });
     }
-    if (!release || release.user_id !== user.id) {
+    if (!release || release.owner_user_id !== user.id) {
       return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
     }
 
@@ -142,7 +142,7 @@ export async function POST(
       .from('releases')
       .delete()
       .eq('id', planId)
-      .eq('user_id', user.id);
+      .eq('owner_user_id', user.id);
     if (releaseDelete.error) {
       return NextResponse.json({ error: releaseDelete.error.message || 'Failed to delete plan' }, { status: 500 });
     }

@@ -21,7 +21,6 @@ export const RELEASE_OPS_SQL = [
   'alter table public.releases add column if not exists artist_id uuid null references public.artists(id) on delete set null;',
   'alter table public.releases add column if not exists slug text null;',
   'alter table public.releases add column if not exists description text null;',
-  'update public.releases set owner_user_id = coalesce(owner_user_id, user_id) where owner_user_id is null;',
   'update public.releases set slug = coalesce(slug, regexp_replace(lower(title), \'[^a-z0-9]+\', \'-\', \'g\')) where slug is null and title is not null;',
   '',
   `create table if not exists public.${COLLABORATORS_TABLE} (`,

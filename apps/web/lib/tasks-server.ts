@@ -313,8 +313,7 @@ type ReleaseRow = {
   id: string;
   title: string;
   artist_name: string;
-  owner_user_id: string | null;
-  user_id: string | null;
+  owner_user_id: string;
 };
 
 type WorkspaceAccessContext = {
@@ -1228,7 +1227,7 @@ export async function resolveReleaseTaskWorkspace(
   const access = await loadWorkspaceAccessContext(adminClient, user);
   const releaseResult = await adminClient
     .from(RELEASES_TABLE)
-    .select('id,title,artist_name,owner_user_id,user_id')
+    .select('id,title,artist_name,owner_user_id')
     .eq('id', releaseId)
     .maybeSingle();
 
@@ -1237,7 +1236,7 @@ export async function resolveReleaseTaskWorkspace(
   }
 
   const release = releaseResult.data as ReleaseRow;
-  const ownerId = release.owner_user_id || release.user_id || '';
+  const ownerId = release.owner_user_id || '';
   const ownerWorkspaceMembership =
     access.memberships.find((member) => member.userId === ownerId && member.role === 'owner') ||
     access.memberships.find((member) => member.userId === ownerId);

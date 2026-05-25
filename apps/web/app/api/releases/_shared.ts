@@ -89,7 +89,7 @@ export async function ensureReleaseOpsSchema(
       run: async () =>
         adminClient
           .from('releases')
-          .select('id,user_id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
+          .select('id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
           .limit(1),
     },
     {
@@ -147,7 +147,7 @@ export async function ensureReleaseOpsSchema(
 
 export const toReleaseSummary = (row: Record<string, unknown>): ReleaseSummary => ({
   id: String(row.id || ''),
-  ownerUserId: String(row.owner_user_id || row.user_id || ''),
+  ownerUserId: String(row.owner_user_id || ''),
   artistId: String(row.artist_id || ''),
   artistName: String(row.artist_name || ''),
   title: String(row.title || ''),
@@ -169,7 +169,7 @@ export async function ensureReleaseOwnership(
 
   const { data: release, error } = await adminClient
     .from('releases')
-    .select('id,user_id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
+    .select('id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
     .eq('id', releaseId)
     .maybeSingle();
 
@@ -180,7 +180,7 @@ export async function ensureReleaseOwnership(
     return { error: NextResponse.json({ error: error.message || 'Could not load release.' }, { status: 500 }) };
   }
 
-  const ownerId = String(release?.owner_user_id || release?.user_id || '');
+  const ownerId = String(release?.owner_user_id || '');
   if (!release || ownerId !== userId) {
     return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
   }
