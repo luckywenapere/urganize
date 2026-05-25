@@ -188,10 +188,10 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                 Create release
               </p>
               <h2 id="create-release-title" className="mt-2 font-display text-2xl font-semibold text-content-primary">
-                Start a release workspace
+                New release
               </h2>
               <p className="mt-2 max-w-xl text-sm leading-6 text-content-secondary">
-                Add the release basics. Urganize will create the workspace and seed the default task plan automatically.
+                Add the release basics. You can add tasks, assets, and collaborators after creating.
               </p>
             </div>
             <IconButton
