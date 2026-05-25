@@ -11,7 +11,6 @@ import {
   ChevronRight,
   LayoutDashboard,
   Settings,
-  Users2,
   X,
 } from 'lucide-react';
 
@@ -26,7 +25,6 @@ type AppSidebarProps = {
 type NavItem = {
   href: string;
   label: string;
-  description: string;
   icon: typeof LayoutDashboard;
   match: (pathname: string | null) => boolean;
 };
@@ -35,14 +33,12 @@ const navItems: NavItem[] = [
   {
     href: '/dashboard',
     label: 'Dashboard',
-    description: 'Command center',
     icon: LayoutDashboard,
     match: (pathname) => pathname === '/dashboard',
   },
   {
     href: '/dashboard/releases',
     label: 'Releases',
-    description: 'Launch pipeline',
     icon: BarChart3,
     match: (pathname) =>
       pathname?.startsWith('/dashboard/releases') === true,
@@ -50,21 +46,12 @@ const navItems: NavItem[] = [
   {
     href: '/dashboard/tasks',
     label: 'Tasks',
-    description: 'Execution queue',
     icon: CheckSquare2,
     match: (pathname) => pathname?.startsWith('/dashboard/tasks') === true,
   },
   {
-    href: '/dashboard/settings/team',
-    label: 'Team',
-    description: 'Members and roles',
-    icon: Users2,
-    match: (pathname) => pathname?.startsWith('/dashboard/settings/team') === true,
-  },
-  {
     href: '/settings',
     label: 'Settings',
-    description: 'Workspace config',
     icon: Settings,
     match: (pathname) => pathname === '/settings' || pathname?.startsWith('/settings/') === true,
   },
@@ -103,12 +90,7 @@ function SidebarNav({ collapsed = false }: { collapsed?: boolean }) {
                 <Icon className="h-4 w-4" strokeWidth={1.8} />
               </span>
               {!collapsed ? (
-                <span className="min-w-0">
-                  <span className="block truncate font-medium">{item.label}</span>
-                  <span className="block truncate text-[11px] leading-4 text-content-tertiary">
-                    {item.description}
-                  </span>
-                </span>
+                <span className="min-w-0 truncate font-medium">{item.label}</span>
               ) : null}
             </Link>
           );
