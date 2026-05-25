@@ -72,6 +72,8 @@ These are the principles that govern v1 build decisions. When in doubt, return t
 
 8. **Visible state changes.** The user always knows what state their release is in, what's blocking it, what's next. No silent operations. No "did it save?" moments. Trust is built through visibility.
 
+9. **Schema is changed only through migration files.** `supabase/migrations/` is the source of truth for schema. Never alter schema through the Supabase dashboard, never with ad-hoc SQL in production. If a migration is needed urgently, write it, commit it, then apply it. No exceptions. Migrations are the source of truth for schema.
+
 ---
 
 ## Stack and runtime
@@ -124,7 +126,7 @@ Two separate databases, one per app. They do not share schema. This is a known l
 - **RLS is enabled on every owned table.** Policies are owner-scoped (`owner_user_id = auth.uid()`).
 - Shared `set_updated_at()` plpgsql trigger function across all owned tables.
 
-**v1 tables in web (post-cut):** `profiles`, `releases`, `release_metadata`, `release_events`, `release_playbook_steps`, `release_collaborators`, `collaborators`, `tasks`, `task_groups`, `assets`, `activity_logs`, `subscriptions`, `payments`, `app_settings`, `release_profiles`, `ai_tasks`, `notifications`.
+**v1 tables in web (post-reconciliation):** `profiles`, `releases`, `release_metadata`, `release_events`, `release_playbook_steps`, `release_collaborators`, `release_workspaces`, `collaborators`, `tasks`, `task_groups`, `task_activity`, `task_attachments`, `task_comments`, `assets`, `activity_logs`, `workspaces`, `workspace_members`, `organizations`, `organization_members`, `subscriptions`, `payments`, `app_settings`, `notifications`, `ui_state_drafts`, `pricing_validation_responses`, `artists`.
 
 ---
 
@@ -260,7 +262,7 @@ Both use `npx turbo-ignore @urganize/<app>` as the Ignored Build Step.
 
 ## Resolved v1 blockers
 
-All six blockers identified during the v1 cut have been resolved.
+All seven blockers identified during the v1 cut have been resolved.
 
 1. **Subscription gating implemented** — `resolveSubscriptionSnapshot` checks `status` + `expires_at`; `hasAccess` delegates to the snapshot; `requirePaidAccess` checks the `app_settings` paywall toggle. Paywall off by default, toggleable via `POST /api/admin/paywall`. → `f71a7c9`
 2. **Paystack webhook persistence added** — `charge.success` handler looks up the payment by reference, upserts `subscriptions`, and sets `profiles.is_subscribed = true`. Idempotent via upsert on `user_id`. → `6ed3125`
@@ -268,6 +270,7 @@ All six blockers identified during the v1 cut have been resolved.
 4. **`Db*` type drift removed** — `DbRelease`, `DbTask`, `DbFile` deleted from `lib/supabase/client.ts`. `Profile` type kept (used by analytics). → `77a29bf`
 5. **`.env.example` files created for both apps** — every `process.env` var documented, grouped by category, marked required/optional. Cross-checked against `turbo.json` env allowlist. → `d34f2ef`
 6. **`bfg.jar` removed** — deleted the 14 MB JAR and its `.gitignore` entry. → `e896cea`
+7. **Schema reconciliation completed** — `20260525034856_schema_reconciliation.sql` applied 2026-05-25. Backfilled 20 tables into migrations, dropped 6 dead tables and 17 dead columns, tightened NOT NULL constraints on `tasks.release_id` and `task_groups.release_id`, added RLS policies across 10 tables. Database and migration files now in sync.
 
 ---
 
@@ -280,6 +283,8 @@ These are real but not blockers:
 - **Tailwind v3 (web) vs v4 (homepage) mismatch.** Shared `packages/ui` styles don't fully port between apps. Acceptable for v1.
 - **Root `layout.tsx` in web is a client component.** Documented architectural compromise. Don't try to undo this in v1.
 - **Outdated top-level docs** (`README.md`, `PROJECT_SUMMARY.md`, `QUICKSTART.md`) reference an old single-app, npm-based, pre-Neon setup. Treat them as historical. Update or delete them when convenient.
+- **RLS on subscriptions and payments uses permissive `USING (true)` policies** inherited from production. This matches the prior state but is overly permissive. Audit client usage and tighten to owner-only reads + service-role writes as a follow-up.
+- **Possible duplicate artists:** 6 releases across 2 users have 6 distinct `artist_id` values. Either expected at small scale, or the artist lookup-or-create flow always creates instead of looking up. Investigate when scale increases or if duplicate-artist issues surface.
 
 ---
 
@@ -341,11 +346,11 @@ Post-cut build sequence. Do not jump ahead.
 
 This section is for state that changes during the v1 build. Keep it current.
 
-**Current build phase:** Post-cut. All v1 blockers resolved. Ready to begin Phase 1: Template infrastructure.
+**Current build phase:** Schema reconciliation complete. Database and migration files in sync. Ready to resume Phase 1 (template infrastructure) — Step 3 (template-to-tasks function) was paused at the audit stage.
 
 **What exists post-cut:**
 - **API routes:** releases (CRUD, metadata, collaborators, playbook, steps, task-groups, tasks), tasks (CRUD, attachments, comments, reorder), payments/subscriptions, auth, admin, command-center, notifications, onboarding, workspace/org members, ui-drafts.
-- **Dashboard pages:** releases (list, new, detail, metadata, playbook, tasks), tasks (my tasks, all tasks), plans (legacy — pending cleanup), team settings.
+- **Dashboard pages:** releases (list, new, detail, metadata, playbook, tasks), tasks (my tasks, all tasks), team settings.
 - **Stores:** auth, releases, tasks, activity.
 
 **Paying users:** 1 (₦5,000/year). 1 contract in legal review (₦100k/year). 1 design partner team meeting scheduled.
@@ -364,4 +369,12 @@ This section is for state that changes during the v1 build. Keep it current.
 
 ---
 
-*Last updated: 2026-05-23. All v1 blockers resolved. Template infrastructure phase begins.*
+**Schema reconciliation lessons (2026-05-25):**
+- Op 1 cleaned application code; Op 2 reconciled schema. Sequence matters.
+- 30+ instances of drift found across columns, tables, RLS policies.
+- Multiple rounds of empirical verification (count queries on production) caught issues that static audit missed.
+- One runtime failure during apply (RLS policies on dropped tables blocked column drops) — fixed by reordering migration. No data lost.
+
+---
+
+*Last updated: 2026-05-25. Schema reconciliation complete. Template infrastructure phase resumes.*
