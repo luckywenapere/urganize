@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getRolePermissions } from '@/lib/role-permissions';
-import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
-import { fetchUiDraft, saveUiDraft } from '@/lib/ui-drafts';
 import { ThemeToggle } from '@urganize/ui';
 import {
   SettingsPageSkeleton,
@@ -15,48 +13,16 @@ import {
 } from '@/components/loading/SettingsPageSkeleton';
 import { errorMessage } from "@/lib/errors";
 
-type OrganizationInfo = {
-  id: string;
-  name: string;
-  owner_id: string;
-  created_at?: string;
-  updated_at?: string;
-};
-
-type OrganizationMember = {
+type WorkspaceMember = {
   id: string;
   user_id: string;
-  role: 'manager' | 'artist' | 'team-member' | 'viewer';
+  role: string;
   name: string;
   email: string;
-  created_at?: string;
-  updated_at?: string;
-};
-
-type SettingsUiState = {
-  organizationName: string;
-  newMemberEmail: string;
-  newMemberRole: 'manager' | 'artist' | 'team-member' | 'viewer';
 };
 
 const panelClass =
   'rounded-3xl border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-sm sm:p-6';
-const SETTINGS_UI_STATE_VERSION = 1;
-const SETTINGS_UI_STATE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
-const SETTINGS_UI_STATE_SCOPE = 'settings-ui';
-
-const isSettingsUiState = (value: unknown): value is SettingsUiState => {
-  if (!value || typeof value !== 'object') return false;
-  const state = value as Partial<SettingsUiState>;
-  return (
-    typeof state.organizationName === 'string' &&
-    typeof state.newMemberEmail === 'string' &&
-    (state.newMemberRole === 'manager' ||
-      state.newMemberRole === 'artist' ||
-      state.newMemberRole === 'team-member' ||
-      state.newMemberRole === 'viewer')
-  );
-};
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -76,21 +42,25 @@ export default function SettingsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [organization, setOrganization] = useState<OrganizationInfo | null>(null);
-  const [organizationName, setOrganizationName] = useState('');
-  const [isSavingOrganization, setIsSavingOrganization] = useState(false);
-  const [organizationMessage, setOrganizationMessage] = useState('');
-  const [organizationError, setOrganizationError] = useState('');
-  const [members, setMembers] = useState<OrganizationMember[]>([]);
-  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
-  const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [newMemberRole, setNewMemberRole] = useState<'manager' | 'artist' | 'team-member' | 'viewer'>('viewer');
-  const [isAddingMember, setIsAddingMember] = useState(false);
-  const [memberMessage, setMemberMessage] = useState('');
-  const [memberError, setMemberError] = useState('');
+
+  // Workspace teammates
+  const [teammates, setTeammates] = useState<WorkspaceMember[]>([]);
+  const [isLoadingTeammates, setIsLoadingTeammates] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<string>('viewer');
+  const [isInviting, setIsInviting] = useState(false);
+  const [teammateMessage, setTeammateMessage] = useState('');
+  const [teammateError, setTeammateError] = useState('');
+
   const rolePermissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
   const isManagerAccount = rolePermissions.role === 'manager';
-  const settingsUiStateKey = user ? `urganize.settings.ui.v${SETTINGS_UI_STATE_VERSION}.${user.id}` : '';
+
+  const getAccessToken = async (): Promise<string> => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    return session?.access_token || '';
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -103,138 +73,54 @@ export default function SettingsPage() {
   }, [authLoading, router, user]);
 
   useEffect(() => {
-    if (!settingsUiStateKey) return;
-    let cancelled = false;
-
-    const restore = async () => {
-      const localDraft = readPersistedState<SettingsUiState>(
-        settingsUiStateKey,
-        SETTINGS_UI_STATE_VERSION,
-        isSettingsUiState,
-        SETTINGS_UI_STATE_MAX_AGE_MS
-      );
-      const remoteDraft = await fetchUiDraft<SettingsUiState>(SETTINGS_UI_STATE_SCOPE, settingsUiStateKey);
-      const restored =
-        localDraft || (remoteDraft.payload && isSettingsUiState(remoteDraft.payload) ? remoteDraft.payload : null);
-      if (!restored || cancelled) return;
-
-      setOrganizationName(restored.organizationName);
-      setNewMemberEmail(restored.newMemberEmail);
-      setNewMemberRole(restored.newMemberRole);
-    };
-
-    void restore();
-    return () => {
-      cancelled = true;
-    };
-  }, [settingsUiStateKey]);
-
-  useEffect(() => {
-    if (!settingsUiStateKey) return;
-    const draft: SettingsUiState = {
-      organizationName,
-      newMemberEmail,
-      newMemberRole,
-    };
-    writePersistedState<SettingsUiState>(settingsUiStateKey, SETTINGS_UI_STATE_VERSION, draft);
-    void saveUiDraft<SettingsUiState>(SETTINGS_UI_STATE_SCOPE, settingsUiStateKey, draft);
-  }, [newMemberEmail, newMemberRole, organizationName, settingsUiStateKey]);
-
-  useEffect(() => {
     if (!user) return;
 
-    const loadSettingsData = async () => {
-      const notificationsRaw = localStorage.getItem(`urganize.notifications.${user.id}`);
-      if (notificationsRaw) {
-        try {
-          const parsed = JSON.parse(notificationsRaw);
-          setNotificationsEmail(parsed.notificationsEmail ?? true);
-          setNotificationsProduct(parsed.notificationsProduct ?? false);
-        } catch {
-          setNotificationsEmail(true);
-          setNotificationsProduct(false);
-        }
+    const notificationsRaw = localStorage.getItem(`urganize.notifications.${user.id}`);
+    if (notificationsRaw) {
+      try {
+        const parsed = JSON.parse(notificationsRaw);
+        setNotificationsEmail(parsed.notificationsEmail ?? true);
+        setNotificationsProduct(parsed.notificationsProduct ?? false);
+      } catch {
+        setNotificationsEmail(true);
+        setNotificationsProduct(false);
       }
-    };
-
-    loadSettingsData();
+    }
   }, [user]);
 
-  // Hoisted above the effects that call it so the static analyzer (and
-  // react-hooks/immutability) don't see a forward-reference TDZ slot.
-  const getAccessToken = async (): Promise<string> => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    return session?.access_token || '';
-  };
-
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isManagerAccount) return;
     let cancelled = false;
 
-    const loadOrganization = async () => {
-      setIsLoadingMembers(true);
-      setOrganizationError('');
-      setMemberError('');
+    const loadTeammates = async () => {
+      setIsLoadingTeammates(true);
       try {
         const token = await getAccessToken();
-        if (!token) {
-          setOrganizationError('Session expired. Please sign in again.');
-          return;
-        }
+        if (!token) return;
 
-        const [orgRes, membersRes] = await Promise.all([
-          fetch('/api/organization', {
-            method: 'GET',
-            headers: { Authorization: `Bearer ${token}` },
-            cache: 'no-store',
-          }),
-          fetch('/api/organization/members', {
-            method: 'GET',
-            headers: { Authorization: `Bearer ${token}` },
-            cache: 'no-store',
-          }),
-        ]);
+        const response = await fetch('/api/workspace/members', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
 
-        const orgPayload = (await orgRes.json().catch(() => ({}))) as {
-          organization?: OrganizationInfo | null;
-          error?: string;
-        };
-        const membersPayload = (await membersRes.json().catch(() => ({}))) as {
-          members?: OrganizationMember[];
+        const payload = (await response.json().catch(() => ({}))) as {
+          members?: WorkspaceMember[];
           error?: string;
         };
 
-        if (!orgRes.ok) {
-          setOrganizationError(orgPayload.error || 'Could not load organization.');
-          return;
-        }
-        if (!membersRes.ok) {
-          setMemberError(membersPayload.error || 'Could not load members.');
-        }
-
-        if (!cancelled) {
-          setOrganization(orgPayload.organization || null);
-          setOrganizationName(orgPayload.organization?.name || '');
-          setMembers(Array.isArray(membersPayload.members) ? membersPayload.members : []);
+        if (!cancelled && response.ok && Array.isArray(payload.members)) {
+          setTeammates(payload.members);
         }
       } catch {
-        if (!cancelled) {
-          setOrganizationError('Could not load organization settings.');
-        }
+        // Non-blocking
       } finally {
-        if (!cancelled) {
-          setIsLoadingMembers(false);
-        }
+        if (!cancelled) setIsLoadingTeammates(false);
       }
     };
 
-    loadOrganization();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
+    void loadTeammates();
+    return () => { cancelled = true; };
+  }, [user, isManagerAccount]);
 
   const clearFeedback = () => {
     setError('');
@@ -370,140 +256,69 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveOrganization = async () => {
-    const name = organizationName.trim();
-    if (!name) {
-      setOrganizationError('Organization name is required.');
-      return;
-    }
-    setIsSavingOrganization(true);
-    setOrganizationError('');
-    setOrganizationMessage('');
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Session expired. Please sign in again.');
-      const response = await fetch('/api/organization', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        organization?: OrganizationInfo;
-        status?: string;
-        error?: string;
-      };
-      if (!response.ok || !payload.organization) {
-        throw new Error(payload.error || 'Could not save organization.');
-      }
-      setOrganization(payload.organization);
-      setOrganizationName(payload.organization.name || name);
-      setOrganizationMessage(payload.status === 'created' ? 'Organization created.' : 'Organization updated.');
-    } catch (err) {
-      setOrganizationError(errorMessage(err, 'Could not save organization.'));
-    } finally {
-      setIsSavingOrganization(false);
-    }
-  };
-
-  const handleAddMember = async () => {
-    const email = newMemberEmail.trim().toLowerCase();
+  const handleInviteTeammate = async () => {
+    const email = inviteEmail.trim().toLowerCase();
     if (!email || !email.includes('@')) {
-      setMemberError('Enter a valid email.');
+      setTeammateError('Enter a valid email.');
       return;
     }
 
-    setIsAddingMember(true);
-    setMemberError('');
-    setMemberMessage('');
+    setIsInviting(true);
+    setTeammateError('');
+    setTeammateMessage('');
     try {
       const token = await getAccessToken();
       if (!token) throw new Error('Session expired. Please sign in again.');
-      const response = await fetch('/api/organization/members', {
+      const response = await fetch('/api/workspace/members/invite', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          email,
-          role: newMemberRole,
-        }),
+        body: JSON.stringify({ email, role: inviteRole }),
       });
       const payload = (await response.json().catch(() => ({}))) as {
-        member?: OrganizationMember;
+        member?: WorkspaceMember;
         error?: string;
       };
-      if (!response.ok || !payload.member) {
-        throw new Error(payload.error || 'Could not add member.');
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not invite teammate.');
       }
-      setMembers((current) => {
-        const existingIndex = current.findIndex((member) => member.user_id === payload.member?.user_id);
-        if (existingIndex === -1) return [...current, payload.member as OrganizationMember];
-        const next = [...current];
-        next[existingIndex] = payload.member as OrganizationMember;
-        return next;
-      });
-      setNewMemberEmail('');
-      setNewMemberRole('viewer');
-      setMemberMessage('Member saved.');
+      if (payload.member) {
+        setTeammates((current) => {
+          const idx = current.findIndex((m) => m.user_id === payload.member?.user_id);
+          if (idx === -1) return [...current, payload.member as WorkspaceMember];
+          const next = [...current];
+          next[idx] = payload.member as WorkspaceMember;
+          return next;
+        });
+      }
+      setInviteEmail('');
+      setInviteRole('viewer');
+      setTeammateMessage('Invite sent.');
     } catch (err) {
-      setMemberError(errorMessage(err, 'Could not add member.'));
+      setTeammateError(errorMessage(err, 'Could not invite teammate.'));
     } finally {
-      setIsAddingMember(false);
+      setIsInviting(false);
     }
   };
 
-  const handleMemberRoleChange = async (memberId: string, role: OrganizationMember['role']) => {
-    setMemberError('');
+  const handleRemoveTeammate = async (memberId: string) => {
+    setTeammateError('');
+    setTeammateMessage('');
     try {
       const token = await getAccessToken();
       if (!token) throw new Error('Session expired. Please sign in again.');
-      const response = await fetch('/api/organization/members', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ memberId, role }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        member?: { role?: OrganizationMember['role'] };
-        error?: string;
-      };
-      if (!response.ok) throw new Error(payload.error || 'Could not update member role.');
-      setMembers((current) =>
-        current.map((member) =>
-          member.id === memberId ? { ...member, role: (payload.member?.role || role) as OrganizationMember['role'] } : member
-        )
-      );
-    } catch (err) {
-      setMemberError(errorMessage(err, 'Could not update role.'));
-    }
-  };
-
-  const handleRemoveMember = async (memberId: string) => {
-    setMemberError('');
-    setMemberMessage('');
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Session expired. Please sign in again.');
-      const response = await fetch('/api/organization/members', {
+      const response = await fetch(`/api/workspace/members/${memberId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ memberId }),
+        headers: { Authorization: `Bearer ${token}` },
       });
       const payload = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) throw new Error(payload.error || 'Could not remove member.');
-      setMembers((current) => current.filter((member) => member.id !== memberId));
-      setMemberMessage('Member removed.');
+      if (!response.ok) throw new Error(payload.error || 'Could not remove teammate.');
+      setTeammates((current) => current.filter((m) => m.id !== memberId));
+      setTeammateMessage('Teammate removed.');
     } catch (err) {
-      setMemberError(errorMessage(err, 'Could not remove member.'));
+      setTeammateError(errorMessage(err, 'Could not remove teammate.'));
     }
   };
 
@@ -521,7 +336,7 @@ export default function SettingsPage() {
         <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl tracking-tight sm:text-4xl">Settings</h1>
-            <p className="mt-1 text-xs uppercase tracking-[0.14em] text-content-tertiary">Account, billing, and workflow</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.14em] text-content-tertiary">Account and preferences</p>
           </div>
           <div className="flex w-full items-center gap-2 sm:w-auto">
             <Link
@@ -641,46 +456,6 @@ export default function SettingsPage() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {isManagerAccount && (
-            <section className={panelClass}>
-            <h2 className="mb-4 text-xl">Organization</h2>
-            <div className="space-y-3">
-              <label className="block">
-                <span className="mb-1 block text-sm text-content-secondary">Organization name</span>
-                <input
-                  value={organizationName}
-                  onChange={(event) => setOrganizationName(event.target.value)}
-                  placeholder="e.g. The Label Group"
-                  className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={handleSaveOrganization}
-                disabled={isSavingOrganization}
-                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-              >
-                {isSavingOrganization ? 'Saving...' : organization ? 'Update organization' : 'Create organization'}
-              </button>
-              {organization && (
-                <p className="text-xs text-content-tertiary">
-                  Owner ID: {organization.owner_id}
-                </p>
-              )}
-              {organizationMessage && (
-                <p className="rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
-                  {organizationMessage}
-                </p>
-              )}
-              {organizationError && (
-                <p className="rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
-                  {organizationError}
-                </p>
-              )}
-            </div>
-          </section>
-          )}
-
           <section className={panelClass}>
             <h2 className="mb-4 text-xl">Session</h2>
             <div className="rounded-lg border border-stroke-subtle bg-bg-elevated p-4">
@@ -699,7 +474,7 @@ export default function SettingsPage() {
           </section>
 
           {user.role === 'artist' && (
-            <section className={`${panelClass} mt-6`}>
+            <section className={panelClass}>
               <h2 className="mb-4 text-xl">Artist profile</h2>
               <p className="mb-3 text-sm text-content-secondary">
                 This name is reused across the app.
@@ -728,100 +503,78 @@ export default function SettingsPage() {
         </div>
 
         {isManagerAccount && (
-        <section id="billing" className={`${panelClass} mt-6`}>
-          <h2 className="mb-4 text-xl">Team members</h2>
-          {!organization ? (
-            <p className="text-sm text-content-secondary">Create your organization first.</p>
+        <section className={`${panelClass} mt-6`}>
+          <h2 className="mb-4 text-xl">Teammates</h2>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+            <input
+              value={inviteEmail}
+              onChange={(event) => setInviteEmail(event.target.value)}
+              placeholder="teammate@email.com"
+              className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
+            />
+            <select
+              value={inviteRole}
+              onChange={(event) => setInviteRole(event.target.value)}
+              className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+            >
+              <option value="manager">Manager</option>
+              <option value="artist">Artist</option>
+              <option value="team-member">Team Member</option>
+              <option value="viewer">Viewer</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => void handleInviteTeammate()}
+              disabled={isInviting}
+              className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+            >
+              {isInviting ? 'Inviting...' : 'Invite'}
+            </button>
+          </div>
+
+          {teammateMessage && (
+            <p className="mt-3 rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
+              {teammateMessage}
+            </p>
+          )}
+          {teammateError && (
+            <p className="mt-3 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+              {teammateError}
+            </p>
+          )}
+
+          {isLoadingTeammates ? (
+            <SettingsTeamMembersSectionSkeleton />
+          ) : teammates.length === 0 ? (
+            <p className="mt-4 text-sm text-content-secondary">No teammates yet. Invite someone to get started.</p>
           ) : (
-            <>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-                <input
-                  value={newMemberEmail}
-                  onChange={(event) => setNewMemberEmail(event.target.value)}
-                  placeholder="member@email.com"
-                  className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
-                />
-                <select
-                  value={newMemberRole}
-                  onChange={(event) =>
-                    setNewMemberRole(
-                      ((event.target.value as OrganizationMember['role']) || 'viewer') as OrganizationMember['role']
-                    )
-                  }
-                  className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+            <div className="mt-4 space-y-2">
+              {teammates.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2"
                 >
-                  <option value="manager">Manager</option>
-                  <option value="artist">Artist</option>
-                  <option value="team-member">Team Member</option>
-                  <option value="viewer">Viewer</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={() => void handleAddMember()}
-                  disabled={isAddingMember}
-                  className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-                >
-                  {isAddingMember ? 'Adding...' : 'Add member'}
-                </button>
-              </div>
-
-              {memberMessage && (
-                <p className="mt-3 rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
-                  {memberMessage}
-                </p>
-              )}
-              {memberError && (
-                <p className="mt-3 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
-                  {memberError}
-                </p>
-              )}
-
-              {isLoadingMembers ? (
-                <SettingsTeamMembersSectionSkeleton />
-              ) : members.length === 0 ? (
-                <p className="mt-4 text-sm text-content-secondary">No team yet.</p>
-              ) : (
-                <div className="mt-4 space-y-2">
-                  {members.map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-content-primary">{member.name || 'Unknown'}</p>
-                        <p className="text-xs text-content-secondary">{member.email || 'No email'}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={member.role}
-                          onChange={(event) =>
-                            handleMemberRoleChange(
-                              member.id,
-                              ((event.target.value as OrganizationMember['role']) || 'viewer') as OrganizationMember['role']
-                            )
-                          }
-                          className="rounded border border-stroke-subtle bg-bg-surface px-2 py-1 text-xs text-content-primary"
-                        >
-                          <option value="manager">Manager</option>
-                          <option value="artist">Artist</option>
-                          <option value="team-member">Team Member</option>
-                          <option value="viewer">Viewer</option>
-                        </select>
-                        {member.user_id !== user.id && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveMember(member.id)}
-                            className="text-xs text-status-error hover:underline"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                  <div>
+                    <p className="text-sm font-medium text-content-primary">{member.name || 'Unknown'}</p>
+                    <p className="text-xs text-content-secondary">{member.email || 'No email'}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded border border-stroke-subtle bg-bg-surface px-2 py-1 text-xs capitalize text-content-primary">
+                      {(member.role || 'viewer').replace(/-/g, ' ')}
+                    </span>
+                    {member.user_id !== user.id && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTeammate(member.id)}
+                        className="text-xs text-status-error hover:underline"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
-              )}
-            </>
+              ))}
+            </div>
           )}
         </section>
         )}
@@ -855,4 +608,3 @@ export default function SettingsPage() {
     </main>
   );
 }
-
