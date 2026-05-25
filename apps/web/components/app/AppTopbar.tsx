@@ -13,11 +13,10 @@ type AppTopbarProps = {
 };
 
 const routeTitles = [
-  { match: (pathname: string) => pathname === '/dashboard', title: 'Dashboard', eyebrow: 'Command center' },
-  { match: (pathname: string) => pathname.startsWith('/dashboard/releases'), title: 'Releases', eyebrow: 'Launch pipeline' },
-  { match: (pathname: string) => pathname.startsWith('/dashboard/tasks'), title: 'Tasks', eyebrow: 'Execution queue' },
-  { match: (pathname: string) => pathname.startsWith('/dashboard/settings/team'), title: 'Team', eyebrow: 'Workspace members' },
-  { match: (pathname: string) => pathname.startsWith('/settings'), title: 'Settings', eyebrow: 'Workspace config' },
+  { match: (pathname: string) => pathname === '/dashboard', title: 'Dashboard', eyebrow: 'Overview' },
+  { match: (pathname: string) => pathname.startsWith('/dashboard/releases'), title: 'Releases', eyebrow: 'All releases' },
+  { match: (pathname: string) => pathname.startsWith('/dashboard/tasks'), title: 'Tasks', eyebrow: 'My tasks' },
+  { match: (pathname: string) => pathname.startsWith('/settings'), title: 'Settings', eyebrow: 'Account' },
 ];
 
 function getRouteTitle(pathname: string | null) {
@@ -67,7 +66,7 @@ export function AppTopbar({
         </div>
 
         <Link
-          href="/dashboard/releases/new"
+          href="/dashboard/releases"
           className="hidden h-10 items-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse shadow-[0_18px_36px_-28px_rgba(62,207,142,0.55)] hover:bg-brand-hover sm:inline-flex"
         >
           <Plus className="h-4 w-4" />

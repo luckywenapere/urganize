@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@urganize/ui';
@@ -109,16 +109,6 @@ export function ReleasesDashboardPage() {
     void loadReleases();
   }, [loadReleases]);
 
-  const totals = useMemo(() => {
-    const active = releases.filter((release) => release.status !== 'archived').length;
-    const collaborators = releases.reduce((sum, release) => sum + Number(release.invitedCount || 0), 0);
-    const averageProgress = releases.length
-      ? Math.round(releases.reduce((sum, release) => sum + Number(release.progress || 0), 0) / releases.length)
-      : 0;
-
-    return { active, collaborators, averageProgress };
-  }, [releases]);
-
   return (
     <div className="mx-auto w-full max-w-[1440px] space-y-6">
       <section className="flex flex-col gap-4 border border-stroke-default bg-bg-surface p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
@@ -130,7 +120,7 @@ export function ReleasesDashboardPage() {
             Releases
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
-            Track active rollouts, assets, collaborators, and readiness across every artist release.
+            Track active rollouts, assets, and collaborators across every artist release.
           </p>
         </div>
 
@@ -156,23 +146,6 @@ export function ReleasesDashboardPage() {
         </div>
       </section>
 
-      {!isLoading && releases.length > 0 ? (
-        <section className="grid gap-3 sm:grid-cols-3">
-          <div className="border border-stroke-default bg-bg-surface p-4">
-            <p className="text-xs font-medium text-content-tertiary">Active releases</p>
-            <p className="mt-2 text-2xl font-semibold text-content-primary">{totals.active}</p>
-          </div>
-          <div className="border border-stroke-default bg-bg-surface p-4">
-            <p className="text-xs font-medium text-content-tertiary">Collaborators</p>
-            <p className="mt-2 text-2xl font-semibold text-content-primary">{totals.collaborators}</p>
-          </div>
-          <div className="border border-stroke-default bg-bg-surface p-4">
-            <p className="text-xs font-medium text-content-tertiary">Average readiness</p>
-            <p className="mt-2 text-2xl font-semibold text-content-primary">{totals.averageProgress}%</p>
-          </div>
-        </section>
-      ) : null}
-
       {error ? (
         <div className="flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -188,7 +161,7 @@ export function ReleasesDashboardPage() {
       {!isLoading && !error && releases.length === 0 ? (
         <EmptyState
           title="No releases yet"
-          description="Create your first release workspace to start collecting assets, assigning tasks, and tracking rollout readiness."
+          description="Create your first release to start collecting assets, assigning tasks, and tracking progress."
           action={
             <button
               type="button"

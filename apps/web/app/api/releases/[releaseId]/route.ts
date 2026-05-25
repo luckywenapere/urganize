@@ -125,7 +125,7 @@ async function loadReleaseRetentionSummary(
         title: 'Invite your team to assign work',
         description: 'Bring managers, publicists, and collaborators into the workspace so the release stops depending on one person.',
         ctaLabel: 'Invite teammates',
-        href: `/dashboard/settings/team?releaseId=${releaseId}`,
+        href: `/settings`,
       },
     };
   }

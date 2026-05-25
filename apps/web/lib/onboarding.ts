@@ -244,7 +244,7 @@ export const getDashboardEmptyStateCopy = (role: UserRole | null) => {
   if (role === 'other') {
     return {
       title: 'No releases yet.',
-      description: 'Create a release to turn Urganize into a working command center instead of an empty dashboard.',
+      description: 'Create a release to start organizing tasks, assets, and collaborators.',
     };
   }
 
