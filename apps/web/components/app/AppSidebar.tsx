@@ -45,8 +45,7 @@ const navItems: NavItem[] = [
     description: 'Launch pipeline',
     icon: BarChart3,
     match: (pathname) =>
-      pathname?.startsWith('/dashboard/releases') === true ||
-      pathname?.startsWith('/dashboard/plans') === true,
+      pathname?.startsWith('/dashboard/releases') === true,
   },
   {
     href: '/dashboard/tasks',
