@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -132,11 +133,13 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
 
   const shouldShowTaskShell = pathname?.startsWith('/dashboard') || pathname === '/settings';
 
+  const loadingOptionsRef = useRef(false);
   const loadOptions = useCallback(async () => {
-    if (isLoadingOptions) {
+    if (loadingOptionsRef.current) {
       return;
     }
 
+    loadingOptionsRef.current = true;
     setIsLoadingOptions(true);
     try {
       const [releasePayload, membersPayload] = await Promise.all([
@@ -148,9 +151,10 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       setMembers(Array.isArray(membersPayload.members) ? membersPayload.members : []);
       setIsOptionsLoaded(true);
     } finally {
+      loadingOptionsRef.current = false;
       setIsLoadingOptions(false);
     }
-  }, [isLoadingOptions]);
+  }, []);
 
   const loadTaskGroups = useCallback(async (releaseId: string | null | undefined) => {
     if (!releaseId) {
@@ -244,9 +248,8 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     (taskId: string) => {
       setActiveTaskId(taskId);
       setIsTaskDrawerOpen(true);
-      void loadTask(taskId);
     },
-    [loadTask]
+    []
   );
 
   const closeTask = useCallback(() => {
