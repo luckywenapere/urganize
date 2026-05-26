@@ -271,7 +271,10 @@ function buildTaskRow(params: BuildTaskRowParams) {
     workspace_id: workspaceId,
     group_id: null,
     created_by: ownerUserId,
-    assigned_to_user_id: null,
+    // Default to the release owner so the dashboard query
+    // (TaskService.getTasksForUser, filters by assigned_to_user_id) surfaces
+    // these tasks. Per-task reassignment happens in the task drawer.
+    assigned_to_user_id: ownerUserId,
     assigned_to: null,
     assigned_collaborator_id: null,
     title: task.title,
