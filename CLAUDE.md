@@ -315,17 +315,33 @@ The template provides the structure. The AI provides the tailoring. Never let th
 
 ---
 
-## Build sequence priority
+## v1 build sequence and current progress (as of May 2026)
 
-Post-cut build sequence. Do not jump ahead.
+**Current position:** Phase 3 (file/asset attachment), step 3b (UI on release detail page). Backend complete, UI prompt drafted and ready to send.
 
-1. **Template infrastructure** — ✅ Done (2026-05-26). `Template` / `TemplateTask` types, loader registry, and `instantiateTemplate(template, release, ctx) → tasks` function live at `apps/web/lib/release-templates/`.
-2. **Single release template content** — ✅ Done (2026-05-26). v0.3 signed off by two design partners, 64 tasks, registered in the loader.
-3. **Release creation → task generation flow end-to-end** — ✅ Done (2026-05-26). POST `/api/releases` calls `instantiateTemplate` after release insert; tasks are assigned to the release owner and surface on the release detail page. Release date is now required at both modal and API.
-4. **Internal use** — ← **resume here.** Founder runs own two artists' releases through the product for 4–6 weeks.
-5. **AI rollout planner layer** — Claude Sonnet via existing provider. Template + release context → tailored plan.
-6. **AI status update generator** — Claude Haiku or equivalent. Release state → one-paragraph narrative.
-7. **Design partners onboarded** — after internal use proves stability.
+v1 is built across six phases. Each phase corresponds to one of the v1 scope items, with some scope items split across multiple phases when the work is non-trivial.
+
+**Phase 0 — Foundation cleanup.** Schema reconciliation, UI cut to remove stages-era surfaces, removing dead code from earlier product iterations. ✅ Complete.
+
+**Phase 1 — Template-driven task generation.** Release object CRUD, hand-crafted single release template (v0.3, 64 tasks across 11 weeks), template-to-tasks instantiation function, wired into release creation flow. ✅ Complete. Three releases (For Love, Free, Hello) successfully generated 64 tasks each in production.
+
+**Phase 2 — Core flow integrity.** Tasks with assignees (PATCH endpoint fixed, workspace-membership validation, assignee picker working), task visibility model corrected from assignee-based to workspace-based with Mine toggle, dependency UI (read-only visibility, blocker message surfacing, locked-task visual treatment, persisted auto-unlock cascade), task completion UX (row checkboxes routing through `completeTask` with blocker check, drawer Status dropdown as deep-edit path, reopen-as-toggle), drawer loading performance fix, dropdown layering and contrast fixes. ✅ Complete.
+
+**Phase 3 — File/asset attachment.** Release-scoped file storage in Supabase Storage with signed URLs. Three sub-steps:
+
+- **3a:** Backend API (upload-url, list, record, delete routes; asset-helpers module). ✅ Complete.
+- **3b:** UI on release detail page (asset section, upload control, category groups, image thumbnails). ← **In progress.**
+- **3c:** Polish (cleanup vestigial buckets, deprecate `release_metadata.artwork_url` reads, delete `WorkspaceSection.tsx` dead code). Pending — non-blocking.
+
+Constraint: Supabase Free plan caps individual uploads at 50 MB. Category size limits configured in `asset-helpers.ts` accordingly (40 MiB audio/video, 10 MiB documents, 5 MiB images).
+
+**Phase 4 — Event milestone rendering.** Tasks with `type: 'event_milestone'` in their template metadata render differently from regular tasks. Visual distinction (icon, date pill, treatment). Backend already generates milestones correctly via template instantiation; UI just needs to differentiate. Small scope. Not started.
+
+**Phase 5 — AI rollout planner.** Reads release context (artist scale, marketing budget, etc.) and tailors the template at instantiation time — drops optional tasks based on context, adjusts post-release content cadence based on artist scale, etc. The hand-crafted template carries the domain knowledge; this AI layer is the removable polish. Uses frontier model via Zuplo gateway (Claude Sonnet). Not started.
+
+**Phase 6 — AI status update generator.** Button on release detail page that reads release state (task completion, blockers, upcoming work, attached files, dates) and generates a paragraph status update the manager can copy to send to artists, labels, or collaborators. Uses Claude Haiku via Zuplo. Not started.
+
+After Phase 6, all six v1 scope items are shipped. Internal use continues throughout — the founder runs his own two artists' releases through the product, and the design partners exercise the workspace flow.
 
 ---
 
@@ -345,7 +361,7 @@ Post-cut build sequence. Do not jump ahead.
 
 This section is for state that changes during the v1 build. Keep it current.
 
-**Current build phase:** Template infrastructure complete and deployed (2026-05-26). Steps 1–3 of the build sequence are done: types/loader/instantiator built, v0.3 single template registered, release creation wired to `instantiateTemplate`, release date required, tasks assigned to owner. Resume at Step 4 (internal use): the founder runs own two artists' releases through the product for 4–6 weeks. The "Generate status update" button is still a placeholder — that's Step 6.
+**Current build phase:** Phase 3 (file/asset attachment), step 3b (UI on release detail page). Phases 0, 1, and 2 are complete; Phase 3a (backend API) is complete; the 3b UI prompt is drafted and ready to send. See the build sequence section above for the full phase map and what's still ahead (Phase 4 event-milestone rendering, Phase 5 AI rollout planner, Phase 6 AI status update generator). Internal use runs continuously throughout — the founder dogfoods on his own two artists' releases.
 
 **What exists post-UI-cut:**
 - **Pages (4 + modals):** Dashboard (greeting, release cards, due-soon tasks), Releases list, Release detail (header, task progress, task list, status update placeholder), Settings (profile, teammates via workspace members, subscription). Modals: CreateReleaseModal, TaskQuickCreateModal, TaskDetailDrawer.
@@ -391,4 +407,4 @@ This section is for state that changes during the v1 build. Keep it current.
 
 ---
 
-*Last updated: 2026-05-26. Template infrastructure deployed. Resume at Step 4 (internal use).*
+*Last updated: 2026-05-26. Build sequence restructured into the six-phase map. Current position: Phase 3b (file/asset attachment UI).*
