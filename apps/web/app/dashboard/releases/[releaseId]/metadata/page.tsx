@@ -8,7 +8,6 @@ import { useAuthStore } from '@/lib/auth-store';
 import { SectionCard } from '@/components/shared/SectionCard';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { ReleaseWorkspaceTabs } from '@/components/releases/ReleaseWorkspaceTabs';
 import { MetadataPageSkeleton } from '@/components/loading/MetadataPageSkeleton';
 import { errorMessage } from "@/lib/errors";
 
@@ -147,10 +146,6 @@ export default function ReleaseMetadataPage() {
                   tone={data.readiness.metadataComplete ? 'success' : 'warning'}
                 />
               </div>
-            </SectionCard>
-
-            <SectionCard className="sm:p-5">
-              <ReleaseWorkspaceTabs releaseId={releaseId} />
             </SectionCard>
 
             <SectionCard>
