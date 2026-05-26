@@ -289,11 +289,11 @@ These are real but not blockers:
 
 ## Hand-crafted release templates
 
-The hand-crafted templates are the heart of v1. They are not yet built in code.
+The hand-crafted templates are the heart of v1. Template infrastructure (types, loader, instantiator) and the single template are built and wired into release creation as of 2026-05-26. EP, album, and music video templates remain to be authored.
 
 **Templates needed for v1:**
 
-1. **Single release** (8 weeks) — drafted, awaiting design partner feedback. Use as the base for other templates.
+1. **Single release** — `single_v0.3`, signed off by two design partners (2026-05-26). 64 tasks across 11 weeks (8 pre-release + 3 post-release). Markdown source at `apps/web/lib/release-templates/single-v0.3.md`; encoded as TypeScript at `single.ts`. Use as the base for other templates.
 2. **EP release** — extends single template with multi-track logic and lead-single staggering.
 3. **Album release** — extends EP template with 2–3 staggered singles and a longer rollout.
 4. **Music video release** — different shape entirely; can be standalone or attached to an audio release.
@@ -319,10 +319,10 @@ The template provides the structure. The AI provides the tailoring. Never let th
 
 Post-cut build sequence. Do not jump ahead.
 
-1. **Template infrastructure** — TypeScript types for `Template` and `TemplateTask`, template loader, template-to-tasks function. ← **resume here** (Step 3: template-to-tasks function)
-2. **Single release template content** — waits on design partner feedback for missing pieces.
-3. **Release creation → task generation flow end-to-end** — user picks template, system generates concrete tasks, user edits before commit.
-4. **Internal use** — founder runs own two artists' releases through the product for 4–6 weeks.
+1. **Template infrastructure** — ✅ Done (2026-05-26). `Template` / `TemplateTask` types, loader registry, and `instantiateTemplate(template, release, ctx) → tasks` function live at `apps/web/lib/release-templates/`.
+2. **Single release template content** — ✅ Done (2026-05-26). v0.3 signed off by two design partners, 64 tasks, registered in the loader.
+3. **Release creation → task generation flow end-to-end** — ✅ Done (2026-05-26). POST `/api/releases` calls `instantiateTemplate` after release insert; tasks are assigned to the release owner and surface on the release detail page. Release date is now required at both modal and API.
+4. **Internal use** — ← **resume here.** Founder runs own two artists' releases through the product for 4–6 weeks.
 5. **AI rollout planner layer** — Claude Sonnet via existing provider. Template + release context → tailored plan.
 6. **AI status update generator** — Claude Haiku or equivalent. Release state → one-paragraph narrative.
 7. **Design partners onboarded** — after internal use proves stability.
@@ -345,7 +345,7 @@ Post-cut build sequence. Do not jump ahead.
 
 This section is for state that changes during the v1 build. Keep it current.
 
-**Current build phase:** UI cut complete and deployed (2026-05-25). Schema reconciliation complete. Database and migration files in sync. Resume Phase 1 (template infrastructure) — Step 3 (template-to-tasks function). The release detail page is ready to display generated tasks; the "Generate status update" button is a placeholder waiting to be wired.
+**Current build phase:** Template infrastructure complete and deployed (2026-05-26). Steps 1–3 of the build sequence are done: types/loader/instantiator built, v0.3 single template registered, release creation wired to `instantiateTemplate`, release date required, tasks assigned to owner. Resume at Step 4 (internal use): the founder runs own two artists' releases through the product for 4–6 weeks. The "Generate status update" button is still a placeholder — that's Step 6.
 
 **What exists post-UI-cut:**
 - **Pages (4 + modals):** Dashboard (greeting, release cards, due-soon tasks), Releases list, Release detail (header, task progress, task list, status update placeholder), Settings (profile, teammates via workspace members, subscription). Modals: CreateReleaseModal, TaskQuickCreateModal, TaskDetailDrawer.
@@ -358,17 +358,9 @@ This section is for state that changes during the v1 build. Keep it current.
 
 **Paying users:** 1 (₦5,000/year). 1 contract in legal review (₦100k/year). 1 design partner team meeting scheduled.
 
-**Last template review:** Single release template v0.1 drafted, sent to paying user, awaiting feedback.
-
-**Recent design partner feedback (2026-05-23):** [Partner name] reviewed single release template v0.1. Said template is fine but flagged missing items — awaiting specifics.
+**Last template review:** Single release template v0.3 — signed off by two design partners (2026-05-26). 64 tasks across 11 weeks (8 pre-release + 3 post-release). Markdown source: `apps/web/lib/release-templates/single-v0.3.md`. The v0.1 → v0.3 jump answered the open questions from 2026-05-23 (default duration extended to 11 weeks, missing items folded in, role assignments clarified).
 
 **Recent inbound interest (2026-05-23):** Two users independently asked about creating a release in Urganize this week. Captured contacts; following up when v1 ships.
-
-**Open questions for design partner feedback:**
-- Is the 8-week single rollout the right default duration?
-- Where does the template break for emerging vs. established artists?
-- What's missing for managers who don't have a designer or marketing lead on the team?
-- What specifically is missing from the template?
 
 ---
 
@@ -389,4 +381,14 @@ This section is for state that changes during the v1 build. Keep it current.
 
 ---
 
-*Last updated: 2026-05-25. UI cut deployed. Template infrastructure phase resumes.*
+**Template infrastructure deployed (2026-05-26):**
+- New module at `apps/web/lib/release-templates/`: `types.ts` (`Template`, `TemplateTask`, `ReleaseContext`), `loader.ts` (release-type → Template registry; `single` populated, EP/album/music_video null), `instantiate.ts` (`Template` + release context → `tasks` rows, batch insert), `single.ts` (`single_v0.3`, 64 tasks), `single-v0.3.md` (markdown source of truth).
+- Release creation flow at `app/api/releases/route.ts` POST: after the `releases` insert, calls `getTemplate(release_type)` + `instantiateTemplate({...})`. The legacy `createDefaultReleaseTasks` call (pipeline-themed defaults) was removed. The helper itself still lives in `tasks-server.ts` as dead code — separate cleanup diff.
+- Failure handling: template instantiation runs inside a try/catch that logs and continues. A release can exist without tasks if instantiation fails — `TemplateNotAvailableError` for unbuilt release types, `TemplateInstantiationError` for DB / template / date issues. Recoverable beats partial rollback for v1.
+- Modal change: release date is now required (HTML `required` + `canSubmit` guard + API 400 before format check). Closes the silent-no-tasks path that `missing_release_date` would have opened.
+- Task assignment: every instantiated task is assigned to the release owner via `assigned_to_user_id`. Required for the dashboard query (`TaskService.getTasksForUser` filters by `.eq('assigned_to_user_id', userId)`) to surface them. Per-task reassignment happens via the task drawer. Earlier null-assignee build (Step 3b spec) caused tasks to be inserted but invisible — fixed before pushing.
+- v2 carry-overs: (1) the create-release modal does not capture release type — every release is implicitly `'single'`. Once EP/album/music_video templates land, the modal needs a type picker. (2) Silent template failures only log to server console — no in-product surface yet. (3) `createDefaultReleaseTasks` dead-code removal pending.
+
+---
+
+*Last updated: 2026-05-26. Template infrastructure deployed. Resume at Step 4 (internal use).*
