@@ -8,6 +8,7 @@
  * @see CLAUDE.md "Hand-crafted release templates" and "Build sequence priority"
  */
 
+import { SINGLE_RELEASE_TEMPLATE } from './single';
 import type { ReleaseType, Template } from './types';
 
 // ---------------------------------------------------------------------------
@@ -19,18 +20,9 @@ import type { ReleaseType, Template } from './types';
  * a concrete Template or null (not yet built). TypeScript enforces that every
  * ReleaseType has an entry, so adding a new release type without a template
  * slot is a compile error.
- *
- * To register a template (Phase 2), import it and assign:
- * ```ts
- * import { singleTemplate } from './templates/single';
- * const TEMPLATES: Record<ReleaseType, Template | null> = {
- *   single: singleTemplate,
- *   ...
- * };
- * ```
  */
 const TEMPLATES: Record<ReleaseType, Template | null> = {
-  single: null,
+  single: SINGLE_RELEASE_TEMPLATE,
   ep: null,
   album: null,
   music_video: null,

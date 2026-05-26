@@ -20,7 +20,10 @@ function sanitizeTextField(value: string, maxLength: number): string {
   return value.trim().replace(/\s+/g, ' ').slice(0, maxLength);
 }
 import { RELEASE_PLAYBOOK_PHASES } from '@/lib/release-playbook';
-import { createDefaultReleaseTasks, ensureOwnedWorkspace, isTaskSchemaMissingError } from '@/lib/tasks-server';
+import { ensureOwnedWorkspace } from '@/lib/tasks-server';
+import { instantiateTemplate } from '@/lib/release-templates/instantiate';
+import { getTemplate } from '@/lib/release-templates/loader';
+import type { ReleaseType } from '@/lib/release-templates/types';
 import { type ReleaseCreatedSource } from '@/lib/analytics';
 import {
   captureServerAnalyticsEvent,
@@ -440,6 +443,10 @@ export async function POST(request: NextRequest) {
 
     if (!title) return NextResponse.json({ error: 'Release title is required.' }, { status: 400 });
 
+    if (!releaseDateInput) {
+      return NextResponse.json({ error: 'Release date is required.' }, { status: 400 });
+    }
+
     const releaseDateResult = parseOptionalReleaseDate(releaseDateInput);
     if (releaseDateResult.error) {
       return NextResponse.json({ error: releaseDateResult.error }, { status: 400 });
@@ -585,13 +592,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: eventResult.error.message || 'Could not log release event.' }, { status: 500 });
     }
 
+    // Template-driven task generation. If template instantiation fails, the
+    // release is still created without tasks. The user can manually add tasks.
+    // This is a known limitation of v1 — recoverable state (release exists,
+    // tasks missing) beats partial-rollback risk (orphaned release row).
+    //
+    // Common failure modes absorbed here: TemplateNotAvailableError when the
+    // release_type has no template yet (ep, album, music_video at v1), and
+    // TemplateInstantiationError with reason 'missing_release_date' when the
+    // release was created without a date.
     try {
       const workspace = await ensureOwnedWorkspace(adminClient, auth.user);
-      await createDefaultReleaseTasks(adminClient, workspace.id, releaseId, auth.user.id);
-    } catch (taskError) {
-      if (!isTaskSchemaMissingError(taskError)) {
-        throw taskError;
-      }
+      const template = getTemplate(releaseType as ReleaseType);
+      await instantiateTemplate({
+        template,
+        releaseId,
+        releaseDate: releaseResult.data.release_date
+          ? String(releaseResult.data.release_date)
+          : null,
+        workspaceId: workspace.id,
+        ownerUserId: auth.user.id,
+        supabaseClient: adminClient,
+      });
+    } catch (templateError) {
+      console.error(
+        `Release ${releaseId} created without tasks: template instantiation failed.`,
+        templateError
+      );
     }
 
     captureServerAnalyticsEvent(

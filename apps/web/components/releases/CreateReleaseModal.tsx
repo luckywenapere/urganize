@@ -35,7 +35,7 @@ async function getAccessToken(): Promise<string> {
 
 function validateReleaseDate(value: string): string {
   if (!value) {
-    return '';
+    return 'Release date is required.';
   }
 
   const parsed = new Date(`${value}T00:00:00`);
@@ -80,7 +80,10 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
   }, [isSubmitting, onClose, open]);
 
   const characterCount = description.length;
-  const canSubmit = useMemo(() => title.trim().length > 0 && !isSubmitting, [isSubmitting, title]);
+  const canSubmit = useMemo(
+    () => title.trim().length > 0 && releaseDate.length > 0 && !isSubmitting,
+    [isSubmitting, releaseDate, title]
+  );
 
   if (!open) {
     return null;
@@ -227,10 +230,12 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                 </span>
                 <input
                   type="date"
+                  required
                   value={releaseDate}
                   onChange={(event) => setReleaseDate(event.target.value)}
                   className="input rounded-none border-stroke-default bg-bg-elevated"
                   aria-invalid={Boolean(errors.releaseDate)}
+                  aria-required="true"
                 />
                 {errors.releaseDate ? <p className="mt-2 text-xs text-status-error">{errors.releaseDate}</p> : null}
               </label>
