@@ -33,7 +33,17 @@ type TaskPatchInput = {
 
 type TaskDetailDrawerProps = {
   isOpen: boolean;
+  /**
+   * True while the augmented task detail (comments, attachments, activity)
+   * is being fetched. The drawer body itself renders as soon as `task` is
+   * non-null; this flag drives spinners inside the comments / attachments /
+   * activity sections only.
+   */
   isLoading: boolean;
+  /** True while the workspace members list is being fetched. */
+  isLoadingMembers?: boolean;
+  /** True while the release's task groups are being fetched. */
+  isLoadingGroups?: boolean;
   error: string;
   task: TaskDetail | null;
   members: WorkspaceMember[];
@@ -68,6 +78,8 @@ function toDateTimeLocalValue(value: string | null): string {
 export function TaskDetailDrawer({
   isOpen,
   isLoading,
+  isLoadingMembers = false,
+  isLoadingGroups = false,
   error,
   task,
   members,
@@ -179,13 +191,7 @@ export function TaskDetailDrawer({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-          {isLoading ? (
-            <div className="space-y-3">
-              <div className="h-10 rounded-[18px] bg-white/6" />
-              <div className="h-24 rounded-[18px] bg-white/6" />
-              <div className="h-24 rounded-[18px] bg-white/6" />
-            </div>
-          ) : error ? (
+          {error && !task ? (
             <div className="rounded-[24px] border border-status-error/30 bg-status-error/10 px-4 py-4 text-sm text-status-error">
               {error}
             </div>
@@ -243,6 +249,7 @@ export function TaskDetailDrawer({
                   selectedMember={selectedAssignee}
                   query={assigneeQuery}
                   onQueryChange={setAssigneeQuery}
+                  isLoading={isLoadingMembers}
                   onSelectMember={(member) => {
                     setSelectedAssignee(member);
                     setAssigneeQuery(member?.name || '');
@@ -287,14 +294,20 @@ export function TaskDetailDrawer({
                     value={task.groupId || ''}
                     onChange={(event) => void onSavePatch({ groupId: event.target.value || null })}
                     className="input h-12 rounded-[18px]"
-                    disabled={!selectedRelease && !task.releaseId}
+                    disabled={isLoadingGroups || (!selectedRelease && !task.releaseId)}
                   >
-                    <option value="">No group</option>
-                    {releaseGroups.map((group) => (
-                      <option key={group.id} value={group.id}>
-                        {group.name}
-                      </option>
-                    ))}
+                    {isLoadingGroups ? (
+                      <option value="">Loading groups…</option>
+                    ) : (
+                      <>
+                        <option value="">No group</option>
+                        {releaseGroups.map((group) => (
+                          <option key={group.id} value={group.id}>
+                            {group.name}
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
                 </label>
               </div>
@@ -338,7 +351,9 @@ export function TaskDetailDrawer({
 
                 <div className="mt-4 space-y-2">
                   {task.attachments.length === 0 ? (
-                    <p className="text-sm text-content-secondary">No files yet.</p>
+                    <p className="text-sm text-content-secondary">
+                      {isLoading ? 'Loading attachments…' : 'No files yet.'}
+                    </p>
                   ) : (
                     task.attachments.map((attachment) => (
                       <div
@@ -372,6 +387,9 @@ export function TaskDetailDrawer({
               <section className="rounded-[24px] border border-stroke-default bg-bg-elevated/50 p-4">
                 <h3 className="text-sm font-semibold text-content-primary">Comments</h3>
                 <div className="mt-4 space-y-3">
+                  {isLoading && task.comments.length === 0 ? (
+                    <p className="text-sm text-content-secondary">Loading comments…</p>
+                  ) : null}
                   {task.comments.map((comment) => (
                     <div key={comment.id} className="rounded-[18px] border border-stroke-subtle bg-bg-surface px-3 py-3">
                       <div className="flex items-start justify-between gap-3">
@@ -474,7 +492,9 @@ export function TaskDetailDrawer({
                 <h3 className="text-sm font-semibold text-content-primary">Activity</h3>
                 <div className="mt-4 space-y-3">
                   {task.activity.length === 0 ? (
-                    <p className="text-sm text-content-secondary">No activity yet.</p>
+                    <p className="text-sm text-content-secondary">
+                      {isLoading ? 'Loading activity…' : 'No activity yet.'}
+                    </p>
                   ) : (
                     task.activity.map((entry) => (
                       <div key={entry.id} className="rounded-[18px] border border-stroke-subtle bg-bg-surface px-3 py-3">
@@ -503,6 +523,12 @@ export function TaskDetailDrawer({
                   Delete task
                 </button>
               </div>
+            </div>
+          ) : isLoading ? (
+            <div className="space-y-3">
+              <div className="h-10 rounded-[18px] bg-white/6" />
+              <div className="h-24 rounded-[18px] bg-white/6" />
+              <div className="h-24 rounded-[18px] bg-white/6" />
             </div>
           ) : (
             <p className="text-sm text-content-secondary">Select a task to inspect the full context.</p>

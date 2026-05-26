@@ -16,6 +16,7 @@ import { TaskNotificationBell } from '@/components/tasks/TaskNotificationBell';
 import { TaskQuickCreateModal } from '@/components/tasks/TaskQuickCreateModal';
 import { type ReleaseOption } from '@/lib/release-helpers';
 import { isTypingTarget, type TaskCreateSource, type TaskDetail, type TaskGroup, type TaskPriority, type WorkspaceMember } from '@/lib/tasks';
+import { useTaskStore } from '@/stores/useTaskStore';
 import { supabase } from '@/lib/supabase/client';
 
 type TaskDetailPayload = {
@@ -113,7 +114,13 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([]);
   const [drawerError, setDrawerError] = useState('');
+  // True while the augmented detail (comments, attachments, activity) is
+  // being fetched. Drives section-level spinners in the drawer. The drawer
+  // body itself renders as soon as `task` is non-null (hydrated from the
+  // store), so this flag no longer gates the whole drawer — only the
+  // augmented sections that aren't in the list-state task.
   const [isTaskLoading, setIsTaskLoading] = useState(false);
+  const [isTaskGroupsLoading, setIsTaskGroupsLoading] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [quickCreateDefaults, setQuickCreateDefaults] = useState<QuickCreateDefaults>({});
   const [quickTitle, setQuickTitle] = useState('');
@@ -159,13 +166,26 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const loadTaskGroups = useCallback(async (releaseId: string | null | undefined) => {
     if (!releaseId) {
       setTaskGroups([]);
+      setIsTaskGroupsLoading(false);
       return;
     }
 
-    const payload = await requestJson<ReleaseTasksPayload>(`/api/releases/${releaseId}/tasks`);
-    setTaskGroups(Array.isArray(payload.groups) ? payload.groups : []);
+    setIsTaskGroupsLoading(true);
+    try {
+      const payload = await requestJson<ReleaseTasksPayload>(`/api/releases/${releaseId}/tasks`);
+      setTaskGroups(Array.isArray(payload.groups) ? payload.groups : []);
+    } catch (error) {
+      console.error('Failed to load task groups:', error);
+    } finally {
+      setIsTaskGroupsLoading(false);
+    }
   }, []);
 
+  // Augmented fetch only — `task` is already hydrated optimistically from the
+  // store by `openTask`. This fills in comments, attachments, and activity,
+  // and refreshes any core fields that may have changed on the server.
+  // Non-blocking: loadOptions and loadTaskGroups run in parallel, not in
+  // series. The body never waits on them.
   const loadTask = useCallback(
     async (taskId: string) => {
       if (!taskId) {
@@ -173,24 +193,39 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       }
 
       setIsTaskLoading(true);
-      setDrawerError('');
 
       try {
-        await loadOptions();
         const payload = await requestJson<TaskDetailPayload>(`/api/tasks/${taskId}`);
         if (!payload.task) {
           throw new Error('Task not found.');
         }
 
         setTask(payload.task);
-        await loadTaskGroups(payload.task.releaseId);
+        setDrawerError('');
+
+        // Kick off groups in background — does not block the body.
+        if (payload.task.releaseId) {
+          void loadTaskGroups(payload.task.releaseId);
+        } else {
+          setTaskGroups([]);
+        }
       } catch (error) {
-        setDrawerError(error instanceof Error ? error.message : 'Could not load task.');
+        console.error('Failed to load task detail:', error);
+        // If the drawer already has hydrated content from the store, keep
+        // it visible and just log. Only surface the error when we have
+        // nothing to show.
+        setTask((current) => {
+          if (current && current.id === taskId) {
+            return current;
+          }
+          setDrawerError(error instanceof Error ? error.message : 'Could not load task.');
+          return current;
+        });
       } finally {
         setIsTaskLoading(false);
       }
     },
-    [loadOptions, loadTaskGroups]
+    [loadTaskGroups]
   );
 
   useEffect(() => {
@@ -198,8 +233,11 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Both fetches run in parallel — neither blocks the body, which renders
+    // immediately from the store-hydrated task.
+    void loadOptions();
     void loadTask(activeTaskId);
-  }, [activeTaskId, isTaskDrawerOpen, loadTask]);
+  }, [activeTaskId, isTaskDrawerOpen, loadOptions, loadTask]);
 
   useEffect(() => {
     if (!shouldShowTaskShell) {
@@ -248,6 +286,28 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     (taskId: string) => {
       setActiveTaskId(taskId);
       setIsTaskDrawerOpen(true);
+      setDrawerError('');
+
+      // Hydrate the drawer instantly from the list-state task. The store's
+      // ExecutionTask carries every core field the drawer body needs (title,
+      // description, status, priority, due date, assignee, releaseId,
+      // dependencies). The augmented detail (comments, attachments, activity)
+      // arrives later via loadTask and is merged into this seed.
+      //
+      // If the task isn't in the store (e.g., opened via notification), we
+      // fall back to null and the body renders the full skeleton until the
+      // fetch completes.
+      const storeTask = useTaskStore.getState().tasks.find((t) => t.id === taskId);
+      if (storeTask) {
+        setTask({
+          ...storeTask,
+          comments: [],
+          attachments: [],
+          activity: [],
+        } as TaskDetail);
+      } else {
+        setTask(null);
+      }
     },
     []
   );
@@ -255,6 +315,11 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const closeTask = useCallback(() => {
     setIsTaskDrawerOpen(false);
     setDrawerError('');
+    // Clear the active task so the next open starts fresh — no flash of the
+    // previous task's data while the new fetch is in flight.
+    setActiveTaskId('');
+    setTask(null);
+    setTaskGroups([]);
   }, []);
 
   const openQuickCreate = useCallback(
@@ -513,6 +578,8 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       <TaskDetailDrawer
         isOpen={isTaskDrawerOpen}
         isLoading={isTaskLoading}
+        isLoadingMembers={isLoadingOptions}
+        isLoadingGroups={isTaskGroupsLoading}
         error={drawerError}
         task={task}
         members={members}
