@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AlertCircle, CalendarDays, FileText, ListChecks, Sparkles } from 'lucide-react';
+import { AlertCircle, CalendarDays, FileText, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -50,7 +50,7 @@ export default function ReleaseDetailPage() {
   const { user, isLoading: authLoading } = useAuthStore();
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
   const tasks = useTaskStore((s) => s.tasks);
-  const { openTask } = useTaskUI();
+  const { openTask, openQuickCreate } = useTaskUI();
 
   useEffect(() => {
     if (authLoading || !releaseId) return;
@@ -122,13 +122,6 @@ export default function ReleaseDetailPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
-              href={`/dashboard/releases/${releaseId}/tasks`}
-              className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-            >
-              <ListChecks className="h-3.5 w-3.5" />
-              Tasks
-            </Link>
-            <Link
               href={`/dashboard/releases/${releaseId}/metadata`}
               className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
             >
@@ -164,12 +157,13 @@ export default function ReleaseDetailPage() {
           {releaseTasks.length === 0 ? (
             <div className="mt-3 border border-stroke-default bg-bg-surface p-6 text-center">
               <p className="text-sm text-content-secondary">No tasks yet for this release.</p>
-              <Link
-                href={`/dashboard/releases/${releaseId}/tasks`}
+              <button
+                type="button"
+                onClick={() => openQuickCreate({ releaseId, source: 'inline' })}
                 className="mt-3 inline-flex border border-brand/25 bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
               >
                 Add tasks
-              </Link>
+              </button>
             </div>
           ) : (
             <div className="mt-3 space-y-1">

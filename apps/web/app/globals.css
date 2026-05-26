@@ -25,10 +25,6 @@
   --color-status-warning: 240 185 92;
   --color-status-error: 240 106 106;
   --color-status-info: 120 169 255;
-  --color-phase-preproduction: 118 124 255;
-  --color-phase-production: 120 169 255;
-  --color-phase-promotion: 240 185 92;
-  --color-phase-distribution: 62 207 142;
 
   --bg-base: #0f0f0f;
   --bg-sidebar: #141414;
@@ -60,10 +56,6 @@
   --status-warning: #f0b95c;
   --status-error: #f06a6a;
   --status-info: #78a9ff;
-  --phase-preproduction: #767cff;
-  --phase-production: #78a9ff;
-  --phase-promotion: #f0b95c;
-  --phase-distribution: #3ecf8e;
 
   --space-1: 4px;
   --space-2: 8px;

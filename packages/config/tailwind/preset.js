@@ -38,12 +38,6 @@ const preset = {
           warning: withOpacity("--color-status-warning"),
           error: withOpacity("--color-status-error"),
           info: withOpacity("--color-status-info")
-        },
-        phase: {
-          preproduction: withOpacity("--color-phase-preproduction"),
-          production: withOpacity("--color-phase-production"),
-          promotion: withOpacity("--color-phase-promotion"),
-          distribution: withOpacity("--color-phase-distribution")
         }
       },
       fontFamily: {
