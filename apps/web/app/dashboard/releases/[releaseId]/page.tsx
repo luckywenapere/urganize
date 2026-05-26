@@ -14,6 +14,7 @@ import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { ProgressBar } from '@/components/shared/ProgressBar';
 import { Toast } from '@/components/shared/Toast';
 import { ReleaseInfoSection } from '@/components/releases/ReleaseInfoSection';
+import { AssetSection } from '@/components/releases/AssetSection';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 
 type ToastState = {
@@ -229,6 +230,11 @@ export default function ReleaseDetailPage() {
             </div>
           )}
         </section>
+
+        <AssetSection
+          releaseId={releaseId}
+          onToast={(message, tone) => setToast({ message, tone })}
+        />
 
         <ReleaseInfoSection releaseId={releaseId} />
       </div>
