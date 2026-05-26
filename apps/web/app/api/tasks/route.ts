@@ -65,11 +65,13 @@ export async function GET(request: NextRequest) {
     const releaseId = request.nextUrl.searchParams.get('release');
     const priority = request.nextUrl.searchParams.get('priority') || undefined;
     const status = request.nextUrl.searchParams.get('status') || undefined;
+    const mineOnly = request.nextUrl.searchParams.get('mine') === '1';
 
     const tasks = await taskService.getTasksForUser(auth.user.id, access.workspaceIds, {
       releaseId,
       priority,
       status,
+      mineOnly,
     });
 
     const createdTasksResult = await adminClient

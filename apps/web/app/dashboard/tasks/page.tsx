@@ -116,6 +116,7 @@ export default function MyTasksPage() {
   const releaseFilter = searchParams.get('release') || '';
   const priorityFilter = (searchParams.get('priority') || '') as TaskPriority | '';
   const statusFilter = (searchParams.get('status') || '') as TaskStatus | '';
+  const mineOnly = searchParams.get('mine') === '1';
 
   const syncFilter = (next: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -317,6 +318,18 @@ export default function MyTasksPage() {
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => syncFilter({ mine: mineOnly ? '' : '1' })}
+                aria-pressed={mineOnly}
+                className={`min-h-11 rounded-[18px] border px-5 py-3 text-sm font-semibold transition-colors ${
+                  mineOnly
+                    ? 'border-brand bg-brand/15 text-content-primary'
+                    : 'border-stroke-default bg-bg-surface text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                }`}
+              >
+                Mine only
+              </button>
               <button
                 type="button"
                 onClick={() => openQuickCreate({ source: 'quick_create' })}

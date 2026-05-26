@@ -271,9 +271,11 @@ function buildTaskRow(params: BuildTaskRowParams) {
     workspace_id: workspaceId,
     group_id: null,
     created_by: ownerUserId,
-    // Default to the release owner so the dashboard query
-    // (TaskService.getTasksForUser, filters by assigned_to_user_id) surfaces
-    // these tasks. Per-task reassignment happens in the task drawer.
+    // Default the assignee to the release owner. Task visibility is
+    // workspace-membership-based (TaskService.getTasksForUser filters by
+    // workspace_id), so this isn't required to make tasks appear — it's a UX
+    // convenience so a freshly-created release's tasks populate the "Mine only"
+    // view by default. Per-task reassignment happens in the task drawer.
     assigned_to_user_id: ownerUserId,
     assigned_to: null,
     assigned_collaborator_id: null,

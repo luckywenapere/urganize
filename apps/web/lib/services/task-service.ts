@@ -11,19 +11,29 @@ import { ReleasePipelineState } from '@/types/releases';
 export class TaskService {
   constructor(private adminClient: SupabaseClient) {}
 
+  /**
+   * Returns tasks visible to the user. Visibility is workspace-membership-based:
+   * any task in a workspace the user can access (passed in via `workspaceIds`,
+   * which the caller derives from `loadWorkspaceAccessContext`) is included
+   * regardless of assignee. Assignment is a display detail, not a visibility
+   * rule.
+   *
+   * Pass `mineOnly: true` to re-narrow to tasks assigned to the user.
+   */
   async getTasksForUser(userId: string, workspaceIds: string[], filters: {
     releaseId?: string | null;
     priority?: string;
     status?: string;
+    mineOnly?: boolean;
   } = {}) {
     let query = this.adminClient
       .from(TASKS_TABLE)
       .select('id,workspace_id,group_id,release_id,created_by,assigned_to_user_id,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
-      .eq('assigned_to_user_id', userId)
       .in('workspace_id', workspaceIds)
       .order('due_date', { ascending: true, nullsFirst: false })
       .order('position', { ascending: true });
 
+    if (filters.mineOnly) query = query.eq('assigned_to_user_id', userId);
     if (filters.releaseId) query = query.eq('release_id', filters.releaseId);
     if (filters.priority) query = query.eq('priority', filters.priority);
     if (filters.status) query = query.eq('status', filters.status);
