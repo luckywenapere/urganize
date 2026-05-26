@@ -26,7 +26,7 @@ type TaskPatchInput = {
   status?: TaskStatus;
   priority?: TaskPriority;
   dueDate?: string | null;
-  assignedTo?: string | null;
+  assignedToUserId?: string | null;
   releaseId?: string | null;
   groupId?: string | null;
 };
@@ -246,7 +246,7 @@ export function TaskDetailDrawer({
                   onSelectMember={(member) => {
                     setSelectedAssignee(member);
                     setAssigneeQuery(member?.name || '');
-                    void onSavePatch({ assignedTo: member?.id || null });
+                    void onSavePatch({ assignedToUserId: member?.userId || null });
                   }}
                 />
 

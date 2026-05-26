@@ -285,7 +285,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     status?: string;
     priority?: TaskPriority;
     dueDate?: string | null;
-    assignedTo?: string | null;
+    assignedToUserId?: string | null;
     releaseId?: string | null;
     groupId?: string | null;
   }) => {
@@ -293,19 +293,40 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const payload = await requestJson<TaskDetailPayload>(`/api/tasks/${activeTaskId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        ...patch,
-        dueDate: patch.dueDate ? new Date(patch.dueDate).toISOString() : patch.dueDate,
-      }),
-    });
+    try {
+      const payload = await requestJson<TaskDetailPayload>(`/api/tasks/${activeTaskId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          ...patch,
+          dueDate: patch.dueDate ? new Date(patch.dueDate).toISOString() : patch.dueDate,
+        }),
+      });
 
-    if (payload.task) {
-      setTask(payload.task);
-      await loadTaskGroups(payload.task.releaseId);
-      dispatchTasksChanged();
-      setNotificationRefreshKey((value) => value + 1);
+      if (payload.task) {
+        setTask(payload.task);
+        setDrawerError('');
+        await loadTaskGroups(payload.task.releaseId);
+        dispatchTasksChanged();
+        setNotificationRefreshKey((value) => value + 1);
+      }
+    } catch (error) {
+      // Surface the failure in the drawer so the user knows their change
+      // didn't persist. Re-fetch the task to revert any visual drift.
+      const message = error instanceof Error ? error.message : 'Could not save changes.';
+      console.error('Task patch failed:', error);
+      setDrawerError(`Failed to save changes: ${message}`);
+      if (activeTaskId) {
+        try {
+          const refreshed = await requestJson<TaskDetailPayload>(`/api/tasks/${activeTaskId}`, {
+            method: 'GET',
+          });
+          if (refreshed.task) {
+            setTask(refreshed.task);
+          }
+        } catch (refreshError) {
+          console.error('Task refetch after failed patch also failed:', refreshError);
+        }
+      }
     }
   };
 
@@ -322,7 +343,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
           title: quickTitle.trim(),
           releaseId: quickSelectedRelease?.id || quickCreateDefaults.releaseId || null,
           groupId: quickCreateDefaults.groupId || null,
-          assignedTo: quickSelectedAssignee?.id || null,
+          assignedToUserId: quickSelectedAssignee?.userId || null,
           dueDate: quickDueDate ? new Date(quickDueDate).toISOString() : null,
           priority: quickPriority,
           source: quickCreateDefaults.source || 'quick_create',
