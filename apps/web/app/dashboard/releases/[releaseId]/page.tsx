@@ -3,11 +3,11 @@
 import { useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AlertCircle, CalendarDays, Sparkles } from 'lucide-react';
+import { AlertCircle, CalendarDays, Lock, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
-import { TASK_DONE_STATUS } from '@/lib/execution-types';
+import { TASK_DONE_STATUS, TASK_LOCKED_STATUS } from '@/lib/execution-types';
 import { formatArtistName } from '@/lib/release-execution';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
@@ -161,30 +161,51 @@ export default function ReleaseDetailPage() {
             </div>
           ) : (
             <div className="mt-3 space-y-1">
-              {releaseTasks.map((task) => (
-                <button
-                  key={task.id}
-                  type="button"
-                  onClick={() => openTask(task.id)}
-                  className="flex w-full items-center gap-3 border border-stroke-default bg-bg-surface px-4 py-3 text-left text-sm transition-colors hover:bg-bg-hover"
-                >
-                  <span
-                    className={`h-2 w-2 shrink-0 rounded-full ${
-                      task.status === TASK_DONE_STATUS
-                        ? 'bg-brand'
-                        : task.status === 'in_progress'
-                          ? 'bg-status-warning'
-                          : 'bg-content-tertiary'
+              {releaseTasks.map((task) => {
+                const isLocked = task.status === TASK_LOCKED_STATUS;
+                const isDone = task.status === TASK_DONE_STATUS;
+                return (
+                  <button
+                    key={task.id}
+                    type="button"
+                    onClick={() => openTask(task.id)}
+                    className={`flex w-full items-center gap-3 border border-stroke-default px-4 py-3 text-left text-sm transition-colors hover:bg-bg-hover ${
+                      isLocked ? 'bg-bg-surface/60' : 'bg-bg-surface'
                     }`}
-                  />
-                  <span className={`min-w-0 flex-1 truncate ${task.status === TASK_DONE_STATUS ? 'text-content-tertiary line-through' : 'text-content-primary'}`}>
-                    {task.title}
-                  </span>
-                  {task.dueDate ? (
-                    <span className="shrink-0 text-xs text-content-tertiary">{formatDate(task.dueDate)}</span>
-                  ) : null}
-                </button>
-              ))}
+                  >
+                    {isLocked ? (
+                      <Lock
+                        className="h-3.5 w-3.5 shrink-0 text-content-tertiary"
+                        aria-label="Locked — waiting on a prerequisite"
+                      />
+                    ) : (
+                      <span
+                        className={`h-2 w-2 shrink-0 rounded-full ${
+                          isDone
+                            ? 'bg-brand'
+                            : task.status === 'in_progress'
+                              ? 'bg-status-warning'
+                              : 'bg-content-tertiary'
+                        }`}
+                      />
+                    )}
+                    <span
+                      className={`min-w-0 flex-1 truncate ${
+                        isDone
+                          ? 'text-content-tertiary line-through'
+                          : isLocked
+                            ? 'text-content-secondary'
+                            : 'text-content-primary'
+                      }`}
+                    >
+                      {task.title}
+                    </span>
+                    {task.dueDate ? (
+                      <span className="shrink-0 text-xs text-content-tertiary">{formatDate(task.dueDate)}</span>
+                    ) : null}
+                  </button>
+                );
+              })}
             </div>
           )}
         </section>

@@ -5,6 +5,10 @@ import { ReleaseCombobox } from '@/components/shared/ReleaseCombobox';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
 import {
+  TaskDependenciesSection,
+  type DependencyTaskSummary,
+} from '@/components/tasks/TaskDependenciesSection';
+import {
   formatFileSize,
   getRelativeDueLabel,
   getTaskPriorityLabel,
@@ -50,8 +54,15 @@ type TaskDetailDrawerProps = {
   releases: ReleaseOption[];
   groups: TaskGroup[];
   isUploadingAttachment: boolean;
+  /** Prerequisite tasks resolved from `task.dependencies`. May be a subset if
+   * some prerequisites aren't loaded in the store. */
+  prerequisites: DependencyTaskSummary[];
+  /** Inline message shown next to the status select when the user attempts to
+   * mark a blocked task done. Cleared on the next successful patch. */
+  statusBlockerMessage: string;
   onClose: () => void;
   onSavePatch: (patch: TaskPatchInput) => Promise<void>;
+  onOpenPrerequisite: (taskId: string) => void;
   onDeleteTask: () => Promise<void>;
   onAddComment: (content: string) => Promise<void>;
   onUpdateComment: (commentId: string, content: string) => Promise<void>;
@@ -86,8 +97,11 @@ export function TaskDetailDrawer({
   releases,
   groups,
   isUploadingAttachment,
+  prerequisites,
+  statusBlockerMessage,
   onClose,
   onSavePatch,
+  onOpenPrerequisite,
   onDeleteTask,
   onAddComment,
   onUpdateComment,
@@ -225,6 +239,14 @@ export function TaskDetailDrawer({
                       </option>
                     ))}
                   </select>
+                  {statusBlockerMessage ? (
+                    <p
+                      role="alert"
+                      className="mt-2 rounded-[14px] border border-status-warning/35 bg-status-warning/10 px-3 py-2 text-xs text-status-warning"
+                    >
+                      {statusBlockerMessage}
+                    </p>
+                  ) : null}
                 </label>
 
                 <label className="block">
@@ -311,6 +333,12 @@ export function TaskDetailDrawer({
                   </select>
                 </label>
               </div>
+
+              <TaskDependenciesSection
+                dependencyIds={task.dependencies}
+                prerequisites={prerequisites}
+                onOpenPrerequisite={onOpenPrerequisite}
+              />
 
               <label className="block">
                 <span className="mb-2 block text-sm font-semibold text-content-primary">Description</span>

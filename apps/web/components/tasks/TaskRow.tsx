@@ -1,5 +1,6 @@
 'use client';
 
+import { Lock } from 'lucide-react';
 import { getRelativeDueLabel, getTaskStatusLabel, getTaskStatusTone, getPriorityBorderClass, type Task } from '@/lib/tasks';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 
@@ -21,12 +22,16 @@ function getAssigneeLabel(task: Task): string {
 
 export function TaskRow({ task, onClick, showCheckbox = false, selected = false, onSelectedChange }: TaskRowProps) {
   const due = getRelativeDueLabel(task);
+  const isLocked = task.status === 'locked';
+  // Locked tasks override the priority accent — the left border becomes a
+  // muted gray that reads as "not ready" rather than its priority color.
+  const borderClass = isLocked ? 'border-l-stroke-default' : getPriorityBorderClass(task.priority);
 
   return (
     <div
-      className={`group flex min-h-[76px] items-center gap-4 border-l-4 border-t border-stroke-subtle bg-bg-surface px-4 py-3.5 transition first:border-t-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-offset-0 ${getPriorityBorderClass(
-        task.priority
-      )} ${onClick ? 'cursor-pointer hover:bg-bg-hover' : ''}`}
+      className={`group flex min-h-[76px] items-center gap-4 border-l-4 border-t border-stroke-subtle bg-bg-surface px-4 py-3.5 transition first:border-t-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-offset-0 ${borderClass} ${
+        onClick ? 'cursor-pointer hover:bg-bg-hover' : ''
+      } ${isLocked ? 'bg-bg-surface/60' : ''}`}
       onClick={() => onClick?.(task)}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
@@ -54,7 +59,19 @@ export function TaskRow({ task, onClick, showCheckbox = false, selected = false,
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-semibold text-content-primary">{task.title}</p>
+          {isLocked ? (
+            <Lock
+              className="h-3.5 w-3.5 shrink-0 text-content-tertiary"
+              aria-label="Locked — waiting on a prerequisite"
+            />
+          ) : null}
+          <p
+            className={`truncate text-sm font-semibold ${
+              isLocked ? 'text-content-secondary' : 'text-content-primary'
+            }`}
+          >
+            {task.title}
+          </p>
           {task.release ? (
             <span className="hidden rounded-full border border-stroke-default bg-bg-elevated px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-content-secondary sm:inline-flex">
               {task.release.title}

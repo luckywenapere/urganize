@@ -151,22 +151,74 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       return null;
     }
 
+    const completedTask = payload.task as ExecutionTask;
+
+    // Identify tasks that are locked today, depend on the just-completed task,
+    // and have every dependency satisfied. Those should flip to todo.
+    const tasksAfterComplete = get().tasks.map((candidate) =>
+      candidate.id === taskId ? completedTask : candidate
+    );
+    const unlockCandidates = tasksAfterComplete.filter(
+      (candidate) =>
+        candidate.status === TASK_LOCKED_STATUS &&
+        candidate.dependencies.includes(taskId) &&
+        candidate.dependencies.every(
+          (id) => tasksAfterComplete.find((dep) => dep.id === id)?.status === TASK_DONE_STATUS
+        )
+    );
+
+    // Persist each unlock so the change survives a refresh. Failures are
+    // logged and skipped — the primary completion still applies and the user
+    // can refresh to reconcile.
+    const unlockResults = await Promise.all(
+      unlockCandidates.map(async (candidate) => {
+        try {
+          const unlockResponse = await fetch(`/api/tasks/${candidate.id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ status: TASK_PENDING_STATUS }),
+          });
+          const unlockPayload = (await unlockResponse.json().catch(() => ({}))) as {
+            task?: ExecutionTask;
+            error?: string;
+          };
+          if (!unlockResponse.ok || !unlockPayload.task) {
+            console.error(
+              'Auto-unlock PATCH failed for task',
+              candidate.id,
+              unlockPayload.error || unlockResponse.statusText
+            );
+            return null;
+          }
+          return unlockPayload.task as ExecutionTask;
+        } catch (error) {
+          console.error('Auto-unlock PATCH threw for task', candidate.id, error);
+          return null;
+        }
+      })
+    );
+
+    const unlockedById = new Map<string, ExecutionTask>();
+    for (const unlocked of unlockResults) {
+      if (unlocked) {
+        unlockedById.set(unlocked.id, unlocked);
+      }
+    }
+
     set((state) => ({
       tasks: state.tasks.map((candidate) => {
-        if (candidate.id === taskId) return payload.task as ExecutionTask;
-        if (candidate.status === TASK_LOCKED_STATUS && candidate.dependencies.includes(taskId)) {
-          const dependenciesComplete = candidate.dependencies.every((id) => {
-            if (id === taskId) return true;
-            return state.tasks.find((dependency) => dependency.id === id)?.status === TASK_DONE_STATUS;
-          });
-          return dependenciesComplete ? { ...candidate, status: TASK_PENDING_STATUS } : candidate;
-        }
+        if (candidate.id === taskId) return completedTask;
+        const unlocked = unlockedById.get(candidate.id);
+        if (unlocked) return unlocked;
         return candidate;
       }),
       error: '',
     }));
 
-    return payload.task as ExecutionTask;
+    return completedTask;
   },
   updateTaskStatus: async (taskId, status) => {
     const task = get().tasks.find((candidate) => candidate.id === taskId);

@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { usePathname } from 'next/navigation';
 import { TaskDetailDrawer } from '@/components/tasks/TaskDetailDrawer';
+import { type DependencyTaskSummary } from '@/components/tasks/TaskDependenciesSection';
 import { TaskNotificationBell } from '@/components/tasks/TaskNotificationBell';
 import { TaskQuickCreateModal } from '@/components/tasks/TaskQuickCreateModal';
 import { type ReleaseOption } from '@/lib/release-helpers';
@@ -114,6 +115,14 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([]);
   const [drawerError, setDrawerError] = useState('');
+  // Inline message surfaced next to the drawer's status select when the user
+  // attempts to mark a blocked task done. Cleared on the next successful patch
+  // or when the drawer reopens.
+  const [statusBlockerMessage, setStatusBlockerMessage] = useState('');
+  // Prerequisite tasks resolved from the active task's dependency IDs, sourced
+  // from the task store. Only release-detail navigation hydrates the store
+  // today, so cross-release entries (Tasks page) may render an empty section.
+  const storeTasks = useTaskStore((state) => state.tasks);
   // True while the augmented detail (comments, attachments, activity) is
   // being fetched. Drives section-level spinners in the drawer. The drawer
   // body itself renders as soon as `task` is non-null (hydrated from the
@@ -287,6 +296,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       setActiveTaskId(taskId);
       setIsTaskDrawerOpen(true);
       setDrawerError('');
+      setStatusBlockerMessage('');
 
       // Hydrate the drawer instantly from the list-state task. The store's
       // ExecutionTask carries every core field the drawer body needs (title,
@@ -315,6 +325,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const closeTask = useCallback(() => {
     setIsTaskDrawerOpen(false);
     setDrawerError('');
+    setStatusBlockerMessage('');
     // Clear the active task so the next open starts fresh — no flash of the
     // previous task's data while the new fetch is in flight.
     setActiveTaskId('');
@@ -358,6 +369,29 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Route status→done through the store so the dependency blocker check
+    // runs and any newly-unlockable tasks get persisted in the same flow.
+    // Falls through to the direct PATCH if the task isn't in the store
+    // (cross-release entries — blocker data isn't available there).
+    if (patch.status === 'done') {
+      const storeHasTask = Boolean(
+        useTaskStore.getState().tasks.find((candidate) => candidate.id === activeTaskId)
+      );
+      if (storeHasTask) {
+        const completed = await useTaskStore.getState().completeTask(activeTaskId);
+        if (!completed) {
+          const blocker = useTaskStore.getState().error;
+          setStatusBlockerMessage(blocker || 'Could not complete task.');
+          return;
+        }
+        setStatusBlockerMessage('');
+        await refreshOpenTask();
+        dispatchTasksChanged();
+        setNotificationRefreshKey((value) => value + 1);
+        return;
+      }
+    }
+
     try {
       const payload = await requestJson<TaskDetailPayload>(`/api/tasks/${activeTaskId}`, {
         method: 'PATCH',
@@ -370,6 +404,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       if (payload.task) {
         setTask(payload.task);
         setDrawerError('');
+        setStatusBlockerMessage('');
         await loadTaskGroups(payload.task.releaseId);
         dispatchTasksChanged();
         setNotificationRefreshKey((value) => value + 1);
@@ -537,6 +572,23 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     [closeTask, openQuickCreate, openTask]
   );
 
+  const prerequisites = useMemo<DependencyTaskSummary[]>(() => {
+    const ids = task?.dependencies || [];
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const idSet = new Set(ids);
+    return storeTasks
+      .filter((candidate) => idSet.has(candidate.id))
+      .map((candidate) => ({
+        id: candidate.id,
+        title: candidate.title,
+        status: candidate.status,
+        dueDate: candidate.dueDate,
+      }));
+  }, [storeTasks, task?.dependencies]);
+
   return (
     <TaskUIContext.Provider value={contextValue}>
       {children}
@@ -586,6 +638,9 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         releases={releases}
         groups={taskGroups}
         isUploadingAttachment={isUploadingAttachment}
+        prerequisites={prerequisites}
+        statusBlockerMessage={statusBlockerMessage}
+        onOpenPrerequisite={openTask}
         onClose={closeTask}
         onSavePatch={saveTaskPatch}
         onDeleteTask={deleteTask}
