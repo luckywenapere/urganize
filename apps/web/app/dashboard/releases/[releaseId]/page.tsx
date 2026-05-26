@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AlertCircle, CalendarDays, FileText, Sparkles } from 'lucide-react';
+import { AlertCircle, CalendarDays, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -12,6 +12,7 @@ import { formatArtistName } from '@/lib/release-execution';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { ProgressBar } from '@/components/shared/ProgressBar';
+import { ReleaseInfoSection } from '@/components/releases/ReleaseInfoSection';
 
 function formatDate(value: string | null): string {
   if (!value) return 'No date set';
@@ -121,13 +122,6 @@ export default function ReleaseDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link
-              href={`/dashboard/releases/${releaseId}/metadata`}
-              className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-            >
-              <FileText className="h-3.5 w-3.5" />
-              Details
-            </Link>
             <button
               type="button"
               disabled
@@ -194,6 +188,8 @@ export default function ReleaseDetailPage() {
             </div>
           )}
         </section>
+
+        <ReleaseInfoSection releaseId={releaseId} />
       </div>
     </main>
   );
