@@ -8,6 +8,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { TASK_DONE_STATUS, TASK_LOCKED_STATUS } from '@/lib/execution-types';
+import { formatMilestoneDate, isEventMilestone } from '@/lib/tasks';
 import { formatArtistName } from '@/lib/release-execution';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
@@ -186,12 +187,13 @@ export default function ReleaseDetailPage() {
               {releaseTasks.map((task) => {
                 const isLocked = task.status === TASK_LOCKED_STATUS;
                 const isDone = task.status === TASK_DONE_STATUS;
+                const isMilestone = isEventMilestone(task);
                 return (
                   <div
                     key={task.id}
                     className={`flex w-full items-center gap-3 border border-stroke-default px-4 py-3 text-sm ${
                       isLocked ? 'bg-bg-surface/60' : 'bg-bg-surface'
-                    }`}
+                    } ${isMilestone ? 'border-l-2 border-l-status-info' : ''}`}
                   >
                     <TaskCompletionCheckbox
                       taskId={task.id}
@@ -202,6 +204,11 @@ export default function ReleaseDetailPage() {
                       <Lock
                         className="h-3.5 w-3.5 shrink-0 text-content-tertiary"
                         aria-label="Locked — waiting on a prerequisite"
+                      />
+                    ) : isMilestone ? (
+                      <CalendarDays
+                        className="h-3.5 w-3.5 shrink-0 text-status-info"
+                        aria-label="Event milestone"
                       />
                     ) : null}
                     <button
@@ -221,7 +228,13 @@ export default function ReleaseDetailPage() {
                         {task.title}
                       </span>
                       {task.dueDate ? (
-                        <span className="shrink-0 text-xs text-content-tertiary">{formatDate(task.dueDate)}</span>
+                        <span
+                          className={`shrink-0 text-xs ${
+                            isMilestone ? 'text-status-info' : 'text-content-tertiary'
+                          }`}
+                        >
+                          {isMilestone ? formatMilestoneDate(task.dueDate) : formatDate(task.dueDate)}
+                        </span>
                       ) : null}
                     </button>
                   </div>

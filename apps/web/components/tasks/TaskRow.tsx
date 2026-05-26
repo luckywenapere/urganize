@@ -1,7 +1,15 @@
 'use client';
 
-import { Lock } from 'lucide-react';
-import { getRelativeDueLabel, getTaskStatusLabel, getTaskStatusTone, getPriorityBorderClass, type Task } from '@/lib/tasks';
+import { CalendarDays, Lock } from 'lucide-react';
+import {
+  formatMilestoneDate,
+  getPriorityBorderClass,
+  getRelativeDueLabel,
+  getTaskStatusLabel,
+  getTaskStatusTone,
+  isEventMilestone,
+  type Task,
+} from '@/lib/tasks';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 
@@ -24,9 +32,14 @@ function getAssigneeLabel(task: Task): string {
 export function TaskRow({ task, onClick, onBlocker }: TaskRowProps) {
   const due = getRelativeDueLabel(task);
   const isLocked = task.status === 'locked';
-  // Locked tasks override the priority accent — the left border becomes a
-  // muted gray that reads as "not ready" rather than its priority color.
-  const borderClass = isLocked ? 'border-l-stroke-default' : getPriorityBorderClass(task.priority);
+  const isMilestone = isEventMilestone(task);
+  // Left-border accent precedence: locked (muted gray, "not ready") wins, then
+  // event milestones (info blue, "dated point"), then the priority color.
+  const borderClass = isLocked
+    ? 'border-l-stroke-default'
+    : isMilestone
+      ? 'border-l-status-info'
+      : getPriorityBorderClass(task.priority);
 
   return (
     <div
@@ -53,6 +66,11 @@ export function TaskRow({ task, onClick, onBlocker }: TaskRowProps) {
               className="h-3.5 w-3.5 shrink-0 text-content-tertiary"
               aria-label="Locked — waiting on a prerequisite"
             />
+          ) : isMilestone ? (
+            <CalendarDays
+              className="h-3.5 w-3.5 shrink-0 text-status-info"
+              aria-label="Event milestone"
+            />
           ) : null}
           <p
             className={`truncate text-sm font-semibold ${
@@ -70,7 +88,11 @@ export function TaskRow({ task, onClick, onBlocker }: TaskRowProps) {
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-content-secondary">
           <span>{getAssigneeLabel(task)}</span>
           <span className="text-content-tertiary">•</span>
-          <span className={due.isOverdue ? 'font-semibold text-status-error' : ''}>{due.label}</span>
+          {isMilestone ? (
+            <span className="text-status-info">{formatMilestoneDate(task.dueDate)}</span>
+          ) : (
+            <span className={due.isOverdue ? 'font-semibold text-status-error' : ''}>{due.label}</span>
+          )}
         </div>
       </div>
 

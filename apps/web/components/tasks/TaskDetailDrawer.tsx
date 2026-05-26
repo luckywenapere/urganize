@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { CalendarDays } from 'lucide-react';
 import { ReleaseCombobox } from '@/components/shared/ReleaseCombobox';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
@@ -14,6 +15,7 @@ import {
   getTaskPriorityLabel,
   getTaskStatusLabel,
   getTaskStatusTone,
+  isEventMilestone,
   TASK_PRIORITY_OPTIONS,
   TASK_STATUS_OPTIONS,
   type TaskDetail,
@@ -188,6 +190,12 @@ export function TaskDetailDrawer({
             {task ? (
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <StatusBadge label={getTaskStatusLabel(task.status)} tone={getTaskStatusTone(task.status)} size="sm" />
+                {isEventMilestone(task) ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-status-info/40 bg-status-info/10 px-2 py-0.5 text-[11px] font-semibold text-status-info">
+                    <CalendarDays className="h-3 w-3" />
+                    Event
+                  </span>
+                ) : null}
                 <span className={due.isOverdue ? 'text-sm font-semibold text-status-error' : 'text-sm text-content-secondary'}>
                   {due.label}
                 </span>

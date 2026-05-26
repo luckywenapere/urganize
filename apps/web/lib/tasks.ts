@@ -392,6 +392,22 @@ export function getRelativeDueLabel(task: Pick<Task, 'dueDate' | 'completedAt'>,
   };
 }
 
+export function isEventMilestone(task: Pick<Task, 'taskType'>): boolean {
+  return task.taskType === 'event_milestone';
+}
+
+/**
+ * Date label for event milestones. A milestone isn't "due" — it happens on a
+ * day — so this drops the deadline framing of getRelativeDueLabel and just
+ * states the date (e.g., "On Jun 26").
+ */
+export function formatMilestoneDate(dueDate: string | null): string {
+  if (!dueDate) return 'Date TBD';
+  const date = new Date(dueDate);
+  if (Number.isNaN(date.getTime())) return 'Date TBD';
+  return `On ${new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(date)}`;
+}
+
 export function createEmptyMyTasksSections(): Record<TaskSectionKey, Task[]> {
   return {
     overdue: [],
