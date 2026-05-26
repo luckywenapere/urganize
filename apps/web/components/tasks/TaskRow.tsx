@@ -3,13 +3,14 @@
 import { Lock } from 'lucide-react';
 import { getRelativeDueLabel, getTaskStatusLabel, getTaskStatusTone, getPriorityBorderClass, type Task } from '@/lib/tasks';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 
 type TaskRowProps = {
   task: Task;
   onClick?: (task: Task) => void;
-  showCheckbox?: boolean;
-  selected?: boolean;
-  onSelectedChange?: (checked: boolean) => void;
+  /** Receives the blocker text when the user clicks the completion checkbox
+   * on a task that can't be marked done yet. Parent should surface via toast. */
+  onBlocker?: (message: string) => void;
 };
 
 function getAssigneeLabel(task: Task): string {
@@ -20,7 +21,7 @@ function getAssigneeLabel(task: Task): string {
   return task.assignee?.email || 'Unassigned';
 }
 
-export function TaskRow({ task, onClick, showCheckbox = false, selected = false, onSelectedChange }: TaskRowProps) {
+export function TaskRow({ task, onClick, onBlocker }: TaskRowProps) {
   const due = getRelativeDueLabel(task);
   const isLocked = task.status === 'locked';
   // Locked tasks override the priority accent — the left border becomes a
@@ -43,19 +44,7 @@ export function TaskRow({ task, onClick, showCheckbox = false, selected = false,
       }}
       data-ph-capture-attribute-section="tasks"
     >
-      {showCheckbox ? (
-        <label
-          className="flex h-11 w-11 shrink-0 items-center justify-center"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={(event) => onSelectedChange?.(event.target.checked)}
-            className="h-4.5 w-4.5 rounded border-stroke-default bg-transparent text-brand"
-          />
-        </label>
-      ) : null}
+      <TaskCompletionCheckbox taskId={task.id} status={task.status} onBlocker={onBlocker} />
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
@@ -68,7 +57,7 @@ export function TaskRow({ task, onClick, showCheckbox = false, selected = false,
           <p
             className={`truncate text-sm font-semibold ${
               isLocked ? 'text-content-secondary' : 'text-content-primary'
-            }`}
+            } ${task.status === 'done' ? 'line-through' : ''}`}
           >
             {task.title}
           </p>

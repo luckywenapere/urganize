@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AlertCircle, CalendarDays, Lock, Sparkles } from 'lucide-react';
@@ -12,7 +12,14 @@ import { formatArtistName } from '@/lib/release-execution';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { ProgressBar } from '@/components/shared/ProgressBar';
+import { Toast } from '@/components/shared/Toast';
 import { ReleaseInfoSection } from '@/components/releases/ReleaseInfoSection';
+import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
+
+type ToastState = {
+  message: string;
+  tone: 'success' | 'error' | 'warning';
+};
 
 function formatDate(value: string | null): string {
   if (!value) return 'No date set';
@@ -52,6 +59,14 @@ export default function ReleaseDetailPage() {
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
   const tasks = useTaskStore((s) => s.tasks);
   const { openTask, openQuickCreate } = useTaskUI();
+  const [toast, setToast] = useState<ToastState | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const dismissAfterMs = toast.tone === 'warning' ? 6000 : 2600;
+    const timeout = window.setTimeout(() => setToast(null), dismissAfterMs);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
 
   useEffect(() => {
     if (authLoading || !releaseId) return;
@@ -102,6 +117,12 @@ export default function ReleaseDetailPage() {
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
       <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-10 sm:px-6">
+        {toast ? (
+          <div className="mb-4">
+            <Toast message={toast.message} tone={toast.tone} />
+          </div>
+        ) : null}
+
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
@@ -165,45 +186,44 @@ export default function ReleaseDetailPage() {
                 const isLocked = task.status === TASK_LOCKED_STATUS;
                 const isDone = task.status === TASK_DONE_STATUS;
                 return (
-                  <button
+                  <div
                     key={task.id}
-                    type="button"
-                    onClick={() => openTask(task.id)}
-                    className={`flex w-full items-center gap-3 border border-stroke-default px-4 py-3 text-left text-sm transition-colors hover:bg-bg-hover ${
+                    className={`flex w-full items-center gap-3 border border-stroke-default px-4 py-3 text-sm ${
                       isLocked ? 'bg-bg-surface/60' : 'bg-bg-surface'
                     }`}
                   >
+                    <TaskCompletionCheckbox
+                      taskId={task.id}
+                      status={task.status}
+                      onBlocker={(message) => setToast({ tone: 'warning', message })}
+                    />
                     {isLocked ? (
                       <Lock
                         className="h-3.5 w-3.5 shrink-0 text-content-tertiary"
                         aria-label="Locked — waiting on a prerequisite"
                       />
-                    ) : (
-                      <span
-                        className={`h-2 w-2 shrink-0 rounded-full ${
-                          isDone
-                            ? 'bg-brand'
-                            : task.status === 'in_progress'
-                              ? 'bg-status-warning'
-                              : 'bg-content-tertiary'
-                        }`}
-                      />
-                    )}
-                    <span
-                      className={`min-w-0 flex-1 truncate ${
-                        isDone
-                          ? 'text-content-tertiary line-through'
-                          : isLocked
-                            ? 'text-content-secondary'
-                            : 'text-content-primary'
-                      }`}
-                    >
-                      {task.title}
-                    </span>
-                    {task.dueDate ? (
-                      <span className="shrink-0 text-xs text-content-tertiary">{formatDate(task.dueDate)}</span>
                     ) : null}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => openTask(task.id)}
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left transition-colors hover:text-content-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
+                    >
+                      <span
+                        className={`min-w-0 flex-1 truncate ${
+                          isDone
+                            ? 'text-content-tertiary line-through'
+                            : isLocked
+                              ? 'text-content-secondary'
+                              : 'text-content-primary'
+                        }`}
+                      >
+                        {task.title}
+                      </span>
+                      {task.dueDate ? (
+                        <span className="shrink-0 text-xs text-content-tertiary">{formatDate(task.dueDate)}</span>
+                      ) : null}
+                    </button>
+                  </div>
                 );
               })}
             </div>

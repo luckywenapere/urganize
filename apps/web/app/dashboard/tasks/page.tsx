@@ -37,7 +37,7 @@ type ReleaseSelectorPayload = {
 
 type ToastState = {
   message: string;
-  tone: 'success' | 'error';
+  tone: 'success' | 'error' | 'warning';
 };
 
 const sectionOrder: TaskSectionKey[] = ['overdue', 'today', 'week', 'upcoming', 'no_due_date'];
@@ -230,7 +230,10 @@ export default function MyTasksPage() {
       return;
     }
 
-    const timeout = window.setTimeout(() => setToast(null), 2600);
+    // Warnings (blocker messages) hold longer so the user has time to read
+    // the dependency reason before it disappears.
+    const dismissAfterMs = toast.tone === 'warning' ? 6000 : 2600;
+    const timeout = window.setTimeout(() => setToast(null), dismissAfterMs);
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
@@ -465,7 +468,12 @@ export default function MyTasksPage() {
                 ) : (
                   <div>
                     {tasks.map((task) => (
-                      <TaskRow key={task.id} task={task} onClick={handleOpenTask} />
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        onClick={handleOpenTask}
+                        onBlocker={(message) => setToast({ tone: 'warning', message })}
+                      />
                     ))}
                   </div>
                 )}

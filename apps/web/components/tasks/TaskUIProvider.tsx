@@ -370,26 +370,21 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     }
 
     // Route status→done through the store so the dependency blocker check
-    // runs and any newly-unlockable tasks get persisted in the same flow.
-    // Falls through to the direct PATCH if the task isn't in the store
-    // (cross-release entries — blocker data isn't available there).
+    // and the cascade-unlock both run. The store self-hydrates if the task
+    // isn't loaded yet (cross-release entries from notifications or the
+    // flat Tasks page), so the same path covers every entry point.
     if (patch.status === 'done') {
-      const storeHasTask = Boolean(
-        useTaskStore.getState().tasks.find((candidate) => candidate.id === activeTaskId)
-      );
-      if (storeHasTask) {
-        const completed = await useTaskStore.getState().completeTask(activeTaskId);
-        if (!completed) {
-          const blocker = useTaskStore.getState().error;
-          setStatusBlockerMessage(blocker || 'Could not complete task.');
-          return;
-        }
-        setStatusBlockerMessage('');
-        await refreshOpenTask();
-        dispatchTasksChanged();
-        setNotificationRefreshKey((value) => value + 1);
+      const completed = await useTaskStore.getState().completeTask(activeTaskId);
+      if (!completed) {
+        const blocker = useTaskStore.getState().error;
+        setStatusBlockerMessage(blocker || 'Could not complete task.');
         return;
       }
+      setStatusBlockerMessage('');
+      await refreshOpenTask();
+      dispatchTasksChanged();
+      setNotificationRefreshKey((value) => value + 1);
+      return;
     }
 
     try {

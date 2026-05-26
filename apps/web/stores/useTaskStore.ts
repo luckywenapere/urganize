@@ -10,7 +10,7 @@ import {
   type TaskRequirement,
 } from '@/lib/execution-types';
 import { getTaskCompletionBlocker } from '@/lib/release-execution';
-import { type TaskPriority, type TaskStatus } from '@/lib/tasks';
+import { type TaskPriority } from '@/lib/tasks';
 
 type TaskCreateInput = {
   title: string;
@@ -32,7 +32,6 @@ type TaskStore = {
   createTask: (input: TaskCreateInput) => Promise<ExecutionTask | null>;
   updateRequirement: (taskId: string, requirement: TaskRequirement | null) => Promise<void>;
   completeTask: (taskId: string) => Promise<ExecutionTask | null>;
-  updateTaskStatus: (taskId: string, status: TaskStatus) => Promise<ExecutionTask | null>;
   tasksForRelease: (releaseId: string) => ExecutionTask[];
 };
 
@@ -121,18 +120,68 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     }));
   },
   completeTask: async (taskId) => {
-    const task = get().tasks.find((candidate) => candidate.id === taskId);
-    if (!task) return null;
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      set({ error: 'Session expired. Please sign in again.' });
+      return null;
+    }
+
+    // Hydrate the store if this task isn't loaded yet (e.g. cross-release
+    // entry from a notification or the flat Tasks page). The blocker check
+    // and cascade-unlock both rely on store state, so we want a single
+    // hydration path before either runs.
+    let task = get().tasks.find((candidate) => candidate.id === taskId);
+    if (!task) {
+      const fetchResponse = await fetch(`/api/tasks/${taskId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      });
+      const fetchPayload = (await fetchResponse.json().catch(() => ({}))) as {
+        task?: ExecutionTask;
+        error?: string;
+      };
+      if (!fetchResponse.ok || !fetchPayload.task) {
+        set({ error: fetchPayload.error || 'Could not load task.' });
+        return null;
+      }
+      task = fetchPayload.task;
+      set((state) => ({ tasks: [...state.tasks, task!] }));
+    }
+
+    // Toggle: clicking the checkbox on a done task reopens it. We PATCH
+    // straight to todo with no blocker check and no cascade — reopening is
+    // an admin action that doesn't need the gate, and re-locking dependents
+    // is more confusing than helpful at v1 scale.
+    if (task.status === TASK_DONE_STATUS) {
+      const reopenResponse = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ status: TASK_PENDING_STATUS }),
+      });
+      const reopenPayload = (await reopenResponse.json().catch(() => ({}))) as {
+        task?: ExecutionTask;
+        error?: string;
+      };
+      if (!reopenResponse.ok || !reopenPayload.task) {
+        set({ error: reopenPayload.error || 'Could not reopen task.' });
+        return null;
+      }
+      const reopenedTask = reopenPayload.task as ExecutionTask;
+      set((state) => ({
+        tasks: state.tasks.map((candidate) =>
+          candidate.id === taskId ? reopenedTask : candidate
+        ),
+        error: '',
+      }));
+      return reopenedTask;
+    }
 
     const blocker = getTaskCompletionBlocker(task, get().tasks);
     if (blocker) {
       set({ error: blocker });
-      return null;
-    }
-
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      set({ error: 'Session expired. Please sign in again.' });
       return null;
     }
 
@@ -219,37 +268,5 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     }));
 
     return completedTask;
-  },
-  updateTaskStatus: async (taskId, status) => {
-    const task = get().tasks.find((candidate) => candidate.id === taskId);
-    if (!task) return null;
-
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      set({ error: 'Session expired. Please sign in again.' });
-      return null;
-    }
-
-    const response = await fetch(`/api/tasks/${taskId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ status }),
-    });
-
-    const payload = (await response.json().catch(() => ({}))) as { task?: ExecutionTask; error?: string };
-    if (!response.ok || !payload.task) {
-      set({ error: payload.error || 'Could not update task status.' });
-      return null;
-    }
-
-    set((state) => ({
-      tasks: state.tasks.map((candidate) => (candidate.id === taskId ? (payload.task as ExecutionTask) : candidate)),
-      error: '',
-    }));
-
-    return payload.task as ExecutionTask;
   },
 }));
