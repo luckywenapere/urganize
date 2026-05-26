@@ -19,7 +19,6 @@ type ReleaseSelectorListResponse = { releases: ReleaseOption[] };
 function sanitizeTextField(value: string, maxLength: number): string {
   return value.trim().replace(/\s+/g, ' ').slice(0, maxLength);
 }
-import { RELEASE_PLAYBOOK_PHASES } from '@/lib/release-playbook';
 import { ensureOwnedWorkspace } from '@/lib/tasks-server';
 import { instantiateTemplate } from '@/lib/release-templates/instantiate';
 import { getTemplate } from '@/lib/release-templates/loader';
@@ -65,21 +64,7 @@ type CreateReleaseBody = {
   state?: unknown;
 };
 
-type PlaybookProgressSummary = {
-  completedCount: number;
-  totalCount: number;
-  completionPercent: number;
-};
-
-type ReleasePlaybookRow = {
-  release_id: string;
-  is_completed: boolean;
-};
-
-const RELEASE_PLAYBOOK_STEPS_TABLE = 'release_playbook_steps';
 const TASKS_TABLE = 'tasks';
-const TRACKS_TABLE = 'tracks';
-const DEFAULT_PLAYBOOK_TOTAL = RELEASE_PLAYBOOK_PHASES.reduce((sum, phase) => sum + phase.items.length, 0);
 const RELEASE_PIPELINE_STATES = ['idea', 'planning', 'asset_prep', 'distribution', 'campaign', 'post_release'] as const;
 
 const normalizePipelineState = (value: unknown) => {
@@ -230,52 +215,12 @@ export async function GET(request: NextRequest) {
   }
 
   const releases = Array.isArray(releasesResult.data) ? (releasesResult.data as ReleaseRow[]) : [];
-  const playbookProgressByReleaseId = new Map<string, PlaybookProgressSummary>();
   const taskCountByReleaseId = new Map<string, number>();
   const taskDoneCountByReleaseId = new Map<string, number>();
-  const trackCountByReleaseId = new Map<string, number>();
 
   if (releases.length > 0) {
-    const playbookResult = await adminClient
-      .from(RELEASE_PLAYBOOK_STEPS_TABLE)
-      .select('release_id,is_completed')
-      .eq('user_id', auth.user.id)
-      .in('release_id', releases.map((release) => release.id));
-
-    if (!playbookResult.error && Array.isArray(playbookResult.data)) {
-      const rows = playbookResult.data as ReleasePlaybookRow[];
-      const groupedRows = new Map<string, ReleasePlaybookRow[]>();
-
-      for (const row of rows) {
-        const releaseId = String(row.release_id || '');
-        if (!releaseId) {
-          continue;
-        }
-
-        const group = groupedRows.get(releaseId) || [];
-        group.push(row);
-        groupedRows.set(releaseId, group);
-      }
-
-      for (const release of releases) {
-        const rowsForRelease = groupedRows.get(release.id) || [];
-        const totalCount = rowsForRelease.length || DEFAULT_PLAYBOOK_TOTAL;
-        const completedCount = rowsForRelease.filter((row) => row.is_completed === true).length;
-        const completionPercent = totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
-
-        playbookProgressByReleaseId.set(release.id, {
-          completedCount,
-          totalCount,
-          completionPercent,
-        });
-      }
-    }
-
     const releaseIds = releases.map((release) => release.id);
-    const [taskResult, trackResult] = await Promise.all([
-      adminClient.from(TASKS_TABLE).select('release_id,status').in('release_id', releaseIds),
-      adminClient.from(TRACKS_TABLE).select('release_id').in('release_id', releaseIds),
-    ]);
+    const taskResult = await adminClient.from(TASKS_TABLE).select('release_id,status').in('release_id', releaseIds);
 
     if (!taskResult.error && Array.isArray(taskResult.data)) {
       for (const row of taskResult.data) {
@@ -289,17 +234,6 @@ export async function GET(request: NextRequest) {
         if (typed.status === 'done') {
           taskDoneCountByReleaseId.set(releaseId, (taskDoneCountByReleaseId.get(releaseId) || 0) + 1);
         }
-      }
-    }
-
-    if (!trackResult.error && Array.isArray(trackResult.data)) {
-      for (const row of trackResult.data) {
-        const releaseId = String((row as { release_id?: string | null }).release_id || '');
-        if (!releaseId) {
-          continue;
-        }
-
-        trackCountByReleaseId.set(releaseId, (trackCountByReleaseId.get(releaseId) || 0) + 1);
       }
     }
   }
@@ -359,19 +293,6 @@ export async function GET(request: NextRequest) {
         : commandCenter.collaborators.length > 0
           ? 'in_progress'
           : 'draft';
-      const playbookProgress = playbookProgressByReleaseId.get(release.id) || {
-        completedCount: 0,
-        totalCount: DEFAULT_PLAYBOOK_TOTAL,
-        completionPercent: 0,
-      };
-      const setupProgress = Math.min(
-        100,
-        Math.round(
-          playbookProgress.completionPercent / 3 +
-            (taskCountByReleaseId.get(release.id) ? 33.333 : 0) +
-            (trackCountByReleaseId.get(release.id) ? 33.333 : 0)
-        )
-      );
 
       return {
         id: release.id,
@@ -386,12 +307,6 @@ export async function GET(request: NextRequest) {
         invitedCount: commandCenter.collaborators.length,
         submittedCount: commandCenter.readiness.submittedCollaborators,
         pendingCount: commandCenter.readiness.pendingCollaborators,
-        playbook: playbookProgress,
-        setup: {
-          progressPercent: setupProgress,
-          hasTask: (taskCountByReleaseId.get(release.id) || 0) > 0,
-          hasTrack: (trackCountByReleaseId.get(release.id) || 0) > 0,
-        },
       };
     })
   );
