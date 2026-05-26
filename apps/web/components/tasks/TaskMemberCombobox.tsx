@@ -174,7 +174,7 @@ export function TaskMemberCombobox({
       </label>
 
       {isOpen ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+0.6rem)] z-20 overflow-hidden rounded-[24px] border border-stroke-default bg-bg-surface/98 shadow-[0_28px_70px_-40px_rgba(0,0,0,0.78)]">
+        <div className="absolute left-0 right-0 top-[calc(100%+0.6rem)] z-20 overflow-hidden rounded-[24px] border border-stroke-default bg-bg-surface shadow-[0_28px_70px_-40px_rgba(0,0,0,0.78)]">
           <div id={listboxId} role="listbox" className="max-h-[18rem] overflow-y-auto p-2">
             {isLoading && activeMembers.length === 0 ? (
               <p className="px-4 py-3 text-sm text-content-secondary">Loading teammates…</p>
