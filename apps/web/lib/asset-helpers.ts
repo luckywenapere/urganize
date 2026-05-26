@@ -45,15 +45,19 @@ export const ASSET_UPLOAD_URL_TTL_SECONDS = 60 * 60 * 2;
 
 const MIB = 1024 * 1024;
 
+// Tuned for Supabase Free plan headroom (50 MiB per-upload ceiling, 1 GiB
+// total). Audio/stems/video are kept under the per-upload cap; cover art and
+// images stay tight to preserve quota for masters and footage. Bump when the
+// project moves to Pro.
 export const ASSET_SIZE_LIMITS: Record<AssetCategory, number> = {
-  audio: 100 * MIB,
-  stems: 100 * MIB,
-  cover_art: 10 * MIB,
-  promo_image: 10 * MIB,
-  video: 200 * MIB,
-  document: 25 * MIB,
-  contract: 25 * MIB,
-  other: 25 * MIB,
+  audio: 40 * MIB,
+  stems: 40 * MIB,
+  cover_art: 5 * MIB,
+  promo_image: 5 * MIB,
+  video: 40 * MIB,
+  document: 10 * MIB,
+  contract: 10 * MIB,
+  other: 10 * MIB,
 };
 
 const AUDIO_MIMES = ['audio/wav', 'audio/mpeg', 'audio/flac', 'audio/x-wav'];
