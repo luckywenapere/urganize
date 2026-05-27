@@ -147,10 +147,17 @@ const requestAiGateway = async ({
   messages,
   timeoutMs,
   model,
+  format = 'json',
 }: {
   messages: AiMessage[];
   timeoutMs: number;
   model: string;
+  /**
+   * 'json' constrains the model to JSON output (Ollama-style format param).
+   * 'text' omits the constraint so the model returns free-form prose — used by
+   * the status update generator, which wants a natural paragraph, not JSON.
+   */
+  format?: 'json' | 'text';
 }): Promise<string> => {
   const config = getAiGatewayConfig();
   if (!config) {
@@ -171,7 +178,7 @@ const requestAiGateway = async ({
         model,
         messages,
         stream: false,
-        format: 'json',
+        ...(format === 'json' ? { format: 'json' } : {}),
       }),
       signal: controller.signal,
     });
@@ -226,6 +233,60 @@ export async function generateStructuredAiOutput<T>({
         throw new AiProviderError(invalidFormatMessage, { retryable: false });
       }
       return parsed;
+    } catch (error) {
+      lastError = error;
+      const typedError =
+        error instanceof AiProviderError
+          ? error
+          : new AiProviderError(String((error as { message?: string } | null)?.message || 'Unknown AI generation error'));
+
+      const shouldRetry = typedError.retryable && attempt < maxRetries;
+      if (shouldRetry) {
+        await sleep(Math.min(1500 * attempt, 4000));
+        continue;
+      }
+
+      break;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Unknown AI generation error');
+}
+
+type GeneratePlainTextAiOutputOptions = {
+  messages: AiMessage[];
+  timeoutMs?: number;
+  maxRetries?: number;
+  model?: string;
+};
+
+/**
+ * Plain-text sibling of generateStructuredAiOutput. Runs the same retry +
+ * timeout + error-mapping loop but requests free-form prose (no JSON format
+ * constraint) and returns the trimmed string. Used by the status update
+ * generator. Throws AiProviderError on exhausted retries; empty output throws
+ * a non-retryable error so the caller can map it to a clear message.
+ */
+export async function generatePlainTextAiOutput({
+  messages,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  maxRetries = DEFAULT_MAX_RETRIES,
+  model = AI_MODEL,
+}: GeneratePlainTextAiOutputOptions): Promise<string> {
+  if (!getAiGatewayConfig()) {
+    throw new Error('AI model environment is not configured');
+  }
+
+  let lastError: unknown = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+    try {
+      const raw = await requestAiGateway({ messages, timeoutMs, model, format: 'text' });
+      const trimmed = raw.trim();
+      if (!trimmed) {
+        throw new AiProviderError('Model returned empty content', { retryable: false });
+      }
+      return trimmed;
     } catch (error) {
       lastError = error;
       const typedError =

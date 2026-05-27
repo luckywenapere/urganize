@@ -17,14 +17,16 @@ import { Toast } from '@/components/shared/Toast';
 import { ReleaseInfoSection } from '@/components/releases/ReleaseInfoSection';
 import { AssetSection } from '@/components/releases/AssetSection';
 import { TailorPlanModal } from '@/components/releases/TailorPlanModal';
+import { StatusUpdateModal } from '@/components/releases/StatusUpdateModal';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { supabase } from '@/lib/supabase/client';
 import { type ReleaseContext } from '@/lib/release-tailoring';
 
-// Feature flag — Tailor plan stays hidden until the AI provider is wired to a
+// Feature flags — both AI features stay hidden until the gateway is wired to a
 // capable model. NEXT_PUBLIC_ prefix so the value is inlined at build time for
-// this client component. The API route guards the same flag server-side.
+// this client component. The API routes guard the same flags server-side.
 const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
+const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
 
 type ToastState = {
   message: string;
@@ -73,6 +75,43 @@ export default function ReleaseDetailPage() {
   const [isTailorOpen, setIsTailorOpen] = useState(false);
   const [savedContext, setSavedContext] = useState<ReleaseContext | null>(null);
   const [hasTailoring, setHasTailoring] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isGeneratingStatus, setIsGeneratingStatus] = useState(false);
+  const [statusUpdate, setStatusUpdate] = useState('');
+
+  const generateStatus = async () => {
+    setIsStatusOpen(true);
+    setIsGeneratingStatus(true);
+    setStatusUpdate('');
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const res = await fetch(`/api/releases/${releaseId}/generate-status`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const payload = (await res.json().catch(() => ({}))) as {
+        status_update?: string;
+        error?: string;
+      };
+      if (!res.ok || !payload.status_update) {
+        throw new Error(payload.error || 'Could not generate status update.');
+      }
+      setStatusUpdate(payload.status_update);
+    } catch (err) {
+      setIsStatusOpen(false);
+      setToast({
+        tone: 'error',
+        message: err instanceof Error ? err.message : 'Could not generate status update.',
+      });
+    } finally {
+      setIsGeneratingStatus(false);
+    }
+  };
 
   // Load any prior tailoring so the button label and modal pre-fill reflect it.
   useEffect(() => {
@@ -199,15 +238,17 @@ export default function ReleaseDetailPage() {
                 {hasTailoring ? 'Re-tailor plan' : 'Tailor plan'}
               </button>
             ) : null}
-            <button
-              type="button"
-              disabled
-              title="Coming soon"
-              className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-tertiary opacity-50"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Generate status update
-            </button>
+            {STATUS_UPDATE_ENABLED ? (
+              <button
+                type="button"
+                onClick={() => void generateStatus()}
+                disabled={isGeneratingStatus}
+                className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary disabled:opacity-60"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {isGeneratingStatus ? 'Generating…' : 'Generate status update'}
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -320,6 +361,14 @@ export default function ReleaseDetailPage() {
           });
           void loadCommandCenter();
         }}
+      />
+
+      <StatusUpdateModal
+        open={isStatusOpen}
+        isGenerating={isGeneratingStatus}
+        statusUpdate={statusUpdate}
+        onClose={() => setIsStatusOpen(false)}
+        onRegenerate={() => void generateStatus()}
       />
     </main>
   );
