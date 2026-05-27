@@ -19,6 +19,13 @@ const RELEASES_TABLE = 'releases';
 const TASKS_TABLE = 'tasks';
 const TAILORING_TIMEOUT_MS = 30_000;
 
+// Feature flag — the AI provider isn't wired to a capable model yet, so the
+// whole tailoring feature stays dark until NEXT_PUBLIC_FEATURE_TAILOR_PLAN is
+// 'true'. When off, both handlers 404 so a direct API call can't invoke the
+// model either.
+const isTailorPlanEnabled = (): boolean =>
+  process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
+
 type ReleaseRow = {
   id: string;
   owner_user_id: string;
@@ -82,6 +89,10 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
+  if (!isTailorPlanEnabled()) {
+    return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  }
+
   const auth = await getAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
@@ -109,6 +120,10 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
+  if (!isTailorPlanEnabled()) {
+    return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  }
+
   const auth = await getAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 

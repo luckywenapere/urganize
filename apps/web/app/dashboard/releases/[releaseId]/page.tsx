@@ -21,6 +21,11 @@ import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbo
 import { supabase } from '@/lib/supabase/client';
 import { type ReleaseContext } from '@/lib/release-tailoring';
 
+// Feature flag — Tailor plan stays hidden until the AI provider is wired to a
+// capable model. NEXT_PUBLIC_ prefix so the value is inlined at build time for
+// this client component. The API route guards the same flag server-side.
+const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
+
 type ToastState = {
   message: string;
   tone: 'success' | 'error' | 'warning';
@@ -184,14 +189,16 @@ export default function ReleaseDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setIsTailorOpen(true)}
-              className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              {hasTailoring ? 'Re-tailor plan' : 'Tailor plan'}
-            </button>
+            {TAILOR_PLAN_ENABLED ? (
+              <button
+                type="button"
+                onClick={() => setIsTailorOpen(true)}
+                className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {hasTailoring ? 'Re-tailor plan' : 'Tailor plan'}
+              </button>
+            ) : null}
             <button
               type="button"
               disabled
