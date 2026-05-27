@@ -294,7 +294,7 @@ These are real but not blockers:
 - **Outdated top-level docs** (`README.md`, `PROJECT_SUMMARY.md`, `QUICKSTART.md`) reference an old single-app, npm-based, pre-Neon setup. Treat them as historical. Update or delete them when convenient.
 - **RLS on subscriptions and payments uses permissive `USING (true)` policies** inherited from production. This matches the prior state but is overly permissive. Audit client usage and tighten to owner-only reads + service-role writes as a follow-up.
 - **Possible duplicate artists:** 6 releases across 2 users have 6 distinct `artist_id` values. Either expected at small scale, or the artist lookup-or-create flow always creates instead of looking up. Investigate when scale increases or if duplicate-artist issues surface.
-- **AI features (Phase 5, Phase 6) require Anthropic API key and Zuplo gateway configuration.** Once the API key is available, set `NEXT_PUBLIC_FEATURE_TAILOR_PLAN=true` to expose the tailor-plan button. Phase 6 will follow the same gating pattern.
+- **AI features (Phase 5, Phase 6) require Anthropic API key and Zuplo gateway configuration.** Both are code-complete and gated. Once the gateway routes to Claude, set `NEXT_PUBLIC_FEATURE_TAILOR_PLAN=true` (rollout planner) and `NEXT_PUBLIC_FEATURE_STATUS_UPDATE=true` (status generator) to expose their buttons. Both API routes 404 while their flag is off.
 
 ---
 
@@ -328,7 +328,7 @@ The template provides the structure. The AI provides the tailoring. Never let th
 
 ## v1 build sequence and current progress (as of May 2026)
 
-**Current position:** Phase 4 complete and deployed. Phase 5 code built, gated, awaiting AI provider activation. Phase 6 (AI status update generator) blocked on same activation. Phase 3c polish pending. v1 is feature-complete in code; AI features pending provider setup.
+**Current position:** Phases 0–4 complete and deployed. Phases 5 and 6 (both AI features) are code-complete and gated behind feature flags, awaiting AI provider activation. Phase 3c polish pending. All six v1 scope items are now built in code; the two AI features are dark by default pending Anthropic key + Zuplo→Claude routing.
 
 v1 is built across six phases. Each phase corresponds to one of the v1 scope items, with some scope items split across multiple phases when the work is non-trivial.
 
@@ -350,9 +350,9 @@ Constraint: Supabase Free plan caps individual uploads at 50 MB. Category size l
 
 **Phase 5 — AI rollout planner.** Code complete and gated behind `NEXT_PUBLIC_FEATURE_TAILOR_PLAN` feature flag. Migration applied to production (`release_context` and `ai_tailoring_response` columns on releases). Activation pending: (1) Anthropic API key configured, (2) Zuplo gateway routed to Claude Sonnet for the tailoring endpoint (currently routes to `qwen2.5:3b` which is insufficient for structured JSON tailoring). Once both are in place, set the feature flag to true and verify end-to-end with a real release.
 
-**Phase 6 — AI status update generator.** Button on release detail page that reads release state (task completion, blockers, upcoming work, attached files, dates) and generates a paragraph status update the manager can copy to send to artists, labels, or collaborators. Uses Claude Haiku via Zuplo. Not started — blocked on the same AI provider activation as Phase 5, and will follow the same feature-flag gating pattern.
+**Phase 6 — AI status update generator.** Code complete and gated behind `NEXT_PUBLIC_FEATURE_STATUS_UPDATE` feature flag (default off; the API route 404s when off). One-click button on the release detail page reads release state (task counts, in-progress / blocked / due-this-week task titles, event milestones in the next 14 days, attachment count + categories) and generates a one-paragraph manager-voice status update in a modal with a Copy button. Plain-text output (no JSON), Claude Haiku via the gateway, 20s timeout. Nothing is persisted — the text is ephemeral. Activation pending: same as Phase 5 — Anthropic API key + Zuplo gateway routed to Claude Haiku (currently `qwen2.5:3b`). The provider gained a `generatePlainTextAiOutput` path and an `AI_STATUS_MODEL` override for this. Once routing is in place, set the flag to true and verify with a real release.
 
-After Phase 6, all six v1 scope items are shipped. Internal use continues throughout — the founder runs his own two artists' releases through the product, and the design partners exercise the workspace flow.
+All six v1 scope items are now built in code. Internal use continues throughout — the founder runs his own two artists' releases through the product, and the design partners exercise the workspace flow. The two AI features come online when the provider is activated.
 
 ---
 
@@ -372,7 +372,7 @@ After Phase 6, all six v1 scope items are shipped. Internal use continues throug
 
 This section is for state that changes during the v1 build. Keep it current.
 
-**Current build phase:** Phases 0–4 complete and deployed. Phase 5 (AI rollout planner) is code-complete but gated behind `NEXT_PUBLIC_FEATURE_TAILOR_PLAN` (default off) pending AI provider activation. Phase 6 (AI status update generator) is not started and blocked on the same activation. Phase 3c polish (vestigial bucket cleanup, `release_metadata.artwork_url` deprecation, `WorkspaceSection.tsx` deletion) is pending and non-blocking. v1 is feature-complete in code; the two AI features await Anthropic API key + Zuplo→Claude routing. Internal use runs continuously — the founder dogfoods on his own two artists' releases.
+**Current build phase:** All six phases built in code. Phases 0–4 complete and deployed. Phases 5 (AI rollout planner) and 6 (AI status update generator) are code-complete but gated behind `NEXT_PUBLIC_FEATURE_TAILOR_PLAN` and `NEXT_PUBLIC_FEATURE_STATUS_UPDATE` respectively (both default off), pending AI provider activation (Anthropic key + Zuplo→Claude routing; gateway currently serves `qwen2.5:3b`). Phase 3c polish (vestigial bucket cleanup, `release_metadata.artwork_url` deprecation, `WorkspaceSection.tsx` deletion) is pending and non-blocking. Internal use runs continuously — the founder dogfoods on his own two artists' releases.
 
 **What exists post-UI-cut:**
 - **Pages (4 + modals):** Dashboard (greeting, release cards, due-soon tasks), Releases list, Release detail (header, task progress, task list, status update placeholder), Settings (profile, teammates via workspace members, subscription). Modals: CreateReleaseModal, TaskQuickCreateModal, TaskDetailDrawer.
@@ -418,4 +418,4 @@ This section is for state that changes during the v1 build. Keep it current.
 
 ---
 
-*Last updated: 2026-05-27. Phases 0–4 complete and deployed; Phase 5 (AI rollout planner) code-complete and gated behind `NEXT_PUBLIC_FEATURE_TAILOR_PLAN` pending AI provider activation; Phase 6 blocked on the same. v1 feature-complete in code.*
+*Last updated: 2026-05-27. All six v1 phases built in code. Phases 0–4 deployed; Phases 5 (rollout planner) and 6 (status update generator) code-complete and gated behind `NEXT_PUBLIC_FEATURE_TAILOR_PLAN` / `NEXT_PUBLIC_FEATURE_STATUS_UPDATE`, awaiting Anthropic key + Zuplo→Claude routing.*
