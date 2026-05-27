@@ -310,10 +310,12 @@ export function TaskDetailDrawer({
                   onSelectRelease={(release) => {
                     setSelectedRelease(release);
                     setReleaseQuery(release?.title || '');
-                    void onSavePatch({
-                      releaseId: release?.id || null,
-                      groupId: null,
-                    });
+                    // Release and group are independent fields. Selecting a
+                    // release must not touch the group. The group dropdown
+                    // already filters its options to the selected release's
+                    // groups (see `releaseGroups`), so the group surface stays
+                    // coherent without forcing a server-side clear.
+                    void onSavePatch({ releaseId: release?.id || null });
                   }}
                   onCreateRelease={async () => null}
                 />
