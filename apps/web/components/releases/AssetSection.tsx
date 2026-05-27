@@ -35,6 +35,7 @@ const DISPLAY_CATEGORY_ORDER: AssetCategory[] = [
   'video',
   'document',
   'contract',
+  'split_sheet',
   'other',
 ];
 

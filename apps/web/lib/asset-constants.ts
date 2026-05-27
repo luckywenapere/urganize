@@ -16,6 +16,7 @@ export type AssetCategory =
   | 'video'
   | 'document'
   | 'contract'
+  | 'split_sheet'
   | 'other';
 
 export const ASSET_CATEGORIES: AssetCategory[] = [
@@ -26,6 +27,7 @@ export const ASSET_CATEGORIES: AssetCategory[] = [
   'video',
   'document',
   'contract',
+  'split_sheet',
   'other',
 ];
 
@@ -47,6 +49,7 @@ export const ASSET_SIZE_LIMITS: Record<AssetCategory, number> = {
   video: 40 * MIB,
   document: 10 * MIB,
   contract: 10 * MIB,
+  split_sheet: 10 * MIB,
   other: 10 * MIB,
 };
 
@@ -67,6 +70,7 @@ export const ASSET_MIME_ALLOWLIST: Record<AssetCategory, string[]> = {
   video: VIDEO_MIMES,
   document: DOCUMENT_MIMES,
   contract: DOCUMENT_MIMES,
+  split_sheet: DOCUMENT_MIMES,
   other: [...AUDIO_MIMES, ...IMAGE_MIMES, ...VIDEO_MIMES, ...DOCUMENT_MIMES],
 };
 
@@ -78,6 +82,7 @@ const CATEGORY_LABELS: Record<AssetCategory, string> = {
   video: 'Video',
   document: 'Document',
   contract: 'Contract',
+  split_sheet: 'Split sheet',
   other: 'Other',
 };
 

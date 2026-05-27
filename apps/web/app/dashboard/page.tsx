@@ -1,16 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AlertCircle, CalendarDays, Plus } from 'lucide-react';
+import { AlertCircle, CalendarDays } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { TASK_DONE_STATUS } from '@/lib/execution-types';
 import { formatArtistName } from '@/lib/release-execution';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
-import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 
 function formatDate(value: string | null): string {
   if (!value) return 'No date set';
@@ -44,7 +43,6 @@ export default function DashboardPage() {
   const { user, isLoading: authLoading } = useAuthStore();
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
   const tasks = useTaskStore((s) => s.tasks);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -75,25 +73,15 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
       <div className="mx-auto max-w-[1200px] px-4 pb-24 pt-10 sm:px-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-content-primary sm:text-3xl">
-              {greeting}
-            </h1>
-            <p className="mt-1 text-sm text-content-secondary">
-              {releases.length === 0
-                ? 'Create your first release to get started.'
-                : `${releases.length} active release${releases.length === 1 ? '' : 's'}`}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex h-10 items-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
-          >
-            <Plus className="h-4 w-4" />
-            New release
-          </button>
+        <div>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-content-primary sm:text-3xl">
+            {greeting}
+          </h1>
+          <p className="mt-1 text-sm text-content-secondary">
+            {releases.length === 0
+              ? 'Create your first release to get started.'
+              : `${releases.length} active release${releases.length === 1 ? '' : 's'}`}
+          </p>
         </div>
 
         {error ? (
@@ -158,15 +146,6 @@ export default function DashboardPage() {
           </section>
         ) : null}
       </div>
-
-      <CreateReleaseModal
-        open={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onCreated={(releaseId) => {
-          setIsCreateModalOpen(false);
-          router.push(`/dashboard/releases/${releaseId}`);
-        }}
-      />
     </main>
   );
 }
