@@ -149,6 +149,13 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
 
   const shouldShowTaskShell = pathname?.startsWith('/dashboard') || pathname === '/settings';
 
+  // Monotonically increasing sequence number for task patches. Each
+  // `saveTaskPatch` call claims the next value; when its async response
+  // returns, it only writes the returned task to local state if no newer
+  // patch has been issued since. This drops out-of-order responses so rapid,
+  // overlapping field edits can't clobber each other with a stale snapshot.
+  const patchVersionRef = useRef(0);
+
   const loadingOptionsRef = useRef(false);
   const loadOptions = useCallback(async () => {
     if (loadingOptionsRef.current) {
@@ -369,12 +376,21 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Claim this patch's place in the issue order. Any state write below only
+    // lands if no newer patch has been issued by the time the response
+    // returns — see `patchVersionRef`.
+    const patchVersion = ++patchVersionRef.current;
+    const isLatestPatch = () => patchVersion === patchVersionRef.current;
+
     // Route status→done through the store so the dependency blocker check
     // and the cascade-unlock both run. The store self-hydrates if the task
     // isn't loaded yet (cross-release entries from notifications or the
     // flat Tasks page), so the same path covers every entry point.
     if (patch.status === 'done') {
       const completed = await useTaskStore.getState().completeTask(activeTaskId);
+      if (!isLatestPatch()) {
+        return;
+      }
       if (!completed) {
         const blocker = useTaskStore.getState().error;
         setStatusBlockerMessage(blocker || 'Could not complete task.');
@@ -397,6 +413,12 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       });
 
       if (payload.task) {
+        // A newer patch superseded this one — discard this stale snapshot.
+        // The newer patch's response (and its own list refresh) will carry
+        // the authoritative state, so we skip every write here.
+        if (!isLatestPatch()) {
+          return;
+        }
         setTask(payload.task);
         setDrawerError('');
         setStatusBlockerMessage('');
@@ -409,13 +431,16 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       // didn't persist. Re-fetch the task to revert any visual drift.
       const message = error instanceof Error ? error.message : 'Could not save changes.';
       console.error('Task patch failed:', error);
+      if (!isLatestPatch()) {
+        return;
+      }
       setDrawerError(`Failed to save changes: ${message}`);
       if (activeTaskId) {
         try {
           const refreshed = await requestJson<TaskDetailPayload>(`/api/tasks/${activeTaskId}`, {
             method: 'GET',
           });
-          if (refreshed.task) {
+          if (refreshed.task && isLatestPatch()) {
             setTask(refreshed.task);
           }
         } catch (refreshError) {
