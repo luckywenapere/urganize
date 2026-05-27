@@ -8,6 +8,12 @@ type GenerateStructuredAiOutputOptions<T> = {
   temperature?: number;
   timeoutMs?: number;
   maxRetries?: number;
+  /**
+   * Upstream model id. Defaults to AI_MODEL. Lets a caller route a specific
+   * request to a different model (e.g., the rollout planner to Claude Sonnet)
+   * provided the Zuplo gateway is configured to serve that model id.
+   */
+  model?: string;
   parse: (raw: string) => T | null;
   invalidFormatMessage?: string;
 };
@@ -140,9 +146,11 @@ const parseProviderError = (status: number, payload: Record<string, unknown> | n
 const requestAiGateway = async ({
   messages,
   timeoutMs,
+  model,
 }: {
   messages: AiMessage[];
   timeoutMs: number;
+  model: string;
 }): Promise<string> => {
   const config = getAiGatewayConfig();
   if (!config) {
@@ -160,7 +168,7 @@ const requestAiGateway = async ({
         'x-api-key': config.apiKey,
       },
       body: JSON.stringify({
-        model: AI_MODEL,
+        model,
         messages,
         stream: false,
         format: 'json',
@@ -198,6 +206,7 @@ export async function generateStructuredAiOutput<T>({
   temperature = 0.25,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   maxRetries = DEFAULT_MAX_RETRIES,
+  model = AI_MODEL,
   parse,
   invalidFormatMessage = 'Model returned invalid JSON format',
 }: GenerateStructuredAiOutputOptions<T>): Promise<T> {
@@ -211,7 +220,7 @@ export async function generateStructuredAiOutput<T>({
 
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     try {
-      const raw = await requestAiGateway({ messages, timeoutMs });
+      const raw = await requestAiGateway({ messages, timeoutMs, model });
       const parsed = parse(raw);
       if (!parsed) {
         throw new AiProviderError(invalidFormatMessage, { retryable: false });

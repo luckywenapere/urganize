@@ -16,7 +16,10 @@ import { ProgressBar } from '@/components/shared/ProgressBar';
 import { Toast } from '@/components/shared/Toast';
 import { ReleaseInfoSection } from '@/components/releases/ReleaseInfoSection';
 import { AssetSection } from '@/components/releases/AssetSection';
+import { TailorPlanModal } from '@/components/releases/TailorPlanModal';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
+import { supabase } from '@/lib/supabase/client';
+import { type ReleaseContext } from '@/lib/release-tailoring';
 
 type ToastState = {
   message: string;
@@ -62,6 +65,42 @@ export default function ReleaseDetailPage() {
   const tasks = useTaskStore((s) => s.tasks);
   const { openTask, openQuickCreate } = useTaskUI();
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [isTailorOpen, setIsTailorOpen] = useState(false);
+  const [savedContext, setSavedContext] = useState<ReleaseContext | null>(null);
+  const [hasTailoring, setHasTailoring] = useState(false);
+
+  // Load any prior tailoring so the button label and modal pre-fill reflect it.
+  useEffect(() => {
+    if (authLoading || !user || !releaseId) return;
+    let cancelled = false;
+    const loadTailoring = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        const res = await fetch(`/api/releases/${releaseId}/tailor-plan`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        if (!res.ok) return;
+        const data = (await res.json().catch(() => ({}))) as {
+          context?: ReleaseContext | null;
+          has_tailoring?: boolean;
+        };
+        if (cancelled) return;
+        setSavedContext(data.context ?? null);
+        setHasTailoring(Boolean(data.has_tailoring));
+      } catch {
+        // Non-blocking: the button just defaults to "Tailor plan".
+      }
+    };
+    void loadTailoring();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, releaseId, user]);
 
   useEffect(() => {
     if (!toast) return;
@@ -145,6 +184,14 @@ export default function ReleaseDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setIsTailorOpen(true)}
+              className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {hasTailoring ? 'Re-tailor plan' : 'Tailor plan'}
+            </button>
             <button
               type="button"
               disabled
@@ -251,6 +298,22 @@ export default function ReleaseDetailPage() {
 
         <ReleaseInfoSection releaseId={releaseId} />
       </div>
+
+      <TailorPlanModal
+        open={isTailorOpen}
+        releaseId={releaseId}
+        initialContext={savedContext}
+        onClose={() => setIsTailorOpen(false)}
+        onTailored={(result, context) => {
+          setHasTailoring(true);
+          setSavedContext(context);
+          setToast({
+            tone: 'success',
+            message: `Plan tailored: ${result.tasks_removed} removed, ${result.tasks_modified} updated`,
+          });
+          void loadCommandCenter();
+        }}
+      />
     </main>
   );
 }
