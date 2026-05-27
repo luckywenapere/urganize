@@ -860,10 +860,18 @@ async function loadReleaseSummaries(
 
   const result = await adminClient
     .from(RELEASES_TABLE)
-    .select('id,title,artist_name,owner_user_id,user_id')
+    .select('id,title,artist_name,owner_user_id')
     .in('id', normalizedIds);
 
-  if (result.error || !Array.isArray(result.data)) {
+  if (result.error) {
+    // Surface the failure instead of swallowing it. A silent empty map here
+    // means every task's `release` relation comes back null, which is exactly
+    // how a stale `user_id` column reference in this select hid for two days.
+    console.error('loadReleaseSummaries query failed:', result.error);
+    return new Map<string, TaskReleaseSummary>();
+  }
+
+  if (!Array.isArray(result.data)) {
     return new Map<string, TaskReleaseSummary>();
   }
 
