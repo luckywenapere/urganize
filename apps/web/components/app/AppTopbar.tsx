@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, PanelLeftClose, PanelLeftOpen, Plus } from 'lucide-react';
 import { IconButton } from '@urganize/ui';
@@ -10,6 +9,10 @@ type AppTopbarProps = {
   isSidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
   onOpenMobileSidebar?: () => void;
+  /** Opens the release creation modal. Lifted to AppShell so this universal
+   * button behaves identically to the page-level "New release" buttons
+   * instead of navigating to the releases list. */
+  onNewRelease?: () => void;
 };
 
 const routeTitles = [
@@ -29,6 +32,7 @@ export function AppTopbar({
   isSidebarCollapsed = false,
   onToggleSidebar,
   onOpenMobileSidebar,
+  onNewRelease,
 }: AppTopbarProps) {
   const pathname = usePathname();
   const routeTitle = getRouteTitle(pathname);
@@ -65,13 +69,14 @@ export function AppTopbar({
           </h1>
         </div>
 
-        <Link
-          href="/dashboard/releases"
+        <button
+          type="button"
+          onClick={onNewRelease}
           className="hidden h-10 items-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse shadow-[0_18px_36px_-28px_rgba(62,207,142,0.55)] hover:bg-brand-hover sm:inline-flex"
         >
           <Plus className="h-4 w-4" />
           <span>New release</span>
-        </Link>
+        </button>
 
         <div className="grid h-10 w-10 place-items-center border border-stroke-default bg-bg-elevated text-sm font-semibold text-content-primary">
           {userInitial}

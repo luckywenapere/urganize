@@ -12,6 +12,8 @@ import { AppTopbar } from '@/components/app/AppTopbar';
 import { FirstTimeOnboardingGate } from '@/components/onboarding/FirstTimeOnboardingGate';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { SupportChat } from '@/components/support/SupportChat';
+import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
+import { useReleaseStore } from '@/stores/useReleaseStore';
 
 const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === 'true';
 
@@ -23,6 +25,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  // Lifted here so the universal topbar "New release" button opens the same
+  // creation modal the page-level buttons use, from any dashboard page,
+  // without navigating away.
+  const [isCreateReleaseOpen, setIsCreateReleaseOpen] = useState(false);
+  const openCreateRelease = useCallback(() => {
+    setIsCreateReleaseOpen(true);
+  }, []);
+  const closeCreateRelease = useCallback(() => {
+    setIsCreateReleaseOpen(false);
+  }, []);
   const toggleSidebar = useCallback(() => {
     setIsSidebarCollapsed((value) => !value);
   }, []);
@@ -73,6 +85,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             isSidebarCollapsed={isSidebarCollapsed}
             onToggleSidebar={toggleSidebar}
             onOpenMobileSidebar={openMobileSidebar}
+            onNewRelease={openCreateRelease}
           />
           <main className="min-w-0 flex-1 px-4 pb-28 pt-5 sm:px-5 md:px-6 md:pb-10 lg:px-8">
             {children}
@@ -109,6 +122,17 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
       {showHelpMenu ? <HelpMenu /> : null}
       {showHelpMenu ? <SupportChat /> : null}
+      <CreateReleaseModal
+        open={isCreateReleaseOpen}
+        onClose={closeCreateRelease}
+        onCreated={() => {
+          // Stay on whatever page the user was on (no forced redirect); just
+          // close and refresh the release store so the new release shows up.
+          // loadCommandCenter refreshes quietly when data already exists.
+          closeCreateRelease();
+          void useReleaseStore.getState().loadCommandCenter();
+        }}
+      />
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
       <Suspense fallback={null}>
         <FirstTimeOnboardingGate />
