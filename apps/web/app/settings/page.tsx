@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { getRolePermissions } from '@/lib/role-permissions';
-import { ThemeToggle } from '@urganize/ui';
 import {
   SettingsPageSkeleton,
   SettingsTeamMembersSectionSkeleton,
@@ -330,7 +329,7 @@ export default function SettingsPage() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="relative mx-auto w-full max-w-5xl px-4 pb-8 pt-20 sm:px-6 sm:py-10">
+      <div className="relative mx-auto w-full max-w-[1440px]">
         <div className="pointer-events-none absolute -right-16 -top-12 h-52 w-52 rounded-full bg-brand/15 blur-3xl" />
         <div className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-status-info/12 blur-3xl" />
         <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -411,10 +410,38 @@ export default function SettingsPage() {
           </section>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <section className={panelClass}>
-            <h2 className="mb-4 text-xl">Notifications</h2>
-            <div className="space-y-4">
+        {user.role === 'artist' && (
+          <section className={`${panelClass} mt-6`}>
+            <h2 className="mb-4 text-xl">Artist profile</h2>
+            <p className="mb-3 text-sm text-content-secondary">
+              This name is reused across the app.
+            </p>
+            <div className="space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-sm text-content-secondary">Artist name</span>
+                <input
+                  value={artistProfileName}
+                  onChange={(event) => setArtistProfileName(event.target.value)}
+                  className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+                  placeholder="e.g. Tems"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={handleSaveArtistProfileName}
+                disabled={isSavingName}
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+              >
+                {isSavingName ? 'Saving...' : 'Save artist name'}
+              </button>
+            </div>
+          </section>
+        )}
+
+        <section className={`${panelClass} mt-6`}>
+          <h2 className="mb-4 text-xl">Notifications</h2>
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex items-center justify-between gap-4 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2">
                 <span className="text-sm text-content-primary">Release reminders by email</span>
                 <input
@@ -433,74 +460,17 @@ export default function SettingsPage() {
                   className="h-4 w-4"
                 />
               </label>
-              <button
-                type="button"
-                onClick={handleSaveNotifications}
-                disabled={isSavingNotifications}
-                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-              >
-                {isSavingNotifications ? 'Saving...' : 'Save notifications'}
-              </button>
             </div>
-          </section>
-
-          <section className={panelClass}>
-            <h2 className="mb-4 text-xl">Appearance</h2>
-            <div className="rounded-lg border border-stroke-subtle bg-bg-elevated p-4">
-              <p className="text-sm text-content-secondary">Switch between dark and light mode.</p>
-              <div className="mt-3">
-                <ThemeToggle />
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <section className={panelClass}>
-            <h2 className="mb-4 text-xl">Session</h2>
-            <div className="rounded-lg border border-stroke-subtle bg-bg-elevated p-4">
-              <p className="text-sm text-content-secondary">Signed in as {user.email}.</p>
-              <button
-                type="button"
-                onClick={async () => {
-                  await logout();
-                  router.push('/auth');
-                }}
-                className="mt-4 rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover"
-              >
-                Log out
-              </button>
-            </div>
-          </section>
-
-          {user.role === 'artist' && (
-            <section className={panelClass}>
-              <h2 className="mb-4 text-xl">Artist profile</h2>
-              <p className="mb-3 text-sm text-content-secondary">
-                This name is reused across the app.
-              </p>
-              <div className="space-y-3">
-                <label className="block">
-                  <span className="mb-1 block text-sm text-content-secondary">Artist name</span>
-                  <input
-                    value={artistProfileName}
-                    onChange={(event) => setArtistProfileName(event.target.value)}
-                    className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
-                    placeholder="e.g. Tems"
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={handleSaveArtistProfileName}
-                  disabled={isSavingName}
-                  className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-                >
-                  {isSavingName ? 'Saving...' : 'Save artist name'}
-                </button>
-              </div>
-            </section>
-          )}
-        </div>
+            <button
+              type="button"
+              onClick={handleSaveNotifications}
+              disabled={isSavingNotifications}
+              className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+            >
+              {isSavingNotifications ? 'Saving...' : 'Save notifications'}
+            </button>
+          </div>
+        </section>
 
         {isManagerAccount && (
         <section className={`${panelClass} mt-6`}>
@@ -578,6 +548,23 @@ export default function SettingsPage() {
           )}
         </section>
         )}
+
+        <section className={`${panelClass} mt-6`}>
+          <h2 className="mb-4 text-xl">Session</h2>
+          <div className="rounded-lg border border-stroke-subtle bg-bg-elevated p-4">
+            <p className="text-sm text-content-secondary">Signed in as {user.email}.</p>
+            <button
+              type="button"
+              onClick={async () => {
+                await logout();
+                router.push('/auth');
+              }}
+              className="mt-4 rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover"
+            >
+              Log out
+            </button>
+          </div>
+        </section>
 
         <section className="mt-6 rounded-3xl border border-status-error/35 bg-status-error/10 p-6">
           <h2 className="mb-2 text-xl text-status-error">Delete account</h2>
