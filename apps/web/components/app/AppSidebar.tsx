@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Logo } from '@urganize/ui';
@@ -119,7 +120,14 @@ function SidebarFrame({
         <Link href="/dashboard" className={`min-w-0 ${collapsed ? 'mx-auto' : ''}`} onClick={mobile ? onCloseMobile : undefined}>
           {collapsed ? (
             <div className="grid h-9 w-9 place-items-center border border-stroke-default bg-bg-elevated">
-              <span className="font-display text-sm font-semibold text-brand">U</span>
+              <Image
+                src="/images/urganize-mark.png"
+                alt="Urganize"
+                width={32}
+                height={32}
+                priority
+                className="h-8 w-8 object-contain"
+              />
             </div>
           ) : (
             <Logo size="md" priority className="justify-start opacity-90" />
