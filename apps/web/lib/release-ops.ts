@@ -145,6 +145,13 @@ export type ReleaseMetadataSnapshot = {
   labelName: string;
   language: string;
   explicit: boolean | null;
+  /**
+   * @deprecated Legacy cover-art URL. As of Phase 3, `releases.artwork_asset_id`
+   * (resolved to a signed URL) is the source of truth for cover art; UI cover
+   * reads go through `release.coverArtUrl`. This field is still read only as a
+   * fallback for pre-Phase-3 releases and remains in the schema. v2 backfills
+   * these into the assets table and drops the fallback.
+   */
   artworkUrl: string;
   createdAt: string;
   updatedAt: string;

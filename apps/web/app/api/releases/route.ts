@@ -23,6 +23,11 @@ import { ensureOwnedWorkspace } from '@/lib/tasks-server';
 import { instantiateTemplate } from '@/lib/release-templates/instantiate';
 import { getTemplate } from '@/lib/release-templates/loader';
 import type { ReleaseType } from '@/lib/release-templates/types';
+import {
+  ASSET_SIGNED_URL_TTL_SECONDS,
+  RELEASE_ASSETS_BUCKET,
+  generateSignedUrl,
+} from '@/lib/asset-helpers';
 import { type ReleaseCreatedSource } from '@/lib/analytics';
 import {
   captureServerAnalyticsEvent,
@@ -43,6 +48,7 @@ type ReleaseRow = {
   release_date: string | null;
   status: string | null;
   description: string | null;
+  artwork_asset_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -76,6 +82,7 @@ const normalizePipelineState = (value: unknown) => {
 
 function toSelectorRelease(
   row: ReleaseRow,
+  coverByReleaseId: Map<string, string>,
   metadataByReleaseId: Map<string, ReleaseMetadataRow>
 ): ReleaseOption {
   return {
@@ -83,7 +90,7 @@ function toSelectorRelease(
     artistName: row.artist_name || '',
     title: row.title || '',
     releaseDate: row.release_date || null,
-    coverArtUrl: metadataByReleaseId.get(row.id)?.artwork_url || null,
+    coverArtUrl: resolveCoverArtUrl(row.id, coverByReleaseId, metadataByReleaseId),
     createdAt: row.created_at || '',
     updatedAt: row.updated_at || '',
   };
@@ -130,6 +137,89 @@ async function loadReleaseMetadataMap(
   }
 
   return { metadataByReleaseId };
+}
+
+/**
+ * Resolve cover-art signed URLs for a batch of releases from
+ * `releases.artwork_asset_id` (the Phase 3 source of truth). Looks up each
+ * referenced asset, then mints a fresh signed download URL (the bucket is
+ * private). Returns a Map keyed by release id. Releases without an
+ * artwork_asset_id, or whose asset/signed-URL lookup fails, are simply absent
+ * from the map — the caller falls back to the legacy artwork_url.
+ */
+async function loadCoverArtUrlMap(
+  adminClient: ReturnType<typeof createAdminClient>,
+  releases: ReleaseRow[]
+): Promise<Map<string, string>> {
+  const coverByReleaseId = new Map<string, string>();
+  if (!adminClient) {
+    return coverByReleaseId;
+  }
+
+  const withArtwork = releases.filter((r) => r.artwork_asset_id);
+  const assetIds = Array.from(new Set(withArtwork.map((r) => r.artwork_asset_id as string)));
+  if (assetIds.length === 0) {
+    return coverByReleaseId;
+  }
+
+  const { data, error } = await adminClient
+    .from('assets')
+    .select('id,storage_bucket,storage_path')
+    .in('id', assetIds);
+
+  if (error || !Array.isArray(data)) {
+    // Non-fatal: degrade to the legacy fallback for these releases.
+    return coverByReleaseId;
+  }
+
+  const assetById = new Map<string, { bucket: string; path: string }>();
+  for (const row of data) {
+    const asset = row as { id?: string; storage_bucket?: string; storage_path?: string };
+    if (asset.id && asset.storage_path) {
+      assetById.set(asset.id, {
+        bucket: asset.storage_bucket || RELEASE_ASSETS_BUCKET,
+        path: asset.storage_path,
+      });
+    }
+  }
+
+  await Promise.all(
+    withArtwork.map(async (release) => {
+      const asset = assetById.get(release.artwork_asset_id as string);
+      if (!asset) return;
+      const signedUrl = await generateSignedUrl(
+        adminClient,
+        asset.bucket,
+        asset.path,
+        ASSET_SIGNED_URL_TTL_SECONDS
+      );
+      if (signedUrl) {
+        coverByReleaseId.set(release.id, signedUrl);
+      }
+    })
+  );
+
+  return coverByReleaseId;
+}
+
+/**
+ * Cover-art URL for a release: the signed URL from `artwork_asset_id` when
+ * available, otherwise the legacy `release_metadata.artwork_url`.
+ *
+ * The legacy fallback is temporary — it keeps cover art visible for releases
+ * created before Phase 3 that only have the old text URL. v2 should backfill
+ * those into the assets table via a migration script and drop this fallback.
+ */
+function resolveCoverArtUrl(
+  releaseId: string,
+  coverByReleaseId: Map<string, string>,
+  metadataByReleaseId: Map<string, ReleaseMetadataRow>
+): string | null {
+  return (
+    coverByReleaseId.get(releaseId) ||
+    metadataByReleaseId.get(releaseId)?.artwork_url ||
+    null
+  );
 }
 
 function getDefaultArtistName(user: User): string {
@@ -205,7 +295,7 @@ export async function GET(request: NextRequest) {
   const view = request.nextUrl.searchParams.get('view');
   const releasesResult = await adminClient
     .from('releases')
-    .select('id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
+    .select('id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,artwork_asset_id,created_at,updated_at')
     .eq('owner_user_id', auth.user.id)
     .order('release_date', { ascending: true, nullsFirst: false });
 
@@ -246,9 +336,15 @@ export async function GET(request: NextRequest) {
     return metadataResult.error;
   }
 
+  // Cover art is sourced from releases.artwork_asset_id (Phase 3 source of
+  // truth), resolved to a signed URL; falls back to the legacy artwork_url.
+  const coverByReleaseId = await loadCoverArtUrlMap(adminClient, releases);
+
   if (view === 'selector') {
     const payload: ReleaseSelectorListResponse = {
-      releases: releases.map((release) => toSelectorRelease(release, metadataResult.metadataByReleaseId)),
+      releases: releases.map((release) =>
+        toSelectorRelease(release, coverByReleaseId, metadataResult.metadataByReleaseId)
+      ),
     };
 
     return NextResponse.json(payload);
@@ -277,7 +373,7 @@ export async function GET(request: NextRequest) {
           title: release.title,
           artistName: release.artistName,
           releaseDate: release.releaseDate || null,
-          coverArtUrl: metadataResult.metadataByReleaseId.get(release.id)?.artwork_url || null,
+          coverArtUrl: resolveCoverArtUrl(release.id, coverByReleaseId, metadataResult.metadataByReleaseId),
           status: release.status,
           progress: 0,
           tasksDone: 0,
@@ -299,7 +395,7 @@ export async function GET(request: NextRequest) {
         title: release.title,
         artistName: release.artistName,
         releaseDate: release.releaseDate,
-        coverArtUrl: metadataResult.metadataByReleaseId.get(release.id)?.artwork_url || null,
+        coverArtUrl: resolveCoverArtUrl(release.id, coverByReleaseId, metadataResult.metadataByReleaseId),
         status: computedStatus,
         progress: commandCenter.readiness.completionPercent,
         tasksDone: taskDoneCountByReleaseId.get(release.id) || 0,
