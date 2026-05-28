@@ -45,9 +45,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     setIsMobileSidebarOpen(false);
   }, []);
 
-  const isAuthRoute = pathname?.startsWith('/auth');
+  const isAuthRoute = pathname?.startsWith('/auth') || pathname === '/locked';
   const isDashboardRoute = pathname?.startsWith('/dashboard');
   const isPreSavePublicRoute = pathname?.startsWith('/p/');
+  const isLockedRoute = pathname === '/locked';
   const isSettingsRoute = pathname === '/settings';
   const isPublicStandaloneRoute =
     pathname === '/' ||
@@ -134,9 +135,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         }}
       />
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
-      <Suspense fallback={null}>
-        <FirstTimeOnboardingGate />
-      </Suspense>
+      {isLockedRoute ? null : (
+        <Suspense fallback={null}>
+          <FirstTimeOnboardingGate />
+        </Suspense>
+      )}
     </TaskUIProvider>
   );
 }

@@ -13,6 +13,17 @@ export const isOptionalTableMissingError = (error: unknown): boolean => {
   );
 };
 
+// Combined auth + global access gate. Returns 401 on bad auth, 402 on no
+// active paid/trial access. See apps/web/app/api/_shared/paywall.ts.
+export const requireActiveAuthenticatedUser = async (request: NextRequest) => {
+  const auth = await getAuthenticatedUser(request);
+  if ('error' in auth) return auth;
+  const { requireActiveAccount } = await import('@/app/api/_shared/paywall');
+  const block = await requireActiveAccount(auth.user.id, auth.user.email);
+  if (block) return { error: block };
+  return auth;
+};
+
 export const getAuthenticatedUser = async (request: NextRequest) => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

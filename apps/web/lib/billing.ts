@@ -196,7 +196,14 @@ export const resolveExpectedAmount = (
 export const getPlanExpiry = (plan: string, now = new Date()): Date => {
   const expiresAt = new Date(now);
 
-  if (plan === 'annual' || plan === 'yearly' || plan === 'group_yearly') {
+  if (
+    plan === 'annual' ||
+    plan === 'yearly' ||
+    plan === 'group_yearly' ||
+    // 'access' is the flat-tier ₦15,000 SKU credited by the Paystack webhook
+    // from standalone Payment Page payments. Buys 1 year of access.
+    plan === 'access'
+  ) {
     expiresAt.setFullYear(expiresAt.getFullYear() + 1);
     return expiresAt;
   }

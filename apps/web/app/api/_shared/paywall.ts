@@ -1,53 +1,38 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getSubscriptionSnapshot } from '@/lib/subscription-access';
-import {
-  DEFAULT_PAYWALL_ENABLED,
-  PAYWALL_SETTING_KEY,
-  isMissingTableError,
-  resolvePaywallEnabled,
-} from '@/lib/paywall-config';
+import { getSubscriptionSnapshot, type AccountStatus } from '@/lib/subscription-access';
+import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
 
-export const PAYWALL_RESPONSE_CODE = 'PAYWALL_REQUIRED';
+// 402 Payment Required is the right code here. The frontend interceptor at
+// apps/web/lib/access-redirect.ts catches it and routes to /locked.
+export const ACCESS_REQUIRED_STATUS = 402;
+export const ACCESS_REQUIRED_CODE = 'ACCESS_REQUIRED';
 
-type RequirePaidAccessOptions = {
-  feature: string;
-  message: string;
+type LockReason = 'unpaid' | 'trial_expired' | 'expired';
+
+const reasonForStatus = (status: AccountStatus, trialUsed: boolean): LockReason => {
+  if (status === 'expired') {
+    return trialUsed ? 'trial_expired' : 'expired';
+  }
+  return 'unpaid';
 };
 
-async function isPaywallEnabled(): Promise<boolean> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    return DEFAULT_PAYWALL_ENABLED;
-  }
-
-  try {
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-    const { data, error } = await supabaseAdmin
-      .from('app_settings')
-      .select('value_json,updated_at')
-      .eq('key', PAYWALL_SETTING_KEY)
-      .maybeSingle();
-
-    if (error) {
-      if (isMissingTableError(error)) return DEFAULT_PAYWALL_ENABLED;
-      return DEFAULT_PAYWALL_ENABLED;
-    }
-
-    return resolvePaywallEnabled(data);
-  } catch {
-    return DEFAULT_PAYWALL_ENABLED;
-  }
-}
-
-export async function requirePaidAccess(
+// Returns null when the user has access (paid, active trial, or allowlisted).
+// Returns a 402 NextResponse with { redirect, reason } when blocked.
+//
+// `email` is optional but recommended: passing it lets the allowlist check
+// short-circuit before any DB read. Auth helpers (requireActiveAuthenticatedUser
+// in releases/_shared.ts, tasks-server.ts, ui-drafts/_shared.ts,
+// plans/_shared.ts) all forward it through. Routes calling this inline should
+// pass `user.email` from their auth result.
+export async function requireActiveAccount(
   userId: string,
-  options: RequirePaidAccessOptions
+  email?: string | null
 ) {
-  const paywallEnabled = await isPaywallEnabled();
-  if (!paywallEnabled) {
+  // Allowlist check first — before any DB work — per the spec.
+  if (isAllowlistedEmail(email)) {
+    console.log(
+      `[paywall-allowlist] bypass: user=${userId} email=${email?.trim().toLowerCase()}`
+    );
     return null;
   }
 
@@ -56,12 +41,31 @@ export async function requirePaidAccess(
     return null;
   }
 
+  const reason = reasonForStatus(snapshot.accountStatus, snapshot.trialUsed);
   return NextResponse.json(
     {
-      error: options.message,
-      code: PAYWALL_RESPONSE_CODE,
-      feature: options.feature,
+      error: 'Active subscription or trial required.',
+      code: ACCESS_REQUIRED_CODE,
+      redirect: '/locked',
+      reason,
+      accountStatus: snapshot.accountStatus,
+      trialUsed: snapshot.trialUsed,
     },
-    { status: 403 }
+    { status: ACCESS_REQUIRED_STATUS }
   );
 }
+
+// Legacy alias. Existing call sites (releases/collaborators, organization/members,
+// workspace/members/invite) accept `feature` and `message` options that are now
+// ignored since the global gate took over. The optional `email` argument was
+// added so allowlist bypass propagates through the legacy path too.
+type LegacyOptions = { feature: string; message: string };
+export async function requirePaidAccess(
+  userId: string,
+  _options?: LegacyOptions,
+  email?: string | null
+) {
+  return requireActiveAccount(userId, email);
+}
+
+export const PAYWALL_RESPONSE_CODE = ACCESS_REQUIRED_CODE;

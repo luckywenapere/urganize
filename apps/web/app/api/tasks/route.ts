@@ -4,7 +4,7 @@ import {
   TASKS_TABLE,
   buildTaskSchemaResponse,
   createAdminClient,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
   loadWorkspaceAccessContext,
   ensureWorkspaceAccess,
@@ -46,7 +46,7 @@ function validateTaskPostBody(body: unknown): { ok: true } | { error: string } {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
   const adminClient = createAdminClient(auth.supabaseUrl);
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
   const adminClient = createAdminClient(auth.supabaseUrl);

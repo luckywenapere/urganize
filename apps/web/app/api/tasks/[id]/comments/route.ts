@@ -4,7 +4,7 @@ import {
   createAdminClient,
   createTaskNotification,
   ensureTaskAccess,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
   loadTaskComments,
   logTaskActivity,
@@ -54,7 +54,7 @@ export async function POST(
   const posthogServer = createServerPostHogClient();
 
   try {
-    const auth = await getAuthenticatedUser(request);
+    const auth = await requireActiveAuthenticatedUser(request);
     if ('error' in auth) {
       return auth.error;
     }

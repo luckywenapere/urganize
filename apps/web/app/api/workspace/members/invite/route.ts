@@ -5,7 +5,7 @@ import {
   buildInviteUrl,
   buildTaskSchemaResponse,
   createAdminClient,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
   loadWorkspaceAccessContext,
 } from '@/lib/tasks-server';
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   const posthogServer = createServerPostHogClient();
 
   try {
-    const auth = await getAuthenticatedUser(request);
+    const auth = await requireActiveAuthenticatedUser(request);
     if ('error' in auth) {
       return auth.error;
     }

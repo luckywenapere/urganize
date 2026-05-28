@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createAdminClient,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
   loadWorkspaceAccessContext,
 } from '@/lib/tasks-server';
@@ -22,7 +22,7 @@ const toActivity = (row: Record<string, unknown>): ActivityLogEntry => ({
 });
 
 export async function GET(request: NextRequest) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
   const adminClient = createAdminClient(auth.supabaseUrl);

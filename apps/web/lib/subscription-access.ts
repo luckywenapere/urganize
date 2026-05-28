@@ -2,11 +2,24 @@ import { createClient } from '@supabase/supabase-js';
 
 export type SubscriptionStatus = 'free_trial' | 'active' | 'expired' | 'cancelled';
 
+// Four-state account access model, surfaced to the frontend and used by the
+// global access gate. Derived from existing subscription state + the new
+// profiles.trial_* fields. See supabase/migrations/20260528_payment_gating_trial_fields.sql.
+export type AccountStatus = 'unpaid' | 'trial' | 'paid' | 'expired';
+
 type SubscriptionRow = {
   status?: string | null;
   expires_at?: string | null;
   plan?: string | null;
   updated_at?: string | null;
+};
+
+type ProfileAccessRow = {
+  is_subscribed?: boolean | null;
+  trial_started_at?: string | null;
+  trial_ends_at?: string | null;
+  trial_used?: boolean | null;
+  paid_at?: string | null;
 };
 
 export type SubscriptionSnapshot = {
@@ -16,6 +29,10 @@ export type SubscriptionSnapshot = {
   expiresAt: string | null;
   plan: string | null;
   rawStatus: string | null;
+  accountStatus: AccountStatus;
+  trialUsed: boolean;
+  trialStartedAt: string | null;
+  paidAt: string | null;
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -37,6 +54,9 @@ const createReadClient = () => {
     },
   });
 };
+
+const isAccountStatus = (value: unknown): value is AccountStatus =>
+  value === 'unpaid' || value === 'trial' || value === 'paid' || value === 'expired';
 
 const isSubscriptionStatus = (value: unknown): value is SubscriptionStatus =>
   value === 'free_trial' || value === 'active' || value === 'expired' || value === 'cancelled';
@@ -67,81 +87,143 @@ export const calculateTrialDaysLeft = (
   return Math.ceil(diffMs / DAY_MS);
 };
 
-const resolveSubscriptionSnapshot = (
+const resolveSnapshot = (
   subscription: SubscriptionRow | null,
+  profile: ProfileAccessRow | null,
   now = new Date()
 ): SubscriptionSnapshot => {
-  if (!subscription || !subscription.status) {
+  const rawStatus = subscription?.status || null;
+  const subExpiresAt = parseTimestamp(subscription?.expires_at);
+  const plan = subscription?.plan || null;
+  const subExpiresAtStr = subscription?.expires_at || null;
+  const isSubExpired = subExpiresAt !== null && subExpiresAt.getTime() <= now.getTime();
+
+  const profileTrialUsed = Boolean(profile?.trial_used);
+  const profileTrialEndsAtStr = profile?.trial_ends_at || null;
+  const profileTrialEndsAt = parseTimestamp(profileTrialEndsAtStr);
+  const profileTrialActive =
+    profileTrialEndsAt !== null && profileTrialEndsAt.getTime() > now.getTime();
+
+  // 1. Paid: any active subscription that has not expired.
+  if (
+    (rawStatus === 'active' || rawStatus === 'cancelled') &&
+    !isSubExpired
+  ) {
     return {
-      status: 'expired',
-      hasAccess: false,
+      status: 'active',
+      hasAccess: true,
       trialEndsAt: null,
-      expiresAt: null,
-      plan: null,
-      rawStatus: null,
+      expiresAt: subExpiresAtStr,
+      plan,
+      rawStatus,
+      accountStatus: 'paid',
+      trialUsed: profileTrialUsed,
+      trialStartedAt: profile?.trial_started_at || null,
+      paidAt: profile?.paid_at || null,
     };
   }
 
-  const rawStatus = subscription.status;
-  const expiresAt = parseTimestamp(subscription.expires_at);
-  const plan = subscription.plan || null;
-  const expiresAtStr = subscription.expires_at || null;
-  const isExpired = expiresAt !== null && expiresAt.getTime() <= now.getTime();
+  // 1b. Back-compat: legacy is_subscribed=true without an active subscription
+  // row. The existing paying user predates the subscriptions table being the
+  // single source of truth; honor the profile flag so they don't get locked
+  // out the moment this gate ships. Production-credited webhook payments
+  // write both, so new users go through path 1.
+  if (profile?.is_subscribed === true) {
+    return {
+      status: 'active',
+      hasAccess: true,
+      trialEndsAt: null,
+      expiresAt: subExpiresAtStr,
+      plan,
+      rawStatus,
+      accountStatus: 'paid',
+      trialUsed: profileTrialUsed,
+      trialStartedAt: profile?.trial_started_at || null,
+      paidAt: profile?.paid_at || null,
+    };
+  }
 
-  // Active trial
-  if ((rawStatus === 'trialing' || rawStatus === 'free_trial') && !isExpired) {
+  // 2. Legacy server-side trial expressed via subscriptions.status. Kept for
+  //    back-compat — the new product flow uses the profiles trial fields.
+  if ((rawStatus === 'trialing' || rawStatus === 'free_trial') && !isSubExpired) {
     return {
       status: 'free_trial',
       hasAccess: true,
-      trialEndsAt: expiresAtStr,
-      expiresAt: expiresAtStr,
+      trialEndsAt: subExpiresAtStr,
+      expiresAt: subExpiresAtStr,
       plan,
       rawStatus,
+      accountStatus: 'trial',
+      trialUsed: profileTrialUsed,
+      trialStartedAt: profile?.trial_started_at || null,
+      paidAt: profile?.paid_at || null,
     };
   }
 
-  // Active subscription (expires_at in future or null = no expiry)
-  if (rawStatus === 'active' && !isExpired) {
+  // 3. Profile-driven trial active.
+  if (profileTrialActive) {
     return {
-      status: 'active',
+      status: 'free_trial',
       hasAccess: true,
-      trialEndsAt: null,
-      expiresAt: expiresAtStr,
-      plan,
+      trialEndsAt: profileTrialEndsAtStr,
+      expiresAt: profileTrialEndsAtStr,
+      plan: null,
       rawStatus,
+      accountStatus: 'trial',
+      trialUsed: true,
+      trialStartedAt: profile?.trial_started_at || null,
+      paidAt: profile?.paid_at || null,
     };
   }
 
-  // Cancelled but still within grace period
-  if (rawStatus === 'cancelled' && !isExpired) {
+  // 4. Has used trial or had a subscription that lapsed → expired.
+  const hadAccess =
+    profileTrialUsed || rawStatus !== null || Boolean(profile?.paid_at);
+  if (hadAccess) {
     return {
-      status: 'active',
-      hasAccess: true,
-      trialEndsAt: null,
-      expiresAt: expiresAtStr,
+      status: 'expired',
+      hasAccess: false,
+      trialEndsAt: profileTrialEndsAtStr,
+      expiresAt: subExpiresAtStr,
       plan,
       rawStatus,
+      accountStatus: 'expired',
+      trialUsed: profileTrialUsed,
+      trialStartedAt: profile?.trial_started_at || null,
+      paidAt: profile?.paid_at || null,
     };
   }
 
-  // Everything else — expired
+  // 5. Never paid, never trialed.
   return {
     status: 'expired',
     hasAccess: false,
     trialEndsAt: null,
-    expiresAt: expiresAtStr,
-    plan,
-    rawStatus,
+    expiresAt: null,
+    plan: null,
+    rawStatus: null,
+    accountStatus: 'unpaid',
+    trialUsed: false,
+    trialStartedAt: null,
+    paidAt: null,
   };
 };
 
+// Server fallback when DB reads can't run. Returns no-access so the global
+// gate fails closed: a misconfigured env should lock the app, not open it.
+// In dev this surfaces config issues immediately; in prod it matches the
+// app's "gate everything" posture.
 const getFallbackSnapshot = (): SubscriptionSnapshot => ({
-  status: 'active',
-  hasAccess: true,
+  status: 'expired',
+  hasAccess: false,
   trialEndsAt: null,
   expiresAt: null,
-  plan: 'annual',
-  rawStatus: 'active',
+  plan: null,
+  rawStatus: null,
+  accountStatus: 'unpaid',
+  trialUsed: false,
+  trialStartedAt: null,
+  paidAt: null,
 });
 
 async function fetchSnapshotFromApi(userId: string): Promise<SubscriptionSnapshot | null> {
@@ -173,13 +255,25 @@ async function fetchSnapshotFromApi(userId: string): Promise<SubscriptionSnapsho
       return null;
     }
 
+    const accountStatus = isAccountStatus(payload.accountStatus)
+      ? payload.accountStatus
+      : payload.status === 'active'
+        ? 'paid'
+        : payload.status === 'free_trial'
+          ? 'trial'
+          : 'expired';
+
     return {
       status: payload.status,
-      hasAccess: payload.status === 'free_trial' || payload.status === 'active',
+      hasAccess: accountStatus === 'paid' || accountStatus === 'trial',
       trialEndsAt: typeof payload.trialEndsAt === 'string' ? payload.trialEndsAt : null,
       expiresAt: typeof payload.expiresAt === 'string' ? payload.expiresAt : null,
       plan: typeof payload.plan === 'string' ? payload.plan : null,
       rawStatus: typeof payload.rawStatus === 'string' ? payload.rawStatus : null,
+      accountStatus,
+      trialUsed: Boolean(payload.trialUsed),
+      trialStartedAt: typeof payload.trialStartedAt === 'string' ? payload.trialStartedAt : null,
+      paidAt: typeof payload.paidAt === 'string' ? payload.paidAt : null,
     };
   } catch {
     return null;
@@ -204,20 +298,28 @@ export async function getSubscriptionSnapshot(userId: string): Promise<Subscript
       return getFallbackSnapshot();
     }
 
-    const subscriptionResult = await supabase
-      .from('subscriptions')
-      .select('status,expires_at,plan,updated_at')
-      .eq('user_id', userId)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const [subscriptionResult, profileResult] = await Promise.all([
+      supabase
+        .from('subscriptions')
+        .select('status,expires_at,plan,updated_at')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('profiles')
+        .select('is_subscribed,trial_started_at,trial_ends_at,trial_used,paid_at')
+        .eq('id', userId)
+        .maybeSingle(),
+    ]);
 
-    if (subscriptionResult.error) {
+    if (subscriptionResult.error && profileResult.error) {
       return getFallbackSnapshot();
     }
 
-    return resolveSubscriptionSnapshot(
-      (subscriptionResult.data || null) as SubscriptionRow | null
+    return resolveSnapshot(
+      (subscriptionResult.data || null) as SubscriptionRow | null,
+      (profileResult.data || null) as ProfileAccessRow | null
     );
   } catch {
     return getFallbackSnapshot();

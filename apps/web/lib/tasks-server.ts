@@ -436,6 +436,22 @@ export function isTaskSchemaMissingError(error: unknown): boolean {
   );
 }
 
+// Auth + global access gate in one call. Wraps getAuthenticatedUser with a
+// requireActiveAccount check that returns 402 + redirect when the user has
+// no active paid subscription or running trial. Routes opt in by importing
+// this instead of getAuthenticatedUser. Mirrors the sibling helper in
+// apps/web/app/api/releases/_shared.ts.
+export async function requireActiveAuthenticatedUser(
+  request: NextRequest
+): Promise<{ user: DatabaseUser; supabaseUrl: string } | { error: NextResponse }> {
+  const auth = await getAuthenticatedUser(request);
+  if ('error' in auth) return auth;
+  const { requireActiveAccount } = await import('@/app/api/_shared/paywall');
+  const block = await requireActiveAccount(auth.user.id, auth.user.email);
+  if (block) return { error: block };
+  return auth;
+}
+
 export async function getAuthenticatedUser(
   request: NextRequest
 ): Promise<{ user: DatabaseUser; supabaseUrl: string } | { error: NextResponse }> {

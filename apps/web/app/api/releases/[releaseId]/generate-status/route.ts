@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createAdminClient,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isOptionalTableMissingError,
 } from '../../_shared';
 import { generatePlainTextAiOutput, isAiConfigured } from '@/lib/ai/provider';
@@ -127,7 +127,7 @@ export async function POST(
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
   const { releaseId } = await context.params;

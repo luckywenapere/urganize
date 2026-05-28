@@ -3,7 +3,7 @@ import { sortTasks, type AllTasksResponse } from '@/lib/tasks';
 import {
   buildTaskSchemaResponse,
   createAdminClient,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
   loadWorkspaceAccessContext,
   normalizeTaskFilters,
@@ -11,7 +11,7 @@ import {
 import { TaskService } from '@/lib/services/task-service';
 
 export async function GET(request: NextRequest) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
   const adminClient = createAdminClient(auth.supabaseUrl);

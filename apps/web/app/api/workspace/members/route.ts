@@ -3,14 +3,14 @@ import {
   buildTaskSchemaResponse,
   buildWorkspaceMembersResponse,
   createAdminClient,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
   loadWorkspaceAccessContext,
   loadWorkspaceMembers,
 } from '@/lib/tasks-server';
 
 export async function GET(request: NextRequest) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) {
     return auth.error;
   }

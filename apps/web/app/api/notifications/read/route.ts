@@ -3,7 +3,7 @@ import {
   NOTIFICATIONS_TABLE,
   buildTaskSchemaResponse,
   createAdminClient,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
 } from '@/lib/tasks-server';
 
@@ -14,7 +14,7 @@ type MarkNotificationsReadBody = {
 const readString = (value: unknown): string => String(value || '').trim();
 
 export async function PATCH(request: NextRequest) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) {
     return auth.error;
   }
