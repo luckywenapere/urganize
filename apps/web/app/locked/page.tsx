@@ -10,10 +10,13 @@ import { type AccountStatus } from '@/lib/subscription-access';
 import { errorMessage } from '@/lib/errors';
 import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
 
-// The standalone Paystack Payment Page that collects the flat ₦15,000 fee.
+// Branded vanity URL → 302s to the Paystack Payment Page that collects the
+// flat ₦15,000 fee. Implemented at apps/homepage/app/pay/route.ts so the URL
+// bar stays in the urganize.app domain when users click "Pay" and so the
+// link is shareable on its own ("urganize.app/pay").
 // The webhook (api/webhooks/paystack/route.ts) credits the payer via email
 // match against profiles.email once charge.success arrives.
-const PAYMENT_LINK_URL = 'https://paystack.com/pay/a2dq-qpyri';
+const PAYMENT_LINK_URL = 'https://urganize.app/pay';
 
 type AccessSnapshot = {
   accountStatus: AccountStatus;
