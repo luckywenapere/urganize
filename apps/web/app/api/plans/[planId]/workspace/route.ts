@@ -133,6 +133,14 @@ const getAuthenticatedUser = async (request: NextRequest) => {
     return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   }
 
+  // Global access gate. Returns 402 + /locked redirect when the user has no
+  // active paid subscription or running trial. Allowlisted emails bypass.
+  const { requireActiveAccount } = await import('@/app/api/_shared/paywall');
+  const block = await requireActiveAccount(user.id, user.email);
+  if (block) {
+    return { error: block };
+  }
+
   return { user, supabaseUrl };
 };
 

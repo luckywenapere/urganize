@@ -6,7 +6,7 @@ import {
   buildTaskSchemaResponse,
   createAdminClient,
   ensureTaskAccess,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
   loadTaskAttachments,
 } from '@/lib/tasks-server';
@@ -15,7 +15,7 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) {
     return auth.error;
   }

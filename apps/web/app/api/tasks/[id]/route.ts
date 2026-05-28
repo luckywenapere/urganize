@@ -7,7 +7,7 @@ import {
   buildTaskSchemaResponse,
   createAdminClient,
   ensureTaskAccess,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
 } from '@/lib/tasks-server';
 import { TaskService } from '@/lib/services/task-service';
@@ -57,7 +57,7 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
   const adminClient = createAdminClient(auth.supabaseUrl);
@@ -87,7 +87,7 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
   const adminClient = createAdminClient(auth.supabaseUrl);
@@ -158,7 +158,7 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
   const adminClient = createAdminClient(auth.supabaseUrl);

@@ -3,7 +3,7 @@ import {
   TASK_GROUPS_TABLE,
   buildTaskSchemaResponse,
   createAdminClient,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
   resolveReleaseTaskWorkspace,
   type TaskGroupRow,
@@ -32,7 +32,7 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) {
     return auth.error;
   }

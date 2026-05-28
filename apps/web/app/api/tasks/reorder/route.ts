@@ -3,7 +3,7 @@ import {
   TASKS_TABLE,
   buildTaskSchemaResponse,
   createAdminClient,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
   loadTaskDetail,
   loadWorkspaceAccessContext,
@@ -27,7 +27,7 @@ const readNullableString = (value: unknown): string | null => {
 };
 
 export async function PATCH(request: NextRequest) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) {
     return auth.error;
   }

@@ -11,6 +11,7 @@ import {
   type ReleaseMetadataSnapshot,
   type ReleaseSummary,
 } from '@/lib/release-ops';
+import { requireActiveAccount } from '@/app/api/_shared/paywall';
 
 export {
   ARTISTS_TABLE,
@@ -58,6 +59,24 @@ export const getAuthenticatedUser = async (request: NextRequest) => {
   }
 
   return { user, supabaseUrl };
+};
+
+// Auth + global access gate in a single call. Replaces getAuthenticatedUser
+// in protected routes. Returns { error } either when auth fails (401) or
+// when the user has no active paid/trial access (402 + redirect: '/locked').
+// Open routes (subscription-status, trial/start, payments/verify, webhooks,
+// paywall-status, auth/providers, admin/*, account/delete-now, user/onboarding,
+// pricing-validation) keep using getAuthenticatedUser directly.
+export const requireActiveAuthenticatedUser = async (request: NextRequest) => {
+  const auth = await getAuthenticatedUser(request);
+  if ('error' in auth) {
+    return auth;
+  }
+  const block = await requireActiveAccount(auth.user.id, auth.user.email);
+  if (block) {
+    return { error: block };
+  }
+  return auth;
 };
 
 export const createAdminClient = (supabaseUrl: string) => {

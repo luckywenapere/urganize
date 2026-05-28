@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   createAdminClient,
   ensureReleaseOwnership,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isOptionalTableMissingError,
 } from '../../../_shared';
 import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-helpers';
@@ -13,7 +13,7 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string; assetId: string }> }
 ) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
   const { releaseId, assetId } = await context.params;

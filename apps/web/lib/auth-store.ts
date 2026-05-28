@@ -4,6 +4,63 @@ import { persist } from 'zustand/middleware';
 import type { User } from '@supabase/supabase-js';
 import { supabase, type Profile, handleSupabaseError } from './supabase/client';
 import { errorMessage } from "@/lib/errors";
+import { installAccessRedirect } from './access-redirect';
+import { isAllowlistedEmail } from './paywall-allowlist';
+
+// Install the global 402 → /locked interceptor as soon as the auth store
+// is loaded on the client. Idempotent.
+if (typeof window !== 'undefined') {
+  installAccessRedirect();
+}
+
+const SAFE_AUTH_PATHS = ['/locked', '/auth'];
+
+const isOnSafeAuthPath = (): boolean => {
+  if (typeof window === 'undefined') return true;
+  const pathname = window.location.pathname || '/';
+  return SAFE_AUTH_PATHS.some(
+    (safe) => pathname === safe || pathname.startsWith(`${safe}/`)
+  );
+};
+
+const ensureActiveAccessOrRedirect = async (
+  accessToken: string,
+  email: string | null | undefined
+): Promise<void> => {
+  if (typeof window === 'undefined') return;
+  if (isOnSafeAuthPath()) return;
+  // Fast path — allowlisted emails never see the locked page. The server
+  // would also bypass them via /api/subscription-status, but checking here
+  // saves a round-trip and works even if the snapshot endpoint is degraded.
+  if (isAllowlistedEmail(email)) {
+    console.log(`[paywall-allowlist] frontend bypass: ${email?.trim().toLowerCase()}`);
+    return;
+  }
+  try {
+    const response = await fetch('/api/subscription-status', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: 'no-store',
+    });
+    if (!response.ok) return;
+    const payload = (await response.json().catch(() => ({}))) as {
+      hasAccess?: boolean;
+      accountStatus?: string;
+      trialUsed?: boolean;
+    };
+    if (payload.hasAccess) return;
+    const reason =
+      payload.accountStatus === 'expired'
+        ? payload.trialUsed
+          ? 'trial_expired'
+          : 'expired'
+        : 'unpaid';
+    window.location.replace(`/locked?reason=${encodeURIComponent(reason)}`);
+  } catch {
+    // Network failure — leave the user where they are; the next API call
+    // will trigger the 402 interceptor if access is actually missing.
+  }
+};
 
 let authCheckInFlight: Promise<void> | null = null;
 const shouldEnforceScheduledDeletion = process.env.NODE_ENV === 'production';
@@ -215,13 +272,18 @@ export const useAuthStore = create<AuthState>()(
                 persistLastAuthEmail(profile.email || user.email);
                 const needsOnboarding = resolveNeedsOnboarding(profile);
 
-                set({ 
-                  user: profile, 
-                  isAuthenticated: true, 
+                set({
+                  user: profile,
+                  isAuthenticated: true,
                   isLoading: false,
                   needsOnboarding,
-                  error: null 
+                  error: null
                 });
+
+                // Side-effect: if the user landed in the app without active
+                // access (no paid sub, no live trial), bounce them to /locked.
+                // The check is best-effort; it does not block checkAuth itself.
+                void ensureActiveAccessOrRedirect(session.access_token, profile.email || user.email);
                 return;
               }
             }

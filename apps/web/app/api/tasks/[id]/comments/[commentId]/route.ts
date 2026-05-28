@@ -3,7 +3,7 @@ import {
   buildTaskSchemaResponse,
   createAdminClient,
   ensureTaskAccess,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
   loadTaskComments,
   logTaskActivity,
@@ -21,7 +21,7 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string; commentId: string }> }
 ) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) {
     return auth.error;
   }
@@ -87,7 +87,7 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string; commentId: string }> }
 ) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) {
     return auth.error;
   }

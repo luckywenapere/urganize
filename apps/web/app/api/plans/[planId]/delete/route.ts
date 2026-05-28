@@ -63,6 +63,14 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Global access gate. Returns 402 + /locked redirect when the user has no
+    // active paid subscription or running trial. Allowlisted emails bypass.
+    const { requireActiveAccount } = await import('@/app/api/_shared/paywall');
+    const accessBlock = await requireActiveAccount(user.id, user.email);
+    if (accessBlock) {
+      return accessBlock;
+    }
+
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     const { data: release, error: releaseError } = await supabaseAdmin

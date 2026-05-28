@@ -6,7 +6,7 @@ import {
   buildMissingTableResponse,
   createAdminClient,
   ensureReleaseOwnership,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isOptionalTableMissingError,
   loadReleaseCommandCenterData,
 } from '../_shared';
@@ -146,7 +146,7 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
   const { releaseId } = await context.params;
@@ -194,7 +194,7 @@ export async function PATCH(
   const posthogServer = createServerPostHogClient();
 
   try {
-    const auth = await getAuthenticatedUser(request);
+    const auth = await requireActiveAuthenticatedUser(request);
     if ('error' in auth) return auth.error;
 
     const { releaseId } = await context.params;

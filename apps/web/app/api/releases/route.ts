@@ -7,7 +7,7 @@ import {
   buildMissingTableResponse,
   createAdminClient,
   ensureReleaseOpsSchema,
-  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
   isOptionalTableMissingError,
   loadReleaseCommandCenterData,
 } from './_shared';
@@ -284,7 +284,7 @@ function normalizeReleaseCreatedSource(value: unknown): ReleaseCreatedSource {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await getAuthenticatedUser(request);
+  const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
   const adminClient = createAdminClient(auth.supabaseUrl);
@@ -414,7 +414,7 @@ export async function POST(request: NextRequest) {
   const posthogServer = createServerPostHogClient();
 
   try {
-    const auth = await getAuthenticatedUser(request);
+    const auth = await requireActiveAuthenticatedUser(request);
     if ('error' in auth) return auth.error;
 
     const adminClient = createAdminClient(auth.supabaseUrl);
