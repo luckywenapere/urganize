@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import type { Release } from '@/types/releases';
 
 type WorkspaceReleaseCardProps = {
@@ -8,6 +9,9 @@ type WorkspaceReleaseCardProps = {
   tasksTotal: number;
   selected: boolean;
   onSelect: (releaseId: string) => void;
+  /** Signed URL for the cover art (Phase 3 source of truth, resolved server-side
+   * via lib/cover-art.ts). Null/undefined → neutral placeholder. */
+  coverArtUrl?: string | null;
 };
 
 const statusLabel: Record<string, string> = {
@@ -36,6 +40,7 @@ export function WorkspaceReleaseCard({
   tasksTotal,
   selected,
   onSelect,
+  coverArtUrl,
 }: WorkspaceReleaseCardProps) {
   const progress = tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0;
   const normalizedStatus = statusLabel[release.status] || release.status.replace(/_/g, ' ');
@@ -45,39 +50,61 @@ export function WorkspaceReleaseCard({
       type="button"
       aria-pressed={selected}
       onClick={() => onSelect(release.id)}
-      className={`block w-full border bg-bg-surface px-4 py-4 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+      className={`group block w-full overflow-hidden border bg-bg-surface text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
         selected
           ? 'border-brand bg-brand/8'
           : 'border-stroke-default hover:border-stroke-strong hover:bg-bg-hover'
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          {release.artistName || 'Unassigned artist'}
-        </p>
-        <span className="shrink-0 border border-stroke-default bg-white/[0.03] px-2 py-1 text-[11px] font-medium capitalize text-content-secondary">
-          {normalizedStatus}
-        </span>
+      {/* Cover-art banner — same aspect-square + next/image pattern the
+          previous grid ReleaseCard used. Neutral placeholder when null
+          (per spec: muted surface-toned panel, no letter monogram). */}
+      <div className="aspect-square overflow-hidden border-b border-stroke-subtle bg-bg-elevated">
+        {coverArtUrl ? (
+          <Image
+            src={coverArtUrl}
+            alt={`${release.title} cover art`}
+            width={720}
+            height={720}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+            sizes="(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw"
+          />
+        ) : (
+          <div className="h-full w-full bg-bg-elevated" aria-hidden="true" />
+        )}
       </div>
 
-      <h3 className="mt-2 line-clamp-2 font-display text-lg font-semibold leading-snug text-content-primary">
-        {release.title}
-      </h3>
-
-      <p className="mt-2 text-xs text-content-secondary">{formatReleaseDate(release.releaseDate)}</p>
-
-      <div className="mt-4">
-        <div className="mb-1.5 flex items-center justify-between text-[11px]">
-          <span className="font-medium text-content-tertiary">Progress</span>
-          <span className="font-semibold text-content-primary">
-            {tasksDone} of {tasksTotal} done
+      <div className="px-4 py-4">
+        <div className="flex items-start justify-between gap-3">
+          <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+            {release.artistName || 'Unassigned artist'}
+          </p>
+          <span className="shrink-0 border border-stroke-default bg-white/[0.03] px-2 py-1 text-[11px] font-medium capitalize text-content-secondary">
+            {normalizedStatus}
           </span>
         </div>
-        <div className="h-1 w-full bg-bg-elevated" aria-hidden="true">
-          <div
-            className="h-full bg-brand transition-[width] duration-300"
-            style={{ width: `${progress}%` }}
-          />
+
+        <h3 className="mt-2 line-clamp-2 font-display text-lg font-semibold leading-snug text-content-primary">
+          {release.title}
+        </h3>
+
+        <p className="mt-2 text-xs text-content-secondary">
+          {formatReleaseDate(release.releaseDate)}
+        </p>
+
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center justify-between text-[11px]">
+            <span className="font-medium text-content-tertiary">Progress</span>
+            <span className="font-semibold text-content-primary">
+              {tasksDone} of {tasksTotal} done
+            </span>
+          </div>
+          <div className="h-1 w-full bg-bg-elevated" aria-hidden="true">
+            <div
+              className="h-full bg-brand transition-[width] duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
         </div>
       </div>
     </button>

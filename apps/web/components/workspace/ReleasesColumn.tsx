@@ -1,7 +1,6 @@
 'use client';
 
-import { Plus, RefreshCw } from 'lucide-react';
-import { Button } from '@urganize/ui';
+import { Plus } from 'lucide-react';
 import type { Release } from '@/types/releases';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { WorkspaceReleaseCard } from './WorkspaceReleaseCard';
@@ -10,14 +9,15 @@ export type ReleaseCardData = {
   release: Pick<Release, 'id' | 'title' | 'artistName' | 'status' | 'releaseDate'>;
   tasksDone: number;
   tasksTotal: number;
+  /** Signed Phase 3 cover-art URL; null/undefined surfaces the neutral
+   * placeholder in WorkspaceReleaseCard. */
+  coverArtUrl?: string | null;
 };
 
 type ReleasesColumnProps = {
   releases: ReleaseCardData[];
   scopedReleaseId: string | null;
   onSelect: (releaseId: string) => void;
-  onRefresh: () => void;
-  isRefreshing: boolean;
   /** Opens the create-release modal. Surfaces as a full-width button below
    * sm where the AppTopbar's "New release" button is hidden. */
   onCreateRelease: () => void;
@@ -27,27 +27,13 @@ export function ReleasesColumn({
   releases,
   scopedReleaseId,
   onSelect,
-  onRefresh,
-  isRefreshing,
   onCreateRelease,
 }: ReleasesColumnProps) {
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Releases
-        </h2>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={onRefresh}
-          isLoading={isRefreshing}
-          leftIcon={<RefreshCw className="h-4 w-4" />}
-        >
-          Refresh
-        </Button>
-      </div>
+      <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+        Releases
+      </h2>
 
       {/* Mobile-only full-width "New release". AppTopbar's New release button
           is `hidden sm:inline-flex`; this fills the gap below 640px. */}
@@ -77,7 +63,7 @@ export function ReleasesColumn({
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {releases.map(({ release, tasksDone, tasksTotal }) => (
+          {releases.map(({ release, tasksDone, tasksTotal, coverArtUrl }) => (
             <WorkspaceReleaseCard
               key={release.id}
               release={release}
@@ -85,6 +71,7 @@ export function ReleasesColumn({
               tasksTotal={tasksTotal}
               selected={scopedReleaseId === release.id}
               onSelect={onSelect}
+              coverArtUrl={coverArtUrl}
             />
           ))}
         </div>

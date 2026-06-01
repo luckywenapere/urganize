@@ -1,6 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { normalizePipelineState } from '@/lib/release-execution';
 import type { ReleaseStatus } from '@/types/releases';
+import { loadCoverArtUrlMap, type ReleaseCoverInput } from '@/lib/cover-art';
 
 export class ReleaseService {
   constructor(private adminClient: SupabaseClient) {}
@@ -8,24 +9,45 @@ export class ReleaseService {
   async getReleasesForUser(userId: string) {
     const { data, error } = await this.adminClient
       .from('releases')
-      .select('id,title,artist_name,release_date,description,status,state,readiness_score,metadata,created_at,updated_at')
+      .select(
+        'id,title,artist_name,release_date,description,status,state,readiness_score,metadata,artwork_asset_id,created_at,updated_at'
+      )
       .eq('owner_user_id', userId)
       .order('release_date', { ascending: true, nullsFirst: false });
 
     if (error) throw error;
 
-    return (data || []).map(row => ({
+    const rows = data || [];
+
+    // Resolve Phase 3 cover art (signed URLs) via the shared helper that
+    // /api/releases also uses. Workspace surfaces show the neutral
+    // placeholder when this returns null; the legacy release_metadata
+    // artwork_url fallback is intentionally not consulted here (it's
+    // exclusive to /api/releases per the deprecation note in
+    // release-ops.ts).
+    const coverInput: ReleaseCoverInput[] = rows.map((row) => ({
       id: String(row.id || ''),
-      title: String(row.title || 'Untitled release'),
-      artistName: String(row.artist_name || 'Unknown artist'),
-      releaseDate: row.release_date ? String(row.release_date) : null,
-      description: row.description ? String(row.description) : null,
-      status: String(row.status || 'draft') as ReleaseStatus,
-      state: normalizePipelineState(row.state),
-      readinessScore: Number(row.readiness_score || 0),
-      createdAt: String(row.created_at || ''),
-      updatedAt: String(row.updated_at || ''),
-      metadata: row.metadata || {},
+      artwork_asset_id:
+        typeof row.artwork_asset_id === 'string' ? row.artwork_asset_id : null,
     }));
+    const coverByReleaseId = await loadCoverArtUrlMap(this.adminClient, coverInput);
+
+    return rows.map((row) => {
+      const id = String(row.id || '');
+      return {
+        id,
+        title: String(row.title || 'Untitled release'),
+        artistName: String(row.artist_name || 'Unknown artist'),
+        releaseDate: row.release_date ? String(row.release_date) : null,
+        description: row.description ? String(row.description) : null,
+        status: String(row.status || 'draft') as ReleaseStatus,
+        state: normalizePipelineState(row.state),
+        readinessScore: Number(row.readiness_score || 0),
+        createdAt: String(row.created_at || ''),
+        updatedAt: String(row.updated_at || ''),
+        metadata: row.metadata || {},
+        coverArtUrl: coverByReleaseId.get(id) ?? null,
+      };
+    });
   }
 }

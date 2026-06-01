@@ -10,7 +10,6 @@ import { type Task } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
-import { GreetingHeader } from './GreetingHeader';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { TasksPanel } from './TasksPanel';
 import { FilesPanel } from './FilesPanel';
@@ -22,11 +21,7 @@ function WorkspaceSkeleton() {
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
       <div className="mx-auto max-w-[1440px] px-4 pb-24 pt-10 sm:px-6">
-        <div className="space-y-3">
-          <SkeletonBlock className="h-3 w-24 rounded-none" />
-          <SkeletonBlock className="h-8 w-64 rounded-none" />
-        </div>
-        <div className="mt-8 grid gap-6 lg:grid-cols-[3fr_2fr]">
+        <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
           <div className="grid gap-3 sm:grid-cols-2">
             {Array.from({ length: 4 }).map((_, i) => (
               <SkeletonBlock key={i} className="h-[170px] w-full rounded-none" />
@@ -46,7 +41,7 @@ function WorkspaceSkeleton() {
 export function WorkspaceView() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
-  const { releases, isInitialLoading, isRefreshing, error, loadCommandCenter } = useReleaseStore();
+  const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
   const tasks = useTaskStore((state) => state.tasks);
   const { scopedReleaseId, setScope } = useReleaseScope();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -77,6 +72,7 @@ export function WorkspaceView() {
         },
         tasksDone,
         tasksTotal: releaseTasks.length,
+        coverArtUrl: release.coverArtUrl ?? null,
       };
     });
   }, [releases, taskList]);
@@ -131,26 +127,18 @@ export function WorkspaceView() {
           {scopeAnnouncement}
         </div>
 
-        <header>
-          <GreetingHeader userName={user?.name} />
-        </header>
-
         {error ? (
-          <div className="mt-6 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
+          <div className="mb-6 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>{error}</p>
           </div>
         ) : null}
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[3fr_2fr]">
+        <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
           <ReleasesColumn
             releases={releaseCards}
             scopedReleaseId={scopedReleaseId}
             onSelect={handleSelect}
-            onRefresh={() => {
-              void loadCommandCenter();
-            }}
-            isRefreshing={isRefreshing}
             onCreateRelease={() => setIsCreateModalOpen(true)}
           />
           {/* Right column stacks: tasks panel, then per-release files panel.

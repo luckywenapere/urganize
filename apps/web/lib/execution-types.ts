@@ -12,6 +12,12 @@ export type ExecutionTask = Task & {
 
 export type ExecutionRelease = Release & {
   readinessScore: number;
+  /** Phase 3 signed cover-art URL resolved from `releases.artwork_asset_id`
+   * via lib/cover-art.ts. Null when the release has no artwork asset or the
+   * lookup degraded (callers show a neutral placeholder). The legacy
+   * release_metadata.artwork_url fallback is not surfaced here — it stays
+   * exclusive to /api/releases. */
+  coverArtUrl?: string | null;
 };
 
 export type ActivityLogEntry = {

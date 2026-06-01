@@ -23,11 +23,7 @@ import { ensureOwnedWorkspace } from '@/lib/tasks-server';
 import { instantiateTemplate } from '@/lib/release-templates/instantiate';
 import { getTemplate } from '@/lib/release-templates/loader';
 import type { ReleaseType } from '@/lib/release-templates/types';
-import {
-  ASSET_SIGNED_URL_TTL_SECONDS,
-  RELEASE_ASSETS_BUCKET,
-  generateSignedUrl,
-} from '@/lib/asset-helpers';
+import { loadCoverArtUrlMap } from '@/lib/cover-art';
 import { type ReleaseCreatedSource } from '@/lib/analytics';
 import {
   captureServerAnalyticsEvent,
@@ -137,69 +133,6 @@ async function loadReleaseMetadataMap(
   }
 
   return { metadataByReleaseId };
-}
-
-/**
- * Resolve cover-art signed URLs for a batch of releases from
- * `releases.artwork_asset_id` (the Phase 3 source of truth). Looks up each
- * referenced asset, then mints a fresh signed download URL (the bucket is
- * private). Returns a Map keyed by release id. Releases without an
- * artwork_asset_id, or whose asset/signed-URL lookup fails, are simply absent
- * from the map — the caller falls back to the legacy artwork_url.
- */
-async function loadCoverArtUrlMap(
-  adminClient: ReturnType<typeof createAdminClient>,
-  releases: ReleaseRow[]
-): Promise<Map<string, string>> {
-  const coverByReleaseId = new Map<string, string>();
-  if (!adminClient) {
-    return coverByReleaseId;
-  }
-
-  const withArtwork = releases.filter((r) => r.artwork_asset_id);
-  const assetIds = Array.from(new Set(withArtwork.map((r) => r.artwork_asset_id as string)));
-  if (assetIds.length === 0) {
-    return coverByReleaseId;
-  }
-
-  const { data, error } = await adminClient
-    .from('assets')
-    .select('id,storage_bucket,storage_path')
-    .in('id', assetIds);
-
-  if (error || !Array.isArray(data)) {
-    // Non-fatal: degrade to the legacy fallback for these releases.
-    return coverByReleaseId;
-  }
-
-  const assetById = new Map<string, { bucket: string; path: string }>();
-  for (const row of data) {
-    const asset = row as { id?: string; storage_bucket?: string; storage_path?: string };
-    if (asset.id && asset.storage_path) {
-      assetById.set(asset.id, {
-        bucket: asset.storage_bucket || RELEASE_ASSETS_BUCKET,
-        path: asset.storage_path,
-      });
-    }
-  }
-
-  await Promise.all(
-    withArtwork.map(async (release) => {
-      const asset = assetById.get(release.artwork_asset_id as string);
-      if (!asset) return;
-      const signedUrl = await generateSignedUrl(
-        adminClient,
-        asset.bucket,
-        asset.path,
-        ASSET_SIGNED_URL_TTL_SECONDS
-      );
-      if (signedUrl) {
-        coverByReleaseId.set(release.id, signedUrl);
-      }
-    })
-  );
-
-  return coverByReleaseId;
 }
 
 /**
