@@ -151,8 +151,9 @@ REST-style Next.js Route Handlers at `app/api/**/route.ts`. No tRPC, no GraphQL.
 
 **Patterns to follow:**
 
-- Validate auth via `getAuthenticatedUser(request)` at the top of every protected route.
-- Each domain has a `_shared.ts` (e.g., `releases/_shared.ts`) holding table-name constants, error detection helpers, and shared logic.
+- **For protected routes**, validate auth + payment gate in one call via `requireActiveAuthenticatedUser(request)` (exported from `releases/_shared.ts`, `tasks-server.ts`, `ui-drafts/_shared.ts`, and `plans/_shared.ts`). It wraps `getAuthenticatedUser` and adds a `requireActiveAccount(userId, email)` check that returns **402** + `{ redirect: '/locked', reason }` when the user lacks active paid/trial access. Email allowlist short-circuits before any DB read.
+- **For open routes** (auth, trial/start, payments/verify, webhooks/paystack, subscription-status, paywall-status, admin/*, account/delete-now, user/onboarding, pricing-validation), use `getAuthenticatedUser(request)` directly — these must work when the user is unpaid/locked.
+- Each domain has a `_shared.ts` (e.g., `releases/_shared.ts`) holding table-name constants, error detection helpers, and shared logic. There are currently four `getAuthenticatedUser` definitions across the codebase (see "Known issues" — consolidation pending).
 - Errors via `NextResponse.json({ error, ... }, { status })`. Use `apps/web/lib/errors.ts` helpers where they exist.
 - Long-running AI calls go through `apps/web/lib/ai/provider.ts` (retry + timeout already implemented). Do not open a parallel fetch loop per feature.
 
@@ -188,7 +189,7 @@ REST-style Next.js Route Handlers at `app/api/**/route.ts`. No tRPC, no GraphQL.
 - **Database:** Neon (homepage), Supabase (web).
 - **File storage:** Supabase Storage. Buckets: `release-assets`, `proofs`. No S3/R2.
 - **Email:** Not wired up yet. Add a transactional provider (Resend or Postmark recommended) when v1 needs email notifications.
-- **Payments:** Paystack. Client checkout via `react-paystack` (`components/PaystackButton.tsx`). Server verification at `api/payments/verify`. Webhook at `api/webhooks/paystack` validates HMAC-SHA512 and persists subscription on `charge.success`.
+- **Payments:** Paystack. Two flows: (1) in-app inline checkout via `react-paystack` (`components/PaystackButton.tsx`) → server verification at `api/payments/verify`; (2) standalone Payment Page at `https://paystack.com/pay/a2dq-qpyri` (flat ₦15,000 access SKU) reached via the vanity URL `https://urganize.app/pay` (302 redirect at `apps/homepage/app/pay/route.ts`). The webhook at `api/webhooks/paystack` validates HMAC-SHA512 and credits both flows on `charge.success`: in-app payments match by `payments.reference`; standalone-page payments match by `customer.email` against `profiles.email` when amount equals 1,500,000 kobo.
 - **Analytics:** PostHog (browser + node) in `apps/web`. Vercel Analytics in both apps. Google Analytics in homepage. Formbricks survey provider in homepage.
 - **Customer support:** Tawk.to floating widget in `apps/web/components/support/SupportChat.tsx`.
 
@@ -250,20 +251,13 @@ Both use `npx turbo-ignore @urganize/<app>` as the Ignored Build Step.
 - Route handlers: always `route.ts`. Per-domain helpers in `_shared.ts`.
 - DB columns: `snake_case`. TS types for DB rows: `camelCase`. (Legacy `Db*` prefixed types were removed — they drifted from the schema and were unused.)
 
-**Server patterns:**
-
-- Validate auth via `getAuthenticatedUser` first.
-- Use `createAdminClient` only when RLS bypass is needed and the request is already authorized.
-- Long-running AI calls through `lib/ai/provider.ts` — do not roll your own.
-- Stick to shared primitives in `packages/ui` across apps.
-
 ---
 
 ## Resolved v1 blockers
 
 All seven blockers identified during the v1 cut have been resolved.
 
-1. **Subscription gating implemented** — `resolveSubscriptionSnapshot` checks `status` + `expires_at`; `hasAccess` delegates to the snapshot; `requirePaidAccess` checks the `app_settings` paywall toggle. Paywall off by default, toggleable via `POST /api/admin/paywall`. → `f71a7c9`
+1. **Subscription gating implemented and globally on** — Four-state access model (`unpaid | trial | paid | expired`) computed by `getSubscriptionSnapshot` in `apps/web/lib/subscription-access.ts` from `subscriptions.status`/`expires_at` + new `profiles.trial_*` / `paid_at` columns + `is_subscribed` back-compat. `requireActiveAccount(userId, email)` returns **402** + `{ redirect: '/locked', reason }` when blocked; wrapped by `requireActiveAuthenticatedUser` and applied to ~30 protected routes. Open routes (auth, payments/verify, webhook, trial/start, subscription-status, paywall-status, admin/*, account/delete-now, user/onboarding, pricing-validation) keep `getAuthenticatedUser`. 28-day no-card trial via `POST /api/trial/start`. `/locked` page with Pay ₦15,000 + Start 28-day trial buttons (`apps/web/app/locked/page.tsx`). Frontend `window.fetch` monkey-patch in `apps/web/lib/access-redirect.ts` redirects same-origin 402 responses to `/locked`. 6-email allowlist at `apps/web/lib/paywall-allowlist.ts` bypasses the gate entirely (lowercased + trimmed comparison, logs `[paywall-allowlist]` on bypass). Vanity payment URL `urganize.app/pay`. The legacy `app_settings.global_paywall` toggle is no longer consulted; the snapshot fallback is now fail-CLOSED. → `f71a7c9` (initial), `02efe0b` (full gating + vanity URL, PRs #46, #47).
 2. **Paystack webhook persistence added** — `charge.success` handler looks up the payment by reference, upserts `subscriptions`, and sets `profiles.is_subscribed = true`. Idempotent via upsert on `user_id`. → `6ed3125`
 3. **`activity_log` / `activity_logs` deduplication completed** — v1 cut migration migrated data from `activity_log` (singular) into `activity_logs` (plural) and dropped the old table. → `d23dfea`
 4. **`Db*` type drift removed** — `DbRelease`, `DbTask`, `DbFile` deleted from `lib/supabase/client.ts`. `Profile` type kept (used by analytics). → `77a29bf`
@@ -294,7 +288,10 @@ These are real but not blockers:
 - **Outdated top-level docs** (`README.md`, `PROJECT_SUMMARY.md`, `QUICKSTART.md`) reference an old single-app, npm-based, pre-Neon setup. Treat them as historical. Update or delete them when convenient.
 - **RLS on subscriptions and payments uses permissive `USING (true)` policies** inherited from production. This matches the prior state but is overly permissive. Audit client usage and tighten to owner-only reads + service-role writes as a follow-up.
 - **Possible duplicate artists:** 6 releases across 2 users have 6 distinct `artist_id` values. Either expected at small scale, or the artist lookup-or-create flow always creates instead of looking up. Investigate when scale increases or if duplicate-artist issues surface.
-- **AI features (Phase 5, Phase 6) require Anthropic API key and Zuplo gateway configuration.** Both are code-complete and gated. Once the gateway routes to Claude, set `NEXT_PUBLIC_FEATURE_TAILOR_PLAN=true` (rollout planner) and `NEXT_PUBLIC_FEATURE_STATUS_UPDATE=true` (status generator) to expose their buttons. Both API routes 404 while their flag is off.
+- **`getAuthenticatedUser` drift.** Four separate definitions across the codebase (`apps/web/app/api/releases/_shared.ts`, `apps/web/lib/tasks-server.ts`, `apps/web/app/api/ui-drafts/_shared.ts`, `apps/web/app/api/plans/_shared.ts`) plus inline copies in `organization/*` and `plans/[planId]/*`. Each was given a `requireActiveAuthenticatedUser` wrapper or an inline `requireActiveAccount` call when the payment gate landed. Consolidation into a single `app/api/_shared/auth.ts` is a worthwhile future refactor.
+- **Dead code from the old card-on-file trial flow.** `apps/web/lib/trial-checkout.ts` (`prepareAnnualTrialCheckout`, `buildAnnualTrialMetadata`, `TRIAL_TOKENIZATION_PURPOSE`) and the `trial_claim` machinery in `/api/payments/verify` are unreachable post-payment-gating-deploy. No live UI consumer. Safe to delete in a follow-up.
+- **`app_settings.global_paywall` toggle row remains in DB** but the gate no longer reads it. `POST /api/admin/paywall` still exists and writes to the row but has no effect on access control. Either delete the endpoint + row in a cleanup pass, or repurpose for a future "emergency open" override.
+- **Snapshot fallback is fail-CLOSED.** If `getSubscriptionSnapshot` errors out (DB down, network blip), `hasAccess` returns false → user is locked. Trade-off: a hiccup locks users instead of letting them through. Existing paying users are protected by the `is_subscribed` back-compat branch which fires before the network error path; this should be safe in practice but flag it if you see lockout reports without an obvious cause.
 
 ---
 
@@ -327,8 +324,6 @@ The template provides the structure. The AI provides the tailoring. Never let th
 ---
 
 ## v1 build sequence and current progress (as of May 2026)
-
-**Current position:** Phases 0–4 complete and deployed. Phases 5 and 6 (both AI features) are code-complete and gated behind feature flags, awaiting AI provider activation. Phase 3c polish pending. All six v1 scope items are now built in code; the two AI features are dark by default pending Anthropic key + Zuplo→Claude routing.
 
 v1 is built across six phases. Each phase corresponds to one of the v1 scope items, with some scope items split across multiple phases when the work is non-trivial.
 
@@ -372,7 +367,9 @@ All six v1 scope items are now built in code. Internal use continues throughout 
 
 This section is for state that changes during the v1 build. Keep it current.
 
-**Current build phase:** All six phases built in code. Phases 0–4 complete and deployed. Phases 5 (AI rollout planner) and 6 (AI status update generator) are code-complete but gated behind `NEXT_PUBLIC_FEATURE_TAILOR_PLAN` and `NEXT_PUBLIC_FEATURE_STATUS_UPDATE` respectively (both default off), pending AI provider activation (Anthropic key + Zuplo→Claude routing; gateway currently serves `qwen2.5:3b`). Phase 3c polish (vestigial bucket cleanup, `release_metadata.artwork_url` deprecation, `WorkspaceSection.tsx` deletion) is pending and non-blocking. Internal use runs continuously — the founder dogfoods on his own two artists' releases.
+**Current build phase:** All six v1 phases built in code. Phases 0–4 deployed; Phases 5 and 6 gated pending AI provider activation. Phase 3c polish non-blocking. Whole-app payment gating shipped 2026-05-28 as a meta-layer (Resolved blockers #1). Internal use runs continuously. See Phase progress above for detail.
+
+**Workspace consolidation (in progress, started 2026-06-01):** `apps/web` two-pane workspace under `/dashboard` gated by `NEXT_PUBLIC_FEATURE_WORKSPACE`. Collapses the current Dashboard / Releases / Tasks trio into a single Home view. Spec integrated below under "Workspace consolidation (apps/web)". Not a v1 scope item — UX consolidation over existing v1 surfaces, no new data layer.
 
 **What exists post-UI-cut:**
 - **Pages (4 + modals):** Dashboard (greeting, release cards, due-soon tasks), Releases list, Release detail (header, task progress, task list, status update placeholder), Settings (profile, teammates via workspace members, subscription). Modals: CreateReleaseModal, TaskQuickCreateModal, TaskDetailDrawer.
@@ -383,7 +380,7 @@ This section is for state that changes during the v1 build. Keep it current.
 - **Release lifecycle:** now implicit — a `status` field (draft/planning/in_progress/ready/released/archived) plus task completion progress. No staged pipeline UI.
 - **Workspace members:** used for task assignment; surfaced via Settings → Teammates section. Organization management removed from UI (tables remain in DB).
 
-**Paying users:** 1 (₦5,000/year). 1 contract in legal review (₦100k/year). 1 design partner team meeting scheduled.
+**Paying users:** 3 users currently carry `profiles.is_subscribed = true` in production (theurganization, bortlen4, luckydio800 — all backfilled to `paid_at = 2026-02-28`). 1 contract in legal review (₦100k/year). 1 design partner team meeting scheduled. The earlier note of "1 paying user (₦5,000/year)" was an undercount discovered during the 2026-05-28 payment-gating deploy; reconcile when convenient.
 
 **Last template review:** Single release template v0.3 — signed off by two design partners (2026-05-26). 64 tasks across 11 weeks (8 pre-release + 3 post-release). Markdown source: `apps/web/lib/release-templates/single-v0.3.md`. The v0.1 → v0.3 jump answered the open questions from 2026-05-23 (default duration extended to 11 weeks, missing items folded in, role assignments clarified).
 
@@ -400,8 +397,6 @@ This section is for state that changes during the v1 build. Keep it current.
 ---
 
 **UI cut deployed (2026-05-25):**
-- Removed: six-stage release pipeline, readiness scores, command center framing, workspace tasks view, full-page release creation, standalone team page, organization card, XState release machine.
-- Kept surface: Dashboard, Releases list, Release detail, Settings — plus CreateReleaseModal, TaskQuickCreateModal, TaskDetailDrawer.
 - 19 component/page files deleted, ~28k lines removed, ~3.5k lines added.
 - Two post-deploy bugs caught and fixed: (1) release detail params unwrapping broke in client component on Next.js 16 — fixed by switching to `useParams()` hook; (2) TaskUIProvider `loadOptions` callback had `isLoadingOptions` in its dependency array, creating an unstable reference chain that caused a re-render loop in the task drawer — fixed by switching the reentrancy guard to a ref.
 - No database changes. DB columns (`state`, `readiness_score`) remain; UI just stopped surfacing them.
@@ -418,4 +413,131 @@ This section is for state that changes during the v1 build. Keep it current.
 
 ---
 
-*Last updated: 2026-05-27. All six v1 phases built in code. Phases 0–4 deployed; Phases 5 (rollout planner) and 6 (status update generator) code-complete and gated behind `NEXT_PUBLIC_FEATURE_TAILOR_PLAN` / `NEXT_PUBLIC_FEATURE_STATUS_UPDATE`, awaiting Anthropic key + Zuplo→Claude routing.*
+**Payment gating deployed (2026-05-28):**
+- See Resolved v1 blockers #1 for the full architecture and PR refs.
+- Lessons / post-deploy notes:
+  - Migration `20260528_payment_gating_trial_fields.sql` was applied during the Vercel build window after explicit risk acceptance — fortunate timing; the gate's snapshot query would have errored on every request otherwise.
+  - 28-day no-card trial replaced the previous 3-day card-on-file flow at the same `POST /api/trial/start` path. `lib/trial-checkout.ts` and the `trial_claim` machinery in `/api/payments/verify` are now dead code (see Known issues for cleanup).
+  - Schema migration backfilled `paid_at` for 3 existing subscribed users from `subscriptions.started_at`, added a BEFORE UPDATE trigger blocking PostgREST `authenticated`/`anon` from self-mutating trial/paid fields, and extended `subscriptions.plan` CHECK to allow `'access'`.
+  - Email allowlist verified end-to-end via `apps/web/lib/paywall-allowlist.test.mts` (15-case runtime check).
+
+---
+
+---
+
+## Workspace consolidation (apps/web)
+
+> Integrated 2026-06-01. Spec source: external consolidation doc, reconciled against `REFACTOR_NOTES.md` and the current `apps/web` state. Where the spec conflicted with the existing CLAUDE.md or the code, the repo wins (see "Adaptations from the original spec" at the end of this section).
+
+### Scope & placement
+
+- All work is in **`apps/web`**. Don't touch `apps/homepage`.
+- Stack: Next.js 16 App Router, React 19, TypeScript 5 (strict), Tailwind v3, Supabase via existing hooks/Route Handlers. Everything lives under `/dashboard/*`.
+- The three pages today: `app/dashboard/page.tsx` (overview), `app/dashboard/releases/page.tsx` → `components/releases/ReleasesDashboardPage.tsx`, `app/dashboard/tasks/page.tsx`.
+- Honor existing principles: boring stack, env-only feature flags, visible state, **match existing conventions exactly**, and **don't propagate the duplicate-type anti-pattern**.
+
+### Conventions to MATCH
+
+- Dashboard and Tasks pages use raw Tailwind on the theme tokens with zero shared primitives. Build new components the same way. **Do not** force `@urganize/ui` adoption. Reuse only:
+  - `Button` from `@urganize/ui` for actions (New release / New task / Refresh) — exactly as `ReleasesDashboardPage` already does.
+  - `Logo` only where `AppSidebar` already uses it.
+- Task filters are URL-driven natives in `app/dashboard/tasks/page.tsx`. The existing release-scope URL param is **`release`** (`searchParams.get('release')` in that file). Reuse it for click-to-scope; do not introduce a second param.
+- The `TaskFilters` interface in `lib/tasks.ts` (lines 126–131) is currently orphan. Adopt it for the workspace's filter state if convenient, but don't refactor the Tasks page's existing read pattern as part of this work.
+- The Releases column refresh keeps `<Button isLoading={isRefreshing} leftIcon={<RefreshCw />}>` exactly as today. Do not create a shared RefreshButton.
+
+### Types (canonical — import ONLY these)
+
+- `Release` → `apps/web/types/releases.ts`.
+- `Task` → `apps/web/types/tasks.ts` (`priority: TaskPriority`, `dueDate: string | null`).
+- **Never** import `Release` / `Task` from `apps/web/types/index.ts` (orphan, stale, divergent shapes) or `apps/web/types/database.ts` (its `TaskStatus` is missing `'blocked'`).
+- `ExecutionRelease` is double-declared (`types/releases.ts` vs `lib/execution-types.ts`). If the workspace needs it, prefer the `types/releases.ts` version; flag the duplication as a separate cleanup — do not reconcile it inside this refactor unless it directly blocks.
+
+### Decisions (locked)
+
+- One screen, two panes: Releases = wide main column; Tasks = narrower side panel.
+- Clicking a release scopes the Tasks panel to it (writes the `release` URL param); default (none) shows the global queue; clearing removes the param.
+- All five buckets render, stacked (Overdue / Due today / Due this week / Upcoming / No due date). Use the existing bucketing functions in `lib/tasks.ts`: `getTaskSectionKey`, `groupTasksIntoSections`, `createEmptyMyTasksSections`, `getTaskSectionLabel`, `getTaskSectionDescription`.
+- Compact release cards: drop cover art + the "0 collaborators" line; keep artist eyebrow, title, Draft pill, date, "X of Y done" + thin progress bar.
+- Mobile (below `lg`): panes stack (releases first, tasks below), New release full width, sidebar → menu trigger, tapping a release smooth-scrolls to the Tasks panel.
+- Greeting + headline stats become a slim header.
+- Nav collapses to a single **Home** entry (Settings stays) — edited in the hardcoded `navItems` array in `AppSidebar.tsx`. There is no registry.
+- Remove the Tasks **Release** filter (click-to-scope replaces it); keep Priority + Status.
+
+### Feature flag & rollout (env-only — matches existing pattern)
+
+- Add `NEXT_PUBLIC_FEATURE_WORKSPACE` (matches existing `NEXT_PUBLIC_FEATURE_TAILOR_PLAN` / `NEXT_PUBLIC_FEATURE_STATUS_UPDATE` naming).
+- The swap happens inside `app/dashboard/page.tsx`: flag on → render `<WorkspaceView />`; flag off → render the existing dashboard. No route is moved.
+- Local + Vercel preview env: `NEXT_PUBLIC_FEATURE_WORKSPACE=true`. Production: leave off until Phase 7.
+- Add a commented entry to `apps/web/.env.example` (`# NEXT_PUBLIC_FEATURE_WORKSPACE=false`) — matches the existing flags' style.
+- Optional one-line shared reader (e.g. `featureEnabled('WORKSPACE')` in a new `lib/feature-flags.ts`) to avoid triplicating the check. Propose before adding — not required.
+
+### Architecture (apps/web)
+
+- `app/dashboard/page.tsx` → conditionally renders `WorkspaceView` behind the flag.
+- `components/workspace/`:
+  - `WorkspaceView.tsx` (client) — top-level shell.
+  - `GreetingHeader.tsx`, `StatChips.tsx`.
+  - `ReleasesColumn.tsx`, `WorkspaceReleaseCard.tsx` (name distinct from existing `components/releases/ReleaseCard.tsx`).
+  - `TasksPanel.tsx`, `ScopePill.tsx`, `TaskBucket.tsx`, `WorkspaceTaskRow.tsx` (name distinct from existing `components/tasks/TaskRow.tsx` — or reuse the existing component directly if the styling matches).
+- `lib/releaseStats.ts` — pure functions (no I/O, no React).
+- Task bucketing: **reuse `lib/tasks.ts`'s existing `getTaskSectionKey` / `groupTasksIntoSections`** rather than introducing a `lib/taskBuckets.ts`. This avoids the duplication anti-pattern that the rest of this file flags.
+- Release scope hook: `apps/web` has no `hooks/` folder today (hooks live alongside their consumers, e.g. `useTaskUI` in `components/tasks/TaskUIProvider.tsx`). For `useReleaseScope`, either:
+  - co-locate as `components/workspace/useReleaseScope.ts`, or
+  - create `apps/web/hooks/` and put it there.
+  Pick one and stick with it for the duration of this work; flag the choice in the PR.
+- **Reuse existing Supabase data hooks/fetchers** for releases and tasks: `useReleaseStore.loadCommandCenter()` already hydrates releases + tasks + activity in one call (`/api/command-center`), and the Releases list's `fetch('/api/releases')` pattern is established. No new data layer.
+
+### Theme tokens (defer to existing tokens)
+
+Dark mode + green brand is the established theme. **Use the existing token roles** in `packages/config/tailwind/preset.js` (defined as CSS vars in `apps/web/app/globals.css`). Do not introduce new CSS variables.
+
+| Spec proposal | Map to existing Tailwind token | RGB value (from `globals.css`) |
+|---|---|---|
+| `--canvas` (#0c0d0f) | `bg-bg-base` | `15 15 15` |
+| `--surface` (#161719) | `bg-bg-surface` | `26 26 26` |
+| `--surface-2` (#1e2023) | `bg-bg-elevated` | `28 28 28` |
+| `--border` (#2a2c31) | `border-stroke-default` (or `border-stroke-strong` for emphasis) | `255 255 255 / 6%` (10% strong) |
+| `--fg` (#f2f3f4) | `text-content-primary` | `226 226 226` |
+| `--muted` (#8c9097) | `text-content-secondary` | `128 128 128` |
+| `--faint` (#6c7178) | `text-content-tertiary` | `102 102 102` |
+| `--brand` (#33e0a1) | `bg-brand` / `text-brand` | `62 207 142` |
+| `--brand-ink` (#06321f) | `text-content-inverse` | `9 15 11` |
+| `--danger` (#f0584e) | `status-error` | `240 106 106` |
+| `--warn` (#f0b04e) | `status-warning` | `240 185 92` |
+
+ReleaseCard selected = `border-brand` + `bg-brand/8` (already available via the `brand.subtle` 8% alpha role in the preset). Progress bar = 4px track in `bg-bg-elevated`, fill in `bg-brand`. Priority dot uses the existing helpers `getPriorityDotClass` / `getPriorityBorderClass` from `lib/tasks.ts` (already wired to the canonical priority union). Overdue bucket label uses `text-status-error`.
+
+**Fonts:** repo uses `font-sans` (IBM Plex Sans) and `font-display` (Space Grotesk). Use `font-display` for workspace headlines / eyebrow weights; `font-sans` for body. **Do not add Archivo** unless explicitly approved — adding a font means another `next/font/google` import and a bundle hit, and the existing display font already exists everywhere.
+
+**Eyebrows:** match the existing tone — uppercase, `tracking-[0.16em]` or `tracking-[0.18em]` (both appear in the codebase), `text-[11px]`, `text-content-tertiary`. Sentence case elsewhere; min 11px.
+
+### Verification (no typecheck script / no test runner exist)
+
+- Gate each phase on **`pnpm build`** (Next build type-checks) **+ `pnpm lint`**.
+- Optional, ask-first: add `"typecheck": "tsc --noEmit"` to `apps/web/package.json` and a matching `turbo.json` task. Adding Vitest for the pure `lib/*` functions is a separate tooling decision — propose, get approval, don't add silently.
+
+### Definition of done
+
+- [ ] `app/dashboard/page.tsx` renders the two-pane workspace behind `NEXT_PUBLIC_FEATURE_WORKSPACE`.
+- [ ] Clicking a release scopes Tasks via the `release` URL param; clearing restores global.
+- [ ] Greeting + stat chips derive from live data (active releases, done/total, overdue, due today).
+- [ ] Five buckets render via the existing `lib/tasks.ts` bucket helpers.
+- [ ] Prod flag flipped; `/dashboard/releases` and `/dashboard/tasks` redirect to `/dashboard`.
+- [ ] `navItems` in `AppSidebar.tsx` shows a single Home + Settings; Tasks Release filter removed; Priority + Status retained.
+- [ ] Existing skeletons reused; empty states for scoped buckets and empty release list.
+- [ ] Imports only canonical types; no new duplicate types; orphan/drifted type files untouched.
+- [ ] `pnpm build` + `pnpm lint` pass; no new data layer.
+
+### Adaptations from the original spec (where the repo wins)
+
+- **Theme tokens.** Spec proposed 11 new CSS variables (`--canvas`, `--surface`, `--surface-2`, `--border`, `--fg`, `--muted`, `--faint`, `--brand`, `--brand-ink`, `--danger`, `--warn`). Repo already defines the same roles via `--color-bg-*` / `--color-text-*` / `--color-brand` / `--color-status-*` in `apps/web/app/globals.css`, exposed through `packages/config/tailwind/preset.js`. Mapping table above; do not duplicate.
+- **Font.** Spec proposed Archivo via `next/font`. Repo uses IBM Plex Sans + Space Grotesk + JetBrains Mono. Reuse `font-display` (Space Grotesk) for workspace display headings — no Archivo.
+- **Task bucketing module.** Spec proposed a new `lib/taskBuckets.ts`. Repo already has `getTaskSectionKey` / `groupTasksIntoSections` / `createEmptyMyTasksSections` / `getTaskSectionLabel` / `getTaskSectionDescription` in `lib/tasks.ts`. Reuse — do not duplicate.
+- **Component naming collisions.** Spec proposed `components/workspace/ReleaseCard.tsx` and `components/workspace/TaskRow.tsx`. Both names already exist (`components/releases/ReleaseCard.tsx`, `components/tasks/TaskRow.tsx`). Use prefixed names (`WorkspaceReleaseCard`, `WorkspaceTaskRow`) or reuse the existing components directly.
+- **Hooks folder.** Spec assumed `hooks/useReleaseScope.ts`. There is no `apps/web/hooks/` folder today; hooks live with their components. Either create the folder or co-locate.
+- **Release-filter URL param.** Spec said "find its exact name" — it's `release` (in `app/dashboard/tasks/page.tsx`).
+- **ExecutionRelease conflict.** Spec acknowledged the duplication and said to use the `types/releases.ts` version. Reconciled identically — and flagged for separate cleanup.
+
+---
+
+*Last updated: 2026-05-28.*

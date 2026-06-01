@@ -418,6 +418,50 @@ export function createEmptyMyTasksSections(): Record<TaskSectionKey, Task[]> {
   };
 }
 
+export type WorkspaceStats = {
+  activeReleases: number;
+  tasksDone: number;
+  tasksTotal: number;
+  overdueCount: number;
+  dueTodayCount: number;
+};
+
+/**
+ * Header stats for the consolidated workspace view. Pure — no I/O.
+ * Reuses getTaskSectionKey so overdue / due-today match the bucket rendering.
+ * Completed tasks are excluded from overdue/today counts but counted in tasksDone.
+ */
+export function computeWorkspaceStats(
+  releaseCount: number,
+  tasks: ReadonlyArray<Task>,
+  now: Date = new Date()
+): WorkspaceStats {
+  let tasksDone = 0;
+  let overdueCount = 0;
+  let dueTodayCount = 0;
+
+  for (const task of tasks) {
+    if (task.status === 'done') {
+      tasksDone += 1;
+      continue;
+    }
+    const section = getTaskSectionKey(task, now);
+    if (section === 'overdue') {
+      overdueCount += 1;
+    } else if (section === 'today') {
+      dueTodayCount += 1;
+    }
+  }
+
+  return {
+    activeReleases: releaseCount,
+    tasksDone,
+    tasksTotal: tasks.length,
+    overdueCount,
+    dueTodayCount,
+  };
+}
+
 export function groupTasksIntoSections(tasks: Task[]): Record<TaskSectionKey, Task[]> {
   const grouped = createEmptyMyTasksSections();
 
