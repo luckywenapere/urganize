@@ -14,6 +14,7 @@ import { GreetingHeader } from './GreetingHeader';
 import { StatChips } from './StatChips';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { TasksPanel } from './TasksPanel';
+import { FilesPanel } from './FilesPanel';
 import { useReleaseScope } from './useReleaseScope';
 
 const TASKS_PANEL_ID = 'workspace-tasks';
@@ -170,12 +171,27 @@ export function WorkspaceView() {
             isRefreshing={isRefreshing}
             onCreateRelease={() => setIsCreateModalOpen(true)}
           />
-          <TasksPanel
-            id={TASKS_PANEL_ID}
-            tasks={scopedTasks}
-            scopedRelease={scopedRelease}
-            onClearScope={() => setScope(null)}
-          />
+          {/* Right column stacks: tasks panel, then per-release files panel.
+              No `space-y-*` here — FilesPanel (unscoped) and AssetSection
+              (inside FilesPanel scoped) both carry their own `mt-8`, which is
+              the canonical workspace section gap. Adding wrapper spacing on
+              top of that would compound to ~56px (unwanted). */}
+          <div>
+            <TasksPanel
+              id={TASKS_PANEL_ID}
+              tasks={scopedTasks}
+              scopedRelease={scopedRelease}
+              onClearScope={() => setScope(null)}
+            />
+            {/* Key on the scope id so FilesPanel remounts when the user picks
+                a different release. Cheap, idiomatic React way to reset its
+                toast state (and AssetSection's internal asset list) without an
+                effect — see React docs "Resetting state with a key". */}
+            <FilesPanel
+              key={scopedRelease?.id ?? 'unscoped'}
+              scopedRelease={scopedRelease}
+            />
+          </div>
         </div>
       </div>
 
