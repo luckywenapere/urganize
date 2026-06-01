@@ -8,7 +8,6 @@ import { Logo } from '@urganize/ui';
 import {
   ChevronLeft,
   ChevronRight,
-  Home,
   LayoutDashboard,
   Settings,
   X,
@@ -29,17 +28,9 @@ type NavItem = {
   match: (pathname: string | null) => boolean;
 };
 
-// Single "Home" entry now that /dashboard is the unified workspace (releases
-// column + tasks panel). Match covers all of /dashboard/* so the release detail
-// page (/dashboard/releases/[releaseId]) still highlights Home in the rail.
+// The Urganize logo at the top of the sidebar is now the way back to
+// /dashboard (the workspace). Settings is the only persistent nav entry.
 const navItems: NavItem[] = [
-  {
-    href: '/dashboard',
-    label: 'Home',
-    icon: Home,
-    match: (pathname) =>
-      pathname === '/dashboard' || pathname?.startsWith('/dashboard/') === true,
-  },
   {
     href: '/settings',
     label: 'Settings',

@@ -142,6 +142,20 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2">
+        {/*
+          Native <select> dropdowns: the open option-list popup is rendered by
+          the OS/browser, not the page DOM. We drop the global `.input` class
+          (which uses a near-transparent white bg that some browsers read as a
+          light surface and then paint a light popup over) in favour of:
+            - solid dark surface tokens on the closed select
+            - `[color-scheme:dark]` directly on the element so the open popup
+              is painted in dark even if the page-level `color-scheme: dark`
+              isn't inherited reliably for form controls
+            - explicit `bg-bg-surface text-content-primary` on each <option> as
+              a fallback for browsers that honor option styling
+          Caveats noted in the response: Safari/macOS may still render the
+          popup in light mode for "fully native" selects regardless.
+        */}
         <label className="block">
           <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-content-tertiary">
             Priority
@@ -149,11 +163,13 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
           <select
             value={priorityFilter}
             onChange={(event) => syncFilter({ priority: event.target.value })}
-            className="input h-10 w-full"
+            className="h-10 w-full rounded-lg border border-stroke-default bg-bg-surface px-3 text-sm text-content-primary transition-colors [color-scheme:dark] hover:border-stroke-strong focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
-            <option value="">All priorities</option>
+            <option value="" className="bg-bg-surface text-content-primary">
+              All priorities
+            </option>
             {TASK_PRIORITY_OPTIONS.map((priority) => (
-              <option key={priority} value={priority}>
+              <option key={priority} value={priority} className="bg-bg-surface text-content-primary">
                 {getTaskPriorityLabel(priority)}
               </option>
             ))}
@@ -167,11 +183,13 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
           <select
             value={statusFilter}
             onChange={(event) => syncFilter({ status: event.target.value })}
-            className="input h-10 w-full"
+            className="h-10 w-full rounded-lg border border-stroke-default bg-bg-surface px-3 text-sm text-content-primary transition-colors [color-scheme:dark] hover:border-stroke-strong focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
-            <option value="">All statuses</option>
+            <option value="" className="bg-bg-surface text-content-primary">
+              All statuses
+            </option>
             {TASK_STATUS_OPTIONS.map((status) => (
-              <option key={status} value={status}>
+              <option key={status} value={status} className="bg-bg-surface text-content-primary">
                 {getTaskStatusLabel(status)}
               </option>
             ))}

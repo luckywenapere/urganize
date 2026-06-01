@@ -17,6 +17,16 @@ import { useReleaseScope } from './useReleaseScope';
 
 const TASKS_PANEL_ID = 'workspace-tasks';
 
+/**
+ * Parse a createdAt ISO string to epoch ms. Empty/invalid values map to 0 so
+ * those releases sort to the bottom deterministically rather than producing
+ * NaN comparator results (which is undefined behavior in Array#sort).
+ */
+function toCreatedMs(value: string): number {
+  const ms = new Date(value).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+}
+
 function WorkspaceSkeleton() {
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
@@ -59,7 +69,15 @@ export function WorkspaceView() {
   const taskList: Task[] = tasks;
 
   const releaseCards: ReleaseCardData[] = useMemo(() => {
-    return releases.map((release) => {
+    // Newest-first by canonical createdAt. Spread before sort so the
+    // useReleaseStore reference stays untouched. Array#sort is stable on
+    // every engine we ship to (ES2019+), so equal timestamps preserve their
+    // original order without extra tie-breaking.
+    const sortedReleases = [...releases].sort(
+      (a, b) => toCreatedMs(b.createdAt) - toCreatedMs(a.createdAt)
+    );
+
+    return sortedReleases.map((release) => {
       const releaseTasks = taskList.filter((task) => task.releaseId === release.id);
       const tasksDone = releaseTasks.filter((task) => task.status === 'done').length;
       return {
