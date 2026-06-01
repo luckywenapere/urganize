@@ -62,7 +62,12 @@ export function ReleasesColumn({
           }
         />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        // Card grid: 2-up below lg (stacked layout — phones / tablets),
+        // 3-up at lg+ (inside the 2-pane workspace, the Releases column is
+        // ~566px at 1280 viewport — 3-up gives ~180px cards with the square
+        // cover art shrinking proportionally, instead of the 2-up ~277px
+        // banners that wasted vertical space).
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {releases.map(({ release, tasksDone, tasksTotal, coverArtUrl }) => (
             <WorkspaceReleaseCard
               key={release.id}

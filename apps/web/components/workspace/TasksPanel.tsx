@@ -149,7 +149,7 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
         <ScopePill release={scopedRelease} onClear={onClearScope} />
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         {/*
           Native <select> dropdowns: the open option-list popup is rendered by
           the OS/browser, not the page DOM. We drop the global `.input` class

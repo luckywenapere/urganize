@@ -3,7 +3,6 @@
 import { usePathname } from 'next/navigation';
 import { Menu, PanelLeftClose, PanelLeftOpen, Plus } from 'lucide-react';
 import { IconButton } from '@urganize/ui';
-import { TaskNotificationBell } from '@/components/tasks/TaskNotificationBell';
 
 type AppTopbarProps = {
   isSidebarCollapsed?: boolean;
@@ -89,13 +88,6 @@ export function AppTopbar({
           <Plus className="h-4 w-4" />
           <span>New release</span>
         </button>
-
-        {/* Notifications bell — docked into the topbar's right rail in the
-            slot the user avatar previously occupied. Self-sufficient via
-            useTaskUI() + TASKS_CHANGED_EVENT (was previously a floating
-            fixed-position widget that overlapped workspace content).
-            Renders for all authenticated dashboard routes, same as before. */}
-        <TaskNotificationBell />
       </div>
     </header>
   );

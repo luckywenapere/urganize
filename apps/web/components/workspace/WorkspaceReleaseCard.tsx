@@ -99,7 +99,7 @@ export function WorkspaceReleaseCard({
           {formatReleaseDate(release.releaseDate)}
         </p>
 
-        <div className="mt-4">
+        <div className="mt-3">
           <div className="mb-1.5 flex items-center justify-between text-[11px]">
             <span className="font-medium text-content-tertiary">Progress</span>
             <span className="font-semibold text-content-primary">
