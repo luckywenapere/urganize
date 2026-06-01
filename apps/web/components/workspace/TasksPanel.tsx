@@ -17,6 +17,7 @@ import {
 } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
 import { TaskRow } from '@/components/tasks/TaskRow';
+import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { ScopePill } from './ScopePill';
 
 const sectionOrder: TaskSectionKey[] = ['overdue', 'today', 'week', 'upcoming', 'no_due_date'];
@@ -65,6 +66,13 @@ type TasksPanelProps = {
 export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPanelProps) {
   const router = useRouter();
   const pathname = usePathname();
+  // The TaskUIProvider mounted in AppShell already renders TaskDetailDrawer
+  // globally; the workspace just needs to call openTask(taskId) on row click
+  // to surface it. Restores the per-task drawer (Title, Status, Priority,
+  // Assignee, Due, Release, Group, Description, Comments, per-task
+  // Attachments via task_attachments table — distinct from the per-release
+  // FilesPanel/assets table).
+  const { openTask } = useTaskUI();
   const searchParams = useSearchParams();
 
   const priorityFilter = (searchParams.get('priority') || '') as TaskPriority | '';
@@ -240,7 +248,12 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
                     </div>
                   ) : (
                     sectionTasks.map((task) => (
-                      <TaskRow key={task.id} task={task} density="compact" />
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        density="compact"
+                        onClick={(t) => openTask(t.id)}
+                      />
                     ))
                   )}
                 </div>
