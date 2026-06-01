@@ -41,3 +41,5 @@ allfiles.txt
 .next/
 .turbo/
 **/cache/swc/
+.gstack/
+supabase/.temp/
