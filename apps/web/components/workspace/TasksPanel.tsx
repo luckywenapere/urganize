@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { ChevronDown } from 'lucide-react';
 import {
   TASK_PRIORITY_OPTIONS,
   TASK_STATUS_OPTIONS,
@@ -19,6 +20,17 @@ import { TaskRow } from '@/components/tasks/TaskRow';
 import { ScopePill } from './ScopePill';
 
 const sectionOrder: TaskSectionKey[] = ['overdue', 'today', 'week', 'upcoming', 'no_due_date'];
+
+// Default expanded state on first render: Overdue open, everything else
+// collapsed. Keeps the panel short so the user sees the most urgent bucket
+// up top and can expand other contexts on demand.
+const DEFAULT_EXPANDED: Record<TaskSectionKey, boolean> = {
+  overdue: true,
+  today: false,
+  week: false,
+  upcoming: false,
+  no_due_date: false,
+};
 
 // Per-bucket empty-state copy. The unscoped copy is celebratory ("You're
 // caught up"); the scoped copy is factual because a single release with no
@@ -87,6 +99,39 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
 
   const sections = useMemo(() => groupTasksIntoSections(filteredTasks), [filteredTasks]);
 
+  // Per-bucket open/closed state, persisted for the session.
+  const [expanded, setExpanded] = useState<Record<TaskSectionKey, boolean>>(DEFAULT_EXPANDED);
+
+  // Detect scope-id transitions during render so we can auto-expand any bucket
+  // that has scoped matches — otherwise the user clicks a release and the
+  // results land behind a collapsed header. This is the documented "Adjusting
+  // state when a prop changes" pattern from React's docs (setState during
+  // render, conditional, converges in one extra render). The undefined sentinel
+  // means the auto-expand also fires on first mount when an initial scope is
+  // present in the URL.
+  const [prevScopeId, setPrevScopeId] = useState<string | null | undefined>(undefined);
+  const currentScopeId = scopedRelease?.id ?? null;
+  if (prevScopeId !== currentScopeId) {
+    setPrevScopeId(currentScopeId);
+    if (scopedRelease) {
+      setExpanded((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        for (const key of sectionOrder) {
+          if (sections[key].length > 0 && !next[key]) {
+            next[key] = true;
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }
+  }
+
+  const toggleBucket = (key: TaskSectionKey) => {
+    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   return (
     <aside id={id} className="space-y-3 scroll-mt-20">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -137,10 +182,20 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
       <div className="space-y-3">
         {sectionOrder.map((sectionKey) => {
           const sectionTasks = sections[sectionKey];
+          const isOpen = expanded[sectionKey];
+          const bodyId = `workspace-bucket-${sectionKey}`;
           return (
             <div key={sectionKey} className="border border-stroke-default bg-bg-surface">
-              <div className="border-b border-stroke-subtle px-4 py-3">
-                <p
+              <button
+                type="button"
+                onClick={() => toggleBucket(sectionKey)}
+                aria-expanded={isOpen}
+                aria-controls={bodyId}
+                className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${
+                  isOpen ? 'border-b border-stroke-subtle' : ''
+                }`}
+              >
+                <span
                   className={`text-sm font-semibold ${
                     sectionKey === 'overdue' ? 'text-status-error' : 'text-content-primary'
                   }`}
@@ -149,21 +204,29 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
                   <span className="ml-2 font-normal text-content-tertiary">
                     ({sectionTasks.length})
                   </span>
-                </p>
-              </div>
-              {sectionTasks.length === 0 ? (
-                <div className="px-4 py-5">
-                  <p className="text-xs text-content-tertiary">
-                    {scopedRelease ? SCOPED_EMPTY[sectionKey] : UNSCOPED_EMPTY[sectionKey]}
-                  </p>
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${
+                    isOpen ? '' : '-rotate-90'
+                  }`}
+                  aria-hidden="true"
+                />
+              </button>
+              {isOpen ? (
+                <div id={bodyId}>
+                  {sectionTasks.length === 0 ? (
+                    <div className="px-4 py-5">
+                      <p className="text-xs text-content-tertiary">
+                        {scopedRelease ? SCOPED_EMPTY[sectionKey] : UNSCOPED_EMPTY[sectionKey]}
+                      </p>
+                    </div>
+                  ) : (
+                    sectionTasks.map((task) => (
+                      <TaskRow key={task.id} task={task} density="compact" />
+                    ))
+                  )}
                 </div>
-              ) : (
-                <div>
-                  {sectionTasks.map((task) => (
-                    <TaskRow key={task.id} task={task} />
-                  ))}
-                </div>
-              )}
+              ) : null}
             </div>
           );
         })}
