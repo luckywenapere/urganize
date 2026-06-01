@@ -79,9 +79,16 @@ export function WorkspaceReleaseCard({
           <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
             {release.artistName || 'Unassigned artist'}
           </p>
-          <span className="shrink-0 border border-stroke-default bg-white/[0.03] px-2 py-1 text-[11px] font-medium capitalize text-content-secondary">
-            {normalizedStatus}
-          </span>
+          {/* Status pill is hidden for 'draft' (the canonical
+              RELEASE_STATUS_OPTIONS default — see types/releases.ts) since
+              nearly every release lives there during planning, making the
+              pill universal noise. Renders only when status has moved past
+              draft, so the pill becomes a meaningful signal. */}
+          {release.status !== 'draft' ? (
+            <span className="shrink-0 border border-stroke-default bg-white/[0.03] px-2 py-1 text-[11px] font-medium capitalize text-content-secondary">
+              {normalizedStatus}
+            </span>
+          ) : null}
         </div>
 
         <h3 className="mt-2 line-clamp-2 font-display text-lg font-semibold leading-snug text-content-primary">

@@ -82,7 +82,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         {sidebar}
         <div className="flex min-w-0 flex-1 flex-col">
           <AppTopbar
-            userName={workspaceUserName}
             isSidebarCollapsed={isSidebarCollapsed}
             onToggleSidebar={toggleSidebar}
             onOpenMobileSidebar={openMobileSidebar}

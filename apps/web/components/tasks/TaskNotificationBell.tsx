@@ -3,11 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { formatNotificationTime, getNotificationMessage, type TaskNotification } from '@/lib/tasks';
-
-type TaskNotificationBellProps = {
-  onOpenTask: (taskId: string) => void;
-  refreshKey?: number;
-};
+import { TASKS_CHANGED_EVENT, useTaskUI } from '@/components/tasks/TaskUIProvider';
 
 type NotificationsPayload = {
   notifications?: TaskNotification[];
@@ -23,7 +19,16 @@ async function getAccessToken(): Promise<string> {
   return session?.access_token || '';
 }
 
-export function TaskNotificationBell({ onOpenTask, refreshKey = 0 }: TaskNotificationBellProps) {
+/**
+ * Notifications bell, now docked inside AppTopbar (was previously a floating
+ * fixed-position widget rendered from TaskUIProvider). It reads `openTask`
+ * from useTaskUI() directly and refetches its feed when a TASKS_CHANGED_EVENT
+ * fires — the same event the rest of the workspace uses after task patches,
+ * completions, and creates. No `refreshKey` prop plumbing needed; the bell
+ * is now self-sufficient.
+ */
+export function TaskNotificationBell() {
+  const { openTask } = useTaskUI();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<TaskNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -56,7 +61,18 @@ export function TaskNotificationBell({ onOpenTask, refreshKey = 0 }: TaskNotific
 
   useEffect(() => {
     void loadNotifications();
-  }, [loadNotifications, refreshKey]);
+  }, [loadNotifications]);
+
+  // Refetch on TASKS_CHANGED_EVENT (dispatched after task patches, creates,
+  // deletes, completes, comments). Replaces the old refreshKey prop wired by
+  // TaskUIProvider.
+  useEffect(() => {
+    const handleTasksChanged = () => {
+      void loadNotifications();
+    };
+    window.addEventListener(TASKS_CHANGED_EVENT, handleTasksChanged);
+    return () => window.removeEventListener(TASKS_CHANGED_EVENT, handleTasksChanged);
+  }, [loadNotifications]);
 
   useEffect(() => {
     let lastFetchTime = Date.now();
@@ -93,27 +109,27 @@ export function TaskNotificationBell({ onOpenTask, refreshKey = 0 }: TaskNotific
   };
 
   return (
-    <div className="pointer-events-auto fixed right-4 top-[4.75rem] z-[150] md:right-6">
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setIsOpen((value) => !value)}
-          className="relative grid h-12 w-12 place-items-center rounded-full border border-stroke-default bg-bg-sidebar/95 text-content-primary shadow-[0_18px_42px_-28px_rgba(0,0,0,0.45)] backdrop-blur-sm"
-          aria-label="Open notifications"
-        >
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="M6.5 9.5a5.5 5.5 0 0 1 11 0v3.2c0 .83.26 1.64.74 2.31l.76 1.08H5l.76-1.08c.48-.67.74-1.48.74-2.31V9.5Z" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M9.5 18.5a2.5 2.5 0 0 0 5 0" strokeLinecap="round" />
-          </svg>
-          {unreadCount > 0 ? (
-            <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-status-error px-1.5 text-[11px] font-semibold text-white">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          ) : null}
-        </button>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((value) => !value)}
+        className="relative grid h-10 w-10 place-items-center border border-stroke-default bg-bg-elevated text-content-secondary transition-colors hover:bg-white/[0.04] hover:text-content-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        aria-label="Open notifications"
+        aria-expanded={isOpen}
+      >
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M6.5 9.5a5.5 5.5 0 0 1 11 0v3.2c0 .83.26 1.64.74 2.31l.76 1.08H5l.76-1.08c.48-.67.74-1.48.74-2.31V9.5Z" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M9.5 18.5a2.5 2.5 0 0 0 5 0" strokeLinecap="round" />
+        </svg>
+        {unreadCount > 0 ? (
+          <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-status-error px-1.5 text-[11px] font-semibold text-white">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        ) : null}
+      </button>
 
-        {isOpen ? (
-          <div className="absolute right-0 mt-3 w-[min(92vw,380px)] overflow-hidden rounded-[26px] border border-stroke-default bg-bg-surface shadow-[0_24px_72px_-34px_rgba(0,0,0,0.72)]">
+      {isOpen ? (
+        <div className="absolute right-0 mt-3 w-[min(92vw,380px)] overflow-hidden rounded-[26px] border border-stroke-default bg-bg-surface shadow-[0_24px_72px_-34px_rgba(0,0,0,0.72)]">
             <div className="flex items-center justify-between border-b border-stroke-subtle px-4 py-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Notifications</p>
@@ -142,7 +158,7 @@ export function TaskNotificationBell({ onOpenTask, refreshKey = 0 }: TaskNotific
                     type="button"
                     onClick={() => {
                       void markNotificationsRead([notification.id]);
-                      onOpenTask(notification.taskId);
+                      openTask(notification.taskId);
                       setIsOpen(false);
                     }}
                     className={`flex w-full items-start gap-3 rounded-[20px] px-4 py-4 text-left transition ${
@@ -166,10 +182,9 @@ export function TaskNotificationBell({ onOpenTask, refreshKey = 0 }: TaskNotific
                   </button>
                 ))
               )}
-            </div>
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -13,7 +13,6 @@ import {
 import { usePathname } from 'next/navigation';
 import { TaskDetailDrawer } from '@/components/tasks/TaskDetailDrawer';
 import { type DependencyTaskSummary } from '@/components/tasks/TaskDependenciesSection';
-import { TaskNotificationBell } from '@/components/tasks/TaskNotificationBell';
 import { TaskQuickCreateModal } from '@/components/tasks/TaskQuickCreateModal';
 import { type ReleaseOption } from '@/lib/release-helpers';
 import { isTypingTarget, type TaskCreateSource, type TaskDetail, type TaskGroup, type TaskPriority, type WorkspaceMember } from '@/lib/tasks';
@@ -145,7 +144,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [, setIsOptionsLoaded] = useState(false);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
-  const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
 
   const shouldShowTaskShell = pathname?.startsWith('/dashboard') || pathname === '/settings';
 
@@ -399,7 +397,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       setStatusBlockerMessage('');
       await refreshOpenTask();
       dispatchTasksChanged();
-      setNotificationRefreshKey((value) => value + 1);
       return;
     }
 
@@ -424,8 +421,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         setStatusBlockerMessage('');
         await loadTaskGroups(payload.task.releaseId);
         dispatchTasksChanged();
-        setNotificationRefreshKey((value) => value + 1);
-      }
+        }
     } catch (error) {
       // Surface the failure in the drawer so the user knows their change
       // didn't persist. Re-fetch the task to revert any visual drift.
@@ -472,7 +468,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
 
       closeQuickCreate();
       dispatchTasksChanged();
-      setNotificationRefreshKey((value) => value + 1);
 
       if (payload.task?.id) {
         openTask(payload.task.id);
@@ -494,7 +489,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     closeTask();
     setTask(null);
     dispatchTasksChanged();
-    setNotificationRefreshKey((value) => value + 1);
   };
 
   const addComment = async (content: string) => {
@@ -509,7 +503,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
 
     await refreshOpenTask();
     dispatchTasksChanged();
-    setNotificationRefreshKey((value) => value + 1);
   };
 
   const updateComment = async (commentId: string, content: string) => {
@@ -612,10 +605,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   return (
     <TaskUIContext.Provider value={contextValue}>
       {children}
-
-      {shouldShowTaskShell ? (
-        <TaskNotificationBell onOpenTask={openTask} refreshKey={notificationRefreshKey} />
-      ) : null}
 
       <TaskQuickCreateModal
         isOpen={isQuickCreateOpen}

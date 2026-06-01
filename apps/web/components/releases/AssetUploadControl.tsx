@@ -226,14 +226,25 @@ export function AssetUploadControl({ releaseId, onUploaded, onToast }: AssetUplo
           <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-content-tertiary">
             Category
           </span>
+          {/*
+            Native <select> dark-popup fix — same treatment applied to the
+            workspace TasksPanel selects: drop the global `.input` class
+            (transparent-white bg confuses some browser popup renderers
+            despite the page-level color-scheme: dark), set solid dark
+            tokens directly, add `[color-scheme:dark]` to the element, and
+            style each <option> as a fallback for browsers that honor option
+            styling. bg-bg-elevated (vs the TasksPanel selects' bg-bg-surface)
+            because this control sits inside an already-bg-bg-surface card —
+            elevated keeps the visual depth.
+          */}
           <select
             value={category}
             onChange={handleCategoryChange}
             disabled={isUploading}
-            className="input h-10 w-full rounded-none border-stroke-default bg-bg-elevated"
+            className="h-10 w-full border border-stroke-default bg-bg-elevated px-3 text-sm text-content-primary transition-colors [color-scheme:dark] hover:border-stroke-strong focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
           >
             {ASSET_CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
+              <option key={cat} value={cat} className="bg-bg-elevated text-content-primary">
                 {categoryLabel(cat)}
               </option>
             ))}

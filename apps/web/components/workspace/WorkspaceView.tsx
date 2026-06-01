@@ -30,7 +30,7 @@ function toCreatedMs(value: string): number {
 function WorkspaceSkeleton() {
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto max-w-[1440px] px-4 pb-24 pt-10 sm:px-6">
+      <div className="mx-auto max-w-[1440px] px-4 pb-24 pt-6 sm:px-6">
         <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
           <div className="grid gap-3 sm:grid-cols-2">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -137,7 +137,7 @@ export function WorkspaceView() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto max-w-[1440px] px-4 pb-24 pt-10 sm:px-6">
+      <div className="mx-auto max-w-[1440px] px-4 pb-24 pt-6 sm:px-6">
         {/* Screen-reader-only live region. Polite mode waits for the SR to be
             idle, atomic="true" re-reads the whole message. Mirrors the visible
             ScopePill copy so SR users get the same context. */}
