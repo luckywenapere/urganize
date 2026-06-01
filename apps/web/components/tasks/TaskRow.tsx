@@ -57,7 +57,12 @@ export function TaskRow({ task, onClick, onBlocker }: TaskRowProps) {
       }}
       data-ph-capture-attribute-section="tasks"
     >
-      <TaskCompletionCheckbox taskId={task.id} status={task.status} onBlocker={onBlocker} />
+      <TaskCompletionCheckbox
+        taskId={task.id}
+        status={task.status}
+        onBlocker={onBlocker}
+        taskTitle={task.title}
+      />
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">

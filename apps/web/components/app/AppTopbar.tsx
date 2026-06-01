@@ -15,10 +15,14 @@ type AppTopbarProps = {
   onNewRelease?: () => void;
 };
 
+// `/dashboard` is the consolidated workspace; matches the sidebar's "Home"
+// label. `/dashboard/releases/[releaseId]` is still the release detail route,
+// so the Releases startsWith matcher stays (the list /dashboard/releases
+// 308-redirects to /dashboard and never reaches this code). The legacy
+// /dashboard/tasks entry was removed for the same reason.
 const routeTitles = [
-  { match: (pathname: string) => pathname === '/dashboard', title: 'Dashboard', eyebrow: 'Overview' },
-  { match: (pathname: string) => pathname.startsWith('/dashboard/releases'), title: 'Releases', eyebrow: 'All releases' },
-  { match: (pathname: string) => pathname.startsWith('/dashboard/tasks'), title: 'Tasks', eyebrow: 'My tasks' },
+  { match: (pathname: string) => pathname === '/dashboard', title: 'Home', eyebrow: 'Workspace' },
+  { match: (pathname: string) => pathname.startsWith('/dashboard/releases'), title: 'Release', eyebrow: 'Release detail' },
   { match: (pathname: string) => pathname.startsWith('/settings'), title: 'Settings', eyebrow: 'Account' },
 ];
 

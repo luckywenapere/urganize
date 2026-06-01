@@ -127,9 +127,20 @@ export function WorkspaceView() {
     return <WorkspaceSkeleton />;
   }
 
+  const scopeAnnouncement = scopedRelease
+    ? `Showing tasks for ${scopedRelease.title}`
+    : 'Showing all tasks';
+
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
       <div className="mx-auto max-w-[1440px] px-4 pb-24 pt-10 sm:px-6">
+        {/* Screen-reader-only live region. Polite mode waits for the SR to be
+            idle, atomic="true" re-reads the whole message. Mirrors the visible
+            ScopePill copy so SR users get the same context. */}
+        <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+          {scopeAnnouncement}
+        </div>
+
         <header className="space-y-4">
           <GreetingHeader userName={user?.name} />
           <StatChips

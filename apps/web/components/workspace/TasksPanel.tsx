@@ -6,7 +6,6 @@ import {
   TASK_PRIORITY_OPTIONS,
   TASK_STATUS_OPTIONS,
   getTaskPriorityLabel,
-  getTaskSectionDescription,
   getTaskSectionLabel,
   getTaskStatusLabel,
   groupTasksIntoSections,
@@ -20,6 +19,25 @@ import { TaskRow } from '@/components/tasks/TaskRow';
 import { ScopePill } from './ScopePill';
 
 const sectionOrder: TaskSectionKey[] = ['overdue', 'today', 'week', 'upcoming', 'no_due_date'];
+
+// Per-bucket empty-state copy. The unscoped copy is celebratory ("You're
+// caught up"); the scoped copy is factual because a single release with no
+// overdue items is the expected state, not an achievement.
+const UNSCOPED_EMPTY: Record<TaskSectionKey, string> = {
+  overdue: "You're caught up.",
+  today: 'Nothing due today.',
+  week: 'Nothing due this week.',
+  upcoming: 'Nothing queued yet.',
+  no_due_date: 'No unscheduled tasks.',
+};
+
+const SCOPED_EMPTY: Record<TaskSectionKey, string> = {
+  overdue: 'No overdue tasks for this release.',
+  today: 'Nothing due today for this release.',
+  week: 'Nothing due this week for this release.',
+  upcoming: 'Nothing upcoming for this release.',
+  no_due_date: 'No unscheduled tasks for this release.',
+};
 
 type TasksPanelProps = {
   /** Tasks already filtered by `?release=` scope (handled in parent). */
@@ -136,7 +154,7 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
               {sectionTasks.length === 0 ? (
                 <div className="px-4 py-5">
                   <p className="text-xs text-content-tertiary">
-                    {getTaskSectionDescription(sectionKey)}
+                    {scopedRelease ? SCOPED_EMPTY[sectionKey] : UNSCOPED_EMPTY[sectionKey]}
                   </p>
                 </div>
               ) : (

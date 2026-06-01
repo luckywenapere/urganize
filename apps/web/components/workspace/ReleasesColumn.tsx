@@ -3,6 +3,7 @@
 import { Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@urganize/ui';
 import type { Release } from '@/types/releases';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { WorkspaceReleaseCard } from './WorkspaceReleaseCard';
 
 export type ReleaseCardData = {
@@ -60,12 +61,20 @@ export function ReleasesColumn({
       </button>
 
       {releases.length === 0 ? (
-        <div className="border border-stroke-default bg-bg-surface px-5 py-8 text-center">
-          <p className="text-sm font-semibold text-content-primary">No releases yet</p>
-          <p className="mt-1 text-xs text-content-secondary">
-            Create your first release to start collecting tasks and assets.
-          </p>
-        </div>
+        <EmptyState
+          title="No releases yet"
+          description="Create your first release to start collecting tasks and assets."
+          action={
+            <button
+              type="button"
+              onClick={onCreateRelease}
+              className="inline-flex h-10 items-center justify-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base"
+            >
+              <Plus className="h-4 w-4" />
+              Create release
+            </button>
+          }
+        />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {releases.map(({ release, tasksDone, tasksTotal }) => (

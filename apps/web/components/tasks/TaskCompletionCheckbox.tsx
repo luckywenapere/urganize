@@ -12,6 +12,9 @@ type TaskCompletionCheckboxProps = {
   /** Called with the blocker text when completion is refused (locked task or
    * unmet dependency). The parent surfaces it via toast/banner. */
   onBlocker?: (message: string) => void;
+  /** Task title, optional. When provided, the aria-label includes it so screen
+   * readers can disambiguate among the many checkboxes in a task list. */
+  taskTitle?: string;
   className?: string;
 };
 
@@ -36,10 +39,12 @@ export function TaskCompletionCheckbox({
   taskId,
   status,
   onBlocker,
+  taskTitle,
   className = '',
 }: TaskCompletionCheckboxProps) {
   const isDone = status === TASK_DONE_STATUS;
   const isLocked = status === TASK_LOCKED_STATUS;
+  const taskLabel = taskTitle ? `"${taskTitle}"` : 'task';
 
   const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -67,7 +72,7 @@ export function TaskCompletionCheckbox({
       type="button"
       role="checkbox"
       aria-checked={isDone}
-      aria-label={isDone ? 'Mark task incomplete' : 'Mark task complete'}
+      aria-label={isDone ? `Mark ${taskLabel} incomplete` : `Mark ${taskLabel} complete`}
       onClick={handleClick}
       className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${stateClasses} ${className}`}
     >
