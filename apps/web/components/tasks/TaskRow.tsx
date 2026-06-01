@@ -4,6 +4,7 @@ import { CalendarDays, Lock } from 'lucide-react';
 import {
   formatMilestoneDate,
   getPriorityBorderClass,
+  getPriorityDotClass,
   getRelativeDueLabel,
   getTaskStatusLabel,
   getTaskStatusTone,
@@ -19,6 +20,13 @@ type TaskRowProps = {
   /** Receives the blocker text when the user clicks the completion checkbox
    * on a task that can't be marked done yet. Parent should surface via toast. */
   onBlocker?: (message: string) => void;
+  /** Layout density. `comfortable` (default) is the wide release-detail layout:
+   * single row, status badge on the right, release pill inline with the title,
+   * assignee in the meta line. `compact` is the narrow workspace-panel layout:
+   * two stacked lines (title, then meta), no status badge / no assignee /
+   * no release pill — the surrounding workspace already shows scope context,
+   * and priority is still conveyed by the left border. */
+  density?: 'compact' | 'comfortable';
 };
 
 function getAssigneeLabel(task: Task): string {
@@ -29,7 +37,7 @@ function getAssigneeLabel(task: Task): string {
   return task.assignee?.email || 'Unassigned';
 }
 
-export function TaskRow({ task, onClick, onBlocker }: TaskRowProps) {
+export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: TaskRowProps) {
   const due = getRelativeDueLabel(task);
   const isLocked = task.status === 'locked';
   const isMilestone = isEventMilestone(task);
@@ -41,20 +49,76 @@ export function TaskRow({ task, onClick, onBlocker }: TaskRowProps) {
       ? 'border-l-status-info'
       : getPriorityBorderClass(task.priority);
 
+  const isCompact = density === 'compact';
+  const titleClass = `truncate text-sm font-semibold ${
+    isLocked ? 'text-content-secondary' : 'text-content-primary'
+  } ${task.status === 'done' ? 'line-through' : ''}`;
+
+  const interactionHandlers = {
+    onClick: () => onClick?.(task),
+    role: onClick ? ('button' as const) : undefined,
+    tabIndex: onClick ? 0 : undefined,
+    onKeyDown: (event: React.KeyboardEvent) => {
+      if ((event.key === 'Enter' || event.key === ' ') && onClick) {
+        event.preventDefault();
+        onClick(task);
+      }
+    },
+  };
+
+  if (isCompact) {
+    return (
+      <div
+        className={`group flex items-center gap-3 border-l-4 border-t border-stroke-subtle bg-bg-surface px-4 py-3 transition first:border-t-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-offset-0 ${borderClass} ${
+          onClick ? 'cursor-pointer hover:bg-bg-hover' : ''
+        } ${isLocked ? 'bg-bg-surface/60' : ''}`}
+        {...interactionHandlers}
+        data-ph-capture-attribute-section="tasks"
+      >
+        <TaskCompletionCheckbox
+          taskId={task.id}
+          status={task.status}
+          onBlocker={onBlocker}
+          taskTitle={task.title}
+        />
+        <div className="min-w-0 flex-1">
+          <p className={titleClass} title={task.title}>
+            {task.title}
+          </p>
+          <div className="mt-1.5 flex items-center gap-2 text-xs text-content-secondary">
+            <span
+              className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${getPriorityDotClass(task.priority)}`}
+              aria-hidden="true"
+            />
+            {isMilestone ? (
+              <span className="inline-flex items-center gap-1 text-status-info">
+                <CalendarDays className="h-3 w-3" aria-label="Event milestone" />
+                {formatMilestoneDate(task.dueDate)}
+              </span>
+            ) : (
+              <span className={due.isOverdue ? 'font-semibold text-status-error' : ''}>
+                {due.label}
+              </span>
+            )}
+            {isLocked ? (
+              <Lock
+                className="h-3 w-3 text-content-tertiary"
+                aria-label="Locked — waiting on a prerequisite"
+              />
+            ) : null}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Comfortable (default) — release-detail page layout.
   return (
     <div
       className={`group flex min-h-[76px] items-center gap-4 border-l-4 border-t border-stroke-subtle bg-bg-surface px-4 py-3.5 transition first:border-t-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-offset-0 ${borderClass} ${
         onClick ? 'cursor-pointer hover:bg-bg-hover' : ''
       } ${isLocked ? 'bg-bg-surface/60' : ''}`}
-      onClick={() => onClick?.(task)}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={(event) => {
-        if ((event.key === 'Enter' || event.key === ' ') && onClick) {
-          event.preventDefault();
-          onClick(task);
-        }
-      }}
+      {...interactionHandlers}
       data-ph-capture-attribute-section="tasks"
     >
       <TaskCompletionCheckbox
@@ -77,11 +141,7 @@ export function TaskRow({ task, onClick, onBlocker }: TaskRowProps) {
               aria-label="Event milestone"
             />
           ) : null}
-          <p
-            className={`truncate text-sm font-semibold ${
-              isLocked ? 'text-content-secondary' : 'text-content-primary'
-            } ${task.status === 'done' ? 'line-through' : ''}`}
-          >
+          <p className={titleClass} title={task.title}>
             {task.title}
           </p>
           {task.release ? (
