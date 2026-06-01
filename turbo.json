@@ -27,7 +27,8 @@
         "DATABASE_URL",
         "ADMIN_WAITLIST_TOKEN",
         "NEXT_PUBLIC_POSTHOG_TOKEN",
-        "NEXT_PUBLIC_POSTHOG_HOST"
+        "NEXT_PUBLIC_POSTHOG_HOST",
+        "NEXT_PUBLIC_FEATURE_WORKSPACE"
       ]
     },
     "dev": {

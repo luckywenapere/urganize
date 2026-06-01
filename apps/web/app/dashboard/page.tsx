@@ -10,6 +10,14 @@ import { useTaskStore } from '@/stores/useTaskStore';
 import { TASK_DONE_STATUS } from '@/lib/execution-types';
 import { formatArtistName } from '@/lib/release-execution';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import { WorkspaceView } from '@/components/workspace/WorkspaceView';
+
+// Feature flag — when 'true', /dashboard renders the consolidated workspace
+// (releases + tasks side by side) in place of the legacy greeting/cards layout.
+// NEXT_PUBLIC_ prefix so the value is inlined at build time. No route is moved;
+// the swap is component-level. Flag stays off in prod until the workspace is
+// validated; flip via .env.local for dev preview.
+const WORKSPACE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
 function formatDate(value: string | null): string {
   if (!value) return 'No date set';
@@ -39,6 +47,13 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardPage() {
+  if (WORKSPACE_ENABLED) {
+    return <WorkspaceView />;
+  }
+  return <LegacyDashboard />;
+}
+
+function LegacyDashboard() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();

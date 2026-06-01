@@ -6,10 +6,9 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Logo } from '@urganize/ui';
 import {
-  BarChart3,
-  CheckSquare2,
   ChevronLeft,
   ChevronRight,
+  Home,
   LayoutDashboard,
   Settings,
   X,
@@ -30,31 +29,23 @@ type NavItem = {
   match: (pathname: string | null) => boolean;
 };
 
+// Single "Home" entry now that /dashboard is the unified workspace (releases
+// column + tasks panel). Match covers all of /dashboard/* so the release detail
+// page (/dashboard/releases/[releaseId]) still highlights Home in the rail.
 const navItems: NavItem[] = [
   {
     href: '/dashboard',
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-    match: (pathname) => pathname === '/dashboard',
-  },
-  {
-    href: '/dashboard/releases',
-    label: 'Releases',
-    icon: BarChart3,
+    label: 'Home',
+    icon: Home,
     match: (pathname) =>
-      pathname?.startsWith('/dashboard/releases') === true,
-  },
-  {
-    href: '/dashboard/tasks',
-    label: 'Tasks',
-    icon: CheckSquare2,
-    match: (pathname) => pathname?.startsWith('/dashboard/tasks') === true,
+      pathname === '/dashboard' || pathname?.startsWith('/dashboard/') === true,
   },
   {
     href: '/settings',
     label: 'Settings',
     icon: Settings,
-    match: (pathname) => pathname === '/settings' || pathname?.startsWith('/settings/') === true,
+    match: (pathname) =>
+      pathname === '/settings' || pathname?.startsWith('/settings/') === true,
   },
 ];
 
