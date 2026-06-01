@@ -6,12 +6,11 @@ import { AlertCircle } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
-import { computeWorkspaceStats, type Task } from '@/lib/tasks';
+import { type Task } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { GreetingHeader } from './GreetingHeader';
-import { StatChips } from './StatChips';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { TasksPanel } from './TasksPanel';
 import { FilesPanel } from './FilesPanel';
@@ -26,11 +25,6 @@ function WorkspaceSkeleton() {
         <div className="space-y-3">
           <SkeletonBlock className="h-3 w-24 rounded-none" />
           <SkeletonBlock className="h-8 w-64 rounded-none" />
-        </div>
-        <div className="mt-5 flex flex-wrap gap-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <SkeletonBlock key={i} className="h-[68px] w-[128px] rounded-none" />
-          ))}
         </div>
         <div className="mt-8 grid gap-6 lg:grid-cols-[3fr_2fr]">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -99,11 +93,6 @@ export function WorkspaceView() {
     return taskList.filter((task) => task.releaseId === scopedReleaseId);
   }, [scopedReleaseId, taskList]);
 
-  const stats = useMemo(
-    () => computeWorkspaceStats(releases.length, taskList),
-    [releases.length, taskList]
-  );
-
   const handleSelect = (releaseId: string) => {
     const nextScope = scopedReleaseId === releaseId ? null : releaseId;
     setScope(nextScope);
@@ -142,15 +131,8 @@ export function WorkspaceView() {
           {scopeAnnouncement}
         </div>
 
-        <header className="space-y-4">
+        <header>
           <GreetingHeader userName={user?.name} />
-          <StatChips
-            activeReleases={stats.activeReleases}
-            tasksDone={stats.tasksDone}
-            tasksTotal={stats.tasksTotal}
-            overdue={stats.overdueCount}
-            dueToday={stats.dueTodayCount}
-          />
         </header>
 
         {error ? (
