@@ -243,9 +243,9 @@ export default function LockedPage() {
           Need help?{' '}
           <a
             className="underline text-content-secondary"
-            href="mailto:theurganization@gmail.com"
+            href="mailto:contact@urganize.app"
           >
-            theurganization@gmail.com
+            contact@urganize.app
           </a>
         </p>
       </div>

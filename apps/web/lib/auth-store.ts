@@ -261,7 +261,7 @@ export const useAuthStore = create<AuthState>()(
                   isAuthenticated: false,
                   isLoading: false,
                   needsOnboarding: true,
-                  error: `Account is scheduled for deletion on ${new Date(scheduledAt || '').toLocaleString()}. Contact theurganization@gmail.com to recover.`,
+                  error: `Account is scheduled for deletion on ${new Date(scheduledAt || '').toLocaleString()}. Contact contact@urganize.app to recover.`,
                 });
                 return;
               }
@@ -329,7 +329,7 @@ export const useAuthStore = create<AuthState>()(
           if (shouldEnforceScheduledDeletion && isScheduledDeletionActive(data.user.user_metadata as Record<string, unknown>)) {
             const scheduledAt = getScheduledDeletion(data.user.user_metadata as Record<string, unknown>);
             await supabase.auth.signOut();
-            throw new Error(`Account is scheduled for deletion on ${new Date(scheduledAt || '').toLocaleString()}. Contact theurganization@gmail.com to recover.`);
+            throw new Error(`Account is scheduled for deletion on ${new Date(scheduledAt || '').toLocaleString()}. Contact contact@urganize.app to recover.`);
           }
 
           const profile = await getOrCreateProfile(data.user);
