@@ -4,6 +4,38 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { AlertCircle, CalendarDays, Loader2, X } from 'lucide-react';
 import { Button, IconButton } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
+import {
+  getTemplate,
+  getTemplateLeadTimeDays,
+  getTemplateSpanDays,
+} from '@/lib/release-templates/loader';
+
+// The modal currently only creates 'single' releases (CreateReleaseBody on the
+// API also defaults releaseType to 'single'). When the modal grows a type
+// picker, look this up dynamically from the picked type instead.
+const ACTIVE_TEMPLATE = getTemplate('single');
+const LEAD_TIME_DAYS = getTemplateLeadTimeDays(ACTIVE_TEMPLATE);
+const LEAD_TIME_WEEKS = Math.round(LEAD_TIME_DAYS / 7);
+const SPAN_WEEKS = Math.round(getTemplateSpanDays(ACTIVE_TEMPLATE) / 7);
+
+function formatYmdLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function addDaysYmd(base: Date, days: number): string {
+  const copy = new Date(base);
+  copy.setDate(copy.getDate() + days);
+  return formatYmdLocal(copy);
+}
+
+function formatYmdHuman(value: string): string {
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(parsed);
+}
 
 type CreateReleaseModalProps = {
   open: boolean;
@@ -84,6 +116,38 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     () => title.trim().length > 0 && releaseDate.length > 0 && !isSubmitting,
     [isSubmitting, releaseDate, title]
   );
+
+  // Anchor "today" and the recommended date once per modal mount. Re-deriving on
+  // every render would make the recommendation flicker across midnight while the
+  // modal is open — exceedingly unlikely in practice, but the mounted-once
+  // anchor also keeps the `min` attribute stable for the duration of the dialog.
+  const { todayYmd, recommendedYmd } = useMemo(() => {
+    const now = new Date();
+    return {
+      todayYmd: formatYmdLocal(now),
+      recommendedYmd: addDaysYmd(now, LEAD_TIME_DAYS),
+    };
+  }, []);
+
+  // Calm "compressed runway" note: only fires when the picked date is valid AND
+  // sooner than the template's lead time. The note frames the consequence in
+  // the catch-up language commit 2 surfaces in the tasks panel — it doesn't
+  // block submission; the user can proceed with any future date.
+  const compressedNote = useMemo(() => {
+    if (!releaseDate) return null;
+    const picked = new Date(`${releaseDate}T00:00:00`);
+    if (Number.isNaN(picked.getTime())) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    picked.setHours(0, 0, 0, 0);
+    const daysOut = Math.round((picked.getTime() - today.getTime()) / 86400000);
+    if (daysOut >= LEAD_TIME_DAYS) return null;
+    const compressedWeeks = Math.max(1, Math.ceil((LEAD_TIME_DAYS - daysOut) / 7));
+    return {
+      compressedWeeks,
+      displayDate: formatYmdHuman(releaseDate),
+    };
+  }, [releaseDate]);
 
   if (!open) {
     return null;
@@ -228,9 +292,16 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                   <CalendarDays className="h-4 w-4 text-content-tertiary" />
                   Release date
                 </span>
+                <p className="mb-2 text-xs leading-5 text-content-secondary">
+                  This single rollout plans ~{SPAN_WEEKS} weeks of work, starting{' '}
+                  {LEAD_TIME_WEEKS} weeks before release. For full lead time, aim for{' '}
+                  <span className="font-medium text-content-primary">{formatYmdHuman(recommendedYmd)}</span>{' '}
+                  or later.
+                </p>
                 <input
                   type="date"
                   required
+                  min={todayYmd}
                   value={releaseDate}
                   onChange={(event) => setReleaseDate(event.target.value)}
                   className="input rounded-none border-stroke-default bg-bg-elevated"
@@ -238,6 +309,14 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                   aria-required="true"
                 />
                 {errors.releaseDate ? <p className="mt-2 text-xs text-status-error">{errors.releaseDate}</p> : null}
+                {!errors.releaseDate && compressedNote ? (
+                  <p className="mt-2 text-xs leading-5 text-content-secondary">
+                    Heads up — a {compressedNote.displayDate} release compresses the first ~
+                    {compressedNote.compressedWeeks}{' '}
+                    {compressedNote.compressedWeeks === 1 ? 'week' : 'weeks'} of prep. Those
+                    early tasks will show as &ldquo;Catch up&rdquo; so you can prioritize them.
+                  </p>
+                ) : null}
               </label>
 
               <label className="block">
