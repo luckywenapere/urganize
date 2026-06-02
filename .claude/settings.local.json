@@ -89,7 +89,20 @@
       "Bash(NEXT_PUBLIC_FEATURE_WORKSPACE=true pnpm *)",
       "Bash(curl -s --retry 60 --retry-delay 1 --retry-connrefused -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
       "Skill(browse)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "Bash(awk '/CREATE TABLE.*artists/,/^\\);/' schema-dump.sql)",
+      "Bash(awk '/CREATE TABLE public.releases /,/^\\);/' schema-dump.sql)",
+      "Bash(awk '/CREATE TABLE public.workspaces /,/^\\);/' schema-dump.sql)",
+      "Bash(node --env-file=.env.local __recon-artists.mjs)",
+      "Bash(supabase --version)",
+      "Bash(supabase migration *)",
+      "PowerShell(Get-Content *)",
+      "Bash(git stash *)",
+      "Bash(git reset *)",
+      "Bash(curl *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell($B = \"C:\\\\Users\\\\penta\\\\.claude\\\\skills\\\\gstack\\\\browse\\\\dist\\\\browse.exe\"; & $B viewport 390x844; & $B goto http://localhost:3000/dashboard; & $B url)",
+      "Bash(git log *)"
     ]
   }
 }
