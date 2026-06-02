@@ -130,7 +130,12 @@ export function WorkspaceView() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto max-w-[1440px] px-4 pb-24 pt-6 sm:px-6">
+      {/* Mobile gutter comes from AppShell's <main> (px-4). Layering another
+          px-4 here on mobile compounded to 32px each side, eating content
+          area on phones where TasksPanel fills the screen full-width. The
+          container's own padding now kicks in at sm+ where the workspace is
+          a two-pane desktop layout that actually wants the extra inset. */}
+      <div className="mx-auto max-w-[1440px] pb-24 pt-6 sm:px-6">
         {/* Screen-reader-only live region. Polite mode waits for the SR to be
             idle, atomic="true" re-reads the whole message. Mirrors the visible
             ScopePill copy so SR users get the same context. */}
@@ -156,8 +161,15 @@ export function WorkspaceView() {
           keeps the same column ratio; the `lg:block` overrides bring both
           columns back into view regardless of scope state.
         */}
+        {/* `min-w-0` on both grid items is the canonical fix for grid
+            "blowout": grid items default to min-width: auto, which means a
+            single descendant with a wide min-content (a long unbreakable
+            title, an image, a row whose truncate-chain breaks somewhere)
+            forces the column wider than the viewport. min-w-0 lets the
+            shrink-to-fit chain reach the column boundary instead of
+            propagating overflow. */}
         <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-          <div className={scopedReleaseId ? 'hidden lg:block' : 'block'}>
+          <div className={`min-w-0 ${scopedReleaseId ? 'hidden lg:block' : 'block'}`}>
             <ReleasesColumn
               releases={releaseCards}
               scopedReleaseId={scopedReleaseId}
@@ -172,7 +184,7 @@ export function WorkspaceView() {
               (inside FilesPanel scoped) both carry their own `mt-8`, which
               is the canonical workspace section gap. Adding wrapper spacing
               on top of that would compound to ~56px (unwanted). */}
-          <div className={scopedReleaseId ? 'block' : 'hidden lg:block'}>
+          <div className={`min-w-0 ${scopedReleaseId ? 'block' : 'hidden lg:block'}`}>
             {scopedRelease ? (
               <div className="mb-4 flex items-center gap-3 lg:hidden">
                 <button

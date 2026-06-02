@@ -157,7 +157,12 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
   };
 
   return (
-    <aside id={id} className="space-y-3 scroll-mt-20">
+    // `min-w-0` here is defensive: the panel is rendered both inside the
+    // desktop two-pane grid (where the grid item carries min-w-0) AND as a
+    // full-screen mobile drill-down. min-w-0 on the aside itself means the
+    // panel's "shrink to fit container" contract holds regardless of how
+    // the surrounding layout was wired.
+    <aside id={id} className="min-w-0 space-y-3 scroll-mt-20">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
           Tasks
