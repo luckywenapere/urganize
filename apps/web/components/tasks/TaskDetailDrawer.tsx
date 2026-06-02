@@ -25,6 +25,7 @@ import {
   type WorkspaceMember,
 } from '@/lib/tasks';
 import { type ReleaseOption } from '@/lib/release-helpers';
+import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 
 type TaskPatchInput = {
   title?: string;
@@ -131,6 +132,10 @@ export function TaskDetailDrawer({
     const release = task.release
       ? releases.find((item) => item.id === task.release?.id) || {
           id: task.release.id,
+          // artistId is unknown in the task-side projection (Task carries
+          // only the cached artistName). Empty string is the agreed
+          // "unresolved FK" sentinel for ReleaseOption.
+          artistId: '',
           title: task.release.title,
           artistName: task.release.artistName,
           releaseDate: null,
@@ -389,9 +394,11 @@ export function TaskDetailDrawer({
 
                 <div className="mt-4 space-y-2">
                   {task.attachments.length === 0 ? (
-                    <p className="text-sm text-content-secondary">
-                      {isLoading ? 'Loading attachments…' : 'No files yet.'}
-                    </p>
+                    isLoading ? (
+                      <SkeletonBlock className="h-10 w-full rounded-[18px]" />
+                    ) : (
+                      <p className="text-sm text-content-secondary">No files yet.</p>
+                    )
                   ) : (
                     task.attachments.map((attachment) => (
                       <div
@@ -426,7 +433,7 @@ export function TaskDetailDrawer({
                 <h3 className="text-sm font-semibold text-content-primary">Comments</h3>
                 <div className="mt-4 space-y-3">
                   {isLoading && task.comments.length === 0 ? (
-                    <p className="text-sm text-content-secondary">Loading comments…</p>
+                    <SkeletonBlock className="h-12 w-full rounded-[18px]" />
                   ) : null}
                   {task.comments.map((comment) => (
                     <div key={comment.id} className="rounded-[18px] border border-stroke-subtle bg-bg-surface px-3 py-3">
@@ -530,9 +537,11 @@ export function TaskDetailDrawer({
                 <h3 className="text-sm font-semibold text-content-primary">Activity</h3>
                 <div className="mt-4 space-y-3">
                   {task.activity.length === 0 ? (
-                    <p className="text-sm text-content-secondary">
-                      {isLoading ? 'Loading activity…' : 'No activity yet.'}
-                    </p>
+                    isLoading ? (
+                      <SkeletonBlock className="h-10 w-full rounded-[18px]" />
+                    ) : (
+                      <p className="text-sm text-content-secondary">No activity yet.</p>
+                    )
                   ) : (
                     task.activity.map((entry) => (
                       <div key={entry.id} className="rounded-[18px] border border-stroke-subtle bg-bg-surface px-3 py-3">

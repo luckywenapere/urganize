@@ -12,7 +12,7 @@ export function RootShellSkeleton() {
             <div className="rounded-[32px] border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:p-8">
               <div className="flex items-center gap-3">
                 <div className="grid h-12 w-12 place-items-center rounded-full border border-stroke-default bg-bg-elevated/85">
-                  <div className="h-5 w-5 rounded-full bg-bg-overlay/90 skeleton-shimmer" />
+                  <SkeletonBlock className="h-5 w-5 rounded-full" />
                 </div>
                 <SkeletonBlock className="h-5 w-32 rounded-full" />
               </div>

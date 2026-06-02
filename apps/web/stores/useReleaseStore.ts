@@ -73,13 +73,15 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       },
       body: JSON.stringify({
         title,
-        artistName: 'New Artist',
+        // No artistName: server uses the workspace's artist when the
+        // NEXT_PUBLIC_FEATURE_WORKSPACE flag is on (Phase 3), and falls back
+        // to the legacy default-artist path when the flag is off.
         releaseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString().slice(0, 10),
         source: 'dashboard',
       }),
     });
 
-    const payload = (await response.json().catch(() => ({}))) as { releaseId?: string; release?: { title?: string; artistName?: string; releaseDate?: string | null }; error?: string };
+    const payload = (await response.json().catch(() => ({}))) as { releaseId?: string; release?: { title?: string; artistId?: string; artistName?: string; releaseDate?: string | null }; error?: string };
     if (!response.ok || !payload.releaseId) {
       set({ error: payload.error || 'Could not create release.' });
       return null;
@@ -88,6 +90,7 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
     const release: ExecutionRelease = {
       id: payload.releaseId,
       title: payload.release?.title || title,
+      artistId: payload.release?.artistId || '',
       artistName: payload.release?.artistName || 'New Artist',
       releaseDate: payload.release?.releaseDate || null,
       description: null,

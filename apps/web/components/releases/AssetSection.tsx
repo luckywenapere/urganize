@@ -5,6 +5,7 @@ import { type AssetCategory, categoryLabel } from '@/lib/asset-constants';
 import { supabase } from '@/lib/supabase/client';
 import { AssetUploadControl } from './AssetUploadControl';
 import { AssetCategoryGroup } from './AssetCategoryGroup';
+import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 
 export type Asset = {
   id: string;
@@ -119,8 +120,9 @@ export function AssetSection({ releaseId, onToast }: AssetSectionProps) {
       </div>
 
       {isLoading && !hasLoaded ? (
-        <div className="mt-4 border border-stroke-default bg-bg-surface p-4 text-sm text-content-secondary">
-          Loading files…
+        <div className="mt-4 space-y-2">
+          <SkeletonBlock className="h-12 w-full" />
+          <SkeletonBlock className="h-12 w-full" />
         </div>
       ) : assets.length === 0 ? (
         <div className="mt-4 border border-stroke-default bg-bg-surface p-4 text-center">

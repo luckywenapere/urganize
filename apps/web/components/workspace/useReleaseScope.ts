@@ -15,16 +15,29 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
  */
 const SCOPE_PARAM = 'release';
 
+export type SetScopeOptions = {
+  /**
+   * When true, push a new history entry instead of replacing the current one.
+   * The mobile drill-down model uses this so the browser back button returns
+   * the user to Level 1 (no scope) — without it, `replace` collapses the
+   * scope change into the current history entry and back navigates out of
+   * the workspace entirely. Desktop callers should leave this unset (default
+   * `replace`) so filter-like click cycles don't pollute history.
+   */
+  push?: boolean;
+};
+
 export type ReleaseScope = {
   scopedReleaseId: string | null;
-  setScope: (releaseId: string | null) => void;
+  setScope: (releaseId: string | null, options?: SetScopeOptions) => void;
 };
 
 /**
  * Read/write the `?release=` search param via the App Router.
  * Passing `null` removes the param entirely (no `?release=`).
- * Uses `router.replace` with `scroll: false` so click-to-scope doesn't
- * jump the page to the top.
+ * Default: `router.replace` with `scroll: false` so click-to-scope on
+ * desktop doesn't jump the page to the top or grow history. Mobile drill-in
+ * passes `{ push: true }` so browser back can return to Level 1.
  */
 export function useReleaseScope(): ReleaseScope {
   const router = useRouter();
@@ -35,7 +48,7 @@ export function useReleaseScope(): ReleaseScope {
   const scopedReleaseId = raw && raw.length > 0 ? raw : null;
 
   const setScope = useCallback(
-    (releaseId: string | null) => {
+    (releaseId: string | null, options?: SetScopeOptions) => {
       const params = new URLSearchParams(searchParams.toString());
       if (releaseId) {
         params.set(SCOPE_PARAM, releaseId);
@@ -43,7 +56,12 @@ export function useReleaseScope(): ReleaseScope {
         params.delete(SCOPE_PARAM);
       }
       const query = params.toString();
-      router.replace(`${pathname ?? ''}${query ? `?${query}` : ''}`, { scroll: false });
+      const url = `${pathname ?? ''}${query ? `?${query}` : ''}`;
+      if (options?.push) {
+        router.push(url, { scroll: false });
+      } else {
+        router.replace(url, { scroll: false });
+      }
     },
     [pathname, router, searchParams]
   );

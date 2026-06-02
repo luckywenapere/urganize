@@ -1,0 +1,147 @@
+-- =============================================================================
+-- ⚠️ DO NOT APPLY YET — POST-DEPLOY CLEANUP MIGRATION
+-- =============================================================================
+--
+-- This file is intentionally named with a far-future timestamp prefix so the
+-- Supabase CLI does NOT pick it up in normal `supabase db push` runs. When the
+-- preconditions below are met, RENAME it to the current YYYYMMDD timestamp
+-- and apply.
+--
+-- Preconditions (all must be true before applying):
+--
+--   1. Migrations 20260602_artists_add_workspace_id and
+--      20260602010000_releases_link_artists_swap_unique are live in production.
+--   2. The workspace-scoped artists code path
+--      (NEXT_PUBLIC_FEATURE_WORKSPACE=true) has been live in production long
+--      enough to verify: release create wires the workspace artist, Settings
+--      → "Workspace artist" renames propagate to releases.artist_name, and no
+--      lookup-or-create regression has appeared.
+--   3. All four legacy readers of profiles.artist_name documented in Phase 0
+--      #6 have been retired or repointed:
+--        a. components/support/SupportChat.tsx — drop the user.artist_name
+--           attribute from the Tawk.to attributes payload (Lines 102/111).
+--        b. app/api/admin/pricing-validation/route.ts — drop the
+--           profile.artist_name projection from the admin survey (Lines 43,
+--           58, 71).
+--        c. components/onboarding/FirstTimeOnboardingGate.tsx — drop the
+--           `|| user?.artist_name` fallback from the first-name greeting
+--           (Line 243). Use user.name only.
+--        d. lib/auth-store.ts — drop the gate-read at line 454 and the
+--           updateArtistName setter plumbing entirely (Lines 84/91/210/
+--           394/426/454/457/526/538). Auth bootstrap no longer mirrors
+--           artist_name from auth.user_metadata into profiles.
+--      AND the Settings → "Artist profile" editor (Lines 413-439) has been
+--      removed. After all five are gone, run `grep -r "artist_name" apps/web/`
+--      and confirm zero remaining references besides this comment.
+--   4. components/SchemaWarningBanner.tsx — the warning is keyed off
+--      `profiles.artist_name` missing-column detection. Either remove the
+--      banner entirely (preferred) or repoint its detection to a different
+--      schema invariant. Leaving it in place is OK — it only fires when the
+--      column is missing, which is exactly the post-drop state, and would
+--      mislead developers.
+--
+-- After all preconditions hold:
+--   - Rename this file: 99999999_artists_workspace_cleanup_DO_NOT_APPLY_YET.sql
+--     → YYYYMMDD_artists_workspace_cleanup.sql (current date).
+--   - Apply.
+--
+-- Scope of this migration:
+--   1. Drop profiles.artist_name (ONE-WAY — see down-migration caveat).
+--   2. Investigate artists.owner_user_id usage; this migration KEEPS it (see
+--      "References to artists.owner_user_id" below). A future migration may
+--      drop it once the read-path refactor lands.
+--   3. KEEP releases.artist_name (write-through read-cache by design).
+-- =============================================================================
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- References to artists.owner_user_id (audit at 2026-06-02; verify again
+-- before dropping in a future migration):
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--
+--   - apps/web/app/api/releases/route.ts:411  — eq('owner_user_id', user.id)
+--     on artist lookup-by-id. (Keep until the lookup path moves to scoping by
+--     workspace_id.)
+--   - apps/web/app/api/releases/route.ts:431  — eq('owner_user_id', user.id)
+--     in the legacy lookup-or-create slug check.
+--   - apps/web/app/api/releases/route.ts:449  — owner_user_id is set on
+--     artist INSERT.
+--   - 20260525034856_schema_reconciliation.sql:244 — owner_user_id is NOT NULL
+--     references auth.users(id) on delete cascade. This is the destruction
+--     model: artists die when the owning user is deleted. workspace_id ON
+--     DELETE CASCADE (added Migration 1) duplicates that destruction signal
+--     via the workspace, but only if the workspace has a single owner. In a
+--     multi-owner future, owner_user_id remains the only deterministic link.
+--   - RLS policies on the artists table inherited from the schema
+--     reconciliation: owner_user_id = auth.uid() is the implied owner-scope
+--     check. Dropping the column requires rewriting policies to use
+--     workspace_id via a workspaces.owner_id subquery.
+--
+-- DECISION: keep artists.owner_user_id for now. Drop in a follow-up migration
+-- only after the three code paths above migrate to workspace_id-based scoping
+-- and the RLS policies are rewritten.
+
+begin;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- Safety guard: verify zero readers of profiles.artist_name remain in the
+-- live code path before dropping. This is a static guard (the migration
+-- cannot read source code), so it relies on the application maintainers
+-- having retired the readers per the precondition list above.
+--
+-- A defensive runtime guard would query a known canary value in
+-- profiles.artist_name and confirm it is still readable, but that's the
+-- wrong direction — we want to ensure nothing READS it. Since SQL cannot
+-- inspect the running app, this section is intentionally empty. The
+-- precondition list at the top of this file is the audit gate.
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- 1. Drop profiles.artist_name (ONE-WAY).
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- Phase 0 inventory captured the live values (28 of 56 profiles had non-null
+-- artist_name). After this migration applies, those values are gone — the
+-- canonical artist name lives in artists.name keyed by workspace, and the
+-- cached label lives in releases.artist_name. Recovering values from the
+-- profile row is not possible from migration history alone; the Phase 0 JSON
+-- snapshot is the only source of truth for the pre-drop state. Archive it
+-- before applying.
+
+alter table public.profiles drop column if exists artist_name;
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- 2. releases.artist_name — RETAINED.
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- Intentionally not dropped. Phase 3 wires this as a write-through cache from
+-- artists.name on release create and on artist rename
+-- (lib/artists-server.ts:renameWorkspaceArtist). UI surfaces continue to read
+-- it because it is denormalized on the release row and avoids the join.
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- 3. artists.owner_user_id — RETAINED.
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- See audit block above. Drop in a future migration only after the three
+-- code references and the inherited RLS policy are repointed at workspace_id.
+
+commit;
+
+-- =============================================================================
+-- DOWN MIGRATION (one-way warning — data loss is permanent)
+-- =============================================================================
+--
+-- The schema-level reverse is straightforward:
+--
+--   begin;
+--   alter table public.profiles add column if not exists artist_name text;
+--   commit;
+--
+-- HOWEVER the previously stored values are gone. There is no source-of-truth
+-- to repopulate from after this migration applies, because:
+--   - artists.name only exists per (workspace, artist), not per profile.
+--   - A profile can be a manager with no artist mapping at all.
+--   - Phase 0 surfaced 28 profiles with non-null artist_name including
+--     manager-role accounts ("Lucky" on luckydio10, "Luks" on
+--     luckywenapere) whose value will not match any artist row.
+--
+-- If a rollback is required AND the values matter, restore profiles from
+-- a database backup taken before applying this migration. Do NOT attempt to
+-- re-derive from artists.name — it will be wrong for manager-role profiles.

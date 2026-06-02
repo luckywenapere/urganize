@@ -1,17 +1,20 @@
 'use client';
 
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, PanelLeftClose, PanelLeftOpen, Plus } from 'lucide-react';
-import { IconButton } from '@urganize/ui';
+import { Plus } from 'lucide-react';
+import { Logo } from '@urganize/ui';
+import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 
 type AppTopbarProps = {
-  isSidebarCollapsed?: boolean;
-  onToggleSidebar?: () => void;
-  onOpenMobileSidebar?: () => void;
   /** Opens the release creation modal. Lifted to AppShell so this universal
    * button behaves identically to the page-level "New release" buttons
    * instead of navigating to the releases list. */
   onNewRelease?: () => void;
+  /** Display name surfaced as the monogram on the workspace menu trigger.
+   * Threaded from AppShell so the topbar doesn't need to read auth state
+   * directly. */
+  userName?: string;
 };
 
 // `/dashboard` is the consolidated workspace. We render NO title / eyebrow
@@ -33,36 +36,24 @@ function getRouteTitle(pathname: string | null) {
   return routeTitles.find((item) => item.match(safePathname)) || routeTitles[0];
 }
 
-export function AppTopbar({
-  isSidebarCollapsed = false,
-  onToggleSidebar,
-  onOpenMobileSidebar,
-  onNewRelease,
-}: AppTopbarProps) {
+export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
   const pathname = usePathname();
   const routeTitle = getRouteTitle(pathname);
 
   return (
     <header className="sticky top-0 z-30 border-b border-stroke-subtle bg-bg-base/88 backdrop-blur-xl">
       <div className="flex min-h-16 items-center gap-3 px-4 sm:px-5 md:px-6 lg:px-8">
-        <button
-          type="button"
-          onClick={onOpenMobileSidebar}
-          className="grid h-10 w-10 place-items-center border border-stroke-default text-content-secondary hover:bg-white/[0.04] hover:text-content-primary md:hidden"
-          aria-label="Open sidebar"
+        {/* Stage 2: the logo now lives in the topbar (the sidebar that
+            previously hosted it is gone). Links back to /dashboard so the
+            top-left "click the logo" affordance still gets users home from
+            any inner route. No text label — the mark itself is the brand. */}
+        <Link
+          href="/dashboard"
+          aria-label="Urganize home"
+          className="shrink-0 transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
-          <Menu className="h-4 w-4" />
-        </button>
-
-        <IconButton
-          type="button"
-          onClick={onToggleSidebar}
-          className="hidden border-stroke-default bg-white/[0.02] text-content-secondary hover:bg-white/[0.04] md:inline-flex"
-          tooltip={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {isSidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-        </IconButton>
+          <Logo size="sm" priority className="opacity-90" />
+        </Link>
 
         {/* Spacer takes flex-1 so the right-side controls stay flush right.
             Eyebrow + title are conditional so empty routeTitle entries
@@ -88,6 +79,8 @@ export function AppTopbar({
           <Plus className="h-4 w-4" />
           <span>New release</span>
         </button>
+
+        <WorkspaceMenu userName={userName} />
       </div>
     </header>
   );

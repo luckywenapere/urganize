@@ -2,6 +2,7 @@
 
 import { useMemo, useRef } from 'react';
 import { SearchableGenreSelect } from '@urganize/ui';
+import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 
 type ManagerArtistOption = {
   id: string;
@@ -204,9 +205,9 @@ export function Step2ArtistSelector({
         {isLoading ? (
           <div className="relative mx-auto flex max-w-[880px] items-center justify-center gap-3 px-1 sm:gap-5">
             {[0, 1, 2].map((index) => (
-              <div
+              <SkeletonBlock
                 key={index}
-                className={`skeleton-shimmer rounded-[2rem] border border-stroke-default bg-bg-surface/70 ${
+                className={`rounded-[2rem] border border-stroke-default bg-bg-surface/70 ${
                   index === 1 ? 'h-[320px] w-[56%]' : 'mt-8 h-[260px] w-[22%]'
                 }`}
               />

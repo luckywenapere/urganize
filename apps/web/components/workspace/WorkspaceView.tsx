@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { type Task } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
-import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { TasksPanel } from './TasksPanel';
@@ -25,27 +25,6 @@ const TASKS_PANEL_ID = 'workspace-tasks';
 function toCreatedMs(value: string): number {
   const ms = new Date(value).getTime();
   return Number.isFinite(ms) ? ms : 0;
-}
-
-function WorkspaceSkeleton() {
-  return (
-    <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto max-w-[1440px] px-4 pb-24 pt-6 sm:px-6">
-        <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-          <div className="grid gap-3 sm:grid-cols-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <SkeletonBlock key={i} className="h-[170px] w-full rounded-none" />
-            ))}
-          </div>
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <SkeletonBlock key={i} className="h-[110px] w-full rounded-none" />
-            ))}
-          </div>
-        </div>
-      </div>
-    </main>
-  );
 }
 
 export function WorkspaceView() {
@@ -109,21 +88,35 @@ export function WorkspaceView() {
 
   const handleSelect = (releaseId: string) => {
     const nextScope = scopedReleaseId === releaseId ? null : releaseId;
-    setScope(nextScope);
+    const stacked =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(max-width: 1023px)').matches;
 
-    // When the layout is stacked (below lg), the tasks panel sits below the
-    // releases column and the newly scoped tasks would otherwise be off-screen.
-    // Smooth-scroll the panel into view. Defer to next frame so the scope
-    // write + bucket re-render has applied before we measure.
-    if (nextScope && typeof window !== 'undefined') {
-      const stacked = window.matchMedia('(max-width: 1023px)').matches;
-      if (stacked) {
-        requestAnimationFrame(() => {
-          document
-            .getElementById(TASKS_PANEL_ID)
-            ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-      }
+    // Mobile drill-in (no scope → scope) pushes a history entry so the
+    // browser back button returns the user to Level 1. Desktop clicks and
+    // mobile deselects stay on `replace` — desktop is filter-like (no nav
+    // noise), and a mobile deselect via tapping the same card is a no-op
+    // path that shouldn't grow history either.
+    const isMobileDrillIn = stacked && nextScope !== null;
+    setScope(nextScope, isMobileDrillIn ? { push: true } : undefined);
+
+    // On mobile drill-in, the Level 2 content (back header → TasksPanel →
+    // FilesPanel) becomes the new screen. Scroll the page to the top so
+    // the back affordance is the first thing the user sees, instead of
+    // landing wherever they were in the releases list.
+    if (isMobileDrillIn) {
+      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
+    }
+  };
+
+  const handleMobileBack = () => {
+    // App-back affordance on Level 2. `replace` (not push) so we don't
+    // grow history with a duplicate L1 entry. Scroll to top so users land
+    // at the top of the releases list rather than inheriting their L2
+    // scroll position.
+    setScope(null);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'auto' });
     }
   };
 
@@ -152,19 +145,55 @@ export function WorkspaceView() {
           </div>
         ) : null}
 
+        {/*
+          MOBILE (below lg): two-level drill-down driven by the `?release=`
+          scope param. Level 1 (no scope) shows ONLY the releases list; Level
+          2 (scope set) shows ONLY the tasks + files for that release plus a
+          back header. The same components mount in both layouts — only the
+          wrapper visibility flips. No mobile component fork.
+
+          DESKTOP (lg+): unchanged two-pane grid. `lg:grid-cols-[3fr_2fr]`
+          keeps the same column ratio; the `lg:block` overrides bring both
+          columns back into view regardless of scope state.
+        */}
         <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-          <ReleasesColumn
-            releases={releaseCards}
-            scopedReleaseId={scopedReleaseId}
-            onSelect={handleSelect}
-            onCreateRelease={() => setIsCreateModalOpen(true)}
-          />
-          {/* Right column stacks: tasks panel, then per-release files panel.
-              No `space-y-*` here — FilesPanel (unscoped) and AssetSection
-              (inside FilesPanel scoped) both carry their own `mt-8`, which is
-              the canonical workspace section gap. Adding wrapper spacing on
-              top of that would compound to ~56px (unwanted). */}
-          <div>
+          <div className={scopedReleaseId ? 'hidden lg:block' : 'block'}>
+            <ReleasesColumn
+              releases={releaseCards}
+              scopedReleaseId={scopedReleaseId}
+              onSelect={handleSelect}
+              onCreateRelease={() => setIsCreateModalOpen(true)}
+            />
+          </div>
+
+          {/* Right column stacks: mobile back/title header (mobile-only,
+              scoped-only) → tasks panel → per-release files panel. No
+              `space-y-*` here — FilesPanel (unscoped) and AssetSection
+              (inside FilesPanel scoped) both carry their own `mt-8`, which
+              is the canonical workspace section gap. Adding wrapper spacing
+              on top of that would compound to ~56px (unwanted). */}
+          <div className={scopedReleaseId ? 'block' : 'hidden lg:block'}>
+            {scopedRelease ? (
+              <div className="mb-4 flex items-center gap-3 lg:hidden">
+                <button
+                  type="button"
+                  onClick={handleMobileBack}
+                  aria-label="Back to releases"
+                  className="grid h-10 w-10 shrink-0 place-items-center border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                >
+                  <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+                    {scopedRelease.artistName || 'Unassigned artist'}
+                  </p>
+                  <h2 className="truncate font-display text-lg font-semibold leading-tight text-content-primary">
+                    {scopedRelease.title}
+                  </h2>
+                </div>
+              </div>
+            ) : null}
+
             <TasksPanel
               id={TASKS_PANEL_ID}
               tasks={scopedTasks}

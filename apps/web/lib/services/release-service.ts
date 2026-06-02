@@ -10,7 +10,7 @@ export class ReleaseService {
     const { data, error } = await this.adminClient
       .from('releases')
       .select(
-        'id,title,artist_name,release_date,description,status,state,readiness_score,metadata,artwork_asset_id,created_at,updated_at'
+        'id,title,artist_id,artist_name,release_date,description,status,state,readiness_score,metadata,artwork_asset_id,created_at,updated_at'
       )
       .eq('owner_user_id', userId)
       .order('release_date', { ascending: true, nullsFirst: false });
@@ -37,6 +37,7 @@ export class ReleaseService {
       return {
         id,
         title: String(row.title || 'Untitled release'),
+        artistId: String(row.artist_id || ''),
         artistName: String(row.artist_name || 'Unknown artist'),
         releaseDate: row.release_date ? String(row.release_date) : null,
         description: row.description ? String(row.description) : null,

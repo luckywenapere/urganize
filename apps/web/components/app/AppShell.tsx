@@ -6,8 +6,6 @@ import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { HelpMenu } from '@/components/app/HelpMenu';
-import { AppSidebar } from '@/components/app/AppSidebar';
-import { AppSidebarSkeleton } from '@/components/app/AppSidebarSkeleton';
 import { AppTopbar } from '@/components/app/AppTopbar';
 import { FirstTimeOnboardingGate } from '@/components/onboarding/FirstTimeOnboardingGate';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
@@ -23,8 +21,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isAuthLoading = useAuthStore((state) => state.isLoading);
   const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   // Lifted here so the universal topbar "New release" button opens the same
   // creation modal the page-level buttons use, from any dashboard page,
   // without navigating away.
@@ -34,15 +30,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
   const closeCreateRelease = useCallback(() => {
     setIsCreateReleaseOpen(false);
-  }, []);
-  const toggleSidebar = useCallback(() => {
-    setIsSidebarCollapsed((value) => !value);
-  }, []);
-  const openMobileSidebar = useCallback(() => {
-    setIsMobileSidebarOpen(true);
-  }, []);
-  const closeMobileSidebar = useCallback(() => {
-    setIsMobileSidebarOpen(false);
   }, []);
 
   const isAuthRoute = pathname?.startsWith('/auth') || pathname === '/locked';
@@ -56,9 +43,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname?.startsWith('/listen/') ||
     isPreSavePublicRoute;
   const hasCompletedOnboarding = user?.onboarding_completed === true;
-  const showWorkspaceSidebar = isAuthenticated && !isAuthLoading && (isDashboardRoute || isSettingsRoute);
-  const showWorkspaceSidebarSkeleton =
-    isAuthLoading && !isAuthenticated && (isDashboardRoute || isSettingsRoute);
+  // Stage 2: the sidebar is gone, so the only chrome that varies between
+  // "authenticated" and "still loading" is whether the WorkspaceMenu
+  // monogram has the user's initial yet — and that gracefully falls back
+  // to "U" when userName is empty. We collapse the two previous branches
+  // (showWorkspaceSidebar / showWorkspaceSidebarSkeleton) into one.
+  const showWorkspaceChrome =
+    (isAuthenticated || isAuthLoading) && (isDashboardRoute || isSettingsRoute);
   const requiresArtistNameGate =
     isAuthenticated &&
     !isAuthLoading &&
@@ -76,25 +67,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const workspaceUserName = user?.name || user?.artist_name || user?.email || '';
 
-  const renderWorkspaceShell = (sidebar: ReactNode) => (
-    <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>
-      <div className="mx-auto flex min-h-screen w-full max-w-[1680px]">
-        {sidebar}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <AppTopbar
-            isSidebarCollapsed={isSidebarCollapsed}
-            onToggleSidebar={toggleSidebar}
-            onOpenMobileSidebar={openMobileSidebar}
-            onNewRelease={openCreateRelease}
-          />
-          <main className="min-w-0 flex-1 px-4 pb-28 pt-5 sm:px-5 md:px-6 md:pb-10 lg:px-8">
-            {children}
-          </main>
-        </div>
-      </div>
-    </div>
-  );
-
   useEffect(() => {
     if (!isAuthenticated || !user) {
       void checkAuth();
@@ -105,18 +77,20 @@ export function AppShell({ children }: { children: ReactNode }) {
     <TaskUIProvider>
       {requiresArtistNameGate ? (
         <ArtistNameGate />
-      ) : showWorkspaceSidebar ? (
-        renderWorkspaceShell(
-          <AppSidebar
-            userName={workspaceUserName}
-            collapsed={isSidebarCollapsed}
-            mobileOpen={isMobileSidebarOpen}
-            onToggleCollapsed={toggleSidebar}
-            onCloseMobile={closeMobileSidebar}
-          />
-        )
-      ) : showWorkspaceSidebarSkeleton ? (
-        renderWorkspaceShell(<AppSidebarSkeleton pathname={pathname || ''} />)
+      ) : showWorkspaceChrome ? (
+        // Stage 2: sidebar removed. The flex-col wrapper takes the full
+        // width inside the page-level max-w-[1680px] cap; the main area
+        // reclaims the horizontal space the rail used to occupy. The
+        // topbar's own sticky positioning is unaffected (it sticks to the
+        // viewport, not this wrapper).
+        <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>
+          <div className="mx-auto flex min-h-screen w-full max-w-[1680px] flex-col">
+            <AppTopbar onNewRelease={openCreateRelease} userName={workspaceUserName} />
+            <main className="min-w-0 flex-1 px-4 pb-28 pt-5 sm:px-5 md:px-6 md:pb-10 lg:px-8">
+              {children}
+            </main>
+          </div>
+        </div>
       ) : (
         <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>{children}</div>
       )}

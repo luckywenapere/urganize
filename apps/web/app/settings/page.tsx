@@ -10,6 +10,7 @@ import {
   SettingsPageSkeleton,
   SettingsTeamMembersSectionSkeleton,
 } from '@/components/loading/SettingsPageSkeleton';
+import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { errorMessage } from "@/lib/errors";
 
 type WorkspaceMember = {
@@ -22,6 +23,20 @@ type WorkspaceMember = {
 
 const panelClass =
   'rounded-3xl border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-sm sm:p-6';
+
+// Workspace artist editor is gated by the same flag that hides the legacy
+// artist input in the create-release modal. Lifting to many artists later is
+// a UI change only — the schema (artists.workspace_id, partial unique on
+// (workspace_id, slug)) already permits multiple rows per workspace.
+const WORKSPACE_FEATURE_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
+
+type WorkspaceArtistResponse = {
+  workspaceId?: string;
+  artist: { id: string; name: string; slug: string } | null;
+  releasesUpdated?: number;
+  error?: string;
+};
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -50,6 +65,17 @@ export default function SettingsPage() {
   const [isInviting, setIsInviting] = useState(false);
   const [teammateMessage, setTeammateMessage] = useState('');
   const [teammateError, setTeammateError] = useState('');
+
+  // Workspace artist (Phase 4: single workspace artist, write-through cache).
+  // null = unloaded, undefined = loaded-but-empty, {} = loaded artist.
+  const [workspaceArtist, setWorkspaceArtist] = useState<
+    { id: string; name: string; slug: string } | null | undefined
+  >(null);
+  const [workspaceArtistInput, setWorkspaceArtistInput] = useState('');
+  const [isLoadingWorkspaceArtist, setIsLoadingWorkspaceArtist] = useState(false);
+  const [isSavingWorkspaceArtist, setIsSavingWorkspaceArtist] = useState(false);
+  const [workspaceArtistMessage, setWorkspaceArtistMessage] = useState('');
+  const [workspaceArtistError, setWorkspaceArtistError] = useState('');
 
   const rolePermissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
   const isManagerAccount = rolePermissions.role === 'manager';
@@ -120,6 +146,82 @@ export default function SettingsPage() {
     void loadTeammates();
     return () => { cancelled = true; };
   }, [user, isManagerAccount]);
+
+  // Load the workspace artist behind the flag. Mirrors loadTeammates' shape
+  // so the feedback paths and cleanup-on-unmount semantics stay consistent.
+  useEffect(() => {
+    if (!user || !WORKSPACE_FEATURE_ENABLED) return;
+    let cancelled = false;
+
+    const loadWorkspaceArtist = async () => {
+      setIsLoadingWorkspaceArtist(true);
+      try {
+        const token = await getAccessToken();
+        if (!token) return;
+        const response = await fetch('/api/workspace/artist', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        const payload = (await response.json().catch(() => ({}))) as WorkspaceArtistResponse;
+        if (cancelled) return;
+        if (response.ok) {
+          setWorkspaceArtist(payload.artist ?? undefined);
+          setWorkspaceArtistInput(payload.artist?.name ?? '');
+        }
+      } finally {
+        if (!cancelled) setIsLoadingWorkspaceArtist(false);
+      }
+    };
+
+    void loadWorkspaceArtist();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const handleSaveWorkspaceArtist = async () => {
+    if (!user || !workspaceArtist) return;
+    setWorkspaceArtistError('');
+    setWorkspaceArtistMessage('');
+    const trimmed = workspaceArtistInput.trim();
+    if (!trimmed) {
+      setWorkspaceArtistError('Artist name cannot be empty.');
+      return;
+    }
+    if (trimmed === workspaceArtist.name) {
+      setWorkspaceArtistMessage('No changes.');
+      return;
+    }
+
+    setIsSavingWorkspaceArtist(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch('/api/workspace/artist', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as WorkspaceArtistResponse;
+      if (!response.ok || !payload.artist) {
+        throw new Error(payload.error || 'Could not rename artist.');
+      }
+      setWorkspaceArtist(payload.artist);
+      setWorkspaceArtistInput(payload.artist.name);
+      const releasesNote =
+        typeof payload.releasesUpdated === 'number' && payload.releasesUpdated > 0
+          ? ` (${payload.releasesUpdated} release${payload.releasesUpdated === 1 ? '' : 's'} updated)`
+          : '';
+      setWorkspaceArtistMessage(`Artist renamed${releasesNote}.`);
+    } catch (err) {
+      setWorkspaceArtistError(errorMessage(err, 'Could not rename artist.'));
+    } finally {
+      setIsSavingWorkspaceArtist(false);
+    }
+  };
 
   const clearFeedback = () => {
     setError('');
@@ -409,6 +511,61 @@ export default function SettingsPage() {
             </div>
           </section>
         </div>
+
+        {WORKSPACE_FEATURE_ENABLED && (
+          <section className={`${panelClass} mt-6`}>
+            <h2 className="mb-1 text-xl">Workspace artist</h2>
+            <p className="mb-4 text-sm text-content-secondary">
+              The single artist this workspace works on. Renaming here updates
+              every release&apos;s cached artist label.
+            </p>
+            {isLoadingWorkspaceArtist ? (
+              <div className="space-y-2">
+                <SkeletonBlock className="h-3 w-20" />
+                <SkeletonBlock className="h-10 w-full rounded-lg" />
+              </div>
+            ) : workspaceArtist === undefined ? (
+              <p className="text-sm text-content-secondary">
+                No workspace artist yet. Create a release to seed one.
+              </p>
+            ) : workspaceArtist === null ? (
+              <p className="text-sm text-content-secondary">
+                Could not load workspace artist.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <label className="block">
+                  <span className="mb-1 block text-sm text-content-secondary">Artist name</span>
+                  <input
+                    value={workspaceArtistInput}
+                    onChange={(event) => setWorkspaceArtistInput(event.target.value)}
+                    className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+                    placeholder="e.g. Tems"
+                    maxLength={120}
+                  />
+                </label>
+                {workspaceArtistMessage && (
+                  <p className="rounded-lg border border-brand/35 bg-brand-muted px-3 py-2 text-sm text-brand">
+                    {workspaceArtistMessage}
+                  </p>
+                )}
+                {workspaceArtistError && (
+                  <p className="rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+                    {workspaceArtistError}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void handleSaveWorkspaceArtist()}
+                  disabled={isSavingWorkspaceArtist}
+                  className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                >
+                  {isSavingWorkspaceArtist ? 'Saving…' : 'Save artist name'}
+                </button>
+              </div>
+            )}
+          </section>
+        )}
 
         {user.role === 'artist' && (
           <section className={`${panelClass} mt-6`}>

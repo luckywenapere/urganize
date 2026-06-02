@@ -6,6 +6,11 @@
 
 export interface ReleaseOption {
   id: string;
+  /** FK to artists.id. Empty string when the legacy lookup path returned a
+   * release with no resolved artist row (production has none after
+   * Migration 2's NOT NULL tightening; the empty-string fallback covers
+   * pre-migration drift and the in-flight workspace-flag-off path). */
+  artistId: string;
   artistName: string;
   title: string;
   releaseDate: string | null;

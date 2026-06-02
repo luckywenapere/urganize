@@ -24,6 +24,7 @@ import { instantiateTemplate } from '@/lib/release-templates/instantiate';
 import { getTemplate } from '@/lib/release-templates/loader';
 import type { ReleaseType } from '@/lib/release-templates/types';
 import { loadCoverArtUrlMap } from '@/lib/cover-art';
+import { getWorkspaceArtist, isWorkspaceFeatureEnabled } from '@/lib/artists-server';
 import { type ReleaseCreatedSource } from '@/lib/analytics';
 import {
   captureServerAnalyticsEvent,
@@ -83,6 +84,7 @@ function toSelectorRelease(
 ): ReleaseOption {
   return {
     id: row.id,
+    artistId: row.artist_id || '',
     artistName: row.artist_name || '',
     title: row.title || '',
     releaseDate: row.release_date || null,
@@ -403,6 +405,32 @@ export async function POST(request: NextRequest) {
     let artistIdToUse = artistId;
     let artistName = artistNameInput || getDefaultArtistName(auth.user);
 
+    // Phase 3 (workspace-scoped artists): when the workspace flag is on AND
+    // the client did not provide an artistId/artistName, derive both from the
+    // workspace's single artist. This is the implicit-artist path the
+    // CreateReleaseModal relies on — it doesn't collect artist input anymore.
+    // If no workspace artist exists yet, fall through to the legacy
+    // lookup-or-create branch below, which will scope the new artist to the
+    // workspace (see workspaceIdForArtist below).
+    let workspaceIdForArtist: string | null = null;
+    if (isWorkspaceFeatureEnabled() && !artistIdToUse) {
+      try {
+        const workspace = await ensureOwnedWorkspace(adminClient, auth.user);
+        workspaceIdForArtist = workspace.id;
+        if (!artistNameInput) {
+          const workspaceArtist = await getWorkspaceArtist(adminClient, workspace.id);
+          if (workspaceArtist) {
+            artistIdToUse = workspaceArtist.id;
+            artistName = workspaceArtist.name;
+          }
+        }
+      } catch (workspaceError) {
+        // Non-fatal: workspace lookup degrades the implicit-artist path back
+        // to the legacy branch. The release still creates.
+        console.error('[releases.POST] workspace artist resolution failed', workspaceError);
+      }
+    }
+
     if (artistIdToUse) {
       const artistResult = await adminClient
         .from(ARTISTS_TABLE)
@@ -443,10 +471,28 @@ export async function POST(request: NextRequest) {
         artistIdToUse = String(existingArtistResult.data.id);
         artistName = String(existingArtistResult.data.name || artistName);
       } else {
+        // Phase 1+2: new artists must be workspace-scoped. The unique index
+        // after Migration 2 is (workspace_id, slug); inserting with
+        // workspace_id NULL produces a row excluded from the partial
+        // unique index, which would silently allow duplicates. If the
+        // feature flag is off the workspace lookup may not have run above
+        // — resolve it eagerly here. Failure to find a workspace falls
+        // back to NULL (legacy behaviour); the insert may still succeed
+        // depending on which migration revision is live.
+        if (!workspaceIdForArtist) {
+          try {
+            const ws = await ensureOwnedWorkspace(adminClient, auth.user);
+            workspaceIdForArtist = ws.id;
+          } catch {
+            workspaceIdForArtist = null;
+          }
+        }
+
         const insertArtistResult = await adminClient
           .from(ARTISTS_TABLE)
           .insert({
             owner_user_id: auth.user.id,
+            workspace_id: workspaceIdForArtist,
             name: artistName,
             slug: normalizedSlug || `artist-${Date.now()}`,
             updated_at: new Date().toISOString(),
@@ -601,6 +647,7 @@ export async function POST(request: NextRequest) {
       release: {
         id: releaseId,
         title: String(releaseResult.data.title || title),
+        artistId: artistIdToUse || '',
         artistName: String(releaseResult.data.artist_name || artistName),
         releaseDate: releaseResult.data.release_date ? String(releaseResult.data.release_date) : null,
         coverArtUrl: coverArtUrl || null,

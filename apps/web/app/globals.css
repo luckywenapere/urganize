@@ -27,6 +27,13 @@
   --color-status-error: 240 106 106;
   --color-status-info: 120 169 255;
 
+  /* Skeleton shimmer tokens. Base mirrors bg-elevated so the loading state
+     reads as the same surface that will replace it. Highlight is the gloss
+     stop in the moving gradient — ~50% lighter than base on dark theme. The
+     `.skeleton-shimmer` rule below themes through these two knobs. */
+  --color-skeleton-base: 28 28 28;
+  --color-skeleton-highlight: 42 42 42;
+
   --bg-base: #0f0f0f;
   --bg-sidebar: #141414;
   --bg-sidebar-active: #1e1e1e;
@@ -128,6 +135,8 @@ html[data-theme='dark'] {
   --color-text-quaternary: 74 74 74;
   --color-text-inverse: 9 15 11;
   --color-stroke: 255 255 255;
+  --color-skeleton-base: 28 28 28;
+  --color-skeleton-highlight: 42 42 42;
 
   --bg-base: #0f0f0f;
   --bg-sidebar: #141414;
@@ -458,14 +467,14 @@ h1, h2, h3, h4 {
 .skeleton-shimmer {
   position: relative;
   overflow: hidden;
-  background-color: #1a1a1a;
+  background-color: rgb(var(--color-skeleton-base));
   background: linear-gradient(
     90deg,
-    #1a1a1a 0%,
-    #242424 45%,
-    #2a2a2a 50%,
-    #242424 55%,
-    #1a1a1a 100%
+    rgb(var(--color-skeleton-base)) 0%,
+    rgb(var(--color-skeleton-highlight) / 0.7) 45%,
+    rgb(var(--color-skeleton-highlight)) 50%,
+    rgb(var(--color-skeleton-highlight) / 0.7) 55%,
+    rgb(var(--color-skeleton-base)) 100%
   );
   background-size: 220% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
