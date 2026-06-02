@@ -304,6 +304,14 @@ export function getTaskSectionKey(task: Task, now = new Date()): TaskSectionKey 
   const differenceInDays = Math.round((dueDay.getTime() - today.getTime()) / 86400000);
 
   if (differenceInDays < 0) {
+    // Compressed-runway tasks: the template instantiated them with a past
+    // due date because the release date was inside the template's lead time.
+    // They route to "Catch up" rather than red "Overdue". Completed tasks
+    // fall through to overdue so the row reads naturally; the catch_up
+    // section is for outstanding catch-up work only.
+    if (task.compressedRunway && !task.completedAt) {
+      return 'catch_up';
+    }
     return 'overdue';
   }
 
@@ -322,6 +330,8 @@ export function getTaskSectionLabel(section: TaskSectionKey): string {
   switch (section) {
     case 'overdue':
       return 'Overdue';
+    case 'catch_up':
+      return 'Catch Up';
     case 'today':
       return 'Due Today';
     case 'week':
@@ -339,6 +349,8 @@ export function getTaskSectionDescription(section: TaskSectionKey): string {
   switch (section) {
     case 'overdue':
       return 'Hard deadlines that already slipped. Clear these first so the release does not drift.';
+    case 'catch_up':
+      return 'These tasks were already in the past when this release was created — a compressed timeline, not slippage. Start here.';
     case 'today':
       return 'What needs action before the day closes.';
     case 'week':
@@ -352,7 +364,10 @@ export function getTaskSectionDescription(section: TaskSectionKey): string {
   }
 }
 
-export function getRelativeDueLabel(task: Pick<Task, 'dueDate' | 'completedAt'>, now = new Date()): {
+export function getRelativeDueLabel(
+  task: Pick<Task, 'dueDate' | 'completedAt' | 'compressedRunway'>,
+  now = new Date()
+): {
   label: string;
   isOverdue: boolean;
 } {
@@ -386,6 +401,19 @@ export function getRelativeDueLabel(task: Pick<Task, 'dueDate' | 'completedAt'>,
   }
 
   const overdueDays = Math.abs(differenceInDays);
+
+  // Compressed-runway tasks were never on a future-trajectory; the template
+  // generated them already in the past. Surface them with neutral copy and
+  // isOverdue=false so TaskRow doesn't paint them red. Completed catch-up
+  // tasks fall through to the standard overdue framing so the row reads as
+  // a finished-late item rather than mixed signals.
+  if (task.compressedRunway && !task.completedAt) {
+    return {
+      label: overdueDays === 1 ? 'Behind by 1 day' : `Behind by ${overdueDays} days`,
+      isOverdue: false,
+    };
+  }
+
   return {
     label: overdueDays === 1 ? '1 day overdue' : `${overdueDays} days overdue`,
     isOverdue: !task.completedAt,
@@ -411,6 +439,7 @@ export function formatMilestoneDate(dueDate: string | null): string {
 export function createEmptyMyTasksSections(): Record<TaskSectionKey, Task[]> {
   return {
     overdue: [],
+    catch_up: [],
     today: [],
     week: [],
     upcoming: [],

@@ -20,13 +20,27 @@ import { TaskRow } from '@/components/tasks/TaskRow';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { ScopePill } from './ScopePill';
 
-const sectionOrder: TaskSectionKey[] = ['overdue', 'today', 'week', 'upcoming', 'no_due_date'];
+// Overdue first (genuine slippage, most urgent), then Catch Up (start-here
+// for compressed-runway plans — calm, neutral framing), then standard
+// time-based buckets. Catch Up is empty on long-running releases where every
+// past-due task is real slippage, so the bucket only takes vertical space
+// when it has signal to add.
+const sectionOrder: TaskSectionKey[] = [
+  'overdue',
+  'catch_up',
+  'today',
+  'week',
+  'upcoming',
+  'no_due_date',
+];
 
-// Default expanded state on first render: Overdue open, everything else
-// collapsed. Keeps the panel short so the user sees the most urgent bucket
-// up top and can expand other contexts on demand.
+// Default expanded state on first render: Overdue and Catch Up open (both
+// flag "look here first"), everything else collapsed. Keeps the panel short
+// so the user sees the most urgent bucket up top and can expand other
+// contexts on demand.
 const DEFAULT_EXPANDED: Record<TaskSectionKey, boolean> = {
   overdue: true,
+  catch_up: true,
   today: false,
   week: false,
   upcoming: false,
@@ -38,6 +52,7 @@ const DEFAULT_EXPANDED: Record<TaskSectionKey, boolean> = {
 // overdue items is the expected state, not an achievement.
 const UNSCOPED_EMPTY: Record<TaskSectionKey, string> = {
   overdue: "You're caught up.",
+  catch_up: 'No catch-up tasks.',
   today: 'Nothing due today.',
   week: 'Nothing due this week.',
   upcoming: 'Nothing queued yet.',
@@ -46,6 +61,7 @@ const UNSCOPED_EMPTY: Record<TaskSectionKey, string> = {
 
 const SCOPED_EMPTY: Record<TaskSectionKey, string> = {
   overdue: 'No overdue tasks for this release.',
+  catch_up: 'No catch-up tasks for this release.',
   today: 'Nothing due today for this release.',
   week: 'Nothing due this week for this release.',
   upcoming: 'Nothing upcoming for this release.',

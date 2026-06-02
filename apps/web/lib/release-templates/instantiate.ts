@@ -187,6 +187,13 @@ export async function instantiateTemplate(params: {
 
   // ---- 4. Build rows ---------------------------------------------------------
 
+  // Anchor for the compressed-runway flag: any computed due_date strictly
+  // before this moment was past-due at the instant the release was created.
+  // These tasks land in the "Catch up" bucket in the workspace, not the red
+  // "Overdue" bucket — they represent a compressed timeline, not slippage.
+  // Captured once per call so every task in this batch shares one anchor.
+  const instantiationMs = Date.now();
+
   const taskRows = template.tasks.map((task, index) =>
     buildTaskRow({
       task,
@@ -197,6 +204,7 @@ export async function instantiateTemplate(params: {
       ownerUserId,
       releaseEpoch,
       templateIdToUuid,
+      instantiationMs,
     })
   );
 
@@ -236,6 +244,7 @@ interface BuildTaskRowParams {
   ownerUserId: string;
   releaseEpoch: number;
   templateIdToUuid: Map<string, string>;
+  instantiationMs: number;
 }
 
 function buildTaskRow(params: BuildTaskRowParams) {
@@ -248,6 +257,7 @@ function buildTaskRow(params: BuildTaskRowParams) {
     ownerUserId,
     releaseEpoch,
     templateIdToUuid,
+    instantiationMs,
   } = params;
 
   const id = templateIdToUuid.get(task.id);
@@ -259,7 +269,9 @@ function buildTaskRow(params: BuildTaskRowParams) {
     );
   }
 
-  const dueDate = new Date(releaseEpoch + task.offset_days * MS_PER_DAY).toISOString();
+  const dueDateMs = releaseEpoch + task.offset_days * MS_PER_DAY;
+  const dueDate = new Date(dueDateMs).toISOString();
+  const compressedRunway = dueDateMs < instantiationMs;
 
   const dependencies = (task.depends_on ?? [])
     .map((depId) => templateIdToUuid.get(depId))
@@ -298,6 +310,12 @@ function buildTaskRow(params: BuildTaskRowParams) {
         duration_days: task.duration_days,
         optional: task.optional,
         tags: task.tags ?? [],
+        // True when the template offset put this task's due date before the
+        // moment of release creation (compressed-runway case). The reader
+        // surfaces these in the "Catch up" bucket so they don't look like
+        // slippage; tasks generated with a future due date keep this false
+        // and route to real "Overdue" if/when they slip later.
+        compressed_runway: compressedRunway,
       },
     },
   };
