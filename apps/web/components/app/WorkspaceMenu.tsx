@@ -132,7 +132,7 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Workspace menu"
-        className="grid h-10 w-10 place-items-center border border-stroke-default bg-bg-elevated text-sm font-semibold text-content-primary transition-colors hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="motion-focus motion-press grid h-10 w-10 place-items-center border border-stroke-default bg-bg-elevated text-sm font-semibold text-content-primary transition-colors hover:bg-white/[0.04]"
       >
         {monogram}
       </button>
@@ -142,7 +142,7 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
           ref={menuRef}
           role="menu"
           aria-label="Workspace menu"
-          className="absolute right-0 top-full z-50 mt-2 w-60 border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgba(0,0,0,0.6)]"
+          className="animate-menu-down absolute right-0 top-full z-50 mt-2 w-60 origin-top-right border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgba(0,0,0,0.6)]"
         >
           {/* Stage 2: the "Lucky / Workspace" identity used to live in the
               sidebar footer. With the sidebar gone it lives here, as a
@@ -174,7 +174,7 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
             role="menuitem"
             onClick={handleSettings}
             onKeyDown={(event) => handleItemKeyDown(event, 0)}
-            className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-content-primary transition-colors hover:bg-bg-hover focus:bg-bg-hover focus:outline-none"
+            className="motion-focus flex w-full items-center gap-3 px-3 py-2.5 text-sm text-content-primary transition-colors hover:bg-bg-hover focus:bg-bg-hover"
           >
             <SettingsIcon className="h-4 w-4 text-content-tertiary" aria-hidden="true" />
             Settings
@@ -187,7 +187,7 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
             role="menuitem"
             onClick={() => void handleSignOut()}
             onKeyDown={(event) => handleItemKeyDown(event, 1)}
-            className="flex w-full items-center gap-3 border-t border-stroke-subtle px-3 py-2.5 text-sm text-content-primary transition-colors hover:bg-bg-hover focus:bg-bg-hover focus:outline-none"
+            className="motion-focus flex w-full items-center gap-3 border-t border-stroke-subtle px-3 py-2.5 text-sm text-content-primary transition-colors hover:bg-bg-hover focus:bg-bg-hover"
           >
             <LogOut className="h-4 w-4 text-content-tertiary" aria-hidden="true" />
             Sign out

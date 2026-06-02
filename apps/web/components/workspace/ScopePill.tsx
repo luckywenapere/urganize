@@ -19,7 +19,7 @@ export function ScopePill({ release, onClear }: ScopePillProps) {
         onClick={onClear}
         aria-label="Show all tasks"
         title="Show all tasks"
-        className="ml-1 grid h-5 w-5 shrink-0 place-items-center text-content-tertiary transition-colors hover:text-content-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="motion-focus ml-1 grid h-5 w-5 shrink-0 place-items-center text-content-tertiary transition-colors hover:text-content-primary"
       >
         <X className="h-3.5 w-3.5" />
       </button>

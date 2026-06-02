@@ -50,7 +50,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
         <Link
           href="/dashboard"
           aria-label="Urganize home"
-          className="shrink-0 transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="motion-focus shrink-0 transition-opacity hover:opacity-80"
         >
           <Logo size="sm" priority className="opacity-90" />
         </Link>
@@ -74,7 +74,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
         <button
           type="button"
           onClick={onNewRelease}
-          className="hidden h-10 items-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse shadow-[0_18px_36px_-28px_rgba(62,207,142,0.55)] hover:bg-brand-hover sm:inline-flex"
+          className="motion-focus motion-press hidden h-10 items-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse shadow-[0_18px_36px_-28px_rgba(62,207,142,0.55)] hover:bg-brand-hover sm:inline-flex"
         >
           <Plus className="h-4 w-4" />
           <span>New release</span>

@@ -74,7 +74,7 @@ export function TaskCompletionCheckbox({
       aria-checked={isDone}
       aria-label={isDone ? `Mark ${taskLabel} incomplete` : `Mark ${taskLabel} complete`}
       onClick={handleClick}
-      className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${stateClasses} ${className}`}
+      className={`motion-focus grid h-6 w-6 shrink-0 place-items-center rounded-full border transition ${stateClasses} ${className}`}
     >
       <Check className="h-3.5 w-3.5" strokeWidth={3} />
     </button>

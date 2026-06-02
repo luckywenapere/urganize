@@ -179,13 +179,13 @@ export function TaskDetailDrawer({
       <div
         aria-hidden={!isOpen}
         onClick={onClose}
-        className={`fixed inset-0 z-[160] bg-black/40 backdrop-blur-[2px] transition-opacity duration-200 ${
+        className={`fixed inset-0 z-[160] bg-black/40 backdrop-blur-[2px] transition-opacity duration-slow ease-out ${
           isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
       />
       <div
         aria-hidden={!isOpen}
-        className={`fixed inset-y-0 right-0 z-[165] flex w-full max-w-[560px] flex-col overflow-hidden border-l border-stroke-default bg-bg-surface shadow-[-24px_0_64px_-34px_rgba(0,0,0,0.72)] transition-transform duration-200 ease-out ${
+        className={`fixed inset-y-0 right-0 z-[165] flex w-full max-w-[560px] flex-col overflow-hidden border-l border-stroke-default bg-bg-surface shadow-[-24px_0_64px_-34px_rgba(0,0,0,0.72)] transition-transform duration-slow ease-out ${
           isOpen ? 'translate-x-0' : 'pointer-events-none translate-x-full'
         }`}
       >

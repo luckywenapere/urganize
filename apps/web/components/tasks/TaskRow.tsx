@@ -69,7 +69,7 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
   if (isCompact) {
     return (
       <div
-        className={`group flex items-center gap-3 border-l-4 border-t border-stroke-subtle bg-bg-surface px-4 py-3 transition first:border-t-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-offset-0 ${borderClass} ${
+        className={`group flex items-center gap-3 border-l-4 border-t border-stroke-subtle bg-bg-surface px-4 py-3 transition first:border-t-0 motion-focus ${borderClass} ${
           onClick ? 'cursor-pointer hover:bg-bg-hover' : ''
         } ${isLocked ? 'bg-bg-surface/60' : ''}`}
         {...interactionHandlers}
@@ -115,7 +115,7 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
   // Comfortable (default) — release-detail page layout.
   return (
     <div
-      className={`group flex min-h-[76px] items-center gap-4 border-l-4 border-t border-stroke-subtle bg-bg-surface px-4 py-3.5 transition first:border-t-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-offset-0 ${borderClass} ${
+      className={`group flex min-h-[76px] items-center gap-4 border-l-4 border-t border-stroke-subtle bg-bg-surface px-4 py-3.5 transition first:border-t-0 motion-focus ${borderClass} ${
         onClick ? 'cursor-pointer hover:bg-bg-hover' : ''
       } ${isLocked ? 'bg-bg-surface/60' : ''}`}
       {...interactionHandlers}

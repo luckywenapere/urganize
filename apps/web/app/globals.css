@@ -557,9 +557,14 @@ h1, h2, h3, h4 {
 
 /* Canonical focus ring. Equivalent to Tailwind's
    `focus-visible:ring-2 ring-brand ring-offset-2 ring-offset-bg-base` but
-   without requiring the user to write all four utilities — a single class.
-   Renders as: 2px bg-base offset (gap), 2px brand ring outside that.
-   `outline: none` removes the browser default; box-shadow draws the ring. */
+   as one class. Renders as: 2px bg-base offset (gap), 2px brand ring
+   outside that. The transition lives on the base class so the ring fades
+   in AND out — putting it inside :focus-visible would only animate the
+   entry; blur would snap. */
+.motion-focus {
+  transition: box-shadow var(--motion-base) var(--motion-out);
+}
+
 .motion-focus:focus {
   outline: none;
 }
@@ -569,7 +574,6 @@ h1, h2, h3, h4 {
   box-shadow:
     0 0 0 2px rgb(var(--color-bg-base)),
     0 0 0 4px rgb(var(--color-brand));
-  transition: box-shadow var(--motion-base) var(--motion-out);
 }
 
 /* ============================================================================

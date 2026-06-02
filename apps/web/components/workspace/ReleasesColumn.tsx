@@ -40,7 +40,7 @@ export function ReleasesColumn({
       <button
         type="button"
         onClick={onCreateRelease}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:hidden"
+        className="motion-focus motion-press inline-flex h-11 w-full items-center justify-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:hidden"
       >
         <Plus className="h-4 w-4" />
         New release
@@ -54,7 +54,7 @@ export function ReleasesColumn({
             <button
               type="button"
               onClick={onCreateRelease}
-              className="inline-flex h-10 items-center justify-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base"
+              className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
             >
               <Plus className="h-4 w-4" />
               Create release

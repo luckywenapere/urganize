@@ -45,7 +45,7 @@ export function TaskCard({ task, onClick, draggable = false, onDragStart, onDrag
         event.preventDefault();
         onDrop(task);
       }}
-      className="panel-shell-subtle w-full rounded-xl p-4 text-left transition hover:border-brand/35 hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
+      className="motion-focus panel-shell-subtle w-full rounded-xl p-4 text-left transition hover:border-brand/35 hover:bg-bg-hover"
       data-ph-capture-attribute-section="tasks"
     >
       <div className="flex items-start justify-between gap-3">

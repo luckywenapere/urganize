@@ -197,7 +197,7 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
           value={priorityFilter}
           onChange={(event) => syncFilter({ priority: event.target.value })}
           aria-label="Filter tasks by priority"
-          className="h-10 w-full rounded-lg border border-stroke-default bg-bg-surface px-3 text-sm text-content-primary transition-colors [color-scheme:dark] hover:border-stroke-strong focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="motion-focus h-10 w-full rounded-lg border border-stroke-default bg-bg-surface px-3 text-sm text-content-primary transition-colors [color-scheme:dark] hover:border-stroke-strong focus:border-brand"
         >
           <option value="" className="bg-bg-surface text-content-primary">
             All priorities
@@ -213,7 +213,7 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
           value={statusFilter}
           onChange={(event) => syncFilter({ status: event.target.value })}
           aria-label="Filter tasks by status"
-          className="h-10 w-full rounded-lg border border-stroke-default bg-bg-surface px-3 text-sm text-content-primary transition-colors [color-scheme:dark] hover:border-stroke-strong focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="motion-focus h-10 w-full rounded-lg border border-stroke-default bg-bg-surface px-3 text-sm text-content-primary transition-colors [color-scheme:dark] hover:border-stroke-strong focus:border-brand"
         >
           <option value="" className="bg-bg-surface text-content-primary">
             All statuses
@@ -238,7 +238,7 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
                 onClick={() => toggleBucket(sectionKey)}
                 aria-expanded={isOpen}
                 aria-controls={bodyId}
-                className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand ${
+                className={`motion-focus flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover ${
                   isOpen ? 'border-b border-stroke-subtle' : ''
                 }`}
               >

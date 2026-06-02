@@ -179,7 +179,7 @@ export function WorkspaceView() {
                   type="button"
                   onClick={handleMobileBack}
                   aria-label="Back to releases"
-                  className="grid h-10 w-10 shrink-0 place-items-center border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
                 >
                   <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                 </button>

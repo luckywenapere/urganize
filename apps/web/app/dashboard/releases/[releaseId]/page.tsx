@@ -294,7 +294,7 @@ export default function ReleaseDetailPage() {
                     <button
                       type="button"
                       onClick={() => openTask(task.id)}
-                      className="flex min-w-0 flex-1 items-center gap-3 text-left transition-colors hover:text-content-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
+                      className="motion-focus flex min-w-0 flex-1 items-center gap-3 text-left transition-colors hover:text-content-primary"
                     >
                       <span
                         className={`min-w-0 flex-1 truncate ${

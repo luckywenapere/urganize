@@ -50,7 +50,7 @@ export function WorkspaceReleaseCard({
       type="button"
       aria-pressed={selected}
       onClick={() => onSelect(release.id)}
-      className={`group block w-full overflow-hidden border bg-bg-surface text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+      className={`group motion-focus block w-full overflow-hidden border bg-bg-surface text-left transition-colors ${
         selected
           ? 'border-brand bg-brand/8'
           : 'border-stroke-default hover:border-stroke-strong hover:bg-bg-hover'
@@ -66,7 +66,7 @@ export function WorkspaceReleaseCard({
             alt={`${release.title} cover art`}
             width={720}
             height={720}
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+            className="h-full w-full object-cover transition-transform duration-slow ease-out group-hover:scale-[1.02]"
             sizes="(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw"
           />
         ) : (
