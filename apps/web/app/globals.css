@@ -509,6 +509,75 @@ h1, h2, h3, h4 {
   background: rgb(var(--color-bg-surface) / 0.94);
 }
 
+/* ============================================================================
+   Motion utility classes — the four standard interactive behaviors.
+
+   Compose with Tailwind atoms; never repeat the durations/easings inline.
+
+     hover  →  .motion-hover  — color/bg/border/text only, --motion-fast
+     press  →  .motion-press  — subtle scale on :active, --motion-fast
+                                (BUTTONS AND SMALL CONTROLS ONLY — do not
+                                 apply to cards or text rows; cards/rows
+                                 should use a quick bg/border shift instead)
+     lift   →  .motion-lift   — hover translate-y -1px, --motion-base
+                                (reserved for cards/surfaces that need depth)
+     focus  →  .motion-focus  — single canonical brand ring, --motion-base
+
+   Reduced motion is honored by the existing `@media (prefers-reduced-motion)`
+   block at the bottom of this file (it clamps every transition-duration to
+   1ms — these classes are pure CSS transitions, so they're covered).
+
+   These DO NOT yet sweep the workspace components. A follow-up commit
+   replaces the inline `duration-*` and `ring-brand/3X` drift with these
+   utilities.
+   ============================================================================ */
+
+.motion-hover {
+  transition: background-color var(--motion-fast) var(--motion-out),
+              border-color var(--motion-fast) var(--motion-out),
+              color var(--motion-fast) var(--motion-out);
+}
+
+.motion-press {
+  transition: transform var(--motion-fast) var(--motion-out);
+}
+
+.motion-press:active {
+  transform: scale(0.985);
+}
+
+.motion-lift {
+  transition: transform var(--motion-base) var(--motion-out),
+              border-color var(--motion-base) var(--motion-out);
+}
+
+.motion-lift:hover {
+  transform: translateY(-1px);
+}
+
+/* Canonical focus ring. Equivalent to Tailwind's
+   `focus-visible:ring-2 ring-brand ring-offset-2 ring-offset-bg-base` but
+   without requiring the user to write all four utilities — a single class.
+   Renders as: 2px bg-base offset (gap), 2px brand ring outside that.
+   `outline: none` removes the browser default; box-shadow draws the ring. */
+.motion-focus:focus {
+  outline: none;
+}
+
+.motion-focus:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgb(var(--color-bg-base)),
+    0 0 0 4px rgb(var(--color-brand));
+  transition: box-shadow var(--motion-base) var(--motion-out);
+}
+
+/* ============================================================================
+   Legacy hover/press classes below — kept for now while the workspace sweep
+   migrates callers to .motion-*. They reference the same motion tokens so
+   timing is consistent with the new utilities; only the naming is dated.
+   ============================================================================ */
+
 .press-effect {
   transition: transform var(--motion-fast) var(--motion-out);
 }
