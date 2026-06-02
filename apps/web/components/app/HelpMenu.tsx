@@ -159,7 +159,7 @@ export function HelpMenu() {
           label: 'Contact us',
           icon: <ContactIcon />,
           onClick: () => {
-            window.location.href = 'mailto:support@urganize.co';
+            window.location.href = 'mailto:contact@urganize.app';
           },
         },
         {
