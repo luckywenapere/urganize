@@ -109,17 +109,28 @@ const preset = {
           "100%": { opacity: "1", transform: "translateY(0) scale(1)" }
         }
       },
+      // Motion tokens — single source of truth. The CSS variables themselves
+      // live in apps/web/app/globals.css; the Tailwind preset references
+      // them via `var(--motion-*)` so a class like `duration-fast` and a
+      // CSS rule like `transition: ... var(--motion-fast)` always resolve
+      // to the same physical value. Adding or changing a duration here
+      // requires updating the CSS var (and vice versa) — but no name can
+      // resolve to two different values.
+      //
+      // Three durations only: fast / base / slow. Two easings only: out /
+      // standard. `spring` is retained for celebratory carve-outs (no
+      // hover/press/menu/routine use); `instant`, `normal`, `slower`, and
+      // the old `in-out` are dropped — see audit recon for the drift each
+      // one caused.
       transitionTimingFunction: {
-        out: "cubic-bezier(0.16, 1, 0.3, 1)",
-        "in-out": "cubic-bezier(0.65, 0, 0.35, 1)",
-        spring: "cubic-bezier(0.34, 1.56, 0.64, 1)"
+        out: "var(--motion-out)",
+        standard: "var(--motion-standard)",
+        spring: "var(--ease-spring)"
       },
       transitionDuration: {
-        instant: "50ms",
-        fast: "100ms",
-        normal: "200ms",
-        slow: "300ms",
-        slower: "500ms"
+        fast: "var(--motion-fast)",
+        base: "var(--motion-base)",
+        slow: "var(--motion-slow)"
       }
     }
   },

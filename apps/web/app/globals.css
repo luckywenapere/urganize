@@ -103,14 +103,21 @@
   --radius-2xl: 0px;
   --radius-full: 9999px;
 
-  --duration-instant: 50ms;
-  --duration-fast: 120ms;
-  --duration-normal: 220ms;
-  --duration-slow: 320ms;
-  --duration-slower: 520ms;
+  /* Motion tokens — ONE source of truth.
+     Tailwind preset (packages/config/tailwind/preset.js) references these via
+     `var(--motion-*)` so the same name resolves to the same value in CSS and
+     in Tailwind utility classes. Three durations, two easings — no more. */
+  --motion-fast: 120ms;       /* hover state, color/bg change, press feedback */
+  --motion-base: 180ms;       /* menu enter/exit, lift, focus ring, entrance animation */
+  --motion-slow: 280ms;       /* drawer slide, modal scrim, progress fill, scoped reflow */
 
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --motion-out: cubic-bezier(0.2, 0.8, 0.2, 1);      /* entrances, expanding, default */
+  --motion-standard: cubic-bezier(0.4, 0, 0.2, 1);   /* bidirectional state changes */
+
+  /* Reserved easings — defined but DO NOT use in hover/press/menu/routine
+     motion. Reserved for future celebratory moments (e.g., release-shipped
+     flourish, completion check). Keeping the names available avoids a
+     re-introduction later. */
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-bounce: cubic-bezier(0.68, -0.6, 0.32, 1.6);
 }
@@ -164,8 +171,14 @@ html[data-theme='dark'] {
   --border-strong: rgba(255, 255, 255, 0.1);
 }
 
+/* Default hover transition for every interactive. Scoped to color
+   properties only — never `all` — so layout properties (transform,
+   translate, scale) are never animated implicitly. Press and lift opt in
+   via .motion-press / .motion-lift utility classes. */
 button, a, input, [role="button"] {
-  transition: all 150ms ease-in-out;
+  transition: background-color var(--motion-fast) var(--motion-out),
+              border-color var(--motion-fast) var(--motion-out),
+              color var(--motion-fast) var(--motion-out);
 }
 
 *, *::before, *::after {
@@ -288,11 +301,11 @@ h1, h2, h3, h4 {
 }
 
 .animate-enter {
-  animation: enter-staggered 200ms ease-out forwards;
+  animation: enter-staggered var(--motion-base) var(--motion-out) forwards;
 }
 
 .animate-slide-left {
-  animation: slide-in-left 200ms ease-out forwards;
+  animation: slide-in-left var(--motion-base) var(--motion-out) forwards;
 }
 
 .animate-refresh-bar {
@@ -406,27 +419,27 @@ h1, h2, h3, h4 {
 }
 
 .animate-in {
-  animation: fadeInUp var(--duration-slow) var(--ease-out) forwards;
+  animation: fadeInUp var(--motion-base) var(--motion-out) forwards;
   opacity: 0;
 }
 
 .animate-scale-in {
-  animation: scaleIn var(--duration-slow) var(--ease-out) forwards;
+  animation: scaleIn var(--motion-base) var(--motion-out) forwards;
   opacity: 0;
 }
 
 .animate-slide-in {
-  animation: slideInLeft var(--duration-slow) var(--ease-out) forwards;
+  animation: slideInLeft var(--motion-base) var(--motion-out) forwards;
   opacity: 0;
 }
 
 .animate-menu-down {
-  animation: menuPopDown 170ms var(--ease-out) forwards;
+  animation: menuPopDown var(--motion-base) var(--motion-out) forwards;
   transform-origin: top right;
 }
 
 .animate-menu-up {
-  animation: menuPopUp 170ms var(--ease-out) forwards;
+  animation: menuPopUp var(--motion-base) var(--motion-out) forwards;
   transform-origin: bottom right;
 }
 
@@ -440,11 +453,11 @@ h1, h2, h3, h4 {
 .delay-8 { animation-delay: 400ms; }
 
 .animate-pulse-glow {
-  animation: pulseGlow 2s var(--ease-in-out) infinite;
+  animation: pulseGlow 2s var(--motion-standard) infinite;
 }
 
 .animate-breathe {
-  animation: breathe 2s var(--ease-in-out) infinite;
+  animation: breathe 2s var(--motion-standard) infinite;
 }
 
 .animate-spin {
@@ -455,8 +468,8 @@ h1, h2, h3, h4 {
   opacity: 0;
   transform: translateY(10px);
   transition:
-    opacity var(--duration-slow) var(--ease-out),
-    transform var(--duration-slow) var(--ease-out);
+    opacity var(--motion-base) var(--motion-out),
+    transform var(--motion-base) var(--motion-out);
 }
 
 .lazy-fade-in {
@@ -497,7 +510,7 @@ h1, h2, h3, h4 {
 }
 
 .press-effect {
-  transition: transform var(--duration-fast) var(--ease-out);
+  transition: transform var(--motion-fast) var(--motion-out);
 }
 
 .press-effect:active {
@@ -506,9 +519,9 @@ h1, h2, h3, h4 {
 
 .hover-lift {
   transition:
-    transform var(--duration-normal) var(--ease-out),
-    box-shadow var(--duration-normal) var(--ease-out),
-    border-color var(--duration-normal) var(--ease-out);
+    transform var(--motion-base) var(--motion-out),
+    box-shadow var(--motion-base) var(--motion-out),
+    border-color var(--motion-base) var(--motion-out);
 }
 
 .hover-lift:hover {
@@ -517,7 +530,7 @@ h1, h2, h3, h4 {
 }
 
 .hover-highlight {
-  transition: background-color var(--duration-fast) var(--ease-out);
+  transition: background-color var(--motion-fast) var(--motion-out);
 }
 
 .hover-highlight:hover {
@@ -525,7 +538,7 @@ h1, h2, h3, h4 {
 }
 
 .hover-rotate {
-  transition: transform var(--duration-normal) var(--ease-spring);
+  transition: transform var(--motion-base) var(--ease-spring);
 }
 
 .hover-rotate:hover {
@@ -533,7 +546,7 @@ h1, h2, h3, h4 {
 }
 
 .hover-scale {
-  transition: transform var(--duration-normal) var(--ease-spring);
+  transition: transform var(--motion-base) var(--ease-spring);
 }
 
 .hover-scale:hover {
@@ -541,7 +554,7 @@ h1, h2, h3, h4 {
 }
 
 .hover-glow {
-  transition: box-shadow var(--duration-normal) var(--ease-out);
+  transition: box-shadow var(--motion-base) var(--motion-out);
 }
 
 .hover-glow:hover {
@@ -577,7 +590,7 @@ h1, h2, h3, h4 {
   background: linear-gradient(90deg, #2ca86f 0%, #3ecf8e 55%, #55db9c 100%);
   background-size: 200% 100%;
   border-radius: var(--radius-full);
-  transition: width var(--duration-slower) var(--ease-out);
+  transition: width var(--motion-slow) var(--motion-out);
 }
 
 .progress-bar-fill.animate {
@@ -596,7 +609,7 @@ h1, h2, h3, h4 {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  animation: pulseGlow 2s var(--ease-in-out) infinite;
+  animation: pulseGlow 2s var(--motion-standard) infinite;
 }
 
 .status-dot.active {
@@ -621,7 +634,7 @@ h1, h2, h3, h4 {
   border-radius: 0;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  transition: all var(--duration-fast) var(--ease-out);
+  transition: all var(--motion-fast) var(--motion-out);
 }
 
 .badge-draft {
@@ -648,7 +661,7 @@ h1, h2, h3, h4 {
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
-  transition: all var(--duration-normal) var(--ease-out);
+  transition: all var(--motion-base) var(--motion-out);
 }
 
 html[data-theme='dark'] .card {
@@ -682,7 +695,7 @@ html[data-theme='dark'] .card-interactive:hover {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-  transition: all var(--duration-fast) var(--ease-out);
+  transition: all var(--motion-fast) var(--motion-out);
 }
 
 html[data-theme='dark'] .input {
@@ -714,7 +727,7 @@ html[data-theme='dark'] .input {
   font-weight: 600;
   border-radius: 0;
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
+  transition: all var(--motion-fast) var(--motion-out);
   border: none;
   outline: none;
 }
@@ -779,7 +792,7 @@ html[data-theme='dark'] .btn-secondary:hover:not(:disabled) {
   color: var(--text-secondary);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
+  transition: all var(--motion-fast) var(--motion-out);
 }
 
 .icon-btn:hover {
@@ -812,7 +825,7 @@ html[data-theme='dark'] .btn-secondary:hover:not(:disabled) {
   white-space: nowrap;
   opacity: 0;
   visibility: hidden;
-  transition: all var(--duration-fast) var(--ease-out);
+  transition: all var(--motion-fast) var(--motion-out);
   z-index: 100;
 }
 
@@ -892,7 +905,7 @@ html[data-theme='dark'] .btn-secondary:hover:not(:disabled) {
   border-radius: inherit;
   opacity: 0;
   filter: blur(24px);
-  transition: opacity var(--duration-normal) var(--ease-out);
+  transition: opacity var(--motion-base) var(--motion-out);
   z-index: -1;
 }
 
@@ -1057,7 +1070,7 @@ html[data-theme='dark'] .btn-secondary:hover:not(:disabled) {
   backdrop-filter: blur(16px);
   opacity: 0;
   transform: translateY(10px);
-  transition: all var(--duration-normal) var(--ease-out);
+  transition: all var(--motion-base) var(--motion-out);
   z-index: 20;
 }
 
