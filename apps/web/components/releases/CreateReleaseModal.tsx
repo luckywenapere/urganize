@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertCircle, CalendarDays, Loader2, X } from 'lucide-react';
 import { Button, IconButton } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
@@ -87,6 +88,16 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Portal mount-guard. The modal renders into document.body via createPortal
+  // to escape AppShell's `lazy-fade` wrapper, which carries a `transform` —
+  // any transformed ancestor turns `position: fixed` into "fixed relative to
+  // that ancestor," so scrolling the page would push the modal off-screen.
+  // Mirrors Spotlight.tsx; the guard avoids touching `document` during SSR.
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!open) {
       return;
@@ -110,6 +121,29 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isSubmitting, onClose, open]);
+
+  // Lock background scroll while the modal is open. Pad the body by the
+  // scrollbar width so the desktop layout doesn't jump when the scrollbar
+  // disappears. Restore the originals on close so we don't stomp on any
+  // other code that has set these.
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    document.body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+    };
+  }, [open]);
 
   const characterCount = description.length;
   const canSubmit = useMemo(
@@ -149,7 +183,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     };
   }, [releaseDate]);
 
-  if (!open) {
+  if (!open || !isMounted) {
     return null;
   }
 
@@ -226,12 +260,19 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[220] overflow-y-auto bg-black/72 px-4 py-4 backdrop-blur-sm sm:py-8" role="presentation">
+  const modal = (
+    // `fixed inset-x-0 top-0 h-[100dvh]` pins to the viewport using the
+    // *dynamic* viewport height (excludes mobile browser chrome). Using
+    // `inset-0` alone falls back to the layout viewport on iOS, pushing the
+    // bottom of the modal under the address bar / bottom toolbar.
+    <div
+      className="fixed inset-x-0 top-0 z-[220] flex h-[100dvh] items-center justify-center bg-black/72 px-4 py-4 backdrop-blur-sm sm:py-8"
+      role="presentation"
+    >
       <button
         type="button"
         aria-label="Close create release modal"
-        className="fixed inset-0 cursor-default"
+        className="absolute inset-0 cursor-default"
         onClick={() => {
           if (!isSubmitting) {
             onClose();
@@ -243,13 +284,13 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-release-title"
-        className="relative mx-auto flex min-h-full w-full max-w-3xl items-center"
+        className="relative mx-auto w-full max-w-3xl"
       >
         <form
           onSubmit={(event) => void handleSubmit(event)}
-          className="relative w-full border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgba(0,0,0,0.76)]"
+          className="relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgba(0,0,0,0.76)] sm:max-h-[calc(100dvh-4rem)]"
         >
-          <div className="flex items-start justify-between gap-4 border-b border-stroke-subtle p-4 sm:p-5">
+          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stroke-subtle p-4 sm:p-5">
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
                 Create release
@@ -272,7 +313,10 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
             </IconButton>
           </div>
 
-          <div className="space-y-4 p-4 sm:p-5">
+          {/* The body scrolls internally when the form exceeds the viewport
+              (small phones). Header + footer stay pinned via `shrink-0` so the
+              submit button is always reachable without scrolling the page. */}
+          <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-content-primary">Release title</span>
                 <input
@@ -339,13 +383,13 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
           </div>
 
           {submitError ? (
-            <div className="mx-4 mb-4 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error sm:mx-5">
+            <div className="mx-4 mb-4 flex shrink-0 items-start gap-3 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error sm:mx-5">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>{submitError}</p>
             </div>
           ) : null}
 
-          <div className="flex flex-col-reverse gap-2 border-t border-stroke-subtle p-4 sm:flex-row sm:justify-end sm:p-5">
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-stroke-subtle p-4 sm:flex-row sm:justify-end sm:p-5">
             <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
@@ -362,4 +406,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
