@@ -23,17 +23,58 @@ type TaskCreateInput = {
   assignedToUserId?: string | null;
 };
 
+/**
+ * Toast snapshot for the "Task completed · Undo" notification surfaced by the
+ * UndoCompletionToast component (mounted globally in TaskUIProvider). A
+ * monotonically increasing `tick` keeps the same taskId completed twice in a
+ * row from collapsing into a single toast — every completion shows a fresh
+ * countdown.
+ */
+export type CompletionToastState = {
+  taskId: string;
+  title: string;
+  tick: number;
+};
+
 type TaskStore = {
   tasks: ExecutionTask[];
   selectedTaskId: string | null;
   error: string;
+  /**
+   * Task ids whose status flipped to `done` but whose row should keep its
+   * original time-based bucket for ~1.5s before sliding into Done. Used by
+   * `groupTasksIntoSections` as a render-time override. Cleared when the in-
+   * place beat ends, or earlier by `undoCompletion`.
+   */
+  pendingCompletionIds: Record<string, true>;
+  /** Latest completion eligible for an Undo toast. Null when no toast active. */
+  completionToast: CompletionToastState | null;
   setTasks: (tasks: ExecutionTask[]) => void;
   selectTask: (taskId: string | null) => void;
   createTask: (input: TaskCreateInput) => Promise<ExecutionTask | null>;
   updateRequirement: (taskId: string, requirement: TaskRequirement | null) => Promise<void>;
   completeTask: (taskId: string) => Promise<ExecutionTask | null>;
+  /**
+   * Reverses the most recent completion of `taskId` by patching it back to
+   * `todo`, clearing any pending in-place beat, and dismissing the undo toast
+   * for that id. Safe to call from inside or outside the 1.5s in-place window.
+   */
+  undoCompletion: (taskId: string) => Promise<void>;
+  dismissCompletionToast: (taskId?: string) => void;
   tasksForRelease: (releaseId: string) => ExecutionTask[];
 };
+
+/**
+ * Module-scoped timers keyed by task id. Kept outside React state because they
+ * are operational handles (cleanup metadata), not rendered values — and so a
+ * later tick on the same task can cancel its predecessor without a re-render.
+ */
+const pendingBeatTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const completionToastTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+const PENDING_BEAT_MS = 1500;
+const TOAST_DURATION_MS = 5000;
+let completionToastTick = 0;
 
 const getAccessToken = async () => {
   const {
@@ -46,6 +87,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
   selectedTaskId: null,
   error: '',
+  pendingCompletionIds: {},
+  completionToast: null,
   setTasks: (tasks) => set({ tasks, error: '' }),
   selectTask: (taskId) => set({ selectedTaskId: taskId }),
   tasksForRelease: (releaseId) => get().tasks.filter((task) => task.releaseId === releaseId),
@@ -152,7 +195,24 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     // straight to todo with no blocker check and no cascade — reopening is
     // an admin action that doesn't need the gate, and re-locking dependents
     // is more confusing than helpful at v1 scale.
+    //
+    // Also covers the "re-tick inside the in-place beat" case: the row is
+    // still rendered in its source bucket via pendingCompletionIds, but the
+    // task itself is already `done` in the store, so the click lands here.
+    // Cancelling the beat + toast timers below makes the row stay put and
+    // the toast disappear instead of stranding state behind.
     if (task.status === TASK_DONE_STATUS) {
+      const beatTimer = pendingBeatTimers.get(taskId);
+      if (beatTimer) {
+        clearTimeout(beatTimer);
+        pendingBeatTimers.delete(taskId);
+      }
+      const toastTimer = completionToastTimers.get(taskId);
+      if (toastTimer) {
+        clearTimeout(toastTimer);
+        completionToastTimers.delete(taskId);
+      }
+
       const reopenResponse = await fetch(`/api/tasks/${taskId}`, {
         method: 'PATCH',
         headers: {
@@ -170,12 +230,20 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         return null;
       }
       const reopenedTask = reopenPayload.task as ExecutionTask;
-      set((state) => ({
-        tasks: state.tasks.map((candidate) =>
-          candidate.id === taskId ? reopenedTask : candidate
-        ),
-        error: '',
-      }));
+      set((state) => {
+        const nextPending = { ...state.pendingCompletionIds };
+        delete nextPending[taskId];
+        const nextToast =
+          state.completionToast?.taskId === taskId ? null : state.completionToast;
+        return {
+          tasks: state.tasks.map((candidate) =>
+            candidate.id === taskId ? reopenedTask : candidate
+          ),
+          pendingCompletionIds: nextPending,
+          completionToast: nextToast,
+          error: '',
+        };
+      });
       return reopenedTask;
     }
 
@@ -257,6 +325,48 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       }
     }
 
+    // Schedule the "in-place beat then move to Done" handoff. Any earlier
+    // timer for this id (rapid re-ticks) is cancelled so the latest tick
+    // wins. The pending flag is set synchronously alongside the data write
+    // so React renders the row in its source bucket on this same frame.
+    const existingBeatTimer = pendingBeatTimers.get(taskId);
+    if (existingBeatTimer) {
+      clearTimeout(existingBeatTimer);
+    }
+    const beatTimer = setTimeout(() => {
+      pendingBeatTimers.delete(taskId);
+      set((state) => {
+        if (!state.pendingCompletionIds[taskId]) return state;
+        const nextPending = { ...state.pendingCompletionIds };
+        delete nextPending[taskId];
+        return { pendingCompletionIds: nextPending };
+      });
+    }, PENDING_BEAT_MS);
+    pendingBeatTimers.set(taskId, beatTimer);
+
+    // Mirror the same single-active-timer rule for the toast — the toast
+    // lifetime (TOAST_DURATION_MS) is independent of the in-place beat so
+    // a mis-tick is recoverable after the row has moved to Done.
+    const existingToastTimer = completionToastTimers.get(taskId);
+    if (existingToastTimer) {
+      clearTimeout(existingToastTimer);
+    }
+    const toastTimer = setTimeout(() => {
+      completionToastTimers.delete(taskId);
+      set((state) => {
+        if (state.completionToast?.taskId !== taskId) return state;
+        return { completionToast: null };
+      });
+    }, TOAST_DURATION_MS);
+    completionToastTimers.set(taskId, toastTimer);
+
+    completionToastTick += 1;
+    const toastSnapshot: CompletionToastState = {
+      taskId,
+      title: completedTask.title,
+      tick: completionToastTick,
+    };
+
     set((state) => ({
       tasks: state.tasks.map((candidate) => {
         if (candidate.id === taskId) return completedTask;
@@ -264,9 +374,77 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         if (unlocked) return unlocked;
         return candidate;
       }),
+      pendingCompletionIds: { ...state.pendingCompletionIds, [taskId]: true },
+      completionToast: toastSnapshot,
       error: '',
     }));
 
     return completedTask;
+  },
+  undoCompletion: async (taskId) => {
+    const beatTimer = pendingBeatTimers.get(taskId);
+    if (beatTimer) {
+      clearTimeout(beatTimer);
+      pendingBeatTimers.delete(taskId);
+    }
+    const toastTimer = completionToastTimers.get(taskId);
+    if (toastTimer) {
+      clearTimeout(toastTimer);
+      completionToastTimers.delete(taskId);
+    }
+
+    // Optimistic clears so the row drops out of pending + the toast hides
+    // immediately, even before the PATCH lands. The store self-heals if the
+    // patch fails (the next refresh will reload the authoritative status).
+    set((state) => {
+      const nextPending = { ...state.pendingCompletionIds };
+      delete nextPending[taskId];
+      const nextToast =
+        state.completionToast?.taskId === taskId ? null : state.completionToast;
+      return { pendingCompletionIds: nextPending, completionToast: nextToast };
+    });
+
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      set({ error: 'Session expired. Please sign in again.' });
+      return;
+    }
+
+    const response = await fetch(`/api/tasks/${taskId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ status: TASK_PENDING_STATUS }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as {
+      task?: ExecutionTask;
+      error?: string;
+    };
+    if (!response.ok || !payload.task) {
+      set({ error: payload.error || 'Could not undo completion.' });
+      return;
+    }
+    const restored = payload.task as ExecutionTask;
+    set((state) => ({
+      tasks: state.tasks.map((candidate) =>
+        candidate.id === taskId ? restored : candidate
+      ),
+      error: '',
+    }));
+  },
+  dismissCompletionToast: (taskId) => {
+    set((state) => {
+      if (!state.completionToast) return state;
+      if (taskId && state.completionToast.taskId !== taskId) return state;
+      const targetId = taskId ?? state.completionToast.taskId;
+      const timer = completionToastTimers.get(targetId);
+      if (timer) {
+        clearTimeout(timer);
+        completionToastTimers.delete(targetId);
+      }
+      return { completionToast: null };
+    });
   },
 }));

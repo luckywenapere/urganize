@@ -3,7 +3,14 @@ import { WorkspaceMember } from './auth';
 
 export type TaskViewMode = 'kanban' | 'list';
 export type TaskSortKey = 'due_date' | 'priority' | 'assignee' | 'status' | 'created_at';
-export type TaskSectionKey = 'overdue' | 'catch_up' | 'today' | 'week' | 'upcoming' | 'no_due_date';
+export type TaskSectionKey =
+  | 'overdue'
+  | 'catch_up'
+  | 'today'
+  | 'week'
+  | 'upcoming'
+  | 'no_due_date'
+  | 'done';
 export type TaskCreateSource = 'quick_create' | 'inline' | 'detail_panel' | 'onboarding';
 export type TaskRequirementType = 'file_upload' | 'field_completion' | 'approval' | 'external_action';
 

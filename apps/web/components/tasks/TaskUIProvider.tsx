@@ -14,6 +14,7 @@ import { usePathname } from 'next/navigation';
 import { TaskDetailDrawer } from '@/components/tasks/TaskDetailDrawer';
 import { type DependencyTaskSummary } from '@/components/tasks/TaskDependenciesSection';
 import { TaskQuickCreateModal } from '@/components/tasks/TaskQuickCreateModal';
+import { UndoCompletionToast } from '@/components/tasks/UndoCompletionToast';
 import { type ReleaseOption } from '@/lib/release-helpers';
 import { isTypingTarget, type TaskCreateSource, type TaskDetail, type TaskGroup, type TaskPriority, type WorkspaceMember } from '@/lib/tasks';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -659,6 +660,11 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         onUploadAttachment={uploadAttachment}
         onDeleteAttachment={deleteAttachment}
       />
+
+      {/* Global undo-completion toast. The store owns the lifecycle; this
+          renders the affordance wherever TaskUIProvider is mounted (currently
+          AppShell, which covers every authenticated dashboard surface). */}
+      <UndoCompletionToast />
     </TaskUIContext.Provider>
   );
 }

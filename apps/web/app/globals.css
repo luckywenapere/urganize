@@ -576,6 +576,47 @@ h1, h2, h3, h4 {
     0 0 0 4px rgb(var(--color-brand));
 }
 
+/* In-place beat for a just-ticked task. The row sits at full opacity for
+   ~86% of the 1500ms window (strikethrough conveys the completion), then
+   fades + slides into Done over the remaining ~200ms. The store handles the
+   data move at exactly 1500ms; this is the visual handoff so the row doesn't
+   pop out of place. Reduced motion is already handled globally — the
+   `@media (prefers-reduced-motion: reduce)` rule below clamps animation-
+   duration to 1ms, which collapses this into an instant move. */
+.task-row-pending-completion {
+  animation: task-row-fade-out 1500ms ease-out forwards;
+}
+
+@keyframes task-row-fade-out {
+  0%, 86% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Slide-up entrance for the Undo toast. Keyed on the store's `tick` so each
+   completion gets a fresh enter animation even when a previous toast is
+   still visible. Reduced-motion users get the clamp-to-1ms treatment from
+   the global rule below. */
+.task-undo-toast {
+  animation: task-undo-toast-enter 200ms ease-out;
+}
+
+@keyframes task-undo-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ============================================================================
    Legacy hover/press classes below — kept for now while the workspace sweep
    migrates callers to .motion-*. They reference the same motion tokens so

@@ -18,13 +18,15 @@ import {
 import type { Release } from '@/types/releases';
 import { TaskRow } from '@/components/tasks/TaskRow';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
+import { useTaskStore } from '@/stores/useTaskStore';
 import { ScopePill } from './ScopePill';
 
 // Overdue first (genuine slippage, most urgent), then Catch Up (start-here
 // for compressed-runway plans — calm, neutral framing), then standard
 // time-based buckets. Catch Up is empty on long-running releases where every
 // past-due task is real slippage, so the bucket only takes vertical space
-// when it has signal to add.
+// when it has signal to add. Done sits at the bottom — it's a terminal
+// section that completion routes to, collapsed by default.
 const sectionOrder: TaskSectionKey[] = [
   'overdue',
   'catch_up',
@@ -32,12 +34,13 @@ const sectionOrder: TaskSectionKey[] = [
   'week',
   'upcoming',
   'no_due_date',
+  'done',
 ];
 
 // Default expanded state on first render: Overdue and Catch Up open (both
-// flag "look here first"), everything else collapsed. Keeps the panel short
-// so the user sees the most urgent bucket up top and can expand other
-// contexts on demand.
+// flag "look here first"), everything else collapsed. Done stays collapsed
+// — the count alone communicates progress; expanding is for un-ticking a
+// mistake.
 const DEFAULT_EXPANDED: Record<TaskSectionKey, boolean> = {
   overdue: true,
   catch_up: true,
@@ -45,11 +48,14 @@ const DEFAULT_EXPANDED: Record<TaskSectionKey, boolean> = {
   week: false,
   upcoming: false,
   no_due_date: false,
+  done: false,
 };
 
 // Per-bucket empty-state copy. The unscoped copy is celebratory ("You're
 // caught up"); the scoped copy is factual because a single release with no
-// overdue items is the expected state, not an achievement.
+// overdue items is the expected state, not an achievement. Done has no
+// "scoped" variant worth distinguishing — an empty Done is just "no tasks
+// completed yet" either way.
 const UNSCOPED_EMPTY: Record<TaskSectionKey, string> = {
   overdue: "You're caught up.",
   catch_up: 'No catch-up tasks.',
@@ -57,6 +63,7 @@ const UNSCOPED_EMPTY: Record<TaskSectionKey, string> = {
   week: 'Nothing due this week.',
   upcoming: 'Nothing queued yet.',
   no_due_date: 'No unscheduled tasks.',
+  done: 'No tasks completed yet.',
 };
 
 const SCOPED_EMPTY: Record<TaskSectionKey, string> = {
@@ -66,6 +73,7 @@ const SCOPED_EMPTY: Record<TaskSectionKey, string> = {
   week: 'Nothing due this week for this release.',
   upcoming: 'Nothing upcoming for this release.',
   no_due_date: 'No unscheduled tasks for this release.',
+  done: 'Nothing completed for this release yet.',
 };
 
 type TasksPanelProps = {
@@ -121,7 +129,16 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
     });
   }, [tasks, priorityFilter, statusFilter]);
 
-  const sections = useMemo(() => groupTasksIntoSections(filteredTasks), [filteredTasks]);
+  // Pending-completion override: just-ticked tasks keep their original
+  // time-based bucket for ~1.5s before sliding into Done. The store owns
+  // the timer; the panel just reads the override so render output matches
+  // the in-place beat.
+  const pendingCompletionIds = useTaskStore((state) => state.pendingCompletionIds);
+
+  const sections = useMemo(
+    () => groupTasksIntoSections(filteredTasks, pendingCompletionIds),
+    [filteredTasks, pendingCompletionIds]
+  );
 
   // Per-bucket open/closed state, persisted for the session.
   const [expanded, setExpanded] = useState<Record<TaskSectionKey, boolean>>(DEFAULT_EXPANDED);
@@ -142,6 +159,10 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
         let changed = false;
         const next = { ...prev };
         for (const key of sectionOrder) {
+          // Done stays collapsed even when it has matches — it's terminal,
+          // and a release with completed tasks shouldn't open a tall list of
+          // strikethrough rows ahead of the active work.
+          if (key === 'done') continue;
           if (sections[key].length > 0 && !next[key]) {
             next[key] = true;
             changed = true;
@@ -235,9 +256,21 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
         {sectionOrder.map((sectionKey) => {
           const sectionTasks = sections[sectionKey];
           const isOpen = expanded[sectionKey];
+          const isDoneBucket = sectionKey === 'done';
+          // Done is suppressed entirely when empty — the count alone is the
+          // signal, and a 0-count Done bucket adds noise to the bottom of
+          // the panel without earning its space. Every other bucket still
+          // renders so the user can see "Overdue (0)" as proof they're
+          // caught up.
+          if (isDoneBucket && sectionTasks.length === 0) return null;
           const bodyId = `workspace-bucket-${sectionKey}`;
           return (
-            <div key={sectionKey} className="border border-stroke-default bg-bg-surface">
+            <div
+              key={sectionKey}
+              className={`border border-stroke-default ${
+                isDoneBucket ? 'bg-bg-surface/60' : 'bg-bg-surface'
+              }`}
+            >
               <button
                 type="button"
                 onClick={() => toggleBucket(sectionKey)}
@@ -249,7 +282,11 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
               >
                 <span
                   className={`text-sm font-semibold ${
-                    sectionKey === 'overdue' ? 'text-status-error' : 'text-content-primary'
+                    sectionKey === 'overdue'
+                      ? 'text-status-error'
+                      : isDoneBucket
+                        ? 'text-content-secondary'
+                        : 'text-content-primary'
                   }`}
                 >
                   {getTaskSectionLabel(sectionKey)}
@@ -273,14 +310,21 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
                       </p>
                     </div>
                   ) : (
-                    sectionTasks.map((task) => (
-                      <TaskRow
-                        key={task.id}
-                        task={task}
-                        density="compact"
-                        onClick={(t) => openTask(t.id)}
-                      />
-                    ))
+                    sectionTasks.map((task) => {
+                      const isLeaving = Boolean(pendingCompletionIds[task.id]);
+                      return (
+                        <div
+                          key={task.id}
+                          className={isLeaving ? 'task-row-pending-completion' : ''}
+                        >
+                          <TaskRow
+                            task={task}
+                            density="compact"
+                            onClick={(t) => openTask(t.id)}
+                          />
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               ) : null}

@@ -285,7 +285,30 @@ export function sortTasksByPosition(tasks: Task[]): Task[] {
   });
 }
 
-export function getTaskSectionKey(task: Task, now = new Date()): TaskSectionKey {
+/**
+ * Bucketing rule:
+ *   Completion overrides time placement. A task with `status === 'done'` routes
+ *   to the terminal `'done'` section regardless of its due date. The lone
+ *   exception is the in-place beat after a tick: when an id is in
+ *   `pendingCompletionIds`, the task keeps its time-based section so the row
+ *   stays visible in its source bucket for ~1.5s before sliding into Done.
+ *   The store sets and clears that override; this function is otherwise pure.
+ */
+export function getTaskSectionKey(
+  task: Task,
+  now: Date = new Date(),
+  pendingCompletionIds?: ReadonlySet<string> | Record<string, true>
+): TaskSectionKey {
+  const isPending = pendingCompletionIds
+    ? pendingCompletionIds instanceof Set
+      ? pendingCompletionIds.has(task.id)
+      : Object.prototype.hasOwnProperty.call(pendingCompletionIds, task.id)
+    : false;
+
+  if (task.status === 'done' && !isPending) {
+    return 'done';
+  }
+
   if (!task.dueDate) {
     return 'no_due_date';
   }
@@ -340,6 +363,8 @@ export function getTaskSectionLabel(section: TaskSectionKey): string {
       return 'Upcoming';
     case 'no_due_date':
       return 'No Due Date';
+    case 'done':
+      return 'Done';
     default:
       return 'Tasks';
   }
@@ -359,6 +384,8 @@ export function getTaskSectionDescription(section: TaskSectionKey): string {
       return 'Future work that is scheduled but not urgent yet.';
     case 'no_due_date':
       return 'Backlog work that still needs ownership and timing.';
+    case 'done':
+      return 'Completed tasks. Un-tick to return one to its active bucket.';
     default:
       return 'Tasks';
   }
@@ -444,14 +471,19 @@ export function createEmptyMyTasksSections(): Record<TaskSectionKey, Task[]> {
     week: [],
     upcoming: [],
     no_due_date: [],
+    done: [],
   };
 }
 
-export function groupTasksIntoSections(tasks: Task[]): Record<TaskSectionKey, Task[]> {
+export function groupTasksIntoSections(
+  tasks: Task[],
+  pendingCompletionIds?: ReadonlySet<string> | Record<string, true>
+): Record<TaskSectionKey, Task[]> {
   const grouped = createEmptyMyTasksSections();
+  const now = new Date();
 
   for (const task of tasks) {
-    grouped[getTaskSectionKey(task)].push(task);
+    grouped[getTaskSectionKey(task, now, pendingCompletionIds)].push(task);
   }
 
   return grouped;

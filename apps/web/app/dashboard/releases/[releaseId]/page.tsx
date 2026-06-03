@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AlertCircle, CalendarDays, Lock, Sparkles } from 'lucide-react';
+import { AlertCircle, CalendarDays, ChevronDown, Lock, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -152,8 +152,27 @@ export default function ReleaseDetailPage() {
     () => tasks.filter((t) => t.releaseId === releaseId),
     [tasks, releaseId]
   );
+  // Pending-completion override: just-ticked tasks stay in the open list for
+  // ~1.5s before sliding into Done. Mirrors the workspace TasksPanel rule so
+  // the in-place beat reads the same on both surfaces.
+  const pendingCompletionIds = useTaskStore((s) => s.pendingCompletionIds);
   const doneTasks = releaseTasks.filter((t) => t.status === TASK_DONE_STATUS);
   const progress = releaseTasks.length > 0 ? Math.round((doneTasks.length / releaseTasks.length) * 100) : 0;
+  const openTasks = useMemo(
+    () =>
+      releaseTasks.filter(
+        (t) => t.status !== TASK_DONE_STATUS || pendingCompletionIds[t.id]
+      ),
+    [releaseTasks, pendingCompletionIds]
+  );
+  const doneBucketTasks = useMemo(
+    () =>
+      releaseTasks.filter(
+        (t) => t.status === TASK_DONE_STATUS && !pendingCompletionIds[t.id]
+      ),
+    [releaseTasks, pendingCompletionIds]
+  );
+  const [isDoneBucketOpen, setIsDoneBucketOpen] = useState(false);
 
   if (authLoading || isInitialLoading) {
     return (
@@ -248,7 +267,10 @@ export default function ReleaseDetailPage() {
           <ProgressBar value={progress} className="mt-2 h-2 rounded-none" fillClassName="rounded-none" />
         </div>
 
-        {/* Task list */}
+        {/* Task list. Render rule mirrors the workspace TasksPanel: completed
+            tasks (with no pending in-place beat) move to a single Done group
+            at the bottom, collapsed by default, with the count as the
+            primary signal. */}
         <section className="mt-6">
           <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">Tasks</h2>
           {releaseTasks.length === 0 ? (
@@ -263,64 +285,137 @@ export default function ReleaseDetailPage() {
               </button>
             </div>
           ) : (
-            <div className="mt-3 space-y-1">
-              {releaseTasks.map((task) => {
-                const isLocked = task.status === TASK_LOCKED_STATUS;
-                const isDone = task.status === TASK_DONE_STATUS;
-                const isMilestone = isEventMilestone(task);
-                return (
-                  <div
-                    key={task.id}
-                    className={`flex w-full items-center gap-3 border border-stroke-default px-4 py-3 text-sm ${
-                      isLocked ? 'bg-bg-surface/60' : 'bg-bg-surface'
-                    } ${isMilestone ? 'border-l-2 border-l-status-info' : ''}`}
-                  >
-                    <TaskCompletionCheckbox
-                      taskId={task.id}
-                      status={task.status}
-                      onBlocker={(message) => setToast({ tone: 'warning', message })}
-                    />
-                    {isLocked ? (
-                      <Lock
-                        className="h-3.5 w-3.5 shrink-0 text-content-tertiary"
-                        aria-label="Locked — waiting on a prerequisite"
-                      />
-                    ) : isMilestone ? (
-                      <CalendarDays
-                        className="h-3.5 w-3.5 shrink-0 text-status-info"
-                        aria-label="Event milestone"
-                      />
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => openTask(task.id)}
-                      className="motion-focus flex min-w-0 flex-1 items-center gap-3 text-left transition-colors hover:text-content-primary"
+            <>
+              <div className="mt-3 space-y-1">
+                {openTasks.map((task) => {
+                  const isLocked = task.status === TASK_LOCKED_STATUS;
+                  const isDone = task.status === TASK_DONE_STATUS;
+                  const isMilestone = isEventMilestone(task);
+                  const isLeaving = Boolean(pendingCompletionIds[task.id]);
+                  return (
+                    <div
+                      key={task.id}
+                      className={`flex w-full items-center gap-3 border border-stroke-default px-4 py-3 text-sm ${
+                        isLocked ? 'bg-bg-surface/60' : 'bg-bg-surface'
+                      } ${isMilestone ? 'border-l-2 border-l-status-info' : ''} ${
+                        isLeaving ? 'task-row-pending-completion' : ''
+                      }`}
                     >
-                      <span
-                        className={`min-w-0 flex-1 truncate ${
-                          isDone
-                            ? 'text-content-tertiary line-through'
-                            : isLocked
-                              ? 'text-content-secondary'
-                              : 'text-content-primary'
-                        }`}
+                      <TaskCompletionCheckbox
+                        taskId={task.id}
+                        status={task.status}
+                        onBlocker={(message) => setToast({ tone: 'warning', message })}
+                      />
+                      {isLocked ? (
+                        <Lock
+                          className="h-3.5 w-3.5 shrink-0 text-content-tertiary"
+                          aria-label="Locked — waiting on a prerequisite"
+                        />
+                      ) : isMilestone ? (
+                        <CalendarDays
+                          className="h-3.5 w-3.5 shrink-0 text-status-info"
+                          aria-label="Event milestone"
+                        />
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => openTask(task.id)}
+                        className="motion-focus flex min-w-0 flex-1 items-center gap-3 text-left transition-colors hover:text-content-primary"
                       >
-                        {task.title}
-                      </span>
-                      {task.dueDate ? (
                         <span
-                          className={`shrink-0 text-xs ${
-                            isMilestone ? 'text-status-info' : 'text-content-tertiary'
+                          className={`min-w-0 flex-1 truncate ${
+                            isDone
+                              ? 'text-content-tertiary line-through'
+                              : isLocked
+                                ? 'text-content-secondary'
+                                : 'text-content-primary'
                           }`}
                         >
-                          {isMilestone ? formatMilestoneDate(task.dueDate) : formatDate(task.dueDate)}
+                          {task.title}
                         </span>
-                      ) : null}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+                        {task.dueDate ? (
+                          <span
+                            className={`shrink-0 text-xs ${
+                              isMilestone ? 'text-status-info' : 'text-content-tertiary'
+                            }`}
+                          >
+                            {isMilestone ? formatMilestoneDate(task.dueDate) : formatDate(task.dueDate)}
+                          </span>
+                        ) : null}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {doneBucketTasks.length > 0 ? (
+                <div className="mt-3 border border-stroke-default bg-bg-surface/60">
+                  <button
+                    type="button"
+                    onClick={() => setIsDoneBucketOpen((v) => !v)}
+                    aria-expanded={isDoneBucketOpen}
+                    aria-controls="release-done-bucket"
+                    className={`motion-focus flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-semibold text-content-secondary transition-colors hover:bg-bg-hover ${
+                      isDoneBucketOpen ? 'border-b border-stroke-subtle' : ''
+                    }`}
+                  >
+                    <span>
+                      Done
+                      <span className="ml-2 font-normal text-content-tertiary">
+                        ({doneBucketTasks.length})
+                      </span>
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${
+                        isDoneBucketOpen ? '' : '-rotate-90'
+                      }`}
+                      aria-hidden="true"
+                    />
+                  </button>
+                  {isDoneBucketOpen ? (
+                    <div id="release-done-bucket" className="space-y-1 px-2 py-2">
+                      {doneBucketTasks.map((task) => {
+                        const isMilestone = isEventMilestone(task);
+                        return (
+                          <div
+                            key={task.id}
+                            className={`flex w-full items-center gap-3 border border-stroke-default bg-bg-surface px-4 py-3 text-sm ${
+                              isMilestone ? 'border-l-2 border-l-status-info' : ''
+                            }`}
+                          >
+                            <TaskCompletionCheckbox
+                              taskId={task.id}
+                              status={task.status}
+                              onBlocker={(message) => setToast({ tone: 'warning', message })}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => openTask(task.id)}
+                              className="motion-focus flex min-w-0 flex-1 items-center gap-3 text-left transition-colors hover:text-content-primary"
+                            >
+                              <span className="min-w-0 flex-1 truncate text-content-tertiary line-through">
+                                {task.title}
+                              </span>
+                              {task.dueDate ? (
+                                <span
+                                  className={`shrink-0 text-xs ${
+                                    isMilestone ? 'text-status-info' : 'text-content-tertiary'
+                                  }`}
+                                >
+                                  {isMilestone
+                                    ? formatMilestoneDate(task.dueDate)
+                                    : formatDate(task.dueDate)}
+                                </span>
+                              ) : null}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </>
           )}
         </section>
 
