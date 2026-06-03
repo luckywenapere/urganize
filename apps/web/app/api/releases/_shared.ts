@@ -6,7 +6,6 @@ import {
   RELEASE_COLLABORATORS_TABLE,
   RELEASE_EVENTS_TABLE,
   RELEASE_METADATA_TABLE,
-  RELEASE_OPS_SQL,
   calculateReleaseReadiness,
   type ReleaseMetadataSnapshot,
   type ReleaseSummary,
@@ -19,7 +18,6 @@ export {
   RELEASE_COLLABORATORS_TABLE,
   RELEASE_EVENTS_TABLE,
   RELEASE_METADATA_TABLE,
-  RELEASE_OPS_SQL,
 };
 
 export const isOptionalTableMissingError = (error: unknown): boolean => {
@@ -85,12 +83,18 @@ export const createAdminClient = (supabaseUrl: string) => {
   return createClient(supabaseUrl, serviceRoleKey);
 };
 
+// Schema-missing fallback. CLAUDE.md flags this pattern as deprecated for v1
+// — we no longer return the bootstrap SQL inline (it was wrong post-Migration-2
+// anyway, since it recreated the dropped owner-scoped unique index). The 501
+// is kept for surfaces that still ask the helper to translate a missing-table
+// error into a response, but it now points devs at the migrations directory
+// rather than handing them stale DDL to paste.
 export const buildMissingTableResponse = (details?: string) =>
   NextResponse.json(
     {
       error: 'Release operations tables are missing.',
       ...(details ? { details } : {}),
-      sql: RELEASE_OPS_SQL,
+      hint: 'Apply pending migrations from supabase/migrations/ against this project.',
     },
     { status: 501 }
   );
@@ -113,7 +117,7 @@ export async function ensureReleaseOpsSchema(
     },
     {
       label: 'artists table',
-      run: async () => adminClient.from(ARTISTS_TABLE).select('id,name,owner_user_id,slug').limit(1),
+      run: async () => adminClient.from(ARTISTS_TABLE).select('id,name,owner_user_id,slug,workspace_id').limit(1),
     },
     {
       label: 'collaborators table',
