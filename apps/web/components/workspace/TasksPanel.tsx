@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Plus } from 'lucide-react';
 import {
   TASK_PRIORITY_OPTIONS,
   TASK_STATUS_OPTIONS,
@@ -96,7 +96,7 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
   // Assignee, Due, Release, Group, Description, Comments, per-task
   // Attachments via task_attachments table — distinct from the per-release
   // FilesPanel/assets table).
-  const { openTask } = useTaskUI();
+  const { openTask, openQuickCreate } = useTaskUI();
   const searchParams = useSearchParams();
 
   const priorityFilter = (searchParams.get('priority') || '') as TaskPriority | '';
@@ -188,13 +188,34 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
         <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
           Tasks
         </h2>
-        {/* ScopePill is desktop-only. Below lg the mobile drill-down model
-            in WorkspaceView replaces it with a dedicated back+title header
-            above this panel — the pill's "showing tasks for X / × clear"
-            affordance is redundant when drilling IS the scope and the back
-            control IS the clear. */}
-        <div className="hidden lg:block">
-          <ScopePill release={scopedRelease} onClear={onClearScope} />
+        <div className="flex items-center gap-2">
+          {/* New-task affordance: opens the global Quick Create modal with the
+              currently-scoped release pre-selected (or empty when nothing is
+              scoped, leaving the picker for the user). Source = 'inline' to
+              tag analytics with the panel-of-origin. Renders on both desktop
+              and mobile — the workspace is the primary task-creation surface
+              now that the legacy /dashboard/tasks page is gone. */}
+          <button
+            type="button"
+            onClick={() =>
+              openQuickCreate({
+                releaseId: scopedRelease?.id || undefined,
+                source: 'inline',
+              })
+            }
+            className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            New task
+          </button>
+          {/* ScopePill is desktop-only. Below lg the mobile drill-down model
+              in WorkspaceView replaces it with a dedicated back+title header
+              above this panel — the pill's "showing tasks for X / × clear"
+              affordance is redundant when drilling IS the scope and the back
+              control IS the clear. */}
+          <div className="hidden lg:block">
+            <ScopePill release={scopedRelease} onClear={onClearScope} />
+          </div>
         </div>
       </div>
 

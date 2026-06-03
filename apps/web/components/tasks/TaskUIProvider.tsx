@@ -16,7 +16,7 @@ import { type DependencyTaskSummary } from '@/components/tasks/TaskDependenciesS
 import { TaskQuickCreateModal } from '@/components/tasks/TaskQuickCreateModal';
 import { UndoCompletionToast } from '@/components/tasks/UndoCompletionToast';
 import { type ReleaseOption } from '@/lib/release-helpers';
-import { isTypingTarget, type TaskCreateSource, type TaskDetail, type TaskGroup, type TaskPriority, type WorkspaceMember } from '@/lib/tasks';
+import { isTypingTarget, type TaskCreateSource, type TaskDetail, type TaskPriority, type WorkspaceMember } from '@/lib/tasks';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { supabase } from '@/lib/supabase/client';
 
@@ -32,11 +32,6 @@ type WorkspaceMembersPayload = {
 
 type ReleaseSelectorPayload = {
   releases?: ReleaseOption[];
-  error?: string;
-};
-
-type ReleaseTasksPayload = {
-  groups?: TaskGroup[];
   error?: string;
 };
 
@@ -113,7 +108,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const [activeTaskId, setActiveTaskId] = useState('');
   const [isTaskDrawerOpen, setIsTaskDrawerOpen] = useState(false);
   const [task, setTask] = useState<TaskDetail | null>(null);
-  const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([]);
   const [drawerError, setDrawerError] = useState('');
   // Inline message surfaced next to the drawer's status select when the user
   // attempts to mark a blocked task done. Cleared on the next successful patch
@@ -129,7 +123,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   // store), so this flag no longer gates the whole drawer — only the
   // augmented sections that aren't in the list-state task.
   const [isTaskLoading, setIsTaskLoading] = useState(false);
-  const [isTaskGroupsLoading, setIsTaskGroupsLoading] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [quickCreateDefaults, setQuickCreateDefaults] = useState<QuickCreateDefaults>({});
   const [quickTitle, setQuickTitle] = useState('');
@@ -138,7 +131,8 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const [quickAssigneeQuery, setQuickAssigneeQuery] = useState('');
   const [quickSelectedAssignee, setQuickSelectedAssignee] = useState<WorkspaceMember | null>(null);
   const [quickDueDate, setQuickDueDate] = useState('');
-  const [quickPriority, setQuickPriority] = useState<TaskPriority>('none');
+  const [quickGroupName, setQuickGroupName] = useState<string | null>(null);
+  const [quickGroupColor, setQuickGroupColor] = useState<string | null>(null);
   const [isQuickSaving, setIsQuickSaving] = useState(false);
   const [releases, setReleases] = useState<ReleaseOption[]>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
@@ -178,29 +172,10 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const loadTaskGroups = useCallback(async (releaseId: string | null | undefined) => {
-    if (!releaseId) {
-      setTaskGroups([]);
-      setIsTaskGroupsLoading(false);
-      return;
-    }
-
-    setIsTaskGroupsLoading(true);
-    try {
-      const payload = await requestJson<ReleaseTasksPayload>(`/api/releases/${releaseId}/tasks`);
-      setTaskGroups(Array.isArray(payload.groups) ? payload.groups : []);
-    } catch (error) {
-      console.error('Failed to load task groups:', error);
-    } finally {
-      setIsTaskGroupsLoading(false);
-    }
-  }, []);
-
   // Augmented fetch only — `task` is already hydrated optimistically from the
   // store by `openTask`. This fills in comments, attachments, and activity,
-  // and refreshes any core fields that may have changed on the server.
-  // Non-blocking: loadOptions and loadTaskGroups run in parallel, not in
-  // series. The body never waits on them.
+  // and refreshes any core fields that may have changed on the server. The
+  // body never blocks on it.
   const loadTask = useCallback(
     async (taskId: string) => {
       if (!taskId) {
@@ -217,13 +192,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
 
         setTask(payload.task);
         setDrawerError('');
-
-        // Kick off groups in background — does not block the body.
-        if (payload.task.releaseId) {
-          void loadTaskGroups(payload.task.releaseId);
-        } else {
-          setTaskGroups([]);
-        }
       } catch (error) {
         console.error('Failed to load task detail:', error);
         // If the drawer already has hydrated content from the store, keep
@@ -240,7 +208,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         setIsTaskLoading(false);
       }
     },
-    [loadTaskGroups]
+    []
   );
 
   useEffect(() => {
@@ -293,7 +261,8 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     setQuickAssigneeQuery('');
     setQuickSelectedAssignee(null);
     setQuickDueDate('');
-    setQuickPriority('none');
+    setQuickGroupName(null);
+    setQuickGroupColor(null);
     setQuickCreateDefaults({});
   };
 
@@ -336,7 +305,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     // previous task's data while the new fetch is in flight.
     setActiveTaskId('');
     setTask(null);
-    setTaskGroups([]);
   }, []);
 
   const openQuickCreate = useCallback(
@@ -422,7 +390,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         setTask(payload.task);
         setDrawerError('');
         setStatusBlockerMessage('');
-        await loadTaskGroups(payload.task.releaseId);
         dispatchTasksChanged();
         }
     } catch (error) {
@@ -450,7 +417,12 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   };
 
   const createQuickTask = async () => {
-    if (!quickTitle.trim()) {
+    const trimmedTitle = quickTitle.trim();
+    const releaseId = quickSelectedRelease?.id || quickCreateDefaults.releaseId || null;
+    if (!trimmedTitle || !releaseId) {
+      // The submit button is also disabled when these are missing; this is the
+      // belt-and-braces guard against an Enter-key path that bypasses the
+      // disabled state.
       return;
     }
 
@@ -459,12 +431,20 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       const payload = await requestJson<TaskDetailPayload>(`/api/tasks`, {
         method: 'POST',
         body: JSON.stringify({
-          title: quickTitle.trim(),
-          releaseId: quickSelectedRelease?.id || quickCreateDefaults.releaseId || null,
+          title: trimmedTitle,
+          releaseId,
           groupId: quickCreateDefaults.groupId || null,
           assignedToUserId: quickSelectedAssignee?.userId || null,
           dueDate: quickDueDate ? new Date(quickDueDate).toISOString() : null,
-          priority: quickPriority,
+          // Manually-created tasks are NOT compressed_runway — that flag is
+          // template-only (set by lib/release-templates/instantiate.ts when
+          // the computed offset lands before the release date). Past-due
+          // manual tasks are genuine overdue, not catch-up. The server
+          // mapper reads metadata.template.compressed_runway and defaults to
+          // false when absent, which is the path we want here.
+          autoGenerated: false,
+          groupName: quickGroupName,
+          groupColor: quickGroupColor,
           source: quickCreateDefaults.source || 'quick_create',
         }),
       });
@@ -617,7 +597,8 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         assigneeQuery={quickAssigneeQuery}
         selectedAssignee={quickSelectedAssignee}
         dueDate={quickDueDate}
-        priority={quickPriority}
+        groupName={quickGroupName}
+        groupColor={quickGroupColor}
         releases={releases}
         members={members}
         isLoadingReleases={isLoadingOptions}
@@ -635,7 +616,10 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
           setQuickAssigneeQuery(toAssigneeQuery(member));
         }}
         onDueDateChange={setQuickDueDate}
-        onPriorityChange={setQuickPriority}
+        onTagChange={(name, color) => {
+          setQuickGroupName(name);
+          setQuickGroupColor(color);
+        }}
         onSubmit={createQuickTask}
       />
 
@@ -643,12 +627,9 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         isOpen={isTaskDrawerOpen}
         isLoading={isTaskLoading}
         isLoadingMembers={isLoadingOptions}
-        isLoadingGroups={isTaskGroupsLoading}
         error={drawerError}
         task={task}
         members={members}
-        releases={releases}
-        groups={taskGroups}
         isUploadingAttachment={isUploadingAttachment}
         prerequisites={prerequisites}
         statusBlockerMessage={statusBlockerMessage}

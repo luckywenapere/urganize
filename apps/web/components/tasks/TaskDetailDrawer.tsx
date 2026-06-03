@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CalendarDays, X } from 'lucide-react';
-import { ReleaseCombobox } from '@/components/shared/ReleaseCombobox';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
 import {
@@ -19,17 +18,22 @@ import {
   TASK_PRIORITY_OPTIONS,
   TASK_STATUS_OPTIONS,
   type TaskDetail,
-  type TaskGroup,
   type TaskPriority,
   type TaskStatus,
   type WorkspaceMember,
 } from '@/lib/tasks';
-import { type ReleaseOption } from '@/lib/release-helpers';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { DEFAULT_GROUP_COLOR, GROUP_PRESETS } from '@/lib/group-presets';
 
 const WORKSPACE_FLAG_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
+// A task's release is set at creation and fixed thereafter — the drawer is the
+// edit surface, and re-homing tasks across releases is intentionally not a
+// supported operation. `releaseId` and `groupId` are kept off this whitelist
+// so even an accidental wire-format call from this surface gets caught at the
+// type boundary. The PATCH route on the server still accepts them for other
+// callers (e.g. the legacy release-board kanban), but the drawer no longer
+// emits them.
 type TaskPatchInput = {
   title?: string;
   description?: string | null;
@@ -37,8 +41,6 @@ type TaskPatchInput = {
   priority?: TaskPriority;
   dueDate?: string | null;
   assignedToUserId?: string | null;
-  releaseId?: string | null;
-  groupId?: string | null;
   groupName?: string | null;
   groupColor?: string | null;
 };
@@ -54,13 +56,9 @@ type TaskDetailDrawerProps = {
   isLoading: boolean;
   /** True while the workspace members list is being fetched. */
   isLoadingMembers?: boolean;
-  /** True while the release's task groups are being fetched. */
-  isLoadingGroups?: boolean;
   error: string;
   task: TaskDetail | null;
   members: WorkspaceMember[];
-  releases: ReleaseOption[];
-  groups: TaskGroup[];
   isUploadingAttachment: boolean;
   /** Prerequisite tasks resolved from `task.dependencies`. May be a subset if
    * some prerequisites aren't loaded in the store. */
@@ -98,12 +96,9 @@ export function TaskDetailDrawer({
   isOpen,
   isLoading,
   isLoadingMembers = false,
-  isLoadingGroups = false,
   error,
   task,
   members,
-  releases,
-  groups,
   isUploadingAttachment,
   prerequisites,
   statusBlockerMessage,
@@ -119,8 +114,6 @@ export function TaskDetailDrawer({
 }: TaskDetailDrawerProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [releaseQuery, setReleaseQuery] = useState('');
-  const [selectedRelease, setSelectedRelease] = useState<ReleaseOption | null>(null);
   const [assigneeQuery, setAssigneeQuery] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState<WorkspaceMember | null>(null);
   const [commentDraft, setCommentDraft] = useState('');
@@ -135,26 +128,9 @@ export function TaskDetailDrawer({
 
     setTitle(task.title);
     setDescription(task.description || '');
-    const release = task.release
-      ? releases.find((item) => item.id === task.release?.id) || {
-          id: task.release.id,
-          // artistId is unknown in the task-side projection (Task carries
-          // only the cached artistName). Empty string is the agreed
-          // "unresolved FK" sentinel for ReleaseOption.
-          artistId: '',
-          title: task.release.title,
-          artistName: task.release.artistName,
-          releaseDate: null,
-          coverArtUrl: null,
-          createdAt: '',
-          updatedAt: '',
-        }
-      : null;
-    setSelectedRelease(release);
-    setReleaseQuery(release?.title || '');
     setSelectedAssignee(task.assignee || null);
     setAssigneeQuery(task.assignee?.name || '');
-  }, [releases, task]);
+  }, [task]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -172,11 +148,6 @@ export function TaskDetailDrawer({
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [isOpen, onClose]);
-
-  const releaseGroups = useMemo(
-    () => groups.filter((group) => group.releaseId === (selectedRelease?.id || task?.releaseId || null)),
-    [groups, selectedRelease?.id, task?.releaseId]
-  );
 
   const due = task ? getRelativeDueLabel(task) : { label: 'No due date', isOverdue: false };
 
@@ -309,51 +280,10 @@ export function TaskDetailDrawer({
                 </label>
               </div>
 
-              <div className="grid gap-5 md:grid-cols-2">
-                <ReleaseCombobox
-                  releases={releases}
-                  selectedRelease={selectedRelease}
-                  query={releaseQuery}
-                  isLoading={false}
-                  isCreating={false}
-                  allowCreate={false}
-                  onQueryChange={setReleaseQuery}
-                  onSelectRelease={(release) => {
-                    setSelectedRelease(release);
-                    setReleaseQuery(release?.title || '');
-                    // Release and group are independent fields. Selecting a
-                    // release must not touch the group. The group dropdown
-                    // already filters its options to the selected release's
-                    // groups (see `releaseGroups`), so the group surface stays
-                    // coherent without forcing a server-side clear.
-                    void onSavePatch({ releaseId: release?.id || null });
-                  }}
-                  onCreateRelease={async () => null}
-                />
-
-                <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-content-primary">Group</span>
-                  <select
-                    value={task.groupId || ''}
-                    onChange={(event) => void onSavePatch({ groupId: event.target.value || null })}
-                    className="input h-12 rounded-[18px]"
-                    disabled={isLoadingGroups || (!selectedRelease && !task.releaseId)}
-                  >
-                    {isLoadingGroups ? (
-                      <option value="">Loading groups…</option>
-                    ) : (
-                      <>
-                        <option value="">No group</option>
-                        {releaseGroups.map((group) => (
-                          <option key={group.id} value={group.id}>
-                            {group.name}
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
-                </label>
-              </div>
+              {/* Release selector intentionally removed: a task's release is
+                  set at creation and fixed thereafter. The legacy task-group
+                  dropdown went with it — Tag below is the single
+                  categorization control. */}
 
               {WORKSPACE_FLAG_ENABLED ? (
                 <div className="block">
