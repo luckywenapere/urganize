@@ -60,13 +60,26 @@ export function ReleaseCombobox({
   const [activeIndex, setActiveIndex] = useState(-1);
 
   const normalizedQuery = normalizeValue(query);
+  // When the modal opens with a release pre-selected, the parent seeds the
+  // input value with that release's title (so users see what's currently
+  // selected as they tab through). If we then filtered by that string, the
+  // dropdown would show ONLY the selected release — defeating the picker.
+  // So when `query` exactly matches the currently-selected release's title
+  // and nothing else has been typed, treat it as an empty filter: show all
+  // releases so any can be chosen. As soon as the user edits the input,
+  // normal substring filtering kicks back in.
+  const queryEqualsSelection =
+    selectedRelease !== null &&
+    normalizedQuery === normalizeValue(selectedRelease.title) &&
+    normalizedQuery.length > 0;
+
   const filteredReleases = useMemo(() => {
-    if (!normalizedQuery) {
+    if (!normalizedQuery || queryEqualsSelection) {
       return releases;
     }
 
     return releases.filter((release) => normalizeValue(release.title).includes(normalizedQuery));
-  }, [normalizedQuery, releases]);
+  }, [normalizedQuery, queryEqualsSelection, releases]);
 
   const exactMatch = useMemo(
     () =>
@@ -223,29 +236,32 @@ export function ReleaseCombobox({
     isOpen && activeIndex >= 0 && items[activeIndex] ? `${baseId}-option-${activeIndex}` : undefined;
 
   return (
+    // The outer field-label is owned by the caller (TaskQuickCreateModal renders
+    // its own "Release *" label so the required-marker can live with the rest
+    // of the form). The combobox no longer renders its own redundant label —
+    // there was a "Release selector" eyebrow here that stacked under "Release"
+    // and read as two competing field names.
     <div ref={containerRef} className="relative">
-      <label className="block">
-        <span className="mb-2 block text-sm font-semibold text-content-primary">Release selector</span>
-        <input
-          type="text"
-          role="combobox"
-          value={query}
-          onChange={(event) => {
-            onQueryChange(event.target.value);
-            setIsOpen(true);
-          }}
-          onFocus={() => setIsOpen(true)}
-          onBlur={handleBlur}
-          onKeyDown={(event) => void handleKeyDown(event)}
-          aria-autocomplete="list"
-          aria-expanded={isOpen}
-          aria-controls={isOpen ? listboxId : undefined}
-          aria-activedescendant={activeOptionId}
-          className="input h-12 rounded-[18px]"
-          placeholder="Search releases or type a new title"
-          autoComplete="off"
-        />
-      </label>
+      <input
+        type="text"
+        role="combobox"
+        value={query}
+        onChange={(event) => {
+          onQueryChange(event.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        onBlur={handleBlur}
+        onKeyDown={(event) => void handleKeyDown(event)}
+        aria-autocomplete="list"
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? listboxId : undefined}
+        aria-activedescendant={activeOptionId}
+        aria-label="Release"
+        className="input h-12 w-full rounded-[18px]"
+        placeholder="Search releases or type a new title"
+        autoComplete="off"
+      />
 
       {isOpen ? (
         <div className="absolute left-0 right-0 top-[calc(100%+0.6rem)] z-20 overflow-hidden rounded-[24px] border border-stroke-default bg-bg-surface shadow-[0_28px_70px_-40px_rgba(0,0,0,0.78)]">
@@ -274,19 +290,21 @@ export function ReleaseCombobox({
                       onMouseEnter={() => setActiveIndex(index)}
                       onClick={() => void commitTypedValue()}
                       disabled={isCreating}
-                      className={`flex w-full items-center justify-between rounded-[18px] px-4 py-3 text-left transition ${
+                      className={`flex w-full items-center justify-between gap-2 rounded-[14px] px-3 py-2 text-left transition ${
                         isActive
                           ? 'bg-brand-muted text-content-primary'
                           : 'text-content-primary hover:bg-bg-elevated'
                       } disabled:cursor-not-allowed disabled:opacity-65`}
                     >
-                      <div>
-                        <p className="text-sm font-semibold">Create &ldquo;{item.value}&rdquo;</p>
-                        <p className="mt-1 text-xs text-content-secondary">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold leading-tight">
+                          Create &ldquo;{item.value}&rdquo;
+                        </p>
+                        <p className="mt-0.5 truncate text-[11px] leading-tight text-content-secondary">
                           New release will be created inline and selected automatically.
                         </p>
                       </div>
-                      <span className="rounded-full border border-stroke-default px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-content-secondary">
+                      <span className="shrink-0 rounded-full border border-stroke-default px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-content-secondary">
                         {isCreating ? 'Saving' : 'Create'}
                       </span>
                     </button>
@@ -295,13 +313,20 @@ export function ReleaseCombobox({
 
                 const coverFallbackMonogram = getCoverFallbackMonogram(item.release);
 
+                // Compact row: smaller thumbnail (h-9 vs h-12), tighter
+                // vertical padding (py-2 vs py-3), smaller secondary text
+                // (text-[11px] vs text-xs), and a subtler date eyebrow. The
+                // information set is unchanged — title, artist, release date
+                // — just less heft per row so more options fit before
+                // scrolling.
+                const isCurrentSelection = selectedRelease?.id === item.release.id;
                 return (
                   <button
                     key={item.release.id}
                     id={`${baseId}-option-${index}`}
                     type="button"
                     role="option"
-                    aria-selected={selectedRelease?.id === item.release.id}
+                    aria-selected={isCurrentSelection}
                     onMouseDown={(event) => event.preventDefault()}
                     onMouseEnter={() => setActiveIndex(index)}
                     onClick={() => {
@@ -309,11 +334,15 @@ export function ReleaseCombobox({
                       setIsOpen(false);
                       setActiveIndex(-1);
                     }}
-                    className={`flex w-full items-center gap-3 rounded-[18px] px-3 py-3 text-left transition ${
-                      isActive ? 'bg-brand-muted' : 'hover:bg-bg-elevated'
+                    className={`flex w-full items-center gap-2.5 rounded-[14px] px-2.5 py-2 text-left transition ${
+                      isActive
+                        ? 'bg-brand-muted'
+                        : isCurrentSelection
+                          ? 'bg-bg-elevated'
+                          : 'hover:bg-bg-elevated'
                     }`}
                   >
-                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-[14px] border border-stroke-default bg-bg-overlay">
+                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-[10px] border border-stroke-default bg-bg-overlay">
                       {item.release.coverArtUrl ? (
                         <img
                           src={item.release.coverArtUrl}
@@ -322,7 +351,7 @@ export function ReleaseCombobox({
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,rgba(62,207,142,0.2),transparent_48%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01))]">
-                          <span className="text-sm font-semibold tracking-[-0.06em] text-content-primary">
+                          <span className="text-[11px] font-semibold tracking-[-0.04em] text-content-primary">
                             {coverFallbackMonogram}
                           </span>
                         </div>
@@ -330,16 +359,16 @@ export function ReleaseCombobox({
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-content-primary">
+                      <p className="truncate text-sm font-semibold leading-tight text-content-primary">
                         {item.release.title}
                       </p>
-                      <p className="mt-1 truncate text-xs text-content-secondary">
+                      <p className="mt-0.5 truncate text-[11px] leading-tight text-content-secondary">
                         {item.release.artistName || 'Artist name pending'}
                       </p>
                     </div>
 
                     <div className="shrink-0 text-right">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-content-tertiary">
                         {formatReleaseDate(item.release.releaseDate)}
                       </p>
                     </div>
