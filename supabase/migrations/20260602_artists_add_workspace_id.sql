@@ -2,54 +2,57 @@
 -- artists: add workspace_id (additive, nullable, reversible)
 -- =============================================================================
 --
--- Phase 1 of the workspace-scoped artists initiative. The v1 ICP is a manager
--- with 1–3 artists, but the UI is consolidating around a single "primary"
--- artist per workspace. We need artists.workspace_id wired up before any UI
--- change or uniqueness tightening can land.
+-- Migration 1 of the workspace-scoped artists initiative. The v1 ICP is a
+-- manager with 1–3 artists, but the UI is consolidating around a single
+-- "primary" artist per workspace. We need artists.workspace_id wired up before
+-- Migration 2 can swap the unique index from (owner_user_id, slug) to
+-- partial (workspace_id, slug).
 --
 -- This migration is intentionally additive only:
 --
 --   1. Adds workspace_id uuid (nullable) on public.artists.
---   2. Adds FK to public.workspaces(id) ON DELETE CASCADE. This mirrors the
---      existing owner_user_id → auth.users ON DELETE CASCADE on the same table,
---      so cascade is already the destruction model for an artist row.
---   3. Adds an index on workspace_id for the workspace-scoped read path that
+--   2. Adds FK to public.workspaces(id) ON DELETE CASCADE. Rationale: this
+--      mirrors the existing owner_user_id → auth.users ON DELETE CASCADE on
+--      the same table, so cascade is already the destruction model for an
+--      artist row. SET NULL was considered and rejected — orphaning an artist
+--      from its workspace would leave it invisible to the workspace-scoped UI
+--      after Migration 2 lands, which is worse than removing the row outright.
+--   3. Adds an index on workspace_id for the workspace-scoped read path
 --      Phase 2+ will introduce.
 --   4. Backfills workspace_id deterministically by joining
---      artists.owner_user_id = workspaces.owner_id. The owner_id column on
---      workspaces already has a unique index in production
---      (workspaces_owner_id_unique_idx), so the join is at most 1:1.
+--      artists.owner_user_id = workspaces.owner_id. workspaces.owner_id is
+--      1:1 with workspace_members(user_id WHERE role='owner') in production
+--      (24 rows each, every row aligns), so the join cannot fan out.
 --
 -- It does NOT:
 --
---   - Add any per-workspace uniqueness constraint on artists. Left for a
---     later phase, after the lookup-or-create flow in
---     app/api/releases/route.ts stops fragmenting data.
---   - Change the existing (owner_user_id, slug) unique index.
---   - Set workspace_id NOT NULL. Phase 0 recon (2026-06-02) found one
---     production artist row owned by a user with zero owned workspaces; that
---     row stays NULL here and must be resolved manually before any NOT NULL
---     tightening.
+--   - Add any per-workspace uniqueness constraint on artists. The one-artist-
+--     per-workspace limit is UI-only by design; the schema permits many.
+--   - Change the existing (owner_user_id, slug) unique index. That's
+--     Migration 2's job.
+--   - Set workspace_id NOT NULL. Also Migration 2.
 --   - Touch RLS policies. The existing owner_user_id policy continues to
---     gate writes. Workspace-scoped reads can join via workspace_id later.
+--     gate writes; workspace-scoped reads will join via workspace_id later.
 --
--- Verification against Phase 0 inventory (2026-06-02):
+-- Verification against the live state (2026-06-03, post-junk-cleanup):
 --
---   - 40 artist rows exist in production.
---   - 39 rows have an owner whose owned workspace resolves to exactly one
---     workspace via workspaces.owner_id.
---   - 1 row remains NULL:
---       id    = 622f5521-874a-43fa-800c-39aa8ab3883a
---       owner = 0a6cad1c-e708-4f09-b873-08d98fc37d47 (luckydio400@gmail.com)
---       name  = 'Luckydidthis'
---     The owner has no row in workspaces, so the join produces no match. This
---     is the only expected NULL after backfill.
+--   - 12 artist rows exist in production. (40 originally; 28 junk rows owned
+--     by the Lucky-cluster test accounts were deleted on 2026-06-03 via
+--     scripts/cleanup-junk-artists.sql.)
+--   - All 12 owners have exactly one owned workspace, so the backfill maps
+--     every row to a non-NULL workspace_id.
+--   - The single Phase 0 NULL candidate (artist 622f5521 owned by
+--     0a6cad1c/luckydio400 — owner had no workspace) was deleted in the
+--     cleanup, so it no longer applies.
 --
--- The NOTICE block at the end of this migration reports total/mapped/unmapped
--- counts at apply time. Expected: total=40, mapped=39, unmapped=1.
+-- The NOTICE block at the end of this migration reports
+-- total/mapped/unmapped counts at apply time. Expected after this migration:
+-- total=12, mapped=12, unmapped=0.
 --
--- A WARNING (not an exception) is raised if unmapped grows past 5. This
--- migration must never block on data state — additive only.
+-- A WARNING (not an EXCEPTION) is raised if any row is unmapped. Additive
+-- migrations must never block on data state — but unmapped rows mean drift
+-- from this script's premise and should be investigated before Migration 2,
+-- which tightens artist_id behavior and swaps the unique index.
 --
 -- Down-migration is provided as a commented block at the bottom of this file.
 -- Dropping the column also drops the FK constraint and the index.
@@ -96,7 +99,8 @@ create index if not exists artists_workspace_id_idx
 -- Only fill rows where workspace_id IS NULL so a re-apply is idempotent.
 -- Uses workspaces.owner_id (not workspace_members.user_id where role='owner')
 -- since they are 1:1 in production today and workspaces.owner_id has a unique
--- index — the join cannot fan out.
+-- index — the join cannot fan out. Any artist whose owner has no workspace
+-- row stays NULL and is surfaced by the verification block below.
 
 update public.artists a
    set workspace_id = w.id
@@ -121,14 +125,14 @@ begin
   raise notice 'artists.workspace_id backfill complete: total=%, mapped=%, unmapped=%',
     total_artists, mapped_artists, unmapped_artists;
 
-  -- Phase 0 inventory (2026-06-02): total=40, mapped=39, unmapped=1.
-  -- If unmapped grows past 5 the production state has drifted from the recon
-  -- snapshot — investigate before any later phase touches NOT NULL.
-  -- We do NOT raise an exception here — additive migrations should never
-  -- block on data state.
-  if unmapped_artists > 5 then
+  -- Post-cleanup live state (2026-06-03): total=12, mapped=12, unmapped=0.
+  -- Any unmapped row means a new artist was created for an owner without a
+  -- workspace since the dry-run — investigate before Migration 2 runs.
+  -- We do NOT raise an exception here — additive migrations must never block
+  -- on data state.
+  if unmapped_artists > 0 then
     raise warning
-      'artists.workspace_id unmapped count (%) is higher than Phase 0 expected (1). Review before Phase 2.',
+      'artists.workspace_id unmapped count (%) > 0. Expected 0 after Phase 0 cleanup. Investigate before Migration 2.',
       unmapped_artists;
   end if;
 end $$;

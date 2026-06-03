@@ -43,3 +43,10 @@ allfiles.txt
 **/cache/swc/
 .gstack/
 supabase/.temp/
+
+# DB snapshots — contain full table exports including real user emails.
+# Never commit these.
+backups/
+
+# Claude Code per-machine settings (permissions, etc.). Local-only.
+.claude/settings.local.json
