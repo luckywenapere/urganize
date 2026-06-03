@@ -19,7 +19,7 @@ type ReleaseSelectorListResponse = { releases: ReleaseOption[] };
 function sanitizeTextField(value: string, maxLength: number): string {
   return value.trim().replace(/\s+/g, ' ').slice(0, maxLength);
 }
-import { ensureOwnedWorkspace } from '@/lib/tasks-server';
+import { ensureOwnedWorkspace, loadWorkspaceAccessContext } from '@/lib/tasks-server';
 import { instantiateTemplate } from '@/lib/release-templates/instantiate';
 import { getTemplate } from '@/lib/release-templates/loader';
 import type { ReleaseType } from '@/lib/release-templates/types';
@@ -432,11 +432,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (artistIdToUse) {
+      // Authorize by workspace membership, not owner_user_id only. After
+      // Migration 2 the artist is workspace-scoped; a workspace member
+      // (non-owner) must be able to create releases against the workspace's
+      // existing artist row even though they don't own it. The membership
+      // lookup is lazy — only fires when the owner check fails, so the
+      // single-owner v1 ICP keeps its previous DB-call count.
       const artistResult = await adminClient
         .from(ARTISTS_TABLE)
-        .select('id,name')
+        .select('id,name,workspace_id,owner_user_id')
         .eq('id', artistIdToUse)
-        .eq('owner_user_id', auth.user.id)
         .maybeSingle();
 
       if (artistResult.error) {
@@ -450,15 +455,46 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Artist not found.' }, { status: 404 });
       }
 
+      const artistOwnerId = String(artistResult.data.owner_user_id || '');
+      const artistWorkspaceId = String(artistResult.data.workspace_id || '');
+      let authorized = artistOwnerId === auth.user.id;
+      if (!authorized && artistWorkspaceId) {
+        const access = await loadWorkspaceAccessContext(adminClient, auth.user);
+        authorized = access.workspaceIds.includes(artistWorkspaceId);
+      }
+      if (!authorized) {
+        return NextResponse.json({ error: 'Artist not found.' }, { status: 404 });
+      }
+
       artistName = String(artistResult.data.name || '');
     } else if (artistName) {
+      // Lookup-or-create keyed by (workspace_id, slug). Migration 2 dropped
+      // the (owner_user_id, slug) unique index; the new partial unique is
+      // (workspace_id, slug) WHERE workspace_id IS NOT NULL. Resolve the
+      // user's owned workspace once up front and use it for both the
+      // lookup leg and the insert. When ensureOwnedWorkspace throws,
+      // workspaceIdForArtist stays null and the insert produces a row
+      // excluded from the partial unique — matching pre-Migration-1
+      // fallback behaviour.
+      if (!workspaceIdForArtist) {
+        try {
+          const ws = await ensureOwnedWorkspace(adminClient, auth.user);
+          workspaceIdForArtist = ws.id;
+        } catch {
+          workspaceIdForArtist = null;
+        }
+      }
+
       const normalizedSlug = normalizeReleaseSlug(artistName);
-      const existingArtistResult = await adminClient
-        .from(ARTISTS_TABLE)
-        .select('id,name')
-        .eq('owner_user_id', auth.user.id)
-        .eq('slug', normalizedSlug)
-        .maybeSingle();
+
+      const existingArtistResult = workspaceIdForArtist
+        ? await adminClient
+            .from(ARTISTS_TABLE)
+            .select('id,name')
+            .eq('workspace_id', workspaceIdForArtist)
+            .eq('slug', normalizedSlug)
+            .maybeSingle()
+        : { data: null, error: null };
 
       if (existingArtistResult.error && !isOptionalTableMissingError(existingArtistResult.error)) {
         return NextResponse.json({ error: existingArtistResult.error.message || 'Could not load artist.' }, { status: 500 });
@@ -471,23 +507,6 @@ export async function POST(request: NextRequest) {
         artistIdToUse = String(existingArtistResult.data.id);
         artistName = String(existingArtistResult.data.name || artistName);
       } else {
-        // Phase 1+2: new artists must be workspace-scoped. The unique index
-        // after Migration 2 is (workspace_id, slug); inserting with
-        // workspace_id NULL produces a row excluded from the partial
-        // unique index, which would silently allow duplicates. If the
-        // feature flag is off the workspace lookup may not have run above
-        // — resolve it eagerly here. Failure to find a workspace falls
-        // back to NULL (legacy behaviour); the insert may still succeed
-        // depending on which migration revision is live.
-        if (!workspaceIdForArtist) {
-          try {
-            const ws = await ensureOwnedWorkspace(adminClient, auth.user);
-            workspaceIdForArtist = ws.id;
-          } catch {
-            workspaceIdForArtist = null;
-          }
-        }
-
         const insertArtistResult = await adminClient
           .from(ARTISTS_TABLE)
           .insert({

@@ -11,6 +11,7 @@ import {
   loadReleaseCommandCenterData,
 } from '../_shared';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
+import { isWorkspaceFeatureEnabled } from '@/lib/artists-server';
 import {
   captureServerAnalyticsEvent,
   createPostHogEvent,
@@ -208,7 +209,14 @@ export async function PATCH(
     const title = trimString(body?.title);
     const releaseDate = trimString(body?.releaseDate);
     const description = trimString(body?.description);
-    const artistName = trimString(body?.artistName) || ownership.release.artistName;
+    // Workspace-scoped artists are renamed via PATCH /api/workspace/artist
+    // (renameWorkspaceArtist), which updates artists.name and write-throughs
+    // the cache on every release. The release-edit path must not mutate the
+    // releases.artist_name cache directly — when the workspace flag is on,
+    // ignore body.artistName entirely and keep the existing release value.
+    const artistName = isWorkspaceFeatureEnabled()
+      ? ownership.release.artistName
+      : trimString(body?.artistName) || ownership.release.artistName;
     const status = trimString(body?.status) || ownership.release.status;
     const state = normalizePipelineState(body?.state);
     const readinessScore = Number(body?.readinessScore);
