@@ -1,9 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { 
-  TASKS_TABLE, 
-  loadTasks, 
-  loadTaskDetail, 
-  type TaskRow 
+import {
+  TASKS_TABLE,
+  TASKS_SELECT_COLUMNS,
+  loadTasks,
+  loadTaskDetail,
+  type TaskRow
 } from '@/lib/tasks-server';
 import { TaskStatus, TaskPriority, TaskRequirement } from '@/types/tasks';
 import { ReleasePipelineState } from '@/types/releases';
@@ -28,7 +29,7 @@ export class TaskService {
   } = {}) {
     let query = this.adminClient
       .from(TASKS_TABLE)
-      .select('id,workspace_id,group_id,release_id,created_by,assigned_to_user_id,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
+      .select(TASKS_SELECT_COLUMNS)
       .in('workspace_id', workspaceIds)
       .order('due_date', { ascending: true, nullsFirst: false })
       .order('position', { ascending: true });
@@ -51,7 +52,7 @@ export class TaskService {
   } = {}) {
     let query = this.adminClient
       .from(TASKS_TABLE)
-      .select('id,workspace_id,group_id,release_id,created_by,assigned_to_user_id,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
+      .select(TASKS_SELECT_COLUMNS)
       .eq('workspace_id', workspaceId)
       .order('updated_at', { ascending: false });
 
@@ -68,7 +69,7 @@ export class TaskService {
   async getTaskById(taskId: string, userId: string) {
     const { data, error } = await this.adminClient
       .from(TASKS_TABLE)
-      .select('id,workspace_id,group_id,release_id,created_by,assigned_to_user_id,assigned_to,title,description,status,priority,due_date,completed_at,position,requirement,dependencies,state,auto_generated,metadata,created_at,updated_at')
+      .select(TASKS_SELECT_COLUMNS)
       .eq('id', taskId)
       .maybeSingle();
 

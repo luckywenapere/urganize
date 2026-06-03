@@ -10,9 +10,49 @@ import {
   getTaskStatusTone,
   isEventMilestone,
   type Task,
+  type WorkspaceMember,
 } from '@/lib/tasks';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
+
+function AssigneeAvatar({ member, size = 'sm' }: { member: WorkspaceMember; size?: 'sm' | 'md' }) {
+  const dim = size === 'sm' ? 'h-[18px] w-[18px] text-[9px]' : 'h-6 w-6 text-[11px]';
+  const displayName = member.name || member.email || 'Member';
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center justify-center rounded-full bg-brand/15 font-semibold uppercase tracking-[0.04em] text-brand ring-1 ring-inset ring-brand/30 ${dim}`}
+      title={displayName}
+      aria-label={`Assigned to ${displayName}`}
+    >
+      {member.initials || 'U'}
+    </span>
+  );
+}
+
+function GroupTagPill({
+  name,
+  color,
+  size = 'sm',
+}: {
+  name: string;
+  color: string;
+  size?: 'sm' | 'md';
+}) {
+  const padding = size === 'sm' ? 'px-2 py-0.5 text-[10px] max-w-[88px]' : 'px-2.5 py-1 text-[11px] max-w-[160px]';
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-elevated font-medium text-content-secondary ${padding}`}
+      title={name}
+    >
+      <span
+        className="h-1.5 w-1.5 shrink-0 rounded-full"
+        style={{ backgroundColor: color }}
+        aria-hidden="true"
+      />
+      <span className="truncate">{name}</span>
+    </span>
+  );
+}
 
 type TaskRowProps = {
   task: Task;
@@ -100,6 +140,14 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
           {task.title}
         </p>
         <div className="flex shrink-0 items-center gap-2 text-xs text-content-secondary">
+          {task.assignee ? <AssigneeAvatar member={task.assignee} size="sm" /> : null}
+          {task.groupName ? (
+            <GroupTagPill
+              name={task.groupName}
+              color={task.groupColor || '#64748B'}
+              size="sm"
+            />
+          ) : null}
           <span
             className={`inline-block h-1.5 w-1.5 rounded-full ${getPriorityDotClass(task.priority)}`}
             aria-hidden="true"
@@ -159,6 +207,13 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
           <p className={titleClass} title={task.title}>
             {task.title}
           </p>
+          {task.groupName ? (
+            <GroupTagPill
+              name={task.groupName}
+              color={task.groupColor || '#64748B'}
+              size="md"
+            />
+          ) : null}
           {task.release ? (
             <span className="hidden rounded-full border border-stroke-default bg-bg-elevated px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-content-secondary sm:inline-flex">
               {task.release.title}
@@ -166,6 +221,7 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
           ) : null}
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-content-secondary">
+          {task.assignee ? <AssigneeAvatar member={task.assignee} size="sm" /> : null}
           <span>{getAssigneeLabel(task)}</span>
           <span className="text-content-tertiary">•</span>
           {isMilestone ? (

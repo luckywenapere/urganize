@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, X } from 'lucide-react';
 import { ReleaseCombobox } from '@/components/shared/ReleaseCombobox';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
@@ -26,6 +26,9 @@ import {
 } from '@/lib/tasks';
 import { type ReleaseOption } from '@/lib/release-helpers';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import { DEFAULT_GROUP_COLOR, GROUP_PRESETS } from '@/lib/group-presets';
+
+const WORKSPACE_FLAG_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
 type TaskPatchInput = {
   title?: string;
@@ -36,6 +39,8 @@ type TaskPatchInput = {
   assignedToUserId?: string | null;
   releaseId?: string | null;
   groupId?: string | null;
+  groupName?: string | null;
+  groupColor?: string | null;
 };
 
 type TaskDetailDrawerProps = {
@@ -121,6 +126,7 @@ export function TaskDetailDrawer({
   const [commentDraft, setCommentDraft] = useState('');
   const [editingCommentId, setEditingCommentId] = useState('');
   const [editingCommentContent, setEditingCommentContent] = useState('');
+  const [customTagDraft, setCustomTagDraft] = useState('');
 
   useEffect(() => {
     if (!task) {
@@ -348,6 +354,109 @@ export function TaskDetailDrawer({
                   </select>
                 </label>
               </div>
+
+              {WORKSPACE_FLAG_ENABLED ? (
+                <div className="block">
+                  <span className="mb-2 block text-sm font-semibold text-content-primary">Tag</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {GROUP_PRESETS.map((preset) => {
+                      const isActive =
+                        (task.groupName || '').toLowerCase() === preset.name.toLowerCase();
+                      return (
+                        <button
+                          key={preset.name}
+                          type="button"
+                          onClick={() =>
+                            void onSavePatch({
+                              groupName: preset.name,
+                              groupColor: preset.color,
+                            })
+                          }
+                          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                            isActive
+                              ? 'border-brand bg-brand/10 text-content-primary'
+                              : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                          }`}
+                          aria-pressed={isActive}
+                        >
+                          <span
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: preset.color }}
+                            aria-hidden="true"
+                          />
+                          {preset.name}
+                        </button>
+                      );
+                    })}
+                    {task.groupName ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomTagDraft('');
+                          void onSavePatch({ groupName: null, groupColor: null });
+                        }}
+                        className="inline-flex items-center gap-1 rounded-full border border-stroke-default bg-bg-elevated px-2.5 py-1.5 text-xs font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                        aria-label="Remove tag"
+                      >
+                        <X className="h-3 w-3" aria-hidden="true" />
+                        Remove
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={customTagDraft}
+                      onChange={(event) => setCustomTagDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          const trimmed = customTagDraft.trim();
+                          if (!trimmed) return;
+                          void onSavePatch({
+                            groupName: trimmed,
+                            groupColor: DEFAULT_GROUP_COLOR,
+                          });
+                          setCustomTagDraft('');
+                        }
+                      }}
+                      placeholder="Custom tag — press Enter"
+                      className="input h-10 flex-1 rounded-[14px] text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const trimmed = customTagDraft.trim();
+                        if (!trimmed) return;
+                        void onSavePatch({
+                          groupName: trimmed,
+                          groupColor: DEFAULT_GROUP_COLOR,
+                        });
+                        setCustomTagDraft('');
+                      }}
+                      disabled={!customTagDraft.trim()}
+                      className="inline-flex h-10 items-center rounded-[14px] border border-stroke-default bg-bg-elevated px-3 text-xs font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                  {task.groupName ? (
+                    <p className="mt-2 text-xs text-content-tertiary">
+                      Current tag:{' '}
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-full border border-stroke-default bg-bg-elevated px-2 py-0.5 text-[11px] font-medium text-content-secondary"
+                      >
+                        <span
+                          className="h-1.5 w-1.5 rounded-full"
+                          style={{ backgroundColor: task.groupColor || DEFAULT_GROUP_COLOR }}
+                          aria-hidden="true"
+                        />
+                        {task.groupName}
+                      </span>
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
 
               <TaskDependenciesSection
                 dependencyIds={task.dependencies}

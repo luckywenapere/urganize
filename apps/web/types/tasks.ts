@@ -134,6 +134,14 @@ export interface Task {
    * rows that predate this flag (legacy template tasks fall through to the
    * normal overdue treatment when past-due). */
   compressedRunway: boolean;
+  /** Lightweight single-tag label stored directly on the task row (no
+   * tag table). Picker offers presets in GROUP_PRESETS or a custom name.
+   * Distinct from `groupId` / `group` which point at the legacy task_groups
+   * table used by the release-detail board layout. */
+  groupName: string | null;
+  /** Hex color paired with groupName. Presets pin a fixed color; customs get
+   * DEFAULT_GROUP_COLOR. Null whenever groupName is null. */
+  groupColor: string | null;
   createdAt: string;
   updatedAt: string;
 

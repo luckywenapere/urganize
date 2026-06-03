@@ -34,6 +34,10 @@ const TASK_PATCH_FIELD_MAP: Record<string, string> = {
   groupId: 'group_id',
   group_id: 'group_id',
   requirement: 'requirement',
+  groupName: 'group_name',
+  group_name: 'group_name',
+  groupColor: 'group_color',
+  group_color: 'group_color',
 };
 
 function mapTaskPatchBody(body: unknown): { updates: Record<string, unknown> } | { error: string } {

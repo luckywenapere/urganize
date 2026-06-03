@@ -370,6 +370,8 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     assignedToUserId?: string | null;
     releaseId?: string | null;
     groupId?: string | null;
+    groupName?: string | null;
+    groupColor?: string | null;
   }) => {
     if (!activeTaskId) {
       return;
