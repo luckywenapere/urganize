@@ -617,6 +617,29 @@ h1, h2, h3, h4 {
   }
 }
 
+/* Workspace centered-focus mode reflow. Fires on the wrapper that mounts
+   when scope flips (grid → focused or focused → grid). The conditional
+   render naturally remounts the wrapper, so each mode change replays the
+   animation once. Quick (220ms) and gentle (a few px lift + ~1.5% scale)
+   so the reflow reads as "settling into place" rather than a swap.
+   Reduced motion is honored via the global @media rule that clamps
+   animation-duration to 1ms — users in that mode see the end state with
+   no motion. */
+.workspace-mode-enter {
+  animation: workspace-mode-enter 220ms ease-out;
+}
+
+@keyframes workspace-mode-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* ============================================================================
    Legacy hover/press classes below — kept for now while the workspace sweep
    migrates callers to .motion-*. They reference the same motion tokens so

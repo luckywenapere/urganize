@@ -13,6 +13,8 @@ import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { TasksPanel } from './TasksPanel';
 import { FilesPanel } from './FilesPanel';
+import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
+import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
 
 const TASKS_PANEL_ID = 'workspace-tasks';
@@ -74,7 +76,7 @@ export function WorkspaceView() {
     });
   }, [releases, taskList]);
 
-  const scopedRelease = useMemo<Pick<Release, 'id' | 'title' | 'artistName'> | null>(() => {
+  const scopedReleaseSlim = useMemo<Pick<Release, 'id' | 'title' | 'artistName'> | null>(() => {
     if (!scopedReleaseId) return null;
     const found = releases.find((r) => r.id === scopedReleaseId);
     if (!found) return null;
@@ -85,6 +87,36 @@ export function WorkspaceView() {
     if (!scopedReleaseId) return taskList;
     return taskList.filter((task) => task.releaseId === scopedReleaseId);
   }, [scopedReleaseId, taskList]);
+
+  // Centered-focus split: take the non-selected releases in grid order and
+  // slice them into left + right rails. Ceiling on the left, floor on the
+  // right, per spec — same release always lands on the same side across
+  // reselects because the underlying releaseCards order doesn't change with
+  // the selection. `selectedCard` is the centered focus card; null when
+  // the URL points at a release that doesn't exist in this user's data
+  // (stale link, deleted release) and we fall back to the grid below.
+  const { selectedCard, leftRail, rightRail } = useMemo(() => {
+    if (!scopedReleaseId) {
+      return { selectedCard: null as ReleaseCardData | null, leftRail: [], rightRail: [] };
+    }
+    const selected = releaseCards.find((c) => c.release.id === scopedReleaseId) ?? null;
+    if (!selected) {
+      return { selectedCard: null as ReleaseCardData | null, leftRail: [], rightRail: [] };
+    }
+    const nonSelected = releaseCards.filter((c) => c.release.id !== scopedReleaseId);
+    const leftCount = Math.ceil(nonSelected.length / 2);
+    return {
+      selectedCard: selected,
+      leftRail: nonSelected.slice(0, leftCount),
+      rightRail: nonSelected.slice(leftCount),
+    };
+  }, [releaseCards, scopedReleaseId]);
+
+  // Desktop focused mode is gated on BOTH the URL scope and a successful
+  // lookup. URL pointing at a stale release id → fall back to the grid
+  // (and clear the param so back-button doesn't trap the user). Mobile
+  // path uses `scopedReleaseSlim` directly for the same reason.
+  const isDesktopFocusedMode = Boolean(scopedReleaseId && selectedCard);
 
   const handleSelect = (releaseId: string) => {
     const nextScope = scopedReleaseId === releaseId ? null : releaseId;
@@ -109,11 +141,13 @@ export function WorkspaceView() {
     }
   };
 
+  const handleClose = () => {
+    // Replace-not-push so desktop deselects don't grow history with a
+    // duplicate at-rest entry. Matches the mobile back affordance below.
+    setScope(null);
+  };
+
   const handleMobileBack = () => {
-    // App-back affordance on Level 2. `replace` (not push) so we don't
-    // grow history with a duplicate L1 entry. Scroll to top so users land
-    // at the top of the releases list rather than inheriting their L2
-    // scroll position.
     setScope(null);
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'auto' });
@@ -124,8 +158,8 @@ export function WorkspaceView() {
     return <WorkspaceSkeleton />;
   }
 
-  const scopeAnnouncement = scopedRelease
-    ? `Showing tasks for ${scopedRelease.title}`
+  const scopeAnnouncement = scopedReleaseSlim
+    ? `Showing tasks for ${scopedReleaseSlim.title}`
     : 'Showing all tasks';
 
   return (
@@ -134,11 +168,11 @@ export function WorkspaceView() {
           px-4 here on mobile compounded to 32px each side, eating content
           area on phones where TasksPanel fills the screen full-width. The
           container's own padding now kicks in at sm+ where the workspace is
-          a two-pane desktop layout that actually wants the extra inset. */}
+          a desktop layout that actually wants the extra inset. */}
       <div className="mx-auto max-w-[1440px] pb-24 pt-6 sm:px-6">
         {/* Screen-reader-only live region. Polite mode waits for the SR to be
             idle, atomic="true" re-reads the whole message. Mirrors the visible
-            ScopePill copy so SR users get the same context. */}
+            workspace state so SR users get the same context. */}
         <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
           {scopeAnnouncement}
         </div>
@@ -150,43 +184,16 @@ export function WorkspaceView() {
           </div>
         ) : null}
 
-        {/*
-          MOBILE (below lg): two-level drill-down driven by the `?release=`
-          scope param. Level 1 (no scope) shows ONLY the releases list; Level
-          2 (scope set) shows ONLY the tasks + files for that release plus a
-          back header. The same components mount in both layouts — only the
-          wrapper visibility flips. No mobile component fork.
-
-          DESKTOP (lg+): unchanged two-pane grid. `lg:grid-cols-[3fr_2fr]`
-          keeps the same column ratio; the `lg:block` overrides bring both
-          columns back into view regardless of scope state.
-        */}
-        {/* `min-w-0` on both grid items is the canonical fix for grid
-            "blowout": grid items default to min-width: auto, which means a
-            single descendant with a wide min-content (a long unbreakable
-            title, an image, a row whose truncate-chain breaks somewhere)
-            forces the column wider than the viewport. min-w-0 lets the
-            shrink-to-fit chain reach the column boundary instead of
-            propagating overflow. */}
-        <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-          <div className={`min-w-0 ${scopedReleaseId ? 'hidden lg:block' : 'block'}`}>
-            <ReleasesColumn
-              releases={releaseCards}
-              scopedReleaseId={scopedReleaseId}
-              onSelect={handleSelect}
-              onCreateRelease={() => setIsCreateModalOpen(true)}
-            />
-          </div>
-
-          {/* Right column stacks: mobile back/title header (mobile-only,
-              scoped-only) → tasks panel → per-release files panel. No
-              `space-y-*` here — FilesPanel (unscoped) and AssetSection
-              (inside FilesPanel scoped) both carry their own `mt-8`, which
-              is the canonical workspace section gap. Adding wrapper spacing
-              on top of that would compound to ~56px (unwanted). */}
-          <div className={`min-w-0 ${scopedReleaseId ? 'block' : 'hidden lg:block'}`}>
-            {scopedRelease ? (
-              <div className="mb-4 flex items-center gap-3 lg:hidden">
+        {/* ====================================================================
+            MOBILE (< lg): drill-down. Level 1 shows the release list; Level 2
+            shows back header + TasksPanel + FilesPanel for the scoped release.
+            Behavior matches the pre-centered-focus implementation — this
+            block is intentionally unchanged.
+            ==================================================================== */}
+        <div className="lg:hidden">
+          {scopedReleaseId && scopedReleaseSlim ? (
+            <>
+              <div className="mb-4 flex items-center gap-3">
                 <button
                   type="button"
                   onClick={handleMobileBack}
@@ -197,30 +204,57 @@ export function WorkspaceView() {
                 </button>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-                    {scopedRelease.artistName || 'Unassigned artist'}
+                    {scopedReleaseSlim.artistName || 'Unassigned artist'}
                   </p>
                   <h2 className="truncate font-display text-lg font-semibold leading-tight text-content-primary">
-                    {scopedRelease.title}
+                    {scopedReleaseSlim.title}
                   </h2>
                 </div>
               </div>
-            ) : null}
+              <TasksPanel
+                id={TASKS_PANEL_ID}
+                tasks={scopedTasks}
+                scopedRelease={scopedReleaseSlim}
+                onClearScope={handleMobileBack}
+              />
+              <FilesPanel key={scopedReleaseSlim.id} scopedRelease={scopedReleaseSlim} />
+            </>
+          ) : (
+            <ReleasesColumn
+              releases={releaseCards}
+              scopedReleaseId={scopedReleaseId}
+              onSelect={handleSelect}
+              onCreateRelease={() => setIsCreateModalOpen(true)}
+            />
+          )}
+        </div>
 
-            <TasksPanel
-              id={TASKS_PANEL_ID}
-              tasks={scopedTasks}
-              scopedRelease={scopedRelease}
-              onClearScope={() => setScope(null)}
+        {/* ====================================================================
+            DESKTOP (≥ lg): centered focus. At rest the whole main area is a
+            release grid (Option A). On select, the non-selected cards split
+            into LEFT + RIGHT rails and the selected release sits centered
+            above its TasksPanel + FilesPanel. This REPLACES the legacy
+            two-pane (3fr/2fr) desktop layout — the old grid wrapper has been
+            removed entirely.
+            ==================================================================== */}
+        <div className="hidden lg:block">
+          {isDesktopFocusedMode && selectedCard && scopedReleaseSlim ? (
+            <WorkspaceDesktopFocused
+              selected={selectedCard}
+              leftRail={leftRail}
+              rightRail={rightRail}
+              scopedTasks={scopedTasks}
+              scopedRelease={scopedReleaseSlim}
+              onSelect={handleSelect}
+              onClose={handleClose}
             />
-            {/* Key on the scope id so FilesPanel remounts when the user picks
-                a different release. Cheap, idiomatic React way to reset its
-                toast state (and AssetSection's internal asset list) without an
-                effect — see React docs "Resetting state with a key". */}
-            <FilesPanel
-              key={scopedRelease?.id ?? 'unscoped'}
-              scopedRelease={scopedRelease}
+          ) : (
+            <WorkspaceDesktopGrid
+              releases={releaseCards}
+              onSelect={handleSelect}
+              onCreateRelease={() => setIsCreateModalOpen(true)}
             />
-          </div>
+          )}
         </div>
       </div>
 
