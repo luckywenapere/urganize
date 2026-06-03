@@ -51,6 +51,20 @@ type RenameResult = {
   releasesUpdated: number;
 };
 
+type RenameOutcome = {
+  data: RenameResult | null;
+  error: string | null;
+  /**
+   * True when the rename was rejected because another artist row in the same
+   * workspace already owns the target slug. Surfaced to the API so it can
+   * return HTTP 409 instead of 400/500. Schema's partial unique index
+   * (workspace_id, slug) WHERE workspace_id IS NOT NULL enforces this; the
+   * pre-check below is a friendlier UX path, and the 23505 backstop covers
+   * the race between SELECT and UPDATE.
+   */
+  conflict?: boolean;
+};
+
 /**
  * Renames an artist row and writes-through to every cached field that
  * denormalizes the artist name:
@@ -70,7 +84,7 @@ export async function renameWorkspaceArtist(
   adminClient: SupabaseClient,
   artistId: string,
   newName: string
-): Promise<{ data: RenameResult | null; error: string | null }> {
+): Promise<RenameOutcome> {
   const trimmed = newName.trim();
   if (!trimmed) {
     return { data: null, error: 'Artist name cannot be empty.' };
@@ -112,6 +126,33 @@ export async function renameWorkspaceArtist(
     };
   }
 
+  // Pre-check: would the new slug collide with a different artist in the
+  // same workspace? The schema's partial unique index would catch this
+  // anyway (23505 below), but checking first lets us return a friendly
+  // message without consuming an UPDATE round-trip. Skipped when the slug
+  // isn't changing (no-op shortcut already returned) and when the artist
+  // has no workspace_id (rows excluded from the partial unique index).
+  if (currentRow.workspace_id && currentRow.slug !== nextSlug) {
+    const collision = await adminClient
+      .from(ARTISTS_TABLE)
+      .select('id,name')
+      .eq('workspace_id', currentRow.workspace_id)
+      .eq('slug', nextSlug)
+      .neq('id', artistId)
+      .maybeSingle();
+
+    if (collision.data) {
+      return {
+        data: null,
+        error: `An artist named "${trimmed}" already exists in this workspace.`,
+        conflict: true,
+      };
+    }
+    // collision.error (other than not-found) is swallowed intentionally —
+    // the UPDATE will surface any real DB problem, and the 23505 backstop
+    // below catches the unique-violation race.
+  }
+
   // 1. Canonical update on artists.
   const updateArtist = await adminClient
     .from(ARTISTS_TABLE)
@@ -121,6 +162,19 @@ export async function renameWorkspaceArtist(
     .single();
 
   if (updateArtist.error || !updateArtist.data) {
+    // Backstop for the SELECT→UPDATE race: another writer can insert a
+    // colliding row between our pre-check and our UPDATE. Match by the
+    // Postgres SQLSTATE code, not by the constraint name string — the
+    // index name could be renamed in a future migration and we'd silently
+    // start leaking raw DB text. 23505 = unique_violation.
+    const updateErrorCode = String((updateArtist.error as { code?: string } | null)?.code || '');
+    if (updateErrorCode === '23505') {
+      return {
+        data: null,
+        error: `An artist named "${trimmed}" already exists in this workspace.`,
+        conflict: true,
+      };
+    }
     return {
       data: null,
       error: updateArtist.error?.message || 'Could not rename artist.',

@@ -104,6 +104,16 @@ export async function PATCH(request: NextRequest) {
     }
 
     const result = await renameWorkspaceArtist(adminClient, artist.id, nextName);
+    if (result.conflict) {
+      // Another artist in the same workspace already owns this slug. The
+      // pre-check / 23505 backstop in renameWorkspaceArtist supplied the
+      // user-facing message; surface it with HTTP 409 so the client can
+      // tell "conflict" apart from "validation error".
+      return NextResponse.json(
+        { error: result.error || 'An artist with that name already exists in this workspace.' },
+        { status: 409 }
+      );
+    }
     if (result.error || !result.data) {
       return NextResponse.json({ error: result.error || 'Rename failed.' }, { status: 400 });
     }
