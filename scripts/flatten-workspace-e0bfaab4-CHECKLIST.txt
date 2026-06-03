@@ -1,0 +1,84 @@
+Workspace flatten checklist — scripts/flatten-workspace-e0bfaab4.sql
+Generated 2026-06-03 against project jsueloedjwpfiyzfoutv.
+
+WORKSPACE: e0bfaab4-d092-430e-a420-ac2b470edbb8
+SURVIVOR:  b04f64ec-c5ad-4e97-9df3-c3f400e09bdb (currently named "Lucky Wenapere")
+
+BEFORE state (live-DB readout, 2026-06-03):
+
+  Artist                                              Releases (8 total)
+  --------------------------------------------------- -----------------------
+  b04f64ec  Lucky Wenapere    (survivor)              Every, For Love, Free,
+                                                      Hello, Best, Understand
+  7256b707  Babyboy Dorian    (will be DELETED)       Ifeoma
+  702c4105  Luckydidthis      (will be DELETED)       Test
+
+AFTER state (asserted by guards in the script):
+
+  Artist                                              Releases (8 total)
+  --------------------------------------------------- -----------------------
+  b04f64ec  <typed name>      (renamed survivor)      Every, For Love, Free,
+                                                      Hello, Best, Understand,
+                                                      Ifeoma, Test
+
+  All 8 releases.artist_name           = <typed name>
+  All 8 release_metadata.primary_artist_name = <typed name>
+  slug = lowercase, non-alphanum → "-", strip ends, ≤ 80 chars
+
+What the script does (5 steps inside one BEGIN…COMMIT):
+  1. UPDATE releases SET artist_id = survivor WHERE artist_id ∈ (absorbed)
+     → 2 rows changed (Ifeoma, Test)
+  2. DELETE FROM artists WHERE workspace = … AND id ≠ survivor
+     → 2 rows deleted (Babyboy Dorian, Luckydidthis)
+  3. UPDATE artists SET name, slug WHERE id = survivor
+     → 1 row changed (Lucky Wenapere → <typed name>)
+  4. UPDATE releases SET artist_name = <typed name> WHERE artist_id = survivor
+     → 8 rows changed (cache write-through)
+  5. UPDATE release_metadata SET primary_artist_name = <typed name>
+       WHERE release_id IN (8 release ids)
+     → 8 rows changed (metadata cache write-through)
+
+Guards inside the DO block (RAISE EXCEPTION → ROLLBACK on mismatch):
+  G1. Workspace has exactly 1 artist row after flatten.
+  G2. That single row is the survivor (id = b04f64ec…).
+  G3. Zero releases anywhere in the table point at a missing artist.
+  G4. The survivor carries exactly 8 releases.
+  G5. Every release.artist_name and every release_metadata.primary_artist_name
+      for survivor's releases equals <typed name>.
+
+Required edit before running:
+  Replace 'REPLACE_ME' on line 50 of the .sql file with the typed name.
+  The script aborts up front if the placeholder is left unchanged.
+
+Editor URL:
+  https://supabase.com/dashboard/project/jsueloedjwpfiyzfoutv/sql/new
+
+Expected NOTICE output on success:
+  flatten: workspace=…, survivor=…, new_name=<typed>, new_slug=<derived>
+  Step 1: reassigned 2 release(s) to survivor (expect 2: Ifeoma + Test)
+  Step 2: deleted 2 absorbed artist row(s) (expect 2)
+  Step 3: renamed survivor to "<typed>" (slug <derived>)
+  Step 4: wrote-through artist_name on 8 release(s) (expect 8)
+  Step 5: wrote-through primary_artist_name on 8 metadata row(s) (expect 8)
+  flatten complete: workspace has 1 artist ("<typed>"), 8 releases, caches in sync.
+
+  (then a single SELECT returning artists_in_workspace=1,
+   releases_under_survivor=8, distinct_artist_names_in_cache=1)
+
+Reversibility:
+  Pre-flatten snapshot at backups/20260603T023016Z/
+    artists.json           (12 rows)
+    releases.json          (15 rows)
+    release_metadata.json  (15 rows)
+  This is the restore point for the 4 rows that change identity (2 deleted
+  artists + 2 reassigned releases) and for the cache write-through (8
+  releases + 8 metadata rows with prior artist_name values).
+  Manual rollback is non-trivial — the absorbed artist ids might be reused
+  elsewhere; consult the snapshot rather than running a blanket re-insert.
+
+Settings UI implication:
+  After this runs, workspace e0bfaab4 has exactly one artist. The Settings
+  "Save artist name" rename path is then a plain UPDATE of that one row
+  (no other workspace artist exists to collide against — the friendly-409
+  collision branch in renameWorkspaceArtist becomes unreachable for this
+  workspace).
