@@ -431,28 +431,42 @@ export default function SettingsPage() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="relative mx-auto w-full max-w-[1440px]">
+      {/* Outer chrome wrapper. NO max-width — the outer page width is owned
+          by AppShell's mx-auto max-w-[1440px] wrapper (see AppShell.tsx
+          PAGE WIDTH SOURCE OF TRUTH). `sm:px-6 pb-24 pt-6` matches
+          WorkspaceView so Dashboard ↔ Settings navigation does not jump.
+          `relative` is here so the decorative blobs can anchor to the
+          full outer width (not the narrower inner form column). */}
+      <div className="relative pb-24 pt-6 sm:px-6">
         <div className="pointer-events-none absolute -right-16 -top-12 h-52 w-52 rounded-full bg-brand/15 blur-3xl" />
         <div className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-status-info/12 blur-3xl" />
-        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl tracking-tight sm:text-4xl">Settings</h1>
-            <p className="mt-1 text-xs uppercase tracking-[0.14em] text-content-tertiary">Account and preferences</p>
-          </div>
-          <div className="flex w-full items-center gap-2 sm:w-auto">
-            <Link
-              href="/dashboard"
-              className="w-full rounded-full border border-stroke-default bg-bg-elevated px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
-            >
-              Dashboard
-            </Link>
-          </div>
-        </div>
 
-        {error && <p className="mb-5 rounded-lg border border-status-error/40 bg-status-error/10 px-4 py-3 text-sm text-status-error">{error}</p>}
-        {success && <p className="mb-5 rounded-lg border border-brand/35 bg-brand-muted px-4 py-3 text-sm text-brand">{success}</p>}
+        {/* Inner form wrapper. THIS is where Settings narrows for readability
+            — form fields like password / name would feel weird at 1440px
+            wide on a 1920px monitor. 960px is a conventional settings-page
+            column (Linear / Vercel / Stripe ballpark). The narrowing is
+            intentional and lives here, NOT at the outer page level, so the
+            visible chrome edges still match Dashboard. */}
+        <div className="relative mx-auto w-full max-w-[960px]">
+          <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-3xl tracking-tight sm:text-4xl">Settings</h1>
+              <p className="mt-1 text-xs uppercase tracking-[0.14em] text-content-tertiary">Account and preferences</p>
+            </div>
+            <div className="flex w-full items-center gap-2 sm:w-auto">
+              <Link
+                href="/dashboard"
+                className="w-full rounded-full border border-stroke-default bg-bg-elevated px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
+              >
+                Dashboard
+              </Link>
+            </div>
+          </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {error && <p className="mb-5 rounded-lg border border-status-error/40 bg-status-error/10 px-4 py-3 text-sm text-status-error">{error}</p>}
+          {success && <p className="mb-5 rounded-lg border border-brand/35 bg-brand-muted px-4 py-3 text-sm text-brand">{success}</p>}
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <section className={panelClass}>
             <h2 className="mb-4 text-xl">Profile</h2>
             <div className="space-y-4">
@@ -748,6 +762,7 @@ export default function SettingsPage() {
             </button>
           </div>
         </section>
+        </div>
       </div>
     </main>
   );

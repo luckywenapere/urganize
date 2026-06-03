@@ -59,10 +59,16 @@ export function SettingsTeamMembersSectionSkeleton() {
 export function SettingsPageSkeleton() {
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="relative mx-auto w-full max-w-5xl px-4 pb-8 pt-20 sm:px-6 sm:py-10">
+      {/* Mirror the live SettingsPage layout exactly so the skeleton-to-real
+          swap has zero width / position jitter:
+            - Outer: pb-24 pt-6 sm:px-6 (width inherited from AppShell's
+              mx-auto max-w-[1440px] — the single page-width source of truth)
+            - Inner: mx-auto max-w-[960px] for form-column readability */}
+      <div className="relative pb-24 pt-6 sm:px-6">
         <div className="pointer-events-none absolute -right-16 -top-12 h-52 w-52 rounded-full bg-brand/15 blur-3xl" />
         <div className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-status-info/12 blur-3xl" />
 
+        <div className="relative mx-auto w-full max-w-[960px]">
         <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
             <SkeletonBlock className="h-12 w-40 rounded-[18px]" />
@@ -136,6 +142,7 @@ export function SettingsPageSkeleton() {
             <SkeletonBlock className="h-10 w-40 rounded-lg" />
           </div>
         </SectionCardSkeleton>
+        </div>
       </div>
     </main>
   );

@@ -6,7 +6,7 @@ import { SkeletonBlock } from './SkeletonBlock';
 export function RootShellSkeleton() {
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="app-layout app-layout-centered lazy-fade lazy-fade-in">
+      <div className="app-layout lazy-fade lazy-fade-in">
         <div className="mx-auto w-full max-w-[980px] px-4 pb-16 pt-24 sm:px-6 sm:pt-28">
           <div className="space-y-6">
             <div className="rounded-[32px] border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_18px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:p-8">

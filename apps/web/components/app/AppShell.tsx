@@ -59,11 +59,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     !String(user?.artist_name || '').trim();
   const showHelpMenu =
     isAuthenticated && !isAuthLoading && !isAuthRoute && !isPublicStandaloneRoute && !requiresArtistNameGate;
-  const pageLayoutClassName = isDashboardRoute
-    ? 'app-layout app-layout-fluid'
-    : isPreSavePublicRoute
-      ? 'app-layout'
-      : 'app-layout app-layout-centered';
 
   const workspaceUserName = user?.name || user?.artist_name || user?.email || '';
 
@@ -78,13 +73,21 @@ export function AppShell({ children }: { children: ReactNode }) {
       {requiresArtistNameGate ? (
         <ArtistNameGate />
       ) : showWorkspaceChrome ? (
-        // Stage 2: sidebar removed. The flex-col wrapper takes the full
-        // width inside the page-level max-w-[1680px] cap; the main area
-        // reclaims the horizontal space the rail used to occupy. The
-        // topbar's own sticky positioning is unaffected (it sticks to the
-        // viewport, not this wrapper).
-        <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>
-          <div className="mx-auto flex min-h-screen w-full max-w-[1680px] flex-col">
+        // PAGE WIDTH SOURCE OF TRUTH.
+        // The inner mx-auto max-w-[1440px] wrapper below is the ONLY place
+        // that decides how wide an authenticated page renders. AppTopbar and
+        // <main> both sit inside it so chrome (topbar nav, scrollbar
+        // alignment) and content edges share one value — navigating between
+        // /dashboard and /settings cannot produce a width jump.
+        //
+        // Pages MUST NOT add their own outer max-width. If a page wants its
+        // content narrower (e.g. Settings constrains forms to ~960px for
+        // readability) it adds an INNER wrapper, not an outer one. See the
+        // long-form rationale at the top of globals.css's `.app-layout`
+        // block — the prior route-keyed system here (.app-layout-fluid vs
+        // .app-layout-centered) was the bug.
+        <div className="app-layout lazy-fade lazy-fade-in">
+          <div className="mx-auto flex min-h-screen w-full max-w-[1440px] flex-col">
             <AppTopbar onNewRelease={openCreateRelease} userName={workspaceUserName} />
             <main className="min-w-0 flex-1 px-4 pb-28 pt-5 sm:px-5 md:px-6 md:pb-10 lg:px-8">
               {children}
@@ -92,7 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       ) : (
-        <div className={`${pageLayoutClassName} lazy-fade lazy-fade-in`}>{children}</div>
+        <div className="app-layout lazy-fade lazy-fade-in">{children}</div>
       )}
       {showHelpMenu ? <HelpMenu /> : null}
       {showHelpMenu ? <SupportChat /> : null}

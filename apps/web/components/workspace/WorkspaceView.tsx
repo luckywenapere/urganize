@@ -168,8 +168,12 @@ export function WorkspaceView() {
           px-4 here on mobile compounded to 32px each side, eating content
           area on phones where TasksPanel fills the screen full-width. The
           container's own padding now kicks in at sm+ where the workspace is
-          a desktop layout that actually wants the extra inset. */}
-      <div className="mx-auto max-w-[1440px] pb-24 pt-6 sm:px-6">
+          a desktop layout that actually wants the extra inset.
+          The outer page width is owned by AppShell's mx-auto max-w-[1440px]
+          wrapper — see AppShell.tsx PAGE WIDTH SOURCE OF TRUTH. This div
+          intentionally has NO max-width so dashboard / settings can't drift
+          apart again. */}
+      <div className="pb-24 pt-6 sm:px-6">
         {/* Screen-reader-only live region. Polite mode waits for the SR to be
             idle, atomic="true" re-reads the whole message. Mirrors the visible
             workspace state so SR users get the same context. */}

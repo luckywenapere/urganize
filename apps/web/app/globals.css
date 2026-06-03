@@ -993,20 +993,22 @@ html[data-theme='dark'] .btn-secondary:hover:not(:disabled) {
   min-height: 100vh;
 }
 
+/* .app-layout is the bare full-width chrome wrapper that AppShell puts around
+ * every authenticated page. Page width itself is owned by AppShell's inner
+ * `mx-auto max-w-[1440px]` div — DO NOT add a `max-width` here or in a
+ * route-keyed sibling class. Two separate classes (.app-layout-centered at
+ * 1160px and .app-layout-fluid at 1620px) used to live here keyed off
+ * isDashboardRoute / isSettingsRoute, and they were the root cause of a
+ * ~280px width jump between Dashboard and Settings — outer ceiling on
+ * Settings clamped to 1160 while Dashboard ran free to 1620, so the two
+ * pages' inner `max-w-[1440px]` caps disagreed on which one actually fired.
+ * Single source of truth lives in AppShell. */
 .app-layout {
   width: 100%;
   min-height: 100vh;
   margin: 0 auto;
   position: relative;
   z-index: 1;
-}
-
-.app-layout-centered {
-  max-width: 1160px;
-}
-
-.app-layout-fluid {
-  max-width: 1620px;
 }
 
 .gradient-border {

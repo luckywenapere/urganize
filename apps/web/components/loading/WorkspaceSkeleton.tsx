@@ -19,7 +19,8 @@ import { SkeletonBlock } from './SkeletonBlock';
  * (acceptable edge case — the centered focus shape is the post-load state).
  *
  * The shape mirrors `WorkspaceView` at rest:
- *   - Outer container: `mx-auto max-w-[1440px] pb-24 pt-6 sm:px-6`
+ *   - Outer container: `pb-24 pt-6 sm:px-6` (width inherited from AppShell's
+ *     mx-auto max-w-[1440px] — the single page-width source of truth)
  *   - Mobile (< lg): single column of release cards (sm:grid-cols-2)
  *   - Desktop (≥ lg): 3-up at lg, 4-up at xl — the centered-focus at-rest
  *     grid filling the main area, no separate tasks pane
@@ -56,7 +57,7 @@ function ReleaseCardSkeleton() {
 export function WorkspaceSkeleton() {
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto max-w-[1440px] pb-24 pt-6 sm:px-6">
+      <div className="pb-24 pt-6 sm:px-6">
         {/* Mobile drill-down L1: single releases list, gutter from AppShell. */}
         <section className="space-y-3 lg:hidden" aria-hidden="true">
           <SkeletonBlock className="h-3 w-20" />
