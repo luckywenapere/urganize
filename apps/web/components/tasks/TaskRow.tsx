@@ -67,9 +67,21 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
   };
 
   if (isCompact) {
+    // One-line layout: [checkbox] [title — flex-1 + truncate] [meta — shrink-0
+    // pinned right]. The title is the only flexible track; the meta cluster
+    // (priority dot + due label + lock icon) is shrink-0 so the date never
+    // wraps and never gets clipped. At the narrow workspace-panel widths
+    // (~280–340px on mobile), long titles like
+    // "Identify 3 priority playlists/curators to pitch" truncate with ellipsis
+    // while "32 days overdue" stays fully visible on the right.
+    //
+    // Color semantics unchanged: overdue stays red (status-error), catch-up
+    // stays neutral (the existing isOverdue=false on compressed-runway tasks
+    // suppresses the red), milestone date stays info-blue, completion stays
+    // strikethrough. Only the POSITION moves vs. the previous two-line stack.
     return (
       <div
-        className={`group flex items-center gap-3 border-l-4 border-t border-stroke-subtle bg-bg-surface px-4 py-3 transition first:border-t-0 motion-focus ${borderClass} ${
+        className={`group flex items-center gap-3 border-l-4 border-t border-stroke-subtle bg-bg-surface px-4 py-2.5 transition first:border-t-0 motion-focus ${borderClass} ${
           onClick ? 'cursor-pointer hover:bg-bg-hover' : ''
         } ${isLocked ? 'bg-bg-surface/60' : ''}`}
         {...interactionHandlers}
@@ -81,32 +93,35 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
           onBlocker={onBlocker}
           taskTitle={task.title}
         />
-        <div className="min-w-0 flex-1">
-          <p className={titleClass} title={task.title}>
-            {task.title}
-          </p>
-          <div className="mt-1.5 flex items-center gap-2 text-xs text-content-secondary">
+        <p
+          className={`min-w-0 flex-1 ${titleClass}`}
+          title={task.title}
+        >
+          {task.title}
+        </p>
+        <div className="flex shrink-0 items-center gap-2 text-xs text-content-secondary">
+          <span
+            className={`inline-block h-1.5 w-1.5 rounded-full ${getPriorityDotClass(task.priority)}`}
+            aria-hidden="true"
+          />
+          {isMilestone ? (
+            <span className="inline-flex items-center gap-1 whitespace-nowrap text-status-info">
+              <CalendarDays className="h-3 w-3" aria-label="Event milestone" />
+              {formatMilestoneDate(task.dueDate)}
+            </span>
+          ) : (
             <span
-              className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${getPriorityDotClass(task.priority)}`}
-              aria-hidden="true"
+              className={`whitespace-nowrap ${due.isOverdue ? 'font-semibold text-status-error' : ''}`}
+            >
+              {due.label}
+            </span>
+          )}
+          {isLocked ? (
+            <Lock
+              className="h-3 w-3 text-content-tertiary"
+              aria-label="Locked — waiting on a prerequisite"
             />
-            {isMilestone ? (
-              <span className="inline-flex items-center gap-1 text-status-info">
-                <CalendarDays className="h-3 w-3" aria-label="Event milestone" />
-                {formatMilestoneDate(task.dueDate)}
-              </span>
-            ) : (
-              <span className={due.isOverdue ? 'font-semibold text-status-error' : ''}>
-                {due.label}
-              </span>
-            )}
-            {isLocked ? (
-              <Lock
-                className="h-3 w-3 text-content-tertiary"
-                aria-label="Locked — waiting on a prerequisite"
-              />
-            ) : null}
-          </div>
+          ) : null}
         </div>
       </div>
     );
