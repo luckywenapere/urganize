@@ -1516,14 +1516,22 @@ export async function listNotifications(
 
   const [taskResult, profileById] = await Promise.all([
     taskIds.length
-      ? adminClient.from(TASKS_TABLE).select('id,title,status').in('id', taskIds)
+      ? adminClient.from(TASKS_TABLE).select('id,title,status,release_id').in('id', taskIds)
       : { data: [], error: null as { message?: string } | null },
     loadProfilesByIds(adminClient, actorIds),
   ]);
 
-  const taskById = new Map<string, { title: string; status: TaskStatus }>();
+  const taskById = new Map<
+    string,
+    { title: string; status: TaskStatus; releaseId: string | null }
+  >();
   for (const row of taskResult.data || []) {
-    const task = row as { id?: string; title?: string; status?: string };
+    const task = row as {
+      id?: string;
+      title?: string;
+      status?: string;
+      release_id?: string | null;
+    };
     const id = readString(task.id);
     if (!id) {
       continue;
@@ -1532,12 +1540,18 @@ export async function listNotifications(
     taskById.set(id, {
       title: readString(task.title) || 'Task',
       status: normalizeTaskStatus(task.status),
+      // release_id is the navigation hint for the bell — when a notification
+      // is clicked, the bell needs to know which release scope to switch the
+      // workspace into before opening the task drawer. Tasks not tied to a
+      // release surface as null and skip the scope switch.
+      releaseId: readString(task.release_id) || null,
     });
   }
 
   return rows.map((row) => {
     const actor = row.actor_id ? profileById.get(row.actor_id) || null : null;
-    const task = taskById.get(row.task_id) || { title: 'Task', status: 'todo' };
+    const task =
+      taskById.get(row.task_id) || { title: 'Task', status: 'todo' as TaskStatus, releaseId: null };
 
     return {
       id: row.id,
@@ -1550,6 +1564,7 @@ export async function listNotifications(
       taskTitle: task.title,
       actorName: readString(actor?.name) || readString(actor?.email) || 'System',
       taskStatus: task.status,
+      taskReleaseId: task.releaseId,
     };
   });
 }

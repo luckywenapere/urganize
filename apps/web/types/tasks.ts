@@ -25,6 +25,10 @@ export interface TaskNotification {
   taskTitle: string;
   actorName: string;
   taskStatus: TaskStatus;
+  /** Release the task belongs to (null for workspace-level tasks). Used by the
+   * notifications bell to switch the workspace's URL scope before opening the
+   * task drawer, so the user lands in the right release context. */
+  taskReleaseId: string | null;
 }
 
 export interface TaskComment {

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Logo } from '@urganize/ui';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
+import { NotificationsBell } from '@/components/app/NotificationsBell';
 
 type AppTopbarProps = {
   /** Opens the release creation modal. Lifted to AppShell so this universal
@@ -79,6 +80,12 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           <Plus className="h-4 w-4" />
           <span>New release</span>
         </button>
+
+        {/* Phase 1 notifications surface — gated internally on
+            NEXT_PUBLIC_FEATURE_WORKSPACE so prod can keep the topbar exactly
+            as it was until the bell is flipped on. Sits left of WorkspaceMenu
+            so the account monogram remains the rightmost control. */}
+        <NotificationsBell />
 
         <WorkspaceMenu userName={userName} />
       </div>

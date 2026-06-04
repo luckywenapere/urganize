@@ -1,0 +1,414 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Bell } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
+import { useAuthStore } from '@/lib/auth-store';
+import { useTaskUI } from '@/components/tasks/TaskUIProvider';
+import { useToast } from '@/components/shared/ToastProvider';
+import { getNotificationMessage, type TaskNotification } from '@/lib/tasks';
+
+// Phase 1 of in-app notifications: the front door for an already-built
+// backend (notifications table + GET /api/notifications +
+// PATCH /api/notifications/read). No new events written here, no schema
+// change — just the bell + dropdown the rest of the app has been missing.
+// Gated behind the workspace flag so it ships alongside the rest of the
+// workspace UI overhaul and can be reverted via env without a code change.
+const WORKSPACE_FEATURE_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
+
+type NotificationsResponse = {
+  notifications?: TaskNotification[];
+  unreadCount?: number;
+};
+
+async function getAccessToken(): Promise<string> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token || '';
+}
+
+// Compact relative-time formatter. The backend ships ISO `createdAt`; the
+// dropdown wants "3m / 4h / 2d" labels. Kept inline because no other surface
+// in the app needs a short-form relative timestamp today — promoting this to
+// /lib would be premature.
+function formatRelativeTime(iso: string): string {
+  const ts = new Date(iso).getTime();
+  if (!Number.isFinite(ts)) return '';
+  const diff = Date.now() - ts;
+  const seconds = Math.max(1, Math.round(diff / 1000));
+  if (seconds < 60) return 'just now';
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.round(days / 7);
+  if (weeks < 5) return `${weeks}w ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+/**
+ * Topbar notifications bell. Matches WorkspaceMenu's interaction model:
+ *   - Outside mousedown closes
+ *   - Esc closes and returns focus to the trigger
+ *   - Trigger is a 40×40 square consistent with the workspace-menu trigger
+ *
+ * Read-marking model (Phase 2): opening the dropdown is a non-destructive
+ * PEEK — the badge does not change. Clicking a row is one action: it marks
+ * THAT notification read (PATCH /api/notifications/read with notificationIds
+ * = [id]) and navigates to the related task. "Mark all read" stays as the
+ * manual blanket clear.
+ *
+ * Cross-context open bridge: the bell sits inside AppShell → TaskUIProvider
+ * (see AppShell.tsx:72), so `useTaskUI()` is reachable here without a portal
+ * or a global ref. `openTask(taskId)` is route-agnostic — the drawer is
+ * rendered at AppShell level and overlays whatever page is mounted. To put
+ * the user in the correct release context underneath, we route through
+ * Next's router to `/dashboard?release={taskReleaseId}` first; the workspace
+ * picks up the URL scope via useReleaseScope on the next render. The drawer
+ * is opened immediately after — TaskUIProvider's openTask already handles
+ * "task not in the local store" by falling back to a fetch (the inline note
+ * at TaskUIProvider.tsx:282-284 calls this exact path out).
+ */
+export function NotificationsBell() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userId = useAuthStore((state) => state.user?.id || '');
+  const { openTask } = useTaskUI();
+  const { pushToast } = useToast();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<TaskNotification[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
+
+  // Derived rather than stored — the server's unreadCount is just
+  // `notifications.filter(n => !n.read).length` over the same payload it
+  // returns, so deriving it client-side eliminates a redundant state slot
+  // and a class of "they drift" bugs. Both flips through markRead and any
+  // future per-row toggles update one source.
+  const unreadCount = notifications.reduce(
+    (count, notification) => (notification.read ? count : count + 1),
+    0
+  );
+
+  // Returns the freshly-fetched list so callers that need the row that just
+  // arrived via realtime can look it up by id without waiting for the next
+  // render of `notifications` state. The state still updates as a side effect.
+  const fetchNotifications = useCallback(async (): Promise<TaskNotification[]> => {
+    setIsLoading(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) return [];
+      const response = await fetch('/api/notifications', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      });
+      if (!response.ok) return [];
+      const data = (await response.json().catch(() => ({}))) as NotificationsResponse;
+      // unreadCount in the payload is ignored — it's derived from the same
+      // list below. See the inline note above the `unreadCount` line.
+      const list = Array.isArray(data.notifications) ? data.notifications : [];
+      setNotifications(list);
+      setHasFetched(true);
+      return list;
+    } catch {
+      // Best-effort: badge keeps its last known value, dropdown shows what we have.
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Initial fetch when the user is signed in — the badge needs to show even
+  // before the user opens the dropdown.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    void fetchNotifications();
+  }, [isAuthenticated, fetchNotifications]);
+
+  // Realtime subscription: toast + refetch the moment a row is INSERTed for
+  // this user. Fail-open contract — if the publication isn't enabled, the
+  // websocket can't connect, or the JWT expires mid-session, the channel
+  // silently no-ops. The bell still surfaces the new row the next time the
+  // user opens the dropdown via fetchNotifications. See the migration at
+  // supabase/migrations/20260604_notifications_realtime_publication.sql for
+  // the one-line ALTER that needs to be applied in Supabase for this to
+  // start broadcasting.
+  //
+  // RLS already restricts SELECTs (and therefore realtime broadcasts) to
+  // `user_id = auth.uid()`. The `user_id=eq.${userId}` filter is defense in
+  // depth — also lets Supabase short-circuit on the broker side instead of
+  // sending us rows we'd just drop client-side.
+  //
+  // Self-action exclusion: the row-write sites (createTaskNotification's
+  // comment-route caller, and any future task_assigned / task_status_changed
+  // sites) already guard with `assignee !== actor`. The defensive check
+  // below catches a row whose actor_id equals this user — e.g. if a future
+  // call site forgot to filter. Notifications with no actor (task_due_soon /
+  // task_overdue from createDueDateNotifications) still toast.
+  useEffect(() => {
+    if (!isAuthenticated || !userId) return;
+
+    const channel = supabase
+      .channel(`notifications:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        async (payload) => {
+          const newRow = payload.new as
+            | { id?: string; actor_id?: string | null }
+            | null;
+          if (!newRow?.id) return;
+          if (newRow.actor_id && newRow.actor_id === userId) return;
+
+          // Refresh the list so the dropdown badge + body reflect the new
+          // row, then surface the toast using the hydrated taskTitle from
+          // the response (the raw realtime payload doesn't include it —
+          // GET /api/notifications joins it server-side).
+          const list = await fetchNotifications();
+          const matched = list.find((n) => n.id === newRow.id);
+          const headline = matched
+            ? getNotificationMessage(matched)
+            : 'New notification';
+          const body =
+            matched && matched.taskTitle
+              ? `${headline} — ${matched.taskTitle}`
+              : headline;
+          pushToast(body);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      // removeChannel returns a promise but we don't await — teardown is
+      // fire-and-forget; the channel will be GC'd by the supabase client.
+      void supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, userId, fetchNotifications, pushToast]);
+
+  // Outside-click close (mousedown, matching WorkspaceMenu — fires before the
+  // target's click so the menu closes cleanly when the user clicks elsewhere).
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (triggerRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setIsOpen(false);
+    };
+    window.addEventListener('mousedown', handler);
+    return () => window.removeEventListener('mousedown', handler);
+  }, [isOpen]);
+
+  // Esc close — stopPropagation so this beats any page-level Esc handlers
+  // (create-release modal, drawers) when the bell is the active surface.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        setIsOpen(false);
+        requestAnimationFrame(() => triggerRef.current?.focus());
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isOpen]);
+
+  // Mark a specific set of notifications read (or all when `ids === 'all'`).
+  // Empty body → server marks every unread row for this user; with ids →
+  // restricted to that subset. See app/api/notifications/read/route.ts:33-36.
+  // Optimistic local update: a momentarily-wrong "everything's read" badge
+  // is a smaller surprise than the badge re-appearing after the user thought
+  // they'd cleared it. On failure we let the next fetch reconcile.
+  const markRead = useCallback(async (ids: string[] | 'all') => {
+    setNotifications((prev) =>
+      prev.map((n) => {
+        if (n.read) return n;
+        if (ids === 'all' || ids.includes(n.id)) {
+          return { ...n, read: true };
+        }
+        return n;
+      })
+    );
+
+    try {
+      const token = await getAccessToken();
+      if (!token) return;
+      await fetch('/api/notifications/read', {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(ids === 'all' ? {} : { notificationIds: ids }),
+      });
+    } catch {
+      // Swallow — next open's fetchNotifications will reconcile state.
+    }
+  }, []);
+
+  const handleToggle = () => {
+    setIsOpen((open) => {
+      const next = !open;
+      if (next) {
+        // Peek-on-open: refresh the list so a long-lived tab doesn't show
+        // stale data, but do NOT auto-mark-read. The badge stays accurate
+        // until the user explicitly acts (click a row, or "Mark all read").
+        void fetchNotifications();
+      }
+      return next;
+    });
+  };
+
+  const handleSelect = useCallback(
+    (notification: TaskNotification) => {
+      // Read + navigate is one action — see the doc block at the top of the
+      // component. Order: optimistic mark-read + server PATCH (fire-and-
+      // forget), close the dropdown, switch route scope so the workspace
+      // shows the right release underneath, then openTask so the drawer
+      // surfaces over it. openTask is route-agnostic so racing the route
+      // change against the drawer mount is safe.
+      if (!notification.read) {
+        void markRead([notification.id]);
+      }
+      setIsOpen(false);
+
+      const targetHref = notification.taskReleaseId
+        ? `/dashboard?release=${notification.taskReleaseId}`
+        : '/dashboard';
+
+      // Only navigate when we're not already at exactly the right URL —
+      // avoids a redundant history push when the user clicks a notification
+      // for the release they're currently scoped to. usePathname()'s search
+      // is intentionally separate, so we eyeball both halves.
+      const currentScope =
+        typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('release') || null
+          : null;
+      const sameRoute = pathname === '/dashboard';
+      const sameScope = currentScope === (notification.taskReleaseId || null);
+      if (!sameRoute || !sameScope) {
+        router.push(targetHref);
+      }
+
+      openTask(notification.taskId);
+    },
+    [markRead, openTask, pathname, router]
+  );
+
+  if (!WORKSPACE_FEATURE_ENABLED) return null;
+  if (!isAuthenticated) return null;
+
+  // Cap visual badge at "9+" — anything bigger is just visual noise on a
+  // 40px-square trigger and the dropdown still shows the exact list.
+  const badgeLabel = unreadCount > 9 ? '9+' : String(unreadCount);
+  const hasUnread = unreadCount > 0;
+
+  return (
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={handleToggle}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-label={
+          hasUnread ? `Notifications, ${unreadCount} unread` : 'Notifications'
+        }
+        className="motion-focus motion-press relative grid h-10 w-10 place-items-center border border-stroke-default bg-bg-elevated text-content-primary transition-colors hover:bg-white/[0.04]"
+      >
+        <Bell className="h-4 w-4" aria-hidden="true" />
+        {hasUnread ? (
+          <span
+            aria-hidden="true"
+            className="absolute -right-1 -top-1 grid min-h-[18px] min-w-[18px] place-items-center rounded-full border border-bg-base bg-brand px-1 text-[10px] font-semibold leading-none text-content-inverse"
+          >
+            {badgeLabel}
+          </span>
+        ) : null}
+      </button>
+
+      {isOpen ? (
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label="Notifications"
+          className="animate-menu-down absolute right-0 top-full z-50 mt-2 w-[360px] max-w-[calc(100vw-2rem)] origin-top-right border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgba(0,0,0,0.6)]"
+        >
+          <div className="flex items-center justify-between border-b border-stroke-subtle px-3 py-3">
+            <p className="text-sm font-semibold text-content-primary">Notifications</p>
+            {hasUnread ? (
+              <button
+                type="button"
+                onClick={() => void markRead('all')}
+                className="motion-focus text-xs text-content-secondary transition-colors hover:text-content-primary"
+              >
+                Mark all read
+              </button>
+            ) : null}
+          </div>
+
+          <div className="max-h-[360px] overflow-y-auto">
+            {isLoading && !hasFetched ? (
+              <p className="px-3 py-8 text-center text-xs text-content-secondary">
+                Loading notifications…
+              </p>
+            ) : notifications.length === 0 ? (
+              <p className="px-3 py-8 text-center text-xs text-content-secondary">
+                No notifications yet.
+              </p>
+            ) : (
+              <ul className="divide-y divide-stroke-subtle">
+                {notifications.map((notification) => (
+                  <li key={notification.id}>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => handleSelect(notification)}
+                      className={`motion-focus flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-bg-hover ${
+                        notification.read ? '' : 'bg-brand/5'
+                      }`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                          notification.read ? 'bg-transparent' : 'bg-brand'
+                        }`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-content-primary">
+                          {getNotificationMessage(notification)}
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-content-secondary">
+                          {notification.taskTitle}
+                        </p>
+                        <p className="mt-1 text-[11px] text-content-tertiary">
+                          {formatRelativeTime(notification.createdAt)}
+                        </p>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}

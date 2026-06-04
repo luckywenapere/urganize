@@ -1,0 +1,38 @@
+-- ============================================================================
+-- 20260604_notifications_realtime_publication.sql
+--
+-- Enables Supabase Realtime broadcasts for the `notifications` table so the
+-- in-app notifications bell can toast in the moment a row arrives, instead of
+-- relying on polling or "next time you open the dropdown".
+--
+-- WHAT THIS DOES
+--   Adds public.notifications to the supabase_realtime PostgreSQL publication.
+--   Realtime listens on this publication; tables not in it never broadcast.
+--   With this in place, an authenticated client subscribed to
+--     `postgres_changes` { schema: 'public', table: 'notifications',
+--                          filter: 'user_id=eq.<currentUserId>' }
+--   receives an INSERT event whenever a new notification is written for them.
+--
+-- WHY IT'S A NO-OP IF NOT APPLIED
+--   The notifications bell is built fail-open: if the realtime channel can't
+--   subscribe (publication missing, websocket blocked, JWT expired), the bell
+--   still picks up new rows on the next dropdown open via GET /api/notifications.
+--   The toast is an enhancement, not a dependency.
+--
+-- SAFETY
+--   - RLS on public.notifications is already enabled (USING / WITH CHECK both
+--     restrict to `user_id = auth.uid()` — see the schema_reconciliation
+--     migration, "Users manage own notifications" policy). Realtime honors the
+--     same RLS, so a subscriber only ever sees their own rows even without a
+--     client-side filter. The `user_id=eq.<self>` filter is defense in depth.
+--   - This is additive — it doesn't alter table schema, RLS, or data. Rolling
+--     back is `alter publication supabase_realtime drop table public.notifications;`.
+--
+-- HOW TO APPLY
+--   Run this in the Supabase SQL editor (or via `supabase db push` once it's
+--   wired). Idempotent: if the table is already in the publication, the
+--   ALTER fails — that's intended. Either way, after a successful run the
+--   bell starts toasting on new inserts the next time a client (re)subscribes.
+-- ============================================================================
+
+alter publication supabase_realtime add table public.notifications;
