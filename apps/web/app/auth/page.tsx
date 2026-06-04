@@ -115,7 +115,6 @@ export default function AuthPage() {
 
       if (hint === 'google') {
         setShowEmailLoginForGoogle(false);
-        setPassword('');
       }
     }, 300);
 
@@ -191,7 +190,7 @@ export default function AuthPage() {
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo size="lg" priority />
           <p className="mt-2 text-xs uppercase tracking-[0.14em] text-content-tertiary">
-            {mode === 'login' ? 'Welcome back' : 'Get started'}
+            {mode === 'login' ? 'Welcome' : 'Get started'}
           </p>
         </div>
 
@@ -288,12 +287,9 @@ export default function AuthPage() {
                       disabled={isLoading || isGoogleLoading}
                       required
                     />
-                    {isProviderLookupPending ? (
-                      <p className="text-center text-xs text-content-tertiary">
-                        Checking sign-in options...
-                      </p>
-                    ) : shouldHideEmailLogin ? (
-                      <>
+
+                    {shouldHideEmailLogin && (
+                      <div className="space-y-3">
                         <p className="text-center text-xs text-content-secondary">
                           This account uses Google sign-in.
                         </p>
@@ -313,35 +309,32 @@ export default function AuthPage() {
                           onClick={() => {
                             setShowEmailLoginForGoogle(true);
                             setError('');
-                            setPassword('');
                           }}
                         >
                           Use email instead
                         </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Input
-                          label="Password"
-                          type="password"
-                          value={password}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                            setPassword(e.target.value);
-                            if (error) setError('');
-                          }}
-                          placeholder="••••••••"
-                          leftIcon={<Lock className="w-4 h-4" />}
-                          autoComplete="current-password"
-                          autoFocus={showEmailLoginForGoogle && providerHint === 'google'}
-                          disabled={isLoading || isGoogleLoading}
-                          required
-                        />
+                      </div>
+                    )}
+
+                    <Input
+                      label="Password"
+                      type="password"
+                      value={password}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setPassword(e.target.value);
+                        if (error) setError('');
+                      }}
+                      placeholder="••••••••"
+                      leftIcon={<Lock className="w-4 h-4" />}
+                      autoComplete="current-password"
+                      autoFocus={showEmailLoginForGoogle && providerHint === 'google'}
+                      disabled={isLoading || isGoogleLoading}
+                      required
+                    />
 
                     <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-                          {isLoading ? 'Signing in...' : 'Sign in'}
-                        </Button>
-                      </>
-                    )}
+                      {isLoading ? 'Signing in...' : 'Sign in'}
+                    </Button>
 
                     {error && (
                       <p className="text-center text-sm text-status-error">{error}</p>
@@ -384,7 +377,7 @@ export default function AuthPage() {
                 </button>
               </p>
 
-              {showEmailLogin && !shouldHideEmailLogin && !isProviderLookupPending && (
+              {showEmailLogin && !shouldHideEmailLogin && (
                 <p className="text-center text-sm text-content-tertiary mt-2">
                   <Link href="/auth/forgot-password" className="text-brand hover:underline">
                     Forgot password?
