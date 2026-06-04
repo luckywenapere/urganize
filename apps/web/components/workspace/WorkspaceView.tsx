@@ -12,7 +12,6 @@ import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { TasksPanel } from './TasksPanel';
-import { FilesPanel } from './FilesPanel';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
@@ -221,7 +220,12 @@ export function WorkspaceView() {
                 scopedRelease={scopedReleaseSlim}
                 onClearScope={handleMobileBack}
               />
-              <FilesPanel key={scopedReleaseSlim.id} scopedRelease={scopedReleaseSlim} />
+              {/* The per-release files surface lives inside TasksPanel as an
+                  inline collapsible segment at the top of the task area,
+                  toggled from the "Files" button in that panel's header.
+                  Both mobile and desktop reach it via the same control;
+                  consolidating to one surface ensures the two can't drift
+                  apart. */}
             </>
           ) : (
             <ReleasesColumn

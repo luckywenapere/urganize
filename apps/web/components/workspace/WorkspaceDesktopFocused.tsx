@@ -5,7 +5,6 @@ import type { Release } from '@/types/releases';
 import type { Task } from '@/lib/tasks';
 import { WorkspaceReleaseCard } from './WorkspaceReleaseCard';
 import { TasksPanel } from './TasksPanel';
-import { FilesPanel } from './FilesPanel';
 import type { ReleaseCardData } from './ReleasesColumn';
 
 type WorkspaceDesktopFocusedProps = {
@@ -32,10 +31,12 @@ type WorkspaceDesktopFocusedProps = {
  * column above its scoped tasks + files. Mobile (< lg) never mounts this;
  * it uses the existing drill-down pattern in WorkspaceView.
  *
- * Reuses three components verbatim — `WorkspaceReleaseCard` for the centered
- * focus card and every rail card, `TasksPanel` for the bucketed task list
- * (Done group + catch_up + drawer all flow through unchanged), and
- * `FilesPanel` for the per-release assets section. This file is purely
+ * Reuses two components verbatim — `WorkspaceReleaseCard` for the centered
+ * focus card and every rail card, and `TasksPanel` for the bucketed task list
+ * (Done group + catch_up + drawer all flow through unchanged). Per-release
+ * files surface from a "Files" toggle in TasksPanel's header that expands an
+ * inline collapsible segment at the top of that panel's task area — no
+ * overlay, the bucket list shifts down to make room. This file is purely
  * arrangement: it doesn't reach into any task or asset logic.
  */
 export function WorkspaceDesktopFocused({
@@ -86,11 +87,9 @@ export function WorkspaceDesktopFocused({
             coverArtUrl={selected.coverArtUrl}
           />
           <TasksPanel tasks={scopedTasks} scopedRelease={scopedRelease} onClearScope={onClose} />
-          {/* FilesPanel is keyed on the release id so internal state (toast,
-              loaded assets) resets cleanly when the user switches focus to
-              another release from a rail. Matches the equivalent key= in the
-              legacy 2-pane layout. */}
-          <FilesPanel key={scopedRelease.id} scopedRelease={scopedRelease} />
+          {/* Files moved out of the focused column into an inline collapsible
+              segment at the top of TasksPanel's task area. Same FilesPanel
+              underneath, same AssetSection / API — no overlay. */}
         </div>
 
         <RailColumn cards={rightRail} onSelect={onSelect} ariaLabel="Other releases (right)" />
