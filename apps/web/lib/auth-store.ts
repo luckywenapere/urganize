@@ -13,7 +13,7 @@ if (typeof window !== 'undefined') {
   installAccessRedirect();
 }
 
-const SAFE_AUTH_PATHS = ['/locked', '/auth'];
+const SAFE_AUTH_PATHS = ['/locked', '/auth', '/onboarding'];
 
 const isOnSafeAuthPath = (): boolean => {
   if (typeof window === 'undefined') return true;
