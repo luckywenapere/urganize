@@ -40,7 +40,7 @@
 // inline. Skip is always reachable and routes to /dashboard regardless of
 // the in-flight state. Failures never block the dashboard.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
@@ -119,6 +119,80 @@ const INVITE_ROLE_OPTIONS = [
 
 const MAX_INVITE_ROWS = 5;
 
+// Onboarding role choice. Matches the two values the standalone /auth signup
+// produces. 'artist' fires the ArtistNameGate downstream (AppShell.tsx:59-65)
+// when artist_name is blank, so we always collect artistName when this is
+// chosen. 'artist-manager' is the default — the same hardcoded value the
+// flow used before this picker existed, so unchanged paths behave the same.
+type OnboardingRole = 'artist' | 'artist-manager';
+const DEFAULT_ONBOARDING_ROLE: OnboardingRole = 'artist-manager';
+const ONBOARDING_ROLE_OPTIONS: Array<{ value: OnboardingRole; label: string; helper: string }> = [
+  {
+    value: 'artist-manager',
+    label: 'I manage an artist',
+    helper: 'You run releases on behalf of the artist (manager, label, agency).',
+  },
+  {
+    value: 'artist',
+    label: "I'm the artist",
+    helper: 'You are the artist running your own releases.',
+  },
+];
+
+// Google OAuth round-trip persistence.
+//
+// Email/password signup is single-page: the auth-store call returns inline
+// and we run the hand-off (trial → release → onboarding-complete) without
+// the user leaving /onboarding. Google OAuth, by contrast, redirects the
+// browser to Google, then back to /auth/callback, then to /onboarding — at
+// which point the local React state from before the click is gone.
+//
+// To bridge the round-trip we drop a marker in sessionStorage right before
+// calling loginWithGoogle. sessionStorage survives same-tab navigation, so
+// the marker is intact when we land back here. On mount we read-and-clear
+// the marker; if it was set and the user is now authenticated, we resume
+// the same hand-off the email/password path runs — just with the role and
+// artistName we captured pre-redirect.
+const RESUME_STORAGE_KEY = 'urganize.onboarding.resume_oauth';
+
+type OnboardingResumeData = {
+  role: OnboardingRole;
+  artistName: string;
+};
+
+const isOnboardingRole = (value: unknown): value is OnboardingRole =>
+  value === 'artist' || value === 'artist-manager';
+
+function readAndClearResumeMarker(): OnboardingResumeData | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(RESUME_STORAGE_KEY);
+    if (!raw) return null;
+    window.sessionStorage.removeItem(RESUME_STORAGE_KEY);
+    const parsed = JSON.parse(raw) as Partial<OnboardingResumeData> | null;
+    if (!parsed || !isOnboardingRole(parsed.role)) return null;
+    return {
+      role: parsed.role,
+      artistName: typeof parsed.artistName === 'string' ? parsed.artistName : '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeResumeMarker(data: OnboardingResumeData): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // sessionStorage may be unavailable (private mode). The OAuth path
+    // degrades gracefully — without the marker, the resume hand-off
+    // skips, the user ends up at /dashboard authenticated but without a
+    // first release. They can create one via the in-app modal. Not ideal
+    // but not worse than the pre-OAuth state of the world.
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Local types
 // ---------------------------------------------------------------------------
@@ -180,6 +254,7 @@ const secondaryButton =
 export default function OnboardingPage() {
   const router = useRouter();
   const signup = useAuthStore((state) => state.signup);
+  const loginWithGoogle = useAuthStore((state) => state.loginWithGoogle);
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthLoading = useAuthStore((state) => state.isLoading);
@@ -191,14 +266,30 @@ export default function OnboardingPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // Role + artist name. Drives both the auth-store signup call (email/
+  // password path) AND the post-OAuth profile patch (Google path). Default
+  // to 'artist-manager' so anyone hitting the previous code path gets the
+  // same result as before.
+  const [role, setRole] = useState<OnboardingRole>(DEFAULT_ONBOARDING_ROLE);
+  const [artistName, setArtistName] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleRedirecting, setIsGoogleRedirecting] = useState(false);
   // Once the account has been created we suppress the "already-signed-in"
   // redirect to /dashboard so the user can finish the invite step on this
   // page instead of being shunted away the moment auth flips.
   const [accountCreated, setAccountCreated] = useState(false);
   const [error, setError] = useState('');
   const [progressMessage, setProgressMessage] = useState('');
+
+  // OAuth resume state. Set on mount if we detect a sessionStorage marker
+  // from a previous loginWithGoogle call. Drives two effects: (1) suppress
+  // the bounce-to-/dashboard redirect, (2) trigger the post-OAuth hand-off
+  // once isAuthenticated is true. resumeStartedRef prevents the hand-off
+  // from being kicked off more than once (the hand-off itself sets state
+  // that would otherwise re-fire the effect's dependencies).
+  const [resumeData, setResumeData] = useState<OnboardingResumeData | null>(null);
+  const resumeStartedRef = useRef(false);
 
   const [inviteRows, setInviteRows] = useState<InviteRow[]>(() => [makeInviteRow()]);
   const [isFinishing, setIsFinishing] = useState(false);
@@ -211,6 +302,17 @@ export default function OnboardingPage() {
     } else {
       setDraft(loaded);
     }
+    // Read-and-clear the OAuth resume marker. If set, we just got back from
+    // a Google round-trip and need to finish the hand-off the email/password
+    // path runs synchronously. Apply the captured role + artistName to local
+    // state too so the UI reflects what the user chose pre-redirect.
+    const resume = readAndClearResumeMarker();
+    if (resume) {
+      setResumeData(resume);
+      setRole(resume.role);
+      setArtistName(resume.artistName);
+      setStep(5);
+    }
     setHasHydrated(true);
   }, []);
 
@@ -221,12 +323,19 @@ export default function OnboardingPage() {
 
   // If the user is already signed in BEFORE starting onboarding, send them
   // home. Once the onboarding flow has created an account (accountCreated),
-  // we let them stay on /onboarding to finish the invite step.
+  // or we're mid-OAuth-resume, we let them stay on /onboarding to finish
+  // the hand-off instead of being shunted away the moment auth flips.
   useEffect(() => {
-    if (!isAuthLoading && isAuthenticated && !isSubmitting && !accountCreated) {
+    if (
+      !isAuthLoading &&
+      isAuthenticated &&
+      !isSubmitting &&
+      !accountCreated &&
+      !resumeData
+    ) {
       router.replace('/dashboard');
     }
-  }, [isAuthenticated, isAuthLoading, isSubmitting, accountCreated, router]);
+  }, [isAuthenticated, isAuthLoading, isSubmitting, accountCreated, resumeData, router]);
 
   // ---- step gating -------------------------------------------------------
   const canAdvance = useMemo(() => {
@@ -235,11 +344,28 @@ export default function OnboardingPage() {
     if (step === 2) return Boolean(draft.stage);
     if (step === 3) return draft.title.trim().length > 0 && isReleaseDateValid(draft.releaseDate);
     if (step === 4) return true;
-    if (step === 5) return Boolean(name.trim() && email.trim() && password.length >= 6);
+    if (step === 5) {
+      // Email/password path requires all three fields plus, if the user
+      // picked 'artist', an artistName. The Google button is gated
+      // separately and bypasses the email/password requirement.
+      const hasEmailPasswordFields = Boolean(name.trim() && email.trim() && password.length >= 6);
+      const hasRequiredArtistName = role !== 'artist' || artistName.trim().length > 0;
+      return hasEmailPasswordFields && hasRequiredArtistName;
+    }
     // Step 6 (invite) intentionally has no gate — Skip is always reachable.
     if (step === 6) return true;
     return false;
-  }, [draft, name, email, password, step]);
+  }, [draft, name, email, password, role, artistName, step]);
+
+  // Google button has its own gate — doesn't require name/email/password
+  // (Google provides those) but DOES require a complete draft and the
+  // artist-name field when role='artist' (we still need to write it).
+  const canStartGoogle = useMemo(() => {
+    if (!isReleaseTypeAvailable(draft.releaseType)) return false;
+    if (!draft.title.trim() || !isReleaseDateValid(draft.releaseDate)) return false;
+    if (role === 'artist' && !artistName.trim()) return false;
+    return true;
+  }, [draft, role, artistName]);
 
   const aiMoment = useMemo(() => getOnboardingAiMoment(draft), [draft]);
 
@@ -298,6 +424,63 @@ export default function OnboardingPage() {
     router.replace('/dashboard');
   };
 
+  // Trial → release → onboarding-complete chain. Runs the same SQL writes
+  // regardless of which auth path got us here (email/password or Google).
+  // Caller is responsible for setting accountCreated=true and providing a
+  // valid access token (already in the supabase session).
+  const runPostSignupHandoff = async (accessToken: string) => {
+    // 1. Start the 28-day trial so the next call passes the paywall.
+    // 400/409 are tolerable: a trial was already used / paid status, in
+    // which case we let /api/releases be the arbiter.
+    setProgressMessage('Starting your trial...');
+    const trialResponse = await fetch('/api/trial/start', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!trialResponse.ok && trialResponse.status !== 400 && trialResponse.status !== 409) {
+      const trialPayload = (await trialResponse.json().catch(() => ({}))) as { error?: string };
+      throw new Error(trialPayload.error || 'Could not start your trial.');
+    }
+
+    // 2. Create the real release. Template tasks instantiate server-side.
+    setProgressMessage('Setting up your first release...');
+    const releaseResponse = await fetch('/api/releases', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        title: draft.title.trim(),
+        releaseDate: draft.releaseDate,
+        releaseType: draft.releaseType,
+        source: 'onboarding',
+      }),
+    });
+    const releasePayload = (await releaseResponse.json().catch(() => ({}))) as {
+      release?: { id?: string };
+      releaseId?: string;
+      error?: string;
+    };
+    if (!releaseResponse.ok) {
+      throw new Error(releasePayload.error || 'Could not create your release.');
+    }
+
+    // 3a. If the workspace flag is OFF, mark complete + ship to dashboard.
+    // 3b. If ON, advance to the invite step. The PATCH to mark onboarding
+    // complete happens in finishToDashboard, called from Send-and-finish
+    // or Skip on the invite screen.
+    if (!WORKSPACE_ENABLED) {
+      setProgressMessage('Finishing up...');
+      await finishToDashboard(accessToken);
+      return;
+    }
+
+    setProgressMessage('');
+    setIsSubmitting(false);
+    setStep(6);
+  };
+
   const handleCreateAccount = async () => {
     if (!canAdvance || !draft.releaseType) {
       setError('Please complete the previous steps.');
@@ -309,69 +492,139 @@ export default function OnboardingPage() {
     setProgressMessage('Creating your account...');
 
     try {
-      // 1. Signup — reuse existing auth flow. Role 'artist-manager' so the
-      // artistName branch (which requires extra input) is bypassed. The
-      // server will derive artistName from user_metadata.name.
-      await signup(email.trim().toLowerCase(), password, name.trim(), 'artist-manager');
+      // Pass the chosen role + artistName so the signup result matches
+      // what standalone /auth signup would produce. The auth-store handler
+      // already updates artist_name when role='artist' (auth-store.ts:423).
+      const trimmedArtistName = role === 'artist' ? artistName.trim() : undefined;
+      await signup(
+        email.trim().toLowerCase(),
+        password,
+        name.trim(),
+        role,
+        trimmedArtistName
+      );
       setAccountCreated(true);
       const accessToken = await getAccessToken();
-
-      // 2. Start the 28-day trial so the next call passes the paywall.
-      // 400/409 are tolerable: a trial was already used / paid status, in
-      // which case we let /api/releases be the arbiter.
-      setProgressMessage('Starting your trial...');
-      const trialResponse = await fetch('/api/trial/start', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!trialResponse.ok && trialResponse.status !== 400 && trialResponse.status !== 409) {
-        const trialPayload = (await trialResponse.json().catch(() => ({}))) as { error?: string };
-        throw new Error(trialPayload.error || 'Could not start your trial.');
-      }
-
-      // 3. Create the real release. Template tasks instantiate server-side.
-      setProgressMessage('Setting up your first release...');
-      const releaseResponse = await fetch('/api/releases', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          title: draft.title.trim(),
-          releaseDate: draft.releaseDate,
-          releaseType: draft.releaseType,
-          source: 'onboarding',
-        }),
-      });
-      const releasePayload = (await releaseResponse.json().catch(() => ({}))) as {
-        release?: { id?: string };
-        releaseId?: string;
-        error?: string;
-      };
-      if (!releaseResponse.ok) {
-        throw new Error(releasePayload.error || 'Could not create your release.');
-      }
-
-      // 4a. If the workspace flag is OFF, mark complete + ship to dashboard.
-      // 4b. If ON, advance to the invite step. The PATCH to mark onboarding
-      // complete happens in finishToDashboard, called from Send-and-finish
-      // or Skip on the invite screen.
-      if (!WORKSPACE_ENABLED) {
-        setProgressMessage('Finishing up...');
-        await finishToDashboard(accessToken);
-        return;
-      }
-
-      setProgressMessage('');
-      setIsSubmitting(false);
-      setStep(6);
+      await runPostSignupHandoff(accessToken);
     } catch (handoffError) {
       setError(errorMessage(handoffError, 'Could not finish creating your workspace.'));
       setProgressMessage('');
       setIsSubmitting(false);
     }
   };
+
+  // Kick off Google OAuth signup. We persist role + artistName to
+  // sessionStorage so the post-OAuth resume effect can apply them and run
+  // the same hand-off the email/password path runs. The browser then leaves
+  // /onboarding → Google → /auth/callback → back to /onboarding, where the
+  // resume effect picks up. NOTE: validation here is intentionally stricter
+  // than canAdvance — we re-check the whole draft because canStartGoogle
+  // gates the button independently of the email/password fields.
+  const handleGoogleSignup = async () => {
+    if (!canStartGoogle || !draft.releaseType) {
+      setError('Please complete the previous steps.');
+      return;
+    }
+
+    setError('');
+    setIsGoogleRedirecting(true);
+    setProgressMessage('Redirecting to Google...');
+    try {
+      writeResumeMarker({
+        role,
+        artistName: role === 'artist' ? artistName.trim() : '',
+      });
+      // loginWithGoogle redirects the browser via supabase.auth.signInWithOAuth.
+      // After the function awaits, the redirect should have been triggered
+      // — but Supabase resolves the promise BEFORE the redirect actually
+      // navigates, so we don't proceed to anything else on this code path.
+      await loginWithGoogle('/onboarding');
+    } catch (oauthError) {
+      // OAuth init failed before the browser left the page. Clear the
+      // marker so a subsequent email/password attempt doesn't accidentally
+      // think it's resuming.
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.removeItem(RESUME_STORAGE_KEY);
+      }
+      setError(errorMessage(oauthError, 'Could not start Google sign-in.'));
+      setProgressMessage('');
+      setIsGoogleRedirecting(false);
+    }
+  };
+
+  // Resume hand-off after Google OAuth returns. Fires when we land back on
+  // /onboarding with resumeData populated (from sessionStorage) and the
+  // auth-store has settled into the authenticated state. The ref guard
+  // ensures we only fire once per mount even though several state writes
+  // inside the hand-off would otherwise re-trigger the effect.
+  useEffect(() => {
+    if (!resumeData) return;
+    if (isAuthLoading) return;
+    if (!isAuthenticated) return;
+    if (resumeStartedRef.current) return;
+    resumeStartedRef.current = true;
+
+    const resumeRole = resumeData.role;
+    const resumeArtistName = resumeData.artistName;
+
+    void (async () => {
+      setError('');
+      setIsSubmitting(true);
+      setAccountCreated(true);
+      setProgressMessage('Setting up your account...');
+
+      try {
+        const accessToken = await getAccessToken();
+
+        // /auth/callback upserts profiles with ignoreDuplicates:true, so a
+        // brand-new Google user ends up with role='artist-manager' from
+        // the callback's default. Patch it to what the user actually chose.
+        // Existing users (rare path — they'd have hit /dashboard already)
+        // skip this if their stored role already matches.
+        const profileUpdate: Record<string, unknown> = {
+          role: resumeRole,
+          updated_at: new Date().toISOString(),
+        };
+        if (resumeRole === 'artist' && resumeArtistName) {
+          profileUpdate.artist_name = resumeArtistName;
+        }
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+        if (!userId) {
+          throw new Error('Could not read session after Google sign-in.');
+        }
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update(profileUpdate)
+          .eq('id', userId);
+        if (updateError) {
+          // Don't hard-fail on the role write — the user can still use the
+          // app at the default role. Log and continue so the release does
+          // get created.
+          console.warn('[onboarding] Could not write chosen role:', updateError.message);
+        }
+        await checkAuth();
+
+        await runPostSignupHandoff(accessToken);
+      } catch (handoffError) {
+        setError(errorMessage(handoffError, 'Could not finish setting up your workspace.'));
+        setProgressMessage('');
+        setIsSubmitting(false);
+      } finally {
+        // Clear the snapshot regardless of outcome so the marker doesn't
+        // hang around if the user retries.
+        setResumeData(null);
+      }
+    })();
+    // Note: runPostSignupHandoff and checkAuth aren't in the dep array
+    // because the resumeStartedRef guard means this effect only does work
+    // once per mount; further re-renders that change those identities
+    // bail before reaching the async block.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeData, isAuthenticated, isAuthLoading]);
 
   // ---- invite step -------------------------------------------------------
   const updateInviteRow = (rowId: string, patch: Partial<InviteRow>) => {
@@ -730,6 +983,120 @@ export default function OnboardingPage() {
               <p className="text-sm leading-relaxed text-content-secondary">
                 Create your account to lock in your release and pick up this task on the other side.
               </p>
+
+              {/* Role picker — at the top because it changes which fields
+                  render below (artistName only for 'artist'). Same two
+                  values the standalone /auth signup uses, so downstream
+                  gates (ArtistNameGate in AppShell) treat the result
+                  identically. */}
+              <fieldset className="space-y-2">
+                <legend className={labelBase}>Who are you?</legend>
+                <div className="space-y-2">
+                  {ONBOARDING_ROLE_OPTIONS.map((option) => {
+                    const selected = role === option.value;
+                    return (
+                      <label
+                        key={option.value}
+                        className={`flex items-start gap-3 border bg-bg-elevated px-4 py-3 cursor-pointer transition-colors duration-fast ease-standard ${
+                          selected
+                            ? 'border-brand bg-brand/8'
+                            : 'border-stroke-default hover:border-stroke-strong'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="onboarding-role"
+                          value={option.value}
+                          checked={selected}
+                          onChange={() => setRole(option.value)}
+                          className="mt-0.5 h-4 w-4 accent-brand"
+                        />
+                        <span className="flex-1">
+                          <span className="block text-sm text-content-primary">{option.label}</span>
+                          <span className="mt-1 block text-xs text-content-tertiary">
+                            {option.helper}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+
+              {/* Artist name. Required when role='artist' to satisfy the
+                  ArtistNameGate downstream; otherwise hidden because the
+                  manager role has no use for an account-level artist name. */}
+              {role === 'artist' ? (
+                <label className="block space-y-1.5">
+                  <span className={labelBase}>Your artist name</span>
+                  <input
+                    type="text"
+                    value={artistName}
+                    onChange={(event) => setArtistName(event.target.value)}
+                    placeholder="e.g. Tems"
+                    autoComplete="off"
+                    className={inputBase}
+                    required
+                  />
+                  <span className="block text-xs text-content-tertiary">
+                    Used across the app — change later in Settings.
+                  </span>
+                </label>
+              ) : null}
+
+              {/* Google sign-in. Disabled when the draft or role-specific
+                  fields aren't ready; clicking redirects through Google +
+                  /auth/callback and resumes the hand-off on return. */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => void handleGoogleSignup()}
+                  disabled={!canStartGoogle || isGoogleRedirecting || isSubmitting}
+                  className="w-full inline-flex items-center justify-center gap-3 border border-stroke-default bg-white px-4 py-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isGoogleRedirecting ? (
+                    'Redirecting…'
+                  ) : (
+                    <>
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          fill="#4285F4"
+                          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                        />
+                        <path
+                          fill="#34A853"
+                          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                        />
+                        <path
+                          fill="#FBBC05"
+                          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                        />
+                        <path
+                          fill="#EA4335"
+                          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                        />
+                      </svg>
+                      Continue with Google
+                    </>
+                  )}
+                </button>
+                {!canStartGoogle ? (
+                  <p className="mt-2 text-xs text-content-tertiary">
+                    {role === 'artist' && !artistName.trim()
+                      ? 'Add your artist name above to continue with Google.'
+                      : 'Complete the previous steps to continue with Google.'}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-stroke-default" />
+                <span className="text-xs uppercase tracking-[0.18em] text-content-tertiary">
+                  Or with email
+                </span>
+                <div className="h-px flex-1 bg-stroke-default" />
+              </div>
+
               <label className="block space-y-1.5">
                 <span className={labelBase}>Your name</span>
                 <input
@@ -878,7 +1245,12 @@ export default function OnboardingPage() {
                 Skip for now
               </button>
             ) : step > 0 && !accountCreated ? (
-              <button type="button" onClick={handleBack} disabled={isSubmitting} className={secondaryButton}>
+              <button
+                type="button"
+                onClick={handleBack}
+                disabled={isSubmitting || isGoogleRedirecting}
+                className={secondaryButton}
+              >
                 Back
               </button>
             ) : (
@@ -889,7 +1261,7 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={() => void handleCreateAccount()}
-                disabled={!canAdvance || isSubmitting}
+                disabled={!canAdvance || isSubmitting || isGoogleRedirecting}
                 className={primaryButton}
               >
                 {isSubmitting ? 'Working…' : 'Create account & release'}
