@@ -26,7 +26,7 @@ type CreateReleaseResponse = {
   error?: string;
 };
 
-const PUBLIC_ROUTE_PREFIXES = ['/auth', '/onboarding'];
+const PUBLIC_ROUTE_PREFIXES = ['/auth', '/onboarding', '/invite'];
 const EDUCATION_CARDS = [
   {
     headline: 'Every release gets a workspace.',

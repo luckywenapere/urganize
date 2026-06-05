@@ -8,10 +8,15 @@ import { Button } from '@urganize/ui';
 import { Input } from '@urganize/ui';
 import { Card } from '@urganize/ui';
 import { Logo } from '@urganize/ui';
-import { ArrowLeft, User, Users, Mail, Lock, UserCircle } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import { errorMessage } from "@/lib/errors";
 
-type AuthMode = 'login' | 'role' | 'signup';
+// /auth is now login-only. Organic signup flows through /onboarding
+// (Google + role parity); invited teammates flow through /invite/accept
+// (token-based, no email-match dependency). The previous in-page mode
+// toggle ('login' | 'role' | 'signup') has been removed; ?mode=signup
+// is preserved as a query parameter only so we can redirect old
+// bookmarks to the right entrance.
 type LoginProviderHint = 'unknown' | 'google' | 'email';
 const LAST_AUTH_EMAIL_KEY = 'urganize.last_auth_email';
 const normalizeAuthEmail = (value: string) => value.trim().toLowerCase();
@@ -35,20 +40,20 @@ const resolveLoginProviderHint = async (normalizedEmail: string): Promise<LoginP
 export default function AuthPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, signup, loginWithGoogle, isAuthenticated, isLoading: authLoading } = useAuthStore();
+  const { login, loginWithGoogle, isAuthenticated, isLoading: authLoading } = useAuthStore();
   const nextPath = searchParams.get('next') || '/dashboard';
   const inviteEmail = normalizeAuthEmail(searchParams.get('email') || '');
-  
-  const [mode, setMode] = useState<AuthMode>('login');
+  // Old bookmarks / sent emails may still carry ?mode=signup. Send those
+  // to /onboarding (the organic signup home) so the user has a path
+  // forward — /auth itself no longer offers a signup form.
+  const isLegacySignupMode = searchParams.get('mode') === 'signup';
+
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [artistName, setArtistName] = useState('');
-  const [hasManager, setHasManager] = useState<boolean | null>(null);
   const [providerHint, setProviderHint] = useState<LoginProviderHint>('unknown');
   const [providerHintEmail, setProviderHintEmail] = useState('');
   const [isCheckingProvider, setIsCheckingProvider] = useState(false);
@@ -57,23 +62,32 @@ export default function AuthPage() {
   const providerLookupRequestIdRef = useRef(0);
 
   const normalizedLoginEmail = normalizeAuthEmail(email);
-  const hasLookupEligibleEmail = mode === 'login' && showEmailLogin && normalizedLoginEmail.includes('@');
+  const hasLookupEligibleEmail = showEmailLogin && normalizedLoginEmail.includes('@');
   const isProviderLookupPending =
     hasLookupEligibleEmail &&
     (isCheckingProvider || providerHintEmail !== normalizedLoginEmail);
   const shouldHideEmailLogin =
-    mode === 'login' &&
     showEmailLogin &&
     providerHint === 'google' &&
     providerHintEmail === normalizedLoginEmail &&
     !showEmailLoginForGoogle;
 
+  // Legacy ?mode=signup bookmarks: bounce to /onboarding immediately so
+  // the user isn't stuck on a login form with no signup option. Runs
+  // before the authenticated-redirect so we don't trap signed-in users
+  // (rare, but possible if they clicked an old marketing link).
+  useEffect(() => {
+    if (isLegacySignupMode) {
+      router.replace('/onboarding');
+    }
+  }, [isLegacySignupMode, router]);
+
   useEffect(() => {
     if (authLoading) return;
-    if (isAuthenticated && mode === 'login') {
+    if (isAuthenticated) {
       router.replace(nextPath);
     }
-  }, [authLoading, isAuthenticated, mode, nextPath, router]);
+  }, [authLoading, isAuthenticated, nextPath, router]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -90,14 +104,7 @@ export default function AuthPage() {
   useEffect(() => {
     const requestId = ++providerLookupRequestIdRef.current;
 
-    if (mode !== 'login' || !showEmailLogin) {
-      setProviderHint('unknown');
-      setProviderHintEmail('');
-      setIsCheckingProvider(false);
-      return;
-    }
-
-    if (!hasLookupEligibleEmail) {
+    if (!showEmailLogin || !hasLookupEligibleEmail) {
       setProviderHint('unknown');
       setProviderHintEmail('');
       setIsCheckingProvider(false);
@@ -121,7 +128,7 @@ export default function AuthPage() {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [hasLookupEligibleEmail, mode, normalizedLoginEmail, showEmailLogin]);
+  }, [hasLookupEligibleEmail, normalizedLoginEmail, showEmailLogin]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,25 +148,6 @@ export default function AuthPage() {
       router.push(nextPath);
     } catch (loginError) {
       setError(errorMessage(loginError, 'Login failed. Please try again.'));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-
-    try {
-      const role = hasManager ? 'artist' : 'artist-manager';
-      if (role === 'artist' && !artistName.trim()) {
-        throw new Error('Artist name is required');
-      }
-      await signup(email, password, name, role, role === 'artist' ? artistName.trim() : undefined);
-      router.push(nextPath);
-    } catch (signupError) {
-      setError(errorMessage(signupError, 'Signup failed. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -190,56 +178,50 @@ export default function AuthPage() {
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo size="lg" priority />
           <p className="mt-2 text-xs uppercase tracking-[0.14em] text-content-tertiary">
-            {mode === 'login' ? 'Welcome' : 'Get started'}
+            Welcome
           </p>
         </div>
 
         <Card padding="lg" className="rounded-3xl border border-stroke-default bg-bg-surface/95 backdrop-blur-sm shadow-[0_10px_40px_rgba(0,0,0,0.18)]">
-          {/* Login Mode */}
-          {mode === 'login' && (
-            <>
-              {/* Google Button */}
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={isGoogleLoading || isLoading || hasManager === true}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-zinc-100 text-black font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isGoogleLoading ? (
-                  <>
-                    <span aria-hidden="true" className="h-5 w-5 rounded-md bg-black/10 skeleton-shimmer" />
-                    <span aria-hidden="true" className="h-3 w-32 rounded-full bg-black/10 skeleton-shimmer" />
-                    <span className="sr-only">Loading Google sign-in</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      />
-                    </svg>
-                    <span>Continue with Google</span>
-                  </>
-                )}
-              </button>
-              {hasManager === true && (
-                <p className="mt-2 text-center text-xs text-content-secondary">
-                  Artist accounts require artist name during signup. Use email signup below.
-                </p>
-              )}
+          {/* Login only — signup moved to /onboarding (organic) and
+              /invite/accept (invited teammates). */}
+          {/* Google Button */}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={isGoogleLoading || isLoading}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-zinc-100 text-black font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGoogleLoading ? (
+              <>
+                <span aria-hidden="true" className="h-5 w-5 rounded-md bg-black/10 skeleton-shimmer" />
+                <span aria-hidden="true" className="h-3 w-32 rounded-full bg-black/10 skeleton-shimmer" />
+                <span className="sr-only">Loading Google sign-in</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
+                </svg>
+                <span>Continue with Google</span>
+              </>
+            )}
+          </button>
 
               {!showEmailLogin ? (
                 <Button
@@ -357,267 +339,23 @@ export default function AuthPage() {
                 </>
               )}
 
-              {error && !showEmailLogin && (
-                <p className="mt-4 text-center text-sm text-status-error">{error}</p>
-              )}
-
-              <p className="text-center text-sm text-content-tertiary mt-6">
-                Don&apos;t have an account?{' '}
-                <button
-                  onClick={() => {
-                    setMode('role');
-                    setShowEmailLogin(false);
-                    setShowEmailLoginForGoogle(false);
-                    setPassword('');
-                    setError('');
-                  }}
-                  className="text-brand hover:underline font-medium"
-                >
-                  Sign up
-                </button>
-              </p>
-
-              {showEmailLogin && !shouldHideEmailLogin && (
-                <p className="text-center text-sm text-content-tertiary mt-2">
-                  <Link href="/auth/forgot-password" className="text-brand hover:underline">
-                    Forgot password?
-                  </Link>
-                </p>
-              )}
-            </>
+          {error && !showEmailLogin && (
+            <p className="mt-4 text-center text-sm text-status-error">{error}</p>
           )}
 
-          {/* Role Selection Mode */}
-          {mode === 'role' && (
-            <>
-              <button
-                onClick={() => {
-                  setMode('login');
-                  setShowEmailLogin(false);
-                  setShowEmailLoginForGoogle(false);
-                  setPassword('');
-                  setError('');
-                }}
-                className="inline-flex items-center gap-2 text-sm text-content-tertiary hover:text-content-primary transition-colors mb-6"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to login
-              </button>
+          <p className="text-center text-sm text-content-tertiary mt-6">
+            Don&apos;t have an account?{' '}
+            <Link href="/onboarding" className="text-brand hover:underline font-medium">
+              Sign up
+            </Link>
+          </p>
 
-              <h2 className="text-xl font-semibold text-content-primary mb-2">
-                How do you work?
-              </h2>
-              <p className="text-content-secondary text-sm mb-6">
-                This shapes your workspace.
-              </p>
-
-              <div className="space-y-3">
-                  <button
-                    onClick={() => {
-                      setHasManager(false);
-                    setMode('signup');
-                    setShowEmailLogin(false);
-                    setShowEmailLoginForGoogle(false);
-                    setPassword('');
-                    setArtistName('');
-                    setError('');
-                  }}
-                    className="w-full p-4 rounded-2xl border border-stroke-default bg-bg-elevated hover:-translate-y-[1px] hover:bg-bg-hover transition text-left group"
-                  >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-brand/10 flex items-center justify-center">
-                      <Users className="w-6 h-6 text-brand" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-content-primary">I&apos;m an Artist Manager</p>
-                      <p className="text-sm text-content-tertiary">I manage one or more artists</p>
-                    </div>
-                  </div>
-                </button>
-
-                  <button
-                    onClick={() => {
-                      setHasManager(true);
-                    setMode('signup');
-                    setShowEmailLogin(false);
-                    setShowEmailLoginForGoogle(false);
-                    setPassword('');
-                    setArtistName('');
-                    setError('');
-                  }}
-                    className="w-full p-4 rounded-2xl border border-stroke-default bg-bg-elevated hover:-translate-y-[1px] hover:bg-bg-hover transition text-left group"
-                  >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-status-info/12 flex items-center justify-center">
-                      <User className="w-6 h-6 text-status-info" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-content-primary">I&apos;m an Artist</p>
-                      <p className="text-sm text-content-tertiary">My manager handles my releases</p>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* Signup Mode */}
-          {mode === 'signup' && (
-            <>
-              <button
-                onClick={() => {
-                  setMode('role');
-                  setShowEmailLogin(false);
-                  setShowEmailLoginForGoogle(false);
-                  setPassword('');
-                  setArtistName('');
-                  setError('');
-                }}
-                className="inline-flex items-center gap-2 text-sm text-content-tertiary hover:text-content-primary transition-colors mb-6"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </button>
-
-              <h2 className="text-xl font-semibold text-content-primary mb-6">
-                Create account
-              </h2>
-
-              {/* Google Button */}
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={isGoogleLoading || isLoading}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-zinc-100 text-black font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isGoogleLoading ? (
-                  <>
-                    <span aria-hidden="true" className="h-5 w-5 rounded-md bg-black/10 skeleton-shimmer" />
-                    <span aria-hidden="true" className="h-3 w-32 rounded-full bg-black/10 skeleton-shimmer" />
-                    <span className="sr-only">Loading Google sign-in</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      />
-                    </svg>
-                    <span>Continue with Google</span>
-                  </>
-                )}
-              </button>
-
-              {/* Divider */}
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-stroke-subtle" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-bg-surface text-content-tertiary">or</span>
-                </div>
-              </div>
-
-              <form onSubmit={handleSignup} className="space-y-4">
-                <Input
-                  label="Full Name"
-                  type="text"
-                  value={name}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    setName(e.target.value);
-                    if (error) setError('');
-                  }}
-                  placeholder="John Doe"
-                  leftIcon={<UserCircle className="w-4 h-4" />}
-                  disabled={isLoading || isGoogleLoading}
-                  required
-                />
-                {hasManager === true && (
-                  <Input
-                    label="Artist Name"
-                    type="text"
-                    value={artistName}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      setArtistName(e.target.value);
-                      if (error) setError('');
-                    }}
-                    placeholder="e.g. Tems"
-                    leftIcon={<User className="w-4 h-4" />}
-                    disabled={isLoading || isGoogleLoading}
-                    required
-                  />
-                )}
-                <Input
-                  label="Email"
-                  type="email"
-                  value={email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    setEmail(e.target.value);
-                    if (error) setError('');
-                  }}
-                  placeholder="you@example.com"
-                  leftIcon={<Mail className="w-4 h-4" />}
-                  autoComplete="email"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  disabled={isLoading || isGoogleLoading}
-                  required
-                />
-                <Input
-                  label="Password"
-                  type="password"
-                  value={password}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    setPassword(e.target.value);
-                    if (error) setError('');
-                  }}
-                  placeholder="••••••••"
-                  leftIcon={<Lock className="w-4 h-4" />}
-                  autoComplete="new-password"
-                  disabled={isLoading || isGoogleLoading}
-                  required
-                />
-
-                {error && (
-                  <p className="text-sm text-red-500 text-center">{error}</p>
-                )}
-
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Creating account...' : 'Create account'}
-                </Button>
-              </form>
-
-              <p className="text-center text-sm text-content-tertiary mt-6">
-                Already have an account?{' '}
-                <button
-                  onClick={() => {
-                    setMode('login');
-                    setShowEmailLogin(false);
-                    setShowEmailLoginForGoogle(false);
-                    setPassword('');
-                    setArtistName('');
-                    setError('');
-                  }}
-                  className="text-brand hover:underline font-medium"
-                >
-                  Sign in
-                </button>
-              </p>
-            </>
+          {showEmailLogin && !shouldHideEmailLogin && (
+            <p className="text-center text-sm text-content-tertiary mt-2">
+              <Link href="/auth/forgot-password" className="text-brand hover:underline">
+                Forgot password?
+              </Link>
+            </p>
           )}
         </Card>
       </div>

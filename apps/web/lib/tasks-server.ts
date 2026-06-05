@@ -1569,17 +1569,27 @@ export async function listNotifications(
   });
 }
 
-export function buildInviteUrl(email: string): string {
+function resolveAppBaseUrl(): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || '';
-  const baseUrl = appUrl
-    ? appUrl.replace(/\/$/, '')
-    : process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim()
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim()}`
-      : 'http://localhost:3000';
+  if (appUrl) return appUrl.replace(/\/$/, '');
+  const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (vercelHost) return `https://${vercelHost}`;
+  return 'http://localhost:3000';
+}
 
-  return `${baseUrl}/auth?next=${encodeURIComponent('/dashboard/tasks')}&email=${encodeURIComponent(
-    email
-  )}`;
+/**
+ * Token-based invite URL. The token identifies the exact workspace_members
+ * row, so acceptance works even if the invitee signs up with a different
+ * email than they were invited at — closes the email-mismatch gap that
+ * pure email-matching cannot see past.
+ *
+ * Old invites that pre-date the token system still work via the email-link
+ * trigger (20260605010000_invite_linkage_trigger.sql) — those URLs point
+ * at /auth?email=... and rely on the auth.users INSERT trigger to link
+ * the new user to the matching pending row.
+ */
+export function buildInviteUrl(token: string): string {
+  return `${resolveAppBaseUrl()}/invite/accept?token=${encodeURIComponent(token)}`;
 }
 
 export function buildWorkspaceMembersResponse(

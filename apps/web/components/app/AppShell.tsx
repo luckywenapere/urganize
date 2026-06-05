@@ -36,18 +36,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isAuthRoute =
     pathname?.startsWith('/auth') ||
     pathname === '/locked' ||
-    pathname?.startsWith('/onboarding');
+    pathname?.startsWith('/onboarding') ||
+    pathname?.startsWith('/invite');
   const isDashboardRoute = pathname?.startsWith('/dashboard');
   const isPreSavePublicRoute = pathname?.startsWith('/p/');
   const isLockedRoute = pathname === '/locked';
   const isOnboardingRoute = pathname?.startsWith('/onboarding');
+  const isInviteRoute = pathname?.startsWith('/invite');
   const isSettingsRoute = pathname === '/settings';
   const isPublicStandaloneRoute =
     pathname === '/' ||
     pathname?.startsWith('/credits/') ||
     pathname?.startsWith('/listen/') ||
     isPreSavePublicRoute ||
-    isOnboardingRoute;
+    isOnboardingRoute ||
+    isInviteRoute;
   const hasCompletedOnboarding = user?.onboarding_completed === true;
   // Stage 2: the sidebar is gone, so the only chrome that varies between
   // "authenticated" and "still loading" is whether the WorkspaceMenu
@@ -123,7 +126,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         }}
       />
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
-      {isLockedRoute || isOnboardingRoute ? null : (
+      {isLockedRoute || isOnboardingRoute || isInviteRoute ? null : (
         <Suspense fallback={null}>
           <FirstTimeOnboardingGate />
         </Suspense>

@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { requirePaidAccess } from '../../../_shared/paywall';
 import {
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     const existingResult = await adminClient
       .from(WORKSPACE_MEMBERS_TABLE)
-      .select('id,user_id,status')
+      .select('id,user_id,status,invite_token,invite_expires_at')
       .eq('workspace_id', workspaceId)
       .eq('email', email)
       .maybeSingle();
@@ -94,16 +95,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const now = new Date().toISOString();
+    const now = new Date();
+    const nowIso = now.toISOString();
+    // 30-day expiry. Long enough that an invitee who reads the email a
+    // week later still has plenty of time; short enough that stale invites
+    // don't sit around indefinitely. Stored as ISO; the accept endpoint
+    // compares against Date.now() to reject expired tokens.
+    const expiresAtIso = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    // randomUUID is 128 bits of crypto-strength entropy — sufficient for
+    // single-use invite tokens. We always mint a fresh token on (re-)invite
+    // so an attacker who got hold of an old invite link can't keep using
+    // it indefinitely.
+    const inviteToken = randomUUID();
+
+    // Typed as a plain string so the already-active branch can blank it
+    // (randomUUID's template-literal return type doesn't unify with '').
+    let activeToken: string = inviteToken;
     if (existingResult.data?.id) {
+      // If the row is ALREADY active (user_id set), the invite is a no-op
+      // from a token perspective — they don't need a fresh link. Keep the
+      // existing row's status and skip token regeneration.
+      const isAlreadyActive = Boolean(existingResult.data.user_id);
+      const updatePayload: Record<string, unknown> = {
+        role,
+        status: isAlreadyActive ? 'active' : 'invited',
+        invited_at: nowIso,
+        updated_at: nowIso,
+      };
+      if (!isAlreadyActive) {
+        updatePayload.invite_token = inviteToken;
+        updatePayload.invite_expires_at = expiresAtIso;
+      }
+
       const updateResult = await adminClient
         .from(WORKSPACE_MEMBERS_TABLE)
-        .update({
-          role,
-          status: existingResult.data.user_id ? 'active' : 'invited',
-          invited_at: now,
-          updated_at: now,
-        })
+        .update(updatePayload)
         .eq('id', existingResult.data.id);
 
       if (updateResult.error) {
@@ -112,6 +138,12 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
+
+      if (isAlreadyActive) {
+        // No URL to send — the user is already on the workspace. Surface a
+        // 200 with no inviteUrl so the caller can show a confirmation.
+        activeToken = '';
+      }
     } else {
       const insertResult = await adminClient.from(WORKSPACE_MEMBERS_TABLE).insert({
         workspace_id: workspaceId,
@@ -119,9 +151,11 @@ export async function POST(request: NextRequest) {
         email,
         role,
         status: 'invited',
-        invited_at: now,
+        invite_token: inviteToken,
+        invite_expires_at: expiresAtIso,
+        invited_at: nowIso,
         joined_at: null,
-        updated_at: now,
+        updated_at: nowIso,
       });
 
       if (insertResult.error) {
@@ -136,9 +170,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const inviteUrl = buildInviteUrl(email);
+    const inviteUrl = activeToken ? buildInviteUrl(activeToken) : null;
     // TODO: replace this console handoff with the app's real transactional email flow once one exists.
-    console.info(`[workspace-invite] ${email} -> ${inviteUrl}`);
+    if (inviteUrl) {
+      console.info(`[workspace-invite] ${email} -> ${inviteUrl}`);
+    } else {
+      console.info(`[workspace-invite] ${email} -> already-active member, no link needed`);
+    }
 
     captureServerAnalyticsEvent(
       posthogServer,
