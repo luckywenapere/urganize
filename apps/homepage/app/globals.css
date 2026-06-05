@@ -83,13 +83,17 @@
   --font-data: "Roboto Mono", "IBM Plex Mono", ui-monospace, monospace;
 }
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-html {
-  scroll-behavior: smooth;
-  background: var(--marketing-bg);
+  html {
+    scroll-behavior: smooth;
+    background: var(--marketing-bg);
+  }
 }
 
 html[data-marketing-theme="light"] {
@@ -135,72 +139,74 @@ html[data-marketing-theme="dark"] .marketing-wordmark {
   filter: none;
 }
 
-body {
-  background: var(--marketing-bg);
-  color: var(--marketing-text);
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  font-weight: 400;
-  line-height: 1.6;
-  letter-spacing: -0.015em;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-}
+@layer base {
+  body {
+    background: var(--marketing-bg);
+    color: var(--marketing-text);
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: -0.015em;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  color: var(--marketing-text);
-  font-family: var(--font-display);
-  font-weight: 600;
-  line-height: 0.96;
-  letter-spacing: -0.04em;
-  margin: 0;
-}
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: var(--marketing-text);
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 0.96;
+    letter-spacing: -0.04em;
+    margin: 0;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
-p {
-  font-size: 1rem;
-  line-height: 1.72;
-  letter-spacing: -0.012em;
-  color: inherit;
-  margin: 0;
-}
+  p {
+    font-size: 1rem;
+    line-height: 1.72;
+    letter-spacing: -0.012em;
+    color: inherit;
+    margin: 0;
+  }
 
-::selection {
-  background: var(--marketing-selection);
-  color: var(--marketing-text);
-}
+  ::selection {
+    background: var(--marketing-selection);
+    color: var(--marketing-text);
+  }
 
-button,
-input,
-a {
-  transition:
-    color 0.25s ease,
-    background-color 0.25s ease,
-    border-color 0.25s ease,
-    opacity 0.25s ease,
-    transform 0.25s ease;
-}
+  button,
+  input,
+  a {
+    transition:
+      color 0.25s ease,
+      background-color 0.25s ease,
+      border-color 0.25s ease,
+      opacity 0.25s ease,
+      transform 0.25s ease;
+  }
 
-button:focus-visible,
-input:focus-visible,
-a:focus-visible {
-  outline: 2px solid var(--marketing-text);
-  outline-offset: 4px;
-}
+  button:focus-visible,
+  input:focus-visible,
+  a:focus-visible {
+    outline: 2px solid var(--marketing-text);
+    outline-offset: 4px;
+  }
 
-img {
-  display: block;
-  max-width: 100%;
+  img {
+    display: block;
+    max-width: 100%;
+  }
 }
 
 .mono-label {
