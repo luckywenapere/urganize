@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from 'react';
 import { usePathname } from 'next/navigation';
-import { TaskDetailDrawer } from '@/components/tasks/TaskDetailDrawer';
+import { TaskDetailView, type TaskDetailPatchInput } from '@/components/tasks/TaskDetailView';
 import { type DependencyTaskSummary } from '@/components/tasks/TaskDependenciesSection';
 import { TaskQuickCreateModal } from '@/components/tasks/TaskQuickCreateModal';
 import { UndoCompletionToast } from '@/components/tasks/UndoCompletionToast';
@@ -45,9 +45,45 @@ type TaskUIContextValue = {
   openTask: (taskId: string) => void;
   openQuickCreate: (defaults?: QuickCreateDefaults) => void;
   closeTask: () => void;
+  /** True while a task detail is open. Consumers use this to swap their
+   * main-area content from "list" to TaskDetailInline. There is no drawer /
+   * overlay anywhere — every entry point (workspace row click, notification
+   * bell, release detail page) renders the inline view in place. */
+  isTaskOpen: boolean;
 };
 
 const TaskUIContext = createContext<TaskUIContextValue | null>(null);
+
+/**
+ * Internal render context — carries the per-task render state + callbacks so
+ * `<TaskDetailInline />` can mount the in-place view from any consumer
+ * (workspace center column, release detail page) without each consumer having
+ * to wire up the ~15 props the detail body needs. The state still lives in
+ * TaskUIProvider's closure; this context is just the conduit.
+ */
+type TaskDetailRenderState = {
+  isOpen: boolean;
+  isLoading: boolean;
+  isLoadingMembers: boolean;
+  error: string;
+  task: TaskDetail | null;
+  members: WorkspaceMember[];
+  isUploadingAttachment: boolean;
+  prerequisites: DependencyTaskSummary[];
+  statusBlockerMessage: string;
+  onBack: () => void;
+  onSavePatch: (patch: TaskDetailPatchInput) => Promise<void>;
+  onOpenPrerequisite: (taskId: string) => void;
+  onDeleteTask: () => Promise<void>;
+  onAddComment: (content: string) => Promise<void>;
+  onUpdateComment: (commentId: string, content: string) => Promise<void>;
+  onDeleteComment: (commentId: string) => Promise<void>;
+  onUploadAttachment: (file: File) => Promise<void>;
+  onDeleteAttachment: (attachmentId: string) => Promise<void>;
+};
+
+const TaskDetailRenderContext = createContext<TaskDetailRenderState | null>(null);
+
 export const TASKS_CHANGED_EVENT = 'urganize:tasks-changed';
 
 async function getAccessToken(): Promise<string> {
@@ -564,8 +600,9 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       openTask,
       openQuickCreate,
       closeTask,
+      isTaskOpen: isTaskDrawerOpen,
     }),
-    [closeTask, openQuickCreate, openTask]
+    [closeTask, isTaskDrawerOpen, openQuickCreate, openTask]
   );
 
   const prerequisites = useMemo<DependencyTaskSummary[]>(() => {
@@ -585,8 +622,36 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       }));
   }, [storeTasks, task?.dependencies]);
 
+  // Plain object — saveTaskPatch / deleteTask / addComment / etc. are
+  // recreated every render today (no useCallback wrap), so memoizing this
+  // would either need the whole callback set wrapped (out of scope) or
+  // include them in deps (defeating the memo). Recreating the value each
+  // render mirrors how the previous TaskDetailDrawer's prop set churned
+  // — no behavior change for the inline consumer.
+  const renderValue: TaskDetailRenderState = {
+    isOpen: isTaskDrawerOpen,
+    isLoading: isTaskLoading,
+    isLoadingMembers: isLoadingOptions,
+    error: drawerError,
+    task,
+    members,
+    isUploadingAttachment,
+    prerequisites,
+    statusBlockerMessage,
+    onBack: closeTask,
+    onSavePatch: saveTaskPatch,
+    onOpenPrerequisite: openTask,
+    onDeleteTask: deleteTask,
+    onAddComment: addComment,
+    onUpdateComment: updateComment,
+    onDeleteComment: deleteComment,
+    onUploadAttachment: uploadAttachment,
+    onDeleteAttachment: deleteAttachment,
+  };
+
   return (
     <TaskUIContext.Provider value={contextValue}>
+      <TaskDetailRenderContext.Provider value={renderValue}>
       {children}
 
       <TaskQuickCreateModal
@@ -623,31 +688,55 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         onSubmit={createQuickTask}
       />
 
-      <TaskDetailDrawer
-        isOpen={isTaskDrawerOpen}
-        isLoading={isTaskLoading}
-        isLoadingMembers={isLoadingOptions}
-        error={drawerError}
-        task={task}
-        members={members}
-        isUploadingAttachment={isUploadingAttachment}
-        prerequisites={prerequisites}
-        statusBlockerMessage={statusBlockerMessage}
-        onOpenPrerequisite={openTask}
-        onClose={closeTask}
-        onSavePatch={saveTaskPatch}
-        onDeleteTask={deleteTask}
-        onAddComment={addComment}
-        onUpdateComment={updateComment}
-        onDeleteComment={deleteComment}
-        onUploadAttachment={uploadAttachment}
-        onDeleteAttachment={deleteAttachment}
-      />
+      {/* TaskDetailDrawer is gone — every entry point now renders the in-place
+          TaskDetailView via `<TaskDetailInline />` in the consumer's own
+          layout (workspace center column, release detail page). The drawer's
+          fixed overlay + slide-in animation introduced perceived jank that
+          we're explicitly trading for in-flow rendering. */}
 
       {/* Global undo-completion toast. The store owns the lifecycle; this
           renders the affordance wherever TaskUIProvider is mounted (currently
           AppShell, which covers every authenticated dashboard surface). */}
       <UndoCompletionToast />
+      </TaskDetailRenderContext.Provider>
     </TaskUIContext.Provider>
+  );
+}
+
+/**
+ * In-place task detail. Renders the same body the legacy TaskDetailDrawer
+ * used, but inline in the consumer's container — no fixed overlay, no
+ * backdrop, no slide-in animation. Returns `null` until a task is open.
+ *
+ * Consumers (workspace center column, release detail page) mount this where
+ * the task list would otherwise render and conditionally swap based on
+ * `useTaskUI().isTaskOpen`.
+ */
+export function TaskDetailInline() {
+  const state = useContext(TaskDetailRenderContext);
+  if (!state || !state.isOpen) {
+    return null;
+  }
+
+  return (
+    <TaskDetailView
+      isLoading={state.isLoading}
+      isLoadingMembers={state.isLoadingMembers}
+      error={state.error}
+      task={state.task}
+      members={state.members}
+      isUploadingAttachment={state.isUploadingAttachment}
+      prerequisites={state.prerequisites}
+      statusBlockerMessage={state.statusBlockerMessage}
+      onBack={state.onBack}
+      onSavePatch={state.onSavePatch}
+      onOpenPrerequisite={state.onOpenPrerequisite}
+      onDeleteTask={state.onDeleteTask}
+      onAddComment={state.onAddComment}
+      onUpdateComment={state.onUpdateComment}
+      onDeleteComment={state.onDeleteComment}
+      onUploadAttachment={state.onUploadAttachment}
+      onDeleteAttachment={state.onDeleteAttachment}
+    />
   );
 }

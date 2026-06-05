@@ -10,6 +10,7 @@ import { type Task } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
+import { TaskDetailInline, useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { TasksPanel } from './TasksPanel';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
@@ -34,6 +35,12 @@ export function WorkspaceView() {
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
   const tasks = useTaskStore((state) => state.tasks);
   const { scopedReleaseId, setScope } = useReleaseScope();
+  // `isTaskOpen` swaps the workspace center (mobile drill-down OR desktop
+  // focused-mode center column) from the task list to TaskDetailInline. The
+  // rails / focused release card stay visible — only the list↔detail surface
+  // swaps. Notification clicks set `?release=` then call openTask, so this
+  // observes the same flag they all flow through.
+  const { isTaskOpen } = useTaskUI();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
@@ -194,7 +201,13 @@ export function WorkspaceView() {
             block is intentionally unchanged.
             ==================================================================== */}
         <div className="lg:hidden">
-          {scopedReleaseId && scopedReleaseSlim ? (
+          {isTaskOpen ? (
+            // Mobile Level 3: task detail in place. Drills one level deeper
+            // than the tasks list. Back inside TaskDetailInline closes the
+            // task and returns to Level 2 (tasks list for the scoped
+            // release) — or Level 1 (releases) if no scope is set.
+            <TaskDetailInline />
+          ) : scopedReleaseId && scopedReleaseSlim ? (
             <>
               <div className="mb-4 flex items-center gap-3">
                 <button
@@ -255,7 +268,15 @@ export function WorkspaceView() {
               scopedRelease={scopedReleaseSlim}
               onSelect={handleSelect}
               onClose={handleClose}
+              isTaskOpen={isTaskOpen}
             />
+          ) : isTaskOpen ? (
+            // Edge case: task opened while unscoped (e.g. notification with
+            // no taskReleaseId, or task opened then scope cleared). With no
+            // selected release there's no centered focus card to anchor to,
+            // so the detail takes over the main area entirely. Back returns
+            // to the grid.
+            <TaskDetailInline />
           ) : (
             <WorkspaceDesktopGrid
               releases={releaseCards}

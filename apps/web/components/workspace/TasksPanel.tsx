@@ -91,12 +91,10 @@ type TasksPanelProps = {
 export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPanelProps) {
   const router = useRouter();
   const pathname = usePathname();
-  // The TaskUIProvider mounted in AppShell already renders TaskDetailDrawer
-  // globally; the workspace just needs to call openTask(taskId) on row click
-  // to surface it. Restores the per-task drawer (Title, Status, Priority,
-  // Assignee, Due, Release, Group, Description, Comments, per-task
-  // Attachments via task_attachments table — distinct from the per-release
-  // FilesPanel/assets table).
+  // openTask flips the TaskUIProvider into "task open" state, which causes
+  // WorkspaceDesktopFocused (or the mobile drill-down in WorkspaceView) to
+  // swap this panel for TaskDetailInline in the same surface. No drawer /
+  // overlay — the center column itself becomes the task detail.
   const { openTask, openQuickCreate } = useTaskUI();
   const searchParams = useSearchParams();
 
