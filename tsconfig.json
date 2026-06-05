@@ -15,6 +15,9 @@
       "@urganize/ui/*": [
         "packages/ui/src/*"
       ],
+      "@urganize/pricing": [
+        "packages/pricing/src/index.ts"
+      ],
       "@urganize/config/*": [
         "packages/config/*"
       ]

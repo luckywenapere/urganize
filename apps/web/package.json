@@ -14,6 +14,7 @@
     "@urganize/ui": "workspace:*",
     "@urganize/lib": "workspace:*",
     "@urganize/db": "workspace:*",
+    "@urganize/pricing": "workspace:*",
     "@vercel/analytics": "^1.6.1",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
@@ -25,7 +26,6 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-dropzone": "^14.3.8",
-    "react-paystack": "^6.0.0",
     "xstate": "5",
     "zustand": "^5.0.2"
   },

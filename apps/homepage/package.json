@@ -16,6 +16,7 @@
     "@formbricks/js": "^4.3.0",
     "@neondatabase/serverless": "^1.0.2",
     "@prisma/client": "^6.19.1",
+    "@urganize/pricing": "workspace:*",
     "@vercel/analytics": "^1.6.1",
     "chart.js": "^4.5.1",
     "clsx": "^2.1.1",

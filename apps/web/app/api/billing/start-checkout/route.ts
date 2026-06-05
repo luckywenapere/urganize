@@ -1,0 +1,214 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { isBillingPlanId, isPricingCurrency } from '@urganize/pricing';
+import { getAuthenticatedUser, createAdminClient } from '@/app/api/releases/_shared';
+import {
+  getPaystackPlanCode,
+  getPlanMinorUnit,
+  isRecurringPlan,
+} from '@/lib/billing-plans';
+
+// App-initiated Paystack subscription checkout.
+//
+// Why this exists:
+//   The previous "Pay ₦15,000" flow redirected the browser to a Paystack-hosted
+//   payment page. The app never learned which user clicked, only what email
+//   they typed at Paystack. Customers who paid with a different email than
+//   their app account never got credited — silent failure with no recovery
+//   short of manual support.
+//
+//   This route inits the Paystack transaction server-side with both:
+//     (a) metadata.user_id  — bound to the logged-in user, so the webhook can
+//                             credit the correct account without email matching
+//     (b) plan              — the Paystack plan code (PLN_xxx) so Paystack
+//                             auto-creates a recurring subscription on first
+//                             charge.success and bills the same card forward.
+//
+//   A `payments` row is reserved at this point with status='pending'. The
+//   webhook flips it to 'success' when charge.success arrives. The
+//   /payment/callback page can then read the row by reference to confirm
+//   the UI state — but the webhook remains authoritative.
+//
+// Why authenticated (not open):
+//   This is a *paid* purchase by a logged-in user. We need their user_id at
+//   reservation time so the webhook can credit deterministically. Anonymous
+//   "self-serve" recurring checkout is intentionally not supported — the
+//   user must sign up first, then subscribe.
+
+type StartCheckoutRequest = {
+  plan?: unknown;
+  currency?: unknown;
+};
+
+type StartCheckoutResponse = {
+  authorizationUrl: string;
+  accessCode: string;
+  reference: string;
+};
+
+const PAYSTACK_INIT_URL = 'https://api.paystack.co/transaction/initialize';
+
+function generateReference(): string {
+  // `urganize_<timestamp>_<random>` — same convention as the (now-deleted)
+  // client-side PaystackButton so support tooling that filters by prefix
+  // keeps working. Server-generated so the reference can't be controlled
+  // by a malicious client (lookups in the webhook treat reference as a
+  // trusted index).
+  const ts = Date.now();
+  const rand = Math.random().toString(16).slice(2, 10);
+  return `urganize_${ts}_${rand}`;
+}
+
+function resolveCallbackUrl(request: NextRequest): string {
+  // Prefer the explicit NEXT_PUBLIC_APP_URL so dev branches don't try to
+  // call back to a stale Vercel preview deployment. Falls back to the
+  // request origin (covers local development without env config).
+  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const base = configured || new URL(request.url).origin;
+  return `${base.replace(/\/$/, '')}/payment/callback`;
+}
+
+export async function POST(request: NextRequest) {
+  const auth = await getAuthenticatedUser(request);
+  if ('error' in auth) {
+    return auth.error;
+  }
+
+  const userId = auth.user.id;
+  const userEmail = String(auth.user.email || '').trim().toLowerCase();
+  if (!userEmail) {
+    return NextResponse.json(
+      { error: 'No email on file. Please complete account setup before subscribing.' },
+      { status: 400 }
+    );
+  }
+
+  let body: StartCheckoutRequest = {};
+  try {
+    body = (await request.json()) as StartCheckoutRequest;
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
+  }
+
+  const plan = body.plan;
+  const currency = body.currency;
+  if (!isBillingPlanId(plan)) {
+    return NextResponse.json(
+      { error: 'plan must be "monthly" or "annual".' },
+      { status: 400 }
+    );
+  }
+  if (!isPricingCurrency(currency)) {
+    return NextResponse.json(
+      { error: 'currency must be "NGN" or "USD".' },
+      { status: 400 }
+    );
+  }
+  if (!isRecurringPlan(plan)) {
+    // Belt-and-braces — isBillingPlanId already narrows to monthly|annual,
+    // but the cleanup migration may introduce extra plan strings later.
+    return NextResponse.json({ error: 'Plan is not a recurring tier.' }, { status: 400 });
+  }
+
+  const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
+  if (!paystackSecretKey) {
+    return NextResponse.json(
+      { error: 'Payment provider is not configured on the server.' },
+      { status: 500 }
+    );
+  }
+
+  const planCode = getPaystackPlanCode(plan, currency);
+  if (!planCode) {
+    return NextResponse.json(
+      {
+        error: `Paystack plan code not configured for ${plan}/${currency}. Set the matching PAYSTACK_PLAN_* env var.`,
+      },
+      { status: 500 }
+    );
+  }
+
+  const amountMinorUnit = getPlanMinorUnit(plan, currency);
+  const reference = generateReference();
+  const callbackUrl = resolveCallbackUrl(request);
+
+  const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL || '');
+  if (!admin) {
+    return NextResponse.json(
+      { error: 'Server environment is not configured.' },
+      { status: 500 }
+    );
+  }
+
+  // Reserve the payments row BEFORE talking to Paystack. If the Paystack
+  // call fails we'll have an orphan pending row, which is harmless — the
+  // webhook never credits 'pending' references, and the row gives support
+  // a paper trail. If we wrote AFTER Paystack and the DB write failed,
+  // the webhook would have nothing to look up and would silently drop the
+  // charge.success event (the renewal-matching path can't kick in until
+  // subscription.create has populated paystack_subscription_code).
+  const paymentInsert = await admin.from('payments').insert({
+    user_id: userId,
+    amount: amountMinorUnit,
+    reference,
+    status: 'pending',
+    plan,
+    paystack_response: { source: 'recurring_start_checkout', currency },
+  });
+  if (paymentInsert.error) {
+    console.error('[billing/start-checkout] payments insert failed:', paymentInsert.error.message);
+    return NextResponse.json({ error: 'Could not start checkout.' }, { status: 500 });
+  }
+
+  const paystackResponse = await fetch(PAYSTACK_INIT_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${paystackSecretKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email: userEmail,
+      amount: amountMinorUnit,
+      reference,
+      currency,
+      plan: planCode,
+      callback_url: callbackUrl,
+      // metadata.user_id is the canonical bind. The webhook reads it via
+      // the verified Paystack transaction (looked up by reference) and
+      // credits that exact account, no email matching.
+      metadata: {
+        user_id: userId,
+        plan,
+        currency,
+        source: 'recurring_start_checkout',
+      },
+    }),
+  });
+
+  const initPayload = (await paystackResponse.json().catch(() => ({}))) as {
+    status?: boolean;
+    message?: string;
+    data?: {
+      authorization_url?: string;
+      access_code?: string;
+      reference?: string;
+    };
+  };
+
+  if (!paystackResponse.ok || !initPayload?.status || !initPayload.data?.authorization_url) {
+    // Roll the pending row back so the user can retry on a fresh
+    // reference. Errors here are logged but not surfaced — the user-facing
+    // response already conveys the failure.
+    await admin.from('payments').delete().eq('reference', reference);
+    return NextResponse.json(
+      { error: initPayload?.message || 'Could not initialize Paystack checkout.' },
+      { status: 502 }
+    );
+  }
+
+  const response: StartCheckoutResponse = {
+    authorizationUrl: initPayload.data.authorization_url,
+    accessCode: initPayload.data.access_code || '',
+    reference: initPayload.data.reference || reference,
+  };
+  return NextResponse.json(response);
+}

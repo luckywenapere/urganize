@@ -3,20 +3,40 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Card, Logo } from '@urganize/ui';
-import { Lock, CheckCircle2, AlertTriangle } from 'lucide-react';
+import {
+  BILLING_PLAN_ORDER,
+  CONTACT_SALES_EMAIL,
+  CONTACT_SALES_SUBJECT,
+  DEFAULT_PRICING_CURRENCY,
+  SUPPORTED_CURRENCIES,
+  formatPlanCyclePrice,
+  getPlan,
+  type BillingPlanId,
+  type PricingCurrencyCode,
+} from '@urganize/pricing';
+import { Lock, CheckCircle2, AlertTriangle, Mail } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { type AccountStatus } from '@/lib/subscription-access';
 import { errorMessage } from '@/lib/errors';
 import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
 
-// Branded vanity URL → 302s to the Paystack Payment Page that collects the
-// flat ₦15,000 fee. Implemented at apps/homepage/app/pay/route.ts so the URL
-// bar stays in the urganize.app domain when users click "Pay" and so the
-// link is shareable on its own ("urganize.app/pay").
-// The webhook (api/webhooks/paystack/route.ts) credits the payer via email
-// match against profiles.email once charge.success arrives.
-const PAYMENT_LINK_URL = 'https://urganize.app/pay';
+// Recurring billing /locked page.
+//
+// Flow:
+//   1. User picks Monthly or Annual (radio).
+//   2. User picks NGN or USD (currency toggle — default NGN, sticky per
+//      session via local state; future enhancement could geo-detect).
+//   3. Click "Subscribe" → POST /api/billing/start-checkout with plan +
+//      currency → server returns Paystack authorization_url → redirect.
+//   4. On the Paystack hosted checkout, customer pays. Paystack creates a
+//      subscription tied to OUR user_id via metadata. Webhook credits.
+//   5. Customer is redirected to /payment/callback?reference=... which can
+//      verify state via GET /api/payments/verify if the user lands there
+//      before the webhook fires (race window). The webhook is authoritative.
+//
+// The 28-day no-card trial is preserved verbatim — it's a separate path
+// that doesn't touch Paystack.
 
 type AccessSnapshot = {
   accountStatus: AccountStatus;
@@ -43,12 +63,14 @@ export default function LockedPage() {
   const [snapshot, setSnapshot] = useState<AccessSnapshot | null>(null);
   const [isLoadingSnapshot, setIsLoadingSnapshot] = useState(true);
   const [isStartingTrial, setIsStartingTrial] = useState(false);
+  const [isStartingCheckout, setIsStartingCheckout] = useState(false);
   const [trialError, setTrialError] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<BillingPlanId>('annual');
+  const [selectedCurrency, setSelectedCurrency] = useState<PricingCurrencyCode>(DEFAULT_PRICING_CURRENCY);
 
   // Allowlisted emails never see this page. Bounce them out before render
-  // can flash any locked UI. The server-side bypass in /api/subscription-status
-  // would also flip hasAccess=true on the snapshot, but this fast path means
-  // they never even reach that fetch.
+  // can flash any locked UI.
   useEffect(() => {
     if (isAuthenticated && isAllowlistedEmail(user?.email)) {
       console.log(`[paywall-allowlist] locked-page bypass: ${user?.email}`);
@@ -57,8 +79,7 @@ export default function LockedPage() {
   }, [isAuthenticated, user?.email, router]);
 
   // Pull the live access snapshot from the server so the trial button's
-  // disabled state reflects the authoritative trial_used flag, not whatever
-  // is cached in the Zustand store.
+  // disabled state reflects the authoritative trial_used flag.
   useEffect(() => {
     let cancelled = false;
 
@@ -67,9 +88,7 @@ export default function LockedPage() {
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
         if (!token) {
-          if (!cancelled) {
-            setIsLoadingSnapshot(false);
-          }
+          if (!cancelled) setIsLoadingSnapshot(false);
           return;
         }
 
@@ -92,9 +111,7 @@ export default function LockedPage() {
       } catch {
         // Fail open with no snapshot — the buttons still render.
       } finally {
-        if (!cancelled) {
-          setIsLoadingSnapshot(false);
-        }
+        if (!cancelled) setIsLoadingSnapshot(false);
       }
     };
 
@@ -118,19 +135,14 @@ export default function LockedPage() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
-      if (!token) {
-        throw new Error('Sign in again and retry.');
-      }
+      if (!token) throw new Error('Sign in again and retry.');
 
       const response = await fetch('/api/trial/start', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const payload = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      };
-
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) {
         throw new Error(payload.error || 'Could not start trial.');
       }
@@ -143,13 +155,47 @@ export default function LockedPage() {
     }
   }, [checkAuth, router]);
 
+  const handleSubscribe = useCallback(async () => {
+    setCheckoutError(null);
+    setIsStartingCheckout(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Sign in again and retry.');
+
+      const response = await fetch('/api/billing/start-checkout', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ plan: selectedPlan, currency: selectedCurrency }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        authorizationUrl?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.authorizationUrl) {
+        throw new Error(payload.error || 'Could not start checkout.');
+      }
+
+      if (typeof window !== 'undefined') {
+        window.location.href = payload.authorizationUrl;
+      }
+    } catch (error) {
+      setCheckoutError(errorMessage(error, 'Could not start checkout.'));
+      setIsStartingCheckout(false);
+    }
+  }, [selectedPlan, selectedCurrency]);
+
   const trialUsed = Boolean(snapshot?.trialUsed);
   const reasonCopy = REASON_COPY[reason] || REASON_COPY.unpaid;
+  const contactMailto = `mailto:${CONTACT_SALES_EMAIL}?subject=${encodeURIComponent(CONTACT_SALES_SUBJECT)}`;
 
   const headline = useMemo(() => {
-    if (!isAuthenticated) {
-      return 'Sign in to continue';
-    }
+    if (!isAuthenticated) return 'Sign in to continue';
     return 'Your access is locked';
   }, [isAuthenticated]);
 
@@ -177,22 +223,77 @@ export default function LockedPage() {
 
           {isAuthenticated ? (
             <>
-              <p className="text-sm text-content-secondary">
-                Please pay <span className="font-medium text-content-primary">₦15,000</span> to
-                continue using the app, or start your 28-day free trial (one per account).
-              </p>
+              <div className="flex flex-col gap-4">
+                {/* Currency toggle — small affordance up top so the plan
+                    cards below reflect the right number on first paint. */}
+                <div className="flex items-center justify-between text-xs text-content-tertiary">
+                  <span className="uppercase tracking-[0.16em]">Currency</span>
+                  <div className="inline-flex overflow-hidden rounded-full border border-stroke-default">
+                    {SUPPORTED_CURRENCIES.map((currency) => {
+                      const isActive = selectedCurrency === currency;
+                      return (
+                        <button
+                          key={currency}
+                          type="button"
+                          onClick={() => setSelectedCurrency(currency)}
+                          className={`px-3 py-1 text-xs font-semibold transition-colors ${
+                            isActive
+                              ? 'bg-brand text-content-inverse'
+                              : 'bg-transparent text-content-secondary hover:text-content-primary'
+                          }`}
+                          aria-pressed={isActive}
+                        >
+                          {currency}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Plan radio cards. Annual first (recommended); monthly
+                    second. Each card is a real <button role="radio">
+                    bound to a fieldset so screen readers + keyboard
+                    selection work the same as a native radio group. */}
+                <div role="radiogroup" aria-label="Choose a plan" className="flex flex-col gap-2">
+                  {[...BILLING_PLAN_ORDER].reverse().map((planId) => {
+                    const plan = getPlan(planId);
+                    const isActive = selectedPlan === planId;
+                    return (
+                      <button
+                        key={planId}
+                        type="button"
+                        role="radio"
+                        aria-checked={isActive}
+                        onClick={() => setSelectedPlan(planId)}
+                        className={`flex items-start justify-between gap-3 rounded-lg border p-4 text-left transition-colors ${
+                          isActive
+                            ? 'border-brand bg-brand/5'
+                            : 'border-stroke-default bg-bg-elevated hover:border-stroke-strong'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-content-primary">{plan.label}</p>
+                          <p className="mt-1 text-xs text-content-secondary">{plan.description}</p>
+                        </div>
+                        <p className="shrink-0 text-sm font-semibold text-content-primary">
+                          {formatPlanCyclePrice(planId, selectedCurrency)}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               <div className="flex flex-col gap-3">
                 <Button
                   variant="primary"
                   className="w-full"
-                  onClick={() => {
-                    if (typeof window !== 'undefined') {
-                      window.location.href = PAYMENT_LINK_URL;
-                    }
-                  }}
+                  disabled={isStartingCheckout}
+                  onClick={handleSubscribe}
                 >
-                  Pay ₦15,000
+                  {isStartingCheckout
+                    ? 'Redirecting to checkout…'
+                    : `Subscribe ${formatPlanCyclePrice(selectedPlan, selectedCurrency)}`}
                 </Button>
 
                 {trialUsed ? (
@@ -210,7 +311,22 @@ export default function LockedPage() {
                     {isStartingTrial ? 'Starting trial…' : 'Start 28-day free trial'}
                   </Button>
                 )}
+
+                <a
+                  href={contactMailto}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-stroke-default px-4 py-2 text-sm font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+                >
+                  <Mail className="size-4" />
+                  Contact us for custom
+                </a>
               </div>
+
+              {checkoutError ? (
+                <div className="flex items-start gap-2 text-sm text-status-error">
+                  <AlertTriangle className="size-4 mt-0.5 shrink-0" />
+                  <span>{checkoutError}</span>
+                </div>
+              ) : null}
 
               {trialError ? (
                 <div className="flex items-start gap-2 text-sm text-status-error">
@@ -221,8 +337,9 @@ export default function LockedPage() {
 
               {user?.email ? (
                 <p className="text-xs text-content-tertiary">
-                  Signed in as <span className="text-content-secondary">{user.email}</span>. Pay
-                  with this same email so we can credit your account automatically.
+                  Signed in as <span className="text-content-secondary">{user.email}</span>. Paystack
+                  will charge the card you enter at checkout — your subscription is bound to this
+                  account automatically.
                 </p>
               ) : null}
             </>
