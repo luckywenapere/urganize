@@ -357,6 +357,9 @@ export function FooterTagline() {
           </div>
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm tracking-[-0.01em] text-[var(--marketing-text-subtle)]">
+            <Link href="/pricing" className="hover:text-[var(--marketing-text)]">
+              Pricing
+            </Link>
             <Link href="/privacy" className="hover:text-[var(--marketing-text)]">
               Privacy
             </Link>

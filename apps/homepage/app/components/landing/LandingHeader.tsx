@@ -23,6 +23,12 @@ export function LandingHeader() {
           </Link>
 
           <div className="flex items-center gap-4 sm:gap-6">
+            <Link
+              href="/pricing"
+              className="hidden text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)] sm:inline"
+            >
+              Pricing
+            </Link>
             <WaitlistButton
               className="text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)]"
               source="header_login"
