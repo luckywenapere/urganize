@@ -29,12 +29,12 @@ export function LandingHeader() {
             >
               Pricing
             </Link>
-            <WaitlistButton
+            <Link
+              href="https://app.urganize.app/auth"
               className="text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)]"
-              source="header_login"
             >
               Login
-            </WaitlistButton>
+            </Link>
             <WaitlistButton
               className="inline-flex items-center justify-center rounded-full border border-[color:var(--marketing-border-strong)] px-4 py-2.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text)] hover:border-[color:var(--marketing-text)] hover:bg-[var(--marketing-surface)] sm:px-5"
               source="header_get_started"
