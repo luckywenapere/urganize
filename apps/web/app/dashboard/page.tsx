@@ -9,7 +9,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { TASK_DONE_STATUS } from '@/lib/execution-types';
 import { formatArtistName } from '@/lib/release-execution';
-import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { WorkspaceView } from '@/components/workspace/WorkspaceView';
 
 // Feature flag — when 'true', /dashboard renders the consolidated workspace
@@ -24,26 +24,6 @@ function formatDate(value: string | null): string {
   const parsed = new Date(`${value}T00:00:00`);
   if (Number.isNaN(parsed.getTime())) return 'No date set';
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(parsed);
-}
-
-function DashboardSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <SkeletonBlock className="h-8 w-56 rounded-none" />
-        <SkeletonBlock className="h-4 w-80 rounded-none" />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="border border-stroke-default bg-bg-surface p-5">
-            <SkeletonBlock className="h-4 w-24 rounded-none" />
-            <SkeletonBlock className="mt-3 h-6 w-48 rounded-none" />
-            <SkeletonBlock className="mt-4 h-3 w-32 rounded-none" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 export default function DashboardPage() {
@@ -68,14 +48,11 @@ function LegacyDashboard() {
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
 
+  // ONE skeleton, rendered here (no route-segment Suspense fallback). SSR
+  // serializes this into HTML; hydration is a no-op reconciliation — no
+  // shimmer restart, no blank gap.
   if (authLoading || isInitialLoading) {
-    return (
-      <main className="min-h-screen bg-bg-base text-content-primary">
-        <div className="mx-auto max-w-[1200px] px-4 pb-24 pt-10 sm:px-6">
-          <DashboardSkeleton />
-        </div>
-      </main>
-    );
+    return <WorkspaceSkeleton />;
   }
 
   const greeting = user?.name ? `Welcome back, ${user.name.split(' ')[0]}` : 'Welcome back';

@@ -4,8 +4,8 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { isBillingPlanId, getPlan } from '@urganize/pricing';
+import { Loader2 } from 'lucide-react';
 import { LoadingScreen } from '@urganize/ui';
-import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 
 // Paystack post-checkout landing.
 //
@@ -99,13 +99,10 @@ function PaymentCallbackContent() {
   return (
     <div className="w-full max-w-md rounded-3xl border border-stroke-subtle bg-bg-surface/95 p-6 shadow-[0_12px_32px_rgba(0,0,0,0.18)] backdrop-blur-sm">
       {status === 'verifying' && (
-        <div aria-live="polite" className="text-center">
-          <div className="mx-auto mb-4 flex max-w-[220px] flex-col items-center gap-3">
-            <SkeletonBlock className="h-3 w-24 rounded-full" />
-            <SkeletonBlock className="h-9 w-40 rounded-[16px]" />
-          </div>
-          <p className="text-lg font-semibold text-content-primary">Verifying payment...</p>
-          <p className="mt-2 text-sm text-content-secondary">Confirming with Paystack — this usually takes a few seconds.</p>
+        <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 text-center">
+          <Loader2 className="h-5 w-5 animate-spin text-content-tertiary" aria-hidden="true" />
+          <p className="text-sm text-content-secondary">Verifying payment</p>
+          <p className="text-xs text-content-tertiary">Confirming with Paystack — this usually takes a few seconds.</p>
         </div>
       )}
 

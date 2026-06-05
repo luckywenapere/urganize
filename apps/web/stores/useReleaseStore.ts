@@ -26,7 +26,14 @@ const getAccessToken = async () => {
 export const useReleaseStore = create<ReleaseStore>((set, get) => ({
   releases: [],
   todaysDirective: null,
-  isInitialLoading: false,
+  // Default true so the in-component `if (authLoading || isInitialLoading)
+  // return null;` guard in WorkspaceView / release-detail / LegacyDashboard
+  // stays active during the brief window between auth-resolve and the first
+  // `loadCommandCenter()` call. Without this, an unauthenticated visitor
+  // would briefly see the empty workspace state before the redirect fires.
+  // After the first load completes, this flips to false and stays false
+  // (in-app re-navigations route through `isRefreshing` instead).
+  isInitialLoading: true,
   isRefreshing: false,
   error: '',
   loadCommandCenter: async () => {

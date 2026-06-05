@@ -160,6 +160,12 @@ export function WorkspaceView() {
     }
   };
 
+  // ONE skeleton, rendered here (not as a route-segment Suspense fallback).
+  // SSR serializes the skeleton into the HTML response; hydration re-renders
+  // the SAME JSX so React reconciles without a remount — no shimmer restart,
+  // no blank gap between route fallback and content. The skeleton stays
+  // visible until both auth resolves AND the first command-center fetch
+  // completes.
   if (authLoading || isInitialLoading) {
     return <WorkspaceSkeleton />;
   }

@@ -423,11 +423,11 @@ export default function SettingsPage() {
     }
   };
 
-  if (authLoading) {
-    return <SettingsPageSkeleton />;
-  }
-
-  if (!user) return <SettingsPageSkeleton />;
+  // ONE skeleton, rendered here (no route-segment Suspense fallback). SSR
+  // serializes this into HTML; hydration is a no-op reconciliation — no
+  // shimmer restart, no blank gap. Stays visible until auth resolves AND
+  // the user is known.
+  if (authLoading || !user) return <SettingsPageSkeleton />;
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">

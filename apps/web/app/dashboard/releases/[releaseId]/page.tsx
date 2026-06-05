@@ -174,12 +174,11 @@ export default function ReleaseDetailPage() {
   );
   const [isDoneBucketOpen, setIsDoneBucketOpen] = useState(false);
 
+  // ONE skeleton, rendered here (no route-segment Suspense fallback). SSR
+  // serializes this into HTML; hydration is a no-op reconciliation — no
+  // shimmer restart, no blank gap.
   if (authLoading || isInitialLoading) {
-    return (
-      <main className="min-h-screen bg-bg-base text-content-primary">
-        <ReleaseDetailSkeleton />
-      </main>
-    );
+    return <ReleaseDetailSkeleton />;
   }
 
   if (!release) {

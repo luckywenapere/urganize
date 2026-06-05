@@ -2,9 +2,9 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
-import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 
 const ALLOWED_ROLES = new Set(['artist', 'manager', 'artist-team', 'artist-manager']);
 
@@ -141,21 +141,15 @@ export default function AuthCallbackPage() {
   }, [router, checkAuth]);
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-bg-base text-content-primary">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-[-190px] h-[340px] w-[340px] -translate-x-1/2 rounded-full bg-brand/12 blur-[135px]" />
+    <main
+      className="flex min-h-screen items-center justify-center bg-bg-base px-4 text-content-primary"
+      role="status"
+      aria-live="polite"
+    >
+      <div className="flex flex-col items-center gap-3 text-center">
+        <Loader2 className="h-5 w-5 animate-spin text-content-tertiary" aria-hidden="true" />
+        <p className="text-sm text-content-secondary">Finishing sign-in</p>
       </div>
-      <div
-        aria-live="polite"
-        className="relative w-full max-w-md rounded-3xl border border-stroke-default bg-bg-surface/95 p-8 text-center shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl"
-      >
-        <div className="mx-auto mb-4 flex max-w-[220px] flex-col items-center gap-3">
-          <SkeletonBlock className="h-3 w-28 rounded-full" />
-          <SkeletonBlock className="h-9 w-40 rounded-[16px]" />
-        </div>
-        <p className="text-sm uppercase tracking-[0.22em] text-content-tertiary">Signing in</p>
-        <p className="mt-3">Finishing sign-in...</p>
-      </div>
-    </div>
+    </main>
   );
 }
