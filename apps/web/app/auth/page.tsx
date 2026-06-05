@@ -48,6 +48,20 @@ export default function AuthPage() {
   // forward — /auth itself no longer offers a signup form.
   const isLegacySignupMode = searchParams.get('mode') === 'signup';
 
+  // Legacy invite signature. The pre-token buildInviteUrl emitted
+  // `/auth?next=/dashboard/tasks&email=…` (see git blame on
+  // apps/web/lib/tasks-server.ts:buildInviteUrl, replaced 2026-06-05).
+  // Recipients of those emails are joining an existing workspace, NOT
+  // starting their own release — funneling them through /onboarding
+  // would create a phantom personal workspace. We detect the exact
+  // pattern, resolve the pending invite to a fresh token, and bounce
+  // them to /invite/accept instead. The email-link trigger from
+  // 20260605010000_invite_linkage_trigger.sql is the safety net if this
+  // round-trip fails (the user signs up via /onboarding and the trigger
+  // still links them by email).
+  const isLegacyInviteLink =
+    Boolean(inviteEmail) && searchParams.get('next') === '/dashboard/tasks';
+
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
@@ -81,6 +95,48 @@ export default function AuthPage() {
       router.replace('/onboarding');
     }
   }, [isLegacySignupMode, router]);
+
+  // Legacy invite link bounce. Fires once on mount when the URL matches
+  // the pre-token invite signature. Resolves the email to a token
+  // server-side and redirects to /invite/accept. If no pending invite
+  // exists for the email (e.g., the user manually crafted the URL),
+  // falls through to the normal login form — the email pre-fill
+  // behaviour below still applies.
+  useEffect(() => {
+    if (!isLegacyInviteLink) return;
+    let cancelled = false;
+
+    const upgrade = async () => {
+      try {
+        const response = await fetch('/api/invites/resolve-by-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: inviteEmail }),
+        });
+        if (!response.ok) return;
+        // Server always returns { token: string } — empty string when
+        // there is no pending invite (or the lookup couldn't complete).
+        // Uniform shape on purpose; the content is what the client
+        // branches on. See route.ts for the threat model write-up.
+        const payload = (await response.json().catch(() => ({}))) as { token?: string };
+        if (cancelled) return;
+        const token = typeof payload.token === 'string' ? payload.token.trim() : '';
+        if (token) {
+          router.replace(`/invite/accept?token=${encodeURIComponent(token)}`);
+        }
+      } catch {
+        // Network or server error — silently fall through to the login
+        // form. The user can still complete signup via the "Don't have
+        // an account?" link to /onboarding; the email-link trigger
+        // catches them post-signup.
+      }
+    };
+
+    void upgrade();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLegacyInviteLink, inviteEmail, router]);
 
   useEffect(() => {
     if (authLoading) return;
