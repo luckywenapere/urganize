@@ -35,19 +35,34 @@ const APP_SUBSCRIBE_URL = "https://app.urganize.app/locked";
 const CONTACT_HREF = `mailto:${CONTACT_SALES_EMAIL}?subject=${encodeURIComponent(CONTACT_SALES_SUBJECT)}`;
 
 // Per-tier marketing copy. Keep the rhythm short and declarative.
+//
+// "Templates" intentionally says "single-release" only. EP, album, and
+// music-video templates are scoped for v2 — same honesty rule as the
+// pricing itself, we don't advertise what isn't built.
+//
+// The 28-day trial line was removed from this list because it's plan-
+// agnostic (the trial applies to both Monthly and Annual). It lives in
+// the hero subhead instead, where it covers both paths at once.
 const MONTHLY_FEATURES = [
   "Unlimited releases on one workspace",
-  "Hand-crafted rollout templates (single, EP, album, music video)",
+  "Hand-crafted single-release rollout template",
   "Tasks with assignees, dependencies, due dates",
   "Per-release file storage for masters, artwork, contracts",
   "Event milestones — listening parties, video shoots, release day",
   "Invite your A&R, PR, distributor",
-  "28-day free trial, no card required",
 ] as const;
 
+// Annual deltas only — the card already shows "Everything in Monthly" so
+// these are the real differentiators. Kept to claims we'll actually honor:
+// priority support, single yearly invoice, locked pricing. The "best for
+// teams committed to a release year" line is positioning, not a feature
+// — included because annual is genuinely the wrong choice for someone
+// testing the water (they should pick Monthly or the 28-day trial).
 const ANNUAL_FEATURES = [
   "Everything in Monthly",
   "Priority email support",
+  "Billed once — one invoice, no monthly admin",
+  "Best for teams committed to a release year",
   "Lock in current pricing for a year",
 ] as const;
 
@@ -148,10 +163,10 @@ export default function PricingPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="mx-auto max-w-2xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl"
+              className="mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl"
             >
-              One workspace, every release your team runs. Pick monthly or annual — annual gives
-              you about two months free. Cancel from settings.
+              One workspace, every release your team runs. Start with 28 days free, no card
+              required.
             </motion.p>
 
             {/* Currency toggle. Default = NGN (primary market). Sticky in
@@ -222,12 +237,15 @@ export default function PricingPage() {
             />
           </div>
 
+          {/* Caption under the card row. Matches the card-row width
+              (max-w-6xl on the parent) so it reads as a caption, not a
+              floating paragraph. Paystack mention removed — the billing
+              FAQ below covers it once, that's enough. */}
           <motion.p
             {...fadeInUp}
-            className="mx-auto mt-10 max-w-3xl text-center text-sm text-[var(--marketing-text-subtle)]"
+            className="mt-10 text-center text-sm text-[var(--marketing-text-subtle)]"
           >
-            All prices in {currency} unless toggled. Paystack handles the card; we never see it.
-            Switch plans or cancel anytime from Settings.
+            All prices in {currency} unless toggled. Cancel anytime from Settings.
           </motion.p>
         </section>
 
@@ -249,7 +267,7 @@ export default function PricingPage() {
               />
               <FaqRow
                 question="What's actually different between monthly and annual?"
-                answer="The same workspace, same features. Annual is billed once and works out to about two months free vs monthly. That's the whole difference."
+                answer="The same workspace, same features. Annual is one invoice instead of twelve, and works out cheaper. That's the whole difference."
               />
               <FaqRow
                 question="Do I pay per teammate?"
