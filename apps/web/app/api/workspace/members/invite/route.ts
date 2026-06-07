@@ -1,6 +1,5 @@
 import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePaidAccess } from '../../../_shared/paywall';
 import {
   WORKSPACE_MEMBERS_TABLE,
   buildInviteUrl,
@@ -45,12 +44,6 @@ export async function POST(request: NextRequest) {
     if ('error' in auth) {
       return auth.error;
     }
-
-    const paywallResponse = await requirePaidAccess(auth.user.id, {
-      feature: 'team_collaboration',
-      message: 'Upgrade required to invite teammates.',
-    });
-    if (paywallResponse) return paywallResponse;
 
     const adminClient = createAdminClient(auth.supabaseUrl);
     if (!adminClient) {
