@@ -42,7 +42,7 @@ export function WorkspaceView() {
   // rails / focused release card stay visible — only the list↔detail surface
   // swaps. Notification clicks set `?release=` then call openTask, so this
   // observes the same flag they all flow through.
-  const { isTaskOpen } = useTaskUI();
+  const { isTaskOpen, closeTask } = useTaskUI();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -128,6 +128,11 @@ export function WorkspaceView() {
   const isDesktopFocusedMode = Boolean(scopedReleaseId && selectedCard);
 
   const handleSelect = (releaseId: string) => {
+    // An open task detail belongs to the outgoing scope. Close it before the
+    // scope changes — otherwise the center column keeps showing the old
+    // task (rail clicks appear to do nothing) and, on deselect, `isTaskOpen`
+    // makes the detail take over the main area instead of the release grid.
+    if (isTaskOpen) closeTask();
     const nextScope = scopedReleaseId === releaseId ? null : releaseId;
     const stacked =
       typeof window !== 'undefined' &&
@@ -151,12 +156,16 @@ export function WorkspaceView() {
   };
 
   const handleClose = () => {
+    // Same invariant as handleSelect: clearing scope must land on the
+    // release grid, so any open task detail closes with it.
+    if (isTaskOpen) closeTask();
     // Replace-not-push so desktop deselects don't grow history with a
     // duplicate at-rest entry. Matches the mobile back affordance below.
     setScope(null);
   };
 
   const handleMobileBack = () => {
+    if (isTaskOpen) closeTask();
     setScope(null);
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'auto' });

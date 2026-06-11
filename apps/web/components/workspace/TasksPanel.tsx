@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ChevronDown, FolderOpen, Plus, X } from 'lucide-react';
 import {
@@ -16,6 +16,7 @@ import {
   type TaskStatus,
 } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
+import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { TaskRow } from '@/components/tasks/TaskRow';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -38,19 +39,30 @@ const sectionOrder: TaskSectionKey[] = [
   'done',
 ];
 
-// Default expanded state on first render: Overdue and Catch Up open (both
-// flag "look here first"), everything else collapsed. Done stays collapsed
-// — the count alone communicates progress; expanding is for un-ticking a
-// mistake.
+// Default expanded state: every bucket collapsed. The header counts carry
+// the signal at a glance; opening a bucket is a deliberate act, and once the
+// user opens or closes one it stays that way (persisted to localStorage)
+// until they change it again.
 const DEFAULT_EXPANDED: Record<TaskSectionKey, boolean> = {
-  overdue: true,
-  catch_up: true,
+  overdue: false,
+  catch_up: false,
   today: false,
   week: false,
   upcoming: false,
   no_due_date: false,
   done: false,
 };
+
+// localStorage persistence for the per-bucket open/closed state. Persisted
+// values are merged over DEFAULT_EXPANDED so a bucket added in a future
+// version starts collapsed instead of invalidating the whole record.
+const EXPANDED_STORAGE_KEY = 'urganize.workspace.task-buckets';
+const EXPANDED_STORAGE_VERSION = 1;
+
+const isPersistedExpanded = (value: unknown): value is Partial<Record<TaskSectionKey, boolean>> =>
+  typeof value === 'object' &&
+  value !== null &&
+  Object.values(value).every((entry) => typeof entry === 'boolean');
 
 // Per-bucket empty-state copy. The unscoped copy is celebratory ("You're
 // caught up"); the scoped copy is factual because a single release with no
@@ -139,8 +151,22 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
     [filteredTasks, pendingCompletionIds]
   );
 
-  // Per-bucket open/closed state, persisted for the session.
+  // Per-bucket open/closed state. Starts from the all-collapsed defaults so
+  // the server-rendered HTML matches, then hydrates from localStorage on
+  // mount (same pattern as the notifications prefs in app/settings/page.tsx).
+  // After that the state only changes when the user toggles a header.
   const [expanded, setExpanded] = useState<Record<TaskSectionKey, boolean>>(DEFAULT_EXPANDED);
+
+  useEffect(() => {
+    const persisted = readPersistedState(
+      EXPANDED_STORAGE_KEY,
+      EXPANDED_STORAGE_VERSION,
+      isPersistedExpanded
+    );
+    if (persisted) {
+      setExpanded({ ...DEFAULT_EXPANDED, ...persisted });
+    }
+  }, []);
 
   // Whether the inline Files segment is expanded. Collapsed by default so the
   // workspace opens on tasks, not files. Lives here because the Files toggle
@@ -149,38 +175,13 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
   // make room.
   const [isFilesOpen, setIsFilesOpen] = useState(false);
 
-  // Detect scope-id transitions during render so we can auto-expand any bucket
-  // that has scoped matches — otherwise the user clicks a release and the
-  // results land behind a collapsed header. This is the documented "Adjusting
-  // state when a prop changes" pattern from React's docs (setState during
-  // render, conditional, converges in one extra render). The undefined sentinel
-  // means the auto-expand also fires on first mount when an initial scope is
-  // present in the URL.
-  const [prevScopeId, setPrevScopeId] = useState<string | null | undefined>(undefined);
-  const currentScopeId = scopedRelease?.id ?? null;
-  if (prevScopeId !== currentScopeId) {
-    setPrevScopeId(currentScopeId);
-    if (scopedRelease) {
-      setExpanded((prev) => {
-        let changed = false;
-        const next = { ...prev };
-        for (const key of sectionOrder) {
-          // Done stays collapsed even when it has matches — it's terminal,
-          // and a release with completed tasks shouldn't open a tall list of
-          // strikethrough rows ahead of the active work.
-          if (key === 'done') continue;
-          if (sections[key].length > 0 && !next[key]) {
-            next[key] = true;
-            changed = true;
-          }
-        }
-        return changed ? next : prev;
-      });
-    }
-  }
-
+  // No auto-expand on scope changes: bucket state is user-owned. Scoping a
+  // release updates the header counts; which buckets are open stays exactly
+  // as the user last left it.
   const toggleBucket = (key: TaskSectionKey) => {
-    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+    const next = { ...expanded, [key]: !expanded[key] };
+    setExpanded(next);
+    writePersistedState(EXPANDED_STORAGE_KEY, EXPANDED_STORAGE_VERSION, next);
   };
 
   return (
