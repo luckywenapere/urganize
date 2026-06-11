@@ -13,6 +13,14 @@ type TaskMemberComboboxProps = {
   placeholder?: string;
   /** True while the members list is being fetched. Shows a hint in the dropdown. */
   isLoading?: boolean;
+  /**
+   * 'compact' renders the property-row variant used by TaskDetailView's
+   * Linear-style metadata list: sr-only label (the row supplies the visible
+   * one) + slim ghost input that only shows its bounds on hover/focus.
+   * Default 'comfortable' keeps the original boxed form field — same
+   * precedent as TaskRow's density prop.
+   */
+  density?: 'comfortable' | 'compact';
 };
 
 // When on, the picker shows every non-removed member the API returns
@@ -45,6 +53,7 @@ export function TaskMemberCombobox({
   label = 'Assignee',
   placeholder = 'Search teammates',
   isLoading = false,
+  density = 'comfortable',
 }: TaskMemberComboboxProps) {
   const baseId = useId();
   const listboxId = `${baseId}-listbox`;
@@ -188,7 +197,15 @@ export function TaskMemberCombobox({
   return (
     <div ref={containerRef} className="relative">
       <label className="block">
-        <span className="mb-2 block text-sm font-semibold text-content-primary">{label}</span>
+        <span
+          className={
+            density === 'compact'
+              ? 'sr-only'
+              : 'mb-2 block text-sm font-semibold text-content-primary'
+          }
+        >
+          {label}
+        </span>
         <input
           type="text"
           role="combobox"
@@ -204,7 +221,11 @@ export function TaskMemberCombobox({
           aria-expanded={isOpen}
           aria-controls={isOpen ? listboxId : undefined}
           aria-activedescendant={activeOptionId}
-          className="input h-12 rounded-[18px]"
+          className={
+            density === 'compact'
+              ? 'motion-focus h-9 w-full border border-transparent bg-transparent px-2 text-sm text-content-primary transition-colors placeholder:text-content-tertiary hover:border-stroke-default hover:bg-bg-elevated focus:border-brand focus:bg-bg-elevated'
+              : 'input h-12 rounded-[18px]'
+          }
           placeholder={placeholder}
           autoComplete="off"
         />
