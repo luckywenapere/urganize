@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LegalSection as Section } from "../components/marketing/LegalSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 
@@ -20,34 +21,6 @@ const CONTACT_HREF =
 // Every claim below is checked against the codebase as of LAST_UPDATED.
 // When the product's data handling changes (new analytics tool, new AI
 // provider, email provider added), update this page in the same PR.
-
-function Section({
-  number,
-  title,
-  children,
-}: {
-  number: string;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="border-t border-[color:var(--marketing-border)] py-10">
-      <div className="grid gap-6 lg:grid-cols-[16rem_1fr] lg:gap-12">
-        <div>
-          <p className="mono-label text-[var(--marketing-text-subtle)]">
-            {number}
-          </p>
-          <h2 className="mt-3 text-[1.6rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[var(--marketing-text)]">
-            {title}
-          </h2>
-        </div>
-        <div className="space-y-4 text-[0.98rem] leading-7 text-[var(--marketing-text-muted)]">
-          {children}
-        </div>
-      </div>
-    </section>
-  );
-}
 
 export default function PrivacyPolicy() {
   return (
@@ -105,7 +78,7 @@ export default function PrivacyPolicy() {
               <p>
                 Urganize (&ldquo;we&rdquo;, &ldquo;our&rdquo;,
                 &ldquo;us&rdquo;) is a release management workspace for music
-                teams, operated by Urganize Technologies Ltd., a company
+                teams, operated by The Urganization Ltd, a company
                 registered in Nigeria.
               </p>
               <p>

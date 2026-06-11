@@ -1,96 +1,222 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { LegalSection as Section } from "../components/marketing/LegalSection";
+import { MarketingFooter } from "../components/marketing/MarketingFooter";
+import { MarketingHeader } from "../components/marketing/MarketingHeader";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description:
+    "The terms that govern your use of Urganize — accounts, subscriptions, your content, and our responsibilities.",
+};
+
+// Real date discipline: moves only when the terms text changes.
+const LAST_UPDATED = "June 11, 2026";
+
+const CONTACT_HREF =
+  "mailto:contact@urganize.app?subject=Terms%20question%20-%20Urganize";
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-[var(--marketing-bg)] px-6 py-24 text-[var(--marketing-text)]">
-      <div className="mx-auto max-w-3xl">
-        <Link
-          href="/"
-          className="text-xs uppercase tracking-[0.2em] text-[var(--marketing-text-subtle)] hover:text-[var(--marketing-text)]"
-        >
-          ← Back to home
-        </Link>
+    <div className="min-h-screen bg-[var(--marketing-bg)] text-[var(--marketing-text)]">
+      <MarketingHeader />
 
-        <h1 className="mt-6 text-4xl font-black tracking-tighter md:text-6xl">
-          Terms of Service
-        </h1>
+      <main className="px-6 py-16 sm:py-20">
+        <div className="mx-auto max-w-4xl">
+          <p className="mono-label text-[var(--marketing-text-subtle)]">
+            Terms of Service
+          </p>
+          <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+            The terms of using Urganize
+          </h1>
+          <p className="mt-5 max-w-[40rem] text-lg leading-8 text-[var(--marketing-text-muted)]">
+            By creating an account or using Urganize, you agree to these terms.
+            They are written to be read, not skimmed past.
+          </p>
+          <p className="mt-6 font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
+            LAST UPDATED: {LAST_UPDATED.toUpperCase()}
+          </p>
 
-        <p className="mt-6 text-[var(--marketing-text-muted)]">
-          By using Urganize, you agree to these Terms.
-        </p>
+          <div className="mt-12">
+            <Section number="01" title="Who we are">
+              <p>
+                Urganize is a release management workspace for music teams,
+                operated by The Urganization Ltd, a company registered in
+                Nigeria (&ldquo;we&rdquo;, &ldquo;our&rdquo;,
+                &ldquo;us&rdquo;). The service runs at urganize.app and
+                app.urganize.app.
+              </p>
+            </Section>
 
-        <div className="mt-12 space-y-10 text-[var(--marketing-text-muted)]">
-          <section>
-            <h2 className="text-2xl font-bold text-[var(--marketing-text)]">Use of Service</h2>
-            <p className="mt-3">
-              Use Urganize lawfully. Abuse or misuse may result in termination.
-            </p>
-          </section>
+            <Section number="02" title="The service">
+              <p>
+                Urganize gives you a workspace to plan and run music releases:
+                a rollout plan generated from our hand-crafted templates, tasks
+                with owners and dependencies, file storage per release, event
+                milestones, and optional AI assistance. We improve the product
+                continuously — features may change, and we may add, modify, or
+                retire functionality.
+              </p>
+            </Section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-[var(--marketing-text)]">Accounts</h2>
-            <p className="mt-3">
-              You are responsible for your account. We may suspend or permanently delete
-              accounts that violate these Terms.
-            </p>
-          </section>
+            <Section number="03" title="Accounts">
+              <p>
+                You can sign up with an email and password or with Google. You
+                are responsible for your account and for keeping your sign-in
+                secure. You must be 13 or older. Provide accurate information —
+                billing and access depend on it.
+              </p>
+            </Section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-[var(--marketing-text)]">Content Ownership</h2>
-            <p className="mt-3">
-              You own your content. You grant Urganize permission to operate the service.
-            </p>
-          </section>
+            <Section number="04" title="Trial, subscriptions, and billing">
+              <p>
+                New accounts get a 28-day free trial with no card required.
+                After the trial, continued use requires a paid subscription —
+                priced per workspace, billed monthly or annually through
+                Paystack in NGN or USD. We never see or store your card
+                details.
+              </p>
+              <p>
+                Subscriptions renew at the end of each billing cycle. You can
+                cancel anytime from Settings; you keep access through the
+                period you already paid for. If a payment fails or a
+                subscription lapses, access to the workspace is locked until
+                payment resumes — your data is not deleted by a lapse.
+              </p>
+              <p>
+                Refunds are handled case by case — email{" "}
+                <a
+                  href={CONTACT_HREF}
+                  className="font-medium text-[var(--marketing-accent)] hover:opacity-80"
+                >
+                  contact@urganize.app
+                </a>
+                .
+              </p>
+            </Section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-[var(--marketing-text)]">AI Disclaimer</h2>
-            <p className="mt-3">
-              AI outputs are guidance only. Urganize does not guarantee results.
-            </p>
-          </section>
+            <Section number="05" title="Your content">
+              <p>
+                You own everything you put into Urganize — releases, tasks,
+                files, artwork, masters, contracts. You grant us only the
+                license we need to operate the service: hosting, processing,
+                and displaying your content to you and the teammates you
+                invite.
+              </p>
+              <p>
+                Workspaces are shared spaces. People you invite to your
+                workspace can see and work on its releases and tasks — invite
+                accordingly.
+              </p>
+              <p>
+                You are responsible for having the rights to what you upload.
+                Don&apos;t upload music, artwork, or documents you don&apos;t
+                own or have permission to use.
+              </p>
+            </Section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-[var(--marketing-text)]">Payments</h2>
-            <p className="mt-3">
-              Payments are processed via Paystack. Refunds handled case-by-case.
-            </p>
-          </section>
+            <Section number="06" title="Acceptable use">
+              <p>
+                Use Urganize lawfully. Don&apos;t attempt to break, overload,
+                or probe the service; don&apos;t use it to infringe rights,
+                harass people, or store unlawful content; don&apos;t resell
+                access. We may suspend or terminate accounts that violate
+                these terms — where reasonable, we&apos;ll warn you first.
+              </p>
+            </Section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-[var(--marketing-text)]">Liability</h2>
-            <p className="mt-3">
-              Liability is limited to amounts paid. No indirect damages.
-            </p>
-          </section>
+            <Section number="07" title="AI features">
+              <p>
+                AI-generated plans and status updates are drafts for you to
+                review and edit, not professional advice, and we don&apos;t
+                guarantee their accuracy or results. The product works without
+                AI — templates and your own edits always take precedence. How
+                AI handles your data is covered in our{" "}
+                <Link
+                  href="/privacy"
+                  className="font-medium text-[var(--marketing-accent)] hover:opacity-80"
+                >
+                  privacy policy
+                </Link>
+                .
+              </p>
+            </Section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-[var(--marketing-text)]">Governing Law</h2>
-            <p className="mt-3">
-              These Terms are governed by Nigerian law.
-            </p>
-          </section>
+            <Section number="08" title="Ending your account">
+              <p>
+                You can delete your account from Settings at any time — it
+                takes effect immediately and removes your data as described in
+                the privacy policy. We may suspend or terminate accounts for
+                violations of these terms or non-payment, as described above.
+              </p>
+            </Section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-[var(--marketing-text)]">Contact</h2>
-            <p className="mt-3">
-              <a
-                href="mailto:contact@urganize.app"
-                className="text-[var(--marketing-accent)] hover:opacity-80"
-              >
-                contact@urganize.app
-              </a>
-            </p>
-          </section>
-        </div>
+            <Section number="09" title="Disclaimers and liability">
+              <p>
+                Urganize is provided &ldquo;as is&rdquo;. We work hard to keep
+                it fast and available, but we don&apos;t guarantee
+                uninterrupted service, and we are not liable for indirect,
+                incidental, or consequential damages — including lost profits
+                or lost opportunities around a release. Our total liability to
+                you is limited to the amounts you paid us in the 12 months
+                before the claim.
+              </p>
+              <p>
+                Keep your own copies of master recordings and irreplaceable
+                files. Urganize stores your working copies; it is not your
+                archive of record.
+              </p>
+            </Section>
 
-        <div className="mt-16 flex justify-between border-t border-[var(--marketing-border)] pt-6 text-xs uppercase tracking-[0.2em] text-[var(--marketing-text-subtle)]">
-          <span>© The Urganization</span>
-          <div className="flex gap-4">
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/subprocessors">Subprocessors</Link>
+            <Section number="10" title="Governing law">
+              <p>
+                These terms are governed by the laws of the Federal Republic of
+                Nigeria, and disputes are subject to the jurisdiction of
+                Nigerian courts.
+              </p>
+            </Section>
+
+            <Section number="11" title="Changes to these terms">
+              <p>
+                We update these terms when the product or our practices
+                actually change. We&apos;ll post the new version here and
+                update the date at the top; material changes will be flagged
+                in-product. Continuing to use Urganize after a change means
+                you accept the updated terms.
+              </p>
+            </Section>
+
+            <Section number="12" title="Contact">
+              <p>
+                Questions about these terms:{" "}
+                <a
+                  href={CONTACT_HREF}
+                  className="font-medium text-[var(--marketing-accent)] hover:opacity-80"
+                >
+                  contact@urganize.app
+                </a>
+                . See also our{" "}
+                <Link
+                  href="/privacy"
+                  className="font-medium text-[var(--marketing-accent)] hover:opacity-80"
+                >
+                  privacy policy
+                </Link>{" "}
+                and{" "}
+                <Link
+                  href="/subprocessors"
+                  className="font-medium text-[var(--marketing-accent)] hover:opacity-80"
+                >
+                  subprocessors
+                </Link>
+                .
+              </p>
+            </Section>
           </div>
         </div>
-      </div>
+      </main>
+
+      <MarketingFooter />
     </div>
   );
 }
