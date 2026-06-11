@@ -295,10 +295,10 @@ export function ThreeFeaturesSection() {
   );
 }
 
-// Same rule as Adenaiye's hero quote below: a testimonial only works because
-// the words are really theirs. These are DRAFTS — get verbatim sign-off from
-// Antoine, Adenaiye and Tamuno-Tekena before this ships, and never edit a
-// quote after sign-off without re-approval.
+// Same rule as the @zaddyfunds_ hero quote below: a testimonial only works
+// because the words are really theirs. These are DRAFTS — get verbatim
+// sign-off from Antoine, Adenaiye and Tamuno-Tekena before this ships, and
+// never edit a quote after sign-off without re-approval.
 const supportingQuotes = [
   {
     quote:
@@ -310,7 +310,7 @@ const supportingQuotes = [
     quote:
       "The master, the artwork, the split sheet, they all live on the release now instead of buried in three different chats. When my artist needs a file, I know exactly where it is.",
     name: "Adenaiye Miracle",
-    role: "Artist Manager · @zaddyfunds_",
+    role: "Artist Manager",
   },
   {
     quote:
@@ -331,12 +331,14 @@ export function TestimonialSection() {
             </p>
           </blockquote>
 
-          {/* Quote is verbatim from Adenaiye; name used with her permission.
-              Never edit the quote text without her sign-off — a testimonial
-              only works because the words are really hers. */}
+          {/* Hero quote is verbatim from @zaddyfunds_ (a different person
+              from Adenaiye Miracle, who has her own card below); handle used
+              with permission. Never edit the quote text without their
+              sign-off — a testimonial only works because the words are
+              really theirs. */}
           <p className="mt-10 font-mono text-[0.8rem] tracking-[0.18em] text-[var(--marketing-text-subtle)]">
-            <span className="text-[var(--marketing-text)]">Adenaiye Miracle</span>
-            {" "}· Artist Manager · @zaddyfunds_
+            <span className="text-[var(--marketing-text)]">@zaddyfunds_</span>
+            {" "}· Artist Manager
           </p>
         </div>
 
