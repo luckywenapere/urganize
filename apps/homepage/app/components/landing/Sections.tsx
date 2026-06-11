@@ -185,6 +185,34 @@ export function MirrorSection() {
   );
 }
 
+// Real screenshot of the current workspace (staged 2026-06-11). If the UI
+// changes meaningfully, retake this — never let marketing imagery lag the
+// product again.
+export function WorkspaceShotSection() {
+  return (
+    <ScrollReveal>
+      <SectionShell
+        containerClassName={wideContainerClass}
+        className="py-[60px] lg:py-[80px]"
+      >
+        <p className="mono-label mb-10 text-center text-[var(--marketing-text-subtle)]">
+          Live since January 2026
+        </p>
+        <div className="overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
+          <Image
+            src="/images/product/workspace-releases.png"
+            alt="The Urganize workspace: four releases in flight, each with artist, release date, and task progress toward its 64-task plan."
+            width={1918}
+            height={974}
+            className="h-auto w-full"
+            sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
+          />
+        </div>
+      </SectionShell>
+    </ScrollReveal>
+  );
+}
+
 // The honest centerpiece: the hand-crafted release template is the product's
 // real IP, so show it — actual rows, rendered as type, not a screenshot of
 // a retired UI.
@@ -227,6 +255,17 @@ export function TemplatePlanSection() {
         <p className="mt-6 text-center font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
           + 56 MORE, GENERATED THE MOMENT YOU CREATE A RELEASE
         </p>
+
+        <div className="mx-auto mt-14 max-w-[58rem] overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
+          <Image
+            src="/images/product/workspace-tasks.png"
+            alt="Tasks scoped to the release 'Born To Be Free' — fresh from its 64-task plan, with owners and due dates on every row."
+            width={1918}
+            height={972}
+            className="h-auto w-full"
+            sizes="(min-width: 1024px) 928px, 100vw"
+          />
+        </div>
       </SectionShell>
     </ScrollReveal>
   );

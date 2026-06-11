@@ -8,6 +8,7 @@ import {
   TemplatePlanSection,
   TestimonialSection,
   ThreeFeaturesSection,
+  WorkspaceShotSection,
 } from "./components/landing/Sections";
 
 const TITLE = "Urganize — Your release deserves a process.";
@@ -58,6 +59,7 @@ export default function Home() {
         <main>
           <HeroSection />
           <MirrorSection />
+          <WorkspaceShotSection />
           <TemplatePlanSection />
           <ThreeFeaturesSection />
           <TestimonialSection />
