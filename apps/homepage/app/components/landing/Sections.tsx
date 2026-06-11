@@ -267,8 +267,12 @@ export function TestimonialSection() {
             </p>
           </blockquote>
 
+          {/* Quote is verbatim from Adenaiye; name used with her permission.
+              Never edit the quote text without her sign-off — a testimonial
+              only works because the words are really hers. */}
           <p className="mt-10 font-mono text-[0.8rem] tracking-[0.18em] text-[var(--marketing-text-subtle)]">
-            Artist manager · @zaddyfunds_
+            <span className="text-[var(--marketing-text)]">Adenaiye Miracle</span>
+            {" "}· Artist Manager
           </p>
         </div>
       </SectionShell>
