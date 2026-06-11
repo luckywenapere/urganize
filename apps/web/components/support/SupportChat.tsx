@@ -1,171 +1,71 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useAuthStore } from '@/lib/auth-store';
+import { useEffect, useRef, useState } from 'react';
 
-declare global {
-  interface Window {
-    Tawk_API?: TawkApi;
-    Tawk_LoadStart?: Date;
-  }
-}
+// Direct line to the founder. Number lives here only — change it in one place.
+const WHATSAPP_URL = 'https://wa.me/2347067367057';
 
-type TawkVisitor = {
-  name?: string;
-  email?: string;
-};
+const LABELS = ['Chat with the founder', 'Report a bug', 'Contact support'] as const;
 
-type TawkAttributes = Record<string, string>;
+const ROTATE_INTERVAL_MS = 3500;
+const FADE_MS = 200;
 
-type TawkApi = {
-  visitor?: TawkVisitor;
-  onLoad?: () => void;
-  onUnreadCountChanged?: (count: number) => void;
-  onChatMaximized?: () => void;
-  onChatMinimized?: () => void;
-  hideWidget?: () => void;
-  showWidget?: () => void;
-  maximize?: () => void;
-  minimize?: () => void;
-  setAttributes?: (attrs: TawkAttributes, cb?: (error: unknown) => void) => void;
-  addEvent?: (event: string, metadata: Record<string, unknown>, cb?: (error: unknown) => void) => void;
-};
-
-const TAWK_PROPERTY_ID = process.env.NEXT_PUBLIC_TAWK_PROPERTY_ID;
-const TAWK_WIDGET_ID = process.env.NEXT_PUBLIC_TAWK_WIDGET_ID;
-const TAWK_SRC =
-  TAWK_PROPERTY_ID && TAWK_WIDGET_ID
-    ? `https://embed.tawk.to/${TAWK_PROPERTY_ID}/${TAWK_WIDGET_ID}`
-    : null;
-
-let tawkScriptInjected = false;
-
-function ensureTawkApi(): TawkApi {
-  if (typeof window === 'undefined') {
-    throw new Error('Tawk_API is only available in the browser');
-  }
-  if (!window.Tawk_API) {
-    window.Tawk_API = {};
-  }
-  return window.Tawk_API;
+function WhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="currentColor" aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+    </svg>
+  );
 }
 
 export function SupportChat() {
-  const user = useAuthStore((state) => state.user);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isReady, setIsReady] = useState(false);
+  const [labelIndex, setLabelIndex] = useState(0);
+  const [isFading, setIsFading] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!TAWK_SRC) return;
     if (typeof window === 'undefined') return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Pause rotation while hovered so the label being read doesn't swap away.
+    if (isHovered) return;
 
-    const api = ensureTawkApi();
+    const interval = setInterval(() => {
+      setIsFading(true);
+      fadeTimeoutRef.current = setTimeout(() => {
+        setLabelIndex((current) => (current + 1) % LABELS.length);
+        setIsFading(false);
+      }, FADE_MS);
+    }, ROTATE_INTERVAL_MS);
 
-    api.onLoad = () => {
-      setIsReady(true);
-      // Hide Tawk's default bubble — we render our own FAB.
-      api.hideWidget?.();
+    return () => {
+      clearInterval(interval);
+      if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
     };
-
-    api.onUnreadCountChanged = (count: number) => {
-      setUnreadCount(typeof count === 'number' ? count : 0);
-    };
-
-    if (tawkScriptInjected) {
-      // Script already in the DOM (e.g., this component re-mounted on route change).
-      // If Tawk is already loaded, the onLoad above won't fire again; resync state.
-      if (typeof api.hideWidget === 'function') {
-        setIsReady(true);
-        api.hideWidget();
-      }
-      return;
-    }
-
-    window.Tawk_LoadStart = new Date();
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = TAWK_SRC;
-    script.charset = 'UTF-8';
-    script.setAttribute('crossorigin', '*');
-    document.head.appendChild(script);
-    tawkScriptInjected = true;
-  }, []);
-
-  // Identify the visitor once the widget is ready and we have a profile.
-  useEffect(() => {
-    if (!isReady || !user || typeof window === 'undefined') return;
-    const api = window.Tawk_API;
-    if (!api?.setAttributes) return;
-
-    const displayName =
-      user.name?.trim() ||
-      user.artist_name?.trim() ||
-      (user.email ? user.email.split('@')[0] : 'User');
-
-    const attributes: TawkAttributes = {
-      name: displayName,
-      email: user.email,
-      id: user.id,
-      role: String(user.role || ''),
-    };
-    if (user.artist_name) attributes.artist_name = user.artist_name;
-
-    api.setAttributes(attributes, (error) => {
-      if (error) {
-        // Free-plan Tawk projects accept name/email without a hash; fail soft.
-        console.warn('Tawk.to setAttributes failed', error);
-      }
-    });
-  }, [isReady, user]);
-
-  if (!TAWK_SRC) return null;
-
-  const handleClick = () => {
-    if (typeof window === 'undefined') return;
-    window.Tawk_API?.maximize?.();
-  };
-
-  const badgeLabel = unreadCount > 9 ? '9+' : String(unreadCount);
+  }, [isHovered]);
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      aria-label={
-        unreadCount > 0
-          ? `Open support chat — ${unreadCount} unread message${unreadCount === 1 ? '' : 's'}`
-          : 'Open support chat'
-      }
-      className="group fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-white text-slate-900 shadow-[0_10px_28px_-8px_rgba(15,23,42,0.35)] ring-1 ring-black/5 transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-10px_rgba(15,23,42,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 active:translate-y-0 md:bottom-6 md:right-6"
+    <a
+      href={WHATSAPP_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      // Stable accessible name regardless of which label is showing.
+      aria-label="Chat with the founder on WhatsApp — report a bug or contact support"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="group fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-none border border-white/10 bg-[#0a0a0a] py-2.5 pl-3.5 pr-4 shadow-2xl transition-all duration-150 hover:border-white/20 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:bottom-6 md:right-6"
     >
-      <svg
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="currentColor"
+      <span className="text-brand">
+        <WhatsAppIcon />
+      </span>
+      <span
         aria-hidden="true"
-        className="drop-shadow-[0_1px_0_rgba(255,255,255,0.6)]"
+        className={`inline-block min-w-[23ch] text-center font-mono text-[10px] uppercase tracking-widest text-white/50 transition-opacity duration-200 group-hover:text-white/80 ${
+          isFading ? 'opacity-0' : 'opacity-100'
+        }`}
       >
-        <path d="M5 3.75A2.25 2.25 0 0 0 2.75 6v10.5A2.25 2.25 0 0 0 5 18.75h3.18l3.27 2.86a.75.75 0 0 0 1.24-.56V18.75H19A2.25 2.25 0 0 0 21.25 16.5V6A2.25 2.25 0 0 0 19 3.75H5Z" />
-        <path
-          d="M8.5 12.25c.9 1.05 2.16 1.7 3.5 1.7s2.6-.65 3.5-1.7"
-          fill="none"
-          stroke="white"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      {unreadCount > 0 ? (
-        <span className="absolute -right-0.5 -top-0.5 flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-400 px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-white">
-          {badgeLabel}
-        </span>
-      ) : (
-        <span
-          aria-hidden="true"
-          className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-rose-400 ring-2 ring-white"
-        />
-      )}
-    </button>
+        {LABELS[labelIndex]}
+      </span>
+    </a>
   );
 }
