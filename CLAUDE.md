@@ -86,7 +86,7 @@ These are the principles that govern v1 build decisions. When in doubt, return t
 
 **Package manager:** pnpm 10.6.4 with workspaces. Lockfile is `pnpm-lock.yaml`. Ignore stale references to npm in old docs.
 
-**Node runtime:** Node 20+. Vercel default in prod. (No `.nvmrc` pinned — consider adding one.)
+**Node runtime:** Node 20+. Vercel default in prod. Pinned via root `.nvmrc` (added 2026-06-11).
 
 **Build tooling:** Turborepo 2.3.3 orchestrates `build`, `dev`, `lint` across the workspace. Next 16 / Turbopack for bundling. Tailwind v4 (PostCSS plugin) on homepage; Tailwind v3 + autoprefixer on web. Prisma 6 generator on homepage only.
 
@@ -151,9 +151,9 @@ REST-style Next.js Route Handlers at `app/api/**/route.ts`. No tRPC, no GraphQL.
 
 **Patterns to follow:**
 
-- **For protected routes**, validate auth + payment gate in one call via `requireActiveAuthenticatedUser(request)` (exported from `releases/_shared.ts`, `tasks-server.ts`, `ui-drafts/_shared.ts`, and `plans/_shared.ts`). It wraps `getAuthenticatedUser` and adds a `requireActiveAccount(userId, email)` check that returns **402** + `{ redirect: '/locked', reason }` when the user lacks active paid/trial access. Email allowlist short-circuits before any DB read.
-- **For open routes** (auth, trial/start, payments/verify, webhooks/paystack, subscription-status, paywall-status, admin/*, account/delete-now, user/onboarding, pricing-validation), use `getAuthenticatedUser(request)` directly — these must work when the user is unpaid/locked.
-- Each domain has a `_shared.ts` (e.g., `releases/_shared.ts`) holding table-name constants, error detection helpers, and shared logic. There are currently four `getAuthenticatedUser` definitions across the codebase (see "Known issues" — consolidation pending).
+- **For protected routes**, validate auth + payment gate in one call via `requireActiveAuthenticatedUser(request)`. The canonical definition lives in `apps/web/app/api/_shared/auth.ts` (alongside `getAuthenticatedUser` and `createAdminClient`); `releases/_shared.ts`, `tasks-server.ts`, and `ui-drafts/_shared.ts` re-export it so domain import sites stay stable. It wraps `getAuthenticatedUser` and adds a `requireActiveAccount(userId, email)` check that returns **402** + `{ redirect: '/locked', reason }` when the user lacks active paid/trial access. Email allowlist short-circuits before any DB read.
+- **For open routes** (auth, trial/start, payments/verify, webhooks/paystack, subscription-status, admin/*, account/delete-now, user/onboarding, pricing-validation), use `getAuthenticatedUser(request)` directly — these must work when the user is unpaid/locked.
+- Each domain has a `_shared.ts` (e.g., `releases/_shared.ts`) holding table-name constants, error detection helpers, and shared logic. Auth helpers were consolidated into `app/api/_shared/auth.ts` on 2026-06-11; do not re-introduce per-domain copies.
 - Errors via `NextResponse.json({ error, ... }, { status })`. Use `apps/web/lib/errors.ts` helpers where they exist.
 - Long-running AI calls go through `apps/web/lib/ai/provider.ts` (retry + timeout already implemented). Do not open a parallel fetch loop per feature.
 
@@ -288,9 +288,9 @@ These are real but not blockers:
 - **Outdated top-level docs** (`README.md`, `PROJECT_SUMMARY.md`, `QUICKSTART.md`) reference an old single-app, npm-based, pre-Neon setup. Treat them as historical. Update or delete them when convenient.
 - **RLS on subscriptions and payments uses permissive `USING (true)` policies** inherited from production. This matches the prior state but is overly permissive. Audit client usage and tighten to owner-only reads + service-role writes as a follow-up.
 - **Possible duplicate artists:** 6 releases across 2 users have 6 distinct `artist_id` values. Either expected at small scale, or the artist lookup-or-create flow always creates instead of looking up. Investigate when scale increases or if duplicate-artist issues surface.
-- **`getAuthenticatedUser` drift.** Four separate definitions across the codebase (`apps/web/app/api/releases/_shared.ts`, `apps/web/lib/tasks-server.ts`, `apps/web/app/api/ui-drafts/_shared.ts`, `apps/web/app/api/plans/_shared.ts`) plus inline copies in `organization/*` and `plans/[planId]/*`. Each was given a `requireActiveAuthenticatedUser` wrapper or an inline `requireActiveAccount` call when the payment gate landed. Consolidation into a single `app/api/_shared/auth.ts` is a worthwhile future refactor.
-- **Dead code from the old card-on-file trial flow.** `apps/web/lib/trial-checkout.ts` (`prepareAnnualTrialCheckout`, `buildAnnualTrialMetadata`, `TRIAL_TOKENIZATION_PURPOSE`) and the `trial_claim` machinery in `/api/payments/verify` are unreachable post-payment-gating-deploy. No live UI consumer. Safe to delete in a follow-up.
-- **`app_settings.global_paywall` toggle row remains in DB** but the gate no longer reads it. `POST /api/admin/paywall` still exists and writes to the row but has no effect on access control. Either delete the endpoint + row in a cleanup pass, or repurpose for a future "emergency open" override.
+- ~~**`getAuthenticatedUser` drift.**~~ Resolved 2026-06-11: consolidated into `app/api/_shared/auth.ts` (see the dead-code sweep block in Working notes). The `plans/*` and `organization/*` route groups that held inline copies were dead and deleted outright.
+- ~~**Dead code from the old card-on-file trial flow.**~~ Resolved: `lib/trial-checkout.ts` and the `trial_claim` machinery were deleted in earlier cleanups. The only remaining reference is a vestigial `.neq('plan', 'trial_claim')` filter in `account/delete-now` — harmless.
+- ~~**`app_settings.global_paywall` toggle row remains in DB.**~~ Resolved 2026-06-11: `POST /api/admin/paywall` and `GET /api/paywall-status` (both caller-less) were deleted along with `lib/paywall-config.ts`; migration `20260611_drop_global_paywall_setting.sql` removes the orphaned row. **Needs applying to production.**
 - **Snapshot fallback is fail-CLOSED.** If `getSubscriptionSnapshot` errors out (DB down, network blip), `hasAccess` returns false → user is locked. Trade-off: a hiccup locks users instead of letting them through. Existing paying users are protected by the `is_subscribed` back-compat branch which fires before the network error path; this should be safe in practice but flag it if you see lockout reports without an obvious cause.
 
 ---
@@ -337,7 +337,7 @@ v1 is built across six phases. Each phase corresponds to one of the v1 scope ite
 
 - **3a:** Backend API (upload-url, list, record, delete routes; asset-helpers module). ✅ Complete.
 - **3b:** UI on release detail page (asset section, upload control, category groups, image thumbnails). ✅ Complete.
-- **3c:** Polish (cleanup vestigial buckets, deprecate `release_metadata.artwork_url` reads, delete `WorkspaceSection.tsx` dead code). Pending — non-blocking.
+- **3c:** Polish (cleanup vestigial buckets, deprecate `release_metadata.artwork_url` reads, ~~delete `WorkspaceSection.tsx` dead code~~ — done 2026-06-11). Remaining items pending — non-blocking.
 
 Constraint: Supabase Free plan caps individual uploads at 50 MB. Category size limits configured in `asset-helpers.ts` accordingly (40 MiB audio/video, 10 MiB documents, 5 MiB images).
 
@@ -454,8 +454,8 @@ This section is for state that changes during the v1 build. Keep it current.
 
 - `Release` → `apps/web/types/releases.ts`.
 - `Task` → `apps/web/types/tasks.ts` (`priority: TaskPriority`, `dueDate: string | null`).
-- **Never** import `Release` / `Task` from `apps/web/types/index.ts` (orphan, stale, divergent shapes) or `apps/web/types/database.ts` (its `TaskStatus` is missing `'blocked'`).
-- `ExecutionRelease` is double-declared (`types/releases.ts` vs `lib/execution-types.ts`). If the workspace needs it, prefer the `types/releases.ts` version; flag the duplication as a separate cleanup — do not reconcile it inside this refactor unless it directly blocks.
+- ~~**Never** import `Release` / `Task` from `apps/web/types/index.ts` or `apps/web/types/database.ts`.~~ Both orphan files were deleted 2026-06-11 — the drift hazard no longer exists.
+- ~~`ExecutionRelease` is double-declared.~~ Resolved 2026-06-11: the unused alias in `types/releases.ts` was removed; `lib/execution-types.ts` holds the only (live) declaration.
 
 ### Decisions (locked)
 
@@ -587,4 +587,26 @@ The artist data model is changing from "owner-scoped, free-text duplicates every
 
 ---
 
-*Last updated: 2026-06-02.*
+## Dead-code sweep + auth consolidation (2026-06-11)
+
+A meticulous cleanup pass executing the debt this file had already flagged. Every deletion was verified caller-less/importer-less by grep before removal; gated on `pnpm build` + `pnpm lint`.
+
+**Deleted (zero importers/callers, confirmed):**
+
+- `app/api/plans/**` — legacy route group from the removed AI plan generator. Not in the post-UI-cut route inventory; zero frontend callers; its `ensureReleaseOwnership` even queried a nonexistent `releases.user_id` column (latent bug confirming it never ran).
+- `app/api/organization/**` — organization management was removed from the UI in the v1 cut; zero callers remained. Tables stay in DB (workspace member mapping in `tasks-server.ts` still reads them directly).
+- `app/api/admin/paywall/route.ts`, `app/api/paywall-status/route.ts`, `lib/paywall-config.ts` — the gate stopped reading `global_paywall`; both endpoints were caller-less. Companion migration `20260611_drop_global_paywall_setting.sql` deletes the orphaned row (**apply to production**).
+- `components/billing/PaywallGate.tsx`, `hooks/usePaywall.ts` — orphaned pre-gating paywall UI (live code uses the 402 + `/locked` redirect path).
+- `components/dashboard/workspace/WorkspaceSection.tsx` — the Phase 3c item.
+- `components/dashboard/VirtualizedPlanList.tsx`, `components/billing/TrialStatusBanner.tsx` — orphans from the plans/trial-banner era.
+- `types/index.ts`, `types/database.ts` — the documented orphan/drifted type files.
+- The unused `ExecutionRelease` alias in `types/releases.ts`.
+- Empty dirs removed with their contents: `components/dashboard/`, `components/billing/`, `hooks/`.
+
+**Auth consolidation (the flagged refactor):** canonical `getAuthenticatedUser` / `requireActiveAuthenticatedUser` / `createAdminClient` now live in `app/api/_shared/auth.ts` (best-variant semantics: trimmed env reads, detailed 401 messages, static `requireActiveAccount` import). `releases/_shared.ts`, `lib/tasks-server.ts`, `ui-drafts/_shared.ts` re-export all three; `pricing-validation/_shared.ts` re-exports only `getAuthenticatedUser` + `createAdminClient` (open route group). Route files were not touched — re-exports keep every import site stable. Do not re-introduce per-domain copies.
+
+**Also:** root `.nvmrc` pinning Node 20.
+
+---
+
+*Last updated: 2026-06-11.*

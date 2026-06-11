@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import {
-  createClient,
   type SupabaseClient,
   type User,
 } from '@supabase/supabase-js';
@@ -458,59 +457,13 @@ export function isTaskSchemaMissingError(error: unknown): boolean {
   );
 }
 
-// Auth + global access gate in one call. Wraps getAuthenticatedUser with a
-// requireActiveAccount check that returns 402 + redirect when the user has
-// no active paid subscription or running trial. Routes opt in by importing
-// this instead of getAuthenticatedUser. Mirrors the sibling helper in
-// apps/web/app/api/releases/_shared.ts.
-export async function requireActiveAuthenticatedUser(
-  request: NextRequest
-): Promise<{ user: DatabaseUser; supabaseUrl: string } | { error: NextResponse }> {
-  const auth = await getAuthenticatedUser(request);
-  if ('error' in auth) return auth;
-  const { requireActiveAccount } = await import('@/app/api/_shared/paywall');
-  const block = await requireActiveAccount(auth.user.id, auth.user.email);
-  if (block) return { error: block };
-  return auth;
-}
-
-export async function getAuthenticatedUser(
-  request: NextRequest
-): Promise<{ user: DatabaseUser; supabaseUrl: string } | { error: NextResponse }> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return { error: NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 }) };
-  }
-
-  const authHeader = request.headers.get('authorization') || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!token) {
-    return { error: NextResponse.json({ error: 'Unauthorized: No token provided' }, { status: 401 }) };
-  }
-
-  const authClient = createClient(supabaseUrl, supabaseAnonKey);
-  const {
-    data: { user },
-    error,
-  } = await authClient.auth.getUser(token);
-
-  if (error || !user?.id) {
-    return { error: NextResponse.json({ error: `Unauthorized: ${error?.message || 'Invalid or expired token'}` }, { status: 401 }) };
-  }
-
-  return { user, supabaseUrl };
-}
-
-export function createAdminClient(supabaseUrl: string): SupabaseClient | null {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!serviceRoleKey) {
-    return null;
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
-}
+// Canonical auth helpers live in app/api/_shared/auth.ts; re-exported here
+// so the many task route import sites stay stable.
+export {
+  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
+  createAdminClient,
+} from '@/app/api/_shared/auth';
 
 export function buildTaskSchemaResponse(message = 'Task management tables are missing.'): NextResponse {
   return NextResponse.json({ error: message, sql: TASKS_SQL }, { status: 501 });

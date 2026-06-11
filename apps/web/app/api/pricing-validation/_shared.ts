@@ -1,9 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import {
   normalizePricingValidationResponse,
   type StoredPricingValidationResponse,
 } from '@/lib/pricing-validation';
+
+// Canonical auth helpers live in app/api/_shared/auth.ts; re-exported here
+// so the pricing-validation route import sites stay stable. This is an open
+// route group (must work for locked users), so only getAuthenticatedUser is
+// re-exported — not the 402 gate.
+export { getAuthenticatedUser, createAdminClient } from '@/app/api/_shared/auth';
 
 export const PRICING_VALIDATION_TABLE = 'pricing_validation_responses';
 
@@ -36,37 +40,6 @@ export const isOptionalTableMissingError = (error: unknown): boolean => {
     message.includes('does not exist') ||
     (message.includes('relation') && message.includes('does not exist'))
   );
-};
-
-export const getAuthenticatedUser = async (request: NextRequest) => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return { error: NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 }) };
-  }
-
-  const authHeader = request.headers.get('authorization') || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!token) {
-    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
-  }
-
-  const authClient = createClient(supabaseUrl, supabaseAnonKey);
-  const {
-    data: { user },
-    error: userError,
-  } = await authClient.auth.getUser(token);
-  if (userError || !user?.id) {
-    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
-  }
-
-  return { user, supabaseUrl };
-};
-
-export const createAdminClient = (supabaseUrl: string) => {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey) return null;
-  return createClient(supabaseUrl, serviceRoleKey);
 };
 
 type PricingValidationRow = {

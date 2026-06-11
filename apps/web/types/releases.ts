@@ -43,7 +43,3 @@ export interface Release {
   createdAt: string;
   updatedAt: string;
 }
-
-// Currently identical to Release; kept as a named alias so execution-side
-// callers can adopt extra fields without refactoring all import sites.
-export type ExecutionRelease = Release;

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
+import { type SupabaseClient } from '@supabase/supabase-js';
 import {
   ARTISTS_TABLE,
   COLLABORATORS_TABLE,
@@ -10,7 +10,7 @@ import {
   type ReleaseMetadataSnapshot,
   type ReleaseSummary,
 } from '@/lib/release-ops';
-import { requireActiveAccount } from '@/app/api/_shared/paywall';
+import { createAdminClient } from '@/app/api/_shared/auth';
 
 export {
   ARTISTS_TABLE,
@@ -19,6 +19,14 @@ export {
   RELEASE_EVENTS_TABLE,
   RELEASE_METADATA_TABLE,
 };
+
+// Canonical auth helpers live in app/api/_shared/auth.ts; re-exported here
+// so the many release route import sites stay stable.
+export {
+  getAuthenticatedUser,
+  requireActiveAuthenticatedUser,
+  createAdminClient,
+} from '@/app/api/_shared/auth';
 
 export const isOptionalTableMissingError = (error: unknown): boolean => {
   const code = String((error as { code?: string } | null)?.code || '').toUpperCase();
@@ -32,55 +40,6 @@ export const isOptionalTableMissingError = (error: unknown): boolean => {
     message.includes('column') ||
     (message.includes('relation') && message.includes('does not exist'))
   );
-};
-
-export const getAuthenticatedUser = async (request: NextRequest) => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return { error: NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 }) };
-  }
-
-  const authHeader = request.headers.get('authorization') || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!token) {
-    return { error: NextResponse.json({ error: 'Unauthorized: No token provided' }, { status: 401 }) };
-  }
-
-  const authClient = createClient(supabaseUrl, supabaseAnonKey);
-  const {
-    data: { user },
-    error: userError,
-  } = await authClient.auth.getUser(token);
-  if (userError || !user?.id) {
-    return { error: NextResponse.json({ error: `Unauthorized: ${userError?.message || 'Invalid or expired token'}` }, { status: 401 }) };
-  }
-
-  return { user, supabaseUrl };
-};
-
-// Auth + global access gate in a single call. Replaces getAuthenticatedUser
-// in protected routes. Returns { error } either when auth fails (401) or
-// when the user has no active paid/trial access (402 + redirect: '/locked').
-// Open routes (subscription-status, trial/start, payments/verify, webhooks,
-// paywall-status, auth/providers, admin/*, account/delete-now, user/onboarding,
-// pricing-validation) keep using getAuthenticatedUser directly.
-export const requireActiveAuthenticatedUser = async (request: NextRequest) => {
-  const auth = await getAuthenticatedUser(request);
-  if ('error' in auth) {
-    return auth;
-  }
-  const block = await requireActiveAccount(auth.user.id, auth.user.email);
-  if (block) {
-    return { error: block };
-  }
-  return auth;
-};
-
-export const createAdminClient = (supabaseUrl: string) => {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey) return null;
-  return createClient(supabaseUrl, serviceRoleKey);
 };
 
 // Schema-missing fallback. CLAUDE.md flags this pattern as deprecated for v1
