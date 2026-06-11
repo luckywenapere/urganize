@@ -24,6 +24,7 @@ import { instantiateTemplate } from '@/lib/release-templates/instantiate';
 import { getTemplate } from '@/lib/release-templates/loader';
 import type { ReleaseType } from '@/lib/release-templates/types';
 import { loadCoverArtUrlMap } from '@/lib/cover-art';
+import { loadWorkspaceLogoFallbackUrl } from '@/lib/workspace-logo';
 import { getWorkspaceArtist, isWorkspaceFeatureEnabled } from '@/lib/artists-server';
 import { type ReleaseCreatedSource } from '@/lib/analytics';
 import {
@@ -80,7 +81,8 @@ const normalizePipelineState = (value: unknown) => {
 function toSelectorRelease(
   row: ReleaseRow,
   coverByReleaseId: Map<string, string>,
-  metadataByReleaseId: Map<string, ReleaseMetadataRow>
+  metadataByReleaseId: Map<string, ReleaseMetadataRow>,
+  workspaceLogoUrl: string | null
 ): ReleaseOption {
   return {
     id: row.id,
@@ -88,7 +90,7 @@ function toSelectorRelease(
     artistName: row.artist_name || '',
     title: row.title || '',
     releaseDate: row.release_date || null,
-    coverArtUrl: resolveCoverArtUrl(row.id, coverByReleaseId, metadataByReleaseId),
+    coverArtUrl: resolveCoverArtUrl(row.id, coverByReleaseId, metadataByReleaseId, workspaceLogoUrl),
     createdAt: row.created_at || '',
     updatedAt: row.updated_at || '',
   };
@@ -139,7 +141,9 @@ async function loadReleaseMetadataMap(
 
 /**
  * Cover-art URL for a release: the signed URL from `artwork_asset_id` when
- * available, otherwise the legacy `release_metadata.artwork_url`.
+ * available, otherwise the legacy `release_metadata.artwork_url`, otherwise
+ * the workspace logo (record label / team logo) — releases without their own
+ * artwork display the logo automatically until cover art is uploaded.
  *
  * The legacy fallback is temporary — it keeps cover art visible for releases
  * created before Phase 3 that only have the old text URL. v2 should backfill
@@ -148,11 +152,13 @@ async function loadReleaseMetadataMap(
 function resolveCoverArtUrl(
   releaseId: string,
   coverByReleaseId: Map<string, string>,
-  metadataByReleaseId: Map<string, ReleaseMetadataRow>
+  metadataByReleaseId: Map<string, ReleaseMetadataRow>,
+  workspaceLogoUrl: string | null
 ): string | null {
   return (
     coverByReleaseId.get(releaseId) ||
     metadataByReleaseId.get(releaseId)?.artwork_url ||
+    workspaceLogoUrl ||
     null
   );
 }
@@ -272,13 +278,15 @@ export async function GET(request: NextRequest) {
   }
 
   // Cover art is sourced from releases.artwork_asset_id (Phase 3 source of
-  // truth), resolved to a signed URL; falls back to the legacy artwork_url.
+  // truth), resolved to a signed URL; falls back to the legacy artwork_url,
+  // then to the workspace logo for releases with no artwork at all.
   const coverByReleaseId = await loadCoverArtUrlMap(adminClient, releases);
+  const workspaceLogoUrl = await loadWorkspaceLogoFallbackUrl(adminClient, auth.user.id);
 
   if (view === 'selector') {
     const payload: ReleaseSelectorListResponse = {
       releases: releases.map((release) =>
-        toSelectorRelease(release, coverByReleaseId, metadataResult.metadataByReleaseId)
+        toSelectorRelease(release, coverByReleaseId, metadataResult.metadataByReleaseId, workspaceLogoUrl)
       ),
     };
 
@@ -308,7 +316,7 @@ export async function GET(request: NextRequest) {
           title: release.title,
           artistName: release.artistName,
           releaseDate: release.releaseDate || null,
-          coverArtUrl: resolveCoverArtUrl(release.id, coverByReleaseId, metadataResult.metadataByReleaseId),
+          coverArtUrl: resolveCoverArtUrl(release.id, coverByReleaseId, metadataResult.metadataByReleaseId, workspaceLogoUrl),
           status: release.status,
           progress: 0,
           tasksDone: 0,
@@ -330,7 +338,7 @@ export async function GET(request: NextRequest) {
         title: release.title,
         artistName: release.artistName,
         releaseDate: release.releaseDate,
-        coverArtUrl: resolveCoverArtUrl(release.id, coverByReleaseId, metadataResult.metadataByReleaseId),
+        coverArtUrl: resolveCoverArtUrl(release.id, coverByReleaseId, metadataResult.metadataByReleaseId, workspaceLogoUrl),
         status: computedStatus,
         progress: commandCenter.readiness.completionPercent,
         tasksDone: taskDoneCountByReleaseId.get(release.id) || 0,
@@ -669,7 +677,10 @@ export async function POST(request: NextRequest) {
         artistId: artistIdToUse || '',
         artistName: String(releaseResult.data.artist_name || artistName),
         releaseDate: releaseResult.data.release_date ? String(releaseResult.data.release_date) : null,
-        coverArtUrl: coverArtUrl || null,
+        // New releases have no artwork yet, so the workspace logo (when set)
+        // stands in immediately — same fallback the list endpoints apply.
+        coverArtUrl:
+          coverArtUrl || (await loadWorkspaceLogoFallbackUrl(adminClient, auth.user.id)),
         createdAt: String(releaseResult.data.created_at || now),
         updatedAt: String(releaseResult.data.updated_at || now),
       } satisfies ReleaseOption,

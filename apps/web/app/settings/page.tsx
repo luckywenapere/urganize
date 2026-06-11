@@ -1,10 +1,16 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+import {
+  ASSET_MIME_ALLOWLIST,
+  ASSET_SIZE_LIMITS,
+  formatFileSize,
+} from '@/lib/asset-constants';
 import { getRolePermissions } from '@/lib/role-permissions';
 import {
   SettingsPageSkeleton,
@@ -37,6 +43,17 @@ type WorkspaceArtistResponse = {
   releasesUpdated?: number;
   error?: string;
 };
+
+type WorkspaceLogoResponse = {
+  workspaceId?: string;
+  logo: { fileName: string | null; url: string } | null;
+  error?: string;
+};
+
+// The logo shares cover art's image constraints — it renders in the same
+// cover-art slot on release cards (see /api/workspace/logo/upload-url).
+const LOGO_MIME_ALLOWLIST = ASSET_MIME_ALLOWLIST.cover_art;
+const LOGO_SIZE_LIMIT = ASSET_SIZE_LIMITS.cover_art;
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -76,6 +93,17 @@ export default function SettingsPage() {
   const [isSavingWorkspaceArtist, setIsSavingWorkspaceArtist] = useState(false);
   const [workspaceArtistMessage, setWorkspaceArtistMessage] = useState('');
   const [workspaceArtistError, setWorkspaceArtistError] = useState('');
+
+  // Workspace logo (record label / team logo). Releases without their own
+  // cover art display it automatically until artwork is uploaded.
+  // null = unloaded/failed, undefined = loaded-but-none, {} = loaded logo.
+  const [workspaceLogo, setWorkspaceLogo] = useState<
+    { fileName: string | null; url: string } | null | undefined
+  >(null);
+  const [isLoadingWorkspaceLogo, setIsLoadingWorkspaceLogo] = useState(false);
+  const [isSavingWorkspaceLogo, setIsSavingWorkspaceLogo] = useState(false);
+  const [workspaceLogoMessage, setWorkspaceLogoMessage] = useState('');
+  const [workspaceLogoError, setWorkspaceLogoError] = useState('');
 
   const rolePermissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
   const isManagerAccount = rolePermissions.role === 'manager';
@@ -178,6 +206,142 @@ export default function SettingsPage() {
       cancelled = true;
     };
   }, [user]);
+
+  // Load the workspace logo behind the flag. Mirrors loadWorkspaceArtist's
+  // shape so the feedback paths and cleanup-on-unmount semantics stay
+  // consistent.
+  useEffect(() => {
+    if (!user || !WORKSPACE_FEATURE_ENABLED) return;
+    let cancelled = false;
+
+    const loadWorkspaceLogo = async () => {
+      setIsLoadingWorkspaceLogo(true);
+      try {
+        const token = await getAccessToken();
+        if (!token) return;
+        const response = await fetch('/api/workspace/logo', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        const payload = (await response.json().catch(() => ({}))) as WorkspaceLogoResponse;
+        if (cancelled) return;
+        if (response.ok) {
+          setWorkspaceLogo(payload.logo ?? undefined);
+        }
+      } finally {
+        if (!cancelled) setIsLoadingWorkspaceLogo(false);
+      }
+    };
+
+    void loadWorkspaceLogo();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  // Same three-step flow as release asset uploads (AssetUploadControl):
+  // signed upload URL → PUT bytes directly to storage → record the pointer.
+  const handleUploadWorkspaceLogo = async (file: File) => {
+    if (!user) return;
+    setWorkspaceLogoError('');
+    setWorkspaceLogoMessage('');
+
+    const mimeType = file.type || 'application/octet-stream';
+    if (!LOGO_MIME_ALLOWLIST.includes(mimeType)) {
+      setWorkspaceLogoError('Logo must be a JPEG, PNG, or WebP image.');
+      return;
+    }
+    if (file.size > LOGO_SIZE_LIMIT) {
+      setWorkspaceLogoError(`Logo must be ${formatFileSize(LOGO_SIZE_LIMIT)} or smaller.`);
+      return;
+    }
+
+    setIsSavingWorkspaceLogo(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+
+      const uploadUrlResponse = await fetch('/api/workspace/logo/upload-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          file_name: file.name,
+          mime_type: mimeType,
+          file_size: file.size,
+        }),
+      });
+      const uploadUrlPayload = (await uploadUrlResponse.json().catch(() => ({}))) as {
+        upload_url?: string;
+        storage_path?: string;
+        error?: string;
+      };
+      if (!uploadUrlResponse.ok || !uploadUrlPayload.upload_url || !uploadUrlPayload.storage_path) {
+        throw new Error(uploadUrlPayload.error || 'Could not create upload URL.');
+      }
+
+      const storageResponse = await fetch(uploadUrlPayload.upload_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': mimeType },
+        body: file,
+      });
+      if (!storageResponse.ok) {
+        throw new Error(`Storage upload failed (${storageResponse.status}).`);
+      }
+
+      const recordResponse = await fetch('/api/workspace/logo', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          storage_path: uploadUrlPayload.storage_path,
+          file_name: file.name,
+        }),
+      });
+      const recordPayload = (await recordResponse.json().catch(() => ({}))) as WorkspaceLogoResponse;
+      if (!recordResponse.ok || !recordPayload.logo) {
+        throw new Error(recordPayload.error || 'Could not save logo.');
+      }
+
+      setWorkspaceLogo(recordPayload.logo);
+      setWorkspaceLogoMessage(
+        'Logo saved. Releases without cover art now show it automatically.'
+      );
+    } catch (err) {
+      setWorkspaceLogoError(errorMessage(err, 'Could not upload logo.'));
+    } finally {
+      setIsSavingWorkspaceLogo(false);
+    }
+  };
+
+  const handleRemoveWorkspaceLogo = async () => {
+    if (!user || !workspaceLogo) return;
+    setWorkspaceLogoError('');
+    setWorkspaceLogoMessage('');
+    setIsSavingWorkspaceLogo(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch('/api/workspace/logo', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = (await response.json().catch(() => ({}))) as WorkspaceLogoResponse;
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not remove logo.');
+      }
+      setWorkspaceLogo(undefined);
+      setWorkspaceLogoMessage('Logo removed. Releases without cover art show the neutral placeholder again.');
+    } catch (err) {
+      setWorkspaceLogoError(errorMessage(err, 'Could not remove logo.'));
+    } finally {
+      setIsSavingWorkspaceLogo(false);
+    }
+  };
 
   const handleSaveWorkspaceArtist = async () => {
     if (!user || !workspaceArtist) return;
@@ -576,6 +740,89 @@ export default function SettingsPage() {
                 >
                   {isSavingWorkspaceArtist ? 'Saving…' : 'Save artist name'}
                 </button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {WORKSPACE_FEATURE_ENABLED && (
+          <section className={`${panelClass} mt-6`}>
+            <h2 className="mb-1 text-xl">Workspace logo</h2>
+            <p className="mb-4 text-sm text-content-secondary">
+              Your record label or team logo. Releases without cover art — new
+              and existing — display it automatically until you upload their
+              artwork.
+            </p>
+            {isLoadingWorkspaceLogo ? (
+              <div className="flex items-center gap-4">
+                <SkeletonBlock className="h-24 w-24" />
+                <SkeletonBlock className="h-10 w-32 rounded-lg" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {workspaceLogo ? (
+                  <div className="flex items-center gap-4">
+                    <Image
+                      src={workspaceLogo.url}
+                      alt="Workspace logo"
+                      width={96}
+                      height={96}
+                      className="h-24 w-24 border border-stroke-subtle bg-bg-elevated object-cover"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-content-primary">
+                        {workspaceLogo.fileName || 'Logo'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void handleRemoveWorkspaceLogo()}
+                        disabled={isSavingWorkspaceLogo}
+                        className="mt-1 text-sm text-status-error hover:underline disabled:opacity-60"
+                      >
+                        Remove logo
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-content-secondary">
+                    No logo yet. JPEG, PNG, or WebP up to{' '}
+                    {formatFileSize(LOGO_SIZE_LIMIT)}.
+                  </p>
+                )}
+                {workspaceLogoMessage && (
+                  <p className="rounded-lg border border-brand/35 bg-brand-muted px-3 py-2 text-sm text-brand">
+                    {workspaceLogoMessage}
+                  </p>
+                )}
+                {workspaceLogoError && (
+                  <p className="rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+                    {workspaceLogoError}
+                  </p>
+                )}
+                <label
+                  className={`inline-flex cursor-pointer items-center rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover ${
+                    isSavingWorkspaceLogo ? 'cursor-not-allowed opacity-60' : ''
+                  }`}
+                >
+                  <input
+                    type="file"
+                    className="sr-only"
+                    accept={LOGO_MIME_ALLOWLIST.join(',')}
+                    disabled={isSavingWorkspaceLogo}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      // Reset so re-selecting the same file fires onChange.
+                      event.target.value = '';
+                      void handleUploadWorkspaceLogo(file);
+                    }}
+                  />
+                  {isSavingWorkspaceLogo
+                    ? 'Uploading…'
+                    : workspaceLogo
+                      ? 'Replace logo'
+                      : 'Upload logo'}
+                </label>
               </div>
             )}
           </section>
