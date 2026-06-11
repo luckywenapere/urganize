@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Trash2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -10,6 +10,7 @@ import { type Task } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
+import { DeleteReleaseDialog } from './DeleteReleaseDialog';
 import { TaskDetailInline, useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { TasksPanel } from './TasksPanel';
@@ -32,7 +33,8 @@ function toCreatedMs(value: string): number {
 export function WorkspaceView() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
-  const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
+  const { releases, isInitialLoading, error, loadCommandCenter, removeReleaseLocal } =
+    useReleaseStore();
   const tasks = useTaskStore((state) => state.tasks);
   const { scopedReleaseId, setScope } = useReleaseScope();
   // `isTaskOpen` swaps the workspace center (mobile drill-down OR desktop
@@ -42,6 +44,7 @@ export function WorkspaceView() {
   // observes the same flag they all flow through.
   const { isTaskOpen } = useTaskUI();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -160,6 +163,15 @@ export function WorkspaceView() {
     }
   };
 
+  const handleReleaseDeleted = (releaseId: string) => {
+    setIsDeleteDialogOpen(false);
+    setScope(null);
+    // Drop the release + its tasks from local state immediately so the card
+    // visibly disappears, then re-sync against the server.
+    removeReleaseLocal(releaseId);
+    void loadCommandCenter();
+  };
+
   // ONE skeleton, rendered here (not as a route-segment Suspense fallback).
   // SSR serializes the skeleton into the HTML response; hydration re-renders
   // the SAME JSX so React reconciles without a remount — no shimmer restart,
@@ -232,6 +244,18 @@ export function WorkspaceView() {
                     {scopedReleaseSlim.title}
                   </h2>
                 </div>
+                {/* Discreet delete affordance — mirrors the desktop focused
+                    header: tertiary at rest, danger on hover, confirmed via
+                    DeleteReleaseDialog before anything happens. */}
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  aria-label={`Delete ${scopedReleaseSlim.title}`}
+                  title="Delete release"
+                  className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center border border-transparent text-content-tertiary transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </button>
               </div>
               <TasksPanel
                 id={TASKS_PANEL_ID}
@@ -274,6 +298,7 @@ export function WorkspaceView() {
               scopedRelease={scopedReleaseSlim}
               onSelect={handleSelect}
               onClose={handleClose}
+              onRequestDelete={() => setIsDeleteDialogOpen(true)}
               isTaskOpen={isTaskOpen}
             />
           ) : isTaskOpen ? (
@@ -292,6 +317,14 @@ export function WorkspaceView() {
           )}
         </div>
       </div>
+
+      <DeleteReleaseDialog
+        open={isDeleteDialogOpen}
+        release={scopedReleaseSlim}
+        tasksTotal={scopedReleaseSlim ? scopedTasks.length : 0}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onDeleted={handleReleaseDeleted}
+      />
 
       <CreateReleaseModal
         open={isCreateModalOpen}

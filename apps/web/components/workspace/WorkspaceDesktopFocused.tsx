@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/lib/tasks';
 import { TaskDetailInline } from '@/components/tasks/TaskUIProvider';
@@ -22,6 +22,8 @@ type WorkspaceDesktopFocusedProps = {
   scopedRelease: Pick<Release, 'id' | 'title' | 'artistName'>;
   onSelect: (releaseId: string) => void;
   onClose: () => void;
+  /** Opens the delete-release confirmation for the focused release. */
+  onRequestDelete: () => void;
   /** True while a task detail is open. Swaps the center column body from
    * TasksPanel to TaskDetailInline; rails + focused card stay visible. */
   isTaskOpen: boolean;
@@ -51,14 +53,17 @@ export function WorkspaceDesktopFocused({
   scopedRelease,
   onSelect,
   onClose,
+  onRequestDelete,
   isTaskOpen,
 }: WorkspaceDesktopFocusedProps) {
   return (
     <div className="workspace-mode-enter space-y-4">
       {/* Back affordance — sits above the 3-column grid. The center card can
           ALSO be clicked to deselect (existing toggle in handleSelect), but
-          a dedicated back button is the canonical close path. */}
-      <div>
+          a dedicated back button is the canonical close path. The delete
+          affordance sits opposite it: icon-only, tertiary at rest, danger on
+          hover — discreet, but always visible when a release is focused. */}
+      <div className="flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={onClose}
@@ -67,6 +72,15 @@ export function WorkspaceDesktopFocused({
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
           Back to all releases
+        </button>
+        <button
+          type="button"
+          onClick={onRequestDelete}
+          aria-label={`Delete ${selected.release.title}`}
+          title="Delete release"
+          className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center border border-transparent text-content-tertiary transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </div>
 
