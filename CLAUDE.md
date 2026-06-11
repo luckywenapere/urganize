@@ -191,7 +191,7 @@ REST-style Next.js Route Handlers at `app/api/**/route.ts`. No tRPC, no GraphQL.
 - **Email:** Not wired up yet. Add a transactional provider (Resend or Postmark recommended) when v1 needs email notifications.
 - **Payments:** Paystack. Two flows: (1) in-app inline checkout via `react-paystack` (`components/PaystackButton.tsx`) → server verification at `api/payments/verify`; (2) standalone Payment Page at `https://paystack.com/pay/a2dq-qpyri` (flat ₦15,000 access SKU) reached via the vanity URL `https://urganize.app/pay` (302 redirect at `apps/homepage/app/pay/route.ts`). The webhook at `api/webhooks/paystack` validates HMAC-SHA512 and credits both flows on `charge.success`: in-app payments match by `payments.reference`; standalone-page payments match by `customer.email` against `profiles.email` when amount equals 1,500,000 kobo.
 - **Analytics:** PostHog (browser + node) in `apps/web`. Vercel Analytics in both apps. Google Analytics in homepage. Formbricks survey provider in homepage.
-- **Customer support:** Tawk.to floating widget in `apps/web/components/support/SupportChat.tsx`.
+- **Customer support:** WhatsApp deep link to the founder (`https://wa.me/2347067367057`) via the floating pill in `apps/web/components/support/SupportChat.tsx`. The label cycles "Chat with the founder" / "Report a bug" / "Contact support". Replaced the former Tawk.to widget (2026-06-11); the `NEXT_PUBLIC_TAWK_*` env vars are retired.
 
 ---
 
