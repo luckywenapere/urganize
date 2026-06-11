@@ -14,7 +14,7 @@ import {
   type PricingCurrencyCode,
 } from '@urganize/pricing';
 
-export type RecurringPlanId = BillingPlanId; // 'monthly' | 'annual'
+export type RecurringPlanId = BillingPlanId; // 'monthly' | 'annual' | 'label'
 
 // Map of (plan, currency) → env var name that holds the Paystack plan
 // code. Defined as a constant so a typo in any one branch surfaces here,
@@ -27,6 +27,10 @@ const PLAN_CODE_ENV_VAR: Record<RecurringPlanId, Record<PricingCurrencyCode, str
   annual: {
     NGN: 'PAYSTACK_PLAN_ANNUAL_NGN',
     USD: 'PAYSTACK_PLAN_ANNUAL_USD',
+  },
+  label: {
+    NGN: 'PAYSTACK_PLAN_LABEL_NGN',
+    USD: 'PAYSTACK_PLAN_LABEL_USD',
   },
 };
 
@@ -63,7 +67,7 @@ export function identifyPlanByCode(
   const target = String(paystackPlanCode || '').trim();
   if (!target) return null;
 
-  for (const plan of ['monthly', 'annual'] as const) {
+  for (const plan of ['monthly', 'annual', 'label'] as const) {
     for (const currency of ['NGN', 'USD'] as const) {
       if (getPaystackPlanCode(plan, currency) === target) {
         return { plan, currency };
@@ -87,7 +91,9 @@ export function advancePeriodEnd(plan: RecurringPlanId, currentEnd: Date | null,
   // truncate) or now (so a long-cancelled customer who pays again starts
   // a fresh period from today, not from their old expires_at).
   const base = currentEnd && currentEnd.getTime() > now.getTime() ? new Date(currentEnd) : new Date(now);
-  if (plan === 'annual') {
+  // Period length comes from the shared plan definition, not a hardcoded
+  // plan-id check — 'annual' and 'label' both bill annually.
+  if (BILLING_PLANS[plan].interval === 'annually') {
     base.setFullYear(base.getFullYear() + 1);
   } else {
     base.setMonth(base.getMonth() + 1);
@@ -101,10 +107,10 @@ export function advancePeriodEnd(plan: RecurringPlanId, currentEnd: Date | null,
  * active. Excludes 'access' (legacy one-time SKU; grandfathered users only)
  * and 'custom' (admin-provisioned).
  */
-export const RECURRING_PLAN_IDS: readonly RecurringPlanId[] = ['monthly', 'annual'] as const;
+export const RECURRING_PLAN_IDS: readonly RecurringPlanId[] = ['monthly', 'annual', 'label'] as const;
 
 export function isRecurringPlan(plan: string): plan is RecurringPlanId {
-  return plan === 'monthly' || plan === 'annual';
+  return plan === 'monthly' || plan === 'annual' || plan === 'label';
 }
 
 /**

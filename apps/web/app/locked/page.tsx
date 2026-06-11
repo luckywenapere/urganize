@@ -4,9 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Card, Logo } from '@urganize/ui';
 import {
-  BILLING_PLAN_ORDER,
-  CONTACT_SALES_EMAIL,
-  CONTACT_SALES_SUBJECT,
   DEFAULT_PRICING_CURRENCY,
   SUPPORTED_CURRENCIES,
   formatPlanCyclePrice,
@@ -14,7 +11,7 @@ import {
   type BillingPlanId,
   type PricingCurrencyCode,
 } from '@urganize/pricing';
-import { Lock, CheckCircle2, AlertTriangle, Mail } from 'lucide-react';
+import { Lock, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { type AccountStatus } from '@/lib/subscription-access';
@@ -192,7 +189,6 @@ export default function LockedPage() {
 
   const trialUsed = Boolean(snapshot?.trialUsed);
   const reasonCopy = REASON_COPY[reason] || REASON_COPY.unpaid;
-  const contactMailto = `mailto:${CONTACT_SALES_EMAIL}?subject=${encodeURIComponent(CONTACT_SALES_SUBJECT)}`;
 
   const headline = useMemo(() => {
     if (!isAuthenticated) return 'Sign in to continue';
@@ -250,12 +246,13 @@ export default function LockedPage() {
                   </div>
                 </div>
 
-                {/* Plan radio cards. Annual first (recommended); monthly
-                    second. Each card is a real <button role="radio">
-                    bound to a fieldset so screen readers + keyboard
-                    selection work the same as a native radio group. */}
+                {/* Plan radio cards. Annual first (recommended), monthly
+                    second, label (roster tier) last. Each card is a real
+                    <button role="radio"> bound to a fieldset so screen
+                    readers + keyboard selection work the same as a native
+                    radio group. */}
                 <div role="radiogroup" aria-label="Choose a plan" className="flex flex-col gap-2">
-                  {[...BILLING_PLAN_ORDER].reverse().map((planId) => {
+                  {(['annual', 'monthly', 'label'] as const).map((planId) => {
                     const plan = getPlan(planId);
                     const isActive = selectedPlan === planId;
                     return (
@@ -311,14 +308,6 @@ export default function LockedPage() {
                     {isStartingTrial ? 'Starting trial…' : 'Start 28-day free trial'}
                   </Button>
                 )}
-
-                <a
-                  href={contactMailto}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-stroke-default px-4 py-2 text-sm font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-                >
-                  <Mail className="size-4" />
-                  Contact us for custom
-                </a>
               </div>
 
               {checkoutError ? (

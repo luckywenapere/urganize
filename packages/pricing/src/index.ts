@@ -1,9 +1,10 @@
 // @urganize/pricing
 //
-// Shared display values for the two recurring billing plans (monthly +
-// annual) in NGN and USD, plus formatters and copy helpers. Both apps/web
-// (paywall, settings, /locked) and apps/homepage (marketing pricing page)
-// import from here so the two surfaces cannot drift on what they advertise.
+// Shared display values for the three recurring billing plans (monthly,
+// annual, label) in NGN and USD, plus formatters and copy helpers. Both
+// apps/web (paywall, settings, /locked) and apps/homepage (marketing
+// pricing page) import from here so the two surfaces cannot drift on what
+// they advertise.
 //
 // What lives here:
 //   - Numeric prices in BOTH the human display unit (NGN/USD) and the
@@ -21,7 +22,7 @@
 // Node-only globals, no env reads. Safe to import from both Next App
 // Router client and server components.
 
-export type BillingPlanId = 'monthly' | 'annual';
+export type BillingPlanId = 'monthly' | 'annual' | 'label';
 export type PricingCurrencyCode = 'NGN' | 'USD';
 
 export type PlanPrice = {
@@ -47,16 +48,20 @@ export type BillingPlanDefinition = {
   prices: Record<PricingCurrencyCode, PlanPrice>;
 };
 
-// Source of truth for the two recurring tiers shipped in v1 recurring
-// billing migration. If these values change, both the paywall display and
-// the marketing pricing page move together — no drift.
+// Source of truth for the three recurring tiers. If these values change,
+// both the paywall display and the marketing pricing page move together —
+// no drift.
 //
 // Pricing rationale (per product brief):
 //   - Monthly NGN: ₦15,000 (matches the previous flat access SKU, makes
 //     the migration feel like-for-like for Nigerian customers).
 //   - Annual NGN: ₦150,000 (~2 months free vs ₦180,000 paid monthly).
+//   - Label NGN: ₦750,000/yr (5× annual; replaced the contact-sales
+//     "Custom" tier 2026-06-11 — high-touch roster tier with hands-on
+//     onboarding and template tailoring delivered by the founders).
 //   - Monthly USD: $25 (diaspora rate, not a strict FX conversion).
 //   - Annual USD: $250 (~2 months free vs $300 paid monthly).
+//   - Label USD: $1,250 (same 5× annual ratio as NGN).
 //
 // Minor units (kobo / cents) are pre-computed here so callers never
 // multiply by 100 at the call site — that's where unit-mismatch bugs hide.
@@ -81,16 +86,19 @@ export const BILLING_PLANS: Record<BillingPlanId, BillingPlanDefinition> = {
       USD: { currency: 'USD', amount: 250, minorUnit: 250_00 },
     },
   },
+  label: {
+    id: 'label',
+    label: 'Label',
+    description: 'For labels and managers running a roster. Billed once a year.',
+    interval: 'annually',
+    prices: {
+      NGN: { currency: 'NGN', amount: 750_000, minorUnit: 750_000_00 },
+      USD: { currency: 'USD', amount: 1_250, minorUnit: 1_250_00 },
+    },
+  },
 };
 
-export const BILLING_PLAN_ORDER: readonly BillingPlanId[] = ['monthly', 'annual'] as const;
-
-// Custom / contact-sales tier. Surfaced in the UI as a "Contact us" CTA;
-// no Paystack plan, no charge. If a deal closes it would be provisioned
-// admin-side by writing `subscriptions { plan: 'custom', amount: 0,
-// expires_at: <far future> }` for that user. No automated path exists yet.
-export const CONTACT_SALES_EMAIL = 'sales@urganize.app';
-export const CONTACT_SALES_SUBJECT = 'Custom plan inquiry';
+export const BILLING_PLAN_ORDER: readonly BillingPlanId[] = ['monthly', 'annual', 'label'] as const;
 
 export const SUPPORTED_CURRENCIES: readonly PricingCurrencyCode[] = ['NGN', 'USD'] as const;
 export const DEFAULT_PRICING_CURRENCY: PricingCurrencyCode = 'NGN';
@@ -107,7 +115,7 @@ export function getPlanPrice(
 }
 
 export function isBillingPlanId(value: unknown): value is BillingPlanId {
-  return value === 'monthly' || value === 'annual';
+  return value === 'monthly' || value === 'annual' || value === 'label';
 }
 
 export function isPricingCurrency(value: unknown): value is PricingCurrencyCode {

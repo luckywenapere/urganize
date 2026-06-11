@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
   const currency = body.currency;
   if (!isBillingPlanId(plan)) {
     return NextResponse.json(
-      { error: 'plan must be "monthly" or "annual".' },
+      { error: 'plan must be "monthly", "annual", or "label".' },
       { status: 400 }
     );
   }
@@ -104,8 +104,8 @@ export async function POST(request: NextRequest) {
     );
   }
   if (!isRecurringPlan(plan)) {
-    // Belt-and-braces — isBillingPlanId already narrows to monthly|annual,
-    // but the cleanup migration may introduce extra plan strings later.
+    // Belt-and-braces — isBillingPlanId already narrows to the recurring
+    // tiers, but the cleanup migration may introduce extra plan strings later.
     return NextResponse.json({ error: 'Plan is not a recurring tier.' }, { status: 400 });
   }
 

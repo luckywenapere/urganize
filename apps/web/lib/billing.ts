@@ -23,6 +23,9 @@ export const getPlanExpiry = (plan: string, now = new Date()): Date => {
 
   if (
     plan === 'annual' ||
+    // 'label' is the ₦750,000/yr roster tier — annual interval, same
+    // 1-year expiry as 'annual'.
+    plan === 'label' ||
     plan === 'yearly' ||
     // 'access' is the flat-tier ₦15,000 SKU credited by the (now retired)
     // standalone Paystack Payment Page flow. No new rows are created — kept

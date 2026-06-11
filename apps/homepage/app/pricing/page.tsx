@@ -6,13 +6,12 @@ import { RiCheckLine } from "react-icons/ri";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import {
-  CONTACT_SALES_EMAIL,
-  CONTACT_SALES_SUBJECT,
   DEFAULT_PRICING_CURRENCY,
   SUPPORTED_CURRENCIES,
   formatPlanCyclePrice,
   formatPlanPrice,
   getPlanPrice,
+  type BillingPlanId,
   type PricingCurrencyCode,
 } from "@urganize/pricing";
 
@@ -32,8 +31,6 @@ import {
 // plan picker. Use the canonical /locked path — that's the surface the app
 // already exposes.
 const APP_SUBSCRIBE_URL = "https://app.urganize.app/locked";
-
-const CONTACT_HREF = `mailto:${CONTACT_SALES_EMAIL}?subject=${encodeURIComponent(CONTACT_SALES_SUBJECT)}`;
 
 // Per-tier marketing copy. Keep the rhythm short and declarative.
 //
@@ -67,24 +64,28 @@ const ANNUAL_FEATURES = [
   "Lock in current pricing for a year",
 ] as const;
 
-const CUSTOM_FEATURES = [
-  "Multi-artist / roster setup",
-  "Custom template tailoring",
-  "Hands-on onboarding for your team",
-  "Direct line to the founders",
+// Label tier benefits are service commitments the founders deliver
+// directly (onboarding, template tailoring, roster setup) on top of
+// everything in Annual — keep them honest and deliverable.
+const LABEL_FEATURES = [
+  "Everything in Annual",
+  "Roster onboarding — we set up every artist's releases with you",
+  "Release templates tailored to how your label actually works",
+  "Hands-on onboarding for your whole team",
+  "Priority support with a direct line to the founders",
 ] as const;
 
 const MONTHLY_SUMMARY = "Billed every month. Easiest way to start.";
 const ANNUAL_SUMMARY = "Billed once a year. About two months free vs monthly.";
-const CUSTOM_SUMMARY =
-  "Multiple artists, a label roster, or a workflow we don't have yet. We'll scope it together.";
+const LABEL_SUMMARY =
+  "For labels and management companies running a roster. One invoice, the founders on call.";
 
-function annualMonthlyEquivalent(currency: PricingCurrencyCode): string {
+function monthlyEquivalent(plan: BillingPlanId, currency: PricingCurrencyCode): string {
   // Marketing context only — we round to a familiar number rather than
-  // showing the exact 1/12 division. Source of truth is the annual amount
+  // showing the exact 1/12 division. Source of truth is the yearly amount
   // in the shared package; this is a labeled approximation.
-  const annual = getPlanPrice("annual", currency).amount;
-  const monthlyEquiv = annual / 12;
+  const yearly = getPlanPrice(plan, currency).amount;
+  const monthlyEquiv = yearly / 12;
   if (currency === "NGN") {
     return `≈ ${formatPlanPrice({ currency, amount: Math.round(monthlyEquiv / 100) * 100, minorUnit: 0 })}/mo, billed annually`;
   }
@@ -198,7 +199,7 @@ export default function PricingPage() {
             <PricingTierCard
               name="Annual"
               price={formatPlanCyclePrice("annual", currency)}
-              priceSubline={annualMonthlyEquivalent(currency)}
+              priceSubline={monthlyEquivalent("annual", currency)}
               summary={ANNUAL_SUMMARY}
               features={ANNUAL_FEATURES}
               cta={{ label: "Start annual", href: APP_SUBSCRIBE_URL }}
@@ -206,11 +207,12 @@ export default function PricingPage() {
               badge="Best value"
             />
             <PricingTierCard
-              name="Custom"
-              price="Let's talk"
-              summary={CUSTOM_SUMMARY}
-              features={CUSTOM_FEATURES}
-              cta={{ label: "Contact sales", href: CONTACT_HREF }}
+              name="Label"
+              price={formatPlanCyclePrice("label", currency)}
+              priceSubline={monthlyEquivalent("label", currency)}
+              summary={LABEL_SUMMARY}
+              features={LABEL_FEATURES}
+              cta={{ label: "Start label", href: APP_SUBSCRIBE_URL }}
             />
           </div>
 
@@ -251,8 +253,8 @@ export default function PricingPage() {
                 answer="No. One workspace, one price. Invite your A&R, PR, and distributor at no extra cost."
               />
               <FaqRow
-                question="What does Custom mean?"
-                answer="A label or agency running multiple artists, or a team that needs templates tailored to their workflow. We scope and price it with you."
+                question="Who is the Label plan for?"
+                answer="Labels and management companies running a roster. Same workspace, plus the founders work with you directly: we onboard each artist's releases, tailor the templates to your workflow, and stay a message away on priority support."
               />
               <FaqRow
                 question="How does billing work?"
