@@ -295,26 +295,26 @@ export function ThreeFeaturesSection() {
   );
 }
 
-// Same rule as Adenaiye's quote below: a testimonial only works because the
-// words are really theirs. These are DRAFTS — get Antoine's and
-// Tamuno-Tekena's verbatim sign-off before this ships, and never edit a
+// Same rule as Adenaiye's hero quote below: a testimonial only works because
+// the words are really theirs. These are DRAFTS — get verbatim sign-off from
+// Antoine, Adenaiye and Tamuno-Tekena before this ships, and never edit a
 // quote after sign-off without re-approval.
 const supportingQuotes = [
   {
     quote:
-      "I manage myself, so every dropped ball is mine. The first release I created handed me the whole rollout — every task, every week, already laid out. I stopped planning from memory.",
+      "I manage myself, so every dropped ball is mine. The first time I created a release, the whole rollout was already laid out, week by week, task by task. I stopped planning from memory.",
     name: "Antoine",
     role: "Independent Artist & Manager",
   },
   {
     quote:
-      "My master, artwork and split sheet live on the release now, not across three different chats. When someone on the team needs a file, there's one place to look.",
-    name: "Antoine",
-    role: "Independent Artist & Manager",
+      "The master, the artwork, the split sheet, they all live on the release now instead of buried in three different chats. When my artist needs a file, I know exactly where it is.",
+    name: "Adenaiye Miracle",
+    role: "Artist Manager · @zaddyfunds_",
   },
   {
     quote:
-      "I can open a release and see what's done, what's blocked and what's due this week without chasing anyone for an update. That's the call I no longer have to make.",
+      "I open a release and see what's done, what's blocked and what's due this week, without chasing anyone for an update. That's a call I don't have to make anymore.",
     name: "Tamuno-Tekena Ayafa",
     role: "A&R",
   },
@@ -336,7 +336,7 @@ export function TestimonialSection() {
               only works because the words are really hers. */}
           <p className="mt-10 font-mono text-[0.8rem] tracking-[0.18em] text-[var(--marketing-text-subtle)]">
             <span className="text-[var(--marketing-text)]">Adenaiye Miracle</span>
-            {" "}· Artist Manager
+            {" "}· Artist Manager · @zaddyfunds_
           </p>
         </div>
 
