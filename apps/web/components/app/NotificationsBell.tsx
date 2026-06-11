@@ -348,7 +348,15 @@ export function NotificationsBell() {
           ref={menuRef}
           role="menu"
           aria-label="Notifications"
-          className="animate-menu-down absolute right-0 top-full z-50 mt-2 w-[360px] max-w-[calc(100vw-2rem)] origin-top-right border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgba(0,0,0,0.6)]"
+          // Below `sm` the panel pins to the viewport (inset-x-4 under the
+          // 4rem topbar) instead of anchoring to the trigger — a 360px panel
+          // anchored right-0 to a bell that sits ~3.5rem in from the edge
+          // runs off the left side of a phone screen. Note the topbar's
+          // backdrop-blur makes it the containing block for this `fixed`
+          // panel; it's full-width and viewport-pinned, so the math is the
+          // same. From `sm` up it reverts to the WorkspaceMenu-style
+          // trigger-anchored dropdown.
+          className="animate-menu-down fixed inset-x-4 top-[4.5rem] z-50 origin-top-right border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgba(0,0,0,0.6)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]"
         >
           <div className="flex items-center justify-between border-b border-stroke-subtle px-3 py-3">
             <p className="text-sm font-semibold text-content-primary">Notifications</p>
