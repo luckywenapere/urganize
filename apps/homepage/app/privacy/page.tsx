@@ -1,368 +1,314 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { MarketingFooter } from "../components/marketing/MarketingFooter";
+import { MarketingHeader } from "../components/marketing/MarketingHeader";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "What Urganize collects, why, who processes it, and the choices you have.",
+};
+
+// Keep this date REAL. It only moves when the policy text actually changes —
+// never wire it to new Date() (the old version did, which made the policy
+// claim it was updated every day).
+const LAST_UPDATED = "June 11, 2026";
+
+const CONTACT_HREF =
+  "mailto:contact@urganize.app?subject=Privacy%20question%20-%20Urganize";
+
+// Every claim below is checked against the codebase as of LAST_UPDATED.
+// When the product's data handling changes (new analytics tool, new AI
+// provider, email provider added), update this page in the same PR.
+
+function Section({
+  number,
+  title,
+  children,
+}: {
+  number: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="border-t border-[color:var(--marketing-border)] py-10">
+      <div className="grid gap-6 lg:grid-cols-[16rem_1fr] lg:gap-12">
+        <div>
+          <p className="mono-label text-[var(--marketing-text-subtle)]">
+            {number}
+          </p>
+          <h2 className="mt-3 text-[1.6rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[var(--marketing-text)]">
+            {title}
+          </h2>
+        </div>
+        <div className="space-y-4 text-[0.98rem] leading-7 text-[var(--marketing-text-muted)]">
+          {children}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function PrivacyPolicy() {
-  const fadeInUp = {
-    initial: { opacity: 0, y: 18 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true },
-    transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const },
-  };
-
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-[var(--marketing-bg)] font-sans text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)]">
-      <main className="relative z-10 px-6 pb-24 pt-28">
+    <div className="min-h-screen bg-[var(--marketing-bg)] text-[var(--marketing-text)]">
+      <MarketingHeader />
+
+      <main className="px-6 py-16 sm:py-20">
         <div className="mx-auto max-w-4xl">
-          {/* Top nav line */}
-          <motion.div {...fadeInUp} className="flex items-center justify-between gap-4">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[var(--marketing-text-subtle)] transition-colors hover:text-[var(--marketing-text)]"
-            >
-              <span className="text-[var(--marketing-accent)]">←</span>
-              Back to home
-            </Link>
+          <p className="mono-label text-[var(--marketing-text-subtle)]">
+            Privacy Policy
+          </p>
+          <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+            How Urganize handles your data
+          </h1>
+          <p className="mt-5 max-w-[40rem] text-lg leading-8 text-[var(--marketing-text-muted)]">
+            This policy explains what we collect, why we collect it, who
+            processes it, and the choices you have. We keep it short, specific,
+            and true to how the product works today.
+          </p>
+          <p className="mt-6 font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
+            LAST UPDATED: {LAST_UPDATED.toUpperCase()}
+          </p>
 
-            <Link
-              href="mailto:contact@urganize.app?subject=Privacy%20question%20-%20Urganize"
-              className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--marketing-text-subtle)] transition-colors hover:text-[var(--marketing-text)]"
-            >
-              Contact
-            </Link>
-          </motion.div>
+          {/* Quick summary */}
+          <div className="mt-12 border border-[color:var(--marketing-border)] p-7 sm:p-8">
+            <p className="mono-label text-[var(--marketing-accent)]">
+              The short version
+            </p>
+            <ul className="mt-5 space-y-3 text-[0.95rem] leading-7 text-[var(--marketing-text-muted)]">
+              <li>
+                — We collect what we need to run Urganize: your account, your
+                release data, and product usage.
+              </li>
+              <li>
+                — Payments are processed by Paystack. We never see or store
+                your card details.
+              </li>
+              <li>
+                — We use analytics (Google Analytics, Vercel Analytics,
+                PostHog) to understand product usage.
+              </li>
+              <li>
+                — AI features send release context to our AI provider only to
+                generate output for you. We do not use your content to train
+                AI models.
+              </li>
+              <li>
+                — You can delete your account yourself, in the app, instantly.
+              </li>
+            </ul>
+          </div>
 
-          {/* Header card */}
-          <motion.div
-            {...fadeInUp}
-            className="mt-10 rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
-          >
-            <div className="flex flex-col items-start gap-5">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-accent)]">
-                <span className="h-1.5 w-1.5 animate-ping rounded-full bg-[var(--marketing-accent)]" />
-                Privacy Policy
-              </div>
-
-              <h1 className="text-4xl font-black leading-[0.95] tracking-tighter md:text-6xl">
-                How Urganize handles your data
-              </h1>
-
-              <p className="max-w-3xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
-                This policy explains what we collect, why we collect it, how we use it, and
-                the choices you have. We aim to keep this simple and transparent.
+          <div className="mt-12">
+            <Section number="01" title="Who we are">
+              <p>
+                Urganize (&ldquo;we&rdquo;, &ldquo;our&rdquo;,
+                &ldquo;us&rdquo;) is a release management workspace for music
+                teams, operated by Urganize Technologies Ltd., a company
+                registered in Nigeria.
               </p>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-text-subtle)]">
-                  Last updated
-                </div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-text-muted)]">
-                  {new Date().toLocaleDateString()}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Content */}
-          <div className="mt-10 space-y-8">
-            {/* Summary / quick bullets */}
-            <motion.div
-              {...fadeInUp}
-              className="rounded-[2rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-8"
-            >
-              <h2 className="mb-4 text-xl font-bold tracking-tight">Quick summary</h2>
-              <ul className="space-y-3 text-[var(--marketing-text-muted)]">
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
-                  <span>We collect data needed to run Urganize and improve it.</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
-                  <span>Payments are processed by Paystack. We do not store your card details.</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
-                  <span>We use analytics (Google Analytics) to understand product usage.</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
-                  <span>
-                    We use AI (including Google Gemini). Inputs may be processed by providers, and
-                    may be used to improve Urganize and underlying AI systems.
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
-                  <span>You can request access, correction, or deletion of your data.</span>
-                </li>
-              </ul>
-            </motion.div>
-
-            {/* Sections */}
-            <motion.div
-              {...fadeInUp}
-              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
-            >
-              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
-                1. Who we are
-              </h2>
-              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
-                Urganize (&ldquo;we&rdquo;, &ldquo;our&rdquo;, &ldquo;us&rdquo;) is a release operating system for artist managers.
-                We are not currently registered, but we intend to register in Nigeria.
-              </p>
-              <p className="mt-4 text-lg leading-relaxed text-[var(--marketing-text-muted)]">
-                If you have privacy questions, email{" "}
+              <p>
+                For privacy questions, email{" "}
                 <a
-                  href="mailto:contact@urganize.app?subject=Privacy%20question%20-%20Urganize"
-                  className="font-semibold text-[var(--marketing-accent)] transition-colors hover:opacity-80"
+                  href={CONTACT_HREF}
+                  className="font-medium text-[var(--marketing-accent)] hover:opacity-80"
                 >
                   contact@urganize.app
                 </a>
                 .
               </p>
-            </motion.div>
+            </Section>
 
-            <motion.div
-              {...fadeInUp}
-              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
-            >
-              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
-                2. Who can use Urganize
-              </h2>
-              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
-                Urganize is not intended for children under 13. We do not knowingly collect
-                personal information from children under 13. If you believe a child has
-                provided us personal data, contact us and we will take steps to delete it.
+            <Section number="02" title="Who can use Urganize">
+              <p>
+                Urganize is not intended for children under 13, and we do not
+                knowingly collect personal information from them. If you
+                believe a child has provided us personal data, contact us and
+                we will delete it.
               </p>
-            </motion.div>
+            </Section>
 
-            <motion.div
-              {...fadeInUp}
-              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
-            >
-              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
-                3. Information we collect
-              </h2>
-
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div className="rounded-[1.75rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface)] p-6">
-                  <h3 className="mb-3 text-lg font-bold text-[var(--marketing-text)]">Account data</h3>
-                  <ul className="space-y-2 text-[var(--marketing-text-muted)]">
-                    <li>• Email address</li>
-                    <li>• Login credentials</li>
-                    <li>• Basic profile details (if provided)</li>
-                  </ul>
-                </div>
-
-                <div className="rounded-[1.75rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface)] p-6">
-                  <h3 className="mb-3 text-lg font-bold text-[var(--marketing-text)]">Release data</h3>
-                  <ul className="space-y-2 text-[var(--marketing-text-muted)]">
-                    <li>• Artist and release info</li>
-                    <li>• Dates, tasks, plans, notes</li>
-                    <li>• Assets you upload or reference</li>
-                  </ul>
-                </div>
-
-                <div className="rounded-[1.75rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface)] p-6">
-                  <h3 className="mb-3 text-lg font-bold text-[var(--marketing-text)]">Usage & device data</h3>
-                  <ul className="space-y-2 text-[var(--marketing-text-muted)]">
-                    <li>• Pages viewed, features used</li>
-                    <li>• IP address, browser, device info</li>
-                    <li>• Logs for debugging and security</li>
-                  </ul>
-                </div>
-
-                <div className="rounded-[1.75rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface)] p-6">
-                  <h3 className="mb-3 text-lg font-bold text-[var(--marketing-text)]">Payments</h3>
-                  <ul className="space-y-2 text-[var(--marketing-text-muted)]">
-                    <li>• Processed by Paystack</li>
-                    <li>• We do not store card details</li>
-                    <li>• We may store billing status and receipts</li>
-                  </ul>
-                </div>
-              </div>
-
-              <p className="mt-6 text-sm text-[var(--marketing-text-subtle)]">
-                Note: Some of these may apply &ldquo;eventually&rdquo; as Urganize evolves. We aim to
-                collect only what we need.
+            <Section number="03" title="What we collect">
+              <p>
+                <strong className="text-[var(--marketing-text)]">
+                  Account data.
+                </strong>{" "}
+                Email address and password (or your Google account email if you
+                sign in with Google), your name and role if you provide them,
+                and your workspace settings.
               </p>
-            </motion.div>
-
-            <motion.div
-              {...fadeInUp}
-              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
-            >
-              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
-                4. How we use your information
-              </h2>
-
-              <ul className="space-y-3 text-lg text-[var(--marketing-text-muted)]">
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
-                  <span>To provide and operate Urganize</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
-                  <span>To generate AI-guided tasks and workflows</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
-                  <span>To improve performance, reliability, and user experience</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
-                  <span>To communicate product updates and announcements (you can unsubscribe)</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold leading-none text-[var(--marketing-accent)]">•</span>
-                  <span>To prevent fraud, abuse, and security issues</span>
-                </li>
-              </ul>
-            </motion.div>
-
-            <motion.div
-              {...fadeInUp}
-              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
-            >
-              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
-                5. AI processing
-              </h2>
-
-              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
-                Urganize uses third-party AI services (including Google Gemini) to generate
-                recommendations, guidance, and workflows. Your inputs may be processed by
-                those providers to produce outputs.
+              <p>
+                <strong className="text-[var(--marketing-text)]">
+                  Release data.
+                </strong>{" "}
+                Everything you put into the workspace: artists, releases,
+                dates, tasks, comments, event milestones, teammates you invite
+                (their email addresses), and the files you upload — masters,
+                artwork, contracts, split sheets.
               </p>
-
-              <p className="mt-4 text-lg leading-relaxed text-[var(--marketing-text-muted)]">
-                You agree that your data may be used to improve Urganize and underlying AI
-                systems. AI outputs are informational only and do not replace professional
-                advice.
+              <p>
+                <strong className="text-[var(--marketing-text)]">
+                  Billing data.
+                </strong>{" "}
+                Your plan, payment references, amounts, and subscription
+                status. Card details go directly to Paystack and never touch
+                our servers.
               </p>
-            </motion.div>
-
-            <motion.div
-              {...fadeInUp}
-              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
-            >
-              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
-                6. Cookies & analytics
-              </h2>
-
-              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
-                We use Google Analytics to understand how users interact with Urganize.
-                We may use cookies or similar technologies to measure performance and improve
-                the product. We also collect anonymized usage data to improve experience.
+              <p>
+                <strong className="text-[var(--marketing-text)]">
+                  Usage and device data.
+                </strong>{" "}
+                Pages viewed, features used, IP address, browser and device
+                information, and server logs for debugging and security.
               </p>
-            </motion.div>
-
-            <motion.div
-              {...fadeInUp}
-              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
-            >
-              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
-                7. Data storage & international transfers
-              </h2>
-
-              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
-                Urganize serves users internationally. Your information may be stored and
-                processed on global cloud infrastructure and may be transferred outside your
-                country of residence.
+              <p>
+                <strong className="text-[var(--marketing-text)]">
+                  Waitlist and survey data.
+                </strong>{" "}
+                If you joined our earlier waitlist or answer an in-product
+                survey (via Formbricks), we keep what you submitted — typically
+                your email and your answers.
               </p>
-            </motion.div>
+            </Section>
 
-            <motion.div
-              {...fadeInUp}
-              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
-            >
-              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
-                8. Your rights
-              </h2>
-
-              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
-                Depending on where you live, you may have the right to access, correct, or
-                delete your personal data. You may also withdraw consent where applicable.
+            <Section number="04" title="How we use it">
+              <p>— To provide and operate Urganize.</p>
+              <p>
+                — To generate your release rollout plan and, when AI features
+                are enabled, AI-tailored plans and status updates (see section
+                05).
               </p>
-
-              <div className="mt-6 rounded-[1.75rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface)] p-6">
-                <p className="text-[var(--marketing-text-muted)]">
-                  To make a request, email{" "}
-                  <a
-                    href="mailto:contact@urganize.app?subject=Privacy%20request%20-%20Urganize"
-                    className="font-semibold text-[var(--marketing-accent)] transition-colors hover:opacity-80"
-                  >
-                    contact@urganize.app
-                  </a>{" "}
-                  and include the email associated with your Urganize account.
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              {...fadeInUp}
-              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
-            >
-              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
-                9. Account deletion
-              </h2>
-
-              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
-                When you delete your account, we remove your data within a reasonable time.
-                Some backups may remain temporarily for security, compliance, or disaster
-                recovery, and will be overwritten over time.
+              <p>
+                — To improve performance, reliability, and the product itself.
               </p>
-            </motion.div>
-
-            <motion.div
-              {...fadeInUp}
-              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
-            >
-              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
-                10. Security
-              </h2>
-
-              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
-                We use reasonable measures to protect your data. No system can guarantee
-                absolute security.
+              <p>
+                — To communicate with you about your account and the product.
               </p>
-            </motion.div>
-
-            <motion.div
-              {...fadeInUp}
-              className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-10"
-            >
-              <h2 className="mb-6 text-2xl font-black tracking-tight md:text-3xl">
-                11. Changes to this policy
-              </h2>
-
-              <p className="text-lg leading-relaxed text-[var(--marketing-text-muted)]">
-                We may update this policy as Urganize evolves. We will post updates on this
-                page and update the &ldquo;Last updated&rdquo; date at the top.
-              </p>
-            </motion.div>
-
-            {/* Footer line */}
-            <motion.div
-              {...fadeInUp}
-              className="flex flex-col items-start justify-between gap-4 border-t border-[var(--marketing-border)] pt-6 sm:flex-row sm:items-center"
-            >
-              <p className="text-sm text-[var(--marketing-text-subtle)]">
-                &copy; {new Date().getFullYear()} The Urganization
-              </p>
-
-              <div className="flex gap-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-text-subtle)]">
-                <Link href="/terms" className="transition-colors hover:text-[var(--marketing-text)]">
-                  Terms
+              <p>— To prevent fraud, abuse, and security issues.</p>
+              <p>
+                We do not sell your personal data, and we do not share your
+                release data with anyone except the service providers listed
+                on our{" "}
+                <Link
+                  href="/subprocessors"
+                  className="font-medium text-[var(--marketing-accent)] hover:opacity-80"
+                >
+                  subprocessors page
                 </Link>
-                <Link href="/subprocessors" className="transition-colors hover:text-[var(--marketing-text)]">
-                  Subprocessors
+                .
+              </p>
+            </Section>
+
+            <Section number="05" title="AI processing">
+              <p>
+                Urganize has two AI features: tailoring your release plan to
+                your context, and generating a written status update from your
+                release&apos;s current state. When you use them, the relevant
+                release context (release details, task progress — not your
+                uploaded files) is sent through our AI gateway to a third-party
+                AI model provider solely to generate the output you asked for.
+              </p>
+              <p>
+                We do not use your content to train AI models, and we use
+                providers whose terms do not train on customer API data. AI
+                output is a draft for you to edit — the product works without
+                it.
+              </p>
+            </Section>
+
+            <Section number="06" title="Cookies, analytics, and storage">
+              <p>
+                We use Google Analytics and Vercel Analytics on our marketing
+                site, and PostHog and Vercel Analytics inside the app, to
+                understand how Urganize is used. These tools may set cookies or
+                collect device identifiers and usage events.
+              </p>
+              <p>
+                The app also stores your session and some workspace state in
+                your browser&apos;s local storage so it loads fast and keeps
+                you signed in. Clearing your browser storage signs you out.
+              </p>
+            </Section>
+
+            <Section number="07" title="Support channels">
+              <p>
+                In-app support runs through WhatsApp — the &ldquo;chat with the
+                founder&rdquo; button opens a WhatsApp conversation. Anything
+                you send there is processed by WhatsApp (Meta) under their own
+                privacy policy. Don&apos;t send passwords or card details over
+                chat; we will never ask for them.
+              </p>
+            </Section>
+
+            <Section number="08" title="Where your data lives">
+              <p>
+                App data and uploaded files are stored with Supabase; waitlist
+                data is stored with Neon; the product is hosted on Vercel.
+                These run on global cloud infrastructure, so your information
+                may be stored and processed outside your country of residence.
+                The full list of providers is on the{" "}
+                <Link
+                  href="/subprocessors"
+                  className="font-medium text-[var(--marketing-accent)] hover:opacity-80"
+                >
+                  subprocessors page
                 </Link>
-              </div>
-            </motion.div>
+                .
+              </p>
+            </Section>
+
+            <Section number="09" title="Your rights">
+              <p>
+                Depending on where you live (including under the Nigeria Data
+                Protection Act and the GDPR), you may have the right to access,
+                correct, export, or delete your personal data, and to withdraw
+                consent where processing is based on it.
+              </p>
+              <p>
+                To make a request, email{" "}
+                <a
+                  href={CONTACT_HREF}
+                  className="font-medium text-[var(--marketing-accent)] hover:opacity-80"
+                >
+                  contact@urganize.app
+                </a>{" "}
+                from the address associated with your account.
+              </p>
+            </Section>
+
+            <Section number="10" title="Account deletion">
+              <p>
+                You can delete your account yourself from Settings — it takes
+                effect immediately and removes your releases, tasks, profile,
+                and sign-in, and permanently unlinks your uploaded files. We
+                may retain minimal payment records where required for
+                accounting and legal compliance, and residual copies may
+                persist briefly in encrypted backups before being overwritten.
+              </p>
+            </Section>
+
+            <Section number="11" title="Security">
+              <p>
+                Your data is protected with encryption in transit, row-level
+                access controls in our database, and signed, expiring links for
+                file access. No system can guarantee absolute security — if we
+                learn of a breach affecting your data, we will notify you.
+              </p>
+            </Section>
+
+            <Section number="12" title="Changes to this policy">
+              <p>
+                We update this policy when how we handle data actually changes,
+                post the new version here, and change the date at the top. The
+                date only moves when the text does.
+              </p>
+            </Section>
           </div>
         </div>
       </main>
+
+      <MarketingFooter />
     </div>
   );
 }
