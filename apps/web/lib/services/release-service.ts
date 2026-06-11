@@ -2,6 +2,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { normalizePipelineState } from '@/lib/release-execution';
 import type { ReleaseStatus } from '@/types/releases';
 import { loadCoverArtUrlMap, type ReleaseCoverInput } from '@/lib/cover-art';
+import { loadWorkspaceLogoFallbackUrl } from '@/lib/workspace-logo';
 
 export class ReleaseService {
   constructor(private adminClient: SupabaseClient) {}
@@ -20,10 +21,11 @@ export class ReleaseService {
     const rows = data || [];
 
     // Resolve Phase 3 cover art (signed URLs) via the shared helper that
-    // /api/releases also uses. Workspace surfaces show the neutral
-    // placeholder when this returns null; the legacy release_metadata
-    // artwork_url fallback is intentionally not consulted here (it's
-    // exclusive to /api/releases per the deprecation note in
+    // /api/releases also uses. Releases without artwork fall back to the
+    // workspace logo (record label / team logo) when one is set, otherwise
+    // workspace surfaces show the neutral placeholder; the legacy
+    // release_metadata artwork_url fallback is intentionally not consulted
+    // here (it's exclusive to /api/releases per the deprecation note in
     // release-ops.ts).
     const coverInput: ReleaseCoverInput[] = rows.map((row) => ({
       id: String(row.id || ''),
@@ -31,6 +33,7 @@ export class ReleaseService {
         typeof row.artwork_asset_id === 'string' ? row.artwork_asset_id : null,
     }));
     const coverByReleaseId = await loadCoverArtUrlMap(this.adminClient, coverInput);
+    const workspaceLogoUrl = await loadWorkspaceLogoFallbackUrl(this.adminClient, userId);
 
     return rows.map((row) => {
       const id = String(row.id || '');
@@ -47,7 +50,7 @@ export class ReleaseService {
         createdAt: String(row.created_at || ''),
         updatedAt: String(row.updated_at || ''),
         metadata: row.metadata || {},
-        coverArtUrl: coverByReleaseId.get(id) ?? null,
+        coverArtUrl: coverByReleaseId.get(id) ?? workspaceLogoUrl,
       };
     });
   }
