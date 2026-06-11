@@ -28,6 +28,17 @@ import { DEFAULT_GROUP_COLOR, GROUP_PRESETS } from '@/lib/group-presets';
 
 const WORKSPACE_FLAG_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
+// Linear-style property rows (Status / Priority / Assignee / Due date / Tag):
+// a slim tertiary label column + a ghost control that only reveals its bounds
+// on hover/focus. Replaces the stacked full-width form boxes that dominated
+// the viewport on mobile. Native selects keep the dark-popup treatment
+// documented on AssetUploadControl (solid dark tokens + [color-scheme:dark]
+// instead of .input's transparent white background).
+const PROPERTY_ROW_CLASS = 'grid grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-x-3';
+const PROPERTY_LABEL_CLASS = 'text-xs font-medium text-content-tertiary';
+const PROPERTY_CONTROL_CLASS =
+  'motion-focus h-9 w-full border border-transparent bg-transparent px-2 text-sm text-content-primary transition-colors [color-scheme:dark] hover:border-stroke-default hover:bg-bg-elevated focus:border-brand focus:bg-bg-elevated md:max-w-[300px]';
+
 // A task's release is set at creation and fixed thereafter — the inline view is
 // the edit surface, and re-homing tasks across releases is intentionally not a
 // supported operation. `releaseId` and `groupId` are kept off this whitelist so
@@ -202,185 +213,185 @@ export function TaskDetailView({
         </div>
       ) : task ? (
         <div className="space-y-6">
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-content-primary">Title</span>
-            <input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              onBlur={() => {
-                if (title.trim() && title.trim() !== task.title) {
-                  void onSavePatch({ title: title.trim() });
-                }
-              }}
-              className="input h-12 rounded-[18px] text-base font-semibold"
-            />
-          </label>
+          {/* Title — the page heading, not a boxed form field. Borderless
+              until focus; blur saves, same as before. */}
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            onBlur={() => {
+              if (title.trim() && title.trim() !== task.title) {
+                void onSavePatch({ title: title.trim() });
+              }
+            }}
+            aria-label="Title"
+            placeholder="Task title"
+            className="motion-focus w-full border-b border-transparent bg-transparent pb-1 font-display text-xl font-semibold leading-snug text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-stroke-strong sm:text-2xl"
+          />
 
-          <div className="grid gap-5 md:grid-cols-2">
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-content-primary">Status</span>
+          <div className="space-y-1.5">
+            <label className={PROPERTY_ROW_CLASS}>
+              <span className={PROPERTY_LABEL_CLASS}>Status</span>
               <select
                 value={task.status}
                 onChange={(event) => void onSavePatch({ status: event.target.value as TaskStatus })}
-                className="input h-12 rounded-[18px]"
+                className={PROPERTY_CONTROL_CLASS}
               >
                 {TASK_STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>
+                  <option key={status} value={status} className="bg-bg-elevated text-content-primary">
                     {getTaskStatusLabel(status)}
                   </option>
                 ))}
               </select>
-              {statusBlockerMessage ? (
+            </label>
+            {statusBlockerMessage ? (
+              <div className={PROPERTY_ROW_CLASS}>
+                <span aria-hidden="true" />
                 <p
                   role="alert"
-                  className="mt-2 rounded-[14px] border border-status-warning/35 bg-status-warning/10 px-3 py-2 text-xs text-status-warning"
+                  className="rounded-[14px] border border-status-warning/35 bg-status-warning/10 px-3 py-2 text-xs text-status-warning md:max-w-[300px]"
                 >
                   {statusBlockerMessage}
                 </p>
-              ) : null}
-            </label>
+              </div>
+            ) : null}
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-content-primary">Priority</span>
+            <label className={PROPERTY_ROW_CLASS}>
+              <span className={PROPERTY_LABEL_CLASS}>Priority</span>
               <select
                 value={task.priority}
                 onChange={(event) => void onSavePatch({ priority: event.target.value as TaskPriority })}
-                className="input h-12 rounded-[18px]"
+                className={PROPERTY_CONTROL_CLASS}
               >
                 {TASK_PRIORITY_OPTIONS.map((priorityOption) => (
-                  <option key={priorityOption} value={priorityOption}>
+                  <option
+                    key={priorityOption}
+                    value={priorityOption}
+                    className="bg-bg-elevated text-content-primary"
+                  >
                     {getTaskPriorityLabel(priorityOption)}
                   </option>
                 ))}
               </select>
             </label>
-          </div>
 
-          <div className="grid gap-5 md:grid-cols-2">
-            <TaskMemberCombobox
-              members={members}
-              selectedMember={selectedAssignee}
-              query={assigneeQuery}
-              onQueryChange={setAssigneeQuery}
-              isLoading={isLoadingMembers}
-              onSelectMember={(member) => {
-                setSelectedAssignee(member);
-                setAssigneeQuery(member?.name || '');
-                void onSavePatch({ assignedToUserId: member?.userId || null });
-              }}
-            />
+            {/* The visible row label lives here; the combobox keeps its own
+                sr-only "Assignee" label for the input's accessible name. */}
+            <div className={PROPERTY_ROW_CLASS}>
+              <span className={PROPERTY_LABEL_CLASS}>Assignee</span>
+              <div className="md:max-w-[300px]">
+                <TaskMemberCombobox
+                  density="compact"
+                  members={members}
+                  selectedMember={selectedAssignee}
+                  query={assigneeQuery}
+                  onQueryChange={setAssigneeQuery}
+                  isLoading={isLoadingMembers}
+                  onSelectMember={(member) => {
+                    setSelectedAssignee(member);
+                    setAssigneeQuery(member?.name || '');
+                    void onSavePatch({ assignedToUserId: member?.userId || null });
+                  }}
+                />
+              </div>
+            </div>
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-content-primary">Due date</span>
+            <label className={PROPERTY_ROW_CLASS}>
+              <span className={PROPERTY_LABEL_CLASS}>Due date</span>
               <input
                 type="datetime-local"
                 value={toDateTimeLocalValue(task.dueDate)}
                 onChange={(event) => void onSavePatch({ dueDate: event.target.value || null })}
-                className="input h-12 rounded-[18px]"
+                className={PROPERTY_CONTROL_CLASS}
               />
             </label>
-          </div>
 
-          {WORKSPACE_FLAG_ENABLED ? (
-            <div className="block">
-              <span className="mb-2 block text-sm font-semibold text-content-primary">Tag</span>
-              <div className="flex flex-wrap items-center gap-2">
-                {GROUP_PRESETS.map((preset) => {
-                  const isActive =
-                    (task.groupName || '').toLowerCase() === preset.name.toLowerCase();
-                  return (
+            {WORKSPACE_FLAG_ENABLED ? (
+              <div className={`${PROPERTY_ROW_CLASS} items-start`}>
+                <span className={`${PROPERTY_LABEL_CLASS} pt-2`}>Tag</span>
+                <div className="flex flex-wrap items-center gap-1.5 py-1">
+                  {GROUP_PRESETS.map((preset) => {
+                    const isActive =
+                      (task.groupName || '').toLowerCase() === preset.name.toLowerCase();
+                    return (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        onClick={() =>
+                          void onSavePatch({
+                            groupName: preset.name,
+                            groupColor: preset.color,
+                          })
+                        }
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${
+                          isActive
+                            ? 'border-brand bg-brand/10 text-content-primary'
+                            : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                        }`}
+                        aria-pressed={isActive}
+                      >
+                        <span
+                          className="h-1.5 w-1.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: preset.color }}
+                          aria-hidden="true"
+                        />
+                        {preset.name}
+                      </button>
+                    );
+                  })}
+                  {task.groupName ? (
                     <button
-                      key={preset.name}
                       type="button"
-                      onClick={() =>
-                        void onSavePatch({
-                          groupName: preset.name,
-                          groupColor: preset.color,
-                        })
-                      }
-                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                        isActive
-                          ? 'border-brand bg-brand/10 text-content-primary'
-                          : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover hover:text-content-primary'
-                      }`}
-                      aria-pressed={isActive}
+                      onClick={() => {
+                        setCustomTagDraft('');
+                        void onSavePatch({ groupName: null, groupColor: null });
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full border border-stroke-default bg-bg-elevated px-2 py-1 text-[11px] font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                      aria-label="Remove tag"
                     >
-                      <span
-                        className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: preset.color }}
-                        aria-hidden="true"
-                      />
-                      {preset.name}
+                      <X className="h-3 w-3" aria-hidden="true" />
+                      Remove
                     </button>
-                  );
-                })}
-                {task.groupName ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCustomTagDraft('');
-                      void onSavePatch({ groupName: null, groupColor: null });
+                  ) : null}
+                  <input
+                    type="text"
+                    value={customTagDraft}
+                    onChange={(event) => setCustomTagDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        const trimmed = customTagDraft.trim();
+                        if (!trimmed) return;
+                        void onSavePatch({
+                          groupName: trimmed,
+                          groupColor: DEFAULT_GROUP_COLOR,
+                        });
+                        setCustomTagDraft('');
+                      }
                     }}
-                    className="inline-flex items-center gap-1 rounded-full border border-stroke-default bg-bg-elevated px-2.5 py-1.5 text-xs font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-                    aria-label="Remove tag"
-                  >
-                    <X className="h-3 w-3" aria-hidden="true" />
-                    Remove
-                  </button>
-                ) : null}
+                    placeholder="Custom tag"
+                    className="motion-focus h-7 w-32 border border-transparent bg-transparent px-2 text-xs text-content-primary transition-colors placeholder:text-content-tertiary hover:border-stroke-default hover:bg-bg-elevated focus:border-brand focus:bg-bg-elevated"
+                  />
+                  {customTagDraft.trim() ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const trimmed = customTagDraft.trim();
+                        if (!trimmed) return;
+                        void onSavePatch({
+                          groupName: trimmed,
+                          groupColor: DEFAULT_GROUP_COLOR,
+                        });
+                        setCustomTagDraft('');
+                      }}
+                      className="inline-flex h-7 items-center rounded-full border border-stroke-default bg-bg-elevated px-2.5 text-[11px] font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                    >
+                      Apply
+                    </button>
+                  ) : null}
+                </div>
               </div>
-              <div className="mt-3 flex items-center gap-2">
-                <input
-                  type="text"
-                  value={customTagDraft}
-                  onChange={(event) => setCustomTagDraft(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      const trimmed = customTagDraft.trim();
-                      if (!trimmed) return;
-                      void onSavePatch({
-                        groupName: trimmed,
-                        groupColor: DEFAULT_GROUP_COLOR,
-                      });
-                      setCustomTagDraft('');
-                    }
-                  }}
-                  placeholder="Custom tag — press Enter"
-                  className="input h-10 flex-1 rounded-[14px] text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const trimmed = customTagDraft.trim();
-                    if (!trimmed) return;
-                    void onSavePatch({
-                      groupName: trimmed,
-                      groupColor: DEFAULT_GROUP_COLOR,
-                    });
-                    setCustomTagDraft('');
-                  }}
-                  disabled={!customTagDraft.trim()}
-                  className="inline-flex h-10 items-center rounded-[14px] border border-stroke-default bg-bg-elevated px-3 text-xs font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Apply
-                </button>
-              </div>
-              {task.groupName ? (
-                <p className="mt-2 text-xs text-content-tertiary">
-                  Current tag:{' '}
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-stroke-default bg-bg-elevated px-2 py-0.5 text-[11px] font-medium text-content-secondary">
-                    <span
-                      className="h-1.5 w-1.5 rounded-full"
-                      style={{ backgroundColor: task.groupColor || DEFAULT_GROUP_COLOR }}
-                      aria-hidden="true"
-                    />
-                    {task.groupName}
-                  </span>
-                </p>
-              ) : null}
-            </div>
-          ) : null}
+            ) : null}
+          </div>
 
           <TaskDependenciesSection
             dependencyIds={task.dependencies}
