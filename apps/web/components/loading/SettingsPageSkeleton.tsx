@@ -20,8 +20,10 @@ export function SettingsPageSkeleton() {
     <main className="min-h-screen bg-bg-base text-content-primary" aria-hidden="true">
       <div className="relative pb-24 pt-6 sm:px-6">
         <div className="relative mx-auto w-full max-w-[960px]">
-          <div className="mb-8">
-            <SkeletonBlock className="h-10 w-40" />
+          {/* Mirrors the page's header row: no in-page "Settings" heading
+              (the topbar titles the route), just the Dashboard shortcut pill. */}
+          <div className="mb-8 flex sm:justify-end">
+            <SkeletonBlock className="h-10 w-full rounded-full sm:w-28" />
           </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

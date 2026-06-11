@@ -612,19 +612,17 @@ export default function SettingsPage() {
             intentional and lives here, NOT at the outer page level, so the
             visible chrome edges still match Dashboard. */}
         <div className="relative mx-auto w-full max-w-[960px]">
-          <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-3xl tracking-tight sm:text-4xl">Settings</h1>
-              <p className="mt-1 text-xs uppercase tracking-[0.14em] text-content-tertiary">Account and preferences</p>
-            </div>
-            <div className="flex w-full items-center gap-2 sm:w-auto">
-              <Link
-                href="/dashboard"
-                className="w-full rounded-full border border-stroke-default bg-bg-elevated px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
-              >
-                Dashboard
-              </Link>
-            </div>
+          {/* No in-page "Settings" heading — the topbar already titles this
+              route (AppTopbar routeTitles: eyebrow "Account", title
+              "Settings"), so an h1 here doubled the heading. The row keeps
+              only the Dashboard shortcut. */}
+          <div className="mb-8 flex sm:justify-end">
+            <Link
+              href="/dashboard"
+              className="w-full rounded-full border border-stroke-default bg-bg-elevated px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
+            >
+              Dashboard
+            </Link>
           </div>
 
           {error && <p className="mb-5 rounded-lg border border-status-error/40 bg-status-error/10 px-4 py-3 text-sm text-status-error">{error}</p>}
