@@ -295,10 +295,35 @@ export function ThreeFeaturesSection() {
   );
 }
 
+// Same rule as Adenaiye's quote below: a testimonial only works because the
+// words are really theirs. These are DRAFTS — get Antoine's and
+// Tamuno-Tekena's verbatim sign-off before this ships, and never edit a
+// quote after sign-off without re-approval.
+const supportingQuotes = [
+  {
+    quote:
+      "I manage myself, so every dropped ball is mine. The first release I created handed me the whole rollout — every task, every week, already laid out. I stopped planning from memory.",
+    name: "Antoine",
+    role: "Independent Artist & Manager",
+  },
+  {
+    quote:
+      "My master, artwork and split sheet live on the release now, not across three different chats. When someone on the team needs a file, there's one place to look.",
+    name: "Antoine",
+    role: "Independent Artist & Manager",
+  },
+  {
+    quote:
+      "I can open a release and see what's done, what's blocked and what's due this week without chasing anyone for an update. That's the call I no longer have to make.",
+    name: "Tamuno-Tekena Ayafa",
+    role: "A&R",
+  },
+] as const;
+
 export function TestimonialSection() {
   return (
     <ScrollReveal>
-      <SectionShell containerClassName="max-w-[64rem] px-6 sm:px-8 lg:px-10">
+      <SectionShell containerClassName={wideContainerClass}>
         <div className="mx-auto max-w-[54rem] text-center">
           <blockquote className="relative pt-20 before:absolute before:left-1/2 before:top-0 before:-translate-x-1/2 before:font-display before:text-[7rem] before:leading-none before:text-[var(--marketing-text-subtle)] before:content-['“'] sm:before:text-[8.5rem]">
             <p className="text-balance font-display text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[3.8rem] lg:text-[4.4rem]">
@@ -313,6 +338,25 @@ export function TestimonialSection() {
             <span className="text-[var(--marketing-text)]">Adenaiye Miracle</span>
             {" "}· Artist Manager
           </p>
+        </div>
+
+        <div className="mt-20 grid divide-y divide-[color:var(--marketing-border)] border-y border-[color:var(--marketing-border)] lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+          {supportingQuotes.map((item) => (
+            <figure
+              key={item.quote}
+              className="flex flex-col justify-between py-10 lg:px-10 lg:py-14"
+            >
+              <blockquote>
+                <p className="text-balance text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
+                  &ldquo;{item.quote}&rdquo;
+                </p>
+              </blockquote>
+              <figcaption className="mt-8 font-mono text-[0.74rem] tracking-[0.18em] text-[var(--marketing-text-subtle)]">
+                <span className="text-[var(--marketing-text)]">{item.name}</span>
+                {" "}· {item.role}
+              </figcaption>
+            </figure>
+          ))}
         </div>
       </SectionShell>
     </ScrollReveal>
