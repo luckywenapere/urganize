@@ -1,11 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
-import { WaitlistButton } from "./WaitlistButton";
 
-export function LandingHeader() {
+const APP_AUTH_URL = "https://app.urganize.app/auth";
+
+// One header for every marketing page. The product is live and sells a
+// 28-day no-card trial, so the primary CTA goes straight to app signup —
+// no waitlist gate anywhere on the funnel.
+export function MarketingHeader() {
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-[color:var(--marketing-border)] bg-transparent">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-[color:var(--marketing-border)] bg-[var(--marketing-bg)]/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-[84rem] items-center justify-between gap-6 px-6 py-4 sm:px-8 lg:px-10">
           <Link
             href="/"
@@ -24,23 +28,29 @@ export function LandingHeader() {
 
           <div className="flex items-center gap-4 sm:gap-6">
             <Link
+              href="/features"
+              className="hidden text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)] sm:inline"
+            >
+              Features
+            </Link>
+            <Link
               href="/pricing"
               className="hidden text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)] sm:inline"
             >
               Pricing
             </Link>
             <Link
-              href="https://app.urganize.app/auth"
+              href={APP_AUTH_URL}
               className="text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)]"
             >
               Login
             </Link>
-            <WaitlistButton
+            <Link
+              href={APP_AUTH_URL}
               className="inline-flex items-center justify-center rounded-full border border-[color:var(--marketing-border-strong)] px-4 py-2.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text)] hover:border-[color:var(--marketing-text)] hover:bg-[var(--marketing-surface)] sm:px-5"
-              source="header_get_started"
             >
-              Get started
-            </WaitlistButton>
+              Start free
+            </Link>
           </div>
         </div>
       </header>

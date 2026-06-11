@@ -1,39 +1,58 @@
-import Link from "next/link";
+import type { Metadata } from "next";
+import { MarketingFooter } from "../components/marketing/MarketingFooter";
+import { MarketingHeader } from "../components/marketing/MarketingHeader";
+
+export const metadata: Metadata = {
+  title: "Team",
+  description: "The team behind Urganize.",
+};
+
+const members = [
+  { name: "Lucky Wenapere", role: "Co-Founder and CEO" },
+  { name: "Tedum King", role: "Co-Founder" },
+  { name: "Bobson Prosper", role: "Founding Engineer" },
+  { name: "Gideon Ugorji", role: "Founding DevOps Engineer" },
+  { name: "Adamu Kabiru", role: "Growth" },
+  { name: "Chidera Nnamani", role: "Operations Lead" },
+  { name: "Victoria Emmanuel", role: "Operations" },
+] as const;
 
 export default function TeamPage() {
   return (
-    <main className="min-h-screen bg-[var(--marketing-bg)] px-6 py-24 text-[var(--marketing-text)]">
-      <div className="mx-auto max-w-5xl">
-        <Link
-          href="/"
-          className="text-sm text-[var(--marketing-text-muted)] transition-colors hover:text-[var(--marketing-text)]"
-        >
-          ← Back to home
-        </Link>
+    <div className="min-h-screen bg-[var(--marketing-bg)] text-[var(--marketing-text)]">
+      <MarketingHeader />
 
-        <h1 className="mt-6 text-4xl font-black tracking-tighter md:text-5xl">Team</h1>
-        <p className="mt-4 text-[var(--marketing-text-muted)]">The team behind Urganize.</p>
+      <main className="px-6 py-16 sm:py-20">
+        <div className="mx-auto max-w-5xl">
+          <p className="mono-label text-[var(--marketing-text-subtle)]">
+            The people
+          </p>
+          <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+            Team
+          </h1>
+          <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
+            The team behind Urganize.
+          </p>
 
-        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
-          {[
-            { name: "Lucky Wenapere", role: "Co-Founder and CEO" },
-            { name: "Tedum King", role: "Co-Founder" },
-            { name: "Bobson Prosper", role: "Founding Engineer" },
-            { name: "Gideon Ugorji", role: "Founding Devops Engineer" },
-            { name: "Adamu Kabiru", role: "Growth" },
-            { name: "Chidera Nnamani", role: "Operations Lead" },
-            { name: "Victoria Emmanuel", role: "Operations" },
-          ].map((member) => (
-            <div
-              key={member.name}
-              className="rounded-2xl border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6"
-            >
-              <div className="text-xl font-bold">{member.name}</div>
-              <div className="mt-1 font-semibold text-[var(--marketing-accent)]">{member.role}</div>
-            </div>
-          ))}
+          <div className="mt-12 grid grid-cols-1 gap-px bg-[color:var(--marketing-border)] md:grid-cols-2">
+            {members.map((member) => (
+              <div
+                key={member.name}
+                className="bg-[var(--marketing-bg)] px-6 py-7 sm:px-7 sm:py-8"
+              >
+                <p className="text-xl font-semibold tracking-[-0.02em]">
+                  {member.name}
+                </p>
+                <p className="mt-2 font-mono text-[0.78rem] uppercase tracking-[0.14em] text-[var(--marketing-accent)]">
+                  {member.role}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+
+      <MarketingFooter />
+    </div>
   );
 }

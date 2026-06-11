@@ -1,61 +1,25 @@
 import Image from "next/image";
 import Link from "next/link";
-import { FaLinkedin } from "react-icons/fa6";
-import {
-  SiInstagram,
-  SiThreads,
-  SiTiktok,
-  SiX,
-  SiYoutube,
-} from "react-icons/si";
 import { ScrollReveal } from "./ScrollReveal";
 import { SectionShell } from "./SectionShell";
-import { WaitlistButton } from "./WaitlistButton";
 
-const socialLinks = [
-  { href: "https://x.com/urganize", label: "Urganize on X", Icon: SiX },
-  {
-    href: "https://www.linkedin.com/company/urganize",
-    label: "Urganize on LinkedIn",
-    Icon: FaLinkedin,
-  },
-  {
-    href: "https://www.instagram.com/urganize",
-    label: "Urganize on Instagram",
-    Icon: SiInstagram,
-  },
-  {
-    href: "https://www.tiktok.com/@urganize",
-    label: "Urganize on TikTok",
-    Icon: SiTiktok,
-  },
-  {
-    href: "https://www.youtube.com/@urganize",
-    label: "Urganize on YouTube",
-    Icon: SiYoutube,
-  },
-  {
-    href: "https://www.threads.net/@urganize",
-    label: "Urganize on Threads",
-    Icon: SiThreads,
-  },
-] as const;
+const APP_AUTH_URL = "https://app.urganize.app/auth";
 
 const featureColumns = [
   {
     kicker: "Workflow",
     title: "Release tasks, assigned.",
-    body: "Every step from demo lock to DSP delivery, owned by a person with a due date. No more 'who's doing the art again?'",
+    body: "Every step from master lock to release day, owned by a person with a due date. No more 'who's doing the art again?'",
   },
   {
     kicker: "Assets",
-    title: "Stems, versioned.",
-    body: "Centralized storage with metadata. Right file, right version, right context — every time. No more 'Final v3 ACTUAL final.'",
+    title: "Every file, filed.",
+    body: "Masters, artwork, contracts, split sheets — attached to the release they belong to. No more 'Final v3 ACTUAL final' buried in Drive.",
   },
   {
     kicker: "Visibility",
-    title: "Pipeline visibility.",
-    body: "Dashboard view of every release in flight. Spot what's slipping before it hurts the rollout.",
+    title: "Status at a glance.",
+    body: "One workspace shows every release in flight — what's done, what's blocked, what's due this week. Spot what's slipping before it hurts the rollout.",
   },
 ] as const;
 
@@ -64,6 +28,21 @@ const fourTools = [
   { num: "02", name: "Google Drive", note: "stems, art, versioned by hope" },
   { num: "03", name: "Asana / Notion", note: "half-built templates" },
   { num: "04", name: "Memory", note: "or nothing at all" },
+] as const;
+
+// Real rows from the single-release template (single_v0.3 — 64 tasks across
+// 11 weeks, signed off by two design partners). Keep these verbatim from
+// apps/web/lib/release-templates/single.ts so the marketing never drifts
+// from the product again.
+const templateExcerpt = [
+  { week: "WK −8", title: "Lock the master file" },
+  { week: "WK −8", title: "Confirm release date and lock it" },
+  { week: "WK −7", title: "Brief designer on cover art" },
+  { week: "WK −6", title: "Draft split sheet and circulate to all contributors" },
+  { week: "WK −5", title: "Upload track and metadata to distributor" },
+  { week: "WK −4", title: "Submit Spotify for Artists pitch" },
+  { week: "DROP", title: "Release day: monitor distributor for go-live across all DSPs" },
+  { week: "WK +1", title: "Compile first-week stats: streams, saves, playlist adds" },
 ] as const;
 
 const wideContainerClass = "max-w-[84rem] px-6 sm:px-8 lg:px-10";
@@ -90,11 +69,11 @@ function LogoStrip({
           visually offsets the whole block to the right. */}
       <div className="mx-auto flex flex-col items-center gap-6 sm:w-fit sm:flex-row sm:gap-8">
         <p className="max-w-[28rem] text-balance text-center font-mono text-[0.82rem] leading-6 tracking-[0.02em] text-[var(--marketing-text-subtle)] sm:text-right sm:text-[0.9rem]">
-          Teams from the best institutions trust us to power their operations.
+          Trusted by Creative Business Academy.
         </p>
         <Image
           src="/images/logos/anchor-partner.png"
-          alt="Anchor partner"
+          alt="Creative Business Academy"
           width={97}
           height={40}
           className="h-12 w-auto shrink-0 opacity-90 sm:h-14"
@@ -129,15 +108,18 @@ export function HeroSection() {
           </h1>
 
           <p className="hero-fade-in hero-delay-2 mx-auto block w-full max-w-[44rem] text-balance text-center text-lg leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
-            One workspace for music workflows. Task assignment,
-            versioned asset storage, and pipeline visibility from demo to drop.
+            One workspace for the whole release — a hand-crafted rollout plan,
+            tasks your team actually owns, and every file where it belongs.
           </p>
         </div>
 
-        <div className="hero-fade-in hero-delay-3 relative z-[60] mt-8 flex justify-center">
-          <WaitlistButton className={solidButtonClassName} source="hero_waitlist">
-            Join the waitlist
-          </WaitlistButton>
+        <div className="hero-fade-in hero-delay-3 relative z-[60] mt-8 flex flex-col items-center gap-3">
+          <Link href={APP_AUTH_URL} className={solidButtonClassName}>
+            Start free for 28 days
+          </Link>
+          <p className="font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
+            NO CARD REQUIRED
+          </p>
         </div>
 
         <LogoStrip className="hero-fade-in hero-delay-3 mt-12 w-full sm:mt-14" />
@@ -150,7 +132,6 @@ export function HeroSection() {
               className="absolute inset-0 h-full w-full"
               src="https://www.youtube.com/embed/nfOjPlmDpFw?start=10"
               title="Urganize product walkthrough"
-              frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
@@ -161,8 +142,6 @@ export function HeroSection() {
     </SectionShell>
   );
 }
-
-
 
 export function MirrorSection() {
   return (
@@ -206,58 +185,48 @@ export function MirrorSection() {
   );
 }
 
-export function DashboardScreenshotSection() {
+// The honest centerpiece: the hand-crafted release template is the product's
+// real IP, so show it — actual rows, rendered as type, not a screenshot of
+// a retired UI.
+export function TemplatePlanSection() {
   return (
     <ScrollReveal>
-      <SectionShell
-        containerClassName={wideContainerClass}
-        className="py-[60px] lg:py-[80px]"
-      >
-        <p className="mono-label mb-10 text-center text-[var(--marketing-text-subtle)]">
-          Live since January 2026
-        </p>
-        <Image
-          src="/images/landing/hero-dashboard.png"
-          alt="Urganize dashboard showing releases, search, and readiness progress in one workspace."
-          width={1920}
-          height={1396}
-          className="h-auto w-full"
-          sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
-        />
-      </SectionShell>
-    </ScrollReveal>
-  );
-}
-
-export function PlaybookSpotlightSection() {
-  return (
-    <ScrollReveal>
-      <SectionShell containerClassName={wideContainerClass}>
+      <SectionShell containerClassName="max-w-[64rem] px-6 sm:px-8 lg:px-10">
         <div className="mx-auto max-w-[52rem] text-center">
           <p className="mono-label text-[var(--marketing-text-subtle)]">
-            Six stages
+            The playbook
           </p>
 
-          <pre className="mx-auto mt-6 inline-block whitespace-pre-wrap text-center font-mono text-[0.78rem] leading-7 tracking-[0.04em] text-[var(--marketing-text-muted)] sm:text-[0.95rem]">
-            <span className="text-[var(--marketing-accent)]">░▒▓</span>{" "}
-            DEMO ──► MIX ──► MASTER ──► ART ──► DSP ──► DROP
-          </pre>
-
-          <h2 className={`mt-10 ${centeredHeadlineClass}`}>
-            Every release has stages. Now yours does too.
+          <h2 className={`mt-6 ${centeredHeadlineClass}`}>
+            Every release starts with a plan. Yours has 64 tasks.
           </h2>
+
+          <p className={`mx-auto mt-8 max-w-[40rem] ${mutedLeadClass}`}>
+            Create a release and Urganize lays out an 11-week rollout —
+            hand-crafted with working managers, owned task by task by your
+            team, and fully yours to edit.
+          </p>
         </div>
 
-        <div className="mt-16 w-full">
-          <Image
-            src="/images/landing/release-playbook.png"
-            alt="Urganize release playbook showing phased release progress and structured tasks."
-            width={1920}
-            height={932}
-            className="block h-auto w-full"
-            sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
-          />
+        <div className="mx-auto mt-14 max-w-[44rem] border-y border-[color:var(--marketing-border)]">
+          {templateExcerpt.map((row) => (
+            <div
+              key={`${row.week}-${row.title}`}
+              className="flex items-baseline gap-5 border-b border-[color:var(--marketing-border)] py-4 last:border-b-0 sm:gap-8"
+            >
+              <p className="w-14 shrink-0 text-right font-mono text-[0.72rem] tracking-[0.12em] text-[var(--marketing-accent)] sm:w-16">
+                {row.week}
+              </p>
+              <p className="text-[0.95rem] leading-6 text-[var(--marketing-text)] sm:text-base">
+                {row.title}
+              </p>
+            </div>
+          ))}
         </div>
+
+        <p className="mt-6 text-center font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
+          + 56 MORE, GENERATED THE MOMENT YOU CREATE A RELEASE
+        </p>
       </SectionShell>
     </ScrollReveal>
   );
@@ -298,8 +267,8 @@ export function TestimonialSection() {
             </p>
           </blockquote>
 
-          <p className="mt-10 font-mono text-[0.8rem] uppercase tracking-[0.22em] text-[var(--marketing-text-subtle)]">
-            — @zaddyfunds_ · Artist Manager
+          <p className="mt-10 font-mono text-[0.8rem] tracking-[0.18em] text-[var(--marketing-text-subtle)]">
+            Artist manager · @zaddyfunds_
           </p>
         </div>
       </SectionShell>
@@ -310,96 +279,22 @@ export function TestimonialSection() {
 export function FinalCTASection() {
   return (
     <ScrollReveal>
-      <SectionShell
-        id="waitlist"
-        containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10"
-      >
+      <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
         <div className="text-center">
           <h2 className={centeredHeadlineClass}>
             Releases shouldn&apos;t be hard to run.
           </h2>
 
-          <div className="relative z-[60] mt-10 flex justify-center">
-            <WaitlistButton className={solidButtonClassName} source="final_cta_waitlist">
-              Join the waitlist
-            </WaitlistButton>
+          <div className="relative z-[60] mt-10 flex flex-col items-center gap-3">
+            <Link href={APP_AUTH_URL} className={solidButtonClassName}>
+              Start free for 28 days
+            </Link>
+            <p className="font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
+              NO CARD REQUIRED
+            </p>
           </div>
         </div>
       </SectionShell>
     </ScrollReveal>
-  );
-}
-
-export function FooterTagline() {
-  const currentYear = new Date().getFullYear();
-
-  return (
-    <footer
-      className="pb-10 pt-14 sm:pb-12 sm:pt-16 lg:pb-14 lg:pt-20"
-      style={{ borderTop: "0.5px solid var(--marketing-border)" }}
-    >
-      <div className={`mx-auto ${wideContainerClass}`}>
-        <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
-          <div>
-            <Link
-              href="/"
-              className="flex h-12 items-center overflow-hidden"
-              aria-label="Urganize home"
-            >
-              <Image
-                src="/images/urganize-logo.svg"
-                alt="Urganize"
-                width={680}
-                height={144}
-                className="marketing-wordmark mt-[-0.6rem] h-24 w-auto max-w-none"
-              />
-            </Link>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm tracking-[-0.01em] text-[var(--marketing-text-subtle)]">
-            <Link href="/pricing" className="hover:text-[var(--marketing-text)]">
-              Pricing
-            </Link>
-            <Link href="/privacy" className="hover:text-[var(--marketing-text)]">
-              Privacy
-            </Link>
-            <Link href="/team" className="hover:text-[var(--marketing-text)]">
-              Team
-            </Link>
-            <Link href="/press" className="hover:text-[var(--marketing-text)]">
-              Press
-            </Link>
-            <a
-              href="mailto:contact@urganize.app"
-              className="hover:text-[var(--marketing-text)]"
-            >
-              Contact
-            </a>
-            <Link href="/terms" className="hover:text-[var(--marketing-text)]">
-              Terms
-            </Link>
-          </div>
-        </div>
-
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-5">
-          {socialLinks.map(({ href, label, Icon }) => (
-            <a
-              key={href}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={label}
-              className="text-[var(--marketing-text-subtle)] transition-colors hover:text-[var(--marketing-text)]"
-            >
-              <Icon className="h-4 w-4" aria-hidden />
-            </a>
-          ))}
-        </div>
-
-        <p className="mt-6 text-center font-mono text-[0.68rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-          &copy; {currentYear} Urganize Technologies Ltd.
-        </p>
-      </div>
-    </footer>
   );
 }

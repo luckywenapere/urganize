@@ -1,53 +1,47 @@
 import type { Metadata } from "next";
-import { LandingHeader } from "./components/landing/LandingHeader";
+import { MarketingFooter } from "./components/marketing/MarketingFooter";
+import { MarketingHeader } from "./components/marketing/MarketingHeader";
 import {
-  DashboardScreenshotSection,
   FinalCTASection,
-  FooterTagline,
   HeroSection,
   MirrorSection,
-  PlaybookSpotlightSection,
+  TemplatePlanSection,
   TestimonialSection,
   ThreeFeaturesSection,
 } from "./components/landing/Sections";
 
+const TITLE = "Urganize — Your release deserves a process.";
+const DESCRIPTION =
+  "The system of record for music releases. A hand-crafted rollout plan, tasks with owners and due dates, and every release file in one workspace. Built for music managers. Free for 28 days.";
+
+// OG/Twitter images intentionally omitted: Next.js serves the branded card
+// at app/opengraph-image.png via the file convention. Do not point these at
+// product screenshots unless they show the CURRENT app.
 export const metadata: Metadata = {
-  title: "Urganize — Your release deserves a process.",
-  description:
-    "One workspace for music release workflows — task assignment, versioned asset storage, and pipeline visibility from demo to drop. Built for music management teams.",
+  title: TITLE,
+  description: DESCRIPTION,
   metadataBase: new URL("https://urganize.app"),
   openGraph: {
-    title: "Urganize — Your release deserves a process.",
-    description:
-      "One workspace for music release workflows — task assignment, versioned asset storage, and pipeline visibility from demo to drop.",
+    title: TITLE,
+    description: DESCRIPTION,
     url: "https://urganize.app",
     siteName: "Urganize",
-    images: [
-      {
-        url: "/images/landing/hero-dashboard.png",
-        width: 1280,
-        height: 800,
-        alt: "Urganize release dashboard — track every release in one place.",
-      },
-    ],
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Urganize — Your release deserves a process.",
-    description:
-      "One workspace for music release workflows — task assignment, versioned asset storage, and pipeline visibility from demo to drop.",
-    images: ["/images/landing/hero-dashboard.png"],
+    title: TITLE,
+    description: DESCRIPTION,
   },
   keywords: [
     "music release management",
     "artist release tool",
-    "release playbook",
-    "music credits",
+    "release rollout plan",
+    "music release checklist",
     "release workflow",
     "artist team software",
-    "music SaaS",
+    "music manager software",
   ],
   robots: {
     index: true,
@@ -59,19 +53,18 @@ export default function Home() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-[var(--marketing-bg)] text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)] selection:text-[var(--marketing-text)]">
       <div className="relative">
-        <LandingHeader />
+        <MarketingHeader />
 
         <main>
           <HeroSection />
           <MirrorSection />
-          <DashboardScreenshotSection />
-          <PlaybookSpotlightSection />
+          <TemplatePlanSection />
           <ThreeFeaturesSection />
           <TestimonialSection />
           <FinalCTASection />
         </main>
 
-        <FooterTagline />
+        <MarketingFooter />
       </div>
     </div>
   );

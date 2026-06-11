@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { RiCheckLine } from "react-icons/ri";
+import { MarketingFooter } from "../components/marketing/MarketingFooter";
+import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import {
   CONTACT_SALES_EMAIL,
   CONTACT_SALES_SUBJECT,
@@ -106,38 +107,14 @@ export default function PricingPage() {
 
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden bg-[var(--marketing-bg)] font-sans text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)]">
-      {/* Floating pill nav — same pattern as /features so the two content
-          pages feel like siblings. CTAs hit the real app, not the
-          waitlist modal (this page is for visitors ready to subscribe
-          today, not waitlist signups). */}
-      <nav className="fixed left-1/2 top-6 z-[100] w-[90%] max-w-5xl -translate-x-1/2">
-        <div className="flex items-center justify-between rounded-full border border-[var(--marketing-border)] bg-[var(--marketing-surface)]/90 px-6 py-3 shadow-[0_8px_32px_var(--marketing-shadow)] backdrop-blur-xl">
-          <Link
-            href="/"
-            className="text-sm font-medium text-[var(--marketing-text-muted)] transition-colors hover:text-[var(--marketing-text)]"
-          >
-            ← Back to Home
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link
-              href="https://app.urganize.app/auth"
-              className="rounded-full border border-[var(--marketing-border-strong)] px-5 py-2 text-xs font-bold uppercase tracking-widest text-[var(--marketing-text)] transition-all hover:scale-105 hover:bg-[var(--marketing-surface-muted)]"
-            >
-              Login
-            </Link>
-            <Link
-              href={APP_SUBSCRIBE_URL}
-              className="rounded-full bg-[var(--marketing-primary)] px-5 py-2 text-xs font-bold uppercase tracking-widest text-[var(--marketing-primary-text)] shadow-[0_8px_24px_var(--marketing-shadow-strong)] transition-all hover:scale-105 hover:bg-[var(--marketing-primary-hover)]"
-            >
-              Sign Up
-            </Link>
-          </div>
-        </div>
-      </nav>
+      {/* Shared marketing header — one nav across all marketing pages.
+          Card CTAs still hit the real app (this page is for visitors ready
+          to subscribe today). */}
+      <MarketingHeader />
 
       <main className="relative z-10">
         {/* HERO */}
-        <section className="relative px-6 pb-12 pt-32 sm:pt-40">
+        <section className="relative px-6 pb-12 pt-14 sm:pt-20">
           <div className="mx-auto max-w-4xl text-center">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -286,38 +263,7 @@ export default function PricingPage() {
         </section>
       </main>
 
-      {/* Footer mirrors the homepage. Uses the same wordmark + small link
-          row so navigating between marketing pages feels consistent. */}
-      <footer
-        className="pb-10 pt-14 sm:pb-12 sm:pt-16 lg:pb-14 lg:pt-20"
-        style={{ borderTop: "0.5px solid var(--marketing-border)" }}
-      >
-        <div className="mx-auto max-w-[84rem] px-6 sm:px-8 lg:px-10">
-          <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
-            <p className="font-display text-2xl font-semibold tracking-tight">Urganize</p>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm tracking-[-0.01em] text-[var(--marketing-text-subtle)]">
-              <Link href="/" className="hover:text-[var(--marketing-text)]">
-                Home
-              </Link>
-              <Link href="/features" className="hover:text-[var(--marketing-text)]">
-                Features
-              </Link>
-              <Link href="/privacy" className="hover:text-[var(--marketing-text)]">
-                Privacy
-              </Link>
-              <Link href="/terms" className="hover:text-[var(--marketing-text)]">
-                Terms
-              </Link>
-              <a
-                href="mailto:contact@urganize.app"
-                className="hover:text-[var(--marketing-text)]"
-              >
-                Contact
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }
@@ -397,8 +343,8 @@ function PricingTierCard({
         href={cta.href}
         className={
           highlight
-            ? "mt-8 inline-flex items-center justify-center rounded-full bg-[var(--marketing-accent)] px-5 py-3 text-sm font-bold uppercase tracking-widest text-[var(--marketing-primary-text)] shadow-[0_12px_32px_rgba(0,0,0,0.3)] transition-all hover:scale-[1.02]"
-            : "mt-8 inline-flex items-center justify-center rounded-full border border-[var(--marketing-border-strong)] bg-[var(--marketing-surface)] px-5 py-3 text-sm font-bold uppercase tracking-widest text-[var(--marketing-text)] transition-all hover:border-[var(--marketing-text)] hover:bg-[var(--marketing-surface-muted)]"
+            ? "mt-8 inline-flex items-center justify-center rounded-full bg-[var(--marketing-primary)] px-5 py-3 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_12px_32px_var(--marketing-shadow-strong)] hover:bg-[var(--marketing-primary-hover)]"
+            : "mt-8 inline-flex items-center justify-center rounded-full border border-[var(--marketing-border-strong)] bg-[var(--marketing-surface)] px-5 py-3 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text)] hover:border-[var(--marketing-text)] hover:bg-[var(--marketing-surface-muted)]"
         }
       >
         {cta.label}

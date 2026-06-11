@@ -14,15 +14,15 @@ import { Analytics } from "@vercel/analytics/next";
 const SITE_URL = "https://urganize.app";
 const LANDING_TITLE = "Urganize — Your release deserves a process.";
 const LANDING_DESCRIPTION =
-  "One workspace for music release workflows — task assignment, versioned asset storage, and pipeline visibility from demo to drop. Built for music management teams.";
+  "The system of record for music releases. A hand-crafted rollout plan, tasks with owners and due dates, and every release file in one workspace. Built for music managers.";
 const LANDING_KEYWORDS = [
   "music release management",
   "artist release tool",
-  "release playbook",
-  "music credits",
+  "release rollout plan",
+  "music release checklist",
   "release workflow",
   "artist team software",
-  "music SaaS",
+  "music manager software",
 ] as const;
 
 // Typography

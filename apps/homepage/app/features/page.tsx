@@ -1,403 +1,232 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { RiCheckLine } from "react-icons/ri";
+import { ScrollReveal } from "../components/landing/ScrollReveal";
+import { SectionShell } from "../components/landing/SectionShell";
+import { MarketingFooter } from "../components/marketing/MarketingFooter";
+import { MarketingHeader } from "../components/marketing/MarketingHeader";
+
+const APP_AUTH_URL = "https://app.urganize.app/auth";
+
+const TITLE = "Features";
+const DESCRIPTION =
+  "What Urganize does: a hand-crafted release rollout plan, tasks with owners and dependencies, per-release file storage, and event milestones — in one workspace.";
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+};
+
+// Every claim on this page must describe the product as it ships today.
+// The honesty rule from /pricing applies here: we don't advertise what
+// isn't built (no AI-guidance claims, no credits, no pre-save, no stages).
+const features = [
+  {
+    kicker: "The plan",
+    title: "A rollout plan, not a blank page.",
+    body: "Create a release and Urganize lays out a hand-crafted 11-week rollout — 64 tasks from locking the master to compiling first-week stats. Written with working managers, signed off by design partners, and fully editable before you commit.",
+    points: [
+      "8 weeks pre-release, 3 weeks post-release",
+      "Every task dated relative to your release day",
+      "Edit, reorder, or delete anything — it's your plan",
+    ],
+  },
+  {
+    kicker: "Tasks",
+    title: "Owned, dated, and in order.",
+    body: "Every task has an owner, a due date, and a priority. Dependencies keep the order honest — artwork upload stays locked until the artwork is approved, and unlocks the moment it is.",
+    points: [
+      "Assign your A&R, PR, designer, distributor",
+      "Blocked tasks show exactly what's blocking them",
+      "Check things off from the release page or your queue",
+    ],
+  },
+  {
+    kicker: "Files",
+    title: "Every file where it belongs.",
+    body: "Masters, artwork, contracts, split sheets — attached to the release they belong to, organized by category, with image previews. Stop excavating Google Drive the night before delivery.",
+    points: [
+      "Per-release storage with categories",
+      "Audio, video, documents, and artwork",
+      "Download links your whole team can use",
+    ],
+  },
+  {
+    kicker: "Milestones",
+    title: "The moments that matter, on the timeline.",
+    body: "Listening party, video shoot, release day — milestones sit inside the release plan as dated events, so the team sees the moments coming, not just the chores.",
+    points: [
+      "Event milestones render on the release timeline",
+      "Dated relative to the drop",
+      "Visible to everyone on the workspace",
+    ],
+  },
+  {
+    kicker: "Visibility",
+    title: "Know where every release stands.",
+    body: "One workspace shows every release in flight — progress, what's overdue, what's due this week, and which release it belongs to. The status conversation stops being a meeting.",
+    points: [
+      "All releases and tasks on one screen",
+      "Click a release to scope down to its work",
+      "Overdue and due-today surfaced first",
+    ],
+  },
+] as const;
+
+const nonFeatures = [
+  {
+    title: "Revenue tracking",
+    body: "We don't track streams, splits, or royalties. That's what distributors are for.",
+  },
+  {
+    title: "Legal contracts",
+    body: "We don't generate or enforce contracts. Get a lawyer for that — we'll store the PDF.",
+  },
+  {
+    title: "Analytics dashboards",
+    body: "We don't show streaming numbers or social metrics. Check your platforms.",
+  },
+  {
+    title: "Distribution",
+    body: "We don't upload to Spotify or Apple Music. Use your preferred distributor — we'll make sure it happens on time.",
+  },
+] as const;
+
+const headlineClass =
+  "text-balance text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[3.6rem]";
 
 export default function FeaturesPage() {
-  const fadeInUp = {
-    initial: { opacity: 0, y: 20 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true },
-    transition: {
-      duration: 0.6,
-      ease: [0.22, 1, 0.36, 1] as const,
-    },
-  };
-
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-[var(--marketing-bg)] font-sans text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)]">
-      {/* --- SIMPLE NAVIGATION --- */}
-      <nav className="fixed left-1/2 top-6 z-[100] w-[90%] max-w-5xl -translate-x-1/2">
-        <div className="flex items-center justify-between rounded-full border border-[var(--marketing-border)] bg-[var(--marketing-surface)]/90 px-6 py-3 shadow-[0_8px_32px_var(--marketing-shadow)] backdrop-blur-xl">
-          <Link
-            href="/"
-            className="text-sm font-medium text-[var(--marketing-text-muted)] transition-colors hover:text-[var(--marketing-text)]"
-          >
-            ← Back to Home
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link
-              href="https://app.urganize.app/auth"
-              className="rounded-full border border-[var(--marketing-border-strong)] px-5 py-2 text-xs font-bold uppercase tracking-widest text-[var(--marketing-text)] transition-all hover:scale-105 hover:bg-[var(--marketing-surface-muted)]"
-            >
-              Login
-            </Link>
-            <Link
-              href="https://app.urganize.app/auth"
-              className="rounded-full bg-[var(--marketing-primary)] px-5 py-2 text-xs font-bold uppercase tracking-widest text-[var(--marketing-primary-text)] shadow-[0_8px_24px_var(--marketing-shadow-strong)] transition-all hover:scale-105 hover:bg-[var(--marketing-primary-hover)]"
-            >
-              Sign Up
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen overflow-x-hidden bg-[var(--marketing-bg)] text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)] selection:text-[var(--marketing-text)]">
+      <MarketingHeader />
 
-      <main className="relative z-10">
-        {/* --- HERO SECTION --- */}
-        <section className="relative flex min-h-[60vh] items-center justify-center px-6 pb-20 pt-32">
-          <div className="mx-auto max-w-4xl text-center">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mb-8 inline-flex items-center gap-2 rounded-full border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-accent)]"
-            >
-              <span className="h-1.5 w-1.5 animate-ping rounded-full bg-[var(--marketing-accent)]" />
+      <main>
+        {/* HERO */}
+        <SectionShell
+          className="pb-16 pt-16 sm:pt-20"
+          containerClassName="max-w-[64rem] px-6 sm:px-8 lg:px-10"
+        >
+          <div className="mx-auto max-w-[46rem] text-center">
+            <p className="mono-label text-[var(--marketing-text-subtle)]">
               Features
-            </motion.div>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="mb-8 text-5xl font-black leading-[0.9] tracking-tighter sm:text-6xl md:text-8xl"
-            >
-              AI-guided.
-              <br />
-              <span className="text-[var(--marketing-accent)]">Stress-free.</span>
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="mx-auto max-w-2xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl"
-            >
-              Every feature in Urganize exists to remove overwhelm and guide you through your release — one intelligent step at a time.
-            </motion.p>
+            </p>
+            <h1 className="mt-8 text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem]">
+              Everything a release needs.{" "}
+              <span className="italic text-[var(--marketing-accent)]">
+                Nothing it doesn&apos;t.
+              </span>
+            </h1>
+            <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
+              Urganize is the system of record for the release — where the plan
+              lives, where the work happens, where the team sees status.
+            </p>
           </div>
-        </section>
+        </SectionShell>
 
-        {/* --- CORE FEATURES --- */}
-        <section className="px-6 py-20">
-          <div className="mx-auto max-w-6xl">
-            {/* Feature 1: AI-Guided Steps */}
-            <motion.div {...fadeInUp} className="mb-32">
-              <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
+        {/* FEATURE BLOCKS */}
+        {features.map((feature, index) => (
+          <ScrollReveal key={feature.title}>
+            <SectionShell
+              className="py-[60px] lg:py-[80px]"
+              containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
+            >
+              <div
+                className={`mx-auto grid max-w-[64rem] items-start gap-10 border-t border-[color:var(--marketing-border)] pt-14 lg:grid-cols-2 lg:gap-16 ${
+                  index % 2 === 1 ? "lg:[&>div:first-child]:order-2" : ""
+                }`}
+              >
                 <div>
-                  <div className="mb-6 inline-block rounded-full border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-accent)]">
-                    Core Feature
-                  </div>
-                  <h2 className="mb-6 text-4xl font-black tracking-tighter md:text-6xl">Intelligent Guidance</h2>
-                  <p className="mb-8 text-xl leading-relaxed text-[var(--marketing-text-muted)]">
-                    Instead of overwhelming you with a massive checklist, Urganize shows you one task at a time. Complete it, share the outcome, and get your next step — adapted to your results.
+                  <p className="mono-label text-[var(--marketing-accent)]">
+                    {feature.kicker}
                   </p>
-                  <ul className="space-y-4">
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--marketing-accent)]/20">
-                        <RiCheckLine className="text-sm text-[var(--marketing-accent)]" />
-                      </div>
-                      <div>
-                        <p className="mb-1 font-semibold">One task at a time</p>
-                        <p className="text-sm text-[var(--marketing-text-subtle)]">Never see 50 tasks at once. Focus on what matters now.</p>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--marketing-accent)]/20">
-                        <RiCheckLine className="text-sm text-[var(--marketing-accent)]" />
-                      </div>
-                      <div>
-                        <p className="mb-1 font-semibold">Feedback-driven adaptation</p>
-                        <p className="text-sm text-[var(--marketing-text-subtle)]">Answer a quick question after each task. The system learns from real outcomes.</p>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--marketing-accent)]/20">
-                        <RiCheckLine className="text-sm text-[var(--marketing-accent)]" />
-                      </div>
-                      <div>
-                        <p className="mb-1 font-semibold">Smart next steps</p>
-                        <p className="text-sm text-[var(--marketing-text-subtle)]">Your next task is intelligently determined based on what just happened.</p>
-                      </div>
-                    </li>
-                  </ul>
+                  <h2 className={`mt-5 ${headlineClass}`}>{feature.title}</h2>
                 </div>
-                <div className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-8">
-                  <div className="flex aspect-[4/3] flex-col items-center justify-center rounded-2xl bg-[var(--marketing-surface)] p-8">
-                    <div className="mb-6 flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--marketing-accent)]/20">
-                        <span className="text-lg text-[var(--marketing-accent)]">✓</span>
-                      </div>
-                      <span className="text-[var(--marketing-text-muted)]">Task completed</span>
-                    </div>
-                    <div className="mb-4 w-full rounded-xl border border-[var(--marketing-accent)]/30 bg-[var(--marketing-surface-muted)] p-4">
-                      <p className="mb-2 text-sm text-[var(--marketing-text-muted)]">How did it go?</p>
-                      <div className="flex gap-2">
-                        <span className="rounded-full bg-[var(--marketing-accent)]/20 px-3 py-1 text-xs text-[var(--marketing-accent)]">Got approval</span>
-                        <span className="rounded-full bg-[var(--marketing-surface-muted)] px-3 py-1 text-xs text-[var(--marketing-text-subtle)]">Needs revision</span>
-                      </div>
-                    </div>
-                    <div className="text-xs text-[var(--marketing-text-subtle)]">→ Next step adapts based on your answer</div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Feature 2: Promotion Built In */}
-            <motion.div {...fadeInUp} className="mb-32">
-              <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
-                <div className="order-2 lg:order-1">
-                  <div className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-8">
-                    <div className="flex aspect-[4/3] flex-col items-center justify-center rounded-2xl bg-[var(--marketing-surface)] p-6">
-                      <div className="w-full space-y-3">
-                        <div className="flex items-center gap-3 rounded-lg border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--marketing-accent)]/20 text-sm text-[var(--marketing-accent)]">📸</div>
-                          <span className="text-sm text-[var(--marketing-text-muted)]">Plan content shoot</span>
-                          <span className="ml-auto text-xs text-[var(--marketing-accent)]">Now</span>
-                        </div>
-                        <div className="flex items-center gap-3 rounded-lg border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-3 opacity-60">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--marketing-bg-muted)] text-sm text-[var(--marketing-text-subtle)]">📅</div>
-                          <span className="text-sm text-[var(--marketing-text-subtle)]">Schedule rollout</span>
-                          <span className="ml-auto text-xs text-[var(--marketing-text-subtle)]">Next</span>
-                        </div>
-                        <div className="flex items-center gap-3 rounded-lg border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-3 opacity-40">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--marketing-bg-muted)] text-sm text-[var(--marketing-text-subtle)]">📣</div>
-                          <span className="text-sm text-[var(--marketing-text-subtle)]">Announcement post</span>
-                          <span className="ml-auto text-xs text-[var(--marketing-text-subtle)]">Later</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="order-1 lg:order-2">
-                  <div className="mb-6 inline-block rounded-full border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-accent)]">
-                    Game Changer
-                  </div>
-                  <h2 className="mb-6 text-4xl font-black tracking-tighter md:text-6xl">Promotion First</h2>
-                  <p className="mb-8 text-xl leading-relaxed text-[var(--marketing-text-muted)]">
-                    Promotion is where releases fail. That&apos;s why it&apos;s built into every release from day one — not an afterthought.
-                  </p>
-                  <ul className="space-y-4">
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--marketing-accent)]/20">
-                        <RiCheckLine className="text-sm text-[var(--marketing-accent)]" />
-                      </div>
-                      <div>
-                        <p className="mb-1 font-semibold">Promotion tasks surface early</p>
-                        <p className="text-sm text-[var(--marketing-text-subtle)]">Content planning, shoot schedules, social rollout — visible from the start</p>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--marketing-accent)]/20">
-                        <RiCheckLine className="text-sm text-[var(--marketing-accent)]" />
-                      </div>
-                      <div>
-                        <p className="mb-1 font-semibold">No last-minute scrambling</p>
-                        <p className="text-sm text-[var(--marketing-text-subtle)]">Timeline guidance prevents &quot;we&apos;ll figure it out later&quot;</p>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--marketing-accent)]/20">
-                        <RiCheckLine className="text-sm text-[var(--marketing-accent)]" />
-                      </div>
-                      <div>
-                        <p className="mb-1 font-semibold">Clear accountability</p>
-                        <p className="text-sm text-[var(--marketing-text-subtle)]">Track progress on every promotion task</p>
-                      </div>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Feature 3: Release-First File System */}
-            <motion.div {...fadeInUp} className="mb-32">
-              <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
                 <div>
-                  <div className="mb-6 inline-block rounded-full border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-accent)]">
-                    Organization
-                  </div>
-                  <h2 className="mb-6 text-4xl font-black tracking-tighter md:text-6xl">Files That Make Sense</h2>
-                  <p className="mb-8 text-xl leading-relaxed text-[var(--marketing-text-muted)]">
-                    Stop searching through Google Drive. Every file belongs to a release. Every release has structure.
+                  <p className="text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
+                    {feature.body}
                   </p>
-                  <ul className="space-y-4">
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--marketing-accent)]/20">
-                        <RiCheckLine className="text-sm text-[var(--marketing-accent)]" />
-                      </div>
-                      <div>
-                        <p className="mb-1 font-semibold">Pre-built folder structure</p>
-                        <p className="text-sm text-[var(--marketing-text-subtle)]">Audio, stems, artwork, contracts — organized by default</p>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--marketing-accent)]/20">
-                        <RiCheckLine className="text-sm text-[var(--marketing-accent)]" />
-                      </div>
-                      <div>
-                        <p className="mb-1 font-semibold">Release-connected</p>
-                        <p className="text-sm text-[var(--marketing-text-subtle)]">Files live with the release they belong to. No more hunting.</p>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--marketing-accent)]/20">
-                        <RiCheckLine className="text-sm text-[var(--marketing-accent)]" />
-                      </div>
-                      <div>
-                        <p className="mb-1 font-semibold">Nothing gets lost</p>
-                        <p className="text-sm text-[var(--marketing-text-subtle)]">Metadata, credits, assets — all in one place</p>
-                      </div>
-                    </li>
-                  </ul>
-                </div>
-                <div className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-8">
-                  <div className="flex aspect-[4/3] flex-col items-center justify-center rounded-2xl bg-[var(--marketing-surface)] p-6">
-                    <div className="w-full space-y-2">
-                      {[
-                        { name: "Audio", count: "3 files" },
-                        { name: "Stems", count: "8 files" },
-                        { name: "Artwork", count: "5 files" },
-                        { name: "Contracts", count: "2 files" },
-                        { name: "Promotion", count: "4 files" },
-                      ].map((folder) => (
-                        <div
-                          key={folder.name}
-                          className="flex items-center gap-3 rounded-lg p-2 hover:bg-[var(--marketing-surface-muted)]"
+                  <ul className="mt-7 space-y-3">
+                    {feature.points.map((point) => (
+                      <li
+                        key={point}
+                        className="flex items-baseline gap-4 text-[0.95rem] leading-7 text-[var(--marketing-text)]"
+                      >
+                        <span
+                          className="font-mono text-[0.72rem] text-[var(--marketing-accent)]"
+                          aria-hidden
                         >
-                          <span className="text-lg">📁</span>
-                          <span className="text-sm text-[var(--marketing-text-muted)]">{folder.name}</span>
-                          <span className="ml-auto text-xs text-[var(--marketing-text-subtle)]">{folder.count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Feature 4: Timeline Enforcement */}
-            <motion.div {...fadeInUp} className="mb-32">
-              <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
-                <div className="order-2 lg:order-1">
-                  <div className="rounded-[2.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-8">
-                    <div className="flex aspect-[4/3] flex-col items-center justify-center rounded-2xl bg-[var(--marketing-surface)] p-6">
-                      <div className="mb-4 w-full rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-                        <div className="mb-2 flex items-center gap-3">
-                          <span className="text-amber-600">⚠️</span>
-                          <span className="text-sm font-medium text-amber-700">Timeline Alert</span>
-                        </div>
-                        <p className="text-sm text-[var(--marketing-text-muted)]">Release date not set. Set a date to unlock timeline-based guidance.</p>
-                      </div>
-                      <div className="w-full rounded-xl border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-4">
-                        <p className="mb-2 text-xs text-[var(--marketing-text-subtle)]">Suggested release window</p>
-                        <p className="text-lg font-semibold text-[var(--marketing-text)]">March 14 - 21, 2026</p>
-                        <p className="mt-1 text-xs text-[var(--marketing-text-subtle)]">Based on your current progress</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="order-1 lg:order-2">
-                  <div className="mb-6 inline-block rounded-full border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-accent)]">
-                    Enforcement
-                  </div>
-                  <h2 className="mb-6 text-4xl font-black tracking-tighter md:text-6xl">Timeline Guidance</h2>
-                  <p className="mb-8 text-xl leading-relaxed text-[var(--marketing-text-muted)]">
-                    The system prompts you when dates are missing. No more &quot;we&apos;ll figure it out later&quot; that turns into last-minute panic.
-                  </p>
-                  <ul className="space-y-4">
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--marketing-accent)]/20">
-                        <RiCheckLine className="text-sm text-[var(--marketing-accent)]" />
-                      </div>
-                      <div>
-                        <p className="mb-1 font-semibold">Gentle prompts, not nagging</p>
-                        <p className="text-sm text-[var(--marketing-text-subtle)]">The system surfaces timeline issues before they become crises</p>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--marketing-accent)]/20">
-                        <RiCheckLine className="text-sm text-[var(--marketing-accent)]" />
-                      </div>
-                      <div>
-                        <p className="mb-1 font-semibold">Smart deadline suggestions</p>
-                        <p className="text-sm text-[var(--marketing-text-subtle)]">Based on your progress and release date</p>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--marketing-accent)]/20">
-                        <RiCheckLine className="text-sm text-[var(--marketing-accent)]" />
-                      </div>
-                      <div>
-                        <p className="mb-1 font-semibold">No missed windows</p>
-                        <p className="text-sm text-[var(--marketing-text-subtle)]">Distributor deadlines, playlist pitches — all accounted for</p>
-                      </div>
-                    </li>
+                          —
+                        </span>
+                        {point}
+                      </li>
+                    ))}
                   </ul>
                 </div>
               </div>
-            </motion.div>
-          </div>
-        </section>
+            </SectionShell>
+          </ScrollReveal>
+        ))}
 
-        {/* --- WHAT WE DON'T DO --- */}
-        <section className="bg-[var(--marketing-bg-muted)] px-6 py-32">
-          <div className="mx-auto max-w-4xl">
-            <motion.div {...fadeInUp} className="mb-16 text-center">
-              <h2 className="mb-8 text-5xl font-black tracking-tighter md:text-7xl">What Urganize Doesn&apos;t Do</h2>
-              <p className="mx-auto max-w-2xl text-xl leading-relaxed text-[var(--marketing-text-muted)]">
-                We&apos;re opinionated about what we build. If a feature doesn&apos;t reduce operational chaos, it&apos;s out.
+        {/* WHAT IT DOESN'T DO */}
+        <ScrollReveal>
+          <SectionShell
+            className="py-[100px] lg:py-[120px]"
+            containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
+          >
+            <div className="mx-auto max-w-[52rem] text-center">
+              <p className="mono-label text-[var(--marketing-text-subtle)]">
+                On purpose
               </p>
-            </motion.div>
+              <h2 className={`mt-6 ${headlineClass}`}>
+                What Urganize doesn&apos;t do.
+              </h2>
+              <p className="mx-auto mt-6 max-w-[36rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
+                We&apos;re opinionated about what we build. If it doesn&apos;t
+                reduce operational chaos, it&apos;s out.
+              </p>
+            </div>
 
-            <motion.div {...fadeInUp} className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {[
-                { title: "❌ Revenue Tracking", body: "We don't track streams, splits, or royalties. That's what distributors are for." },
-                { title: "❌ Legal Contracts", body: "We don't generate or enforce contracts. Get a lawyer for that." },
-                { title: "❌ Analytics", body: "We don't show streaming numbers or social media metrics. Check your platforms." },
-                { title: "❌ Music Distribution", body: "We don't upload to Spotify or Apple Music. Use your preferred distributor." },
-              ].map((item) => (
+            <div className="mx-auto mt-14 grid max-w-[60rem] grid-cols-1 gap-px bg-[color:var(--marketing-border)] sm:grid-cols-2">
+              {nonFeatures.map((item) => (
                 <div
                   key={item.title}
-                  className="rounded-[2rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface)] p-8"
+                  className="bg-[var(--marketing-bg)] px-6 py-7 text-left sm:px-7 sm:py-8"
                 >
-                  <h3 className="mb-3 text-xl font-bold text-[var(--marketing-text-muted)]">{item.title}</h3>
-                  <p className="text-[var(--marketing-text-subtle)]">{item.body}</p>
+                  <p className="font-mono text-[0.95rem] font-semibold uppercase tracking-[0.06em] text-[var(--marketing-text)]">
+                    {item.title}
+                  </p>
+                  <p className="mt-3 text-[0.92rem] leading-7 text-[var(--marketing-text-muted)]">
+                    {item.body}
+                  </p>
                 </div>
               ))}
-            </motion.div>
-          </div>
-        </section>
+            </div>
+          </SectionShell>
+        </ScrollReveal>
 
-        {/* --- FINAL CTA --- */}
-        <section className="relative overflow-hidden px-6 py-32">
-          <div className="relative z-10 mx-auto max-w-4xl text-center">
-            <motion.div {...fadeInUp}>
-              <h2 className="mb-6 text-4xl font-bold tracking-tighter md:text-6xl">Ready to release without the stress?</h2>
-              <p className="mx-auto mb-12 max-w-2xl text-xl text-[var(--marketing-text-muted)]">
-                Join managers and artists who refuse to let chaos kill their releases.
-              </p>
-              <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+        {/* FINAL CTA */}
+        <ScrollReveal>
+          <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
+            <div className="text-center">
+              <h2 className={headlineClass}>
+                Run your next release with a system.
+              </h2>
+              <div className="mt-10 flex flex-col items-center gap-3">
                 <Link
-                  href="https://app.urganize.app/auth"
-                  className="inline-flex items-center gap-3 rounded-full bg-[var(--marketing-primary)] px-10 py-5 text-sm font-black uppercase tracking-[0.2em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] transition-all hover:scale-105 hover:bg-[var(--marketing-primary-hover)] active:scale-95"
+                  href={APP_AUTH_URL}
+                  className="inline-flex items-center justify-center rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] hover:bg-[var(--marketing-primary-hover)] sm:text-base"
                 >
-                  Sign Up
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
+                  Start free for 28 days
                 </Link>
-                <Link
-                  href="https://app.urganize.app/auth"
-                  className="inline-flex items-center gap-3 rounded-full border border-[var(--marketing-border-strong)] px-10 py-5 text-sm font-black uppercase tracking-[0.2em] text-[var(--marketing-text)] transition-all hover:bg-[var(--marketing-surface-muted)] active:scale-95"
-                >
-                  Login
-                </Link>
+                <p className="font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
+                  NO CARD REQUIRED
+                </p>
               </div>
-            </motion.div>
-          </div>
-        </section>
+            </div>
+          </SectionShell>
+        </ScrollReveal>
       </main>
+
+      <MarketingFooter />
     </div>
   );
 }
