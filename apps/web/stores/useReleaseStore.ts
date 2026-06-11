@@ -14,6 +14,10 @@ type ReleaseStore = {
   error: string;
   loadCommandCenter: () => Promise<CommandCenterData | null>;
   createRelease: (title: string) => Promise<ExecutionRelease | null>;
+  /** Drops a release (and its tasks) from local state after the server
+   * confirmed deletion. The caller is expected to follow up with
+   * loadCommandCenter() to re-sync. */
+  removeReleaseLocal: (releaseId: string) => void;
 };
 
 const getAccessToken = async () => {
@@ -118,5 +122,14 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       message: `Created ${release.title}`,
     });
     return release;
+  },
+  removeReleaseLocal: (releaseId) => {
+    const taskStore = useTaskStore.getState();
+    taskStore.setTasks(taskStore.tasks.filter((task) => task.releaseId !== releaseId));
+    set((current) => ({
+      releases: current.releases.filter((release) => release.id !== releaseId),
+      todaysDirective:
+        current.todaysDirective?.releaseId === releaseId ? null : current.todaysDirective,
+    }));
   },
 }));

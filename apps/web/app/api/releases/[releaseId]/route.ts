@@ -12,6 +12,7 @@ import {
 } from '../_shared';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
 import { isWorkspaceFeatureEnabled } from '@/lib/artists-server';
+import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-helpers';
 import {
   captureServerAnalyticsEvent,
   createPostHogEvent,
@@ -21,6 +22,7 @@ import {
 
 const trimString = (value: unknown): string => String(value || '').trim();
 const TASKS_TABLE = 'tasks';
+const ASSETS_TABLE = 'assets';
 const WORKSPACES_TABLE = 'workspaces';
 const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
 const RELEASE_PIPELINE_STATES = ['idea', 'planning', 'asset_prep', 'distribution', 'campaign', 'post_release'] as const;
@@ -281,6 +283,88 @@ export async function PATCH(
     );
 
     return NextResponse.json({ status: 'saved' });
+  } finally {
+    await shutdownServerAnalytics(posthogServer);
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ releaseId: string }> }
+) {
+  const posthogServer = createServerPostHogClient();
+
+  try {
+    const auth = await requireActiveAuthenticatedUser(request);
+    if ('error' in auth) return auth.error;
+
+    const { releaseId } = await context.params;
+    if (!releaseId) return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+
+    const adminClient = createAdminClient(auth.supabaseUrl);
+    const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+    if ('error' in ownership) return ownership.error;
+
+    // Storage objects don't cascade with the DB row, so they go first — same
+    // ordering as the single-asset DELETE: if storage removal fails we leave
+    // everything in place for a retry, since orphan storage is recoverable
+    // but DB rows pointing at deleted objects are harder to detect.
+    const assetsResult = await adminClient!
+      .from(ASSETS_TABLE)
+      .select('storage_bucket, storage_path')
+      .eq('release_id', releaseId);
+
+    if (assetsResult.error && !isOptionalTableMissingError(assetsResult.error)) {
+      return NextResponse.json(
+        { error: assetsResult.error.message || 'Could not load release assets.' },
+        { status: 500 }
+      );
+    }
+
+    const pathsByBucket = new Map<string, string[]>();
+    for (const row of assetsResult.data ?? []) {
+      const storagePath = String(row.storage_path || '');
+      if (!storagePath) continue;
+      const bucket = String(row.storage_bucket || RELEASE_ASSETS_BUCKET);
+      const paths = pathsByBucket.get(bucket) ?? [];
+      paths.push(storagePath);
+      pathsByBucket.set(bucket, paths);
+    }
+
+    for (const [bucket, paths] of pathsByBucket) {
+      const removeResult = await adminClient!.storage.from(bucket).remove(paths);
+      if (removeResult.error) {
+        return NextResponse.json(
+          { error: removeResult.error.message || 'Could not delete release files from storage.' },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Child rows (tasks, task_groups, assets, metadata, events, playbook
+    // steps, collaborators, activity_logs) all carry ON DELETE CASCADE FKs
+    // to releases — one row delete cleans the whole tree.
+    const deleteResult = await adminClient!
+      .from('releases')
+      .delete()
+      .eq('id', releaseId)
+      .eq('owner_user_id', auth.user.id);
+
+    if (deleteResult.error) {
+      if (isOptionalTableMissingError(deleteResult.error)) return buildMissingTableResponse();
+      return NextResponse.json(
+        { error: deleteResult.error.message || 'Could not delete release.' },
+        { status: 500 }
+      );
+    }
+
+    captureServerAnalyticsEvent(
+      posthogServer,
+      auth.user.id,
+      createPostHogEvent('release_deleted', { release_id: releaseId })
+    );
+
+    return new NextResponse(null, { status: 204 });
   } finally {
     await shutdownServerAnalytics(posthogServer);
   }
