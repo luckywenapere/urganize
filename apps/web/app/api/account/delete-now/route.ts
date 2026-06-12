@@ -1,5 +1,90 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
+import { TASK_ATTACHMENTS_BUCKET } from '@/lib/tasks-server';
+
+// Storage objects don't cascade with the DB rows deleted below, so they are
+// enumerated and removed first. Unlike the per-release DELETE, a storage
+// failure must not block account deletion (the privacy policy promises the
+// account goes away) — log and continue; an orphaned blob is recoverable.
+async function removeUserStorageObjects(supabaseAdmin: SupabaseClient, userId: string) {
+  const pathsByBucket = new Map<string, Set<string>>();
+  const collectPath = (bucket: string, path: unknown) => {
+    const storagePath = typeof path === 'string' ? path.trim() : '';
+    if (!storagePath) return;
+    const paths = pathsByBucket.get(bucket) ?? new Set<string>();
+    paths.add(storagePath);
+    pathsByBucket.set(bucket, paths);
+  };
+  const logQueryError = (label: string, error: { message?: string } | null) => {
+    if (error) {
+      console.error(`[account/delete-now] Could not enumerate ${label} for storage cleanup:`, error.message);
+    }
+  };
+
+  // All assets owned by the user — storage_bucket on the row covers both the
+  // release-assets and proofs buckets.
+  const assetsResult = await supabaseAdmin
+    .from('assets')
+    .select('storage_bucket, storage_path')
+    .eq('owner_user_id', userId);
+  logQueryError('assets', assetsResult.error);
+  for (const row of assetsResult.data ?? []) {
+    collectPath(String(row.storage_bucket || RELEASE_ASSETS_BUCKET), row.storage_path);
+  }
+
+  // Task attachments uploaded by the user anywhere...
+  const ownAttachmentsResult = await supabaseAdmin
+    .from('task_attachments')
+    .select('storage_path')
+    .eq('user_id', userId);
+  logQueryError('task attachments', ownAttachmentsResult.error);
+  for (const row of ownAttachmentsResult.data ?? []) {
+    collectPath(TASK_ATTACHMENTS_BUCKET, row.storage_path);
+  }
+
+  // ...plus attachments on tasks under the user's releases — those rows
+  // cascade-delete with the releases and would orphan their blobs.
+  const releasesResult = await supabaseAdmin.from('releases').select('id').eq('owner_user_id', userId);
+  logQueryError('releases', releasesResult.error);
+  const releaseIds = (releasesResult.data ?? []).map((row) => String(row.id || '')).filter(Boolean);
+  if (releaseIds.length > 0) {
+    const tasksResult = await supabaseAdmin.from('tasks').select('id').in('release_id', releaseIds);
+    logQueryError('tasks', tasksResult.error);
+    const taskIds = (tasksResult.data ?? []).map((row) => String(row.id || '')).filter(Boolean);
+    if (taskIds.length > 0) {
+      const releaseAttachmentsResult = await supabaseAdmin
+        .from('task_attachments')
+        .select('storage_path')
+        .in('task_id', taskIds);
+      logQueryError('release task attachments', releaseAttachmentsResult.error);
+      for (const row of releaseAttachmentsResult.data ?? []) {
+        collectPath(TASK_ATTACHMENTS_BUCKET, row.storage_path);
+      }
+    }
+  }
+
+  // The workspace logo lives in release-assets keyed off the workspaces row,
+  // which cascade-deletes with the auth user.
+  const workspaceResult = await supabaseAdmin
+    .from('workspaces')
+    .select('logo_storage_path')
+    .eq('owner_id', userId);
+  logQueryError('workspace logo', workspaceResult.error);
+  for (const row of workspaceResult.data ?? []) {
+    collectPath(RELEASE_ASSETS_BUCKET, row.logo_storage_path);
+  }
+
+  for (const [bucket, paths] of pathsByBucket) {
+    const removeResult = await supabaseAdmin.storage.from(bucket).remove([...paths]);
+    if (removeResult.error) {
+      console.error(
+        `[account/delete-now] Could not remove ${paths.size} object(s) from ${bucket}:`,
+        removeResult.error.message
+      );
+    }
+  }
+}
 
 export async function POST(req: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -45,6 +130,10 @@ export async function POST(req: NextRequest) {
 
   await supabaseAdmin.from('payments').delete().eq('user_id', user.id).neq('plan', 'trial_claim');
   await supabaseAdmin.from('subscriptions').delete().eq('user_id', user.id);
+
+  // Must run before the releases delete: the asset / task_attachment rows
+  // holding the storage paths cascade away with the releases.
+  await removeUserStorageObjects(supabaseAdmin, user.id);
 
   await supabaseAdmin.from('releases').delete().eq('owner_user_id', user.id);
   await supabaseAdmin.from('profiles').delete().eq('id', user.id);

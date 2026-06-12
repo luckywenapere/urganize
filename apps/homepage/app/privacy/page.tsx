@@ -254,7 +254,7 @@ export default function PrivacyPolicy() {
               <p>
                 You can delete your account yourself from Settings — it takes
                 effect immediately and removes your releases, tasks, profile,
-                and sign-in, and permanently unlinks your uploaded files. We
+                and sign-in, and deletes your uploaded files. We
                 may retain minimal payment records where required for
                 accounting and legal compliance, and residual copies may
                 persist briefly in encrypted backups before being overwritten.
