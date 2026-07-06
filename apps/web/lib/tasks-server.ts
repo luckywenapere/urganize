@@ -1390,20 +1390,19 @@ export async function createTaskNotification(
   });
 }
 
-export async function createDueDateNotifications(
-  adminClient: SupabaseClient,
-  user: DatabaseUser,
-  access: WorkspaceAccessContext
-) {
-  if (!access.membershipIds.length) {
-    return;
-  }
-
+// Runs across every user's tasks in one pass — called from the
+// /api/cron/due-date-notifications route (see apps/web/vercel.json for the
+// schedule), not from the request path. Previously this ran per-user inside
+// listNotifications on every single GET /api/notifications call, which
+// meant every bell fetch/dropdown-open re-scanned that user's tasks. A
+// scheduled sweep across all tasks once an hour does the same job without
+// paying that cost on every read.
+export async function createDueDateNotificationsForAllUsers(adminClient: SupabaseClient) {
   const result = await adminClient
     .from(TASKS_TABLE)
     .select('id,assigned_to_user_id,due_date,status')
-    .eq('assigned_to_user_id', user.id)
-    .not('due_date', 'is', null);
+    .not('due_date', 'is', null)
+    .not('assigned_to_user_id', 'is', null);
 
   if (result.error || !Array.isArray(result.data)) {
     return;
@@ -1414,10 +1413,13 @@ export async function createDueDateNotifications(
 
   for (const row of result.data) {
     const taskId = readString((row as { id?: string }).id);
+    const assigneeUserId = readNullableString(
+      (row as { assigned_to_user_id?: string }).assigned_to_user_id
+    );
     const dueDateRaw = readNullableString((row as { due_date?: string }).due_date);
     const status = normalizeTaskStatus((row as { status?: string }).status);
 
-    if (!taskId || !dueDateRaw || status === 'done' || status === 'cancelled') {
+    if (!taskId || !assigneeUserId || !dueDateRaw || status === 'done' || status === 'cancelled') {
       continue;
     }
 
@@ -1428,7 +1430,7 @@ export async function createDueDateNotifications(
 
     if (dueDate < now) {
       await createTaskNotification(adminClient, {
-        userId: user.id,
+        userId: assigneeUserId,
         type: 'task_overdue',
         taskId,
       });
@@ -1437,7 +1439,7 @@ export async function createDueDateNotifications(
 
     if (dueDate <= in24Hours) {
       await createTaskNotification(adminClient, {
-        userId: user.id,
+        userId: assigneeUserId,
         type: 'task_due_soon',
         taskId,
       });
@@ -1449,9 +1451,9 @@ export async function listNotifications(
   adminClient: SupabaseClient,
   user: DatabaseUser
 ): Promise<TaskNotification[]> {
-  const access = await loadWorkspaceAccessContext(adminClient, user);
-  await createDueDateNotifications(adminClient, user, access);
-
+  // Due-date notifications are created by a scheduled sweep now (see
+  // createDueDateNotificationsForAllUsers + /api/cron/due-date-notifications),
+  // not on every read of this list.
   const result = await adminClient
     .from(NOTIFICATIONS_TABLE)
     .select('id,user_id,type,task_id,actor_id,read,created_at')
