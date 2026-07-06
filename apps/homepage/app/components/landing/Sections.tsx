@@ -89,10 +89,10 @@ export function HeroSection() {
 
         <div className="hero-fade-in hero-delay-3 relative z-[60] mt-8 flex flex-col items-center gap-3">
           <Link href={APP_AUTH_URL} className={solidButtonClassName}>
-            Start free for 28 days
+            Plan your next release
           </Link>
           <p className="font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-            NO CARD REQUIRED
+            FREE FOR 28 DAYS · NO CARD REQUIRED
           </p>
         </div>
       </div>
@@ -355,10 +355,10 @@ export function FinalCTASection() {
 
           <div className="relative z-[60] mt-10 flex flex-col items-center gap-3">
             <Link href={APP_AUTH_URL} className={solidButtonClassName}>
-              Start free for 28 days
+              Plan your next release
             </Link>
             <p className="font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-              NO CARD REQUIRED
+              FREE FOR 28 DAYS · NO CARD REQUIRED
             </p>
           </div>
         </div>

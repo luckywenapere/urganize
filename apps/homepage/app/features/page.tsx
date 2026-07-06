@@ -264,10 +264,10 @@ export default function FeaturesPage() {
                   href={APP_AUTH_URL}
                   className="inline-flex items-center justify-center rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] hover:bg-[var(--marketing-primary-hover)] sm:text-base"
                 >
-                  Start free for 28 days
+                  Plan your next release
                 </Link>
                 <p className="font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-                  NO CARD REQUIRED
+                  FREE FOR 28 DAYS · NO CARD REQUIRED
                 </p>
               </div>
             </div>
