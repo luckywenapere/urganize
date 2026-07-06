@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ScrollReveal } from "./ScrollReveal";
 import { SectionShell } from "./SectionShell";
+import { YouTubeFacade } from "./YouTubeFacade";
 
 const APP_AUTH_URL = "https://app.urganize.app/auth";
 
@@ -100,14 +101,7 @@ export function HeroSection() {
       <ScrollReveal>
         <div className="mx-auto mt-14 w-full max-w-4xl sm:mt-16">
           <div className="relative aspect-video w-full overflow-hidden rounded-xl">
-            <iframe
-              className="absolute inset-0 h-full w-full"
-              src="https://www.youtube.com/embed/nfOjPlmDpFw?start=10"
-              title="Urganize product walkthrough"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-            />
+            <YouTubeFacade />
           </div>
         </div>
       </ScrollReveal>
