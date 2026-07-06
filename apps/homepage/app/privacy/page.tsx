@@ -3,12 +3,14 @@ import Link from "next/link";
 import { LegalSection as Section } from "../components/marketing/LegalSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "Privacy Policy",
   description:
     "What Urganize collects, why, who processes it, and the choices you have.",
-};
+  path: "/privacy",
+});
 
 // Keep this date REAL. It only moves when the policy text actually changes —
 // never wire it to new Date() (the old version did, which made the policy
@@ -117,7 +119,7 @@ export default function PrivacyPolicy() {
                 </strong>{" "}
                 Everything you put into the workspace: artists, releases,
                 dates, tasks, comments, event milestones, teammates you invite
-                (their email addresses), and the files you upload — masters,
+                (their email addresses), and the files you upload: masters,
                 artwork, contracts, split sheets.
               </p>
               <p>
@@ -140,7 +142,7 @@ export default function PrivacyPolicy() {
                   Waitlist and survey data.
                 </strong>{" "}
                 If you joined our earlier waitlist or answer an in-product
-                survey (via Formbricks), we keep what you submitted — typically
+                survey (via Formbricks), we keep what you submitted, typically
                 your email and your answers.
               </p>
             </Section>
@@ -178,14 +180,14 @@ export default function PrivacyPolicy() {
                 Urganize has two AI features: tailoring your release plan to
                 your context, and generating a written status update from your
                 release&apos;s current state. When you use them, the relevant
-                release context (release details, task progress — not your
+                release context (release details, task progress, not your
                 uploaded files) is sent through our AI gateway to a third-party
                 AI model provider solely to generate the output you asked for.
               </p>
               <p>
                 We do not use your content to train AI models, and we use
                 providers whose terms do not train on customer API data. AI
-                output is a draft for you to edit — the product works without
+                output is a draft for you to edit. The product works without
                 it.
               </p>
             </Section>
@@ -206,7 +208,7 @@ export default function PrivacyPolicy() {
 
             <Section number="07" title="Support channels">
               <p>
-                In-app support runs through WhatsApp — the &ldquo;chat with the
+                In-app support runs through WhatsApp: the &ldquo;chat with the
                 founder&rdquo; button opens a WhatsApp conversation. Anything
                 you send there is processed by WhatsApp (Meta) under their own
                 privacy policy. Don&apos;t send passwords or card details over
@@ -252,7 +254,7 @@ export default function PrivacyPolicy() {
 
             <Section number="10" title="Account deletion">
               <p>
-                You can delete your account yourself from Settings — it takes
+                You can delete your account yourself from Settings. It takes
                 effect immediately and removes your releases, tasks, profile,
                 and sign-in, and deletes your uploaded files. We
                 may retain minimal payment records where required for
@@ -265,7 +267,7 @@ export default function PrivacyPolicy() {
               <p>
                 Your data is protected with encryption in transit, row-level
                 access controls in our database, and signed, expiring links for
-                file access. No system can guarantee absolute security — if we
+                file access. No system can guarantee absolute security. If we
                 learn of a breach affecting your data, we will notify you.
               </p>
             </Section>

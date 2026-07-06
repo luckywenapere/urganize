@@ -3,12 +3,14 @@ import Link from "next/link";
 import { LegalSection as Section } from "../components/marketing/LegalSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "Terms of Service",
   description:
-    "The terms that govern your use of Urganize — accounts, subscriptions, your content, and our responsibilities.",
-};
+    "The terms that govern your use of Urganize: accounts, subscriptions, your content, and our responsibilities.",
+  path: "/terms",
+});
 
 // Real date discipline: moves only when the terms text changes.
 const LAST_UPDATED = "June 11, 2026";
@@ -54,7 +56,7 @@ export default function TermsPage() {
                 a rollout plan generated from our hand-crafted templates, tasks
                 with owners and dependencies, file storage per release, event
                 milestones, and optional AI assistance. We improve the product
-                continuously — features may change, and we may add, modify, or
+                continuously: features may change, and we may add, modify, or
                 retire functionality.
               </p>
             </Section>
@@ -63,15 +65,15 @@ export default function TermsPage() {
               <p>
                 You can sign up with an email and password or with Google. You
                 are responsible for your account and for keeping your sign-in
-                secure. You must be 13 or older. Provide accurate information —
-                billing and access depend on it.
+                secure. You must be 13 or older. Provide accurate information.
+                Billing and access depend on it.
               </p>
             </Section>
 
             <Section number="04" title="Trial, subscriptions, and billing">
               <p>
                 New accounts get a 28-day free trial with no card required.
-                After the trial, continued use requires a paid subscription —
+                After the trial, continued use requires a paid subscription,
                 priced per workspace, billed monthly or annually through
                 Paystack in NGN or USD. We never see or store your card
                 details.
@@ -81,10 +83,10 @@ export default function TermsPage() {
                 cancel anytime from Settings; you keep access through the
                 period you already paid for. If a payment fails or a
                 subscription lapses, access to the workspace is locked until
-                payment resumes — your data is not deleted by a lapse.
+                payment resumes. Your data is not deleted by a lapse.
               </p>
               <p>
-                Refunds are handled case by case — email{" "}
+                Refunds are handled case by case. Email{" "}
                 <a
                   href={CONTACT_HREF}
                   className="font-medium text-[var(--marketing-accent)] hover:opacity-80"
@@ -97,7 +99,7 @@ export default function TermsPage() {
 
             <Section number="05" title="Your content">
               <p>
-                You own everything you put into Urganize — releases, tasks,
+                You own everything you put into Urganize: releases, tasks,
                 files, artwork, masters, contracts. You grant us only the
                 license we need to operate the service: hosting, processing,
                 and displaying your content to you and the teammates you
@@ -105,7 +107,7 @@ export default function TermsPage() {
               </p>
               <p>
                 Workspaces are shared spaces. People you invite to your
-                workspace can see and work on its releases and tasks — invite
+                workspace can see and work on its releases and tasks. Invite
                 accordingly.
               </p>
               <p>
@@ -121,7 +123,7 @@ export default function TermsPage() {
                 or probe the service; don&apos;t use it to infringe rights,
                 harass people, or store unlawful content; don&apos;t resell
                 access. We may suspend or terminate accounts that violate
-                these terms — where reasonable, we&apos;ll warn you first.
+                these terms. Where reasonable, we&apos;ll warn you first.
               </p>
             </Section>
 
@@ -130,7 +132,7 @@ export default function TermsPage() {
                 AI-generated plans and status updates are drafts for you to
                 review and edit, not professional advice, and we don&apos;t
                 guarantee their accuracy or results. The product works without
-                AI — templates and your own edits always take precedence. How
+                AI. Templates and your own edits always take precedence. How
                 AI handles your data is covered in our{" "}
                 <Link
                   href="/privacy"
@@ -144,7 +146,7 @@ export default function TermsPage() {
 
             <Section number="08" title="Ending your account">
               <p>
-                You can delete your account from Settings at any time — it
+                You can delete your account from Settings at any time. It
                 takes effect immediately and removes your data as described in
                 the privacy policy. We may suspend or terminate accounts for
                 violations of these terms or non-payment, as described above.
@@ -156,7 +158,7 @@ export default function TermsPage() {
                 Urganize is provided &ldquo;as is&rdquo;. We work hard to keep
                 it fast and available, but we don&apos;t guarantee
                 uninterrupted service, and we are not liable for indirect,
-                incidental, or consequential damages — including lost profits
+                incidental, or consequential damages, including lost profits
                 or lost opportunities around a release. Our total liability to
                 you is limited to the amounts you paid us in the 12 months
                 before the claim.

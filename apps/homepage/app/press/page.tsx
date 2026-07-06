@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "Press Kit",
   description:
     "Logos, product description, and contact for press inquiries about Urganize.",
-};
+  path: "/press",
+});
 
 export default function PressPage() {
   return (
@@ -31,10 +33,10 @@ export default function PressPage() {
                 Short description
               </h2>
               <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
-                Urganize is the system of record for music releases — a
+                Urganize is the system of record for music releases: a
                 hand-crafted rollout plan, tasks with owners and due dates, and
-                every release file in one workspace. Built for the people
-                actually running the campaigns.
+                every release file in one workspace. Built for labels and
+                artist managers running the campaigns.
               </p>
             </div>
 

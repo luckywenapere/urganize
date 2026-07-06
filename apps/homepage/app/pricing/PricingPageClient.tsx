@@ -45,7 +45,7 @@ const MONTHLY_FEATURES = [
   "Hand-crafted single-release rollout template",
   "Tasks with assignees, dependencies, due dates",
   "Per-release file storage for masters, artwork, contracts",
-  "Event milestones — listening parties, video shoots, release day",
+  "Event milestones: listening parties, video shoots, release day",
   "Invite your A&R, PR, distributor",
 ] as const;
 
@@ -58,7 +58,7 @@ const MONTHLY_FEATURES = [
 const ANNUAL_FEATURES = [
   "Everything in Monthly",
   "Priority email support",
-  "Billed once — one invoice, no monthly admin",
+  "Billed once: one invoice, no monthly admin",
   "Best for teams committed to a release year",
   "Lock in current pricing for a year",
 ] as const;
@@ -68,11 +68,54 @@ const ANNUAL_FEATURES = [
 // everything in Annual — keep them honest and deliverable.
 const LABEL_FEATURES = [
   "Everything in Annual",
-  "Roster onboarding — we set up every artist's releases with you",
+  "Roster onboarding: we set up every artist's releases with you",
   "Release templates tailored to how your label actually works",
   "Hands-on onboarding for your whole team",
   "Priority support with a direct line to the founders",
 ] as const;
+
+// Shared between the on-page FAQ rows and the FAQPage JSON-LD below so the
+// two never drift.
+const FAQ_ITEMS = [
+  {
+    question: "Can I try Urganize first?",
+    answer:
+      "Yes. The 28-day free trial doesn't ask for a card. Start it from the app. Once it ends, pick a plan or stop using it.",
+  },
+  {
+    question: "What's actually different between monthly and annual?",
+    answer:
+      "The same workspace, same features. Annual is one invoice instead of twelve, and works out cheaper. That's the whole difference.",
+  },
+  {
+    question: "Do I pay per teammate?",
+    answer:
+      "No. One workspace, one price. Invite your A&R, PR, and distributor at no extra cost.",
+  },
+  {
+    question: "Who is the Label plan for?",
+    answer:
+      "Labels and management companies running a roster. Same workspace, plus the founders work with you directly: we onboard each artist's releases, tailor the templates to your workflow, and stay a message away on priority support.",
+  },
+  {
+    question: "How does billing work?",
+    answer:
+      "Paystack processes the card. We charge in NGN or USD, your choice. You can cancel anytime from Settings and keep access through the period you paid for.",
+  },
+] as const;
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": FAQ_ITEMS.map((item) => ({
+    "@type": "Question",
+    "name": item.question,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": item.answer,
+    },
+  })),
+} as const;
 
 const MONTHLY_SUMMARY = "Billed every month. Easiest way to start.";
 const ANNUAL_SUMMARY = "Billed once a year. About two months free vs monthly.";
@@ -247,32 +290,20 @@ export function PricingPageClient({
             </motion.h2>
 
             <div className="mt-8 space-y-4">
-              <FaqRow
-                question="Can I try Urganize first?"
-                answer="Yes. The 28-day free trial doesn't ask for a card. Start it from the app — once it ends, pick a plan or stop using it."
-              />
-              <FaqRow
-                question="What's actually different between monthly and annual?"
-                answer="The same workspace, same features. Annual is one invoice instead of twelve, and works out cheaper. That's the whole difference."
-              />
-              <FaqRow
-                question="Do I pay per teammate?"
-                answer="No. One workspace, one price. Invite your A&R, PR, and distributor at no extra cost."
-              />
-              <FaqRow
-                question="Who is the Label plan for?"
-                answer="Labels and management companies running a roster. Same workspace, plus the founders work with you directly: we onboard each artist's releases, tailor the templates to your workflow, and stay a message away on priority support."
-              />
-              <FaqRow
-                question="How does billing work?"
-                answer="Paystack processes the card. We charge in NGN or USD — your choice. You can cancel anytime from Settings and keep access through the period you paid for."
-              />
+              {FAQ_ITEMS.map((item) => (
+                <FaqRow key={item.question} question={item.question} answer={item.answer} />
+              ))}
             </div>
           </div>
         </section>
       </main>
 
       <MarketingFooter />
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
     </div>
   );
 }

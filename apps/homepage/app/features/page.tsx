@@ -4,17 +4,16 @@ import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { buildPageMetadata } from "@/lib/seo";
 
 const APP_AUTH_URL = "https://app.urganize.app/auth";
 
-const TITLE = "Features";
-const DESCRIPTION =
-  "What Urganize does: a hand-crafted release rollout plan, tasks with owners and dependencies, per-release file storage, and event milestones — in one workspace.";
-
-export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-};
+export const metadata: Metadata = buildPageMetadata({
+  title: "Features",
+  description:
+    "What Urganize does: a hand-crafted rollout plan, tasks your freelance team owns, per-release file storage, and event milestones, all in one workspace.",
+  path: "/features",
+});
 
 // Every claim on this page must describe the product as it ships today.
 // The honesty rule from /pricing applies here: we don't advertise what
@@ -23,17 +22,17 @@ const features = [
   {
     kicker: "The plan",
     title: "A rollout plan, not a blank page.",
-    body: "Create a release and Urganize lays out a hand-crafted 11-week rollout — 64 tasks from locking the master to compiling first-week stats. Written with working managers, signed off by design partners, and fully editable before you commit.",
+    body: "Create a release and Urganize lays out a hand-crafted 11-week rollout: 64 tasks from locking the master to compiling first-week stats. Written with working managers, signed off by design partners, and fully editable before you commit.",
     points: [
       "8 weeks pre-release, 3 weeks post-release",
       "Every task dated relative to your release day",
-      "Edit, reorder, or delete anything — it's your plan",
+      "Edit, reorder, or delete anything: it's your plan",
     ],
   },
   {
     kicker: "Tasks",
     title: "Owned, dated, and in order.",
-    body: "Every task has an owner, a due date, and a priority. Dependencies keep the order honest — artwork upload stays locked until the artwork is approved, and unlocks the moment it is.",
+    body: "Every task has an owner, a due date, and a priority. Dependencies keep the order honest: artwork upload stays locked until the artwork is approved, and unlocks the moment it is.",
     points: [
       "Assign your A&R, PR, designer, distributor",
       "Blocked tasks show exactly what's blocking them",
@@ -43,7 +42,7 @@ const features = [
   {
     kicker: "Files",
     title: "Every file where it belongs.",
-    body: "Masters, artwork, contracts, split sheets — attached to the release they belong to, organized by category, with image previews. Stop excavating Google Drive the night before delivery.",
+    body: "Masters, artwork, contracts, and split sheets, attached to the release they belong to, organized by category, with image previews. Stop excavating Google Drive the night before delivery.",
     points: [
       "Per-release storage with categories",
       "Audio, video, documents, and artwork",
@@ -53,7 +52,7 @@ const features = [
   {
     kicker: "Milestones",
     title: "The moments that matter, on the timeline.",
-    body: "Listening party, video shoot, release day — milestones sit inside the release plan as dated events, so the team sees the moments coming, not just the chores.",
+    body: "Listening party, video shoot, release day: milestones sit inside the release plan as dated events, so the team sees the moments coming, not just the chores.",
     points: [
       "Event milestones render on the release timeline",
       "Dated relative to the drop",
@@ -63,7 +62,7 @@ const features = [
   {
     kicker: "Visibility",
     title: "Know where every release stands.",
-    body: "One workspace shows every release in flight — progress, what's overdue, what's due this week, and which release it belongs to. The status conversation stops being a meeting.",
+    body: "One workspace shows every release in flight: progress, what's overdue, what's due this week, and which release it belongs to. The status conversation stops being a meeting.",
     points: [
       "All releases and tasks on one screen",
       "Click a release to scope down to its work",
@@ -72,6 +71,16 @@ const features = [
   },
 ] as const;
 
+// Not built yet. Chappi is in development, not shipped, so this block gets
+// its own "coming soon" caption and a subtle (not accent) kicker color to
+// visually separate it from the five live features above it.
+const comingSoon = {
+  kicker: "Coming soon",
+  title: "Chappi drafts the cover art brief.",
+  body: "Chappi, the AI assistant we're building into Urganize, will turn your release details into a cover art brief your designer can work from, reviewed and approved in the same place as the rest of the release.",
+  points: ["In development, not live yet", "Reviewed and approved inside the release"],
+} as const;
+
 const nonFeatures = [
   {
     title: "Revenue tracking",
@@ -79,7 +88,7 @@ const nonFeatures = [
   },
   {
     title: "Legal contracts",
-    body: "We don't generate or enforce contracts. Get a lawyer for that — we'll store the PDF.",
+    body: "We don't generate or enforce contracts. Get a lawyer for that. We'll store the PDF.",
   },
   {
     title: "Analytics dashboards",
@@ -87,7 +96,7 @@ const nonFeatures = [
   },
   {
     title: "Distribution",
-    body: "We don't upload to Spotify or Apple Music. Use your preferred distributor — we'll make sure it happens on time.",
+    body: "We don't upload to Spotify or Apple Music. Use your preferred distributor. We'll make sure it happens on time.",
   },
 ] as const;
 
@@ -116,7 +125,7 @@ export default function FeaturesPage() {
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              Urganize is the system of record for the release — where the plan
+              Urganize is the system of record for the release: where the plan
               lives, where the work happens, where the team sees status.
             </p>
           </div>
@@ -165,6 +174,46 @@ export default function FeaturesPage() {
             </SectionShell>
           </ScrollReveal>
         ))}
+
+        {/* COMING SOON — kept visually identical to the feature blocks above
+            except for the subtle (not accent) kicker color and the explicit
+            "not live yet" point, so it never reads as a shipped feature. */}
+        <ScrollReveal>
+          <SectionShell
+            className="py-[60px] lg:py-[80px]"
+            containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
+          >
+            <div className="mx-auto grid max-w-[64rem] items-start gap-10 border-t border-[color:var(--marketing-border)] pt-14 lg:grid-cols-2 lg:gap-16">
+              <div>
+                <p className="mono-label text-[var(--marketing-text-subtle)]">
+                  {comingSoon.kicker}
+                </p>
+                <h2 className={`mt-5 ${headlineClass}`}>{comingSoon.title}</h2>
+              </div>
+              <div>
+                <p className="text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
+                  {comingSoon.body}
+                </p>
+                <ul className="mt-7 space-y-3">
+                  {comingSoon.points.map((point) => (
+                    <li
+                      key={point}
+                      className="flex items-baseline gap-4 text-[0.95rem] leading-7 text-[var(--marketing-text)]"
+                    >
+                      <span
+                        className="font-mono text-[0.72rem] text-[var(--marketing-text-subtle)]"
+                        aria-hidden
+                      >
+                        —
+                      </span>
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </SectionShell>
+        </ScrollReveal>
 
         {/* WHAT IT DOESN'T DO */}
         <ScrollReveal>

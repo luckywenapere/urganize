@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { MarketingFooter } from "./components/marketing/MarketingFooter";
 import { MarketingHeader } from "./components/marketing/MarketingHeader";
+import { buildPageMetadata } from "@/lib/seo";
 import {
   FinalCTASection,
   HeroSection,
@@ -11,44 +12,16 @@ import {
   WorkspaceShotSection,
 } from "./components/landing/Sections";
 
-const TITLE = "Urganize — Your release deserves a process.";
-const DESCRIPTION =
-  "The system of record for music releases. A hand-crafted rollout plan, tasks with owners and due dates, and every release file in one workspace. Built for music managers. Free for 28 days.";
-
-// OG/Twitter images intentionally omitted: Next.js serves the branded card
-// at app/opengraph-image.png via the file convention. Do not point these at
-// product screenshots unless they show the CURRENT app.
-export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  metadataBase: new URL("https://urganize.app"),
-  openGraph: {
-    title: TITLE,
-    description: DESCRIPTION,
-    url: "https://urganize.app",
-    siteName: "Urganize",
-    locale: "en_US",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: TITLE,
-    description: DESCRIPTION,
-  },
-  keywords: [
-    "music release management",
-    "artist release tool",
-    "release rollout plan",
-    "music release checklist",
-    "release workflow",
-    "artist team software",
-    "music manager software",
-  ],
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
+// This title/description render verbatim (the home page sits at the same
+// route segment as the root layout, so layout.tsx's "%s | Urganize"
+// template does not apply here — write the full string, not just the page
+// name). metadataBase/keywords/robots are inherited from the root layout.
+export const metadata: Metadata = buildPageMetadata({
+  title: "Urganize | Music Release Management for Teams",
+  description:
+    "How labels and artist managers run a release across their freelance team, so tasks and handoffs don't slip through WhatsApp and notes.",
+  path: "/",
+});
 
 export default function Home() {
   return (
