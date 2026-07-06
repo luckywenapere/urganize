@@ -54,12 +54,12 @@ export const Logo: React.FC<LogoProps> = ({
   // Full logo with text
   return (
     <div className={`flex items-center ${className}`}>
-      <Image 
+      <Image
         src="/images/urganize-logo.png"
         alt="Urganize"
         width={dimensions.width}
         height={dimensions.height}
-        className="flex-shrink-0 object-contain"
+        className="app-wordmark flex-shrink-0 object-contain"
         priority={priority}
       />
     </div>

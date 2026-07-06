@@ -210,6 +210,14 @@ html[data-theme='light'] {
   --shadow-glow-sm: 0 10px 22px rgba(62, 207, 142, 0.12);
 }
 
+/* The wordmark PNG (packages/ui/src/Logo.tsx) is solid white on
+   transparent — correct on dark's near-black canvas, invisible on
+   light's near-white one. Dark is the CSS baseline (:root), so only
+   light needs the invert. */
+html[data-theme='light'] .app-wordmark {
+  filter: invert(1);
+}
+
 html[data-theme='dark'] {
   --color-bg-base: 15 15 15;
   --color-bg-sidebar: 20 20 20;
