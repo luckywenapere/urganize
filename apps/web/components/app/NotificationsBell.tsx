@@ -190,6 +190,28 @@ export function NotificationsBell() {
           pushToast(body);
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          // A task getting deleted cascade-deletes its notifications too
+          // (notifications.task_id is ON DELETE CASCADE) — drop the row
+          // from local state immediately rather than leaving a stale entry
+          // visible until the next manual refetch. Requires REPLICA IDENTITY
+          // FULL on this table (see the migration alongside this change) —
+          // without it, `old` would only carry the primary key, which is
+          // enough to filter local state by id but not by user_id, so the
+          // subscription's filter itself wouldn't match at all.
+          const deletedRow = payload.old as { id?: string } | null;
+          if (!deletedRow?.id) return;
+          setNotifications((prev) => prev.filter((n) => n.id !== deletedRow.id));
+        }
+      )
       .subscribe();
 
     return () => {
