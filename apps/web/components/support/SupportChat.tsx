@@ -53,14 +53,14 @@ export function SupportChat() {
       aria-label="Chat with the founder on WhatsApp — report a bug or contact support"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="group fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-none border border-white/10 bg-[#0a0a0a] py-2.5 pl-3.5 pr-4 shadow-2xl transition-all duration-150 hover:border-white/20 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:bottom-6 md:right-6"
+      className="group fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-none border border-stroke-default bg-bg-elevated py-2.5 pl-3.5 pr-4 shadow-2xl transition-all duration-150 hover:border-stroke-strong hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:bottom-6 md:right-6"
     >
       <span className="text-brand">
         <WhatsAppIcon />
       </span>
       <span
         aria-hidden="true"
-        className={`inline-block min-w-[23ch] text-center font-mono text-[10px] uppercase tracking-widest text-white/50 transition-opacity duration-200 group-hover:text-white/80 ${
+        className={`inline-block min-w-[23ch] text-center font-mono text-[10px] uppercase tracking-widest text-content-tertiary transition-opacity duration-200 group-hover:text-content-primary ${
           isFading ? 'opacity-0' : 'opacity-100'
         }`}
       >
