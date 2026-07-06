@@ -10,8 +10,6 @@ export const metadata: Metadata = {
 const members = [
   { name: "Lucky Wenapere", role: "Co-Founder and CEO" },
   { name: "Tedum King", role: "Co-Founder" },
-  { name: "Bobson Prosper", role: "Founding Engineer" },
-  { name: "Gideon Ugorji", role: "Founding DevOps Engineer" },
   { name: "Adamu Kabiru", role: "Growth" },
   { name: "Chidera Nnamani", role: "Operations Lead" },
   { name: "Victoria Emmanuel", role: "Operations" },
