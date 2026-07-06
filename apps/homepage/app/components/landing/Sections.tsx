@@ -14,12 +14,12 @@ const featureColumns = [
   {
     kicker: "Assets",
     title: "Every file, filed.",
-    body: "Masters, artwork, contracts, split sheets — attached to the release they belong to. No more 'Final v3 ACTUAL final' buried in Drive.",
+    body: "Masters, artwork, contracts, and split sheets, attached to the release they belong to. No more 'Final v3 ACTUAL final' buried in Drive.",
   },
   {
     kicker: "Visibility",
     title: "Status at a glance.",
-    body: "One workspace shows every release in flight — what's done, what's blocked, what's due this week. Spot what's slipping before it hurts the rollout.",
+    body: "One workspace shows every release in flight: what's done, what's blocked, what's due this week. Spot what's slipping before it hurts the rollout.",
   },
 ] as const;
 
@@ -91,7 +91,7 @@ export function HeroSection() {
     >
       <div className="mx-auto flex max-w-[64rem] flex-col items-center text-center">
         <p className="hero-fade-in mono-label text-[var(--marketing-text-subtle)]">
-          Music teams
+          Labels and artist managers
         </p>
 
         <div className="mt-8 flex flex-col items-center gap-8 sm:gap-10">
@@ -102,14 +102,15 @@ export function HeroSection() {
             </span>{" "}
             and{" "}
             <span className="italic text-[var(--marketing-accent)]">
-              Google Drive folders
+              scattered notes
             </span>
             .
           </h1>
 
           <p className="hero-fade-in hero-delay-2 mx-auto block w-full max-w-[44rem] text-balance text-center text-lg leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
-            One workspace for the whole release — a hand-crafted rollout plan,
-            tasks your team actually owns, and every file where it belongs.
+            One workspace for the whole release: a hand-crafted rollout plan,
+            tasks your freelance team actually owns, and every file where it
+            belongs.
           </p>
         </div>
 
@@ -152,7 +153,7 @@ export function MirrorSection() {
       >
         <div className="mx-auto flex w-full flex-col items-center text-center">
           <h2 className={`mx-auto max-w-[52rem] ${centeredHeadlineClass}`}>
-            Most teams run releases across WhatsApp, Drive, Asana, and Notion —
+            Most teams run releases across WhatsApp, Drive, Asana, and Notion,
             or no system at all.
           </h2>
 
@@ -230,7 +231,7 @@ export function TemplatePlanSection() {
           </h2>
 
           <p className={`mx-auto mt-8 max-w-[40rem] ${mutedLeadClass}`}>
-            Create a release and Urganize lays out an 11-week rollout —
+            Create a release and Urganize lays out an 11-week rollout,
             hand-crafted with working managers, owned task by task by your
             team, and fully yours to edit.
           </p>
@@ -259,7 +260,7 @@ export function TemplatePlanSection() {
         <div className="mx-auto mt-14 max-w-[58rem] overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
           <Image
             src="/images/product/workspace-tasks.png"
-            alt="Tasks scoped to the release 'Born To Be Free' — fresh from its 64-task plan, with owners and due dates on every row."
+            alt="Tasks scoped to the release 'Born To Be Free', fresh from its 64-task plan, with owners and due dates on every row."
             width={1918}
             height={972}
             className="h-auto w-full"
@@ -304,7 +305,7 @@ const supportingQuotes = [
     quote:
       "I manage myself, so every dropped ball is mine. The first time I created a release, the whole rollout was already laid out, week by week, task by task. I stopped planning from memory.",
     name: "Antoine",
-    role: "Independent Artist & Manager",
+    role: "Artist Manager",
   },
   {
     quote:

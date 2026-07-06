@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "Team",
   description: "The team behind Urganize.",
-};
+  path: "/team",
+});
 
 const members = [
   { name: "Lucky Wenapere", role: "Co-Founder and CEO" },

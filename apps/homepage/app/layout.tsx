@@ -12,17 +12,18 @@ import FormbricksProvider from "./formbricks-provider";
 import { Analytics } from "@vercel/analytics/next";
 
 const SITE_URL = "https://urganize.app";
-const LANDING_TITLE = "Urganize — Your release deserves a process.";
+const LEGAL_NAME = "The Urganization Ltd";
+const LANDING_TITLE = "Urganize | Music Release Management for Teams";
 const LANDING_DESCRIPTION =
-  "The system of record for music releases. A hand-crafted rollout plan, tasks with owners and due dates, and every release file in one workspace. Built for music managers.";
+  "How labels and artist managers run a release across their freelance team, so tasks and handoffs don't slip through WhatsApp and notes.";
 const LANDING_KEYWORDS = [
   "music release management",
-  "artist release tool",
+  "artist manager software",
+  "music project management",
+  "label management tool",
   "release rollout plan",
   "music release checklist",
-  "release workflow",
   "artist team software",
-  "music manager software",
 ] as const;
 
 // Typography
@@ -55,6 +56,7 @@ const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
   "name": "Urganize",
+  "legalName": LEGAL_NAME,
   "url": SITE_URL,
   "logo": "https://urganize.app/images/urganize-logo.png",
   "description": LANDING_DESCRIPTION,
@@ -97,6 +99,25 @@ const homepageSchema = {
         "item": SITE_URL
       }
     ]
+  }
+} as const;
+
+// Price left out deliberately: @urganize/pricing is the source of truth for
+// amounts and they can change independently of a deploy that touches this
+// file. Point at the pricing page instead of hardcoding a number that could
+// drift from what a shopper actually sees.
+const softwareApplicationSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Urganize",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "description": LANDING_DESCRIPTION,
+  "url": SITE_URL,
+  "offers": {
+    "@type": "Offer",
+    "url": `${SITE_URL}/pricing`,
+    "priceCurrency": "USD"
   }
 } as const;
 
@@ -143,6 +164,11 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(homepageSchema) }}
           key="homepage-schema"
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationSchema) }}
+          key="software-application-schema"
         />
       </head>
       <body className="font-sans antialiased">

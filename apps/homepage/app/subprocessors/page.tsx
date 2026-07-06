@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "Subprocessors",
   description:
     "The third-party services Urganize uses to operate, and what data each one processes.",
-};
+  path: "/subprocessors",
+});
 
 // Keep this date real — it moves only when the list changes.
 const LAST_UPDATED = "June 11, 2026";
@@ -34,7 +36,7 @@ const subprocessors = [
   {
     name: "Paystack",
     purpose: "Payment processing",
-    data: "Billing details and transactions. Card details go to Paystack directly — we never store them",
+    data: "Billing details and transactions. Card details go to Paystack directly. We never store them",
   },
   {
     name: "Google Analytics",
@@ -54,12 +56,12 @@ const subprocessors = [
   {
     name: "AI model provider (via our gateway)",
     purpose:
-      "Generating plan tailoring and status updates — only when you use the AI features",
+      "Generating plan tailoring and status updates, only when you use the AI features",
     data: "Release context (details, task progress). Never your uploaded files, and never used to train models",
   },
   {
     name: "WhatsApp (Meta)",
-    purpose: "Customer support — the in-app founder chat",
+    purpose: "Customer support: the in-app founder chat",
     data: "Messages you send us there, under Meta's own privacy policy",
   },
   {
@@ -123,8 +125,8 @@ export default function SubprocessorsPage() {
           </div>
 
           <p className="mt-10 max-w-[40rem] text-[0.95rem] leading-7 text-[var(--marketing-text-muted)]">
-            We may add, remove, or replace subprocessors as Urganize evolves —
-            when we do, this page changes in the same release. Questions:{" "}
+            We may add, remove, or replace subprocessors as Urganize evolves.
+            When we do, this page changes in the same release. Questions:{" "}
             <a
               href="mailto:contact@urganize.app"
               className="font-medium text-[var(--marketing-accent)] hover:opacity-80"

@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import {
   DEFAULT_PRICING_CURRENCY,
   type PricingCurrencyCode,
 } from "@urganize/pricing";
+import { buildPageMetadata } from "@/lib/seo";
 import { PricingPageClient } from "./PricingPageClient";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Pricing",
+  description:
+    "Simple pricing for labels and artist managers: monthly, annual, or a label plan for a whole roster. Start free for 28 days, no card required.",
+  path: "/pricing",
+});
 
 // GEO-RESOLVED DEFAULT CURRENCY
 //
