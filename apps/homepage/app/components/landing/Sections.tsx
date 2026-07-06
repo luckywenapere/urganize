@@ -56,33 +56,6 @@ const centeredHeadlineClass =
 const mutedLeadClass =
   "text-balance text-[clamp(1.1rem,2vw,1.4rem)] leading-8 text-[var(--marketing-text-muted)]";
 
-function LogoStrip({
-  className = "",
-}: {
-  className?: string;
-}) {
-  return (
-    <div className={className}>
-      {/* w-fit on the inner row makes mx-auto center the VISIBLE content
-          (text + gap + logo), not the reserved max-w. Without it, the
-          right-aligned text leaves invisible whitespace on its left, which
-          visually offsets the whole block to the right. */}
-      <div className="mx-auto flex flex-col items-center gap-6 sm:w-fit sm:flex-row sm:gap-8">
-        <p className="max-w-[28rem] text-balance text-center font-mono text-[0.82rem] leading-6 tracking-[0.02em] text-[var(--marketing-text-subtle)] sm:text-right sm:text-[0.9rem]">
-          Trusted by Creative Business Academy.
-        </p>
-        <Image
-          src="/images/logos/anchor-partner.png"
-          alt="Creative Business Academy"
-          width={97}
-          height={40}
-          className="h-12 w-auto shrink-0 opacity-90 sm:h-14"
-        />
-      </div>
-    </div>
-  );
-}
-
 export function HeroSection() {
   return (
     <SectionShell
@@ -122,8 +95,6 @@ export function HeroSection() {
             NO CARD REQUIRED
           </p>
         </div>
-
-        <LogoStrip className="hero-fade-in hero-delay-3 mt-12 w-full sm:mt-14" />
       </div>
 
       <ScrollReveal>
