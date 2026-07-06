@@ -6,6 +6,7 @@ import {
   WORKSPACES_TABLE,
   buildTaskSchemaResponse,
   createAdminClient,
+  createTaskNotification,
   ensureTaskAccess,
   requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
@@ -145,8 +146,50 @@ export async function PATCH(
       }
     }
 
+    const previousAssigneeUserId = access.task.assigned_to_user_id;
+    const previousStatus = access.task.status;
+
     await taskService.updateTask(id, auth.user.id, mapped.updates);
     const task = await taskService.getTaskById(id, auth.user.id);
+
+    // Notification types defined for these two events but never fired
+    // anywhere until now — see lib/tasks.ts's NOTIFICATION_TYPE_OPTIONS and
+    // getNotificationMessage, which already had copy for both. Fire-and-forget:
+    // a notification failure shouldn't fail a task update that already
+    // succeeded (createTaskNotification swallows its own errors internally).
+    const nextAssigneeUserId =
+      typeof mapped.updates.assigned_to_user_id === 'string'
+        ? mapped.updates.assigned_to_user_id
+        : null;
+    if (
+      nextAssigneeUserId &&
+      nextAssigneeUserId !== previousAssigneeUserId &&
+      nextAssigneeUserId !== auth.user.id
+    ) {
+      void createTaskNotification(adminClient, {
+        userId: nextAssigneeUserId,
+        type: 'task_assigned',
+        taskId: id,
+        actorId: auth.user.id,
+      });
+    }
+
+    if (
+      typeof mapped.updates.status === 'string' &&
+      mapped.updates.status !== previousStatus
+    ) {
+      // Notify whoever the task is assigned to now (or was, if this same
+      // request also cleared the assignee) — not the actor themself.
+      const notifyUserId = nextAssigneeUserId ?? previousAssigneeUserId;
+      if (notifyUserId && notifyUserId !== auth.user.id) {
+        void createTaskNotification(adminClient, {
+          userId: notifyUserId,
+          type: 'task_status_changed',
+          taskId: id,
+          actorId: auth.user.id,
+        });
+      }
+    }
 
     return NextResponse.json({ task });
   } catch (error) {

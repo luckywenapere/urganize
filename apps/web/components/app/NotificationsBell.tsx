@@ -234,7 +234,9 @@ export function NotificationsBell() {
   // restricted to that subset. See app/api/notifications/read/route.ts:33-36.
   // Optimistic local update: a momentarily-wrong "everything's read" badge
   // is a smaller surprise than the badge re-appearing after the user thought
-  // they'd cleared it. On failure we let the next fetch reconcile.
+  // they'd cleared it. On failure, reconcile immediately (don't wait for the
+  // next dropdown open) and tell the user, rather than silently leaving them
+  // believing it worked when the server never persisted it.
   const markRead = useCallback(async (ids: string[] | 'all') => {
     setNotifications((prev) =>
       prev.map((n) => {
@@ -248,8 +250,8 @@ export function NotificationsBell() {
 
     try {
       const token = await getAccessToken();
-      if (!token) return;
-      await fetch('/api/notifications/read', {
+      if (!token) throw new Error('Not signed in.');
+      const response = await fetch('/api/notifications/read', {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -257,10 +259,12 @@ export function NotificationsBell() {
         },
         body: JSON.stringify(ids === 'all' ? {} : { notificationIds: ids }),
       });
+      if (!response.ok) throw new Error('Server rejected the request.');
     } catch {
-      // Swallow — next open's fetchNotifications will reconcile state.
+      pushToast('Could not mark as read — please try again.', 'error');
+      void fetchNotifications();
     }
-  }, []);
+  }, [fetchNotifications, pushToast]);
 
   const handleToggle = () => {
     setIsOpen((open) => {
