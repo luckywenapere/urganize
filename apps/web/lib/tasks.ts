@@ -208,7 +208,7 @@ export function getPriorityBorderClass(priority: TaskPriority): string {
     case 'high':
       return 'border-l-status-warning';
     case 'medium':
-      return 'border-l-[#E3C240]';
+      return 'border-l-priority-medium';
     case 'low':
       return 'border-l-status-info';
     default:
@@ -223,11 +223,11 @@ export function getPriorityDotClass(priority: TaskPriority): string {
     case 'high':
       return 'bg-status-warning';
     case 'medium':
-      return 'bg-[#E3C240]';
+      return 'bg-priority-medium';
     case 'low':
       return 'bg-status-info';
     default:
-      return 'bg-white/10';
+      return 'bg-priority-none';
   }
 }
 

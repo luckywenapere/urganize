@@ -68,7 +68,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 try {
                   var key = 'urganize.theme';
                   var stored = localStorage.getItem(key);
-                  var resolved = stored === 'light' || stored === 'dark' ? stored : 'dark';
+                  var resolved;
+                  if (stored === 'light' || stored === 'dark') {
+                    resolved = stored;
+                  } else {
+                    resolved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+                  }
                   var root = document.documentElement;
                   root.dataset.theme = resolved;
                   root.classList.remove('dark', 'light');

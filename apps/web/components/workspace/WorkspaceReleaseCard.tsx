@@ -85,7 +85,7 @@ export function WorkspaceReleaseCard({
               pill universal noise. Renders only when status has moved past
               draft, so the pill becomes a meaningful signal. */}
           {release.status !== 'draft' ? (
-            <span className="shrink-0 border border-stroke-default bg-white/[0.03] px-2 py-1 text-[11px] font-medium capitalize text-content-secondary">
+            <span className="shrink-0 border border-stroke-default bg-bg-elevated px-2 py-1 text-[11px] font-medium capitalize text-content-secondary">
               {normalizedStatus}
             </span>
           ) : null}

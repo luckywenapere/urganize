@@ -174,7 +174,7 @@ REST-style Next.js Route Handlers at `app/api/**/route.ts`. No tRPC, no GraphQL.
 
 **Styling:**
 
-- `apps/web`: Tailwind v3 + autoprefixer. Theme forced dark via pre-hydration inline script reading `urganize.theme`.
+- `apps/web`: Tailwind v3 + autoprefixer. Supports both dark and light themes via the `data-theme` attribute plus a pre-hydration inline script reading `urganize.theme`; falls back to OS `prefers-color-scheme` on first visit with nothing stored. Dark remains the default for no-JS/SSR clients. Toggle lives in Settings → Appearance (`ThemeToggle` from `@urganize/ui`).
 - `apps/homepage`: Tailwind v4 via `@tailwindcss/postcss`. Custom typography via four `next/font/google` families.
 - Shared Tailwind preset at `packages/config/tailwind/preset.js`.
 
@@ -494,7 +494,7 @@ This section is for state that changes during the v1 build. Keep it current.
 
 ### Theme tokens (defer to existing tokens)
 
-Dark mode + green brand is the established theme. **Use the existing token roles** in `packages/config/tailwind/preset.js` (defined as CSS vars in `apps/web/app/globals.css`). Do not introduce new CSS variables.
+Dark and light modes are both supported (added 2026-07-06); green brand is the established accent across both. **Use the existing token roles** in `packages/config/tailwind/preset.js` (defined as CSS vars in `apps/web/app/globals.css`). Do not introduce new CSS variables.
 
 | Spec proposal | Map to existing Tailwind token | RGB value (from `globals.css`) |
 |---|---|---|
