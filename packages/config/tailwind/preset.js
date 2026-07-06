@@ -38,6 +38,10 @@ const preset = {
           warning: withOpacity("--color-status-warning"),
           error: withOpacity("--color-status-error"),
           info: withOpacity("--color-status-info")
+        },
+        priority: {
+          medium: withOpacity("--color-priority-medium"),
+          none: withOpacity("--color-priority-none")
         }
       },
       fontFamily: {

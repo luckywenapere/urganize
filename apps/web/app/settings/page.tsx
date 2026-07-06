@@ -18,6 +18,7 @@ import {
 } from '@/components/loading/SettingsPageSkeleton';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { errorMessage } from "@/lib/errors";
+import { ThemeToggle } from '@urganize/ui';
 
 type WorkspaceMember = {
   id: string;
@@ -653,6 +654,14 @@ export default function SettingsPage() {
                 {isSavingName ? 'Saving...' : 'Save profile'}
               </button>
             </div>
+          </section>
+
+          <section className={panelClass}>
+            <h2 className="mb-4 text-xl">Appearance</h2>
+            <p className="mb-4 text-sm text-content-secondary">
+              Choose how Urganize looks on this device.
+            </p>
+            <ThemeToggle />
           </section>
 
           <section className={panelClass}>
