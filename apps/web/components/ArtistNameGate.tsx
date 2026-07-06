@@ -37,7 +37,7 @@ export function ArtistNameGate() {
       <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-brand/15 blur-3xl" />
       <div className="pointer-events-none absolute -left-20 bottom-0 h-48 w-48 rounded-full bg-status-info/12 blur-3xl" />
       <div className="mx-auto flex min-h-screen w-full max-w-[620px] items-center px-6 py-12">
-        <section className="w-full rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl sm:p-8">
+        <section className="w-full rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_20px_80px_-46px_rgb(var(--shadow-ink)/calc(0.62*var(--shadow-alpha-scale)))] backdrop-blur-xl sm:p-8">
           <p className="text-xs uppercase tracking-[0.15em] text-content-tertiary">Profile setup required</p>
           <h1 className="mt-2 text-[clamp(1.8rem,4.4vw,2.6rem)] tracking-tight">Add your artist name to continue</h1>
           <p className="mt-3 text-sm text-content-secondary">

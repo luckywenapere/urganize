@@ -43,7 +43,7 @@ function ItemIcon({
   children: ReactNode;
 }) {
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-none border border-white/5 bg-white/5 text-white/40 group-hover:text-white/70">
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-none border border-stroke-subtle bg-bg-hover text-content-secondary group-hover:text-content-primary">
       {children}
     </span>
   );
@@ -81,11 +81,11 @@ function HelpMenuItem({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="group flex min-h-[40px] w-full items-center gap-3 rounded-none px-3 py-1.5 text-left text-xs text-white/40 transition hover:bg-white/5 hover:text-white/80"
+      className="group flex min-h-[40px] w-full items-center gap-3 rounded-none px-3 py-1.5 text-left text-xs text-content-secondary transition hover:bg-bg-hover hover:text-content-primary"
     >
       <ItemIcon>{icon}</ItemIcon>
       <span className="min-w-0 flex-1 font-sans">{label}</span>
-      {hint ? <span className="shrink-0 text-white/20 group-hover:text-white/40">{hint}</span> : null}
+      {hint ? <span className="shrink-0 text-content-quaternary group-hover:text-content-secondary">{hint}</span> : null}
     </button>
   );
 }
@@ -260,7 +260,7 @@ export function HelpMenu() {
         {isOpen ? (
           <div
             role="menu"
-            className="absolute bottom-full left-0 mb-4 w-64 animate-in fade-in slide-in-from-bottom-1 duration-150 rounded-none border border-white/10 bg-[#0a0a0a] p-2 shadow-2xl"
+            className="absolute bottom-full left-0 mb-4 w-64 animate-in fade-in slide-in-from-bottom-1 duration-150 rounded-none border border-stroke-strong bg-bg-elevated p-2 shadow-2xl"
           >
             {menuGroups.map((group, groupIndex) => (
               <div key={`help-group-${groupIndex}`}>
@@ -273,7 +273,7 @@ export function HelpMenu() {
                     onClick={() => runMenuAction(item.onClick)}
                   />
                 ))}
-                {groupIndex < menuGroups.length - 1 ? <div className="my-2 h-px bg-white/5" /> : null}
+                {groupIndex < menuGroups.length - 1 ? <div className="my-2 h-px bg-stroke-subtle" /> : null}
               </div>
             ))}
           </div>
@@ -285,7 +285,7 @@ export function HelpMenu() {
           aria-haspopup="menu"
           aria-expanded={isOpen}
           onClick={() => setIsOpen((current) => !current)}
-          className="flex h-6 w-6 items-center justify-center font-mono text-[10px] text-white/20 transition-all duration-150 hover:text-white/50"
+          className="flex h-6 w-6 items-center justify-center font-mono text-[10px] text-content-quaternary transition-all duration-150 hover:text-content-secondary"
         >
           ?
         </button>
@@ -300,7 +300,7 @@ export function HelpMenu() {
             className="modal-scrim absolute inset-0"
           />
 
-          <div className="relative z-[1] w-full max-w-md rounded-sm border border-white/10 bg-[#0a0a0a] p-5 sm:p-6 shadow-2xl">
+          <div className="relative z-[1] w-full max-w-md rounded-sm border border-stroke-strong bg-bg-elevated p-5 sm:p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Keyboard shortcuts</p>
@@ -309,7 +309,7 @@ export function HelpMenu() {
               <button
                 type="button"
                 onClick={() => setIsShortcutsModalOpen(false)}
-                className="rounded-none border border-white/10 bg-white/5 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-white/40 transition hover:bg-white/10 hover:text-white/70"
+                className="rounded-none border border-stroke-strong bg-bg-hover px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-content-secondary transition hover:bg-bg-active hover:text-content-primary"
               >
                 Close
               </button>
@@ -319,7 +319,7 @@ export function HelpMenu() {
               {shortcutDefinitions.map((shortcut) => (
                 <div
                   key={`${shortcut.keys.join('-')}-${shortcut.description}`}
-                  className="flex items-center justify-between gap-4 rounded-none border border-white/5 bg-white/5 px-4 py-3"
+                  className="flex items-center justify-between gap-4 rounded-none border border-stroke-subtle bg-bg-hover px-4 py-3"
                 >
                   <p className="text-sm text-content-secondary">{shortcut.description}</p>
                   <ShortcutKeys keys={shortcut.keys} />

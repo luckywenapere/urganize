@@ -62,7 +62,7 @@ export function FeedbackSubmitStep({
   onGoToDashboard,
 }: FeedbackSubmitStepProps) {
   return (
-    <div className="relative mx-auto mt-16 w-full max-w-[860px] rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl sm:p-8">
+    <div className="relative mx-auto mt-16 w-full max-w-[860px] rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_20px_80px_-46px_rgb(var(--shadow-ink)/calc(0.62*var(--shadow-alpha-scale)))] backdrop-blur-xl sm:p-8">
       <div className="pointer-events-none absolute -left-12 -top-12 h-36 w-36 rounded-full bg-brand/10 blur-[90px]" />
       <div className="pointer-events-none absolute -bottom-14 right-0 h-40 w-40 rounded-full bg-brand/8 blur-[95px]" />
       <div className="relative rounded-2xl border border-stroke-default bg-bg-elevated/80 p-4 sm:p-5">

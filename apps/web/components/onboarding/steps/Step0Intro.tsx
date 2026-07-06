@@ -6,7 +6,7 @@ type Step0IntroProps = {
 
 export function Step0Intro({ onContinue }: Step0IntroProps) {
   return (
-    <section className="mx-auto mt-[12vh] w-full max-w-[860px] rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl sm:p-8">
+    <section className="mx-auto mt-[12vh] w-full max-w-[860px] rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_20px_80px_-46px_rgb(var(--shadow-ink)/calc(0.62*var(--shadow-alpha-scale)))] backdrop-blur-xl sm:p-8">
       <h1 className="text-[clamp(2.1rem,5.3vw,4rem)] tracking-tight text-content-primary">
         Urganize is your release execution workspace.
       </h1>

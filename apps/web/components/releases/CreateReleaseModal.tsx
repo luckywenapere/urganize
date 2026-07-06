@@ -288,7 +288,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
       >
         <form
           onSubmit={(event) => void handleSubmit(event)}
-          className="relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgba(0,0,0,0.76)] sm:max-h-[calc(100dvh-4rem)]"
+          className="relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))] sm:max-h-[calc(100dvh-4rem)]"
         >
           <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stroke-subtle p-4 sm:p-5">
             <div className="min-w-0">
@@ -307,7 +307,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
               onClick={onClose}
               disabled={isSubmitting}
               aria-label="Close modal"
-              className="shrink-0 border-stroke-default bg-white/[0.02]"
+              className="shrink-0 border-stroke-default bg-[rgb(var(--color-stroke)/0.02)]"
             >
               <X className="h-4 w-4" />
             </IconButton>

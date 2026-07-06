@@ -256,11 +256,11 @@ export function Step2ArtistSelector({
                   }}
                   className={`relative overflow-hidden rounded-[2rem] border px-4 py-5 text-left transition duration-300 ease-out sm:px-6 sm:py-6 ${
                     isCenter
-                      ? 'z-20 min-h-[320px] w-[58%] scale-100 border-brand/45 bg-[linear-gradient(160deg,rgba(255,255,255,0.09),rgba(255,255,255,0.02))] shadow-[0_32px_90px_-40px_rgba(0,0,0,0.85)]'
+                      ? 'z-20 min-h-[320px] w-[58%] scale-100 border-brand/45 bg-[linear-gradient(160deg,rgb(var(--color-stroke)/0.09),rgb(var(--color-stroke)/0.02))] shadow-[0_32px_90px_-40px_rgb(var(--shadow-ink)/calc(0.85*var(--shadow-alpha-scale)))]'
                       : 'z-10 min-h-[255px] w-[21%] scale-[0.88] border-stroke-default bg-bg-surface/78 opacity-75'
                   } ${isSelected ? 'ring-1 ring-brand/55' : ''}`}
                 >
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.10),transparent_56%)]" />
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgb(var(--color-stroke)/0.10),transparent_56%)]" />
                   <div className="relative flex h-full flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between gap-3">
@@ -325,7 +325,7 @@ export function Step2ArtistSelector({
       </section>
 
       {isAddArtistOpen && (
-        <section className="mx-auto mt-8 w-full max-w-[820px] rounded-[2rem] border border-stroke-default bg-bg-surface/96 p-6 shadow-[0_28px_80px_-38px_rgba(0,0,0,0.82)] backdrop-blur-xl sm:p-7">
+        <section className="mx-auto mt-8 w-full max-w-[820px] rounded-[2rem] border border-stroke-default bg-bg-surface/96 p-6 shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.82*var(--shadow-alpha-scale)))] backdrop-blur-xl sm:p-7">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.14em] text-content-tertiary">Add New Artist</p>

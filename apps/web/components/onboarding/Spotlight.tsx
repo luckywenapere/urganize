@@ -231,7 +231,7 @@ export function Spotlight({
       )}
 
       <div
-        className="absolute w-[min(360px,calc(100vw-2rem))] rounded-[28px] border border-stroke-default bg-bg-surface p-5 shadow-[0_30px_90px_-36px_rgba(0,0,0,0.8)] transition-all duration-300 ease-out"
+        className="absolute w-[min(360px,calc(100vw-2rem))] rounded-[28px] border border-stroke-default bg-bg-surface p-5 shadow-[0_30px_90px_-36px_rgb(var(--shadow-ink)/calc(0.8*var(--shadow-alpha-scale)))] transition-all duration-300 ease-out"
         style={{
           top: cardPosition.top,
           left: cardPosition.left,

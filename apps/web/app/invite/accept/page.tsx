@@ -306,7 +306,7 @@ export default function InviteAcceptPage() {
 
           <Card
             padding="lg"
-            className="rounded-3xl border border-stroke-default bg-bg-surface/95 backdrop-blur-sm shadow-[0_10px_40px_rgba(0,0,0,0.18)]"
+            className="rounded-3xl border border-stroke-default bg-bg-surface/95 backdrop-blur-sm shadow-[0_10px_40px_rgb(var(--shadow-ink)/calc(0.18*var(--shadow-alpha-scale)))]"
           >
             {loadState.kind === 'loading' ? (
               <div className="py-6 text-center text-sm text-content-secondary">

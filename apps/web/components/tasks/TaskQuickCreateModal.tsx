@@ -81,7 +81,7 @@ export function TaskQuickCreateModal({
 
   return (
     <div className="fixed inset-0 z-[170] flex items-center justify-center bg-black/55 p-4 backdrop-blur-[2px]">
-      <div className="w-full max-w-2xl rounded-[32px] border border-stroke-default bg-bg-surface p-5 shadow-[0_28px_80px_-38px_rgba(0,0,0,0.68)] sm:p-6">
+      <div className="w-full max-w-2xl rounded-[32px] border border-stroke-default bg-bg-surface p-5 shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Quick Create</p>

@@ -70,12 +70,16 @@ const preset = {
         xl: "12px",
         "2xl": "16px"
       },
+      // Reference the same --shadow-* CSS vars apps/web/app/globals.css
+      // already defines per-theme, rather than a second hardcoded scale
+      // that drifted slightly from it (same opacities, different px
+      // values) and never got a light-mode value at all.
       boxShadow: {
-        sm: "0 8px 18px rgba(0, 0, 0, 0.24)",
-        md: "0 18px 42px rgba(0, 0, 0, 0.34)",
-        lg: "0 28px 72px rgba(0, 0, 0, 0.46)",
-        glow: "0 0 30px rgba(62, 207, 142, 0.22)",
-        "glow-sm": "0 0 15px rgba(62, 207, 142, 0.14)"
+        sm: "var(--shadow-sm)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
+        glow: "var(--shadow-glow)",
+        "glow-sm": "var(--shadow-glow-sm)"
       },
       animation: {
         "fade-in": "fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
