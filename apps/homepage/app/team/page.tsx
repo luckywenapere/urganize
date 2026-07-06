@@ -9,10 +9,10 @@ export const metadata: Metadata = {
 
 const members = [
   { name: "Lucky Wenapere", role: "Co-Founder and CEO" },
-  { name: "Tedum King", role: "Co-Founder" },
-  { name: "Adamu Kabiru", role: "Growth" },
+  { name: "Tedum King", role: "Co-Founder and AI Engineer" },
+  { name: "Adamu Kabiru", role: "Growth Lead" },
   { name: "Chidera Nnamani", role: "Operations Lead" },
-  { name: "Victoria Emmanuel", role: "Operations" },
+  { name: "Victoria Emmanuel", role: "Finance Lead" },
 ] as const;
 
 export default function TeamPage() {
