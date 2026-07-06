@@ -264,7 +264,7 @@ export function ReleaseCombobox({
       />
 
       {isOpen ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+0.6rem)] z-20 overflow-hidden rounded-[24px] border border-stroke-default bg-bg-surface shadow-[0_28px_70px_-40px_rgba(0,0,0,0.78)]">
+        <div className="absolute left-0 right-0 top-[calc(100%+0.6rem)] z-20 overflow-hidden rounded-[24px] border border-stroke-default bg-bg-surface shadow-[0_28px_70px_-40px_rgb(var(--shadow-ink)/calc(0.78*var(--shadow-alpha-scale)))]">
           <div id={listboxId} role="listbox" className="max-h-[22rem] overflow-y-auto p-2">
             {isLoading ? (
               <div className="rounded-[18px] px-4 py-4 text-sm text-content-secondary">
@@ -350,7 +350,7 @@ export function ReleaseCombobox({
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,rgba(62,207,142,0.2),transparent_48%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01))]">
+                        <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,rgba(62,207,142,0.2),transparent_48%),linear-gradient(180deg,rgb(var(--color-stroke)/0.05),rgb(var(--color-stroke)/0.01))]">
                           <span className="text-[11px] font-semibold tracking-[-0.04em] text-content-primary">
                             {coverFallbackMonogram}
                           </span>

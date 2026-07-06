@@ -118,7 +118,7 @@ function EducationCardPreview({
   if (cardIndex === 0) {
     const activePhase = tick % 3;
     return (
-      <div className="relative overflow-hidden rounded-[28px] border border-stroke-default bg-bg-surface/90 p-5 shadow-[0_26px_70px_-40px_rgba(0,0,0,0.8)] sm:p-6">
+      <div className="relative overflow-hidden rounded-[28px] border border-stroke-default bg-bg-surface/90 p-5 shadow-[0_26px_70px_-40px_rgb(var(--shadow-ink)/calc(0.8*var(--shadow-alpha-scale)))] sm:p-6">
         <div className="pointer-events-none absolute inset-x-12 top-8 h-24 rounded-full bg-brand/12 blur-3xl" />
         <div className="relative space-y-3">
           {['Pre-Release', 'Release Week', 'Post-Release'].map((phase, index) => (
@@ -139,7 +139,7 @@ function EducationCardPreview({
                 </div>
                 <div
                   className={`h-3 w-3 rounded-full transition-all duration-500 ${
-                    index === activePhase ? 'bg-brand shadow-[0_0_24px_rgba(62,207,142,0.8)]' : 'bg-white/15'
+                    index === activePhase ? 'bg-brand shadow-[0_0_24px_rgba(62,207,142,0.8)]' : 'bg-content-quaternary'
                   }`}
                 />
               </div>
@@ -681,7 +681,7 @@ export function FirstTimeOnboardingGate() {
             <span
               key={index}
               className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                index + 1 <= visibleStep ? 'bg-brand' : 'bg-white/8'
+                index + 1 <= visibleStep ? 'bg-brand' : 'bg-content-quaternary'
               }`}
             />
           ))}
@@ -724,7 +724,7 @@ export function FirstTimeOnboardingGate() {
                     <span
                       key={demoCard.label}
                       className={`h-2.5 rounded-full transition-all duration-300 ${
-                        index === educationIndex ? 'w-10 bg-brand' : 'w-2.5 bg-white/15'
+                        index === educationIndex ? 'w-10 bg-brand' : 'w-2.5 bg-content-quaternary'
                       }`}
                     />
                   ))}
@@ -810,7 +810,7 @@ export function FirstTimeOnboardingGate() {
         {visibleStep === 3 ? (
           <div className="flex flex-1 items-center justify-center px-1 py-8">
             {workspaceCreationName ? (
-              <div className="w-full max-w-2xl rounded-[32px] border border-stroke-default bg-bg-surface/95 p-6 text-center shadow-[0_28px_90px_-46px_rgba(0,0,0,0.8)] sm:p-8">
+              <div className="w-full max-w-2xl rounded-[32px] border border-stroke-default bg-bg-surface/95 p-6 text-center shadow-[0_28px_90px_-46px_rgb(var(--shadow-ink)/calc(0.8*var(--shadow-alpha-scale)))] sm:p-8">
                 <p className="saas-eyebrow">Step 3 of 5</p>
                 <h2 className="mt-4 text-[clamp(2rem,5vw,3.5rem)] tracking-tight text-content-primary">
                   Your workspace is taking shape.
@@ -840,7 +840,7 @@ export function FirstTimeOnboardingGate() {
                   This becomes your first workspace.
                 </p>
 
-                <div className="mt-8 rounded-[32px] border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_28px_90px_-46px_rgba(0,0,0,0.8)] sm:p-6">
+                <div className="mt-8 rounded-[32px] border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_28px_90px_-46px_rgb(var(--shadow-ink)/calc(0.8*var(--shadow-alpha-scale)))] sm:p-6">
                   <label className="block text-left">
                     <span className="field-label">Release name</span>
                     <input
@@ -904,7 +904,7 @@ export function FirstTimeOnboardingGate() {
               </div>
 
               <div className="mt-8 grid gap-4 md:grid-cols-2">
-                <section className="rounded-[30px] border border-status-error/20 bg-[rgba(240,106,106,0.06)] p-5 shadow-[0_24px_80px_-46px_rgba(0,0,0,0.8)] sm:p-6">
+                <section className="rounded-[30px] border border-status-error/20 bg-status-error/[0.06] p-5 shadow-[0_24px_80px_-46px_rgb(var(--shadow-ink)/calc(0.8*var(--shadow-alpha-scale)))] sm:p-6">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-status-error/75">Without</p>
                   <div className="mt-5 space-y-3">
                     {STEP_FOUR_COMPARISON_ROWS.map((row, index) => (
@@ -919,7 +919,7 @@ export function FirstTimeOnboardingGate() {
                   </div>
                 </section>
 
-                <section className="rounded-[30px] border border-brand/20 bg-brand-muted/65 p-5 shadow-[0_24px_80px_-46px_rgba(0,0,0,0.8)] sm:p-6">
+                <section className="rounded-[30px] border border-brand/20 bg-brand-muted/65 p-5 shadow-[0_24px_80px_-46px_rgb(var(--shadow-ink)/calc(0.8*var(--shadow-alpha-scale)))] sm:p-6">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">With Urganize</p>
                   <div className="mt-5 space-y-3">
                     {STEP_FOUR_COMPARISON_ROWS.map((row, index) => (
@@ -935,7 +935,7 @@ export function FirstTimeOnboardingGate() {
                 </section>
               </div>
 
-              <div className="animate-in mt-6 rounded-[30px] border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_24px_80px_-46px_rgba(0,0,0,0.8)] sm:p-6">
+              <div className="animate-in mt-6 rounded-[30px] border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_24px_80px_-46px_rgb(var(--shadow-ink)/calc(0.8*var(--shadow-alpha-scale)))] sm:p-6">
                 <p className="text-sm font-semibold text-content-primary">
                   Artists using Urganize spend 70% less time on release admin.
                 </p>
@@ -946,7 +946,7 @@ export function FirstTimeOnboardingGate() {
                       <span>Admin capacity</span>
                     </div>
                     <div className="h-3 rounded-full bg-bg-overlay">
-                      <div className="animate-in h-full w-[32%] rounded-full bg-white/25" />
+                      <div className="animate-in h-full w-[32%] rounded-full bg-content-tertiary" />
                     </div>
                   </div>
                   <div>
@@ -986,7 +986,7 @@ export function FirstTimeOnboardingGate() {
         {visibleStep === 5 ? (
           <div className="flex flex-1 items-center justify-center px-1 py-8">
             <div className="w-full max-w-5xl">
-              <div className="rounded-[34px] border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_30px_90px_-46px_rgba(0,0,0,0.82)] sm:p-8">
+              <div className="rounded-[34px] border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.82*var(--shadow-alpha-scale)))] sm:p-8">
                 <div className="mx-auto max-w-2xl text-center">
                   <span className="inline-flex items-center rounded-full border border-brand/20 bg-brand-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-brand">
                     Your workspace is ready.

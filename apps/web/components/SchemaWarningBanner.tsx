@@ -61,7 +61,7 @@ export function SchemaWarningBanner({ enabled }: SchemaWarningBannerProps) {
   if (!enabled || !showWarning) return null;
 
   return (
-    <div className="fixed left-1/2 top-3 z-[200] w-[min(980px,calc(100%-1.5rem))] -translate-x-1/2 rounded-xl border border-status-warning/45 bg-status-warning/12 px-4 py-3 shadow-[0_14px_36px_-24px_rgba(0,0,0,0.6)]">
+    <div className="fixed left-1/2 top-3 z-[200] w-[min(980px,calc(100%-1.5rem))] -translate-x-1/2 rounded-xl border border-status-warning/45 bg-status-warning/12 px-4 py-3 shadow-[0_14px_36px_-24px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-content-primary">
           Schema warning: `profiles.artist_name` is missing. Artist profile lock/prefill may fail. Run migration in{' '}

@@ -14,7 +14,7 @@ export function Step5ExistingSteps({
   onSkip,
 }: Step5ExistingStepsProps) {
   return (
-    <div className="mx-auto mt-[12vh] w-full max-w-[860px] rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl sm:p-8">
+    <div className="mx-auto mt-[12vh] w-full max-w-[860px] rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_20px_80px_-46px_rgb(var(--shadow-ink)/calc(0.62*var(--shadow-alpha-scale)))] backdrop-blur-xl sm:p-8">
       <h1 className="text-[clamp(2.4rem,5.6vw,4.4rem)] tracking-tight">Do you have steps?</h1>
       <textarea
         className="mt-8 min-h-[230px] w-full rounded-2xl border border-stroke-subtle bg-bg-elevated/70 p-4 text-xl text-content-primary outline-none placeholder:text-content-quaternary focus:border-brand"

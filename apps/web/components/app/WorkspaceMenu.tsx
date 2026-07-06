@@ -132,7 +132,7 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Workspace menu"
-        className="motion-focus motion-press grid h-10 w-10 place-items-center border border-stroke-default bg-bg-elevated text-sm font-semibold text-content-primary transition-colors hover:bg-white/[0.04]"
+        className="motion-focus motion-press grid h-10 w-10 place-items-center border border-stroke-default bg-bg-elevated text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover"
       >
         {monogram}
       </button>
@@ -142,7 +142,7 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
           ref={menuRef}
           role="menu"
           aria-label="Workspace menu"
-          className="animate-menu-down absolute right-0 top-full z-50 mt-2 w-60 origin-top-right border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgba(0,0,0,0.6)]"
+          className="animate-menu-down absolute right-0 top-full z-50 mt-2 w-60 origin-top-right border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
         >
           {/* Stage 2: the "Lucky / Workspace" identity used to live in the
               sidebar footer. With the sidebar gone it lives here, as a

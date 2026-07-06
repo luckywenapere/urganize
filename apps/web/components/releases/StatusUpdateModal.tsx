@@ -51,7 +51,7 @@ export function StatusUpdateModal({
         aria-labelledby="status-update-title"
         className="relative mx-auto flex min-h-full w-full max-w-xl items-center"
       >
-        <div className="relative w-full border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgba(0,0,0,0.76)]">
+        <div className="relative w-full border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))]">
           <div className="flex items-start justify-between gap-4 border-b border-stroke-subtle p-4 sm:p-5">
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
@@ -69,7 +69,7 @@ export function StatusUpdateModal({
               type="button"
               onClick={onClose}
               aria-label="Close modal"
-              className="shrink-0 border-stroke-default bg-white/[0.02]"
+              className="shrink-0 border-stroke-default bg-[rgb(var(--color-stroke)/0.02)]"
             >
               <X className="h-4 w-4" />
             </IconButton>

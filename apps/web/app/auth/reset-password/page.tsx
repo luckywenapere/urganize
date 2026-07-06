@@ -115,7 +115,7 @@ export default function ResetPasswordPage() {
           </div>
 
           <Card
-            className="animate-in delay-1 rounded-3xl border border-stroke-default bg-bg-surface/95 shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl"
+            className="animate-in delay-1 rounded-3xl border border-stroke-default bg-bg-surface/95 shadow-[0_20px_80px_-46px_rgb(var(--shadow-ink)/calc(0.62*var(--shadow-alpha-scale)))] backdrop-blur-xl"
             padding="lg"
           >
             <div className="text-center space-y-5">
@@ -168,7 +168,7 @@ export default function ResetPasswordPage() {
 
         {/* Reset Password Card */}
         <Card
-          className="animate-in delay-1 rounded-3xl border border-stroke-default bg-bg-surface/95 shadow-[0_20px_80px_-46px_rgba(0,0,0,0.62)] backdrop-blur-xl"
+          className="animate-in delay-1 rounded-3xl border border-stroke-default bg-bg-surface/95 shadow-[0_20px_80px_-46px_rgb(var(--shadow-ink)/calc(0.62*var(--shadow-alpha-scale)))] backdrop-blur-xl"
           padding="lg"
         >
           {!isSuccess ? (

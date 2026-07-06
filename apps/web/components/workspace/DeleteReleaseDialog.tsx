@@ -152,7 +152,7 @@ export function DeleteReleaseDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-release-title"
-        className="relative mx-auto w-full max-w-md border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgba(0,0,0,0.76)]"
+        className="relative mx-auto w-full max-w-md border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))]"
       >
         <div className="p-4 sm:p-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">

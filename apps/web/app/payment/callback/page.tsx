@@ -97,7 +97,7 @@ function PaymentCallbackContent() {
   const planLabel = isBillingPlanId(result.plan) ? getPlan(result.plan).label : null;
 
   return (
-    <div className="w-full max-w-md rounded-3xl border border-stroke-subtle bg-bg-surface/95 p-6 shadow-[0_12px_32px_rgba(0,0,0,0.18)] backdrop-blur-sm">
+    <div className="w-full max-w-md rounded-3xl border border-stroke-subtle bg-bg-surface/95 p-6 shadow-[0_12px_32px_rgb(var(--shadow-ink)/calc(0.18*var(--shadow-alpha-scale)))] backdrop-blur-sm">
       {status === 'verifying' && (
         <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 text-center">
           <Loader2 className="h-5 w-5 animate-spin text-content-tertiary" aria-hidden="true" />

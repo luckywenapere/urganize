@@ -48,6 +48,24 @@
   --color-priority-medium: 227 194 64;
   --color-priority-none: 74 74 74;
 
+  /* One-off shadow recipe used by settings/page.tsx's panelClass (6
+     sections on that page share it) — its own offset/blur shape, distinct
+     from the --shadow-sm/md/lg scale, so it gets its own themed color
+     rather than being forced onto an existing token at a different
+     visual weight. */
+  --shadow-settings-panel: rgba(0, 0, 0, 0.14);
+
+  /* Generic escape hatch for the ~25 components with their own bespoke
+     shadow shape (modals, dropdowns, cards — each with a deliberately
+     different blur/spread for its size) that all hardcoded plain
+     rgba(0,0,0,X) rather than going through a named token. Rather than
+     naming and hand-tuning ~15 distinct one-off variables, every one of
+     those gets a mechanical rgba(0,0,0,X) -> rgb(var(--shadow-ink) /
+     calc(X * var(--shadow-alpha-scale))) swap — same shape per component,
+     preserved exactly; only the ink color + intensity become theme-aware. */
+  --shadow-ink: 0 0 0;
+  --shadow-alpha-scale: 1;
+
   --bg-base: #0f0f0f;
   --bg-sidebar: #141414;
   --bg-sidebar-active: #1e1e1e;
@@ -208,6 +226,11 @@ html[data-theme='light'] {
   --shadow-lg: 0 24px 56px rgba(15, 15, 15, 0.10);
   --shadow-glow: 0 0 32px rgba(62, 207, 142, 0.14);
   --shadow-glow-sm: 0 10px 22px rgba(62, 207, 142, 0.12);
+
+  --shadow-settings-panel: rgba(15, 15, 15, 0.05);
+
+  --shadow-ink: 15 15 15;
+  --shadow-alpha-scale: 0.25;
 }
 
 /* The wordmark PNG (packages/ui/src/Logo.tsx) is solid white on
@@ -1236,7 +1259,7 @@ html[data-theme='dark'] .btn-secondary:hover:not(:disabled) {
 
 .note-card {
   border-radius: 0;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-default);
   box-shadow: 0 20px 40px -30px rgba(0, 0, 0, 0.35);
 }
 
@@ -1262,6 +1285,37 @@ html[data-theme='dark'] .btn-secondary:hover:not(:disabled) {
   background:
     linear-gradient(180deg, rgba(120, 169, 255, 0.09), rgba(24, 32, 38, 0.98)),
     var(--bg-surface);
+}
+
+/* Light-mode shadow overrides for the shell/card classes above. Their
+   background/border already theme correctly via CSS vars — only
+   box-shadow was hardcoded to a dark-mode-only black. Each value below is
+   the same offset/blur shape as its dark counterpart, scaled down using
+   the same ratio applied to --shadow-* (roughly a 3-4x opacity cut plus a
+   tighter blur/spread), since a light canvas shows shadow contamination
+   far more readily than a dark one at the same opacity. */
+html[data-theme='light'] .panel-shell {
+  box-shadow: 0 16px 40px -28px rgba(15, 15, 15, 0.09);
+}
+
+html[data-theme='light'] .panel-shell-subtle {
+  box-shadow: 0 13px 32px -24px rgba(15, 15, 15, 0.08);
+}
+
+html[data-theme='light'] .nav-shell {
+  box-shadow: 0 13px 34px -22px rgba(15, 15, 15, 0.11);
+}
+
+html[data-theme='light'] .menu-shell {
+  box-shadow: 0 17px 42px -28px rgba(15, 15, 15, 0.16);
+}
+
+html[data-theme='light'] .modal-shell {
+  box-shadow: 0 21px 62px -36px rgba(15, 15, 15, 0.17);
+}
+
+html[data-theme='light'] .note-card {
+  box-shadow: 0 14px 28px -22px rgba(15, 15, 15, 0.09);
 }
 
 .saas-eyebrow {

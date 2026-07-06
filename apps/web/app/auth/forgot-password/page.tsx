@@ -53,7 +53,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         {/* Forgot Password Card */}
-        <Card className="animate-in delay-1 rounded-3xl border border-stroke-default bg-bg-surface/95 backdrop-blur-sm shadow-[0_10px_40px_rgba(0,0,0,0.18)]" padding="lg">
+        <Card className="animate-in delay-1 rounded-3xl border border-stroke-default bg-bg-surface/95 backdrop-blur-sm shadow-[0_10px_40px_rgb(var(--shadow-ink)/calc(0.18*var(--shadow-alpha-scale)))]" padding="lg">
           {!isSubmitted ? (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>

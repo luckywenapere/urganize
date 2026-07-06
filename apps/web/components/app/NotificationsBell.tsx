@@ -153,7 +153,8 @@ export function NotificationsBell() {
   // sites) already guard with `assignee !== actor`. The defensive check
   // below catches a row whose actor_id equals this user — e.g. if a future
   // call site forgot to filter. Notifications with no actor (task_due_soon /
-  // task_overdue from createDueDateNotifications) still toast.
+  // task_overdue from the scheduled createDueDateNotificationsForAllUsers
+  // sweep) still toast.
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
 
@@ -356,7 +357,7 @@ export function NotificationsBell() {
         aria-label={
           hasUnread ? `Notifications, ${unreadCount} unread` : 'Notifications'
         }
-        className="motion-focus motion-press relative grid h-10 w-10 place-items-center border border-stroke-default bg-bg-elevated text-content-primary transition-colors hover:bg-white/[0.04]"
+        className="motion-focus motion-press relative grid h-10 w-10 place-items-center border border-stroke-default bg-bg-elevated text-content-primary transition-colors hover:bg-bg-hover"
       >
         <Bell className="h-4 w-4" aria-hidden="true" />
         {hasUnread ? (
@@ -382,7 +383,7 @@ export function NotificationsBell() {
           // panel; it's full-width and viewport-pinned, so the math is the
           // same. From `sm` up it reverts to the WorkspaceMenu-style
           // trigger-anchored dropdown.
-          className="animate-menu-down fixed inset-x-4 top-[4.5rem] z-50 origin-top-right border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgba(0,0,0,0.6)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]"
+          className="animate-menu-down fixed inset-x-4 top-[4.5rem] z-50 origin-top-right border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]"
         >
           <div className="flex items-center justify-between border-b border-stroke-subtle px-3 py-3">
             <p className="text-sm font-semibold text-content-primary">Notifications</p>

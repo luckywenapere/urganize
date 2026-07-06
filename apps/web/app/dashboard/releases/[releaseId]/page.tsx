@@ -241,7 +241,7 @@ export default function ReleaseDetailPage() {
                 <CalendarDays className="h-3.5 w-3.5 text-content-tertiary" />
                 {formatDate(release.releaseDate)}
               </span>
-              <span className="border border-stroke-default bg-white/[0.03] px-2 py-0.5 text-[11px] font-medium capitalize text-content-secondary">
+              <span className="border border-stroke-default bg-bg-elevated px-2 py-0.5 text-[11px] font-medium capitalize text-content-secondary">
                 {normalizedStatus}
               </span>
             </div>

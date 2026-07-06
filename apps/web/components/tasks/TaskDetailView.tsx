@@ -617,9 +617,9 @@ export function TaskDetailView({
         </div>
       ) : isLoading ? (
         <div className="space-y-3">
-          <div className="h-10 rounded-[18px] bg-white/6" />
-          <div className="h-24 rounded-[18px] bg-white/6" />
-          <div className="h-24 rounded-[18px] bg-white/6" />
+          <div className="h-10 rounded-[18px] skeleton-shimmer" />
+          <div className="h-24 rounded-[18px] skeleton-shimmer" />
+          <div className="h-24 rounded-[18px] skeleton-shimmer" />
         </div>
       ) : (
         <p className="text-sm text-content-secondary">Select a task to inspect the full context.</p>
