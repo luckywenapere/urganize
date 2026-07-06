@@ -339,8 +339,8 @@ function PricingTierCard({
       transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       className={
         highlight
-          ? "relative flex h-full flex-col rounded-[2rem] border border-[var(--marketing-accent)]/40 bg-[linear-gradient(180deg,rgba(110,233,155,0.10),rgba(255,255,255,0.04))] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.30)] backdrop-blur-xl"
-          : "relative flex h-full flex-col rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 shadow-[0_24px_70px_rgba(0,0,0,0.22)] backdrop-blur-xl"
+          ? "relative flex h-full flex-col rounded-[2rem] border border-[var(--marketing-accent)]/40 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--marketing-accent)_12%,transparent),var(--marketing-surface-muted))] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.30)] backdrop-blur-xl"
+          : "relative flex h-full flex-col rounded-[2rem] border border-[color:var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-8 shadow-[0_24px_70px_rgba(0,0,0,0.22)] backdrop-blur-xl"
       }
     >
       <div className="flex items-start justify-between gap-4">
