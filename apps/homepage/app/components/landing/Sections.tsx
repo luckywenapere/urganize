@@ -276,7 +276,7 @@ const supportingQuotes = [
     quote:
       "I manage myself, so every dropped ball is mine. The first time I created a release, the whole rollout was already laid out, week by week, task by task. I stopped planning from memory.",
     name: "Antoine",
-    role: "Artist Manager",
+    role: "Artist Manager, Creative Business Academy alum",
   },
   {
     quote:
