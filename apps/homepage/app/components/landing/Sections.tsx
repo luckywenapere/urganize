@@ -268,9 +268,9 @@ export function ThreeFeaturesSection() {
 }
 
 // Same rule as the @zaddyfunds_ hero quote below: a testimonial only works
-// because the words are really theirs. These are DRAFTS — get verbatim
-// sign-off from Antoine, Adenaiye and Tamuno-Tekena before this ships, and
-// never edit a quote after sign-off without re-approval.
+// because the words are really theirs. All three quotes have verbatim
+// sign-off from Antoine, Adenaiye and Tamuno-Tekena (confirmed 2026-07-06).
+// Never edit a quote after sign-off without re-approval.
 const supportingQuotes = [
   {
     quote:
@@ -309,7 +309,14 @@ export function TestimonialSection() {
               sign-off — a testimonial only works because the words are
               really theirs. */}
           <p className="mt-10 font-mono text-[0.8rem] tracking-[0.18em] text-[var(--marketing-text-subtle)]">
-            <span className="text-[var(--marketing-text)]">@zaddyfunds_</span>
+            <a
+              href="https://instagram.com/zaddyfunds_"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--marketing-text)] underline decoration-[color:var(--marketing-text-subtle)] underline-offset-4 transition-colors hover:decoration-[color:var(--marketing-text)]"
+            >
+              @zaddyfunds_
+            </a>
             {" "}· Artist Manager
           </p>
         </div>
