@@ -144,10 +144,32 @@ export default function RootLayout({
     <html
       lang="en"
       data-marketing-theme="dark"
+      suppressHydrationWarning
       className={`${cormorantGaramond.variable} ${instrumentSans.variable} ${ibmPlexMono.variable} ${robotoMono.variable}`}
     >
       <head>
         <meta name="apple-mobile-web-app-title" content="Urganize" />
+
+        {/* Resolves and applies the visitor's theme before first paint, so
+            there's no flash of the wrong theme. Falls back to system
+            preference (prefers-color-scheme) when nothing is stored yet —
+            the SSR default above is dark for no-JS clients and crawlers. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var key = 'urganize.theme';
+                  var stored = localStorage.getItem(key);
+                  var resolved = stored === 'light' || stored === 'dark'
+                    ? stored
+                    : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+                  document.documentElement.dataset.marketingTheme = resolved;
+                } catch (_) {}
+              })();
+            `,
+          }}
+        />
 
         {/* JSON-LD STRUCTURED DATA */}
         <script

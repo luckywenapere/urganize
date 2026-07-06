@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ThemeToggle } from "./ThemeToggle";
 
 const APP_AUTH_URL = "https://app.urganize.app/auth";
 
@@ -45,6 +46,7 @@ export function MarketingHeader() {
             >
               Login
             </Link>
+            <ThemeToggle />
             <Link
               href={APP_AUTH_URL}
               className="inline-flex items-center justify-center rounded-full border border-[color:var(--marketing-border-strong)] px-4 py-2.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text)] hover:border-[color:var(--marketing-text)] hover:bg-[var(--marketing-surface)] sm:px-5"
