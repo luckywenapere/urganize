@@ -17,7 +17,15 @@ import {
 
 const RELEASES_TABLE = 'releases';
 const TASKS_TABLE = 'tasks';
-const TAILORING_TIMEOUT_MS = 30_000;
+const TAILORING_TIMEOUT_MS = 25_000;
+
+// Without this, Vercel's plan-default function timeout (10-15s) kills the
+// invocation before the provider's retry budget can produce the handled
+// 504/503 below. 60 is the Hobby-plan ceiling, so the budget must fit inside
+// it, not the other way around: 2 attempts x TAILORING_TIMEOUT_MS + ~1.5s
+// backoff + auth/DB pre-work ≈ 55s worst case. If you raise the timeout or
+// retries, re-do this math.
+export const maxDuration = 60;
 
 // Feature flag — the AI provider isn't wired to a capable model yet, so the
 // whole tailoring feature stays dark until NEXT_PUBLIC_FEATURE_TAILOR_PLAN is

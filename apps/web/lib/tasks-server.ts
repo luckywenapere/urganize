@@ -494,7 +494,7 @@ function mapOrganizationRoleToWorkspaceRole(role: string, isOwner: boolean): Wor
   return 'member';
 }
 
-async function loadProfilesByIds(
+export async function loadProfilesByIds(
   adminClient: SupabaseClient,
   userIds: string[]
 ): Promise<Map<string, ProfileRow>> {
