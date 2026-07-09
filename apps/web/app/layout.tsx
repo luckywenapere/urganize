@@ -1,8 +1,25 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { IBM_Plex_Sans, Space_Grotesk } from 'next/font/google';
 import { AppShell } from '@/components/app/AppShell';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import './globals.css';
+
+// Self-hosted via next/font (preloaded, no third-party request chain). These
+// replace the render-blocking Google Fonts @import that used to sit at the
+// top of globals.css; that file's --font-sans/--font-display/--font-accent
+// consume the two variables bound on <html> below.
+const plexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-plex-sans',
+});
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-space-grotesk',
+});
 
 const appName = 'Urganize';
 const appDescription =
@@ -59,7 +76,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning data-theme="dark" className="dark">
+    <html
+      lang="en"
+      suppressHydrationWarning
+      data-theme="dark"
+      className={`dark ${plexSans.variable} ${spaceGrotesk.variable}`}
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{

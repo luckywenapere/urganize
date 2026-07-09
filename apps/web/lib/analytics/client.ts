@@ -1,4 +1,4 @@
-import posthog from 'posthog-js';
+import type { PostHog } from 'posthog-js';
 import {
   type AnalyticsEvent,
   type AnalyticsIdentity,
@@ -11,7 +11,16 @@ const ANALYTICS_FEATURES_STORAGE_KEY = 'urganize.analytics.discovered-features';
 const ONBOARDING_STARTED_AT_STORAGE_KEY = 'urganize.analytics.onboarding.started-at';
 const MAX_STORED_EVENTS = 400;
 
-let hasInitializedBrowserPostHog = false;
+// posthog-js is one of the largest client dependencies. It used to be a
+// static import here, which put it in the render-blocking first-load bundle
+// of every route. It now loads as a deferred async chunk: init still happens
+// on page load (instrumentation-client.ts) so autocapture and session
+// recording behave exactly as before — the library just no longer blocks
+// download/parse/hydration. The memoized promise doubles as the "already
+// initialized" flag, and chaining every capture through it preserves call
+// order (identify-before-capture, etc.).
+let posthogClientPromise: Promise<PostHog | null> | null = null;
+
 let hasWarnedMissingBrowserConfig = false;
 
 const featureRouteMatchers: Array<{ pattern: RegExp; feature: string }> = [
@@ -85,39 +94,50 @@ function resolveFeatureFromPath(pathname: string): string | null {
   return null;
 }
 
-export function initializeBrowserPostHog(): boolean {
+function loadBrowserPostHog(): Promise<PostHog | null> {
   if (typeof window === 'undefined') {
-    return false;
-  }
-
-  if (hasInitializedBrowserPostHog) {
-    return true;
+    return Promise.resolve(null);
   }
 
   const key = getPostHogProjectKey();
   if (!key) {
     warnMissingBrowserConfig();
-    return false;
+    return Promise.resolve(null);
   }
 
-  posthog.init(
-    key,
-    {
-      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://app.posthog.com',
-      defaults: '2026-01-30',
-      capture_pageviews: false,
-      capture_pageleave: true,
-      session_recording: {
-        maskAllInputs: false,
-        maskInputAttributes: ['password', 'card', 'cvv', 'ssn'],
-      },
-      autocapture: true,
-      persistence: 'localStorage+cookie',
-    } as Parameters<typeof posthog.init>[1]
-  );
+  if (!posthogClientPromise) {
+    posthogClientPromise = import('posthog-js')
+      .then((mod) => {
+        const client = mod.default;
+        client.init(
+          key,
+          {
+            api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://app.posthog.com',
+            defaults: '2026-01-30',
+            capture_pageviews: false,
+            capture_pageleave: true,
+            session_recording: {
+              maskAllInputs: false,
+              maskInputAttributes: ['password', 'card', 'cvv', 'ssn'],
+            },
+            autocapture: true,
+            persistence: 'localStorage+cookie',
+          } as Parameters<PostHog['init']>[1]
+        );
+        return client;
+      })
+      .catch(() => {
+        // Analytics must never break the app — a failed chunk load (offline,
+        // ad blocker) just disables PostHog for this session.
+        return null;
+      });
+  }
 
-  hasInitializedBrowserPostHog = true;
-  return true;
+  return posthogClientPromise;
+}
+
+export async function initializeBrowserPostHog(): Promise<boolean> {
+  return (await loadBrowserPostHog()) !== null;
 }
 
 export function captureAnalyticsEvent(
@@ -127,11 +147,7 @@ export function captureAnalyticsEvent(
   const payload = event.properties as Record<string, unknown>;
   persistAnalyticsEvent(event.name, payload, options?.userId || null);
 
-  if (!initializeBrowserPostHog()) {
-    return;
-  }
-
-  posthog.capture(event.name, payload);
+  void loadBrowserPostHog().then((client) => client?.capture(event.name, payload));
 }
 
 export function captureAnalyticsPageView(input: {
@@ -139,15 +155,13 @@ export function captureAnalyticsPageView(input: {
   search: string;
   url: string;
 }) {
-  if (!initializeBrowserPostHog()) {
-    return;
-  }
-
-  posthog.capture('$pageview', {
-    pathname: input.pathname,
-    search: input.search,
-    url: input.url,
-  });
+  void loadBrowserPostHog().then((client) =>
+    client?.capture('$pageview', {
+      pathname: input.pathname,
+      search: input.search,
+      url: input.url,
+    })
+  );
 }
 
 export function captureFeatureDiscovery(pathname: string) {
@@ -189,16 +203,14 @@ export function identifyAnalyticsUser(user: AnalyticsIdentity | null | undefined
     return;
   }
 
-  if (!initializeBrowserPostHog()) {
-    return;
-  }
-
-  posthog.identify(user.id, {
-    email: user.email,
-    name: user.name,
-    role: user.onboarding_role || user.role,
-    created_at: user.created_at,
-  });
+  void loadBrowserPostHog().then((client) =>
+    client?.identify(user.id, {
+      email: user.email,
+      name: user.name,
+      role: user.onboarding_role || user.role,
+      created_at: user.created_at,
+    })
+  );
 }
 
 export function resetAnalyticsUser() {
@@ -206,11 +218,13 @@ export function resetAnalyticsUser() {
     return;
   }
 
-  if (!initializeBrowserPostHog()) {
+  // If the library never loaded this session there is no identity to reset —
+  // don't force the chunk to download just to clear it.
+  if (!posthogClientPromise) {
     return;
   }
 
-  posthog.reset();
+  void posthogClientPromise.then((client) => client?.reset());
 }
 
 export function markOnboardingStarted() {
@@ -285,9 +299,5 @@ export function trackEvent(
   const payload = options?.payload || {};
   persistAnalyticsEvent(name, payload, options?.userId || null);
 
-  if (!initializeBrowserPostHog()) {
-    return;
-  }
-
-  posthog.capture(name, payload);
+  void loadBrowserPostHog().then((client) => client?.capture(name, payload));
 }

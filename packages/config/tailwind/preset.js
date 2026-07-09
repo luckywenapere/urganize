@@ -45,8 +45,16 @@ const preset = {
         }
       },
       fontFamily: {
-        sans: ["IBM Plex Sans", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
-        display: ["Space Grotesk", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+        // sans/display must resolve through the semantic CSS variables, not
+        // literal family names: apps/web self-hosts its fonts via next/font,
+        // which registers hashed @font-face names reachable only behind
+        // --font-sans/--font-display (bound in apps/web/app/globals.css).
+        // The literal "IBM Plex Sans"/"Space Grotesk" names stopped existing
+        // when the Google Fonts @import was removed. The variables carry
+        // their own fallback stacks; the trailing entries here only cover
+        // a consumer that never defines the variables.
+        sans: ["var(--font-sans)", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+        display: ["var(--font-display)", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
         mono: ["JetBrains Mono", "Fira Code", "monospace"]
       },
       fontSize: {
