@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { AlertCircle, X } from 'lucide-react';
+import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { ReleaseCombobox } from '@/components/shared/ReleaseCombobox';
 import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
 import { type ReleaseOption } from '@/lib/release-helpers';
@@ -24,6 +25,9 @@ type TaskQuickCreateModalProps = {
   members: WorkspaceMember[];
   isLoadingReleases: boolean;
   isSaving: boolean;
+  /** Failure message from the last create attempt — rendered above the
+   * actions so a failed create is never silent. Empty string when clean. */
+  errorMessage: string;
   onClose: () => void;
   onTitleChange: (value: string) => void;
   onReleaseQueryChange: (value: string) => void;
@@ -49,6 +53,7 @@ export function TaskQuickCreateModal({
   members,
   isLoadingReleases,
   isSaving,
+  errorMessage,
   onClose,
   onTitleChange,
   onReleaseQueryChange,
@@ -60,7 +65,9 @@ export function TaskQuickCreateModal({
   onSubmit,
 }: TaskQuickCreateModalProps) {
   const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
   const [customTagDraft, setCustomTagDraft] = useState('');
+  const headingId = useId();
 
   useEffect(() => {
     if (!isOpen) {
@@ -73,6 +80,67 @@ export function TaskQuickCreateModal({
     }, 0);
   }, [isOpen]);
 
+  // Escape closes (guarded while saving so a mid-flight create isn't
+  // abandoned by accident), and Tab is trapped inside the dialog — the page
+  // behind the overlay is inert to keyboard users, matching what the
+  // backdrop already communicates visually. Same effect structure as
+  // CreateReleaseModal.
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isSaving) {
+        // Layered dismissal: the comboboxes preventDefault() their own
+        // Escape when their dropdown is open, so a prevented event means
+        // "the dropdown just closed" — the modal only closes on an
+        // unclaimed Escape. Without this check one keypress wiped the
+        // whole in-progress form.
+        if (event.defaultPrevented) {
+          return;
+        }
+        onClose();
+        return;
+      }
+
+      if (event.key === 'Tab' && cardRef.current) {
+        const focusables = Array.from(
+          cardRef.current.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((element) => element.offsetParent !== null);
+        if (!focusables.length) {
+          return;
+        }
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+
+        if (event.shiftKey && (active === first || !cardRef.current.contains(active))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (active === last || !cardRef.current.contains(active))) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, isSaving, onClose]);
+
+  // Lock background scroll while open — the shared ref-counted lock keeps
+  // stacked modals (the 'c' shortcut can open this over CreateReleaseModal)
+  // from stomping each other's overflow/padding restores.
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    return lockBodyScroll();
+  }, [isOpen]);
+
   if (!isOpen) {
     return null;
   }
@@ -80,12 +148,25 @@ export function TaskQuickCreateModal({
   const canSubmit = Boolean(title.trim() && selectedRelease);
 
   return (
-    <div className="fixed inset-0 z-[170] flex items-center justify-center bg-black/55 p-4 backdrop-blur-[2px]">
-      <div className="w-full max-w-2xl rounded-[32px] border border-stroke-default bg-bg-surface p-5 shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] sm:p-6">
+    <div
+      className="fixed inset-0 z-[170] flex items-center justify-center bg-black/55 p-4 backdrop-blur-[2px]"
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !isSaving) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        ref={cardRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={headingId}
+        className="w-full max-w-2xl rounded-[32px] border border-stroke-default bg-bg-surface p-5 shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] sm:p-6"
+      >
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Quick Create</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-content-primary">Create task</h2>
+            <h2 id={headingId} className="mt-2 text-2xl font-semibold tracking-tight text-content-primary">Create task</h2>
             <p className="mt-2 text-sm text-content-secondary">
               Title is enough to create a task. Everything else is optional.
             </p>
@@ -94,7 +175,8 @@ export function TaskQuickCreateModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+            disabled={isSaving}
+            className="rounded-full border border-stroke-default bg-bg-elevated px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60"
           >
             Close
           </button>
@@ -251,11 +333,19 @@ export function TaskQuickCreateModal({
             ) : null}
           </div>
 
+          {errorMessage ? (
+            <div className="flex items-start gap-3 rounded-[16px] border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error" role="alert">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <p>{errorMessage}</p>
+            </div>
+          ) : null}
+
           <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={onClose}
-              className="min-h-11 rounded-[18px] border border-stroke-default bg-bg-elevated px-4 py-3 text-sm font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+              disabled={isSaving}
+              className="min-h-11 rounded-[18px] border border-stroke-default bg-bg-elevated px-4 py-3 text-sm font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
               Cancel
             </button>

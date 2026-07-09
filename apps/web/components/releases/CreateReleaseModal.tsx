@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, CalendarDays, Loader2, X } from 'lucide-react';
 import { Button, IconButton } from '@urganize/ui';
+import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import {
@@ -123,27 +124,14 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isSubmitting, onClose, open]);
 
-  // Lock background scroll while the modal is open. Pad the body by the
-  // scrollbar width so the desktop layout doesn't jump when the scrollbar
-  // disappears. Restore the originals on close so we don't stomp on any
-  // other code that has set these.
+  // Lock background scroll while the modal is open — the shared ref-counted
+  // lock (lib/body-scroll-lock.ts) captures/restores overflow + scrollbar
+  // padding exactly once across any stack of concurrent modals.
   useEffect(() => {
     if (!open) {
       return;
     }
-
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    const originalOverflow = document.body.style.overflow;
-    const originalPaddingRight = document.body.style.paddingRight;
-    document.body.style.overflow = 'hidden';
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      document.body.style.paddingRight = originalPaddingRight;
-    };
+    return lockBodyScroll();
   }, [open]);
 
   const characterCount = description.length;

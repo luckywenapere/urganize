@@ -10,11 +10,13 @@ import {
   validateAssetUpload,
 } from '@/lib/asset-constants';
 import { supabase } from '@/lib/supabase/client';
-import type { AssetToastTone } from './AssetSection';
+import type { Asset, AssetToastTone } from './AssetSection';
 
 type AssetUploadControlProps = {
   releaseId: string;
-  onUploaded: () => void;
+  /** Receives the created asset (from the record POST's response) so the
+   * parent can append it locally instead of re-fetching the whole list. */
+  onUploaded: (asset?: Asset) => void;
   onToast: (message: string, tone: AssetToastTone) => void;
 };
 
@@ -46,7 +48,7 @@ async function runUploadFlow(params: {
   file: File;
   category: AssetCategory;
   token: string;
-}): Promise<{ ok: true } | { ok: false; step: 1 | 2 | 3; error: string }> {
+}): Promise<{ ok: true; asset?: Asset } | { ok: false; step: 1 | 2 | 3; error: string }> {
   const { releaseId, file, category, token } = params;
   const mimeType = file.type || 'application/octet-stream';
 
@@ -101,7 +103,7 @@ async function runUploadFlow(params: {
   }
 
   // Step 3: record asset row, with one silent retry on transient failure
-  const recordAsset = async () => {
+  const recordAsset = async (): Promise<Asset | undefined> => {
     const res = await fetch(`/api/releases/${releaseId}/assets`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -113,20 +115,19 @@ async function runUploadFlow(params: {
         mime_type: mimeType,
       }),
     });
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    const data = (await res.json().catch(() => ({}))) as { asset?: Asset; error?: string };
     if (!res.ok) {
       throw new Error(data.error || 'Could not record asset.');
     }
+    return data.asset;
   };
 
   try {
-    await recordAsset();
-    return { ok: true };
+    return { ok: true, asset: await recordAsset() };
   } catch {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     try {
-      await recordAsset();
-      return { ok: true };
+      return { ok: true, asset: await recordAsset() };
     } catch (err2) {
       return {
         ok: false,
@@ -174,7 +175,7 @@ export function AssetUploadControl({ releaseId, onUploaded, onToast }: AssetUplo
 
     if (result.ok) {
       setStatus('idle');
-      onUploaded();
+      onUploaded(result.asset);
       return;
     }
 

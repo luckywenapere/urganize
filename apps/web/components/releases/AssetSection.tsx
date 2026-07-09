@@ -50,13 +50,19 @@ async function getAccessToken(): Promise<string> {
 export function AssetSection({ releaseId, onToast }: AssetSectionProps) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasLoaded, setHasLoaded] = useState(false);
+  // Distinguishes "the release has no files" from "the load failed" — a
+  // failed fetch used to render the same 'No files attached yet' empty
+  // state, telling the user their uploads were gone with only a transient
+  // toast to say otherwise.
+  const [loadError, setLoadError] = useState('');
 
   const loadAssets = useCallback(async () => {
     setIsLoading(true);
+    setLoadError('');
     try {
       const token = await getAccessToken();
       if (!token) {
+        setLoadError('Session expired. Please sign in again.');
         onToast('Session expired. Please sign in again.', 'error');
         return;
       }
@@ -66,15 +72,17 @@ export function AssetSection({ releaseId, onToast }: AssetSectionProps) {
       });
       const data = (await res.json().catch(() => ({}))) as { assets?: Asset[]; error?: string };
       if (!res.ok) {
+        setLoadError(data.error || 'Could not load files.');
         onToast(data.error || 'Could not load files.', 'error');
         return;
       }
       setAssets(Array.isArray(data.assets) ? data.assets : []);
     } catch (err) {
-      onToast(err instanceof Error ? err.message : 'Could not load files.', 'error');
+      const message = err instanceof Error ? err.message : 'Could not load files.';
+      setLoadError(message);
+      onToast(message, 'error');
     } finally {
       setIsLoading(false);
-      setHasLoaded(true);
     }
   }, [onToast, releaseId]);
 
@@ -82,11 +90,30 @@ export function AssetSection({ releaseId, onToast }: AssetSectionProps) {
     void loadAssets();
   }, [loadAssets]);
 
-  const handleUploaded = useCallback(() => {
-    void loadAssets();
-  }, [loadAssets]);
+  const handleUploaded = useCallback(
+    (asset?: Asset) => {
+      // The record POST already returns the created asset (download URL
+      // included) — add it locally like handleDeleted filters, instead of
+      // re-fetching the whole list after every single upload. Prepended
+      // because the list GET orders newest-first, so the row sits where a
+      // reload would put it. A successful mutation also proves the earlier
+      // load failure (if any) is over. The no-asset fallback keeps edge
+      // cases correct.
+      if (asset) {
+        setLoadError('');
+        setAssets((current) => [asset, ...current]);
+        return;
+      }
+      void loadAssets();
+    },
+    [loadAssets]
+  );
 
   const handleDeleted = useCallback((assetId: string) => {
+    // Clearing loadError here too: without it, deleting the last file after
+    // a long-past failed load would re-surface the stale "couldn't load"
+    // banner over what is genuinely just an empty list now.
+    setLoadError('');
     setAssets((current) => current.filter((a) => a.id !== assetId));
   }, []);
 
@@ -119,10 +146,27 @@ export function AssetSection({ releaseId, onToast }: AssetSectionProps) {
         <AssetUploadControl releaseId={releaseId} onUploaded={handleUploaded} onToast={onToast} />
       </div>
 
-      {isLoading && !hasLoaded ? (
+      {isLoading && assets.length === 0 ? (
+        // Covers the initial load AND a Retry after a failed one — gating on
+        // hasLoaded alone made a retry flash the "No files attached yet."
+        // empty state for the whole request.
         <div className="mt-4 space-y-2">
           <SkeletonBlock className="h-12 w-full" />
           <SkeletonBlock className="h-12 w-full" />
+        </div>
+      ) : loadError && assets.length === 0 ? (
+        <div className="mt-4 border border-status-error/30 bg-status-error/10 p-4 text-center">
+          <p className="text-sm text-status-error">Couldn&rsquo;t load files: {loadError}</p>
+          <p className="mt-1 text-xs text-content-secondary">
+            Your files are safe — this is a loading problem, not a missing-files problem.
+          </p>
+          <button
+            type="button"
+            onClick={() => void loadAssets()}
+            className="mt-3 inline-flex h-9 items-center border border-stroke-default bg-bg-elevated px-4 text-sm font-semibold text-content-primary hover:bg-bg-hover"
+          >
+            Retry
+          </button>
         </div>
       ) : assets.length === 0 ? (
         <div className="mt-4 border border-stroke-default bg-bg-surface p-4 text-center">
