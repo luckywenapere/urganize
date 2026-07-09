@@ -718,20 +718,15 @@ export async function activatePendingWorkspaceInvitesForUser(
   );
 }
 
-export async function loadWorkspaceAccessContext(
+// Pure-read half of access resolution: membership rows, their workspaces,
+// and member profiles. No writes, no provisioning. Also reports whether the
+// user holds an owner-role membership in a workspace they actually OWN
+// (workspaces.owner_id) — the role alone is not enough, since a member can
+// be granted role='owner' in someone else's workspace via the members API.
+async function resolveWorkspaceAccessContext(
   adminClient: SupabaseClient,
   user: DatabaseUser
-): Promise<WorkspaceAccessContext> {
-  try {
-    await ensureOwnedWorkspace(adminClient, user);
-  } catch (error) {
-    if (!isTaskSchemaMissingError(error)) {
-      throw error;
-    }
-  }
-
-  await activatePendingWorkspaceInvitesForUser(adminClient, user);
-
+): Promise<{ context: WorkspaceAccessContext; hasProvisionedOwnWorkspace: boolean }> {
   const membershipResult = await adminClient
     .from(WORKSPACE_MEMBERS_TABLE)
     .select('id,workspace_id,user_id,email,role,status,invited_at,joined_at,created_at,updated_at')
@@ -747,21 +742,23 @@ export async function loadWorkspaceAccessContext(
     : [];
   const workspaceIds = Array.from(new Set(membershipRows.map((row) => row.workspace_id).filter(Boolean)));
 
-  const workspaceResult = workspaceIds.length
-    ? await adminClient
-        .from(WORKSPACES_TABLE)
-        .select('id,owner_id,name,created_at,updated_at')
-        .in('id', workspaceIds)
-    : { data: [], error: null };
+  // Independent lookups — run together instead of serially.
+  const [workspaceResult, profileById] = await Promise.all([
+    workspaceIds.length
+      ? adminClient
+          .from(WORKSPACES_TABLE)
+          .select('id,owner_id,name,created_at,updated_at')
+          .in('id', workspaceIds)
+      : Promise.resolve({ data: [], error: null }),
+    loadProfilesByIds(
+      adminClient,
+      membershipRows.map((row) => row.user_id || '').filter(Boolean)
+    ),
+  ]);
 
   if (workspaceResult.error) {
     throw workspaceResult.error;
   }
-
-  const profileById = await loadProfilesByIds(
-    adminClient,
-    membershipRows.map((row) => row.user_id || '').filter(Boolean)
-  );
 
   const workspaceById = new Map<string, WorkspaceRow>();
   for (const row of workspaceResult.data || []) {
@@ -794,13 +791,63 @@ export async function loadWorkspaceAccessContext(
     ? toWorkspace(workspaceById.get(primaryMembership.workspaceId) as WorkspaceRow)
     : null;
 
+  // "Provisioned" means BOTH halves of what ensureOwnedWorkspace guarantees
+  // exist: a workspace this user owns (workspaces.owner_id) AND their
+  // owner-role membership row in it. Checking the role alone is not enough —
+  // the members API can grant role='owner' in a workspace the user does not
+  // own, and that must not suppress provisioning of their own.
+  const hasProvisionedOwnWorkspace = membershipRows.some((row) => {
+    if (row.role !== 'owner') {
+      return false;
+    }
+    const workspace = workspaceById.get(row.workspace_id);
+    return workspace?.owner_id === user.id;
+  });
+
   return {
-    memberships,
-    workspaceIds: memberships.map((member) => member.workspaceId),
-    membershipIds: memberships.map((member) => member.id),
-    primaryWorkspaceId: primaryMembership?.workspaceId || null,
-    primaryWorkspace,
+    context: {
+      memberships,
+      workspaceIds: memberships.map((member) => member.workspaceId),
+      membershipIds: memberships.map((member) => member.id),
+      primaryWorkspaceId: primaryMembership?.workspaceId || null,
+      primaryWorkspace,
+    },
+    hasProvisionedOwnWorkspace,
   };
+}
+
+export async function loadWorkspaceAccessContext(
+  adminClient: SupabaseClient,
+  user: DatabaseUser
+): Promise<WorkspaceAccessContext> {
+  // This runs on every task/dashboard read, so it must be read-only on the
+  // steady state. It used to run ensureOwnedWorkspace unconditionally — an
+  // owner-membership UPSERT (a real write, stamping updated_at) plus a
+  // 4-query organization-member sync on every GET. Now:
+  //   1. Invite activation stays first (one indexed read when the user has
+  //      no pending email-invites) so an invited user sees their workspace
+  //      on first load, not after their first write.
+  //   2. Resolve the context with reads only.
+  //   3. Provision-on-miss: only a user whose OWN workspace + owner
+  //      membership isn't intact (first-ever load, or a corrupted/missing
+  //      owner row — the cases the old unconditional upsert was silently
+  //      self-healing) pays the write path, then the context is re-resolved.
+  await activatePendingWorkspaceInvitesForUser(adminClient, user);
+
+  let resolved = await resolveWorkspaceAccessContext(adminClient, user);
+
+  if (!resolved.hasProvisionedOwnWorkspace) {
+    try {
+      await ensureOwnedWorkspace(adminClient, user);
+    } catch (error) {
+      if (!isTaskSchemaMissingError(error)) {
+        throw error;
+      }
+    }
+    resolved = await resolveWorkspaceAccessContext(adminClient, user);
+  }
+
+  return resolved.context;
 }
 
 export async function loadWorkspaceMembers(
@@ -981,23 +1028,43 @@ function toTask(
 export async function loadTasks(
   adminClient: SupabaseClient,
   rows: TaskRow[],
-  currentUserId: string
+  currentUserId: string,
+  preloaded?: {
+    // Callers that already resolved a workspace's members (e.g. the release
+    // task board, which loads them for its response anyway) pass them here
+    // so the same workspace_members + profiles queries don't run twice in
+    // one request. Workspaces not in the map are still fetched.
+    membersByWorkspaceId?: Map<string, WorkspaceMember[]>;
+  }
 ): Promise<Task[]> {
-  const releaseById = await loadReleaseSummaries(
-    adminClient,
-    rows.map((row) => row.release_id || '').filter(Boolean)
-  );
-  const groupById = await loadTaskGroups(
-    adminClient,
-    rows.map((row) => row.group_id || '').filter(Boolean)
-  );
-
   const workspaceIds = Array.from(new Set(rows.map((row) => row.workspace_id).filter(Boolean)));
+
+  // Everything here is independent — releases, groups, members, and both
+  // count lookups used to run as up to 5+ serial awaits per call.
+  const [releaseById, groupById, memberLists, commentCountByTaskId, attachmentCountByTaskId] =
+    await Promise.all([
+      loadReleaseSummaries(
+        adminClient,
+        rows.map((row) => row.release_id || '').filter(Boolean)
+      ),
+      loadTaskGroups(
+        adminClient,
+        rows.map((row) => row.group_id || '').filter(Boolean)
+      ),
+      Promise.all(
+        workspaceIds.map(
+          (workspaceId) =>
+            preloaded?.membersByWorkspaceId?.get(workspaceId) ??
+            loadWorkspaceMembers(adminClient, workspaceId, currentUserId)
+        )
+      ),
+      loadTaskCounts(adminClient, TASK_COMMENTS_TABLE, rows.map((row) => row.id)),
+      loadTaskCounts(adminClient, TASK_ATTACHMENTS_TABLE, rows.map((row) => row.id)),
+    ]);
+
   const memberById = new Map<string, WorkspaceMember>();
   const memberByUserId = new Map<string, WorkspaceMember>();
-
-  for (const workspaceId of workspaceIds) {
-    const members = await loadWorkspaceMembers(adminClient, workspaceId, currentUserId);
+  for (const members of memberLists) {
     for (const member of members) {
       memberById.set(member.id, member);
       if (member.userId) {
@@ -1005,11 +1072,6 @@ export async function loadTasks(
       }
     }
   }
-
-  const [commentCountByTaskId, attachmentCountByTaskId] = await Promise.all([
-    loadTaskCounts(adminClient, TASK_COMMENTS_TABLE, rows.map((row) => row.id)),
-    loadTaskCounts(adminClient, TASK_ATTACHMENTS_TABLE, rows.map((row) => row.id)),
-  ]);
 
   return rows.map((row) =>
     toTask(row, releaseById, groupById, memberByUserId, memberById, commentCountByTaskId, attachmentCountByTaskId)
@@ -1019,9 +1081,12 @@ export async function loadTasks(
 export async function ensureWorkspaceAccess(
   adminClient: SupabaseClient,
   workspaceId: string,
-  user: DatabaseUser
+  user: DatabaseUser,
+  // Pass a context the request already resolved to skip re-running the whole
+  // access lookup (tasks POST used to resolve it twice per request).
+  resolvedAccess?: WorkspaceAccessContext
 ): Promise<{ access: WorkspaceAccessContext } | { error: NextResponse }> {
-  const access = await loadWorkspaceAccessContext(adminClient, user);
+  const access = resolvedAccess ?? (await loadWorkspaceAccessContext(adminClient, user));
   if (!access.workspaceIds.includes(workspaceId)) {
     return { error: NextResponse.json({ error: 'Workspace not found.' }, { status: 404 }) };
   }
@@ -1156,23 +1221,24 @@ export async function loadReleaseTaskBoard(
 ): Promise<ReleaseTasksResponse> {
   const context = await resolveReleaseTaskWorkspace(adminClient, releaseId, user);
 
-  const groupsResult = await adminClient
-    .from(TASK_GROUPS_TABLE)
-    .select('id,workspace_id,release_id,name,position,created_at,updated_at')
-    .eq('workspace_id', context.workspaceId)
-    .eq('release_id', releaseId)
-    .order('position', { ascending: true });
+  const [groupsResult, taskRowsResult] = await Promise.all([
+    adminClient
+      .from(TASK_GROUPS_TABLE)
+      .select('id,workspace_id,release_id,name,position,created_at,updated_at')
+      .eq('workspace_id', context.workspaceId)
+      .eq('release_id', releaseId)
+      .order('position', { ascending: true }),
+    adminClient
+      .from(TASKS_TABLE)
+      .select(TASKS_SELECT_COLUMNS)
+      .eq('workspace_id', context.workspaceId)
+      .eq('release_id', releaseId)
+      .order('position', { ascending: true }),
+  ]);
 
   if (groupsResult.error) {
     throw groupsResult.error;
   }
-
-  const taskRowsResult = await adminClient
-    .from(TASKS_TABLE)
-    .select(TASKS_SELECT_COLUMNS)
-    .eq('workspace_id', context.workspaceId)
-    .eq('release_id', releaseId)
-    .order('position', { ascending: true });
 
   if (taskRowsResult.error) {
     throw taskRowsResult.error;
@@ -1181,10 +1247,14 @@ export async function loadReleaseTaskBoard(
   const groups = Array.isArray(groupsResult.data)
     ? (groupsResult.data as TaskGroupRow[]).map((row) => toTaskGroup(row))
     : [];
+  // The board response already carries context.members — hand them to
+  // loadTasks so this request doesn't resolve the same workspace's members
+  // (and their profiles) a second time.
   const tasks = await loadTasks(
     adminClient,
     Array.isArray(taskRowsResult.data) ? (taskRowsResult.data as TaskRow[]) : [],
-    user.id
+    user.id,
+    { membersByWorkspaceId: new Map([[context.workspaceId, context.members]]) }
   );
 
   return {

@@ -72,26 +72,35 @@ async function loadReleaseRetentionSummary(
   releaseId: string,
   userId: string
 ): Promise<ReleaseRetentionSummary> {
-  const tasksResult = await adminClient.from(TASKS_TABLE).select('id').eq('release_id', releaseId);
-  const taskCount = !tasksResult.error && Array.isArray(tasksResult.data) ? tasksResult.data.length : 0;
-  const workspaceResult = await adminClient
-    .from(WORKSPACES_TABLE)
-    .select('id')
-    .eq('owner_id', userId)
-    .limit(1)
-    .maybeSingle();
-  const teamMembersResult =
-    workspaceResult.data?.id
-      ? await adminClient
-          .from(WORKSPACE_MEMBERS_TABLE)
-          .select('id')
-          .eq('workspace_id', workspaceResult.data.id)
-          .neq('role', 'owner')
-          .in('status', ['active', 'invited'])
-      : { data: [], error: workspaceResult.error };
+  // Counts come from head-only count queries (no rows shipped), and the two
+  // independent lookups run together; only the member count waits on the
+  // workspace id.
+  const [tasksResult, workspaceResult] = await Promise.all([
+    adminClient
+      .from(TASKS_TABLE)
+      .select('id', { count: 'exact', head: true })
+      .eq('release_id', releaseId),
+    adminClient
+      .from(WORKSPACES_TABLE)
+      .select('id')
+      .eq('owner_id', userId)
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  const taskCount = !tasksResult.error && typeof tasksResult.count === 'number' ? tasksResult.count : 0;
+  const teamMembersResult = workspaceResult.data?.id
+    ? await adminClient
+        .from(WORKSPACE_MEMBERS_TABLE)
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceResult.data.id)
+        .neq('role', 'owner')
+        .in('status', ['active', 'invited'])
+    : { count: 0, error: workspaceResult.error };
 
   const teamMemberCount =
-    !teamMembersResult.error && Array.isArray(teamMembersResult.data) ? teamMembersResult.data.length : 0;
+    !teamMembersResult.error && typeof teamMembersResult.count === 'number'
+      ? teamMembersResult.count
+      : 0;
 
   if (tasksResult.error && !isMissingOptionalFeatureTable(tasksResult.error)) {
     throw new Error(tasksResult.error.message || 'Could not load release tasks.');
@@ -159,18 +168,21 @@ export async function GET(
   const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
   if ('error' in ownership) return ownership.error;
 
-  const commandCenter = await loadReleaseCommandCenterData(adminClient!, ownership.release);
+  // Independent lookups — run together instead of serializing the request.
+  const [commandCenter, retentionResult] = await Promise.all([
+    loadReleaseCommandCenterData(adminClient!, ownership.release),
+    loadReleaseRetentionSummary(adminClient!, releaseId, auth.user.id)
+      .then((summary) => ({ summary }))
+      .catch((error: unknown) => ({
+        retentionError:
+          error instanceof Error ? error.message : 'Could not load release retention state.',
+      })),
+  ]);
   if ('error' in commandCenter) return commandCenter.error;
-  let retentionSummary: ReleaseRetentionSummary;
-
-  try {
-    retentionSummary = await loadReleaseRetentionSummary(adminClient!, releaseId, auth.user.id);
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not load release retention state.' },
-      { status: 500 }
-    );
+  if ('retentionError' in retentionResult) {
+    return NextResponse.json({ error: retentionResult.retentionError }, { status: 500 });
   }
+  const retentionSummary: ReleaseRetentionSummary = retentionResult.summary;
 
   const computedStatus = commandCenter.readiness.readyForDistribution
     ? 'ready'

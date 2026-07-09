@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { AlertCircle, CalendarDays, Loader2, X } from 'lucide-react';
 import { Button, IconButton } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
+import { useReleaseStore } from '@/stores/useReleaseStore';
 import {
   getTemplate,
   getTemplateLeadTimeDays,
@@ -252,6 +253,11 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
       setReleaseDate('');
       setDescription('');
       setErrors({});
+      // Resync the store here, with force, so the new release is guaranteed
+      // to appear no matter which caller opened the modal. Callers' own
+      // follow-up non-forced loadCommandCenter() calls piggyback on this
+      // in-flight load instead of firing a duplicate fetch.
+      void useReleaseStore.getState().loadCommandCenter({ force: true });
       onCreated(releaseId);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Could not create release.');

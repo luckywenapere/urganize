@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
     }
 
-    const workspaceAccess = await ensureWorkspaceAccess(adminClient, workspaceId, auth.user);
+    const workspaceAccess = await ensureWorkspaceAccess(adminClient, workspaceId, auth.user, access);
     if ('error' in workspaceAccess) return workspaceAccess.error;
 
     const task = await taskService.createTask(auth.user.id, workspaceId, body);

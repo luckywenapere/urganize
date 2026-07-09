@@ -9,6 +9,12 @@ import {
 import { TaskStatus, TaskPriority, TaskRequirement } from '@/types/tasks';
 import { ReleasePipelineState } from '@/types/releases';
 
+// Hard ceiling on list queries. Invisible at v1 scale (a full roster is a
+// few hundred tasks) but stops response size and hydration cost from growing
+// without bound as workspaces accumulate releases. Deliberately logged when
+// hit — a silent cap would read as "that's all the tasks there are".
+const TASK_LIST_MAX_ROWS = 1_000;
+
 export class TaskService {
   constructor(private adminClient: SupabaseClient) {}
 
@@ -32,7 +38,8 @@ export class TaskService {
       .select(TASKS_SELECT_COLUMNS)
       .in('workspace_id', workspaceIds)
       .order('due_date', { ascending: true, nullsFirst: false })
-      .order('position', { ascending: true });
+      .order('position', { ascending: true })
+      .limit(TASK_LIST_MAX_ROWS);
 
     if (filters.mineOnly) query = query.eq('assigned_to_user_id', userId);
     if (filters.releaseId) query = query.eq('release_id', filters.releaseId);
@@ -41,6 +48,12 @@ export class TaskService {
 
     const { data, error } = await query;
     if (error) throw error;
+
+    if ((data || []).length === TASK_LIST_MAX_ROWS) {
+      console.warn(
+        `[task-service] getTasksForUser hit the ${TASK_LIST_MAX_ROWS}-row cap for user ${userId} — results may be truncated; pagination is now a real need.`
+      );
+    }
 
     return loadTasks(this.adminClient, (data || []) as TaskRow[], userId);
   }
@@ -54,7 +67,8 @@ export class TaskService {
       .from(TASKS_TABLE)
       .select(TASKS_SELECT_COLUMNS)
       .eq('workspace_id', workspaceId)
-      .order('updated_at', { ascending: false });
+      .order('updated_at', { ascending: false })
+      .limit(TASK_LIST_MAX_ROWS);
 
     if (filters.releaseId) query = query.eq('release_id', filters.releaseId);
     if (filters.priority) query = query.eq('priority', filters.priority);
@@ -62,6 +76,12 @@ export class TaskService {
 
     const { data, error } = await query;
     if (error) throw error;
+
+    if ((data || []).length === TASK_LIST_MAX_ROWS) {
+      console.warn(
+        `[task-service] getWorkspaceTasks hit the ${TASK_LIST_MAX_ROWS}-row cap for workspace ${workspaceId} — results may be truncated.`
+      );
+    }
 
     return loadTasks(this.adminClient, (data || []) as TaskRow[], userId);
   }

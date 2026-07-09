@@ -12,7 +12,7 @@ type ReleaseStore = {
   isInitialLoading: boolean;
   isRefreshing: boolean;
   error: string;
-  loadCommandCenter: () => Promise<CommandCenterData | null>;
+  loadCommandCenter: (options?: { force?: boolean }) => Promise<CommandCenterData | null>;
   createRelease: (title: string) => Promise<ExecutionRelease | null>;
   /** Drops a release (and its tasks) from local state after the server
    * confirmed deletion. The caller is expected to follow up with
@@ -27,6 +27,18 @@ const getAccessToken = async () => {
   return session?.access_token || '';
 };
 
+// Recency guard for loadCommandCenter. Every route-level mount used to
+// re-download the entire payload (all releases + all tasks + activity), so
+// dashboard -> release detail -> back re-pulled everything on each leg.
+// Within this window a mount renders straight from the hydrated store;
+// mutation refreshes pass { force: true } and always hit the network.
+// Non-forced calls made while a load is already in flight piggyback on that
+// load's promise instead of firing a concurrent duplicate fetch (e.g. the
+// caller's follow-up refresh right after CreateReleaseModal's forced resync).
+const COMMAND_CENTER_FRESH_MS = 10_000;
+let commandCenterLoadedAt = 0;
+let commandCenterInFlight: Promise<CommandCenterData | null> | null = null;
+
 export const useReleaseStore = create<ReleaseStore>((set, get) => ({
   releases: [],
   todaysDirective: null,
@@ -40,34 +52,58 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
   isInitialLoading: true,
   isRefreshing: false,
   error: '',
-  loadCommandCenter: async () => {
-    const hasData = get().releases.length > 0;
-    if (!hasData) {
-      set({ isInitialLoading: true, error: '' });
-    } else {
-      set({ isRefreshing: true, error: '' });
+  loadCommandCenter: async (options) => {
+    if (!options?.force) {
+      if (commandCenterInFlight) {
+        return commandCenterInFlight;
+      }
+      if (
+        get().releases.length > 0 &&
+        Date.now() - commandCenterLoadedAt < COMMAND_CENTER_FRESH_MS
+      ) {
+        return null;
+      }
     }
 
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      set({ isInitialLoading: false, isRefreshing: false, error: 'Session expired. Please sign in again.' });
-      return null;
-    }
+    const run = (async (): Promise<CommandCenterData | null> => {
+      const hasData = get().releases.length > 0;
+      if (!hasData) {
+        set({ isInitialLoading: true, error: '' });
+      } else {
+        set({ isRefreshing: true, error: '' });
+      }
 
-    const response = await fetch('/api/command-center', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      cache: 'no-store',
-    });
-    const payload = (await response.json().catch(() => ({}))) as Partial<CommandCenterData> & { error?: string };
-    if (!response.ok || !Array.isArray(payload.releases)) {
-      set({ isInitialLoading: false, isRefreshing: false, error: payload.error || 'Could not load releases.' });
-      return null;
-    }
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        set({ isInitialLoading: false, isRefreshing: false, error: 'Session expired. Please sign in again.' });
+        return null;
+      }
 
-    useTaskStore.getState().setTasks((payload.tasks || []) as CommandCenterData['tasks']);
-    useActivityStore.getState().setActivity(payload.activity || []);
-    set({ releases: payload.releases, todaysDirective: payload.todaysDirective || null, isInitialLoading: false, isRefreshing: false, error: '' });
-    return payload as CommandCenterData;
+      const response = await fetch('/api/command-center', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      });
+      const payload = (await response.json().catch(() => ({}))) as Partial<CommandCenterData> & { error?: string };
+      if (!response.ok || !Array.isArray(payload.releases)) {
+        set({ isInitialLoading: false, isRefreshing: false, error: payload.error || 'Could not load releases.' });
+        return null;
+      }
+
+      useTaskStore.getState().setTasks((payload.tasks || []) as CommandCenterData['tasks']);
+      useActivityStore.getState().setActivity(payload.activity || []);
+      commandCenterLoadedAt = Date.now();
+      set({ releases: payload.releases, todaysDirective: payload.todaysDirective || null, isInitialLoading: false, isRefreshing: false, error: '' });
+      return payload as CommandCenterData;
+    })();
+
+    commandCenterInFlight = run;
+    try {
+      return await run;
+    } finally {
+      if (commandCenterInFlight === run) {
+        commandCenterInFlight = null;
+      }
+    }
   },
   createRelease: async (title) => {
     const accessToken = await getAccessToken();
