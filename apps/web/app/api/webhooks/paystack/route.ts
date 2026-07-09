@@ -8,6 +8,7 @@ import {
   isRecurringPlan,
   type RecurringPlanId,
 } from '@/lib/billing-plans';
+import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Paystack webhook — recurring billing edition.
@@ -157,6 +158,8 @@ async function applyInitialOrManualCharge(
   if (profileError) {
     console.error('[paystack-webhook] profile update error:', profileError.message);
   }
+
+  invalidateSubscriptionSnapshot(userId);
 }
 
 async function applyRenewal(
@@ -196,6 +199,8 @@ async function applyRenewal(
   if (profileError) {
     console.error('[paystack-webhook] renewal profile update error:', profileError.message);
   }
+
+  invalidateSubscriptionSnapshot(userId);
 }
 
 // ─── event handlers ──────────────────────────────────────────────────────────

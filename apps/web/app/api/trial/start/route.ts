@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createAdminClient } from '../../releases/_shared';
-import { getSubscriptionSnapshot } from '@/lib/subscription-access';
+import {
+  getSubscriptionSnapshot,
+  invalidateSubscriptionSnapshot,
+} from '@/lib/subscription-access';
 
 // POST /api/trial/start
 // Starts the one-time 28-day trial for the logged-in user.
@@ -93,7 +96,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Re-fetch snapshot so the response carries the new truth.
+  // Re-fetch snapshot so the response carries the new truth (invalidate
+  // first — the server-side snapshot cache must not serve the pre-trial
+  // state to this or the next request on this instance).
+  invalidateSubscriptionSnapshot(userId);
   const freshSnapshot = await getSubscriptionSnapshot(userId);
 
   return NextResponse.json({

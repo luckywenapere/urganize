@@ -54,6 +54,17 @@ export function buildStoragePath(
   return `${releaseId}/${category}/${randomUUID()}-${sanitizeFileName(fileName)}`;
 }
 
+// Signed-URL cache. Minting a fresh URL per request gave every response a
+// different token, so browsers/CDN could never cache cover art or the
+// workspace logo — every dashboard load re-downloaded every image. Reusing
+// a URL until 80% of its TTL has elapsed keeps the URL string stable across
+// requests (cache hit in the browser) while never handing out one that's
+// close to expiry. Storage paths are UUID-suffixed and never reused, so a
+// cached URL can't point at different content; a deleted asset's URL dies
+// with its row (nothing renders it) and ages out of the cache on its own.
+const SIGNED_URL_CACHE_MAX_ENTRIES = 500;
+const signedUrlCache = new Map<string, { url: string; staleAt: number }>();
+
 /**
  * Generate a signed download URL. Returns null (with console.error) on failure
  * so callers can degrade gracefully — listing twenty assets shouldn't 500 if
@@ -65,6 +76,12 @@ export async function generateSignedUrl(
   path: string,
   ttlSeconds: number
 ): Promise<string | null> {
+  const cacheKey = `${bucket}/${path}/${ttlSeconds}`;
+  const cached = signedUrlCache.get(cacheKey);
+  if (cached && cached.staleAt > Date.now()) {
+    return cached.url;
+  }
+
   try {
     const { data, error } = await supabaseClient.storage
       .from(bucket)
@@ -73,6 +90,18 @@ export async function generateSignedUrl(
       console.error(`Signed URL generation failed for ${bucket}/${path}:`, error);
       return null;
     }
+
+    if (signedUrlCache.size >= SIGNED_URL_CACHE_MAX_ENTRIES) {
+      const oldestKey = signedUrlCache.keys().next().value;
+      if (oldestKey !== undefined) {
+        signedUrlCache.delete(oldestKey);
+      }
+    }
+    signedUrlCache.set(cacheKey, {
+      url: data.signedUrl,
+      staleAt: Date.now() + ttlSeconds * 1000 * 0.8,
+    });
+
     return data.signedUrl;
   } catch (err) {
     console.error(`Signed URL generation threw for ${bucket}/${path}:`, err);

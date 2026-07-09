@@ -619,7 +619,11 @@ export async function POST(request: NextRequest) {
     // TemplateInstantiationError with reason 'missing_release_date' when the
     // release was created without a date.
     try {
-      const workspace = await ensureOwnedWorkspace(adminClient, auth.user);
+      // Reuse the workspace id the artist branch already resolved — a normal
+      // create used to run the full ensureOwnedWorkspace (upsert + org sync)
+      // twice in one request.
+      const workspaceIdForTemplate =
+        workspaceIdForArtist ?? (await ensureOwnedWorkspace(adminClient, auth.user)).id;
       const template = getTemplate(releaseType as ReleaseType);
       await instantiateTemplate({
         template,
@@ -627,7 +631,7 @@ export async function POST(request: NextRequest) {
         releaseDate: releaseResult.data.release_date
           ? String(releaseResult.data.release_date)
           : null,
-        workspaceId: workspace.id,
+        workspaceId: workspaceIdForTemplate,
         ownerUserId: auth.user.id,
         supabaseClient: adminClient,
       });

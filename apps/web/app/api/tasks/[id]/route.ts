@@ -8,8 +8,10 @@ import {
   createAdminClient,
   createTaskNotification,
   ensureTaskAccess,
+  loadTaskDetail,
   requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
+  type TaskRow,
 } from '@/lib/tasks-server';
 import { TaskService } from '@/lib/services/task-service';
 
@@ -71,13 +73,14 @@ export async function GET(
   }
 
   const { id } = await context.params;
-  const taskService = new TaskService(adminClient);
 
   try {
     const access = await ensureTaskAccess(adminClient, id, auth.user);
     if ('error' in access) return access.error;
 
-    const task = await taskService.getTaskById(id, auth.user.id);
+    // ensureTaskAccess already fetched the row — hydrate from it instead of
+    // re-selecting the same task.
+    const task = await loadTaskDetail(adminClient, access.task, auth.user.id);
     return NextResponse.json({ task });
   } catch (error) {
     if (isTaskSchemaMissingError(error)) return buildTaskSchemaResponse();
@@ -149,8 +152,13 @@ export async function PATCH(
     const previousAssigneeUserId = access.task.assigned_to_user_id;
     const previousStatus = access.task.status;
 
-    await taskService.updateTask(id, auth.user.id, mapped.updates);
-    const task = await taskService.getTaskById(id, auth.user.id);
+    // updateTask returns the fresh post-update row via .select() — hydrate
+    // from that instead of a third select of the same task. (access.task
+    // would be STALE here; it predates the update.)
+    const updatedRow = await taskService.updateTask(id, auth.user.id, mapped.updates);
+    const task = updatedRow
+      ? await loadTaskDetail(adminClient, updatedRow as TaskRow, auth.user.id)
+      : await taskService.getTaskById(id, auth.user.id);
 
     // Notification types defined for these two events but never fired
     // anywhere until now — see lib/tasks.ts's NOTIFICATION_TYPE_OPTIONS and

@@ -178,7 +178,7 @@ export function WorkspaceView() {
     // Drop the release + its tasks from local state immediately so the card
     // visibly disappears, then re-sync against the server.
     removeReleaseLocal(releaseId);
-    void loadCommandCenter();
+    void loadCommandCenter({ force: true });
   };
 
   // ONE skeleton, rendered here (not as a route-segment Suspense fallback).
@@ -340,6 +340,9 @@ export function WorkspaceView() {
         onClose={() => setIsCreateModalOpen(false)}
         onCreated={(releaseId) => {
           setIsCreateModalOpen(false);
+          // CreateReleaseModal already force-resyncs the store on success;
+          // this non-forced call piggybacks on that in-flight load (or the
+          // recency guard) rather than fetching a second time.
           void loadCommandCenter();
           router.push(`/dashboard/releases/${releaseId}`);
         }}

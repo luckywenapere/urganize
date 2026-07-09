@@ -467,7 +467,7 @@ export default function ReleaseDetailPage() {
               tone: 'success',
               message: `Plan tailored: ${result.tasks_removed} removed, ${result.tasks_modified} updated`,
             });
-            void loadCommandCenter();
+            void loadCommandCenter({ force: true });
           }}
         />
       ) : null}

@@ -280,6 +280,54 @@ async function fetchSnapshotFromApi(userId: string): Promise<SubscriptionSnapsho
   }
 }
 
+// Server-side snapshot cache. Every protected API request pays this lookup
+// (two DB reads via requireActiveAccount) before doing any real work, yet the
+// underlying subscription/trial state only changes on rare payment events.
+// A short positive-only TTL cache removes the repeated reads on warm
+// serverless instances:
+//   - Only snapshots WITH access are cached. A blocked/fallback snapshot is
+//     never cached, so the fail-closed path stays live (a DB blip can't lock
+//     a user out for the TTL) and a just-paid user is unlocked by their very
+//     next request rather than a stale negative entry.
+//   - Payment mutation routes call invalidateSubscriptionSnapshot so the
+//     instance that processed the event refreshes immediately; other warm
+//     instances converge within the TTL. Worst case for a lapsed user is
+//     TTL seconds of grace — subscription expiry granularity is days.
+const SNAPSHOT_CACHE_TTL_MS = 30_000;
+const SNAPSHOT_CACHE_MAX_ENTRIES = 1_000;
+const snapshotCache = new Map<string, { snapshot: SubscriptionSnapshot; expiresAt: number }>();
+
+export function invalidateSubscriptionSnapshot(userId: string) {
+  if (userId) {
+    snapshotCache.delete(userId);
+  }
+}
+
+function readCachedSnapshot(userId: string): SubscriptionSnapshot | null {
+  const entry = snapshotCache.get(userId);
+  if (!entry) {
+    return null;
+  }
+  if (entry.expiresAt <= Date.now()) {
+    snapshotCache.delete(userId);
+    return null;
+  }
+  return entry.snapshot;
+}
+
+function writeCachedSnapshot(userId: string, snapshot: SubscriptionSnapshot) {
+  if (!snapshot.hasAccess) {
+    return;
+  }
+  if (snapshotCache.size >= SNAPSHOT_CACHE_MAX_ENTRIES) {
+    const oldestKey = snapshotCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      snapshotCache.delete(oldestKey);
+    }
+  }
+  snapshotCache.set(userId, { snapshot, expiresAt: Date.now() + SNAPSHOT_CACHE_TTL_MS });
+}
+
 export async function getSubscriptionSnapshot(userId: string): Promise<SubscriptionSnapshot> {
   if (!userId) {
     return getFallbackSnapshot();
@@ -290,6 +338,11 @@ export async function getSubscriptionSnapshot(userId: string): Promise<Subscript
     if (browserSnapshot) {
       return browserSnapshot;
     }
+  }
+
+  const cached = typeof window === 'undefined' ? readCachedSnapshot(userId) : null;
+  if (cached) {
+    return cached;
   }
 
   try {
@@ -317,10 +370,16 @@ export async function getSubscriptionSnapshot(userId: string): Promise<Subscript
       return getFallbackSnapshot();
     }
 
-    return resolveSnapshot(
+    const snapshot = resolveSnapshot(
       (subscriptionResult.data || null) as SubscriptionRow | null,
       (profileResult.data || null) as ProfileAccessRow | null
     );
+
+    if (typeof window === 'undefined') {
+      writeCachedSnapshot(userId, snapshot);
+    }
+
+    return snapshot;
   } catch {
     return getFallbackSnapshot();
   }
