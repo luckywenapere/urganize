@@ -102,8 +102,14 @@ export function NotificationsBell() {
   // Returns the freshly-fetched list so callers that need the row that just
   // arrived via realtime can look it up by id without waiting for the next
   // render of `notifications` state. The state still updates as a side effect.
-  const fetchNotifications = useCallback(async (): Promise<TaskNotification[]> => {
-    setIsLoading(true);
+  const fetchNotifications = useCallback(async (options?: {
+    /** Realtime-driven refreshes pass true: the list already renders and the
+     * user didn't ask for anything, so don't flip the loading state. */
+    background?: boolean;
+  }): Promise<TaskNotification[]> => {
+    if (!options?.background) {
+      setIsLoading(true);
+    }
     try {
       const token = await getAccessToken();
       if (!token) return [];
@@ -178,8 +184,11 @@ export function NotificationsBell() {
           // Refresh the list so the dropdown badge + body reflect the new
           // row, then surface the toast using the hydrated taskTitle from
           // the response (the raw realtime payload doesn't include it —
-          // GET /api/notifications joins it server-side).
-          const list = await fetchNotifications();
+          // GET /api/notifications joins it server-side; the list is capped
+          // at 20 rows, so this refetch is the cheapest correct hydration
+          // path). background: the user didn't ask for a load, so no
+          // loading-state flip.
+          const list = await fetchNotifications({ background: true });
           const matched = list.find((n) => n.id === newRow.id);
           const headline = matched
             ? getNotificationMessage(matched)

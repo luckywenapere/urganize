@@ -76,8 +76,11 @@ type TaskDetailViewProps = {
   onSavePatch: (patch: TaskDetailPatchInput) => Promise<void>;
   onOpenPrerequisite: (taskId: string) => void;
   onDeleteTask: () => Promise<void>;
-  onAddComment: (content: string) => Promise<void>;
-  onUpdateComment: (commentId: string, content: string) => Promise<void>;
+  // Resolve true only when the mutation actually persisted — the view keeps
+  // the typed text (comment draft, edit box) until then, so a failed save
+  // never throws user input away.
+  onAddComment: (content: string) => Promise<boolean>;
+  onUpdateComment: (commentId: string, content: string) => Promise<boolean>;
   onDeleteComment: (commentId: string) => Promise<void>;
   onUploadAttachment: (file: File) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
@@ -213,6 +216,18 @@ export function TaskDetailView({
         </div>
       ) : task ? (
         <div className="space-y-6">
+          {/* Mutation failures (comment save/edit/delete, attachment
+              upload/delete, patch refetch) land in the same `error` channel —
+              without this in-body banner they were invisible whenever a task
+              was open, which is every time those buttons exist. */}
+          {error ? (
+            <div
+              role="alert"
+              className="rounded-[18px] border border-status-error/30 bg-status-error/10 px-4 py-3 text-sm text-status-error"
+            >
+              {error}
+            </div>
+          ) : null}
           {/* Title — the page heading, not a boxed form field. Borderless
               until focus; blur saves, same as before. */}
           <input
@@ -522,9 +537,17 @@ export function TaskDetailView({
                         <button
                           type="button"
                           onClick={() => {
-                            void onUpdateComment(comment.id, editingCommentContent);
-                            setEditingCommentId('');
-                            setEditingCommentContent('');
+                            void onUpdateComment(comment.id, editingCommentContent).then(
+                              (saved) => {
+                                // Stay in edit mode with the text intact when
+                                // the save failed — the drawer error banner
+                                // says why.
+                                if (saved) {
+                                  setEditingCommentId('');
+                                  setEditingCommentContent('');
+                                }
+                              }
+                            );
                           }}
                           className="rounded-[14px] bg-brand px-3 py-2 text-xs font-semibold text-content-inverse"
                         >
@@ -566,8 +589,14 @@ export function TaskDetailView({
                       return;
                     }
 
-                    void onAddComment(commentDraft);
-                    setCommentDraft('');
+                    // Clear the draft only after the save lands — clearing
+                    // eagerly meant a failed request discarded what the user
+                    // typed with no way back.
+                    void onAddComment(commentDraft).then((saved) => {
+                      if (saved) {
+                        setCommentDraft('');
+                      }
+                    });
                   }}
                   className="rounded-[16px] bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
                 >

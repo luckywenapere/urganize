@@ -71,6 +71,18 @@ type TaskStore = {
  */
 const pendingBeatTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const completionToastTimers = new Map<string, ReturnType<typeof setTimeout>>();
+// One in-flight complete/reopen mutation per task. The optimistic flip means
+// a second click during the round trip would route to the opposite branch
+// (done → reopen) and race the first PATCH — so clicks are ignored while a
+// mutation is in the air, and undoCompletion waits for it to settle before
+// sending its own PATCH.
+//
+// Two structures on purpose: the Set is stamped SYNCHRONOUSLY at completeTask
+// entry (before any await), so two clicks in the same token-refresh window
+// can't both pass the guard; the Map holds the network promise undoCompletion
+// awaits for ordering, which only exists once the PATCH is dispatched.
+const inFlightCompletionIds = new Set<string>();
+const inFlightCompletionPatches = new Map<string, Promise<unknown>>();
 
 const PENDING_BEAT_MS = 1500;
 const TOAST_DURATION_MS = 5000;
@@ -163,6 +175,20 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     }));
   },
   completeTask: async (taskId) => {
+    // Ignore clicks while a previous complete/reopen for this task is still
+    // running. Clear the error first so callers' `!result` blocker checks
+    // read an empty message and treat the ignored click as a no-op rather
+    // than a failure.
+    if (inFlightCompletionIds.has(taskId)) {
+      set({ error: '' });
+      return null;
+    }
+    inFlightCompletionIds.add(taskId);
+    // The whole mutation runs inside this try so every exit path — early
+    // returns included — releases the in-flight marker in the finally at the
+    // bottom of this method.
+    try {
+
     const accessToken = await getAccessToken();
     if (!accessToken) {
       set({ error: 'Session expired. Please sign in again.' });
@@ -213,23 +239,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         completionToastTimers.delete(taskId);
       }
 
-      const reopenResponse = await fetch(`/api/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ status: TASK_PENDING_STATUS }),
-      });
-      const reopenPayload = (await reopenResponse.json().catch(() => ({}))) as {
-        task?: ExecutionTask;
-        error?: string;
-      };
-      if (!reopenResponse.ok || !reopenPayload.task) {
-        set({ error: reopenPayload.error || 'Could not reopen task.' });
-        return null;
-      }
-      const reopenedTask = reopenPayload.task as ExecutionTask;
+      // Optimistic reopen: the checkbox unticks on this frame; the PATCH
+      // settles in the background and rolls the row back on failure.
+      const taskBeforeReopen = task;
+      const optimisticReopened = { ...task, status: TASK_PENDING_STATUS } as ExecutionTask;
       set((state) => {
         const nextPending = { ...state.pendingCompletionIds };
         delete nextPending[taskId];
@@ -237,14 +250,55 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           state.completionToast?.taskId === taskId ? null : state.completionToast;
         return {
           tasks: state.tasks.map((candidate) =>
-            candidate.id === taskId ? reopenedTask : candidate
+            candidate.id === taskId ? optimisticReopened : candidate
           ),
           pendingCompletionIds: nextPending,
           completionToast: nextToast,
           error: '',
         };
       });
-      return reopenedTask;
+
+      const reopenRequest = (async () => {
+        const reopenResponse = await fetch(`/api/tasks/${taskId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ status: TASK_PENDING_STATUS }),
+        });
+        const reopenPayload = (await reopenResponse.json().catch(() => ({}))) as {
+          task?: ExecutionTask;
+          error?: string;
+        };
+        if (!reopenResponse.ok || !reopenPayload.task) {
+          throw new Error(reopenPayload.error || 'Could not reopen task.');
+        }
+        return reopenPayload.task as ExecutionTask;
+      })();
+      inFlightCompletionPatches.set(taskId, reopenRequest.catch(() => null));
+
+      try {
+        const reopenedTask = await reopenRequest;
+        set((state) => ({
+          tasks: state.tasks.map((candidate) =>
+            candidate.id === taskId ? reopenedTask : candidate
+          ),
+          error: '',
+        }));
+        return reopenedTask;
+      } catch (error) {
+        // Roll the row back to done — the server never accepted the reopen.
+        set((state) => ({
+          tasks: state.tasks.map((candidate) =>
+            candidate.id === taskId ? taskBeforeReopen : candidate
+          ),
+          error: error instanceof Error ? error.message : 'Could not reopen task.',
+        }));
+        return null;
+      } finally {
+        inFlightCompletionPatches.delete(taskId);
+      }
     }
 
     const blocker = getTaskCompletionBlocker(task, get().tasks);
@@ -253,27 +307,26 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       return null;
     }
 
-    const response = await fetch(`/api/tasks/${taskId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ status: TASK_DONE_STATUS }),
-    });
+    // ── Optimistic completion ───────────────────────────────────────────
+    // The tick, the in-place beat, and the toast all render on THIS frame;
+    // the completion PATCH settles in the background and the flip rolls back
+    // if the server rejects it. This used to wait for the completion PATCH
+    // plus every cascade-unlock PATCH before showing anything — the checkbox
+    // sat visually empty for 1-2+ round trips on every tick.
+    //
+    // Dependency unlocks are deliberately NOT optimistic: flipping a
+    // dependent to todo before its PATCH lands would let the user complete a
+    // task whose server row is still `locked` (the PATCH route doesn't
+    // validate transitions), so unlocked rows only flip once the server
+    // confirms them below.
+    const taskBeforeComplete = task;
+    const optimisticDone = { ...task, status: TASK_DONE_STATUS } as ExecutionTask;
 
-    const payload = (await response.json().catch(() => ({}))) as { task?: ExecutionTask; error?: string };
-    if (!response.ok || !payload.task) {
-      set({ error: payload.error || 'Could not complete task.' });
-      return null;
-    }
-
-    const completedTask = payload.task as ExecutionTask;
-
-    // Identify tasks that are locked today, depend on the just-completed task,
-    // and have every dependency satisfied. Those should flip to todo.
+    // Identify tasks that are locked today, depend on the just-completed
+    // task, and have every dependency satisfied. Those flip to todo once
+    // their PATCH succeeds.
     const tasksAfterComplete = get().tasks.map((candidate) =>
-      candidate.id === taskId ? completedTask : candidate
+      candidate.id === taskId ? optimisticDone : candidate
     );
     const unlockCandidates = tasksAfterComplete.filter(
       (candidate) =>
@@ -283,47 +336,6 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           (id) => tasksAfterComplete.find((dep) => dep.id === id)?.status === TASK_DONE_STATUS
         )
     );
-
-    // Persist each unlock so the change survives a refresh. Failures are
-    // logged and skipped — the primary completion still applies and the user
-    // can refresh to reconcile.
-    const unlockResults = await Promise.all(
-      unlockCandidates.map(async (candidate) => {
-        try {
-          const unlockResponse = await fetch(`/api/tasks/${candidate.id}`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({ status: TASK_PENDING_STATUS }),
-          });
-          const unlockPayload = (await unlockResponse.json().catch(() => ({}))) as {
-            task?: ExecutionTask;
-            error?: string;
-          };
-          if (!unlockResponse.ok || !unlockPayload.task) {
-            console.error(
-              'Auto-unlock PATCH failed for task',
-              candidate.id,
-              unlockPayload.error || unlockResponse.statusText
-            );
-            return null;
-          }
-          return unlockPayload.task as ExecutionTask;
-        } catch (error) {
-          console.error('Auto-unlock PATCH threw for task', candidate.id, error);
-          return null;
-        }
-      })
-    );
-
-    const unlockedById = new Map<string, ExecutionTask>();
-    for (const unlocked of unlockResults) {
-      if (unlocked) {
-        unlockedById.set(unlocked.id, unlocked);
-      }
-    }
 
     // Schedule the "in-place beat then move to Done" handoff. Any earlier
     // timer for this id (rapid re-ticks) is cancelled so the latest tick
@@ -363,23 +375,138 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     completionToastTick += 1;
     const toastSnapshot: CompletionToastState = {
       taskId,
-      title: completedTask.title,
+      title: optimisticDone.title,
       tick: completionToastTick,
     };
 
     set((state) => ({
-      tasks: state.tasks.map((candidate) => {
-        if (candidate.id === taskId) return completedTask;
-        const unlocked = unlockedById.get(candidate.id);
-        if (unlocked) return unlocked;
-        return candidate;
-      }),
+      tasks: state.tasks.map((candidate) =>
+        candidate.id === taskId ? optimisticDone : candidate
+      ),
       pendingCompletionIds: { ...state.pendingCompletionIds, [taskId]: true },
       completionToast: toastSnapshot,
       error: '',
     }));
 
-    return completedTask;
+    const rollbackCompletion = (message: string) => {
+      const pendingBeat = pendingBeatTimers.get(taskId);
+      if (pendingBeat) {
+        clearTimeout(pendingBeat);
+        pendingBeatTimers.delete(taskId);
+      }
+      const pendingToast = completionToastTimers.get(taskId);
+      if (pendingToast) {
+        clearTimeout(pendingToast);
+        completionToastTimers.delete(taskId);
+      }
+      set((state) => {
+        const nextPending = { ...state.pendingCompletionIds };
+        delete nextPending[taskId];
+        return {
+          tasks: state.tasks.map((candidate) =>
+            candidate.id === taskId ? taskBeforeComplete : candidate
+          ),
+          pendingCompletionIds: nextPending,
+          completionToast:
+            state.completionToast?.taskId === taskId ? null : state.completionToast,
+          error: message,
+        };
+      });
+    };
+
+    const completionRequest = (async () => {
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ status: TASK_DONE_STATUS }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        task?: ExecutionTask;
+        error?: string;
+      };
+      if (!response.ok || !payload.task) {
+        throw new Error(payload.error || 'Could not complete task.');
+      }
+      return payload.task as ExecutionTask;
+    })();
+    inFlightCompletionPatches.set(taskId, completionRequest.catch(() => null));
+
+    try {
+      const completedTask = await completionRequest;
+
+      // Reconcile the optimistic row with the server's authoritative one.
+      set((state) => ({
+        tasks: state.tasks.map((candidate) =>
+          candidate.id === taskId ? completedTask : candidate
+        ),
+      }));
+
+      // Persist each unlock, then flip only the rows the server confirmed —
+      // a failed unlock simply stays locked on screen, matching its server
+      // state. Failures are logged; the completion stands either way.
+      const unlockResults = await Promise.all(
+        unlockCandidates.map(async (candidate) => {
+          try {
+            const unlockResponse = await fetch(`/api/tasks/${candidate.id}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({ status: TASK_PENDING_STATUS }),
+            });
+            const unlockPayload = (await unlockResponse.json().catch(() => ({}))) as {
+              task?: ExecutionTask;
+              error?: string;
+            };
+            if (!unlockResponse.ok || !unlockPayload.task) {
+              console.error(
+                'Auto-unlock PATCH failed for task',
+                candidate.id,
+                unlockPayload.error || unlockResponse.statusText
+              );
+              return null;
+            }
+            return unlockPayload.task as ExecutionTask;
+          } catch (error) {
+            console.error('Auto-unlock PATCH threw for task', candidate.id, error);
+            return null;
+          }
+        })
+      );
+
+      const unlockedById = new Map<string, ExecutionTask>();
+      for (const unlocked of unlockResults) {
+        if (unlocked) {
+          unlockedById.set(unlocked.id, unlocked);
+        }
+      }
+
+      if (unlockedById.size) {
+        set((state) => ({
+          tasks: state.tasks.map(
+            (candidate) => unlockedById.get(candidate.id) || candidate
+          ),
+        }));
+      }
+
+      return completedTask;
+    } catch (error) {
+      rollbackCompletion(
+        error instanceof Error ? error.message : 'Could not complete task.'
+      );
+      return null;
+    } finally {
+      inFlightCompletionPatches.delete(taskId);
+    }
+
+    } finally {
+      // Releases the click guard for every exit path of this method.
+      inFlightCompletionIds.delete(taskId);
+    }
   },
   undoCompletion: async (taskId) => {
     const beatTimer = pendingBeatTimers.get(taskId);
@@ -403,6 +530,14 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         state.completionToast?.taskId === taskId ? null : state.completionToast;
       return { pendingCompletionIds: nextPending, completionToast: nextToast };
     });
+
+    // The completion toast (and its Undo) now appears while the completion
+    // PATCH may still be in flight — wait for it to settle so this undo
+    // PATCH can't be overtaken by the earlier request on the server.
+    const inFlight = inFlightCompletionPatches.get(taskId);
+    if (inFlight) {
+      await inFlight;
+    }
 
     const accessToken = await getAccessToken();
     if (!accessToken) {

@@ -178,6 +178,13 @@ export function TaskMemberCombobox({
     }
 
     if (event.key === 'Escape') {
+      // Claim Escape only while the dropdown is actually open — a prevented
+      // Escape tells an enclosing modal "the dropdown consumed this", so an
+      // unconditional preventDefault would stop Escape from ever closing the
+      // modal while this input has focus.
+      if (!isOpen) {
+        return;
+      }
       event.preventDefault();
       setIsOpen(false);
       setActiveIndex(-1);

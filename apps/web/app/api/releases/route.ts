@@ -253,6 +253,13 @@ export async function GET(request: NextRequest) {
     const releaseIds = releases.map((release) => release.id);
     const taskResult = await adminClient.from(TASKS_TABLE).select('release_id,status').in('release_id', releaseIds);
 
+    // Degrading to zero counts is deliberate (counts are non-critical to the
+    // list) but must not be silent — a swallowed error here is exactly how
+    // the same pattern hid a schema mismatch in command-center for weeks.
+    if (taskResult.error) {
+      console.error('[releases.GET] task-count query failed:', taskResult.error.message);
+    }
+
     if (!taskResult.error && Array.isArray(taskResult.data)) {
       for (const row of taskResult.data) {
         const typed = row as { release_id?: string | null; status?: string | null };

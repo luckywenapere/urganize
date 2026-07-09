@@ -75,8 +75,8 @@ type TaskDetailRenderState = {
   onSavePatch: (patch: TaskDetailPatchInput) => Promise<void>;
   onOpenPrerequisite: (taskId: string) => void;
   onDeleteTask: () => Promise<void>;
-  onAddComment: (content: string) => Promise<void>;
-  onUpdateComment: (commentId: string, content: string) => Promise<void>;
+  onAddComment: (content: string) => Promise<boolean>;
+  onUpdateComment: (commentId: string, content: string) => Promise<boolean>;
   onDeleteComment: (commentId: string) => Promise<void>;
   onUploadAttachment: (file: File) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
@@ -94,21 +94,39 @@ async function getAccessToken(): Promise<string> {
   return session?.access_token || '';
 }
 
+// Hard ceiling on every provider mutation. The modals disable their
+// dismissal controls while a request is in flight, so a request that never
+// settles must not be able to trap the user — a stalled fetch aborts here
+// and surfaces as a normal, dismissible error instead.
+const REQUEST_TIMEOUT_MS = 20_000;
+
 async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
   const accessToken = await getAccessToken();
   if (!accessToken) {
     throw new Error('Session expired. Please sign in again.');
   }
 
-  const response = await fetch(input, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-      ...(init?.headers || {}),
-    },
-    cache: 'no-store',
-  });
+  let response: Response;
+  try {
+    response = await fetch(input, {
+      ...init,
+      signal: init?.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+        ...(init?.headers || {}),
+      },
+      cache: 'no-store',
+    });
+  } catch (error) {
+    if (
+      error instanceof DOMException &&
+      (error.name === 'TimeoutError' || error.name === 'AbortError')
+    ) {
+      throw new Error('The request timed out. Check your connection and try again.');
+    }
+    throw error;
+  }
 
   const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   if (!response.ok) {
@@ -170,6 +188,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const [quickGroupName, setQuickGroupName] = useState<string | null>(null);
   const [quickGroupColor, setQuickGroupColor] = useState<string | null>(null);
   const [isQuickSaving, setIsQuickSaving] = useState(false);
+  const [quickError, setQuickError] = useState('');
   const [releases, setReleases] = useState<ReleaseOption[]>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
@@ -300,6 +319,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     setQuickGroupName(null);
     setQuickGroupColor(null);
     setQuickCreateDefaults({});
+    setQuickError('');
   };
 
   const openTask = useCallback(
@@ -346,6 +366,9 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const openQuickCreate = useCallback(
     (defaults?: QuickCreateDefaults) => {
       setQuickCreateDefaults(defaults || {});
+      // A failure from a previous session's in-flight create can land after
+      // the modal closed — never show that stale message over a fresh form.
+      setQuickError('');
       setIsQuickCreateOpen(true);
       void loadOptions();
     },
@@ -397,8 +420,11 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (!completed) {
+        // Empty error means the store IGNORED the click (a duplicate while
+        // the previous complete/reopen was still in flight) — that's a
+        // no-op, not a failure, so no banner.
         const blocker = useTaskStore.getState().error;
-        setStatusBlockerMessage(blocker || 'Could not complete task.');
+        setStatusBlockerMessage(blocker);
         return;
       }
       setStatusBlockerMessage('');
@@ -463,6 +489,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     }
 
     setIsQuickSaving(true);
+    setQuickError('');
     try {
       const payload = await requestJson<TaskDetailPayload>(`/api/tasks`, {
         method: 'POST',
@@ -491,6 +518,13 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       if (payload.task?.id) {
         openTask(payload.task.id);
       }
+    } catch (error) {
+      // Keep the modal open with inputs intact and say what went wrong — this
+      // used to fail with zero feedback (try/finally, no catch), the primary
+      // task-creation flow silently doing nothing on a 4xx/5xx/network error.
+      setQuickError(
+        error instanceof Error ? error.message : 'Could not create task. Try again.'
+      );
     } finally {
       setIsQuickSaving(false);
     }
@@ -510,31 +544,48 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     dispatchTasksChanged();
   };
 
-  const addComment = async (content: string) => {
+  // Comment/attachment mutations report success so the view can decide what
+  // local state is safe to discard (the comment draft, the edit box). They
+  // used to throw with no catch — a failed save silently swallowed the text
+  // the user typed, and a failed delete left the row on screen with no
+  // explanation. Failures now land in the drawer error banner.
+  const addComment = async (content: string): Promise<boolean> => {
     if (!activeTaskId || !content.trim()) {
-      return;
+      return false;
     }
 
-    await requestJson<{ comments: TaskDetail['comments'] }>(`/api/tasks/${activeTaskId}/comments`, {
-      method: 'POST',
-      body: JSON.stringify({ content }),
-    });
+    try {
+      await requestJson<{ comments: TaskDetail['comments'] }>(`/api/tasks/${activeTaskId}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ content }),
+      });
+    } catch (error) {
+      setDrawerError(error instanceof Error ? error.message : 'Could not add comment.');
+      return false;
+    }
 
     await refreshOpenTask();
     dispatchTasksChanged();
+    return true;
   };
 
-  const updateComment = async (commentId: string, content: string) => {
+  const updateComment = async (commentId: string, content: string): Promise<boolean> => {
     if (!activeTaskId || !commentId || !content.trim()) {
-      return;
+      return false;
     }
 
-    await requestJson<{ comments: TaskDetail['comments'] }>(`/api/tasks/${activeTaskId}/comments/${commentId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ content }),
-    });
+    try {
+      await requestJson<{ comments: TaskDetail['comments'] }>(`/api/tasks/${activeTaskId}/comments/${commentId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ content }),
+      });
+    } catch (error) {
+      setDrawerError(error instanceof Error ? error.message : 'Could not save the comment edit.');
+      return false;
+    }
 
     await refreshOpenTask();
+    return true;
   };
 
   const deleteComment = async (commentId: string) => {
@@ -542,9 +593,14 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    await requestJson<{ comments: TaskDetail['comments'] }>(`/api/tasks/${activeTaskId}/comments/${commentId}`, {
-      method: 'DELETE',
-    });
+    try {
+      await requestJson<{ comments: TaskDetail['comments'] }>(`/api/tasks/${activeTaskId}/comments/${commentId}`, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      setDrawerError(error instanceof Error ? error.message : 'Could not delete the comment.');
+      return;
+    }
 
     await refreshOpenTask();
   };
@@ -578,6 +634,10 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       }
 
       await refreshOpenTask();
+    } catch (error) {
+      setDrawerError(
+        error instanceof Error ? error.message : 'Could not upload attachment.'
+      );
     } finally {
       setIsUploadingAttachment(false);
     }
@@ -588,9 +648,14 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    await requestJson<{ attachments: TaskDetail['attachments'] }>(`/api/tasks/${activeTaskId}/attachments/${attachmentId}`, {
-      method: 'DELETE',
-    });
+    try {
+      await requestJson<{ attachments: TaskDetail['attachments'] }>(`/api/tasks/${activeTaskId}/attachments/${attachmentId}`, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      setDrawerError(error instanceof Error ? error.message : 'Could not delete the attachment.');
+      return;
+    }
 
     await refreshOpenTask();
   };
@@ -668,6 +733,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         members={members}
         isLoadingReleases={isLoadingOptions}
         isSaving={isQuickSaving}
+        errorMessage={quickError}
         onClose={closeQuickCreate}
         onTitleChange={setQuickTitle}
         onReleaseQueryChange={setQuickReleaseQuery}
