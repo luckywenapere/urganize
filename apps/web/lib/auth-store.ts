@@ -585,8 +585,33 @@ export const useAuthStore = create<AuthState>()(
 );
 
 if (typeof window !== 'undefined') {
-  supabase.auth.onAuthStateChange((event) => {
-    if (event === 'SIGNED_OUT') {
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'INITIAL_SESSION') {
+      // Fires exactly once when supabase-js finishes restoring the persisted
+      // session (with `session: null` when there is none). It is the only
+      // event a returning user with a still-fresh token receives, and the
+      // store boots with isLoading: true (not persisted) — so this handler
+      // must always resolve the loading gate or the '/' redirect never fires.
+      if (!session) {
+        // No Supabase session: any persisted isAuthenticated is stale.
+        useAuthStore.setState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          needsOnboarding: true,
+          error: null,
+        });
+        return;
+      }
+      const { isAuthenticated, user } = useAuthStore.getState();
+      if (isAuthenticated && user) {
+        // Persisted auth confirmed by a live session — release the gate now;
+        // checkAuth below reconciles with the server without flickering the
+        // UI (it only shows loading when there is no user yet).
+        useAuthStore.setState({ isLoading: false });
+      }
+      void useAuthStore.getState().checkAuth();
+    } else if (event === 'SIGNED_OUT') {
       useAuthStore.setState({
         user: null,
         isAuthenticated: false,
