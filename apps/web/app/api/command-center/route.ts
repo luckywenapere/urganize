@@ -4,6 +4,7 @@ import {
   requireActiveAuthenticatedUser,
   isTaskSchemaMissingError,
   loadWorkspaceAccessContext,
+  loadProfilesByIds,
 } from '@/lib/tasks-server';
 import { TaskService } from '@/lib/services/task-service';
 import { ReleaseService } from '@/lib/services/release-service';
@@ -11,11 +12,32 @@ import type { ActivityLogEntry, ExecutionTask } from '@/lib/execution-types';
 
 const ACTIVITY_LOG_TABLE = 'activity_logs';
 
-const toActivity = (row: Record<string, unknown>): ActivityLogEntry => ({
+// activity_logs has no actor_name column — the actor is actor_user_id, plus a
+// metadata.legacy_actor_name carried over by the v1-cut migration for rows
+// that predate the split. Prefer the historical name (accurate for legacy
+// rows, whose actor_user_id was a best-guess backfill), then the actor's
+// profile, then the system fallback.
+const resolveActorName = (
+  row: Record<string, unknown>,
+  actorProfileById: Map<string, { name?: string | null; email?: string | null }>
+): string => {
+  const metadata = (row.metadata || {}) as Record<string, unknown>;
+  if (typeof metadata.legacy_actor_name === 'string' && metadata.legacy_actor_name.trim()) {
+    return metadata.legacy_actor_name.trim();
+  }
+  const actorId = row.actor_user_id ? String(row.actor_user_id) : '';
+  const profile = actorId ? actorProfileById.get(actorId) : undefined;
+  return profile?.name?.trim() || profile?.email?.trim() || 'Urganize';
+};
+
+const toActivity = (
+  row: Record<string, unknown>,
+  actorProfileById: Map<string, { name?: string | null; email?: string | null }>
+): ActivityLogEntry => ({
   id: String(row.id || ''),
   releaseId: row.release_id ? String(row.release_id) : null,
   taskId: row.task_id ? String(row.task_id) : null,
-  actorName: String(row.actor_name || 'Urganize'),
+  actorName: resolveActorName(row, actorProfileById),
   action: String(row.action || 'updated'),
   message: String(row.message || 'Workspace activity recorded'),
   createdAt: String(row.created_at || new Date().toISOString()),
@@ -42,17 +64,32 @@ export async function GET(request: NextRequest) {
       tasks = await taskService.getTasksForUser(auth.user.id, access.workspaceIds) as ExecutionTask[];
     }
 
+    // owner_user_id is NOT NULL, so a plain eq matches everything this user
+    // owns and rides activity_logs_owner_created_idx (owner_user_id,
+    // created_at desc) exactly.
     const activityResult = await adminClient
       .from(ACTIVITY_LOG_TABLE)
-      .select('id,release_id,task_id,actor_name,action,message,created_at')
-      .or(`user_id.eq.${auth.user.id},user_id.is.null`)
+      .select('id,release_id,task_id,actor_user_id,action,message,metadata,created_at')
+      .eq('owner_user_id', auth.user.id)
       .order('created_at', { ascending: false })
       .limit(20);
 
-    const activity =
-      activityResult.error || !Array.isArray(activityResult.data)
-        ? []
-        : activityResult.data.map((row) => toActivity(row as Record<string, unknown>));
+    // Activity is non-critical to the dashboard payload — degrade to an empty
+    // feed rather than failing the whole request, but say so in the logs
+    // (a silent coerce-to-[] is what hid the previous schema mismatch here).
+    if (activityResult.error) {
+      console.error('[command-center] activity query failed:', activityResult.error.message);
+    }
+
+    let activity: ActivityLogEntry[] = [];
+    if (!activityResult.error && Array.isArray(activityResult.data)) {
+      const rows = activityResult.data as Record<string, unknown>[];
+      const actorProfileById = await loadProfilesByIds(
+        adminClient,
+        rows.map((row) => (row.actor_user_id ? String(row.actor_user_id) : ''))
+      );
+      activity = rows.map((row) => toActivity(row, actorProfileById));
+    }
 
     let todaysDirective: ExecutionTask | null = null;
     const incompleteTasks = tasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled');

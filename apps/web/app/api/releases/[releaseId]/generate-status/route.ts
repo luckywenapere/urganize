@@ -18,6 +18,11 @@ const ASSETS_TABLE = 'assets';
 const STATUS_TIMEOUT_MS = 20_000;
 const MS_PER_DAY = 86_400_000;
 
+// Without this, Vercel's plan-default function timeout (10-15s) kills the
+// invocation before STATUS_TIMEOUT_MS + the provider's retry budget can
+// produce the handled 504/503 below.
+export const maxDuration = 60;
+
 const isStatusUpdateEnabled = (): boolean =>
   process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
 
