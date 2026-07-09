@@ -16,8 +16,7 @@ import { ProgressBar } from '@/components/shared/ProgressBar';
 import { Toast } from '@/components/shared/Toast';
 import { ReleaseInfoSection } from '@/components/releases/ReleaseInfoSection';
 import { AssetSection } from '@/components/releases/AssetSection';
-import { TailorPlanModal } from '@/components/releases/TailorPlanModal';
-import { StatusUpdateModal } from '@/components/releases/StatusUpdateModal';
+import dynamic from 'next/dynamic';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { supabase } from '@/lib/supabase/client';
 import { type ReleaseContext } from '@/lib/release-tailoring';
@@ -27,6 +26,19 @@ import { type ReleaseContext } from '@/lib/release-tailoring';
 // this client component. The API routes guard the same flags server-side.
 const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
 const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
+
+// The AI modals are dynamic AND only rendered behind their flag (bottom of
+// the JSX): while a flag is off — as both are in production today — the
+// modal's chunk is never requested at all; once on, it loads as an async
+// chunk instead of riding this page's bundle.
+const TailorPlanModal = dynamic(
+  () => import('@/components/releases/TailorPlanModal').then((m) => m.TailorPlanModal),
+  { ssr: false }
+);
+const StatusUpdateModal = dynamic(
+  () => import('@/components/releases/StatusUpdateModal').then((m) => m.StatusUpdateModal),
+  { ssr: false }
+);
 
 type ToastState = {
   message: string;
@@ -442,29 +454,33 @@ export default function ReleaseDetailPage() {
         <ReleaseInfoSection releaseId={releaseId} />
       </div>
 
-      <TailorPlanModal
-        open={isTailorOpen}
-        releaseId={releaseId}
-        initialContext={savedContext}
-        onClose={() => setIsTailorOpen(false)}
-        onTailored={(result, context) => {
-          setHasTailoring(true);
-          setSavedContext(context);
-          setToast({
-            tone: 'success',
-            message: `Plan tailored: ${result.tasks_removed} removed, ${result.tasks_modified} updated`,
-          });
-          void loadCommandCenter();
-        }}
-      />
+      {TAILOR_PLAN_ENABLED ? (
+        <TailorPlanModal
+          open={isTailorOpen}
+          releaseId={releaseId}
+          initialContext={savedContext}
+          onClose={() => setIsTailorOpen(false)}
+          onTailored={(result, context) => {
+            setHasTailoring(true);
+            setSavedContext(context);
+            setToast({
+              tone: 'success',
+              message: `Plan tailored: ${result.tasks_removed} removed, ${result.tasks_modified} updated`,
+            });
+            void loadCommandCenter();
+          }}
+        />
+      ) : null}
 
-      <StatusUpdateModal
-        open={isStatusOpen}
-        isGenerating={isGeneratingStatus}
-        statusUpdate={statusUpdate}
-        onClose={() => setIsStatusOpen(false)}
-        onRegenerate={() => void generateStatus()}
-      />
+      {STATUS_UPDATE_ENABLED ? (
+        <StatusUpdateModal
+          open={isStatusOpen}
+          isGenerating={isGeneratingStatus}
+          statusUpdate={statusUpdate}
+          onClose={() => setIsStatusOpen(false)}
+          onRegenerate={() => void generateStatus()}
+        />
+      ) : null}
     </main>
   );
 }

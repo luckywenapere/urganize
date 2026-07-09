@@ -1,18 +1,41 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
-import { HelpMenu } from '@/components/app/HelpMenu';
 import { AppTopbar } from '@/components/app/AppTopbar';
-import { FirstTimeOnboardingGate } from '@/components/onboarding/FirstTimeOnboardingGate';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { ToastProvider } from '@/components/shared/ToastProvider';
-import { SupportChat } from '@/components/support/SupportChat';
-import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+
+// None of these are needed for first paint — the onboarding wizard, the
+// create-release modal, and the two floating support widgets used to be
+// static imports, which shipped their code (the ~1,000-line onboarding flow
+// included) in the render-blocking bundle of every route, /auth included.
+// next/dynamic moves each into its own async chunk that loads after hydration
+// (or, for HelpMenu/SupportChat, only on the authenticated routes that render
+// them). ssr:false is safe: all four render nothing on the server today.
+const HelpMenu = dynamic(() => import('@/components/app/HelpMenu').then((m) => m.HelpMenu), {
+  ssr: false,
+});
+const SupportChat = dynamic(
+  () => import('@/components/support/SupportChat').then((m) => m.SupportChat),
+  { ssr: false }
+);
+const CreateReleaseModal = dynamic(
+  () => import('@/components/releases/CreateReleaseModal').then((m) => m.CreateReleaseModal),
+  { ssr: false }
+);
+const FirstTimeOnboardingGate = dynamic(
+  () =>
+    import('@/components/onboarding/FirstTimeOnboardingGate').then(
+      (m) => m.FirstTimeOnboardingGate
+    ),
+  { ssr: false }
+);
 
 const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === 'true';
 
