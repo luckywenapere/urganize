@@ -1,191 +1,75 @@
-# 🚀 QUICK START GUIDE
+# Quickstart — local development
 
-## Get Running in 3 Minutes
+Get the Urganize monorepo running locally. For what the product is and how the repo is laid out, read [README.md](README.md) first; for architecture and conventions, [CLAUDE.md](CLAUDE.md).
 
-### 1. Install Dependencies
+## 1. Prerequisites
+
+- **Node 20** — the repo pins it in `.nvmrc` (`nvm use` picks it up).
+- **pnpm 10** — `corepack enable` or `npm install -g pnpm`. The repo declares `packageManager: pnpm@10.6.4`; npm and yarn will not resolve the workspace correctly.
+
+## 2. Install
+
 ```bash
-cd urganize-mvp
-npm install
+pnpm install
 ```
 
-### 2. Start Development Server
+One install at the repo root covers both apps and all shared packages.
+
+## 3. Environment variables
+
+Each app documents every variable it reads in its own `.env.example`, with `[required]` / `[optional]` markers:
+
 ```bash
-npm run dev
+cp apps/web/.env.example apps/web/.env.local
+cp apps/homepage/.env.example apps/homepage/.env.local
 ```
 
-### 3. Open Browser
-Navigate to: `http://localhost:3000`
+What you actually need depends on which app you're running:
 
----
+- **`apps/web`** (the product) needs a real **Supabase** project: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` at minimum. There is no mock auth — sign-in goes through Supabase Auth. Apply the SQL in `supabase/migrations/` to your project so the schema exists.
+- **`apps/homepage`** (marketing) needs a **Neon** Postgres `DATABASE_URL` for the waitlist/admin surfaces; the static marketing pages render without it.
+- Paystack, PostHog, and the AI gateway vars are optional locally — the features they power degrade gracefully or are feature-flagged off.
 
-## First Time Setup
+## 4. Run
 
-### Create Your First Account
-1. You'll see the auth page
-2. Click "Sign up"
-3. Choose: **"No, I manage myself"** (easier for testing)
-4. Fill in:
-   - Name: Your name
-   - Email: test@example.com
-   - Password: password123
-
-### Create Your First Release
-1. Dashboard will be empty
-2. Click "Create Your First Release"
-3. Fill in wizard:
-   - **Step 1**: 
-     - Type: Single
-     - Title: "Test Release"
-     - Artist: "Test Artist"
-   - **Step 2**: 
-     - Release Date: Pick any future date
-   - **Step 3**: 
-     - Review and click "Create Release"
-
-### Explore the Release
-You'll land on the release page with:
-- **Overview Tab**: Health score, warnings, next steps
-- **Tasks Tab**: 16 pre-generated tasks across 4 phases
-- **Files Tab**: Upload files to organized folders
-
-### Try Key Features
-1. ✅ **Complete a task**: Go to Tasks, click any checkbox
-2. 📁 **Upload a file**: Go to Files, drag/drop a file
-3. 📊 **Check progress**: Back to Overview, see health score update
-4. 🏠 **View dashboard**: Click "Urganize" logo or "Back to Dashboard"
-
----
-
-## Test Credentials
-
-For quick testing, use these:
-- **Email**: manager@test.com
-- **Password**: anything (it's mock auth)
-
----
-
-## Key Pages
-
-| Page | URL | Purpose |
-|------|-----|---------|
-| Home | `/` | Redirects to auth or dashboard |
-| Auth | `/auth` | Login/Signup |
-| Dashboard | `/dashboard` | Overview of all releases |
-| Create | `/releases/create` | 3-step release wizard |
-| Release | `/releases/[id]` | Release workspace |
-
----
-
-## Keyboard Shortcuts
-
-None yet - but in production:
-- `Cmd+K` - Quick search
-- `Cmd+N` - New release
-- `Space` - Check/uncheck task
-
----
-
-## Mobile Testing
-
-To test on your phone:
-1. Find your computer's IP: `ipconfig` (Windows) or `ifconfig` (Mac)
-2. Start dev server: `npm run dev -- --host`
-3. On phone, navigate to: `http://YOUR_IP:3000`
-
----
-
-## Common First-Time Issues
-
-### "Cannot find module"
 ```bash
-rm -rf node_modules
-npm install
+pnpm dev                                  # both apps via turbo
+pnpm --filter @urganize/web dev           # just the product app
+pnpm --filter @urganize/homepage dev      # just the marketing site
 ```
 
-### Port 3000 already in use
+Both apps default to port 3000, so when running both at once one of them will be offered the next free port — check the terminal output for the actual URLs. Running the single app you're working on is the usual mode.
+
+If the homepage complains about a missing Prisma client, generate it once:
+
 ```bash
-npm run dev -- -p 3001
+pnpm --filter @urganize/homepage prisma:generate
 ```
 
-### Browser cache issues
-- Hard refresh: `Cmd+Shift+R` (Mac) or `Ctrl+Shift+R` (Windows)
-- Or: Open in incognito mode
+## 5. First run in the product app
 
----
+1. Open the web app and sign up at `/auth` (email/password or Google, against your Supabase project).
+2. New accounts hit the paywall. Start the **28-day trial** from the `/locked` page — no card required.
+3. Create a release from the dashboard (release date is required). The single-release template instantiates ~64 tasks automatically.
+4. Explore: click a release card to scope the tasks panel, open a task drawer, upload an asset on the release detail page.
 
-## What to Test
+## 6. Verify your changes
 
-### Core Flows
-- [ ] Sign up as manager
-- [ ] Create a release
-- [ ] Complete a task
-- [ ] Upload a file
-- [ ] Create another release
-- [ ] Switch between releases
-
-### Edge Cases
-- [ ] Try to create release without title
-- [ ] Complete all tasks (see celebration)
-- [ ] Delete a file
-- [ ] Log out and log back in
-- [ ] Refresh page (data persists)
-
----
-
-## Demo Data Script
-
-Want pre-populated data? Run this in browser console:
-
-```javascript
-// Add to localStorage
-localStorage.setItem('release-storage', JSON.stringify({
-  state: {
-    releases: [
-      {
-        id: '1',
-        title: 'Summer Vibes',
-        artistName: 'DJ Test',
-        type: 'single',
-        status: 'in-progress',
-        releaseDate: new Date('2026-03-15'),
-        userId: '1',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ],
-    currentRelease: null
-  }
-}));
-
-// Refresh page
-location.reload();
+```bash
+pnpm test    # vitest unit tests (billing/access logic + pattern guards)
+pnpm lint    # eslint across the workspace
+pnpm build   # next build — this is the type-check gate
 ```
 
----
+All three must pass before a PR. Note that `pnpm build` type-checks test files too, and Vercel does not run the test suite — run it yourself.
 
-## Need Help?
+## Common issues
 
-1. Check the main README.md
-2. Review code comments in components
-3. Check browser console for errors
-4. Clear localStorage: `localStorage.clear()`
-
----
-
-## Production Checklist
-
-Before deploying:
-- [ ] Replace mock auth with real auth
-- [ ] Set up database
-- [ ] Implement real file storage
-- [ ] Add error boundaries
-- [ ] Add analytics
-- [ ] Set up monitoring
-- [ ] Configure environment variables
-- [ ] Add rate limiting
-- [ ] Implement CSRF protection
-- [ ] Add input sanitization
-
----
-
-**Ready to ship? Let's go! 🚀**
+| Symptom | Fix |
+|---|---|
+| Workspace packages not found | You used npm/yarn — remove `node_modules`, run `pnpm install` |
+| Engine/version errors | `nvm use` (Node 20) |
+| Supabase 401s locally | Check the three Supabase vars in `apps/web/.env.local`; restart the dev server after editing env files |
+| Tables missing / API 500s | Apply `supabase/migrations/*.sql` to your Supabase project, in filename order |
+| `@prisma/client` did not initialize | `pnpm --filter @urganize/homepage prisma:generate` |
+| Port 3000 in use | `pnpm --filter @urganize/web dev -- -p 3001` |
