@@ -635,3 +635,23 @@ A workspace-level record label / team logo that automatically stands in as cover
 ---
 
 *Last updated: 2026-06-11.*
+
+---
+
+## Deploy Configuration (configured by /setup-deploy)
+- Platform: Vercel — monorepo, TWO projects from this one repo:
+  - `Web` → https://app.urganize.app (builds `apps/web`)
+  - `the-urganization` → https://www.urganize.app (builds `apps/homepage`; bare `urganize.app` 307s to www)
+  - Both use `npx turbo-ignore @urganize/<app>` as the Ignored Build Step, so a push only rebuilds the app it touched.
+- Production URL: https://app.urganize.app (product) / https://www.urganize.app (marketing)
+- Deploy workflow: auto-deploy on push to `main` (production); PRs get preview deployments
+- Deploy status command: none (no vercel CLI installed) — poll the production URLs
+- Merge method: squash
+- Project type: web app (SaaS product + marketing site, Next.js App Router)
+- Post-deploy health check: `https://app.urganize.app/auth` must return 200 (public page that exercises the web app end to end); `https://www.urganize.app/` must return 200
+
+### Custom deploy hooks
+- Pre-merge: `pnpm test && pnpm lint && pnpm build`
+- Deploy trigger: automatic on push to main
+- Deploy status: poll production URLs until the new deployment serves (script asset hashes change)
+- Health check: `curl -sf https://app.urganize.app/auth` and `curl -sf https://www.urganize.app/`
