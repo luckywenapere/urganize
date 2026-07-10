@@ -133,6 +133,17 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  // Bing Webmaster Tools ownership proof. Renders nothing until the env var
+  // is set in Vercel (Production), so this is inert for local/preview builds.
+  ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+    ? {
+        verification: {
+          other: {
+            "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION,
+          },
+        },
+      }
+    : {}),
 };
 
 export default function RootLayout({
