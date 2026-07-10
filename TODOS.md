@@ -4,17 +4,35 @@ Maintained by gstack /ship (auto-marks completed items) and by hand. Format:
 items grouped by component, each with a **Priority:** field (P0 blocker → P4
 someday), completed items move to the bottom with their ship date.
 
+"Report item N" references point at `docs/optimization-report-2026-07-09.md`,
+a LOCAL UNTRACKED report (kept out of git by decision, 2026-07-10) — it only
+exists on the machine that generated it. Each TODO below carries enough
+context to act on without it.
+
 ## apps/web — refactors
 
-### Split FirstTimeOnboardingGate into gate + steps + hook
+### Harden onboarding wizard failure paths
 **Priority:** P1
-The onboarding wizard is a single 1,022-line client component doing five jobs
-(route gating, wizard state, network, tick animation, education preview).
-Split into a thin gate, per-step components under
-`components/onboarding/steps/`, and a co-located state/network hook — no
-behavior change. Full brief: docs/optimization-report-2026-07-09.md item 29.
-Risky to ship without visual verification of the wizard — pair with
-authenticated QA (/setup-browser-cookies + /qa).
+Four pre-existing failure modes in `components/onboarding/useOnboardingWizard.ts`
+(all moved verbatim in the 2026-07-10 split; surfaced by adversarial review,
+deferred by decision to keep that branch a pure move):
+1. `handleCreateFirstRelease`: `setWorkspaceCreationName` fires before the
+   `patchOnboarding` await — if the PATCH fails after the release POST
+   succeeded, the user is stranded on the button-less "taking shape" overlay
+   (scroll locked, no Back), and a reload + retry mints a DUPLICATE release
+   (`onboarding_release_id` never persisted; POST not idempotent).
+2. `handleFinishOnboarding`: the release title/date PATCH never checks
+   `response.ok` — 4xx/5xx silently drops the release date, and on
+   resume-after-reload it sends `title: ''` (guaranteed 400, swallowed). Also
+   clobbers server state with stale local title/date.
+3. Step-2 auto-advance effect: on PATCH failure the catch re-arms the effect
+   → unbounded retry every ~1.2s with no backoff or cap while the API is down.
+4. `loadOnboarding` has no AbortController — a route flip mid-flight can paint
+   a stale error banner or resurrect nulled state.
+Also INVESTIGATE: session-expiry inside the overlay leaves no actionable
+escape (banner says "sign in again" but the full-screen gate has no sign-out
+affordance); consider `.catch`-containment for the next/dynamic chunk-load
+seam in AppShell.
 
 ### Deduplicate the auth + admin-client route preamble
 **Priority:** P1
@@ -54,6 +72,37 @@ and WorkspaceReleaseCard, stabilize per-row handlers, compute per-release
 done/total in one groupBy pass, and use narrow Zustand selectors on the pages.
 Report item 26. Verify with authenticated profiling.
 
+### Gate the onboarding demo-tick interval on gate visibility
+**Priority:** P3
+`useOnboardingWizard.ts`: the 950ms `demoTick` interval runs whenever
+`currentStep === 1`, and `currentStep` defaults to 1 while `onboarding` is
+null — so it ticks (re-rendering a null-returning gate) on routes where the
+gate never shows, e.g. /auth. Pre-existing, moved verbatim in the 2026-07-10
+split; deferred by decision to keep that branch a pure move. Fix: early-return
+the interval effect unless the gate is actually visible at step 1.
+
+### Tokenize the hardcoded "Without" text color in StepFourComparison
+**Priority:** P3
+`steps/StepFourComparison.tsx` uses `text-[rgba(226,226,226,0.72)]` (dark-theme
+content-primary, hardcoded) for the "Without" rows — it won't adapt in light
+theme and gets barely legible on the light row background. Pre-existing, moved
+verbatim in the split. Replace with a token class (e.g. `text-content-secondary`)
+and verify both themes visually.
+
+## infrastructure
+
+### Disconnect the legacy `urganize-website` Vercel project
+**Priority:** P2
+A third Vercel project (`urganize-website`) is still connected to this GitHub
+repo and fails its deployment check on every commit (verified pre-existing on
+main). It serves neither app.urganize.app nor www.urganize.app. Dashboard
+action for the owner: Vercel → urganize-website → Settings → Git → Disconnect
+(or delete the project). Removes the permanent red ✗ from every PR.
+
 ## Completed
 
+- **2026-07-10** Split FirstTimeOnboardingGate into gate + steps + hook
+  (thin gate + `useOnboardingWizard.ts` + five components under
+  `components/onboarding/steps/`; also deleted the old flow's 11 dead
+  onboarding components).
 - (History predating this file lives in git log; the file starts 2026-07-10.)
