@@ -9,7 +9,6 @@ import {
   ensureReleaseOpsSchema,
   requireActiveAuthenticatedUser,
   isOptionalTableMissingError,
-  loadReleaseCommandCenterData,
 } from './_shared';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
 import { type ReleaseOption } from '@/lib/release-helpers';
@@ -65,17 +64,6 @@ type CreateReleaseBody = {
   releaseType?: unknown;
   coverArtUrl?: unknown;
   source?: unknown;
-  state?: unknown;
-};
-
-const TASKS_TABLE = 'tasks';
-const RELEASE_PIPELINE_STATES = ['idea', 'planning', 'asset_prep', 'distribution', 'campaign', 'post_release'] as const;
-
-const normalizePipelineState = (value: unknown) => {
-  const normalized = trimString(value).toLowerCase();
-  return RELEASE_PIPELINE_STATES.includes(normalized as (typeof RELEASE_PIPELINE_STATES)[number])
-    ? normalized
-    : 'idea';
 };
 
 function toSelectorRelease(
@@ -233,7 +221,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const view = request.nextUrl.searchParams.get('view');
+  // The only live consumer of this GET is the release-selector combobox
+  // (historically ?view=selector). The old default "summary list" view — a
+  // 3-queries-per-release fan-out — had no callers left (the product's list
+  // view loads through /api/command-center), so it was removed 2026-07-10
+  // rather than hardened. Every GET now returns the selector payload.
   const releasesResult = await adminClient
     .from('releases')
     .select('id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,artwork_asset_id,created_at,updated_at')
@@ -246,35 +238,6 @@ export async function GET(request: NextRequest) {
   }
 
   const releases = Array.isArray(releasesResult.data) ? (releasesResult.data as ReleaseRow[]) : [];
-  const taskCountByReleaseId = new Map<string, number>();
-  const taskDoneCountByReleaseId = new Map<string, number>();
-
-  if (releases.length > 0) {
-    const releaseIds = releases.map((release) => release.id);
-    const taskResult = await adminClient.from(TASKS_TABLE).select('release_id,status').in('release_id', releaseIds);
-
-    // Degrading to zero counts is deliberate (counts are non-critical to the
-    // list) but must not be silent — a swallowed error here is exactly how
-    // the same pattern hid a schema mismatch in command-center for weeks.
-    if (taskResult.error) {
-      console.error('[releases.GET] task-count query failed:', taskResult.error.message);
-    }
-
-    if (!taskResult.error && Array.isArray(taskResult.data)) {
-      for (const row of taskResult.data) {
-        const typed = row as { release_id?: string | null; status?: string | null };
-        const releaseId = String(typed.release_id || '');
-        if (!releaseId) {
-          continue;
-        }
-
-        taskCountByReleaseId.set(releaseId, (taskCountByReleaseId.get(releaseId) || 0) + 1);
-        if (typed.status === 'done') {
-          taskDoneCountByReleaseId.set(releaseId, (taskDoneCountByReleaseId.get(releaseId) || 0) + 1);
-        }
-      }
-    }
-  }
 
   const metadataResult = await loadReleaseMetadataMap(
     adminClient,
@@ -290,74 +253,13 @@ export async function GET(request: NextRequest) {
   const coverByReleaseId = await loadCoverArtUrlMap(adminClient, releases);
   const workspaceLogoUrl = await loadWorkspaceLogoFallbackUrl(adminClient, auth.user.id);
 
-  if (view === 'selector') {
-    const payload: ReleaseSelectorListResponse = {
-      releases: releases.map((release) =>
-        toSelectorRelease(release, coverByReleaseId, metadataResult.metadataByReleaseId, workspaceLogoUrl)
-      ),
-    };
+  const payload: ReleaseSelectorListResponse = {
+    releases: releases.map((release) =>
+      toSelectorRelease(release, coverByReleaseId, metadataResult.metadataByReleaseId, workspaceLogoUrl)
+    ),
+  };
 
-    return NextResponse.json(payload);
-  }
-
-  const summaries = await Promise.all(
-    releases.map(async (row) => {
-      const release = {
-        id: String(row.id || ''),
-        ownerUserId: String(row.owner_user_id || ''),
-        artistId: String(row.artist_id || ''),
-        artistName: String(row.artist_name || ''),
-        title: String(row.title || ''),
-        slug: String(row.slug || ''),
-        releaseDate: String(row.release_date || ''),
-        status: String(row.status || 'draft') as 'draft' | 'in_progress' | 'ready',
-        description: String(row.description || ''),
-        createdAt: String(row.created_at || ''),
-        updatedAt: String(row.updated_at || ''),
-      };
-
-      const commandCenter = await loadReleaseCommandCenterData(adminClient, release);
-      if ('error' in commandCenter) {
-        return {
-          id: release.id,
-          title: release.title,
-          artistName: release.artistName,
-          releaseDate: release.releaseDate || null,
-          coverArtUrl: resolveCoverArtUrl(release.id, coverByReleaseId, metadataResult.metadataByReleaseId, workspaceLogoUrl),
-          status: release.status,
-          progress: 0,
-          tasksDone: 0,
-          tasksTotal: 0,
-          invitedCount: 0,
-          submittedCount: 0,
-          pendingCount: 0,
-        };
-      }
-
-      const computedStatus = commandCenter.readiness.readyForDistribution
-        ? 'ready'
-        : commandCenter.collaborators.length > 0
-          ? 'in_progress'
-          : 'draft';
-
-      return {
-        id: release.id,
-        title: release.title,
-        artistName: release.artistName,
-        releaseDate: release.releaseDate,
-        coverArtUrl: resolveCoverArtUrl(release.id, coverByReleaseId, metadataResult.metadataByReleaseId, workspaceLogoUrl),
-        status: computedStatus,
-        progress: commandCenter.readiness.completionPercent,
-        tasksDone: taskDoneCountByReleaseId.get(release.id) || 0,
-        tasksTotal: taskCountByReleaseId.get(release.id) || 0,
-        invitedCount: commandCenter.collaborators.length,
-        submittedCount: commandCenter.readiness.submittedCollaborators,
-        pendingCount: commandCenter.readiness.pendingCollaborators,
-      };
-    })
-  );
-
-  return NextResponse.json({ releases: summaries });
+  return NextResponse.json(payload);
 }
 
 export async function POST(request: NextRequest) {
@@ -400,7 +302,6 @@ export async function POST(request: NextRequest) {
     const releaseType = trimString(body?.releaseType) || 'single';
     const coverArtUrl = trimString(body?.coverArtUrl);
     const releaseSource = normalizeReleaseCreatedSource(body?.source);
-    const state = normalizePipelineState(body?.state);
 
     if (!title) return NextResponse.json({ error: 'Release title is required.' }, { status: 400 });
 
@@ -563,8 +464,9 @@ export async function POST(request: NextRequest) {
         slug,
         release_date: releaseDateResult.value,
         status: 'draft',
-        state,
-        readiness_score: 0,
+        // state/readiness_score are relics of the removed six-stage pipeline
+        // UI — no longer written here; both columns carry NOT NULL defaults
+        // ('idea' / 0) until a follow-up migration drops them.
         release_type: releaseType,
         description: description || null,
         updated_at: now,

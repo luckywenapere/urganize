@@ -25,7 +25,6 @@ const TASKS_TABLE = 'tasks';
 const ASSETS_TABLE = 'assets';
 const WORKSPACES_TABLE = 'workspaces';
 const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
-const RELEASE_PIPELINE_STATES = ['idea', 'planning', 'asset_prep', 'distribution', 'campaign', 'post_release'] as const;
 
 type ReleaseSuggestedAction =
   | {
@@ -60,13 +59,6 @@ const isMissingOptionalFeatureTable = (error: unknown) => {
     message.includes('does not exist')
   );
 };
-const normalizePipelineState = (value: unknown): string | null => {
-  const normalized = trimString(value).toLowerCase();
-  return RELEASE_PIPELINE_STATES.includes(normalized as (typeof RELEASE_PIPELINE_STATES)[number])
-    ? normalized
-    : null;
-};
-
 async function loadReleaseRetentionSummary(
   adminClient: SupabaseClient,
   releaseId: string,
@@ -232,8 +224,6 @@ export async function PATCH(
       ? ownership.release.artistName
       : trimString(body?.artistName) || ownership.release.artistName;
     const status = trimString(body?.status) || ownership.release.status;
-    const state = normalizePipelineState(body?.state);
-    const readinessScore = Number(body?.readinessScore);
 
     if (!title) return NextResponse.json({ error: 'Release title is required.' }, { status: 400 });
 
@@ -246,8 +236,8 @@ export async function PATCH(
         description: description || null,
         artist_name: artistName,
         status,
-        ...(state ? { state } : {}),
-        ...(Number.isFinite(readinessScore) ? { readiness_score: Math.max(0, Math.min(100, Math.round(readinessScore))) } : {}),
+        // state/readinessScore body fields are no longer accepted — the
+        // six-stage pipeline they belonged to was removed from the product.
         updated_at: new Date().toISOString(),
       })
       .eq('id', releaseId)
