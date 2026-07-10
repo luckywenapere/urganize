@@ -94,7 +94,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
   // to escape AppShell's `lazy-fade` wrapper, which carries a `transform` —
   // any transformed ancestor turns `position: fixed` into "fixed relative to
   // that ancestor," so scrolling the page would push the modal off-screen.
-  // Mirrors Spotlight.tsx; the guard avoids touching `document` during SSR.
+  // The mounted guard avoids touching `document` during SSR.
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
     setIsMounted(true);
