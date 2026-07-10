@@ -9,6 +9,9 @@ import {
   requireActiveAuthenticatedUser,
   isOptionalTableMissingError,
   loadReleaseCommandCenterData,
+  isValidReleaseStatus,
+  parseOptionalReleaseDate,
+  RELEASE_STATUSES,
 } from '../_shared';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
 import { isWorkspaceFeatureEnabled } from '@/lib/artists-server';
@@ -223,16 +226,34 @@ export async function PATCH(
     const artistName = isWorkspaceFeatureEnabled()
       ? ownership.release.artistName
       : trimString(body?.artistName) || ownership.release.artistName;
-    const status = trimString(body?.status) || ownership.release.status;
+
+    // status is an enumerated field with no DB CHECK constraint — reject
+    // unknown values here or arbitrary text lands in releases.status and
+    // silently breaks every statusLabel lookup and status filter downstream.
+    const statusInput = trimString(body?.status);
+    if (statusInput && !isValidReleaseStatus(statusInput)) {
+      return NextResponse.json(
+        { error: `Release status must be one of: ${RELEASE_STATUSES.join(', ')}.` },
+        { status: 400 }
+      );
+    }
+    const status = statusInput || ownership.release.status;
 
     if (!title) return NextResponse.json({ error: 'Release title is required.' }, { status: 400 });
+
+    // Same validation the POST route runs — without it a malformed date
+    // string reached Postgres, cast-errored, and surfaced as a raw 500.
+    const releaseDateResult = parseOptionalReleaseDate(releaseDate);
+    if (releaseDateResult.error) {
+      return NextResponse.json({ error: releaseDateResult.error }, { status: 400 });
+    }
 
     const releaseUpdate = await adminClient!
       .from('releases')
       .update({
         title,
         slug: normalizeReleaseSlug(title) || ownership.release.slug,
-        release_date: releaseDate || null,
+        release_date: releaseDateResult.value,
         description: description || null,
         artist_name: artistName,
         status,

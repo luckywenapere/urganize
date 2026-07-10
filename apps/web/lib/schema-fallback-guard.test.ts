@@ -69,25 +69,39 @@ function collectTsFiles(dir: string, out: string[] = []): string[] {
 }
 
 describe('schema-missing fallback containment', () => {
-  it('the deprecated pattern does not spread to new files', () => {
+  it('positive control: the pattern still matches a known baseline file', () => {
+    // Guards the guard — if PATTERN ever rots (helper renamed, regex typo),
+    // the containment check below would pass vacuously. This fails first.
+    const known = readFileSync(join(APP_ROOT, 'app/api/releases/_shared.ts'), 'utf8');
+    expect(PATTERN.test(known)).toBe(true);
+  });
+
+  it('the pattern matches exactly the baseline files — no spread, no stale entries', () => {
+    // Set EQUALITY, not subset: a new file adopting the pattern fails (spread),
+    // AND a baseline file that no longer matches fails until its entry is
+    // deleted (ratcheting the list down as routes get cleaned), AND a deleted
+    // file can't leave a stale entry behind.
     const files = [
       ...collectTsFiles(join(APP_ROOT, 'app')),
       ...collectTsFiles(join(APP_ROOT, 'lib')),
       ...collectTsFiles(join(APP_ROOT, 'components')),
     ];
 
-    const offenders: string[] = [];
-    for (const file of files) {
-      const rel = relative(APP_ROOT, file).replace(/\\/g, '/');
-      if (BASELINE.has(rel)) continue;
-      if (PATTERN.test(readFileSync(file, 'utf8'))) {
-        offenders.push(rel);
-      }
-    }
+    const matching = files
+      .filter((file) => PATTERN.test(readFileSync(file, 'utf8')))
+      .map((file) => relative(APP_ROOT, file).replace(/\\/g, '/'))
+      .sort();
+
+    const spread = matching.filter((rel) => !BASELINE.has(rel));
+    const cleaned = [...BASELINE].filter((rel) => !matching.includes(rel)).sort();
 
     expect(
-      offenders,
-      `New files using the deprecated schema-missing fallback (see CLAUDE.md "Patterns being deprecated in v1"): ${offenders.join(', ')}`
+      spread,
+      `New files using the deprecated schema-missing fallback (see CLAUDE.md "Patterns being deprecated in v1"): ${spread.join(', ')}`
+    ).toEqual([]);
+    expect(
+      cleaned,
+      `Baseline files no longer using the pattern — delete their BASELINE entries to ratchet the list down: ${cleaned.join(', ')}`
     ).toEqual([]);
   });
 });

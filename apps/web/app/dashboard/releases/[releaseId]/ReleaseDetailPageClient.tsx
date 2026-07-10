@@ -160,6 +160,21 @@ export default function ReleaseDetailPage() {
   }, [authLoading, loadCommandCenter, releaseId, router, user]);
 
   const release = releases.find((r) => r.id === releaseId);
+
+  // Differentiate browser tabs per release once data loads. The server
+  // wrapper's static 'Release | Urganize' stays as the SSR/loading fallback —
+  // generateMetadata can't resolve the title server-side because auth is a
+  // Bearer token in localStorage, not a cookie the server can read.
+  useEffect(() => {
+    if (release?.title) {
+      document.title = `${release.title} | Urganize`;
+      return;
+    }
+    // Release gone from the store (deleted elsewhere, store eviction) — fall
+    // back to the wrapper's static title rather than a dead release's name.
+    document.title = 'Release | Urganize';
+  }, [release?.title]);
+
   const releaseTasks = useMemo(
     () => tasks.filter((t) => t.releaseId === releaseId),
     [tasks, releaseId]

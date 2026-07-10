@@ -66,7 +66,7 @@ import { getAvailableReleaseTypes } from '@/lib/release-templates/loader';
 // ---------------------------------------------------------------------------
 
 // Workspace flag — the invite step exists only when the workspace consolidation
-// is active. Same pattern app/dashboard/page.tsx uses.
+// is active. Same pattern app/dashboard/DashboardPageClient.tsx uses.
 const WORKSPACE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
 // Single source of truth for selectable release types: the template registry.

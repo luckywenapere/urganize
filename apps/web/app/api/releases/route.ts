@@ -9,6 +9,7 @@ import {
   ensureReleaseOpsSchema,
   requireActiveAuthenticatedUser,
   isOptionalTableMissingError,
+  parseOptionalReleaseDate,
 } from './_shared';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
 import { type ReleaseOption } from '@/lib/release-helpers';
@@ -172,23 +173,6 @@ function getDefaultArtistName(user: User): string {
   }
 
   return '';
-}
-
-function parseOptionalReleaseDate(value: string): { value: string | null; error?: string } {
-  if (!value) {
-    return { value: null };
-  }
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return { value: null, error: 'Release date must use YYYY-MM-DD format.' };
-  }
-
-  const parsedDate = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return { value: null, error: 'Release date is invalid.' };
-  }
-
-  return { value };
 }
 
 function isValidHttpUrl(value: string): boolean {
@@ -466,7 +450,11 @@ export async function POST(request: NextRequest) {
         status: 'draft',
         // state/readiness_score are relics of the removed six-stage pipeline
         // UI — no longer written here; both columns carry NOT NULL defaults
-        // ('idea' / 0) until a follow-up migration drops them.
+        // ('idea' / 0) until a follow-up migration drops them. BEFORE writing
+        // that migration: lib/services/release-service.ts still SELECTs both
+        // columns for /api/command-center — migrate that read (and the
+        // readinessScore fields in types/releases.ts, lib/execution-types.ts,
+        // stores/useReleaseStore.ts) first or the dashboard 500s.
         release_type: releaseType,
         description: description || null,
         updated_at: now,
