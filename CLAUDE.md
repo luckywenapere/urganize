@@ -655,3 +655,6 @@ A workspace-level record label / team logo that automatically stands in as cover
 - Deploy trigger: automatic on push to main
 - Deploy status: poll production URLs until the new deployment serves (script asset hashes change)
 - Health check: `curl -sf https://app.urganize.app/auth` and `curl -sf https://www.urganize.app/`
+
+### Versioning
+This repo does NOT use a VERSION file or CHANGELOG.md (decided 2026-07-10 via /ship): production deploys continuously from `main`, and release history lives in git. gstack's /ship skips the version-bump and CHANGELOG steps here, and PR titles use plain conventional-commit prefixes (no `vX.Y.Z.W` prefix).
