@@ -87,7 +87,10 @@ export const calculateTrialDaysLeft = (
   return Math.ceil(diffMs / DAY_MS);
 };
 
-const resolveSnapshot = (
+// Exported for lib/subscription-access.test.ts — this pure function IS the
+// four-state access model (unpaid | trial | paid | expired); everything else
+// in this module is I/O around it.
+export const resolveSnapshot = (
   subscription: SubscriptionRow | null,
   profile: ProfileAccessRow | null,
   now = new Date()
@@ -104,9 +107,15 @@ const resolveSnapshot = (
   const profileTrialActive =
     profileTrialEndsAt !== null && profileTrialEndsAt.getTime() > now.getTime();
 
-  // 1. Paid: any active subscription that has not expired.
+  // 1. Paid: any active subscription that has not expired. 'past_due' is
+  // included deliberately — the webhook writes it on invoice.payment_failed
+  // while Paystack retries the charge, and the user's already-paid window
+  // (expires_at) hasn't lapsed. Both the webhook and billing-plans.ts
+  // document this contract ("the snapshot resolver treats past_due + not
+  // expired as paid"); until 2026-07-10 it only held by accident via the
+  // is_subscribed back-compat branch below.
   if (
-    (rawStatus === 'active' || rawStatus === 'cancelled') &&
+    (rawStatus === 'active' || rawStatus === 'cancelled' || rawStatus === 'past_due') &&
     !isSubExpired
   ) {
     return {

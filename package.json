@@ -9,7 +9,8 @@
   "scripts": {
     "build": "node scripts/run-turbo.cjs build",
     "dev": "node scripts/run-turbo.cjs dev",
-    "lint": "node scripts/run-turbo.cjs lint"
+    "lint": "node scripts/run-turbo.cjs lint",
+    "test": "node scripts/run-turbo.cjs test"
   },
   "devDependencies": {
     "next": "^16.1.1",
