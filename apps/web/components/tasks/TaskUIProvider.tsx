@@ -214,7 +214,9 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     setIsLoadingOptions(true);
     try {
       const [releasePayload, membersPayload] = await Promise.all([
-        requestJson<ReleaseSelectorPayload>('/api/releases?view=selector'),
+        // The ?view=selector param died 2026-07-10 — GET /api/releases now
+        // returns the selector payload unconditionally.
+        requestJson<ReleaseSelectorPayload>('/api/releases'),
         requestJson<WorkspaceMembersPayload>('/api/workspace/members'),
       ]);
 

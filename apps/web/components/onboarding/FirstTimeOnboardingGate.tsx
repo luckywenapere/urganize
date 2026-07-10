@@ -72,15 +72,6 @@ const STEP_FOUR_COMPARISON_ROWS = [
     with: 'A repeatable process',
   },
 ] as const;
-const _STEP_FIVE_FEATURES = [
-  'Unlimited releases after your first',
-  'Full task management and playbook',
-  'Credits and metadata tools',
-  'Track uploads and private share links',
-  'Pre-save campaigns',
-  'Team collaboration',
-] as const;
-
 const buildReleasePath = (releaseId: string) => `/dashboard/releases/${releaseId}`;
 
 const getFirstName = (value: string | null | undefined) => {

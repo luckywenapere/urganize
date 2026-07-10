@@ -106,7 +106,7 @@ There is **no `middleware.ts`** — auth is enforced per-route via `getAuthentic
 | Release create | `useReleaseStore.createRelease()` | `POST /api/releases` | Bearer |
 | Tasks list | Direct `fetch()` inside the component | `/api/tasks?<searchParams>` | Bearer |
 | Release detail tasks | `useTaskStore` state (hydrated by `loadCommandCenter`) + per-action PATCH/POST | `/api/tasks/[id]` | Bearer |
-| Release selector for Tasks page | Direct `fetch()` | `/api/releases?view=selector` | Bearer |
+| Release selector for Tasks page | Direct `fetch()` | `/api/releases` (selector payload is the only GET view since 2026-07-10) | Bearer |
 
 The Zustand stores live at:
 - `apps/web/stores/useReleaseStore.ts` — `{ releases, todaysDirective, isInitialLoading, isRefreshing, error, loadCommandCenter, createRelease }`.
@@ -541,7 +541,7 @@ All filter logic lives in **`apps/web/app/dashboard/tasks/page.tsx`** — there 
 
 | Filter | URL param | Source of values |
 |---|---|---|
-| Release | `?release=<id>` | `fetch('/api/releases?view=selector')` → `ReleaseOption[]` from `@/lib/release-helpers` |
+| Release | `?release=<id>` | `fetch('/api/releases')` → `ReleaseOption[]` from `@/lib/release-helpers` (selector payload is the only GET view since 2026-07-10) |
 | Priority | `?priority=<value>` | `TASK_PRIORITY_OPTIONS` from `@/lib/tasks` (re-exported from `@/types/tasks`): `'urgent' \| 'high' \| 'medium' \| 'low' \| 'none'` |
 | Status | `?status=<value>` | `TASK_STATUS_OPTIONS` from `@/lib/tasks` (re-exported from `@/types/tasks`): `'locked' \| 'backlog' \| 'todo' \| 'in_progress' \| 'blocked' \| 'in_review' \| 'done' \| 'cancelled'` |
 | Mine only (toggle) | `?mine=1` | n/a — boolean |

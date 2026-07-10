@@ -249,3 +249,37 @@ export async function loadReleaseCommandCenterData(
 
   return { collaborators, metadata, readiness };
 }
+
+// Shared PATCH/POST input validation. Lives here because Next.js route files
+// may only export HTTP handlers + route config, so both releases routes
+// import these instead of keeping per-route copies.
+
+export const RELEASE_STATUSES = [
+  'draft',
+  'planning',
+  'in_progress',
+  'ready',
+  'released',
+  'archived',
+] as const;
+
+export function isValidReleaseStatus(value: string): boolean {
+  return (RELEASE_STATUSES as readonly string[]).includes(value);
+}
+
+export function parseOptionalReleaseDate(value: string): { value: string | null; error?: string } {
+  if (!value) {
+    return { value: null };
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return { value: null, error: 'Release date must use YYYY-MM-DD format.' };
+  }
+
+  const parsedDate = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return { value: null, error: 'Release date is invalid.' };
+  }
+
+  return { value };
+}

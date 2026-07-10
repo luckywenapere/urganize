@@ -9,6 +9,9 @@ import {
   requireActiveAuthenticatedUser,
   isOptionalTableMissingError,
   loadReleaseCommandCenterData,
+  isValidReleaseStatus,
+  parseOptionalReleaseDate,
+  RELEASE_STATUSES,
 } from '../_shared';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
 import { isWorkspaceFeatureEnabled } from '@/lib/artists-server';
@@ -25,7 +28,6 @@ const TASKS_TABLE = 'tasks';
 const ASSETS_TABLE = 'assets';
 const WORKSPACES_TABLE = 'workspaces';
 const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
-const RELEASE_PIPELINE_STATES = ['idea', 'planning', 'asset_prep', 'distribution', 'campaign', 'post_release'] as const;
 
 type ReleaseSuggestedAction =
   | {
@@ -60,13 +62,6 @@ const isMissingOptionalFeatureTable = (error: unknown) => {
     message.includes('does not exist')
   );
 };
-const normalizePipelineState = (value: unknown): string | null => {
-  const normalized = trimString(value).toLowerCase();
-  return RELEASE_PIPELINE_STATES.includes(normalized as (typeof RELEASE_PIPELINE_STATES)[number])
-    ? normalized
-    : null;
-};
-
 async function loadReleaseRetentionSummary(
   adminClient: SupabaseClient,
   releaseId: string,
@@ -231,23 +226,39 @@ export async function PATCH(
     const artistName = isWorkspaceFeatureEnabled()
       ? ownership.release.artistName
       : trimString(body?.artistName) || ownership.release.artistName;
-    const status = trimString(body?.status) || ownership.release.status;
-    const state = normalizePipelineState(body?.state);
-    const readinessScore = Number(body?.readinessScore);
+
+    // status is an enumerated field with no DB CHECK constraint — reject
+    // unknown values here or arbitrary text lands in releases.status and
+    // silently breaks every statusLabel lookup and status filter downstream.
+    const statusInput = trimString(body?.status);
+    if (statusInput && !isValidReleaseStatus(statusInput)) {
+      return NextResponse.json(
+        { error: `Release status must be one of: ${RELEASE_STATUSES.join(', ')}.` },
+        { status: 400 }
+      );
+    }
+    const status = statusInput || ownership.release.status;
 
     if (!title) return NextResponse.json({ error: 'Release title is required.' }, { status: 400 });
+
+    // Same validation the POST route runs — without it a malformed date
+    // string reached Postgres, cast-errored, and surfaced as a raw 500.
+    const releaseDateResult = parseOptionalReleaseDate(releaseDate);
+    if (releaseDateResult.error) {
+      return NextResponse.json({ error: releaseDateResult.error }, { status: 400 });
+    }
 
     const releaseUpdate = await adminClient!
       .from('releases')
       .update({
         title,
         slug: normalizeReleaseSlug(title) || ownership.release.slug,
-        release_date: releaseDate || null,
+        release_date: releaseDateResult.value,
         description: description || null,
         artist_name: artistName,
         status,
-        ...(state ? { state } : {}),
-        ...(Number.isFinite(readinessScore) ? { readiness_score: Math.max(0, Math.min(100, Math.round(readinessScore))) } : {}),
+        // state/readinessScore body fields are no longer accepted — the
+        // six-stage pipeline they belonged to was removed from the product.
         updated_at: new Date().toISOString(),
       })
       .eq('id', releaseId)
