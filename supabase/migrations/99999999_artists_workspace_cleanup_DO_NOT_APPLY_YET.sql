@@ -23,9 +23,9 @@
 --        b. app/api/admin/pricing-validation/route.ts — drop the
 --           profile.artist_name projection from the admin survey (Lines 43,
 --           58, 71).
---        c. components/onboarding/FirstTimeOnboardingGate.tsx — drop the
+--        c. components/onboarding/useOnboardingWizard.ts — drop the
 --           `|| user?.artist_name` fallback from the first-name greeting
---           (Line 243). Use user.name only.
+--           (the `firstName` derivation). Use user.name only.
 --        d. lib/auth-store.ts — drop the gate-read at line 454 and the
 --           updateArtistName setter plumbing entirely (Lines 84/91/210/
 --           394/426/454/457/526/538). Auth bootstrap no longer mirrors
