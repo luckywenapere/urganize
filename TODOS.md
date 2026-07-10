@@ -6,16 +6,6 @@ someday), completed items move to the bottom with their ship date.
 
 ## apps/web — refactors
 
-### Split FirstTimeOnboardingGate into gate + steps + hook
-**Priority:** P1
-The onboarding wizard is a single 1,022-line client component doing five jobs
-(route gating, wizard state, network, tick animation, education preview).
-Split into a thin gate, per-step components under
-`components/onboarding/steps/`, and a co-located state/network hook — no
-behavior change. Full brief: docs/optimization-report-2026-07-09.md item 29.
-Risky to ship without visual verification of the wizard — pair with
-authenticated QA (/setup-browser-cookies + /qa).
-
 ### Deduplicate the auth + admin-client route preamble
 **Priority:** P1
 ~40 API route handlers repeat the same 4-line bootstrap
@@ -54,6 +44,20 @@ and WorkspaceReleaseCard, stabilize per-row handlers, compute per-release
 done/total in one groupBy pass, and use narrow Zustand selectors on the pages.
 Report item 26. Verify with authenticated profiling.
 
+## infrastructure
+
+### Disconnect the legacy `urganize-website` Vercel project
+**Priority:** P2
+A third Vercel project (`urganize-website`) is still connected to this GitHub
+repo and fails its deployment check on every commit (verified pre-existing on
+main). It serves neither app.urganize.app nor www.urganize.app. Dashboard
+action for the owner: Vercel → urganize-website → Settings → Git → Disconnect
+(or delete the project). Removes the permanent red ✗ from every PR.
+
 ## Completed
 
+- **2026-07-10** Split FirstTimeOnboardingGate into gate + steps + hook
+  (thin gate + `useOnboardingWizard.ts` + five components under
+  `components/onboarding/steps/`; also deleted the old flow's 11 dead
+  onboarding components).
 - (History predating this file lives in git log; the file starts 2026-07-10.)
