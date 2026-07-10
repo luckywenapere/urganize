@@ -212,7 +212,7 @@ export function useOnboardingWizard() {
     void loadOnboarding();
     // Intentionally keyed only on shouldMountGate. loadOnboarding identity
     // changes each render; adding it would trigger refetch on every state
-    // update inside this component.
+    // update inside this hook.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldMountGate]);
 
@@ -309,7 +309,7 @@ export function useOnboardingWizard() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-    // patchOnboarding closes over component state; adding it to deps would
+    // patchOnboarding closes over hook state; adding it to deps would
     // cause the closing-line animation to retrigger on every state change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, hasCompletedStepTwoQuestions, isAdvancingFromStepTwo]);

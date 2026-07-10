@@ -14,7 +14,7 @@
 //
 // Auth carve-out: /onboarding is allow-listed in apps/web/lib/access-redirect.ts
 // (SAFE_PATHS), apps/web/lib/auth-store.ts (SAFE_AUTH_PATHS), and
-// apps/web/components/onboarding/FirstTimeOnboardingGate.tsx
+// apps/web/components/onboarding/useOnboardingWizard.ts
 // (PUBLIC_ROUTE_PREFIXES). AppShell renders this route without workspace chrome.
 //
 // Release-type restriction: the step-0 radio is wired to the template registry
