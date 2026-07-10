@@ -36,6 +36,9 @@
         "^lint"
       ],
       "outputs": []
+    },
+    "test": {
+      "outputs": []
     }
   }
 }
