@@ -1,176 +1,104 @@
 # Urganize
 
-Urganize is a Next.js App Router product for music campaign execution.
-Current scope is:
+Urganize is operational infrastructure for music industry teams. v1 is a **release management workspace**: the system of record for a music release — where the plan lives, where the work happens, where the team sees status.
 
-- Supabase auth (email/password + Google OAuth)
-- Guided onboarding that creates/updates a campaign plan (`release`)
-- Task execution loop (`ai_tasks`) with feedback/proof submission
-- Plan dashboard + timeline pacing + next-step generation/custom entry
-- Billing/settings with Paystack checkout + payment verification
+The target user is an independent music manager handling 1–3 artists, planning their next release in the next 90 days. The central object is the release; every feature ties back to one.
 
-## Documentation
+> **`CLAUDE.md` is the source of truth** for scope, architecture, and conventions. This README is the quick orientation; when they disagree, CLAUDE.md wins.
 
-- Product Requirements Document (MVP): [`docs/PRODUCT_REQUIREMENTS.md`](docs/PRODUCT_REQUIREMENTS.md)
-- DB migration for canonical artist profile name: [`docs/DB_MIGRATION_ARTIST_NAME.md`](docs/DB_MIGRATION_ARTIST_NAME.md)
+## What v1 does
 
-## Tech Stack
+1. **Release object** — date, type (single/EP/album/music video), artist, team, status.
+2. **AI-tailored rollout plans from hand-crafted templates** — a version-controlled template (64 tasks across 11 weeks for a single) is instantiated into real tasks at release creation; AI tailoring is feature-flagged.
+3. **Tasks with assignees and dependencies** — status, priority, due dates, blocker-aware completion with auto-unlock.
+4. **File/asset attachment** — artwork, masters, contracts in Supabase Storage.
+5. **Event milestones** — dated points (video shoot, listening party, release day) on the release timeline.
+6. **AI status update generator** — one-paragraph narrative status from live release state (feature-flagged).
 
-- Next.js 16 (App Router), React 19, TypeScript
-- Tailwind CSS
-- Supabase (Auth, Postgres, Storage)
-- Zustand (`lib/auth-store.ts`) for auth/session state
-- Paystack (`react-paystack`) for checkout
+## Repository layout
 
-## Product Flow
+pnpm workspace + Turborepo monorepo with two deployable apps:
 
-1. User lands on `/` and is redirected to `/auth` or `/dashboard`.
-2. Auth supports Google and email/password, with provider hints via `/api/auth/providers`.
-3. After auth, `AppShell` may show `PostAuthScreen` onboarding.
-4. Onboarding creates or resumes a plan and drives step progression in `release_profiles.setup_step`.
-5. A first task is created in `ai_tasks`, user executes it, and submits structured feedback + optional proof.
-6. User continues from `/dashboard`, each plan page, and `/dashboard/plans/[planId]/next-step`.
-7. Billing and subscription management happen in `/settings` (Paystack + trial + account actions).
+```
+urganize/
+├── apps/
+│   ├── homepage/          # Marketing site + waitlist + admin growth (www.urganize.app)
+│   └── web/               # Authenticated product app (app.urganize.app)
+├── packages/
+│   ├── ui/                # Shared React primitives
+│   ├── config/            # Shared tsconfig, ESLint, Tailwind preset
+│   ├── pricing/           # Single source of truth for plan tiers/prices
+│   ├── lib/               # Stub placeholder
+│   └── db/                # Stub placeholder
+├── supabase/migrations/   # SQL migrations for the web app database
+├── scripts/run-turbo.cjs  # Wrapper the root build/dev/lint/test scripts call
+└── turbo.json, pnpm-workspace.yaml, vercel.json
+```
 
-## Main Routes
+## Tech stack
 
-- `/auth` - Login/signup (Google + email)
-- `/auth/callback` - OAuth callback session handling
-- `/auth/forgot-password`, `/auth/reset-password` - Password reset flow
-- `/dashboard` - Plans list with active/archived filters and delete modal
-- `/dashboard/plans/[planId]` - Plan dashboard, metrics, timeline pace, edit basics
-- `/dashboard/plans/[planId]/next-step` - Add/generate the next task step, mark plan complete
-- `/settings` - Profile, password, notifications, billing, theme toggle, delete account
-- `/payment/callback` - Paystack verification result screen
+- **Framework:** Next.js 16 App Router, React 19, TypeScript 5 (strict) in both apps. No separate backend — Route Handlers under `app/api/**/route.ts` are the API layer.
+- **Databases (two, unconnected):**
+  - `apps/web` → **Supabase** Postgres (RLS on every owned table), schema managed only through `supabase/migrations/*.sql`.
+  - `apps/homepage` → **Neon** Postgres via Prisma 6 (`apps/homepage/prisma/`), waitlist only.
+- **Auth:** Supabase Auth (email/password + Google OAuth) in web; per-route bearer-token checks, no `middleware.ts`. Homepage admin views use a shared-secret cookie.
+- **State:** Zustand stores (`apps/web/stores/`, `lib/auth-store.ts`).
+- **Styling:** Tailwind v3 (web) / Tailwind v4 (homepage), shared preset in `packages/config`.
+- **Payments:** Paystack recurring checkout + HMAC-validated webhook. Plans defined in `packages/pricing`.
+- **Analytics:** PostHog (web), Vercel Analytics (both), Google Analytics (homepage). See [ANALYTICS.md](ANALYTICS.md) and [PRIVACY.md](PRIVACY.md).
+- **AI:** two integration points only (rollout-plan tailoring, status updates) behind `apps/web/lib/ai/provider.ts`; both feature-flagged. Templates work without AI.
 
-## API Endpoints
+## Getting started
 
-- `POST /api/auth/providers` - Detect whether an email uses Google provider
-- `POST /api/trial/start` - Start one-time 10-day free trial
-- `GET /api/payments/verify?reference=...` - Verify Paystack transaction and upsert subscription
-- `POST /api/plans/[planId]/delete` - Hard-delete a plan and related data
-- `POST /api/account/delete-now` - Immediate account and data deletion
-- `POST /api/webhooks/paystack` - Signature-validated webhook receiver (currently lightweight ack)
-
-## Required Environment Variables
-
-Add these to `.env.local`:
+Prereqs: Node 20 (`.nvmrc`), pnpm 10.
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+pnpm install
 
-NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=
-PAYSTACK_SECRET_KEY=
+# copy env templates and fill in real values (each file documents every var)
+cp apps/web/.env.example apps/web/.env.local
+cp apps/homepage/.env.example apps/homepage/.env.local
 
-# AI generation via local Ollama
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=qwen2.5:3b
-
-# Optional (fallbacks to service role key if unset)
-TRIAL_CLAIMS_SALT=
+pnpm dev          # turbo runs both apps' dev servers
 ```
 
-## Data Model (Current Usage)
+See [QUICKSTART.md](QUICKSTART.md) for a step-by-step local setup, including running one app at a time.
 
-Core tables used by runtime code:
+## Commands
 
-- `profiles`
-  - includes `artist_name` (canonical artist profile name for artist-role accounts)
-- `releases`
-- `release_profiles`
-- `ai_tasks`
-- `subscriptions`
-- `payments`
-- `artist_profiles` (read/write in onboarding/settings)
+All root scripts fan out through Turborepo:
 
-Optional tables (deleted if present during plan delete):
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Dev servers for both apps |
+| `pnpm build` | Production build (type-checks everything, including test files) |
+| `pnpm lint` | ESLint across the workspace |
+| `pnpm test` | Vitest unit tests (`apps/web/lib/*.test.ts`) |
 
-- `plan_feedback`
-- `release_assets`
-- `files`
+Scope to one app with `pnpm --filter @urganize/web <script>` or `--filter @urganize/homepage`.
 
-Storage bucket used:
+**Tests are deliberately narrow for v1:** pure-logic units for the highest-consequence paths — billing expiry math, plan resolution, the paywall allowlist, the subscription snapshot, and a containment guard that stops the deprecated schema-missing-fallback pattern from spreading to new routes. Components and flows are manually tested. Run `pnpm test` before touching billing/access code.
 
-- `proofs` (task proof uploads)
+## Deployment
 
-## Run Locally
+Vercel, two projects on this one repo, auto-deploying from `main`:
 
-```bash
-npm install
-npm run dev
-```
+- `Web` → `app.urganize.app` (builds `apps/web`)
+- `the-urganization` → `www.urganize.app` (builds `apps/homepage`)
 
-App runs at `http://localhost:3000`.
+Both use `npx turbo-ignore` so a push only rebuilds the app it touched. PRs get preview deployments. There is **no VERSION file or CHANGELOG** — the repo deploys continuously and release history lives in git. Full deploy config: the "Deploy Configuration" section of [CLAUDE.md](CLAUDE.md).
 
-## Current Architectural Notes
+## Documentation map
 
-- `app/layout.tsx` is client-side and mounts `AppShell`; it checks auth state and conditionally renders onboarding.
-- `lib/subscription-access.ts` currently returns active access for all users (stub implementation).
-- Dashboard and plan detail pages use short-lived localStorage caches for perceived speed.
-- `types/index.ts` contains legacy domain types and is not the main source of truth for current runtime behavior.
-
-## Known Gaps / TODOs
-
-- Paystack webhook route validates signature but does not yet reconcile data (verification is handled by callback endpoint).
-- Subscription access helper is hardcoded to active; tighten with real status checks from `subscriptions`.
-- `.env.example` is outdated and does not yet list Supabase/Paystack variables used by code.
-- No automated test suite yet.
-
-## Repository Map
-
-```text
-app/
-  api/                          # Server route handlers
-  auth/                         # Auth, callback, password reset pages
-  dashboard/                    # Plans list, plan page, next-step page
-  payment/callback/             # Payment verification UI
-  settings/                     # Profile, billing, security, account deletion
-components/
-  onboarding/                   # Post-auth onboarding step UI
-  billing/                      # Subscription paywall UI
-  dashboard/                    # Virtualized plan list
-lib/
-  supabase/client.ts            # Supabase client + DB-adjacent TS types
-  auth-store.ts                 # Zustand auth/session logic
-  billing.ts                    # Plan pricing and metadata helpers
-  subscription-access.ts        # Access helper (currently stubbed)
-```
-
-## Support Chat (Tawk.to)
-
-A floating support chat widget is mounted in the dashboard via `apps/web/components/support/SupportChat.tsx`. It:
-
-- Renders a custom bottom-right FAB (matches the in-app design) and hides Tawk's default bubble.
-- Opens the Tawk chat panel on click, with live chat when an agent is online and ticket-style messaging when offline.
-- Identifies the visitor (name, email, user id, role) so chat history persists across sessions.
-- Shows an unread-message badge on the FAB.
-- Only mounts on authenticated, non-public routes (same gate as the help menu).
-
-### Required environment variables
-
-Add to `apps/web/.env.local` and to the deployment environment (e.g. Vercel):
-
-```bash
-NEXT_PUBLIC_TAWK_PROPERTY_ID=
-NEXT_PUBLIC_TAWK_WIDGET_ID=
-```
-
-If either value is missing, the widget renders nothing — the rest of the app keeps working.
-
-### Where to get the Tawk.to values
-
-1. Sign up for a free account at https://www.tawk.to.
-2. Create a property for Urganize. Tawk auto-creates a default chat widget under it.
-3. In the Tawk dashboard go to **Administration → Channels → Chat Widget**, then open **Direct Chat Link**. The link looks like:
-   ```
-   https://tawk.to/chat/<PROPERTY_ID>/<WIDGET_ID>
-   ```
-   The first segment is `NEXT_PUBLIC_TAWK_PROPERTY_ID`, the second is `NEXT_PUBLIC_TAWK_WIDGET_ID`.
-4. Recommended dashboard settings:
-   - **Appearance**: dark theme + brand color to match the app.
-   - **File uploads**: enable in Chat Widget settings (used for proof/screenshot attachments).
-   - **Offline form**: enable so messages submitted while no agent is online become tickets.
-   - Leave the default Tawk bubble enabled — the app hides it at runtime and renders its own FAB.
-5. If the deployment uses a Content Security Policy, allowlist `https://embed.tawk.to`, `https://*.tawk.to`, and `wss://*.tawk.to`.
+| Doc | Status |
+|---|---|
+| [CLAUDE.md](CLAUDE.md) | **Source of truth** — scope, architecture, conventions, build history |
+| [TODOS.md](TODOS.md) | Tracked follow-up work (priority-tagged) |
+| [ANALYTICS.md](ANALYTICS.md) | PostHog setup and event conventions |
+| [PRIVACY.md](PRIVACY.md) | Session-replay privacy safeguards |
+| [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) | High-level current-state summary |
+| [QUICKSTART.md](QUICKSTART.md) | Local development setup |
+| [REFACTOR_NOTES.md](REFACTOR_NOTES.md) | Dated audit of `apps/web` (point-in-time record) |
+| [AUDIT.md](AUDIT.md) | Dated marketing-site audit (point-in-time record) |
+| [CUT_PLAN.md](CUT_PLAN.md) | Historical v1 cut plan (executed) |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | **Historical** — predates the monorepo; use CLAUDE.md's Deploy Configuration instead |
