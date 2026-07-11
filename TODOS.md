@@ -36,7 +36,7 @@ seam in AppShell.
 
 ### Consolidate local admin-client factories and env-error bodies
 **Priority:** P3
-Census from the 2026-07-10 auth dedup: six route files define their own local
+Census from the 2026-07-10 auth dedup: seven route files define their own local
 admin-client factories duplicating the shared `createAdminClient`
 (`webhooks/paystack` — a module-scope shadow, `user/onboarding`,
 `invites/[token]`, `invites/resolve-by-email`, `auth/providers`,
