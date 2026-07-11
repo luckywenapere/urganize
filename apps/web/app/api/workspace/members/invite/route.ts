@@ -4,8 +4,7 @@ import {
   WORKSPACE_MEMBERS_TABLE,
   buildInviteUrl,
   buildTaskSchemaResponse,
-  createAdminClient,
-  requireActiveAuthenticatedUser,
+  requireAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadWorkspaceAccessContext,
 } from '@/lib/tasks-server';
@@ -40,15 +39,12 @@ export async function POST(request: NextRequest) {
   const posthogServer = createServerPostHogClient();
 
   try {
-    const auth = await requireActiveAuthenticatedUser(request);
+    const auth = await requireAuthenticatedAdmin(request);
     if ('error' in auth) {
       return auth.error;
     }
 
-    const adminClient = createAdminClient(auth.supabaseUrl);
-    if (!adminClient) {
-      return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-    }
+    const { adminClient } = auth;
 
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     const workspaceId = access.primaryWorkspaceId;

@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   WORKSPACES_TABLE,
-  createAdminClient,
   ensureOwnedWorkspace,
-  requireActiveAuthenticatedUser,
+  requireAuthenticatedAdmin,
 } from '@/lib/tasks-server';
 import {
   ASSET_SIGNED_URL_TTL_SECONDS,
@@ -66,13 +65,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   try {
     const workspace = await ensureOwnedWorkspace(adminClient, auth.user);
@@ -99,13 +95,10 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   const body = (await request.json().catch(() => null)) as LogoRecordBody | null;
   if (!body) {
@@ -194,13 +187,10 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   try {
     const workspace = await ensureOwnedWorkspace(adminClient, auth.user);

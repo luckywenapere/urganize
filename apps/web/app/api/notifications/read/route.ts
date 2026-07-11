@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   NOTIFICATIONS_TABLE,
   buildTaskSchemaResponse,
-  createAdminClient,
-  requireActiveAuthenticatedUser,
+  requireAuthenticatedAdmin,
   isTaskSchemaMissingError,
 } from '@/lib/tasks-server';
 
@@ -14,15 +13,12 @@ type MarkNotificationsReadBody = {
 const readString = (value: unknown): string => String(value || '').trim();
 
 export async function PATCH(request: NextRequest) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   try {
     const body = (await request.json().catch(() => ({}))) as MarkNotificationsReadBody;

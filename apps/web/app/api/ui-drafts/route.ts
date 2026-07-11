@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   UI_DRAFTS_TABLE,
   UI_DRAFTS_TABLE_SQL,
-  createAdminClient,
-  requireActiveAuthenticatedUser,
+  requireAuthenticatedAdmin,
   isOptionalTableMissingError,
 } from './_shared';
 
@@ -11,13 +10,10 @@ const normalizeScope = (value: string | null): string => String(value || '').tri
 const normalizeDraftKey = (value: string | null): string => String(value || '').trim();
 
 export async function GET(request: NextRequest) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   const scope = normalizeScope(request.nextUrl.searchParams.get('scope'));
   const draftKey = normalizeDraftKey(request.nextUrl.searchParams.get('draftKey'));
@@ -53,13 +49,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   const body = (await request.json().catch(() => ({}))) as {
     scope?: string;
@@ -108,13 +101,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   const scope = normalizeScope(request.nextUrl.searchParams.get('scope'));
   const draftKey = normalizeDraftKey(request.nextUrl.searchParams.get('draftKey'));

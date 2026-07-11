@@ -3,6 +3,7 @@
 export {
   getAuthenticatedUser,
   requireActiveAuthenticatedUser,
+  requireAuthenticatedAdmin,
   createAdminClient,
 } from '@/app/api/_shared/auth';
 
