@@ -31,7 +31,7 @@ Payment gating is live: 28-day no-card trial, Paystack recurring checkout (Month
 
 - **Monorepo:** pnpm workspaces + Turborepo. Two deployable Next.js 16 / React 19 apps — `apps/web` (the product, app.urganize.app) and `apps/homepage` (marketing + waitlist admin, www.urganize.app) — plus shared `packages/` (ui, config, pricing, and two stub placeholders: lib, db).
 - **Two unconnected databases by design:** Supabase Postgres for the product (RLS everywhere, schema only via `supabase/migrations/`), Neon + Prisma for the homepage waitlist.
-- **Auth:** Supabase Auth in the product; per-route bearer validation (`requireAuthenticatedAdmin`, which wraps `requireActiveAuthenticatedUser` + the service-role client), no middleware.
+- **Auth:** Supabase Auth in the product; per-route bearer validation via `requireActiveAuthenticatedUser` (most protected handlers call it through `requireAuthenticatedAdmin`, which composes the gate with the service-role client), no middleware.
 - **API:** REST-style Next.js Route Handlers under `apps/web/app/api/`. No tRPC/GraphQL.
 - **UI:** a two-pane workspace at `/dashboard` (releases column + scoped tasks panel) behind `NEXT_PUBLIC_FEATURE_WORKSPACE`, release detail at `/dashboard/releases/[releaseId]`, settings, onboarding, and a `/locked` paywall page. Six routes use thin server `page.tsx` wrappers (per-page metadata) around `*PageClient.tsx` client components.
 - **Tests:** a deliberately narrow Vitest suite (`pnpm test`) covering billing math, plan resolution, the paywall allowlist, the subscription snapshot, and a guard that keeps the deprecated schema-fallback pattern contained. Everything else is manual for v1.
