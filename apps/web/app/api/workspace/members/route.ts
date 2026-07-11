@@ -2,23 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   buildTaskSchemaResponse,
   buildWorkspaceMembersResponse,
-  createAdminClient,
-  requireActiveAuthenticatedUser,
+  requireAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadWorkspaceAccessContext,
   loadWorkspaceMembers,
 } from '@/lib/tasks-server';
 
 export async function GET(request: NextRequest) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   try {
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);

@@ -34,12 +34,17 @@ escape (banner says "sign in again" but the full-screen gate has no sign-out
 affordance); consider `.catch`-containment for the next/dynamic chunk-load
 seam in AppShell.
 
-### Deduplicate the auth + admin-client route preamble
-**Priority:** P1
-~40 API route handlers repeat the same 4-line bootstrap
-(requireActiveAuthenticatedUser → createAdminClient → env-error 500). Add a
-`withAuthenticatedAdmin(request, handler)` helper in `app/api/_shared/auth.ts`
-and migrate all call sites mechanically. Report item 33.
+### Consolidate local admin-client factories and env-error bodies
+**Priority:** P3
+Census from the 2026-07-10 auth dedup: six route files define their own local
+admin-client factories duplicating the shared `createAdminClient`
+(`webhooks/paystack` — a module-scope shadow, `user/onboarding`,
+`invites/[token]`, `invites/resolve-by-email`, `auth/providers`,
+`payments/verify`, `account/delete-now`), and the env-error body is
+inconsistent ("Server environment is not configured" with and without a
+trailing period; `billing/start-checkout` also passes the env URL instead of
+`auth.supabaseUrl`). Consolidate onto the shared helper and one canonical
+body. Low urgency — behavior is correct today, just duplicated.
 
 ## apps/web — data layer
 
@@ -101,6 +106,11 @@ action for the owner: Vercel → urganize-website → Settings → Git → Disco
 
 ## Completed
 
+- **2026-07-10** Deduplicate the auth + admin-client route preamble
+  (`requireAuthenticatedAdmin` in `app/api/_shared/auth.ts`; 33 handlers
+  across 21 route files migrated; 13 handlers that interleave params/paywall
+  checks between the two calls deliberately kept the split form to preserve
+  400-before-500 error precedence).
 - **2026-07-10** Split FirstTimeOnboardingGate into gate + steps + hook
   (thin gate + `useOnboardingWizard.ts` + five components under
   `components/onboarding/steps/`; also deleted the old flow's 11 dead

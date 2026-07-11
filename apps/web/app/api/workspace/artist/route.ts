@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   buildTaskSchemaResponse,
-  createAdminClient,
-  requireActiveAuthenticatedUser,
+  requireAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadWorkspaceAccessContext,
 } from '@/lib/tasks-server';
@@ -23,15 +22,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   try {
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
@@ -68,15 +64,12 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   const body = (await request.json().catch(() => ({}))) as { name?: unknown };
   const nextName = typeof body.name === 'string' ? body.name : '';

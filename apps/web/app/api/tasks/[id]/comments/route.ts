@@ -4,7 +4,7 @@ import {
   createAdminClient,
   createTaskNotification,
   ensureTaskAccess,
-  requireActiveAuthenticatedUser,
+  requireAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadTaskComments,
   logTaskActivity,
@@ -54,15 +54,12 @@ export async function POST(
   const posthogServer = createServerPostHogClient();
 
   try {
-    const auth = await requireActiveAuthenticatedUser(request);
+    const auth = await requireAuthenticatedAdmin(request);
     if ('error' in auth) {
       return auth.error;
     }
 
-    const adminClient = createAdminClient(auth.supabaseUrl);
-    if (!adminClient) {
-      return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-    }
+    const { adminClient } = auth;
 
     const { id } = await context.params;
     const access = await ensureTaskAccess(adminClient, id, auth.user);

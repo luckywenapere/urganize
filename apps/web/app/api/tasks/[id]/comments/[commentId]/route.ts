@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   buildTaskSchemaResponse,
-  createAdminClient,
   ensureTaskAccess,
-  requireActiveAuthenticatedUser,
+  requireAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadTaskComments,
   logTaskActivity,
@@ -21,15 +20,12 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string; commentId: string }> }
 ) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   const { id, commentId } = await context.params;
 
@@ -87,15 +83,12 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string; commentId: string }> }
 ) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   const { id, commentId } = await context.params;
 

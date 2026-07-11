@@ -3,8 +3,7 @@ import type { SupabaseClient, User } from '@supabase/supabase-js';
 import {
   WORKSPACE_MEMBERS_TABLE,
   buildTaskSchemaResponse,
-  createAdminClient,
-  requireActiveAuthenticatedUser,
+  requireAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadWorkspaceAccessContext,
 } from '@/lib/tasks-server';
@@ -45,15 +44,12 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   const { id } = await context.params;
 
@@ -129,15 +125,12 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   const { id } = await context.params;
 

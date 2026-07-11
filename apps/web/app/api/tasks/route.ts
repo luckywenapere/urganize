@@ -3,8 +3,7 @@ import { groupTasksIntoSections } from '@/lib/tasks';
 import {
   TASKS_TABLE,
   buildTaskSchemaResponse,
-  createAdminClient,
-  requireActiveAuthenticatedUser,
+  requireAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadWorkspaceAccessContext,
   ensureWorkspaceAccess,
@@ -48,13 +47,10 @@ function validateTaskPostBody(body: unknown): { ok: true } | { error: string } {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   const taskService = new TaskService(adminClient);
 
@@ -99,13 +95,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   const taskService = new TaskService(adminClient);
 

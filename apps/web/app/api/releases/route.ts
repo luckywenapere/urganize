@@ -7,7 +7,7 @@ import {
   buildMissingTableResponse,
   createAdminClient,
   ensureReleaseOpsSchema,
-  requireActiveAuthenticatedUser,
+  requireAuthenticatedAdmin,
   isOptionalTableMissingError,
   parseOptionalReleaseDate,
 } from './_shared';
@@ -197,13 +197,10 @@ function normalizeReleaseCreatedSource(value: unknown): ReleaseCreatedSource {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
+  const { adminClient } = auth;
 
   // The only live consumer of this GET is the release-selector combobox
   // (historically ?view=selector). The old default "summary list" view — a
@@ -250,13 +247,10 @@ export async function POST(request: NextRequest) {
   const posthogServer = createServerPostHogClient();
 
   try {
-    const auth = await requireActiveAuthenticatedUser(request);
+    const auth = await requireAuthenticatedAdmin(request);
     if ('error' in auth) return auth.error;
 
-    const adminClient = createAdminClient(auth.supabaseUrl);
-    if (!adminClient) {
-      return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-    }
+    const { adminClient } = auth;
 
     const schemaStatus = await ensureReleaseOpsSchema(adminClient);
     if ('error' in schemaStatus) return schemaStatus.error;
