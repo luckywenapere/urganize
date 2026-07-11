@@ -61,3 +61,21 @@ export function createAdminClient(supabaseUrl: string): SupabaseClient | null {
   if (!serviceRoleKey) return null;
   return createClient(supabaseUrl, serviceRoleKey);
 }
+
+// Auth + access gate + admin client in a single call, for handlers where the
+// two checks are adjacent (the common case). Handlers that interleave code
+// between the auth gate and the admin client (params validation, per-feature
+// paywall) keep the split calls so their error precedence — 400 for a bad
+// request before 500 for a missing service key — is preserved.
+export async function requireAuthenticatedAdmin(request: NextRequest) {
+  const auth = await requireActiveAuthenticatedUser(request);
+  // The truthiness check (not just `in`) matters: the success branch's
+  // inferred `error?: undefined` member would otherwise survive into the
+  // return union and callers couldn't narrow to `adminClient`.
+  if ('error' in auth && auth.error) return { error: auth.error };
+  const adminClient = createAdminClient(auth.supabaseUrl);
+  if (!adminClient) {
+    return { error: NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 }) };
+  }
+  return { user: auth.user, supabaseUrl: auth.supabaseUrl, adminClient };
+}
