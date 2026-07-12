@@ -8,6 +8,20 @@ import {
 } from '@/lib/tasks-server';
 import { TaskStatus, TaskPriority, TaskRequirement } from '@/types/tasks';
 import { ReleasePipelineState } from '@/types/releases';
+import { getTaskCompletionBlocker } from '@/lib/release-execution';
+import {
+  TASK_DONE_STATUS,
+  TASK_LOCKED_STATUS,
+  TASK_PENDING_STATUS,
+  type ExecutionTask,
+} from '@/lib/execution-types';
+
+/** Result of a server-side completion attempt. Mirrors the blocker gate the
+ * client store enforces so Chappi can't complete a task whose dependency chain
+ * is unmet. */
+export type CompleteTaskResult =
+  | { ok: true; completedId: string; unlockedIds: string[] }
+  | { ok: false; reason: 'not_found' | 'forbidden' | 'blocked'; message: string };
 
 // Hard ceiling on list queries. Invisible at v1 scale (a full roster is a
 // few hundred tasks) but stops response size and hydration cost from growing
@@ -174,5 +188,119 @@ export class TaskService {
 
     if (error) throw error;
     return true;
+  }
+
+  /**
+   * Complete a task WITH the dependency-blocker gate + cascade-unlock that
+   * otherwise live only in the client store (`useTaskStore.completeTask`). The
+   * PATCH route does neither, so a Chappi `complete_task` tool hitting raw
+   * update would bypass the gate and strand dependents locked. This is the
+   * server-side equivalent the agent calls. (A follow-up can repoint the store
+   * at this same logic to remove the duplication — out of scope here.)
+   *
+   * `workspaceIds` is the caller's access set (from loadWorkspaceAccessContext);
+   * it authorizes the mutation to the user's own workspaces.
+   */
+  async completeTaskWithCascade(
+    taskId: string,
+    userId: string,
+    workspaceIds: string[]
+  ): Promise<CompleteTaskResult> {
+    // 1. Locate the target and authorize it against the caller's workspaces.
+    const { data: targetRow, error: targetError } = await this.adminClient
+      .from(TASKS_TABLE)
+      .select('id,release_id,workspace_id')
+      .eq('id', taskId)
+      .maybeSingle();
+    if (targetError) throw targetError;
+    if (!targetRow) return { ok: false, reason: 'not_found', message: 'Task not found.' };
+    if (!workspaceIds.includes(String(targetRow.workspace_id))) {
+      return { ok: false, reason: 'forbidden', message: "You don't have access to that task." };
+    }
+
+    // 2. Load the release's tasks so the blocker check + cascade see the whole
+    //    dependency graph, exactly like the client store does.
+    const { data: rows, error: rowsError } = await this.adminClient
+      .from(TASKS_TABLE)
+      .select(TASKS_SELECT_COLUMNS)
+      .eq('release_id', targetRow.release_id);
+    if (rowsError) throw rowsError;
+
+    const tasks = (await loadTasks(
+      this.adminClient,
+      (rows || []) as TaskRow[],
+      userId
+    )) as ExecutionTask[];
+    const target = tasks.find((t) => t.id === taskId);
+    if (!target) return { ok: false, reason: 'not_found', message: 'Task not found.' };
+
+    // 3. Same gate the checkbox enforces: locked chain, unmet deps, or an
+    //    unsatisfied requirement blocks completion.
+    const blocker = getTaskCompletionBlocker(target, tasks);
+    if (blocker) return { ok: false, reason: 'blocked', message: blocker };
+
+    // 4. Mark done.
+    const nowIso = new Date().toISOString();
+    const { error: completeError } = await this.adminClient
+      .from(TASKS_TABLE)
+      .update({ status: TASK_DONE_STATUS, completed_at: nowIso, updated_at: nowIso })
+      .eq('id', taskId);
+    if (completeError) throw completeError;
+
+    // 5. Cascade-unlock: any locked dependent whose every dependency is now
+    //    done flips to todo (mirrors the store's unlockCandidates logic).
+    const afterComplete = tasks.map((t) =>
+      t.id === taskId ? ({ ...t, status: TASK_DONE_STATUS } as ExecutionTask) : t
+    );
+    const unlockedIds = afterComplete
+      .filter(
+        (candidate) =>
+          candidate.status === TASK_LOCKED_STATUS &&
+          candidate.dependencies.includes(taskId) &&
+          candidate.dependencies.every(
+            (id) => afterComplete.find((dep) => dep.id === id)?.status === TASK_DONE_STATUS
+          )
+      )
+      .map((candidate) => candidate.id);
+
+    if (unlockedIds.length > 0) {
+      const { error: unlockError } = await this.adminClient
+        .from(TASKS_TABLE)
+        .update({ status: TASK_PENDING_STATUS, updated_at: new Date().toISOString() })
+        .in('id', unlockedIds);
+      if (unlockError) throw unlockError;
+    }
+
+    return { ok: true, completedId: taskId, unlockedIds };
+  }
+
+  /**
+   * Reopen a done task → todo. Like the store's reopen path, this does NOT
+   * re-lock dependents (more confusing than helpful at v1 scale). Authorized
+   * against the caller's workspaces.
+   */
+  async reopenTask(
+    taskId: string,
+    workspaceIds: string[]
+  ): Promise<CompleteTaskResult> {
+    const { data: targetRow, error: targetError } = await this.adminClient
+      .from(TASKS_TABLE)
+      .select('id,workspace_id')
+      .eq('id', taskId)
+      .maybeSingle();
+    if (targetError) throw targetError;
+    if (!targetRow) return { ok: false, reason: 'not_found', message: 'Task not found.' };
+    if (!workspaceIds.includes(String(targetRow.workspace_id))) {
+      return { ok: false, reason: 'forbidden', message: "You don't have access to that task." };
+    }
+
+    const nowIso = new Date().toISOString();
+    const { error } = await this.adminClient
+      .from(TASKS_TABLE)
+      .update({ status: TASK_PENDING_STATUS, completed_at: null, updated_at: nowIso })
+      .eq('id', taskId);
+    if (error) throw error;
+
+    return { ok: true, completedId: taskId, unlockedIds: [] };
   }
 }
