@@ -689,3 +689,6 @@ A workspace-level record label / team logo that automatically stands in as cover
 
 ### Versioning
 This repo does NOT use a VERSION file or CHANGELOG.md (decided 2026-07-10 via /ship): production deploys continuously from `main`, and release history lives in git. gstack's /ship skips the version-bump and CHANGELOG steps here, and PR titles use plain conventional-commit prefixes (no `vX.Y.Z.W` prefix).
+
+### Product changelog
+The repo has NO internal CHANGELOG.md (see Versioning above), but it DOES have a public, user-facing product changelog at `apps/homepage/content/changelog.ts` (rendered at `/changelog`). Keep it current: whenever you ship a **user-facing** change (a new feature, a user-visible behavior change, or a bug fix a user would notice), add a plain-English one-line highlight to the CURRENT month's `highlights` array (most recent month first; add a new month object at the top when the calendar turns over). Benefit-framed, no jargon or file names — match the existing entries' voice. Skip internal-only work (refactors, dependency bumps, test/tooling, docs); it is invisible to users and does not belong here. This is separate from git history and from gstack /ship's (skipped) internal CHANGELOG step.
