@@ -3,9 +3,26 @@ import type { Metadata } from "next";
 const SITE_URL = "https://urganize.app";
 const SITE_NAME = "Urganize";
 
+// Absolute, canonical share image. Served as a static asset from public/
+// (NOT the app/opengraph-image.png file convention), so the URL is stable
+// across deploys and always resolves on the public domain. This is the
+// crux of URG-118: the file convention resolved og:image against the
+// runtime deployment host, which on Vercel is an SSO-gated *.vercel.app
+// preview URL — social crawlers hit a login redirect and showed no card.
+// A hardcoded absolute URL sidesteps host resolution entirely.
+const SHARE_IMAGE = {
+  url: `${SITE_URL}/opengraph-image.png`,
+  width: 1200,
+  height: 630,
+  alt: "Urganize — music release management for teams",
+};
+
 // Shared per-page metadata shape (canonical + OG + Twitter) so every
 // marketing page gets the same fields instead of hand-rolling them.
 // Root layout still owns metadataBase, keywords, and robots defaults.
+// The share image is set here (not via file convention) so EVERY page —
+// home and nested routes alike — emits og:image + twitter:image; nested
+// segments do not inherit the app/ file-convention image.
 export function buildPageMetadata({
   title,
   description,
@@ -28,11 +45,13 @@ export function buildPageMetadata({
       siteName: SITE_NAME,
       locale: "en_US",
       type: "website",
+      images: [SHARE_IMAGE],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      images: [SHARE_IMAGE.url],
     },
   };
 }
