@@ -354,25 +354,29 @@ export default function AuthPage() {
                       </div>
                     )}
 
-                    <Input
-                      label="Password"
-                      type="password"
-                      value={password}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                        setPassword(e.target.value);
-                        if (error) setError('');
-                      }}
-                      placeholder="••••••••"
-                      leftIcon={<Lock className="w-4 h-4" />}
-                      autoComplete="current-password"
-                      autoFocus={showEmailLoginForGoogle && providerHint === 'google'}
-                      disabled={isLoading || isGoogleLoading}
-                      required
-                    />
+                    {!shouldHideEmailLogin && (
+                      <>
+                        <Input
+                          label="Password"
+                          type="password"
+                          value={password}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                            setPassword(e.target.value);
+                            if (error) setError('');
+                          }}
+                          placeholder="••••••••"
+                          leftIcon={<Lock className="w-4 h-4" />}
+                          autoComplete="current-password"
+                          autoFocus={showEmailLoginForGoogle && providerHint === 'google'}
+                          disabled={isLoading || isGoogleLoading}
+                          required
+                        />
 
-                    <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-                      {isLoading ? 'Signing in...' : 'Sign in'}
-                    </Button>
+                        <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
+                          {isLoading ? 'Signing in...' : 'Sign in'}
+                        </Button>
+                      </>
+                    )}
 
                     {error && (
                       <p className="text-center text-sm text-status-error">{error}</p>
