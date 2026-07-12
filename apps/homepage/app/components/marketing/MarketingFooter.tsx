@@ -43,6 +43,7 @@ const footerLinks = [
   { href: "/pricing", label: "Pricing" },
   { href: "/team", label: "Team" },
   { href: "/press", label: "Press" },
+  { href: "/changelog", label: "Changelog" },
   { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
 ] as const;
