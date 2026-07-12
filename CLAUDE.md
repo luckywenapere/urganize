@@ -44,7 +44,7 @@ The six features that constitute v1:
 - Pre-save campaigns
 - Listener profile generation
 - Credit submissions / shareable credit links
-- AI chat / general-purpose AI assistant
+- AI chat / general-purpose AI assistant — **EXCEPTION (2026-07-13): now being built as Chappi.** The founder consciously moved this line; Chappi is the conversational AI front door at `/dashboard` (see "Chappi — conversational AI front door" under AI integration). This is the ONE sanctioned exception — do not read it as license to add other items from this list.
 - Track / song library as separate entities (assets cover this for v1)
 - Collaborators directory as a standalone feature (assignees on tasks is enough)
 
@@ -58,7 +58,7 @@ These are the principles that govern v1 build decisions. When in doubt, return t
 
 1. **The release is the spine.** Every feature serves a release. If you find yourself building something that doesn't tie back to a specific release, stop and ask whether it belongs in v1. The release detail page is where the product converges — Dashboard, Releases list, and Tasks are navigational surfaces; the work happens on the release detail page. New features attach to the release, not to standalone surfaces.
 
-2. **Templates carry domain knowledge; AI is a removable polish layer.** Hand-crafted release templates are the product's IP. AI adjusts them and writes prose around them. If AI failed tomorrow, the product would still work — users pick a template, get a plan, edit it, run their release. Build it so AI is *removable* without the product dying.
+2. **Templates carry domain knowledge; AI is a removable polish layer.** Hand-crafted release templates are the product's IP. AI adjusts them and writes prose around them. If AI failed tomorrow, the product would still work — users pick a template, get a plan, edit it, run their release. Build it so AI is *removable* without the product dying. (Exception under active build: **Chappi**, the conversational front door — see AI integration. It's a conscious expansion of the AI surface, but still honors this principle's spirit: Chappi degrades to a deterministic command bar + action chips when no model is configured.)
 
 3. **Structured data over free text.** A release has a type. A task has a status, an owner, a due date, a dependency. A file has a category. Enumerate these. Don't let users type them as free strings. Structured data is what makes AI prompts contextual, status views correct, and analytics possible later.
 
@@ -205,15 +205,30 @@ REST-style Next.js Route Handlers at `app/api/**/route.ts`. No tRPC, no GraphQL.
 - **Release rollout planner:** Claude Sonnet (latest). Higher quality matters here — the call has to take a hand-crafted template plus release context and produce a structured, edited plan.
 - **AI status update generator:** Claude Haiku or equivalent (GPT-4o mini, Gemini Flash). Shorter, simpler, runs more often, lower cost per call.
 
-**Two AI integration points exist in v1. No more.**
+**Three AI integration points now exist in v1** (was two — Chappi was added 2026-07-13 as a conscious scope expansion; see the Chappi subsection below).
 
 1. **Release rollout planner:** Input = a hand-crafted template + release context (artist, type, timeline, budget, team size). Output = a tailored plan (tasks with assignees, durations, dependencies). One API call per release creation. User edits before commit.
 
 2. **Status update generator:** Input = current release state (tasks completed, blocked, upcoming; recent activity; release date). Output = one-paragraph narrative status. One API call per request, a handful per release per week.
 
-**Removed in the v1 cut:** AI chat (`api/ai/chat`), the old AI release plan generator, `services/mock-ai.ts`, `useAIStore`.
+3. **Chappi — conversational AI front door:** a multi-turn, tool-calling assistant at the top of `/dashboard`. Answers questions about releases/tasks and takes actions on the user's behalf. Unlike the two single-shot features above, it is agentic (a tool loop), uses its own transport, and is the removable-but-present exception to the "AI chat is v2" scope line.
+
+**Removed in the v1 cut (2026-05):** AI chat (`api/ai/chat`), the old AI release plan generator, `services/mock-ai.ts`, `useAIStore`. NOTE: conversational AI has since returned deliberately as Chappi (below) — but freshly built on the current architecture, not the removed code.
 
 **Architectural rule:** AI is a *layer on top of templates*, not a substitute for them. The product must work — degraded but functional — if AI is unavailable. The template alone produces a valid plan; AI just tailors it. The structured release data alone produces a valid status view; AI just narrates it.
+
+### Chappi — conversational AI front door (added 2026-07-13)
+
+A conscious expansion of the AI surface beyond the two single-shot features above. Chappi is a conversational assistant that answers questions AND takes actions, rendered as a full-width hero at the top of the `/dashboard` workspace (releases/tasks below it). The founder deliberately moved the "AI chat / general-purpose assistant → v2" line to build this. **It is the ONE sanctioned exception to that scope line — do not treat it as license to add other out-of-scope items.**
+
+It still honors the "AI is removable" principle: with no capable model configured, the route returns `{ mode: 'deterministic' }` and the client falls back to a keyword intent-router + action chips, so the front door is useful with AI off. This is why it could ship before the model was wired.
+
+- **Flag:** `NEXT_PUBLIC_FEATURE_CHAPPI` (client + route gate; the route 404s when off). Only renders when `NEXT_PUBLIC_FEATURE_WORKSPACE` is also on. Registered in `turbo.json`; documented in `apps/web/.env.example`.
+- **Transport — the deliberate exception:** Chappi uses its OWN transport, the official **`@anthropic-ai/sdk`** (a documented exception to "boring stack / route through `provider.ts`": the Zuplo/Ollama transport structurally can't do native tool-calling). `lib/ai/provider.ts` still exclusively owns the two single-shot features. Env: `CHAPPI_MODEL` (capable Claude model), `CHAPPI_API_KEY` (separate from `AI_API_KEY`), optional `CHAPPI_API_BASE`. Capability gates on `CHAPPI_MODEL` being set to a real model, NOT the `qwen2.5:3b` placeholder.
+- **Backend:** `app/api/chappi/route.ts` (POST, `maxDuration = 60`, auth via `requireAuthenticatedAdmin`) → `lib/chappi/{config,tools,dispatch,system-prompt,runner}.ts`. A tool-calling loop **capped at 5 rounds**. Conversation state is **ephemeral** (client-held; no DB table, no migration — consistent with the CUT_PLAN removal of AI tables).
+- **Tools:** read (`list_releases`, `get_release`, `list_tasks`, `get_dashboard`) + mutate (`create_release`, `create_task`, `update_task`, `complete_task`, `reopen_task`, `generate_status_update`, `navigate`). **No delete tools** (deferred). Mutating tools call the existing REST endpoints via internal fetch — preserving template instantiation, assignee validation, and notifications rather than reimplementing them — EXCEPT completion, which goes through the new `TaskService.completeTaskWithCascade` (+ `reopenTask`). That method replicates the dependency-blocker gate + cascade-unlock that otherwise lived only in `useTaskStore.completeTask`, so a Chappi-driven completion can't bypass it. Every mutating tool re-validates the model's ids against live rows server-side; the system-prompt workspace snapshot is a hint, not the guard.
+- **Frontend:** `components/chappi/ChappiHero.tsx`, `stores/useChappiStore.ts`, `lib/chappi/{types,intent-router}.ts`. Chips run deterministic actions instantly (no round-trip); free-text goes to the agent, falling back to the intent-router on failure or deterministic mode.
+- **Status:** Phase 1 (deterministic shell) + Phase 2 (agentic backend) built behind the flag; `pnpm lint` + `pnpm build` green. **Deferred:** streaming + conversation transcript UI (Phase 3), delete tools + confirmation gate, cross-session persistence. **Activation (Phase 4):** set `CHAPPI_MODEL` + `CHAPPI_API_KEY` in Vercel `Web`, flip `NEXT_PUBLIC_FEATURE_CHAPPI=true` in prod, verify end-to-end with a real release. Until then the agent path is dark and the deterministic front door is what users see.
 
 ---
 
@@ -650,7 +665,7 @@ A workspace-level record label / team logo that automatically stands in as cover
 
 ---
 
-*Last updated: 2026-07-10.*
+*Last updated: 2026-07-13 (added Chappi — conversational AI front door).*
 
 ---
 

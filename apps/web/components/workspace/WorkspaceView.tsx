@@ -9,6 +9,7 @@ import { useTaskStore } from '@/stores/useTaskStore';
 import { type Task } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
+import { ChappiHero } from '@/components/chappi/ChappiHero';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { DeleteReleaseDialog } from './DeleteReleaseDialog';
 import { TaskDetailInline, useTaskUI } from '@/components/tasks/TaskUIProvider';
@@ -19,6 +20,13 @@ import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
 
 const TASKS_PANEL_ID = 'workspace-tasks';
+
+// Feature flag — when 'true', the Chappi conversational front door renders as a
+// full-width hero at the top of the workspace, with releases/tasks below it.
+// Inlined at build time (NEXT_PUBLIC_ prefix). Off in prod until the AI backend
+// is activated (Phase 4); Phase 1 works with AI off, so it's safe to enable in
+// dev/preview immediately. Only renders when the workspace itself is enabled.
+const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 /**
  * Parse a createdAt ISO string to epoch ms. Empty/invalid values map to 0 so
@@ -207,6 +215,13 @@ export function WorkspaceView() {
           intentionally has NO max-width so dashboard / settings can't drift
           apart again. */}
       <div className="pb-24 pt-6 sm:px-6">
+        {/* Chappi front door — full-width hero above the workspace. Renders once
+            (spans both the mobile and desktop branches below) and only after
+            the auth/skeleton guard, so it never flashes pre-auth. */}
+        {CHAPPI_ENABLED ? (
+          <ChappiHero onNewRelease={() => setIsCreateModalOpen(true)} />
+        ) : null}
+
         {/* Screen-reader-only live region. Polite mode waits for the SR to be
             idle, atomic="true" re-reads the whole message. Mirrors the visible
             workspace state so SR users get the same context. */}
