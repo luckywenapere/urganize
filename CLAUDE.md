@@ -689,8 +689,22 @@ A workspace-level record label / team logo that automatically stands in as cover
 - Deploy status: poll production URLs until the new deployment serves (script asset hashes change)
 - Health check: `curl -sf https://app.urganize.app/auth` and `curl -sf https://www.urganize.app/`
 
-### Versioning
-This repo does NOT use a VERSION file or CHANGELOG.md (decided 2026-07-10 via /ship): production deploys continuously from `main`, and release history lives in git. gstack's /ship skips the version-bump and CHANGELOG steps here, and PR titles use plain conventional-commit prefixes (no `vX.Y.Z.W` prefix).
+### Versioning (reversed 2026-07-13 — the repo now tracks a version)
 
-### Product changelog
-The repo has NO internal CHANGELOG.md (see Versioning above), but it DOES have a public, user-facing product changelog at `apps/homepage/content/changelog.ts` (rendered at `/changelog`). Keep it current: whenever you ship a **user-facing** change (a new feature, a user-visible behavior change, or a bug fix a user would notice), add a plain-English one-line highlight to the CURRENT month's `highlights` array (most recent month first; add a new month object at the top when the calendar turns over). Benefit-framed, no jargon or file names — match the existing entries' voice. Skip internal-only work (refactors, dependency bumps, test/tooling, docs); it is invisible to users and does not belong here. This is separate from git history and from gstack /ship's (skipped) internal CHANGELOG step.
+The earlier decision (2026-07-10) NOT to version was an early-stage call and has been **reversed**. The product now has a tracked, incrementing version.
+
+- **Single source of truth:** `apps/homepage/content/changelog.ts`. The **top entry's `version`** is the current product version, exported as `CURRENT_VERSION` (derived from `changelog[0].version`, so it can't drift). There is no separate VERSION file — the ledger is the record.
+- **All `package.json` versions mirror it.** Root + every workspace (`apps/*`, `packages/*`) carry the same number. They are bumped together with the ledger, never independently.
+- **Current version: `0.10.0`** (Chappi built into the UI = the minor bump from the real v0.9.0 May cut). Versions before v0.10.0 in the ledger are reconstructed milestones; strict per-release semver applies from v0.10.0 forward.
+- **Bump rules (pre-1.0 semver):** patch (`0.10.x`) = fixes/polish; minor (`0.x.0`) = new user-facing feature(s). **`v1.0.0` is reserved for AI activation** — the moment Chappi + the rollout planner + the status generator are switched on for users.
+- **`v1.0.0` note:** at 1.0, "breaking change → major" semver begins in earnest; until then the middle number is the feature counter.
+
+### Release procedure (how to ship a version)
+
+When shipping a **user-facing** change (new feature, visible behavior change, or a bug fix a user would notice):
+
+1. Add a release entry at the **top** of `changelog` in `apps/homepage/content/changelog.ts`: `{ version, date, highlights }`. Bump `version` per the rules above; `date` is a display string (e.g. `"July 13, 2026"`); `highlights` are plain-English, benefit-framed, no jargon/file names — match the existing voice. Batch same-day changes into one entry rather than minting a version per commit.
+2. Set every `package.json` `version` (root + all workspaces) to the new number.
+3. That's the whole ceremony — no git tag, no separate CHANGELOG.md. Production still deploys continuously from `main`; the ledger renders publicly at `/changelog` with a "current version" badge.
+
+Skip internal-only work (refactors, dependency bumps, test/tooling, docs) — it is invisible to users, does not earn a ledger entry, and by itself does not require a version bump. gstack `/ship`'s version step now **applies** here (steps 1–2 above) rather than being skipped; PR titles still use plain conventional-commit prefixes (no `vX.Y.Z` prefix).
