@@ -136,7 +136,7 @@ export default function BrandPage() {
               <div>
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Positioning</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Operational infrastructure for music teams. The system of record for the release.
+                  Operational infrastructure for music industry teams. The system of record for the release.
                 </p>
               </div>
 

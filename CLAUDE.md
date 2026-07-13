@@ -8,7 +8,7 @@ This file is the source of truth for AI coding assistants working in this reposi
 
 Urganize is operational infrastructure for music industry teams. The product being built right now is **v1**: a release management workspace.
 
-**Target user for v1:** an independent music manager handling 1–3 artists, planning their next release in the next 90 days. Not labels, not enterprise teams, not artists directly. The independent manager is the ICP.
+**Target user for v1:** an independent music manager handling 1–3 artists, planning their next release in the next 90 days. Not enterprise teams, not artists directly. The independent manager is the core ICP — labels running a full roster are served by the premium Label tier (founder-delivered onboarding + template tailoring), not the self-serve core wedge.
 
 **The central object is the release.** Every feature, every data model, every UI surface in v1 should answer the question: *how does this serve a release?* If a feature can't tie back to a specific release, it does not belong in v1.
 
@@ -667,7 +667,7 @@ A workspace-level record label / team logo that automatically stands in as cover
 
 ---
 
-*Last updated: 2026-07-13 (added Chappi — conversational AI front door).*
+*Last updated: 2026-07-13 (reconciled the ICP line with the Label tier — labels are the premium roster tier, not excluded).*
 
 ---
 
