@@ -73,6 +73,16 @@ const persistLastAuthEmail = (email: string | null | undefined) => {
   localStorage.setItem(LAST_AUTH_EMAIL_KEY, normalized);
 };
 
+// Explicit logout should forget the remembered email so /auth comes back
+// to a clean slate — otherwise the next visitor sees the previous account's
+// address pre-filled (and the "this account uses Google sign-in" hint that
+// follows from it). The prefill still helps users who just leave and return
+// without logging out.
+const clearLastAuthEmail = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(LAST_AUTH_EMAIL_KEY);
+};
+
 const buildFallbackProfile = (authUser: User): Omit<Profile, 'created_at' | 'updated_at'> => {
   const email = authUser?.email || '';
   const metadata = authUser?.user_metadata || {};
@@ -558,13 +568,15 @@ export const useAuthStore = create<AuthState>()(
         try {
           const { error } = await supabase.auth.signOut();
           if (error) throw error;
-          
-          set({ 
-            user: null, 
-            isAuthenticated: false, 
+
+          clearLastAuthEmail();
+
+          set({
+            user: null,
+            isAuthenticated: false,
             isLoading: false,
             needsOnboarding: true,
-            error: null 
+            error: null
           });
         } catch (error) {
           const errorMessage = handleSupabaseError(error);
