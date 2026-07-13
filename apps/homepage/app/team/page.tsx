@@ -28,13 +28,6 @@ const members = [
     linkedin: "https://www.linkedin.com/in/tedum-king-kpunee-035556393/",
   },
   {
-    name: "Victoria Emmanuel",
-    role: "Finance Lead",
-    initials: "VE",
-    bio: "Runs Urganize's finances. Studied at Afe Babalola University.",
-    linkedin: null,
-  },
-  {
     name: "Adamu Kabiru",
     role: "Growth Lead",
     initials: "AK",
