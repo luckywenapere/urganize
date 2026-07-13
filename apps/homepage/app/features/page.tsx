@@ -71,14 +71,20 @@ const features = [
   },
 ] as const;
 
-// Not built yet. Chappi is in development, not shipped, so this block gets
-// its own "coming soon" caption and a subtle (not accent) kicker color to
-// visually separate it from the five live features above it.
+// Chappi's UI is in the product but the conversational AI is off until a
+// capable model is wired, so it stays under "coming soon" with a subtle
+// (not accent) kicker color and an explicit "not live yet" point. Describe
+// what Chappi actually is — a conversational release assistant — not the
+// old cover-art-brief framing, which never matched its scope.
 const comingSoon = {
   kicker: "Coming soon",
-  title: "Chappi drafts the cover art brief.",
-  body: "Chappi, the AI assistant we're building into Urganize, will turn your release details into a cover art brief your designer can work from, reviewed and approved in the same place as the rest of the release.",
-  points: ["In development, not live yet", "Reviewed and approved inside the release"],
+  title: "Just ask Chappi.",
+  body: "Chappi is the conversational assistant we're building into your dashboard. Ask about any release or task in plain language, or just tell it what to do, and it takes the action inside your workspace.",
+  points: [
+    "In development, not live yet",
+    "Answers questions about your releases and tasks",
+    "Takes actions for you: create a release, add or complete tasks, draft a status update",
+  ],
 } as const;
 
 const nonFeatures = [
