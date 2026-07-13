@@ -40,6 +40,12 @@ const APP_SUBSCRIBE_URL = "https://app.urganize.app/locked";
 // The 28-day trial line was removed from this list because it's plan-
 // agnostic (the trial applies to both Monthly and Annual). It lives in
 // the hero subhead instead, where it covers both paths at once.
+//
+// Refreshed 2026-07-14 (alongside the pricing reprice) with two bullets for
+// capability that shipped since this list was last written: light/dark mode
+// and real-time notifications. Chappi is deliberately NOT listed — it's
+// flag-gated off in production (NEXT_PUBLIC_FEATURE_CHAPPI defaults false),
+// and this page doesn't advertise what isn't live yet.
 const MONTHLY_FEATURES = [
   "Unlimited releases on one workspace",
   "Hand-crafted single-release rollout template",
@@ -47,6 +53,8 @@ const MONTHLY_FEATURES = [
   "Per-release file storage for masters, artwork, contracts",
   "Event milestones: listening parties, video shoots, release day",
   "Invite your A&R, PR, distributor",
+  "Light and dark mode, matching your system automatically",
+  "Real-time notifications when things change on your releases",
 ] as const;
 
 // Annual deltas only — the card already shows "Everything in Monthly" so
