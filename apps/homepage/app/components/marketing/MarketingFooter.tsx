@@ -38,12 +38,18 @@ const socialLinks = [
   },
 ] as const;
 
+// Flag-gated (matches app/roadmap/page.tsx's own 404-when-off guard): the
+// footer link only appears once NEXT_PUBLIC_FEATURE_ROADMAP is on, so
+// flipping that one env var in Vercel is the entire "go live" action.
+const ROADMAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_ROADMAP === "true";
+
 const footerLinks = [
   { href: "/features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
   { href: "/team", label: "Team" },
   { href: "/press", label: "Press" },
   { href: "/changelog", label: "Changelog" },
+  ...(ROADMAP_ENABLED ? [{ href: "/roadmap", label: "Roadmap" }] : []),
   { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
 ] as const;
