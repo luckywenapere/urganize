@@ -16,6 +16,7 @@ export const changelog: ChangelogMonth[] = [
       "Fixed notification bugs, including notifications not clearing when their task was deleted.",
       "Refreshed the Team page with founder story and updated bios.",
       "Site-wide search-visibility improvements so pages show up better in search and share cleanly on social.",
+      "Started building Chappi, a conversational assistant for driving your releases by just typing what you need (in the works, not yet switched on).",
     ],
   },
   {
