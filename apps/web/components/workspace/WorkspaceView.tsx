@@ -10,6 +10,7 @@ import { type Task } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { ChappiHero } from '@/components/chappi/ChappiHero';
+import { FirstReleaseWin } from './FirstReleaseWin';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { DeleteReleaseDialog } from './DeleteReleaseDialog';
 import { TaskDetailInline, useTaskUI } from '@/components/tasks/TaskUIProvider';
@@ -27,6 +28,11 @@ const TASKS_PANEL_ID = 'workspace-tasks';
 // is activated (Phase 4); Phase 1 works with AI off, so it's safe to enable in
 // dev/preview immediately. Only renders when the workspace itself is enabled.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
+// Feature flag — when 'true', a new user's FIRST release creation triggers the
+// "first win" reveal (URG-107) instead of navigating straight to the release.
+// Inlined at build time. Off in prod until validated.
+const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
 
 /**
  * Parse a createdAt ISO string to epoch ms. Empty/invalid values map to 0 so
@@ -53,6 +59,8 @@ export function WorkspaceView() {
   const { isTaskOpen, closeTask } = useTaskUI();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  // Set to the new release's id when a first-release "win" reveal should show.
+  const [winReleaseId, setWinReleaseId] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -359,9 +367,27 @@ export function WorkspaceView() {
           // this non-forced call piggybacks on that in-flight load (or the
           // recency guard) rather than fetching a second time.
           void loadCommandCenter();
-          router.push(`/dashboard/releases/${releaseId}`);
+          // First release ever (releases still empty at this point, since the
+          // forced resync above hasn't landed) → stage the "first win" reveal
+          // instead of navigating. The reveal handles navigation on dismiss.
+          if (FIRST_WIN_ENABLED && releases.length === 0) {
+            setWinReleaseId(releaseId);
+          } else {
+            router.push(`/dashboard/releases/${releaseId}`);
+          }
         }}
       />
+
+      {winReleaseId ? (
+        <FirstReleaseWin
+          releaseId={winReleaseId}
+          onDone={() => {
+            const target = winReleaseId;
+            setWinReleaseId(null);
+            router.push(`/dashboard/releases/${target}`);
+          }}
+        />
+      ) : null}
     </main>
   );
 }
