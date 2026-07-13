@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { changelog } from "../../content/changelog";
+import { changelog, CURRENT_VERSION } from "../../content/changelog";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Changelog",
   description:
-    "What's shipped in Urganize, month by month — release templates, tasks, files, and the workspace.",
+    "Every Urganize release, newest first — what shipped and when, version by version.",
   path: "/changelog",
 });
 
@@ -18,22 +18,32 @@ export default function ChangelogPage() {
 
       <main className="px-6 py-16 sm:py-20">
         <div className="mx-auto max-w-4xl">
-          <p className="mono-label text-[var(--marketing-text-subtle)]">
-            Product updates
-          </p>
+          <div className="flex flex-wrap items-center gap-4">
+            <p className="mono-label text-[var(--marketing-text-subtle)]">
+              Product updates
+            </p>
+            <span className="mono-label rounded-full border border-[color:var(--marketing-border-strong)] px-3 py-1 text-[var(--marketing-text-muted)]">
+              Current version · v{CURRENT_VERSION}
+            </span>
+          </div>
           <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
             Changelog
           </h1>
           <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-            What&apos;s shipped in Urganize, month by month.
+            Every Urganize release, newest first.
           </p>
 
           <div className="mt-12 space-y-px bg-[color:var(--marketing-border)]">
-            {changelog.map(({ month, highlights }) => (
-              <div key={month} className="bg-[var(--marketing-bg)] py-8">
-                <h2 className="text-xl font-semibold tracking-[-0.02em]">
-                  {month}
-                </h2>
+            {changelog.map(({ version, date, highlights }) => (
+              <div key={version} className="bg-[var(--marketing-bg)] py-8">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <h2 className="text-xl font-semibold tracking-[-0.02em]">
+                    v{version}
+                  </h2>
+                  <span className="mono-label text-[var(--marketing-text-subtle)]">
+                    {date}
+                  </span>
+                </div>
                 <ul className="mt-4 list-disc space-y-2 pl-5">
                   {highlights.map((highlight) => (
                     <li
