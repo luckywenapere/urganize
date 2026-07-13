@@ -15,6 +15,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.11.0",
+    date: "July 13, 2026",
+    highlights: [
+      "Promo codes: partner workshops and programs can now give their participants a free window of full Urganize access — redeem a code, no card required.",
+    ],
+  },
+  {
     version: "0.10.0",
     date: "July 13, 2026",
     highlights: [
