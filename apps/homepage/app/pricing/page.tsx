@@ -10,7 +10,7 @@ import { PricingPageClient } from "./PricingPageClient";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing",
   description:
-    "Simple pricing for labels and artist managers: monthly, annual, or a label plan for a whole roster. Start free for 28 days, no card required.",
+    "Simple pricing for independent artist managers: monthly, annual, or a Label plan for a whole roster. Start free for 28 days, no card required.",
   path: "/pricing",
 });
 

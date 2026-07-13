@@ -15,7 +15,7 @@ const SITE_URL = "https://urganize.app";
 const LEGAL_NAME = "The Urganization Ltd";
 const LANDING_TITLE = "Urganize | Music Release Management for Teams";
 const LANDING_DESCRIPTION =
-  "How labels and artist managers run a release across their freelance team, so tasks and handoffs don't slip through WhatsApp and notes.";
+  "How independent artist managers run a release across their freelance team, so tasks and handoffs don't slip through WhatsApp and notes.";
 const LANDING_KEYWORDS = [
   "music release management",
   "artist manager software",

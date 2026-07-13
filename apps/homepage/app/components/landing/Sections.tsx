@@ -65,7 +65,7 @@ export function HeroSection() {
     >
       <div className="mx-auto flex max-w-[64rem] flex-col items-center text-center">
         <p className="hero-fade-in mono-label text-[var(--marketing-text-subtle)]">
-          Labels and artist managers
+          For independent artist managers
         </p>
 
         <div className="mt-8 flex flex-col items-center gap-8 sm:gap-10">
