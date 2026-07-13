@@ -52,16 +52,20 @@ export type BillingPlanDefinition = {
 // both the paywall display and the marketing pricing page move together —
 // no drift.
 //
-// Pricing rationale (per product brief):
-//   - Monthly NGN: ₦15,000 (matches the previous flat access SKU, makes
-//     the migration feel like-for-like for Nigerian customers).
-//   - Annual NGN: ₦150,000 (~2 months free vs ₦180,000 paid monthly).
-//   - Label NGN: ₦750,000/yr (5× annual; replaced the contact-sales
-//     "Custom" tier 2026-06-11 — high-touch roster tier with hands-on
-//     onboarding and template tailoring delivered by the founders).
-//   - Monthly USD: $25 (diaspora rate, not a strict FX conversion).
-//   - Annual USD: $250 (~2 months free vs $300 paid monthly).
-//   - Label USD: $1,250 (same 5× annual ratio as NGN).
+// Pricing rationale (per product brief; repriced 2026-07-14):
+//   - Monthly NGN: ₦17,000 (raised from ₦15,000).
+//   - Annual NGN: ₦170,000 (raised from ₦150,000; still exactly 2 months
+//     free vs ₦204,000 paid monthly — the ratio held through the reprice).
+//   - Label NGN: ₦800,000/yr (raised from ₦750,000; replaced the
+//     contact-sales "Custom" tier 2026-06-11 — high-touch roster tier with
+//     hands-on onboarding and template tailoring delivered by the founders.
+//     No longer a clean multiple of annual post-reprice — was exactly 5×,
+//     now ~4.7×).
+//   - Monthly USD: $26 (raised from $25; diaspora rate, not a strict FX
+//     conversion).
+//   - Annual USD: $260 (raised from $250; still exactly 2 months free vs
+//     $312 paid monthly).
+//   - Label USD: $1,250 (held flat in this reprice pass).
 //
 // Minor units (kobo / cents) are pre-computed here so callers never
 // multiply by 100 at the call site — that's where unit-mismatch bugs hide.
@@ -72,8 +76,8 @@ export const BILLING_PLANS: Record<BillingPlanId, BillingPlanDefinition> = {
     description: 'Billed every month. Cancel anytime from settings.',
     interval: 'monthly',
     prices: {
-      NGN: { currency: 'NGN', amount: 15_000, minorUnit: 15_000_00 },
-      USD: { currency: 'USD', amount: 25, minorUnit: 25_00 },
+      NGN: { currency: 'NGN', amount: 17_000, minorUnit: 17_000_00 },
+      USD: { currency: 'USD', amount: 26, minorUnit: 26_00 },
     },
   },
   annual: {
@@ -82,8 +86,8 @@ export const BILLING_PLANS: Record<BillingPlanId, BillingPlanDefinition> = {
     description: 'Billed once a year. ~2 months free vs monthly.',
     interval: 'annually',
     prices: {
-      NGN: { currency: 'NGN', amount: 150_000, minorUnit: 150_000_00 },
-      USD: { currency: 'USD', amount: 250, minorUnit: 250_00 },
+      NGN: { currency: 'NGN', amount: 170_000, minorUnit: 170_000_00 },
+      USD: { currency: 'USD', amount: 260, minorUnit: 260_00 },
     },
   },
   label: {
@@ -92,7 +96,7 @@ export const BILLING_PLANS: Record<BillingPlanId, BillingPlanDefinition> = {
     description: 'For labels and managers running a roster. Billed once a year.',
     interval: 'annually',
     prices: {
-      NGN: { currency: 'NGN', amount: 750_000, minorUnit: 750_000_00 },
+      NGN: { currency: 'NGN', amount: 800_000, minorUnit: 800_000_00 },
       USD: { currency: 'USD', amount: 1_250, minorUnit: 1_250_00 },
     },
   },

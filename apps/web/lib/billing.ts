@@ -23,7 +23,8 @@ export const getPlanExpiry = (plan: string, now = new Date()): Date => {
 
   if (
     plan === 'annual' ||
-    // 'label' is the ₦750,000/yr roster tier — annual interval, same
+    // 'label' is the ₦800,000/yr roster tier (repriced 2026-07-14 from
+    // ₦750,000) — annual interval, same
     // 1-year expiry as 'annual'.
     plan === 'label' ||
     plan === 'yearly' ||
