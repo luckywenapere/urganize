@@ -17,6 +17,28 @@ export const PUBLIC_ROADMAP_STATUSES: readonly RoadmapIdeaStatus[] = [
   'shipped',
 ];
 
+/**
+ * Statuses that appear in the ranked voting list (PostHog-style): the open
+ * candidates plus committed-but-not-done work, all ranked together by votes.
+ * `shipped` is intentionally excluded -- it goes in the muted "Shipped"
+ * footer strip and, canonically, the /changelog -- so it never competes with
+ * or dilutes the live voting signal.
+ */
+export const BOARD_STATUSES: readonly RoadmapIdeaStatus[] = [
+  'under_consideration',
+  'planned',
+  'in_progress',
+];
+
+/** Every status an admin can move an idea into from the board row control. */
+export const ADMIN_STATUS_OPTIONS: readonly RoadmapIdeaStatus[] = [
+  'under_consideration',
+  'planned',
+  'in_progress',
+  'shipped',
+  'declined',
+];
+
 export const ROADMAP_STATUS_LABELS: Record<RoadmapIdeaStatus, string> = {
   pending: 'Pending review',
   under_consideration: 'Under consideration',
