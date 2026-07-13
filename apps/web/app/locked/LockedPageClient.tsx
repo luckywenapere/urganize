@@ -308,6 +308,14 @@ export default function LockedPage() {
                     {isStartingTrial ? 'Starting trial…' : 'Start 28-day free trial'}
                   </Button>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => router.push('/redeem')}
+                  className="text-center text-xs text-content-tertiary hover:text-content-secondary"
+                >
+                  Have a promo code?
+                </button>
               </div>
 
               {checkoutError ? (
