@@ -47,7 +47,7 @@ const footerLinks = [
   { href: "/features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
   { href: "/team", label: "Team" },
-  { href: "/press", label: "Press" },
+  { href: "/brand", label: "Brand" },
   { href: "/changelog", label: "Changelog" },
   ...(ROADMAP_ENABLED ? [{ href: "/roadmap", label: "Roadmap" }] : []),
   { href: "/privacy", label: "Privacy" },
