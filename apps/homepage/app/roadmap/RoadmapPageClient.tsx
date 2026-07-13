@@ -1,21 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { supabase } from "@/lib/supabase/client";
 import { isRoadmapAdmin } from "@/lib/roadmap/admin";
 import { listIdeas, castVote, removeVote, updateIdeaStatus } from "@/lib/roadmap/queries";
-import {
-  PUBLIC_ROADMAP_STATUSES,
-  ROADMAP_STATUS_LABELS,
-  type RoadmapIdea,
-  type RoadmapIdeaStatus,
-} from "@/lib/roadmap/types";
+import { BOARD_STATUSES, type RoadmapIdea, type RoadmapIdeaStatus } from "@/lib/roadmap/types";
 import { AuthPanel } from "@/components/roadmap/AuthPanel";
 import { IdeaSubmissionModal } from "@/components/roadmap/IdeaSubmissionModal";
+import { IdeaRow } from "@/components/roadmap/IdeaRow";
 import { IdeaCard } from "@/components/roadmap/IdeaCard";
+
+const BOARD_STATUS_SET = new Set<RoadmapIdeaStatus>(BOARD_STATUSES);
 
 export function RoadmapPageClient() {
   const [user, setUser] = useState<User | null>(null);
@@ -121,31 +120,47 @@ export function RoadmapPageClient() {
     [ideas, isAdmin, user]
   );
 
-  const columns = useMemo(() => {
-    return PUBLIC_ROADMAP_STATUSES.map((status) => ({
-      status,
-      label: ROADMAP_STATUS_LABELS[status],
-      items: ideas
-        .filter((idea) => idea.status === status)
+  // The vote-ranked list: every board-status idea in ONE list, sorted by votes
+  // desc (created_at asc as the tiebreak). This global ranking is the point --
+  // the single most-wanted idea sits at the top, unmissable.
+  const rankedIdeas = useMemo(
+    () =>
+      ideas
+        .filter((idea) => BOARD_STATUS_SET.has(idea.status))
         .sort((a, b) => b.vote_count - a.vote_count || a.created_at.localeCompare(b.created_at)),
-    }));
-  }, [ideas]);
+    [ideas]
+  );
+
+  // Shipped ideas: shown as a muted footer strip, no vote control. Canonical
+  // shipped history lives in /changelog; this just closes the loop for ideas
+  // that originated here.
+  const shippedIdeas = useMemo(
+    () =>
+      ideas
+        .filter((idea) => idea.status === "shipped")
+        .sort((a, b) => (b.published_at ?? "").localeCompare(a.published_at ?? "")),
+    [ideas]
+  );
 
   return (
     <div className="min-h-screen bg-[var(--marketing-bg)] text-[var(--marketing-text)]">
       <MarketingHeader />
 
       <main className="px-6 py-16 sm:py-20">
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-3xl">
           <div className="flex flex-wrap items-start justify-between gap-6">
-            <div>
+            <div className="max-w-[36rem]">
               <p className="mono-label text-[var(--marketing-text-subtle)]">Roadmap</p>
               <h1 className="mt-6 text-[2.4rem] font-semibold leading-[1.05] tracking-[-0.05em] sm:text-[3rem]">
                 Help us decide what to build next
               </h1>
-              <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-                Suggest an idea, vote on what matters to you, and watch it move from
-                consideration to shipped.
+              <p className="mt-4 text-[var(--marketing-text-muted)]">
+                Vote on what matters to you. The most-wanted ideas rise to the top. To see what
+                we&apos;ve shipped recently,{" "}
+                <Link href="/changelog" className="text-[var(--marketing-text)] underline underline-offset-2">
+                  visit the changelog
+                </Link>
+                .
               </p>
             </div>
 
@@ -185,26 +200,21 @@ export function RoadmapPageClient() {
             </div>
           ) : null}
 
-          {loadError ? (
-            <p className="mt-8 text-sm text-red-600">{loadError}</p>
-          ) : null}
-          {actionError ? (
-            <p className="mt-4 text-sm text-red-600">{actionError}</p>
-          ) : null}
+          {loadError ? <p className="mt-8 text-sm text-red-600">{loadError}</p> : null}
+          {actionError ? <p className="mt-4 text-sm text-red-600">{actionError}</p> : null}
 
+          {/* Non-admin: your own pending/declined submissions. */}
           {ownPendingOrDeclined.length > 0 ? (
             <section className="mt-10">
               <h2 className="mono-label text-[var(--marketing-text-subtle)]">Your submissions</h2>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="mt-3 space-y-2">
                 {ownPendingOrDeclined.map((idea) => (
                   <div
                     key={idea.id}
-                    className="rounded-xl border border-[color:var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-4"
+                    className="rounded-xl border border-[color:var(--marketing-border)] bg-[var(--marketing-surface-muted)] px-4 py-3"
                   >
-                    <p className="text-sm font-semibold text-[var(--marketing-text)]">
-                      {idea.title}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--marketing-text-subtle)]">
+                    <p className="text-sm font-semibold text-[var(--marketing-text)]">{idea.title}</p>
+                    <p className="mt-0.5 text-xs text-[var(--marketing-text-subtle)]">
                       {idea.status === "pending" ? "Under review by the team" : "Not moving forward"}
                     </p>
                   </div>
@@ -213,6 +223,7 @@ export function RoadmapPageClient() {
             </section>
           ) : null}
 
+          {/* Admin: pending moderation queue. */}
           {isAdmin && pendingReviewIdeas.length > 0 ? (
             <section className="mt-10">
               <h2 className="mono-label text-[var(--marketing-text-subtle)]">
@@ -223,11 +234,7 @@ export function RoadmapPageClient() {
                   <IdeaCard
                     key={idea.id}
                     idea={idea}
-                    isSignedIn={Boolean(user)}
                     isAdmin={isAdmin}
-                    variant="review"
-                    onVoteToggle={handleVoteToggle}
-                    onRequestSignIn={() => setIsAuthPanelOpen(true)}
                     onStatusChange={handleStatusChange}
                   />
                 ))}
@@ -235,32 +242,46 @@ export function RoadmapPageClient() {
             </section>
           ) : null}
 
-          <div className="mt-12 grid gap-6 lg:grid-cols-4">
-            {columns.map((column) => (
-              <section key={column.status}>
-                <h2 className="mono-label text-[var(--marketing-text-subtle)]">
-                  {column.label} ({column.items.length})
-                </h2>
-                <div className="mt-3 space-y-3">
-                  {column.items.length === 0 ? (
-                    <p className="text-sm text-[var(--marketing-text-subtle)]">Nothing here yet.</p>
-                  ) : (
-                    column.items.map((idea) => (
-                      <IdeaCard
-                        key={idea.id}
-                        idea={idea}
-                        isSignedIn={Boolean(user)}
-                        isAdmin={isAdmin}
-                        onVoteToggle={handleVoteToggle}
-                        onRequestSignIn={() => setIsAuthPanelOpen(true)}
-                        onStatusChange={handleStatusChange}
-                      />
-                    ))
-                  )}
-                </div>
-              </section>
-            ))}
-          </div>
+          {/* The vote-ranked list. */}
+          <section className="mt-12">
+            {rankedIdeas.length === 0 ? (
+              <p className="rounded-xl border border-[color:var(--marketing-border)] bg-[var(--marketing-surface)] px-4 py-8 text-center text-sm text-[var(--marketing-text-subtle)]">
+                No ideas on the board yet. Be the first to suggest one.
+              </p>
+            ) : (
+              <div className="border-t border-[color:var(--marketing-border)]">
+                {rankedIdeas.map((idea) => (
+                  <IdeaRow
+                    key={idea.id}
+                    idea={idea}
+                    isSignedIn={Boolean(user)}
+                    isAdmin={isAdmin}
+                    onVoteToggle={handleVoteToggle}
+                    onRequestSignIn={() => setIsAuthPanelOpen(true)}
+                    onStatusChange={handleStatusChange}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Shipped: muted footer strip, no voting. */}
+          {shippedIdeas.length > 0 ? (
+            <section className="mt-12">
+              <h2 className="mono-label text-[var(--marketing-text-subtle)]">Shipped</h2>
+              <ul className="mt-3 space-y-1.5">
+                {shippedIdeas.map((idea) => (
+                  <li
+                    key={idea.id}
+                    className="flex items-center gap-2 text-sm text-[var(--marketing-text-muted)]"
+                  >
+                    <span className="text-[var(--marketing-accent)]">✓</span>
+                    {idea.title}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </div>
       </main>
 
