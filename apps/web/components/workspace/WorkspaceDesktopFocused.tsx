@@ -97,6 +97,10 @@ export function WorkspaceDesktopFocused({
         <RailColumn cards={leftRail} onSelect={onSelect} ariaLabel="Other releases (left)" />
 
         <div className="min-w-0 space-y-6">
+          {/* variant="focused": the center column spans most of the viewport,
+              so the default tile layout's full-width square cover art became
+              a huge banner. The focused variant pins the art to a fixed
+              thumbnail beside the meta — a slim header row instead. */}
           <WorkspaceReleaseCard
             release={selected.release}
             tasksDone={selected.tasksDone}
@@ -104,6 +108,7 @@ export function WorkspaceDesktopFocused({
             selected
             onSelect={onSelect}
             coverArtUrl={selected.coverArtUrl}
+            variant="focused"
           />
           {/* Center column body — list ↔ detail swap. When `isTaskOpen` is
               true, the TasksPanel + inline FilesPanel (lives inside it)
