@@ -38,7 +38,7 @@ const members = [
     name: "Chidera Nnamani",
     role: "Operations Lead",
     initials: "CN",
-    bio: "Manages artists and has worked in the startup space, bringing both the operator's and the manager's view to Urganize's operations. Creative Business Academy alum.",
+    bio: "Manages artists and has worked across startups, bringing both the operator's and the manager's view to Urganize's operations. Holds an MBA in Music Management from the Creative Business Academy for Africa, on a foundation of engineering and mathematics.",
     linkedin: "https://www.linkedin.com/in/chidera-nnamani/",
   },
 ] as const;
