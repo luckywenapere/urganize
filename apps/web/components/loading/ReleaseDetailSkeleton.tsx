@@ -3,9 +3,10 @@
 import { SkeletonBlock } from './SkeletonBlock';
 
 /**
- * Release-detail loading state. Mounted by
- * `app/dashboard/releases/[releaseId]/loading.tsx` as the route-segment
- * Suspense fallback.
+ * Release-detail loading state, rendered inline by `ReleaseDetailPageClient`
+ * while auth/release data are in flight (no
+ * `app/dashboard/releases/[releaseId]/loading.tsx` route fallback — same
+ * inline-swap rationale as `WorkspaceSkeleton`).
  *
  * Reserves the release-detail frame (max-w-[1000px] column + header + four
  * stacked regions) so content doesn't jump on load, but holds each region
