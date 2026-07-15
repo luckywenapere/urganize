@@ -1,10 +1,8 @@
 import Image from "next/image";
-import Link from "next/link";
 import { ScrollReveal } from "./ScrollReveal";
 import { SectionShell } from "./SectionShell";
+import { WaitlistForm } from "./WaitlistForm";
 import { YouTubeFacade } from "./YouTubeFacade";
-
-const APP_AUTH_URL = "https://app.urganize.app/auth";
 
 const featureColumns = [
   {
@@ -48,9 +46,6 @@ const templateExcerpt = [
 
 const wideContainerClass = "max-w-[84rem] px-6 sm:px-8 lg:px-10";
 
-const solidButtonClassName =
-  "relative z-[60] inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] pointer-events-auto hover:bg-[var(--marketing-primary-hover)] sm:text-base";
-
 const centeredHeadlineClass =
   "text-balance text-[3rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem] lg:text-[5rem]";
 
@@ -88,13 +83,8 @@ export function HeroSection() {
           </p>
         </div>
 
-        <div className="hero-fade-in hero-delay-3 relative z-[60] mt-8 flex flex-col items-center gap-3">
-          <Link href={APP_AUTH_URL} className={solidButtonClassName}>
-            Plan your next release
-          </Link>
-          <p className="font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-            FREE FOR 28 DAYS · NO CARD REQUIRED
-          </p>
+        <div className="hero-fade-in hero-delay-3 relative z-[60] mt-8 flex w-full flex-col items-center gap-3">
+          <WaitlistForm source="homepage_hero" />
         </div>
       </div>
 
@@ -347,13 +337,8 @@ export function FinalCTASection() {
             Releases shouldn&apos;t be hard to run.
           </h2>
 
-          <div className="relative z-[60] mt-10 flex flex-col items-center gap-3">
-            <Link href={APP_AUTH_URL} className={solidButtonClassName}>
-              Plan your next release
-            </Link>
-            <p className="font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-              FREE FOR 28 DAYS · NO CARD REQUIRED
-            </p>
+          <div className="relative z-[60] mt-10 flex w-full flex-col items-center gap-3">
+            <WaitlistForm source="homepage_final_cta" />
           </div>
         </div>
       </SectionShell>

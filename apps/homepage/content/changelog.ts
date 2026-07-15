@@ -15,6 +15,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.14.0",
+    date: "July 15, 2026",
+    highlights: [
+      "Joining Urganize now starts with a waitlist — tap Join now on the homepage, leave your details, and we'll reach out. Existing teams still log in as usual.",
+    ],
+  },
+  {
     version: "0.13.1",
     date: "July 15, 2026",
     highlights: [
