@@ -18,7 +18,7 @@ export const changelog: Release[] = [
     version: "0.14.0",
     date: "July 15, 2026",
     highlights: [
-      "Joining Urganize now starts with a waitlist — tap Join now on the homepage, leave your details, and we'll reach out. Existing teams still log in as usual.",
+      "Joining Urganize now starts with a waitlist — tap Join now anywhere on the site, leave your details, and we'll reach out. Existing teams still log in as usual.",
       "Chappi now floats with you: an Ask Chappi button at the bottom-right of every page opens a chat panel that follows you around the app — same conversation as the full Chappi page, expandable any time, with a direct line to the founder in its footer. (Rolling out with Chappi.)",
     ],
   },
