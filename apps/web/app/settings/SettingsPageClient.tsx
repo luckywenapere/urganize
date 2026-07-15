@@ -897,8 +897,11 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* id + scroll-mt on the section: deep-link target for Chappi's
+            invite banner (/settings#teammates); scroll-mt clears the sticky
+            topbar. */}
         {isManagerAccount && (
-        <section className={`${panelClass} mt-6`}>
+        <section id="teammates" className={`${panelClass} mt-6 scroll-mt-24`}>
           <h2 className="mb-4 text-xl">Teammates</h2>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
             <input

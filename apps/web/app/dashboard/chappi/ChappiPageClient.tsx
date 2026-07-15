@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { ChappiConversation } from '@/components/chappi/ChappiConversation';
+import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { ChappiPageSkeleton } from '@/components/loading/ChappiPageSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { FirstReleaseWin } from '@/components/workspace/FirstReleaseWin';
@@ -49,7 +50,20 @@ export default function ChappiPageClient() {
 
   return (
     <>
-      <ChappiConversation onNewRelease={() => setIsCreateModalOpen(true)} />
+      <InviteTeamBanner />
+
+      {/* The conversation's empty state centers itself with justify-center,
+          which needs a DEFINITE height to center within — AppShell's <main>
+          is flex-1 under a min-h-screen column, so a child h-full resolves
+          to content height and the block hugged the topbar. This wrapper
+          pins the height to the viewport minus the chrome around it
+          (topbar min-h-16 = 4rem, main pt-5 = 1.25rem, main pb-28 = 7rem
+          mobile / md:pb-10 = 2.5rem), giving the PostHog-style vertical
+          centering. Floor keeps short viewports usable; the active
+          conversation scrolls inside the same box. */}
+      <div className="h-[calc(100dvh-12.25rem)] min-h-[24rem] md:h-[calc(100dvh-7.75rem)]">
+        <ChappiConversation onNewRelease={() => setIsCreateModalOpen(true)} />
+      </div>
 
       <CreateReleaseModal
         open={isCreateModalOpen}
