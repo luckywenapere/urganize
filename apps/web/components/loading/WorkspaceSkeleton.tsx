@@ -3,10 +3,6 @@
 import { useSearchParams } from 'next/navigation';
 import { SkeletonBlock } from './SkeletonBlock';
 
-// Same flag WorkspaceView reads for the Chappi front door — kept in sync so
-// the skeleton reserves its frame exactly when the real hero will render.
-const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
-
 // Same URL param useReleaseScope reads (`?release=`). Knowing this at
 // skeleton-render time (before release data has loaded) lets the skeleton
 // reserve the FOCUSED 3-column shape instead of always assuming the at-rest
@@ -23,7 +19,6 @@ const SCOPE_PARAM = 'release';
  * pass with no remount).
  *
  * Mirrors the CURRENT workspace shape, not a generic placeholder:
- *  - the Chappi hero frame, when the flag is on (`ChappiHero`)
  *  - the at-rest release grid: mobile 2-up (`ReleasesColumn`), desktop 3-up
  *    at lg / 4-up at xl (`WorkspaceDesktopGrid`), each card slot shaped like
  *    `WorkspaceReleaseCard`'s tile variant (square art + meta block)
@@ -45,8 +40,6 @@ export function WorkspaceSkeleton() {
   return (
     <main className="min-h-screen bg-bg-base text-content-primary" aria-hidden="true">
       <div className="pb-24 pt-6 sm:px-6">
-        {CHAPPI_ENABLED ? <ChappiHeroSkeleton /> : null}
-
         <section className="lg:hidden">
           {isFocused ? <MobileFocusedSkeleton /> : <ReleaseGridSkeleton count={4} columns="sm:grid-cols-2" />}
         </section>
@@ -60,23 +53,6 @@ export function WorkspaceSkeleton() {
         </section>
       </div>
     </main>
-  );
-}
-
-/** Mirrors `ChappiHero`'s outer shell: eyebrow, greeting, input bar, chips. */
-function ChappiHeroSkeleton() {
-  return (
-    <div className="mb-8 border border-stroke-default bg-bg-surface/60 p-5 sm:p-6">
-      <SkeletonBlock className="h-2.5 w-14" />
-      <SkeletonBlock className="mt-3 h-7 w-56 sm:h-8 sm:w-72" />
-      <SkeletonBlock className="mt-2 h-3.5 w-64" />
-      <div className="mt-4 h-11 border border-stroke-default bg-bg-base" />
-      <div className="mt-3 flex flex-wrap gap-2">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <SkeletonBlock key={`chappi-chip-${index}`} className="h-7 w-28" />
-        ))}
-      </div>
-    </div>
   );
 }
 

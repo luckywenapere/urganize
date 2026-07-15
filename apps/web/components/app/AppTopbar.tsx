@@ -2,10 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { MessageCircle, Plus } from 'lucide-react';
 import { Logo } from '@urganize/ui';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
+
+// Same flag ChappiPageClient reads. Inlined at build time (NEXT_PUBLIC_
+// prefix) so the icon only appears once Chappi's own dedicated page is
+// reachable.
+const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 type AppTopbarProps = {
   /** Opens the release creation modal. Lifted to AppShell so this universal
@@ -28,6 +33,7 @@ type AppTopbarProps = {
 // reaches this code).
 const routeTitles = [
   { match: (pathname: string) => pathname === '/dashboard', title: '', eyebrow: '' },
+  { match: (pathname: string) => pathname === '/dashboard/chappi', title: 'Chappi', eyebrow: 'Assistant' },
   { match: (pathname: string) => pathname.startsWith('/dashboard/releases'), title: 'Release', eyebrow: 'Release detail' },
   { match: (pathname: string) => pathname.startsWith('/settings'), title: 'Settings', eyebrow: 'Account' },
 ];
@@ -80,6 +86,25 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           <Plus className="h-4 w-4" />
           <span>New release</span>
         </button>
+
+        {/* Chappi's dedicated page — a separate surface from the
+            releases/tasks workspace so a long conversation never pushes the
+            workspace down the page. Active state (brand border) when already
+            on that route. Sits left of NotificationsBell, same slot pattern. */}
+        {CHAPPI_ENABLED ? (
+          <Link
+            href="/dashboard/chappi"
+            aria-label="Chappi"
+            title="Chappi"
+            className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center border transition-colors ${
+              pathname === '/dashboard/chappi'
+                ? 'border-brand bg-brand/10 text-brand'
+                : 'border-stroke-default bg-bg-elevated text-content-primary hover:bg-bg-hover'
+            }`}
+          >
+            <MessageCircle className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        ) : null}
 
         {/* Phase 1 notifications surface — gated internally on
             NEXT_PUBLIC_FEATURE_WORKSPACE so prod can keep the topbar exactly
