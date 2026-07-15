@@ -12,6 +12,7 @@ import {
   Target,
   type LucideIcon,
 } from 'lucide-react';
+import { ChappiBetaBadge } from '@/components/chappi/ChappiBetaBadge';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -293,7 +294,10 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         {/* The dock's own header already says "Chappi"; the page shows the
             eyebrow itself. */}
         {isPanel ? null : (
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">Chappi</p>
+          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
+            Chappi
+            <ChappiBetaBadge />
+          </p>
         )}
         <h1
           className={`font-display font-semibold tracking-tight text-content-primary ${
@@ -336,7 +340,10 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       {isPanel ? null : (
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stroke-subtle pb-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">Chappi</p>
+            <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
+              Chappi
+              <ChappiBetaBadge />
+            </p>
             <h1 className="mt-1 truncate font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
               {greeting}
             </h1>

@@ -7,23 +7,38 @@ import { SkeletonBlock } from './SkeletonBlock';
  * auth/the command-center fetch are in flight (same inline-swap rationale
  * as `WorkspaceSkeleton` — no route-segment `loading.tsx` file).
  *
- * Reserves the header (eyebrow + greeting) and the input bar; the middle
- * region (empty-state cards or transcript) is a single dim block since its
- * eventual shape depends on whether a conversation already exists.
+ * Mirrors the CURRENT Chappi home: the PostHog-style vertically centered
+ * empty state (eyebrow → greeting → subline → input bar → quick-action
+ * chips) inside the SAME definite-height wrapper ChappiPageClient uses, so
+ * the resolved page lands exactly where the skeleton stood. The
+ * conversation store is ephemeral (a reload always starts empty), so the
+ * empty state is effectively the only shape a fresh load resolves to.
+ *
+ * Deliberately NOT reserved: the invite-teammates banner — it's
+ * manager-gated and dismissal-persisted, so the skeleton can't know whether
+ * it will render; a banner popping in beats one vanishing.
  */
 export function ChappiPageSkeleton() {
   return (
-    <div className="flex h-full min-h-0 flex-col" aria-hidden="true">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stroke-subtle pb-4">
-        <div>
-          <SkeletonBlock className="h-2.5 w-14" />
-          <SkeletonBlock className="mt-2 h-6 w-48" />
+    <div
+      className="h-[calc(100dvh-12.25rem)] min-h-[24rem] md:h-[calc(100dvh-7.75rem)]"
+      aria-hidden="true"
+    >
+      <div className="flex h-full min-h-0 flex-col items-center justify-center px-2">
+        <SkeletonBlock className="h-2.5 w-14" />
+        <SkeletonBlock className="mt-4 h-8 w-64 sm:w-80" />
+        <SkeletonBlock className="mt-3 h-3.5 w-72" />
+
+        {/* Input bar — same width cap as the real form (max-w-2xl). */}
+        <div className="mt-6 h-11 w-full max-w-2xl border border-stroke-default bg-bg-surface" />
+
+        {/* Quick-action chips row. */}
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <SkeletonBlock key={`chappi-chip-${index}`} className="h-7 w-24" />
+          ))}
         </div>
       </div>
-
-      <div className="mt-4 min-h-0 flex-1 border border-stroke-default bg-bg-surface" />
-
-      <div className="mt-4 h-11 shrink-0 border border-stroke-default bg-bg-surface" />
     </div>
   );
 }
