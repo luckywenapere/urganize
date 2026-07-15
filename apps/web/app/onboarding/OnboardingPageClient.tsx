@@ -32,7 +32,7 @@
 //   4. PATCH /api/user/onboarding { onboardingCompleted: true } — so the
 //      FirstTimeOnboardingGate modal does not open on /dashboard.
 //   5a. Workspace flag ON  → advance to step 6 (invite).
-//   5b. Workspace flag OFF → router.replace('/dashboard').
+//   5b. Workspace flag OFF → router.replace(HOME_PATH).
 //
 // Invite step: each row { email, role } maps to one POST to
 // /api/workspace/members/invite (the same endpoint Settings → Teammates uses).
@@ -43,6 +43,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
+import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
 import {
@@ -333,7 +334,7 @@ export default function OnboardingPage() {
       !accountCreated &&
       !resumeData
     ) {
-      router.replace('/dashboard');
+      router.replace(HOME_PATH);
     }
   }, [isAuthenticated, isAuthLoading, isSubmitting, accountCreated, resumeData, router]);
 
@@ -421,7 +422,7 @@ export default function OnboardingPage() {
     }
     await checkAuth();
     clearOnboardingDraft();
-    router.replace('/dashboard');
+    router.replace(HOME_PATH);
   };
 
   // Trial → release → onboarding-complete chain. Runs the same SQL writes

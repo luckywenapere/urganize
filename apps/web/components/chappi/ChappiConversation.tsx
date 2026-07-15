@@ -42,8 +42,8 @@ const CHIP_ICONS: Record<ChappiChipIntent, LucideIcon> = {
   generate_status: FileText,
 };
 
-// One-line description shown under each empty-state card — the "clicks"
-// this page exists to preserve, framed the way Codex's landing cards are.
+// Hover tooltip (title attr) for each quick-action button — the "clicks"
+// this page exists to preserve, kept compact per the PostHog-style landing.
 const CHIP_DESCRIPTIONS: Record<ChappiChipIntent, string> = {
   new_release: 'Start a new release with a rollout plan',
   add_task: 'Create a task for one of your releases',
@@ -65,17 +65,26 @@ async function getAccessToken(): Promise<string> {
   return session?.access_token || '';
 }
 
+// Module-scope id generator: keeps impure Date.now() out of component scope
+// (react-hooks/purity), and the counter guarantees uniqueness even when two
+// turns land in the same millisecond (e.g. a chip's user+assistant pair).
+let messageSeq = 0;
+function nextMessageId(role: 'u' | 'a'): string {
+  messageSeq += 1;
+  return `${Date.now()}-${messageSeq}-${role}`;
+}
+
 /**
  * Chappi's full conversation surface — lives on its own page
  * (`/dashboard/chappi`), separate from the release/task workspace, so a long
  * conversation never pushes releases/tasks down the page.
  *
  * Two states, switched on `messages.length`:
- *  - Empty: greeting + the 4 quick-action cards (the "clicks" — New release,
- *    Add task, Today's focus, Generate status), matching the reference
- *    Codex-style landing screen.
+ *  - Empty: PostHog-home-style landing — centered greeting, the input
+ *    mid-screen, and the 4 quick-action buttons (the "clicks" — New release,
+ *    Add task, Today's focus, Generate status) directly BELOW the box.
  *  - Active: a scrolling transcript of every turn, chip-triggered or typed,
- *    with the input pinned below.
+ *    with the input pinned at the bottom.
  *
  * Chips run deterministic app actions instantly (no round-trip) and are
  * recorded as a turn either way. Free-text goes to the agent backend
@@ -108,7 +117,7 @@ export function ChappiConversation({ onNewRelease }: ChappiConversationProps) {
   // user side (a chip's label, or the typed prompt) — keeps each turn
   // recorded exactly once regardless of which path produced it.
   const appendAssistantReply = (replyText: string, replyMeta?: ChappiReply) => {
-    appendMessage({ id: `${Date.now()}-a`, role: 'assistant', content: replyText });
+    appendMessage({ id: nextMessageId('a'), role: 'assistant', content: replyText });
     setReply(replyMeta ?? { text: replyText });
   };
 
@@ -162,7 +171,7 @@ export function ChappiConversation({ onNewRelease }: ChappiConversationProps) {
   };
 
   const handleChipClick = (chip: ChappiChip) => {
-    appendMessage({ id: `${Date.now()}-u`, role: 'user', content: chip.label });
+    appendMessage({ id: nextMessageId('u'), role: 'user', content: chip.label });
     handleIntent({ kind: chip.intent });
   };
 
@@ -218,7 +227,7 @@ export function ChappiConversation({ onNewRelease }: ChappiConversationProps) {
   // round-trip), then sends the FULL prior history + this turn to the agent
   // — /api/chappi already accepts and expects multi-turn `messages`.
   const sendUserTurn = (text: string) => {
-    const userMessage: ChappiMessage = { id: `${Date.now()}-u`, role: 'user', content: text };
+    const userMessage: ChappiMessage = { id: nextMessageId('u'), role: 'user', content: text };
     const historyForApi = [...messages, userMessage];
     appendMessage(userMessage);
     void submitPrompt(text, historyForApi);
@@ -232,6 +241,72 @@ export function ChappiConversation({ onNewRelease }: ChappiConversationProps) {
     sendUserTurn(trimmed);
   };
 
+  // One input, two positions: centered mid-screen on the empty landing
+  // (PostHog-home style), pinned at the bottom once a conversation exists.
+  const inputForm = (
+    <form onSubmit={handleSubmit} className="w-full">
+      <div className="flex items-center gap-2 border border-stroke-default bg-bg-surface px-3 py-2 transition-colors focus-within:border-brand">
+        <input
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          placeholder="Ask Chappi or type a command…"
+          aria-label="Message Chappi"
+          disabled={isThinking}
+          className="min-w-0 flex-1 bg-transparent text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none disabled:opacity-60"
+        />
+        <button
+          type="submit"
+          aria-label="Send"
+          disabled={!input.trim() || isThinking}
+          className="motion-press grid h-8 w-8 shrink-0 place-items-center bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
+        >
+          {isThinking ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <ArrowUp className="h-4 w-4" aria-hidden="true" />
+          )}
+        </button>
+      </div>
+    </form>
+  );
+
+  // Empty landing: centered greeting → input → quick actions BELOW the box
+  // (compact icon+label buttons, screenshot-style). No header row, no
+  // bottom-pinned input — the whole surface is one centered column.
+  if (!hasMessages) {
+    return (
+      <div className="flex h-full min-h-0 flex-col items-center justify-center px-2 text-center">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">Chappi</p>
+        <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight text-content-primary sm:text-4xl">
+          {greeting}
+        </h1>
+        <p className="mt-2 text-sm text-content-secondary">
+          Ask a question or run a command — I&apos;ll take it from here.
+        </p>
+
+        <div className="mt-6 w-full max-w-2xl">{inputForm}</div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          {CHAPPI_CHIPS.map((chip) => {
+            const Icon = CHIP_ICONS[chip.intent];
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => handleChipClick(chip)}
+                title={CHIP_DESCRIPTIONS[chip.intent]}
+                className="motion-focus motion-press inline-flex items-center gap-1.5 border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
+              >
+                <Icon className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stroke-subtle pb-4">
@@ -241,92 +316,27 @@ export function ChappiConversation({ onNewRelease }: ChappiConversationProps) {
             {greeting}
           </h1>
         </div>
-        {hasMessages ? (
-          <button
-            type="button"
-            onClick={reset}
-            className="motion-focus motion-press inline-flex shrink-0 items-center gap-1.5 border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
-          >
-            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-            New conversation
-          </button>
-        ) : null}
+        <button
+          type="button"
+          onClick={reset}
+          className="motion-focus motion-press inline-flex shrink-0 items-center gap-1.5 border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
+        >
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+          New conversation
+        </button>
       </div>
 
       <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
-        {hasMessages ? (
-          <Transcript
-            messages={messages}
-            isThinking={isThinking}
-            suggestions={reply?.suggestions}
-            onSuggestion={sendUserTurn}
-            bottomRef={bottomRef}
-          />
-        ) : (
-          <EmptyState onChipClick={handleChipClick} />
-        )}
+        <Transcript
+          messages={messages}
+          isThinking={isThinking}
+          suggestions={reply?.suggestions}
+          onSuggestion={sendUserTurn}
+          bottomRef={bottomRef}
+        />
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-4 shrink-0">
-        <div className="flex items-center gap-2 border border-stroke-default bg-bg-surface px-3 py-2 transition-colors focus-within:border-brand">
-          <input
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="Ask Chappi or type a command…"
-            aria-label="Message Chappi"
-            disabled={isThinking}
-            className="min-w-0 flex-1 bg-transparent text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none disabled:opacity-60"
-          />
-          <button
-            type="submit"
-            aria-label="Send"
-            disabled={!input.trim() || isThinking}
-            className="motion-press grid h-8 w-8 shrink-0 place-items-center bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
-          >
-            {isThinking ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <ArrowUp className="h-4 w-4" aria-hidden="true" />
-            )}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-/** Landing content shown before the first turn — the quick-action cards. */
-function EmptyState({ onChipClick }: { onChipClick: (chip: ChappiChip) => void }) {
-  return (
-    <div className="flex h-full flex-col justify-center">
-      <p className="mb-4 text-sm text-content-secondary">
-        Ask a question or run a command — I&apos;ll take it from here.
-      </p>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {CHAPPI_CHIPS.map((chip) => {
-          const Icon = CHIP_ICONS[chip.intent];
-          return (
-            <button
-              key={chip.id}
-              type="button"
-              onClick={() => onChipClick(chip)}
-              className="motion-focus motion-press flex items-start gap-3 border border-stroke-default bg-bg-surface p-4 text-left transition-colors hover:border-stroke-strong hover:bg-bg-hover"
-            >
-              <span className="grid h-9 w-9 shrink-0 place-items-center border border-stroke-default bg-bg-base text-brand">
-                <Icon className="h-4 w-4" aria-hidden="true" />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold text-content-primary">
-                  {chip.label}
-                </span>
-                <span className="mt-0.5 block text-xs text-content-secondary">
-                  {CHIP_DESCRIPTIONS[chip.intent]}
-                </span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <div className="mt-4 shrink-0">{inputForm}</div>
     </div>
   );
 }

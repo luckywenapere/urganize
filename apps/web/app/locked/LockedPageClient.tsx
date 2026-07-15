@@ -13,6 +13,7 @@ import {
 } from '@urganize/pricing';
 import { Lock, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
+import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { type AccountStatus } from '@/lib/subscription-access';
 import { errorMessage } from '@/lib/errors';
@@ -71,7 +72,7 @@ export default function LockedPage() {
   useEffect(() => {
     if (isAuthenticated && isAllowlistedEmail(user?.email)) {
       console.log(`[paywall-allowlist] locked-page bypass: ${user?.email}`);
-      router.replace('/dashboard');
+      router.replace(HOME_PATH);
     }
   }, [isAuthenticated, user?.email, router]);
 
@@ -122,7 +123,7 @@ export default function LockedPage() {
   // credited them in the background), bounce them back to the app.
   useEffect(() => {
     if (snapshot?.hasAccess) {
-      router.replace('/dashboard');
+      router.replace(HOME_PATH);
     }
   }, [snapshot?.hasAccess, router]);
 
@@ -145,7 +146,7 @@ export default function LockedPage() {
       }
 
       await checkAuth();
-      router.replace('/dashboard');
+      router.replace(HOME_PATH);
     } catch (error) {
       setTrialError(errorMessage(error, 'Could not start trial.'));
       setIsStartingTrial(false);
