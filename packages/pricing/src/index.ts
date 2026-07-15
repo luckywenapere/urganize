@@ -52,20 +52,26 @@ export type BillingPlanDefinition = {
 // both the paywall display and the marketing pricing page move together —
 // no drift.
 //
-// Pricing rationale (per product brief; repriced 2026-07-14):
-//   - Monthly NGN: ₦17,000 (raised from ₦15,000).
-//   - Annual NGN: ₦170,000 (raised from ₦150,000; still exactly 2 months
-//     free vs ₦204,000 paid monthly — the ratio held through the reprice).
-//   - Label NGN: ₦800,000/yr (raised from ₦750,000; replaced the
-//     contact-sales "Custom" tier 2026-06-11 — high-touch roster tier with
-//     hands-on onboarding and template tailoring delivered by the founders.
-//     No longer a clean multiple of annual post-reprice — was exactly 5×,
-//     now ~4.7×).
-//   - Monthly USD: $26 (raised from $25; diaspora rate, not a strict FX
-//     conversion).
-//   - Annual USD: $260 (raised from $250; still exactly 2 months free vs
-//     $312 paid monthly).
-//   - Label USD: $1,250 (held flat in this reprice pass).
+// Pricing rationale (per product brief; repriced 2026-07-15, URG billing
+// audit — supersedes the 2026-07-14 note below):
+//   - Monthly NGN: ₦150,000 (raised from ₦15,000 — a full retier, not an
+//     incremental bump. The prior 2026-07-14 pass to ₦17,000 only ever
+//     updated this display constant; the live Paystack Plan objects behind
+//     PAYSTACK_PLAN_MONTHLY_* were never recreated, so every renewal since
+//     has actually kept billing ₦15,000/$25. This reprice closes that gap
+//     in the same motion — new Plan objects at the new price, old ones left
+//     untouched so any real existing subscriber keeps renewing at their
+//     original rate (see apps/web/lib/billing-plans.ts).
+//   - Annual NGN: ₦1,500,000 (10× monthly — the exact ratio the old
+//     ₦150,000/yr annual tier had vs its ₦15,000/mo monthly base, i.e.
+//     "2 months free," applied literally to the new monthly figure).
+//     Known, accepted state: this now exceeds Label (₦800,000/yr) in
+//     Naira — Label is intentionally untouched by this pass, so the
+//     Monthly→Annual→Label ladder is inverted in NGN until Label is
+//     repriced separately. Fine in USD (Annual $1,000 < Label $1,250).
+//   - Monthly USD: $100 (raised from $25, same full-retier rationale).
+//   - Annual USD: $1,000 (10× monthly, same ratio as NGN).
+//   - Label: untouched this pass — ₦800,000 / $1,250/yr, unchanged.
 //
 // Minor units (kobo / cents) are pre-computed here so callers never
 // multiply by 100 at the call site — that's where unit-mismatch bugs hide.
@@ -76,8 +82,8 @@ export const BILLING_PLANS: Record<BillingPlanId, BillingPlanDefinition> = {
     description: 'Billed every month. Cancel anytime from settings.',
     interval: 'monthly',
     prices: {
-      NGN: { currency: 'NGN', amount: 17_000, minorUnit: 17_000_00 },
-      USD: { currency: 'USD', amount: 26, minorUnit: 26_00 },
+      NGN: { currency: 'NGN', amount: 150_000, minorUnit: 150_000_00 },
+      USD: { currency: 'USD', amount: 100, minorUnit: 100_00 },
     },
   },
   annual: {
@@ -86,8 +92,8 @@ export const BILLING_PLANS: Record<BillingPlanId, BillingPlanDefinition> = {
     description: 'Billed once a year. ~2 months free vs monthly.',
     interval: 'annually',
     prices: {
-      NGN: { currency: 'NGN', amount: 170_000, minorUnit: 170_000_00 },
-      USD: { currency: 'USD', amount: 260, minorUnit: 260_00 },
+      NGN: { currency: 'NGN', amount: 1_500_000, minorUnit: 1_500_000_00 },
+      USD: { currency: 'USD', amount: 1_000, minorUnit: 1_000_00 },
     },
   },
   label: {

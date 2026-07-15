@@ -95,7 +95,7 @@ const FAQ_ITEMS = [
   {
     question: "What's actually different between monthly and annual?",
     answer:
-      "The same workspace, same features. Annual is one invoice instead of twelve, and works out cheaper. That's the whole difference.",
+      "The same workspace, same features. Annual is one invoice instead of twelve — the plan for teams already committed to their release calendar for the year.",
   },
   {
     question: "Do I pay per teammate?",
@@ -127,8 +127,8 @@ const faqSchema = {
   })),
 } as const;
 
-const MONTHLY_SUMMARY = "Billed every month. Easiest way to start.";
-const ANNUAL_SUMMARY = "Billed once a year. About two months free vs monthly.";
+const MONTHLY_SUMMARY = "Billed every month. Full access, no long-term commitment.";
+const ANNUAL_SUMMARY = "Billed once a year. Built for teams running a full release calendar.";
 const LABEL_SUMMARY =
   "For labels and management companies running a roster. One invoice, the founders on call.";
 

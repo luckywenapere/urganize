@@ -307,7 +307,8 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           {greeting}
         </h1>
         <p className="mt-2 text-sm text-content-secondary">
-          Ask a question or run a command, and I&apos;ll take it from here.
+          You&apos;ve been holding every release together from memory. You
+          don&apos;t have to anymore.
         </p>
 
         <div className={`w-full max-w-2xl ${isPanel ? 'mt-4' : 'mt-6'}`}>{inputForm}</div>
