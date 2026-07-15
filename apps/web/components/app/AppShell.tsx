@@ -25,6 +25,10 @@ const SupportChat = dynamic(
   () => import('@/components/support/SupportChat').then((m) => m.SupportChat),
   { ssr: false }
 );
+const ChappiDock = dynamic(
+  () => import('@/components/chappi/ChappiDock').then((m) => m.ChappiDock),
+  { ssr: false }
+);
 const CreateReleaseModal = dynamic(
   () => import('@/components/releases/CreateReleaseModal').then((m) => m.CreateReleaseModal),
   { ssr: false }
@@ -38,6 +42,11 @@ const FirstTimeOnboardingGate = dynamic(
 );
 
 const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === 'true';
+
+// When Chappi is on, the floating dock takes the bottom-right corner and the
+// WhatsApp founder line moves into its footer; with the flag off, the
+// standalone SupportChat pill renders exactly as before.
+const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -136,7 +145,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="app-layout lazy-fade lazy-fade-in">{children}</div>
       )}
       {showHelpMenu ? <HelpMenu /> : null}
-      {showHelpMenu ? <SupportChat /> : null}
+      {showHelpMenu ? (
+        CHAPPI_ENABLED ? <ChappiDock onNewRelease={openCreateRelease} /> : <SupportChat />
+      ) : null}
       <CreateReleaseModal
         open={isCreateReleaseOpen}
         onClose={closeCreateRelease}

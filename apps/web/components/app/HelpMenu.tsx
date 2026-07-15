@@ -8,6 +8,10 @@ type ShortcutDefinition = {
   description: string;
 };
 
+// Same flag ChappiDock/AppShell read — the Ctrl/Cmd+J toggle only exists
+// when the dock does.
+const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
 const shortcutDefinitions: ShortcutDefinition[] = [
   {
     keys: ['?'],
@@ -21,6 +25,14 @@ const shortcutDefinitions: ShortcutDefinition[] = [
     keys: ['Ctrl', 'K'],
     description: 'Search releases from the dashboard on Windows',
   },
+  ...(CHAPPI_ENABLED
+    ? [
+        {
+          keys: ['Cmd/Ctrl', 'J'],
+          description: 'Open or close the Chappi assistant',
+        },
+      ]
+    : []),
   {
     keys: ['Esc'],
     description: 'Close open menus and dialogs',
