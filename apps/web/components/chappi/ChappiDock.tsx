@@ -93,13 +93,18 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
       <button
         type="button"
         onClick={() => setOpenPersisted(true)}
-        aria-label="Ask Chappi"
+        aria-label="Ask Chappi (beta)"
         className="group fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-none border border-stroke-default bg-bg-elevated py-2.5 pl-3.5 pr-4 shadow-2xl transition-all duration-150 hover:border-stroke-strong hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:bottom-6 md:right-6"
       >
         <MessageCircle className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-        <span className="font-mono text-[10px] uppercase tracking-widest text-content-tertiary group-hover:text-content-primary">
-          Ask Chappi
-        </span>
+        <div className="flex flex-col gap-1">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-content-tertiary group-hover:text-content-primary">
+            Ask Chappi
+          </span>
+          <span className="font-mono text-[7px] uppercase tracking-widest text-content-secondary">
+            Beta
+          </span>
+        </div>
       </button>
     );
   }
