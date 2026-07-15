@@ -166,10 +166,10 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
         href={WHATSAPP_URL}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Chat with the founder on WhatsApp — report a bug or contact support"
+        aria-label="Chat with the founder — report a bug or contact support"
         className="flex shrink-0 items-center justify-center gap-1.5 border-t border-stroke-subtle px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
       >
-        Chat with the founder on WhatsApp
+        Chat with the founder
       </a>
     </div>
   );

@@ -33,7 +33,7 @@ type AppTopbarProps = {
 // reaches this code).
 const routeTitles = [
   { match: (pathname: string) => pathname === '/dashboard', title: '', eyebrow: '' },
-  { match: (pathname: string) => pathname === '/dashboard/chappi', title: 'Chappi', eyebrow: 'Assistant' },
+  { match: (pathname: string) => pathname === '/dashboard/chappi', title: '', eyebrow: '' },
   { match: (pathname: string) => pathname.startsWith('/dashboard/releases'), title: 'Release', eyebrow: 'Release detail' },
   { match: (pathname: string) => pathname.startsWith('/settings'), title: 'Settings', eyebrow: 'Account' },
 ];
