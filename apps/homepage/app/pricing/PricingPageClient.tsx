@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { RiCheckLine } from "react-icons/ri";
+import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import {
@@ -25,11 +26,11 @@ import {
 // marketing-side framing, not a billing concern. Editing the copy here
 // does not change what a customer is charged.
 
-// In-app subscribe entry. Hitting this URL signed-out drops the user into
-// the auth flow with `next=/locked`; signed-in users land directly on the
-// plan picker. Use the canonical /locked path — that's the surface the app
-// already exposes.
-const APP_SUBSCRIBE_URL = "https://app.urganize.app/locked";
+// Tier CTAs anchor to the on-page waitlist form (#waitlist) — the whole
+// public funnel is waitlist-gated (URG-125/URG-136); only the header's
+// Login / Start free links still go straight to the app. The old in-app
+// subscribe entry was https://app.urganize.app/locked — restore that href
+// here if the funnel ever reopens to direct signup.
 
 // Per-tier marketing copy. Keep the rhythm short and declarative.
 //
@@ -38,8 +39,9 @@ const APP_SUBSCRIBE_URL = "https://app.urganize.app/locked";
 // pricing itself, we don't advertise what isn't built.
 //
 // The 28-day trial line was removed from this list because it's plan-
-// agnostic (the trial applies to both Monthly and Annual). It lives in
-// the hero subhead instead, where it covers both paths at once.
+// agnostic (the trial applies to both Monthly and Annual). With the funnel
+// waitlist-gated it no longer appears in the hero either — the trial is
+// only mentioned in the FAQ, as the answer to the question, not as a CTA.
 //
 // Refreshed 2026-07-14 (alongside the pricing reprice) with two bullets for
 // capability that shipped since this list was last written: light/dark mode
@@ -166,8 +168,8 @@ export function PricingPageClient({
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden bg-[var(--marketing-bg)] font-sans text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)]">
       {/* Shared marketing header — one nav across all marketing pages.
-          Card CTAs still hit the real app (this page is for visitors ready
-          to subscribe today). */}
+          Card CTAs anchor to the on-page waitlist form; the header keeps
+          the only direct path into the app. */}
       <MarketingHeader />
 
       <main className="relative z-10">
@@ -200,8 +202,8 @@ export function PricingPageClient({
               transition={{ delay: 0.4 }}
               className="mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl"
             >
-              One workspace, every release your team runs. Start with 28 days free, no card
-              required.
+              One workspace, every release your team runs. Join the waitlist and
+              we&apos;ll reach out.
             </motion.p>
 
             {/* Currency toggle. Default is geo-resolved (NGN in Nigeria,
@@ -252,7 +254,7 @@ export function PricingPageClient({
               price={formatPlanCyclePrice("monthly", currency)}
               summary={MONTHLY_SUMMARY}
               features={MONTHLY_FEATURES}
-              cta={{ label: "Start monthly", href: APP_SUBSCRIBE_URL }}
+              cta={{ label: "Join now", href: "#waitlist" }}
             />
             <PricingTierCard
               name="Annual"
@@ -260,7 +262,7 @@ export function PricingPageClient({
               priceSubline={monthlyEquivalent("annual", currency)}
               summary={ANNUAL_SUMMARY}
               features={ANNUAL_FEATURES}
-              cta={{ label: "Start annual", href: APP_SUBSCRIBE_URL }}
+              cta={{ label: "Join now", href: "#waitlist" }}
               highlight
               badge="Best value"
             />
@@ -270,7 +272,7 @@ export function PricingPageClient({
               priceSubline={monthlyEquivalent("label", currency)}
               summary={LABEL_SUMMARY}
               features={LABEL_FEATURES}
-              cta={{ label: "Start label", href: APP_SUBSCRIBE_URL }}
+              cta={{ label: "Join now", href: "#waitlist" }}
             />
           </div>
 
@@ -301,6 +303,22 @@ export function PricingPageClient({
               {FAQ_ITEMS.map((item) => (
                 <FaqRow key={item.question} question={item.question} answer={item.answer} />
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* WAITLIST — the target of every tier card's "Join now" anchor.
+            scroll-mt keeps the heading clear of the fixed header on jump. */}
+        <section id="waitlist" className="relative scroll-mt-28 px-6 pb-28">
+          <div className="mx-auto max-w-3xl text-center">
+            <motion.h2
+              {...fadeInUp}
+              className="text-3xl font-black tracking-tight md:text-4xl"
+            >
+              Ready when you are.
+            </motion.h2>
+            <div className="mt-8">
+              <WaitlistForm source="pricing" />
             </div>
           </div>
         </section>

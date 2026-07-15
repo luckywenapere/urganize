@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
+import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
-
-const APP_AUTH_URL = "https://app.urganize.app/auth";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Features",
@@ -265,16 +263,8 @@ export default function FeaturesPage() {
               <h2 className={headlineClass}>
                 Run your next release with a system.
               </h2>
-              <div className="mt-10 flex flex-col items-center gap-3">
-                <Link
-                  href={APP_AUTH_URL}
-                  className="inline-flex items-center justify-center rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] hover:bg-[var(--marketing-primary-hover)] sm:text-base"
-                >
-                  Plan your next release
-                </Link>
-                <p className="font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-                  FREE FOR 28 DAYS · NO CARD REQUIRED
-                </p>
+              <div className="mt-10 flex w-full flex-col items-center gap-3">
+                <WaitlistForm source="features_cta" />
               </div>
             </div>
           </SectionShell>
