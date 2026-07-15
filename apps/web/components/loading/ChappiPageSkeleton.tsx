@@ -25,9 +25,13 @@ export function ChappiPageSkeleton() {
       aria-hidden="true"
     >
       <div className="flex h-full min-h-0 flex-col items-center justify-center px-2">
-        <SkeletonBlock className="h-2.5 w-14" />
-        <SkeletonBlock className="mt-4 h-8 w-64 sm:w-80" />
-        <SkeletonBlock className="mt-3 h-3.5 w-72" />
+        {/* Eyebrow row: "CHAPPI" + the Beta badge pill. */}
+        <div className="flex items-center gap-2">
+          <SkeletonBlock className="h-2.5 w-14" />
+          <SkeletonBlock className="h-4 w-9" />
+        </div>
+        <SkeletonBlock className="mt-3 h-8 w-64 sm:w-80" />
+        <SkeletonBlock className="mt-2 h-3.5 w-72" />
 
         {/* Input bar — same width cap as the real form (max-w-2xl). */}
         <div className="mt-6 h-11 w-full max-w-2xl border border-stroke-default bg-bg-surface" />
