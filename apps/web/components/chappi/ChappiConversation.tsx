@@ -303,7 +303,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           {greeting}
         </h1>
         <p className="mt-2 text-sm text-content-secondary">
-          Ask a question or run a command — I&apos;ll take it from here.
+          Ask a question or run a command, and I&apos;ll take it from here.
         </p>
 
         <div className={`w-full max-w-2xl ${isPanel ? 'mt-4' : 'mt-6'}`}>{inputForm}</div>
