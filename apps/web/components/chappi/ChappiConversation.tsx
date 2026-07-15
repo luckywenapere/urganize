@@ -29,8 +29,17 @@ import type {
 } from '@/lib/chappi/types';
 
 type ChappiConversationProps = {
-  /** Opens the CreateReleaseModal owned by the Chappi page. */
+  /** Opens the CreateReleaseModal owned by the mounting surface. */
   onNewRelease: () => void;
+  /**
+   * Layout variant.
+   * - 'page' (default): the full /dashboard/chappi surface — centered
+   *   PostHog-style empty state, header row with greeting + New conversation.
+   * - 'panel': the floating ChappiDock — compact top-aligned empty state and
+   *   NO internal header (the dock's own header owns title/reset/expand/
+   *   close), sized for a ~380px column.
+   */
+  variant?: 'page' | 'panel';
 };
 
 // Icons live here, not in the client-safe intent-router lib (icons are React
@@ -92,7 +101,8 @@ function nextMessageId(role: 'u' | 'a'): string {
  * configured — or the call fails — it falls back to the local keyword
  * intent-router, so the page always does something useful.
  */
-export function ChappiConversation({ onNewRelease }: ChappiConversationProps) {
+export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiConversationProps) {
+  const isPanel = variant === 'panel';
   const router = useRouter();
   const { user } = useAuthStore();
   const todaysDirective = useReleaseStore((state) => state.todaysDirective);
@@ -275,16 +285,28 @@ export function ChappiConversation({ onNewRelease }: ChappiConversationProps) {
   // bottom-pinned input — the whole surface is one centered column.
   if (!hasMessages) {
     return (
-      <div className="flex h-full min-h-0 flex-col items-center justify-center px-2 text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">Chappi</p>
-        <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight text-content-primary sm:text-4xl">
+      <div
+        className={`flex h-full min-h-0 flex-col items-center px-2 text-center ${
+          isPanel ? 'justify-start overflow-y-auto pt-4' : 'justify-center'
+        }`}
+      >
+        {/* The dock's own header already says "Chappi"; the page shows the
+            eyebrow itself. */}
+        {isPanel ? null : (
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">Chappi</p>
+        )}
+        <h1
+          className={`font-display font-semibold tracking-tight text-content-primary ${
+            isPanel ? 'text-lg' : 'mt-3 text-3xl sm:text-4xl'
+          }`}
+        >
           {greeting}
         </h1>
         <p className="mt-2 text-sm text-content-secondary">
           Ask a question or run a command — I&apos;ll take it from here.
         </p>
 
-        <div className="mt-6 w-full max-w-2xl">{inputForm}</div>
+        <div className={`w-full max-w-2xl ${isPanel ? 'mt-4' : 'mt-6'}`}>{inputForm}</div>
 
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           {CHAPPI_CHIPS.map((chip) => {
@@ -309,24 +331,28 @@ export function ChappiConversation({ onNewRelease }: ChappiConversationProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stroke-subtle pb-4">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">Chappi</p>
-          <h1 className="mt-1 truncate font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
-            {greeting}
-          </h1>
+      {/* Panel variant skips the header — the dock's own header carries the
+          title and the reset/expand/close controls. */}
+      {isPanel ? null : (
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stroke-subtle pb-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">Chappi</p>
+            <h1 className="mt-1 truncate font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
+              {greeting}
+            </h1>
+          </div>
+          <button
+            type="button"
+            onClick={reset}
+            className="motion-focus motion-press inline-flex shrink-0 items-center gap-1.5 border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
+          >
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+            New conversation
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={reset}
-          className="motion-focus motion-press inline-flex shrink-0 items-center gap-1.5 border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
-        >
-          <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-          New conversation
-        </button>
-      </div>
+      )}
 
-      <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
+      <div className={`min-h-0 flex-1 overflow-y-auto ${isPanel ? '' : 'mt-4'}`}>
         <Transcript
           messages={messages}
           isThinking={isThinking}
