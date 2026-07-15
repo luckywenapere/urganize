@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Card, Input, Logo } from '@urganize/ui';
 import { Gift, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
+import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
 
@@ -85,7 +86,7 @@ export default function RedeemPageClient() {
       await checkAuth();
       setSuccess({ freeDays: payload.freeDays ?? 0, label: payload.label ?? null });
       // Brief success beat, then into the workspace.
-      setTimeout(() => router.replace('/dashboard'), 1400);
+      setTimeout(() => router.replace(HOME_PATH), 1400);
     } catch (err) {
       setError(errorMessage(err, 'Could not redeem this code.'));
       setIsRedeeming(false);

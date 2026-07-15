@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
+import { HOME_PATH } from '@/lib/home-path';
 import { isBillingPlanId, getPlan } from '@urganize/pricing';
 import { Loader2 } from 'lucide-react';
 import { LoadingScreen } from '@urganize/ui';
@@ -121,7 +122,7 @@ function PaymentCallbackContent() {
           <div className="mt-6 flex flex-col gap-2">
             <button
               type="button"
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push(HOME_PATH)}
               className="min-h-11 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
             >
               Open dashboard

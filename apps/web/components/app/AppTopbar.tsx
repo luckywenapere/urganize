@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageCircle, Plus } from 'lucide-react';
+import { LayoutGrid, MessageCircle, Plus } from 'lucide-react';
 import { Logo } from '@urganize/ui';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
@@ -87,23 +87,39 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           <span>New release</span>
         </button>
 
-        {/* Chappi's dedicated page — a separate surface from the
-            releases/tasks workspace so a long conversation never pushes the
-            workspace down the page. Active state (brand border) when already
-            on that route. Sits left of NotificationsBell, same slot pattern. */}
+        {/* The app's two surfaces as a topbar pair: Workspace (releases +
+            tasks) and Chappi (the conversational landing). Each highlights
+            when active via an exact pathname match. Only rendered once
+            Chappi exists as a surface — with the flag off, /dashboard is the
+            only surface and needs no switcher. Sits left of
+            NotificationsBell, same slot pattern. */}
         {CHAPPI_ENABLED ? (
-          <Link
-            href="/dashboard/chappi"
-            aria-label="Chappi"
-            title="Chappi"
-            className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center border transition-colors ${
-              pathname === '/dashboard/chappi'
-                ? 'border-brand bg-brand/10 text-brand'
-                : 'border-stroke-default bg-bg-elevated text-content-primary hover:bg-bg-hover'
-            }`}
-          >
-            <MessageCircle className="h-4 w-4" aria-hidden="true" />
-          </Link>
+          <>
+            <Link
+              href="/dashboard"
+              aria-label="Workspace"
+              title="Workspace"
+              className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center border transition-colors ${
+                pathname === '/dashboard'
+                  ? 'border-brand bg-brand/10 text-brand'
+                  : 'border-stroke-default bg-bg-elevated text-content-primary hover:bg-bg-hover'
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+            </Link>
+            <Link
+              href="/dashboard/chappi"
+              aria-label="Chappi"
+              title="Chappi"
+              className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center border transition-colors ${
+                pathname === '/dashboard/chappi'
+                  ? 'border-brand bg-brand/10 text-brand'
+                  : 'border-stroke-default bg-bg-elevated text-content-primary hover:bg-bg-hover'
+              }`}
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </>
         ) : null}
 
         {/* Phase 1 notifications surface — gated internally on

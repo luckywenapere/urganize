@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
+import { HOME_PATH } from '@/lib/home-path';
 import { Button } from '@urganize/ui';
 import { Input } from '@urganize/ui';
 import { Card } from '@urganize/ui';
@@ -41,7 +42,7 @@ export default function AuthPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, loginWithGoogle, isAuthenticated, isLoading: authLoading } = useAuthStore();
-  const nextPath = searchParams.get('next') || '/dashboard';
+  const nextPath = searchParams.get('next') || HOME_PATH;
   const inviteEmail = normalizeAuthEmail(searchParams.get('email') || '');
   // Old bookmarks / sent emails may still carry ?mode=signup. Send those
   // to /onboarding (the organic signup home) so the user has a path

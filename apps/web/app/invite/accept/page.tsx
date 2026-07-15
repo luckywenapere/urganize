@@ -33,6 +33,7 @@ import Link from 'next/link';
 import { Button, Card, Input, Logo } from '@urganize/ui';
 import { Mail, Lock, UserCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
+import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
 
@@ -205,7 +206,7 @@ export default function InviteAcceptPage() {
       const result = await acceptInvite();
       if (result.ok) {
         setSuccessMessage('Joined! Taking you to the workspace…');
-        router.replace('/dashboard');
+        router.replace(HOME_PATH);
       } else {
         setError(result.message || 'Could not accept invite.');
         setIsSubmitting(false);
@@ -230,7 +231,7 @@ export default function InviteAcceptPage() {
         throw new Error(result.message || 'Could not accept invite.');
       }
       setSuccessMessage('Joined! Taking you to the workspace…');
-      router.replace('/dashboard');
+      router.replace(HOME_PATH);
     } catch (signupError) {
       setError(errorMessage(signupError, 'Could not finish signup.'));
       setIsSubmitting(false);
@@ -261,7 +262,7 @@ export default function InviteAcceptPage() {
     const result = await acceptInvite();
     if (result.ok) {
       setSuccessMessage('Joined! Taking you to the workspace…');
-      router.replace('/dashboard');
+      router.replace(HOME_PATH);
     } else {
       setError(result.message || 'Could not accept invite.');
       setIsSubmitting(false);

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+import { HOME_PATH } from '@/lib/home-path';
 
 const ALLOWED_ROLES = new Set(['artist', 'manager', 'artist-team', 'artist-manager']);
 
@@ -31,7 +32,7 @@ export default function AuthCallbackPage() {
       try {
         const url = new URL(window.location.href);
         const next = url.searchParams.get('next');
-        const safeNext = next && next.startsWith('/') ? next : '/dashboard';
+        const safeNext = next && next.startsWith('/') ? next : HOME_PATH;
 
         // Handle PKCE/code flow if present.
         const code = url.searchParams.get('code');
@@ -119,7 +120,7 @@ export default function AuthCallbackPage() {
         }
 
         const hasExplicitNext = Boolean(next && next.startsWith('/'));
-        const destination = isFirstLogin && !hasExplicitNext ? '/dashboard' : safeNext;
+        const destination = isFirstLogin && !hasExplicitNext ? HOME_PATH : safeNext;
 
         window.clearTimeout(timeout);
         router.replace(destination);
