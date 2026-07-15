@@ -19,7 +19,7 @@ export const changelog: Release[] = [
     date: "July 15, 2026",
     highlights: [
       "Chappi now carries a Beta badge everywhere it appears, so it's clear the assistant is still finding its feet.",
-      "Chappi's welcome message now speaks to what it's really for: taking the release off your mind, not just taking commands.",
+      "Chappi's welcome message now speaks to what it's really for: taking the release off your mind, then inviting you to tell it what's going on.",
     ],
   },
   {
