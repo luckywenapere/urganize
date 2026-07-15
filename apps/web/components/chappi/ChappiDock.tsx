@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Maximize2, MessageCircle, RotateCcw, X } from 'lucide-react';
 import { useChappiStore } from '@/stores/useChappiStore';
+import { ChappiBetaBadge } from './ChappiBetaBadge';
 import { ChappiConversation } from './ChappiConversation';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 
@@ -97,14 +98,10 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
         className="group fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-none border border-stroke-default bg-bg-elevated py-2.5 pl-3.5 pr-4 shadow-2xl transition-all duration-150 hover:border-stroke-strong hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:bottom-6 md:right-6"
       >
         <MessageCircle className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-        <div className="flex flex-col gap-1">
-          <span className="font-mono text-[10px] uppercase tracking-widest text-content-tertiary group-hover:text-content-primary">
-            Ask Chappi
-          </span>
-          <span className="font-mono text-[7px] uppercase tracking-widest text-content-secondary">
-            Beta
-          </span>
-        </div>
+        <span className="font-mono text-[10px] uppercase tracking-widest text-content-tertiary group-hover:text-content-primary">
+          Ask Chappi
+        </span>
+        <ChappiBetaBadge />
       </button>
     );
   }
@@ -119,6 +116,7 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
         <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
           <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
           Chappi
+          <ChappiBetaBadge />
         </p>
         <div className="flex items-center gap-1">
           {messages.length > 0 ? (
