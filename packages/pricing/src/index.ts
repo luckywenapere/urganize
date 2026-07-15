@@ -44,9 +44,24 @@ export type BillingPlanDefinition = {
    *  `getPlanExpiry` server-side. */
   interval: 'monthly' | 'annually';
   /** Per-currency prices. NGN is the primary market; USD is for diaspora
-   *  / international customers and gets its own Paystack plan code. */
+   *  / international customers and gets its own Paystack plan code.
+   *  For a `contactSales` tier these amounts are retained for internal
+   *  reference / renewal math on any legacy subscription, but are NOT shown
+   *  anywhere — the display surfaces render "Contact us" instead. */
   prices: Record<PricingCurrencyCode, PlanPrice>;
+  /** When true, this tier is sales-led: no price is displayed and no
+   *  self-serve checkout is offered. Both the marketing /pricing page and
+   *  the in-app /locked paywall render a "Contact us" CTA (mailto
+   *  SALES_CONTACT_EMAIL) in place of a price + Subscribe/Join button.
+   *  Label is contactSales because it's a founder-delivered, roster-sized,
+   *  price-per-deal offering (and its self-serve Paystack plans were never
+   *  wired). */
+  contactSales?: boolean;
 };
+
+// Where the "Contact us" CTA on a contactSales tier points. Single constant
+// so the marketing page and the in-app paywall can't drift on the address.
+export const SALES_CONTACT_EMAIL = 'contact@urganize.app';
 
 // Source of truth for the three recurring tiers. If these values change,
 // both the paywall display and the marketing pricing page move together —
@@ -99,12 +114,15 @@ export const BILLING_PLANS: Record<BillingPlanId, BillingPlanDefinition> = {
   label: {
     id: 'label',
     label: 'Label',
-    description: 'For labels and managers running a roster. Billed once a year.',
+    description: 'For labels and managers running a roster. Priced per roster — talk to us.',
     interval: 'annually',
+    // Retained for reference / any legacy subscription's renewal math, but
+    // NOT displayed — contactSales makes both surfaces show "Contact us".
     prices: {
       NGN: { currency: 'NGN', amount: 800_000, minorUnit: 800_000_00 },
       USD: { currency: 'USD', amount: 1_250, minorUnit: 1_250_00 },
     },
+    contactSales: true,
   },
 };
 

@@ -7,6 +7,7 @@ import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import {
+  SALES_CONTACT_EMAIL,
   SUPPORTED_CURRENCIES,
   formatPlanCyclePrice,
   formatPlanPrice,
@@ -130,7 +131,7 @@ const faqSchema = {
 const MONTHLY_SUMMARY = "Billed every month. Full access, no long-term commitment.";
 const ANNUAL_SUMMARY = "Billed once a year. Built for teams running a full release calendar.";
 const LABEL_SUMMARY =
-  "For labels and management companies running a roster. One invoice, the founders on call.";
+  "For labels and management companies running a roster. Priced to your roster, set up with the founders directly.";
 
 function monthlyEquivalent(plan: BillingPlanId, currency: PricingCurrencyCode): string {
   // Marketing context only — we round to a familiar number rather than
@@ -266,13 +267,19 @@ export function PricingPageClient({
               highlight
               badge="Best value"
             />
+            {/* Label is sales-led (contactSales in @urganize/pricing): no
+                price, no monthly-equivalent — a roster deal is scoped and
+                quoted per label, so the CTA opens an email to the founders
+                instead of the waitlist. */}
             <PricingTierCard
               name="Label"
-              price={formatPlanCyclePrice("label", currency)}
-              priceSubline={monthlyEquivalent("label", currency)}
+              price="Contact us"
               summary={LABEL_SUMMARY}
               features={LABEL_FEATURES}
-              cta={{ label: "Join now", href: "#waitlist" }}
+              cta={{
+                label: "Talk to the founders",
+                href: `mailto:${SALES_CONTACT_EMAIL}?subject=${encodeURIComponent("Urganize Label plan enquiry")}`,
+              }}
             />
           </div>
 
