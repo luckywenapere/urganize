@@ -9,6 +9,7 @@ import { Button } from '@urganize/ui';
 import { Input } from '@urganize/ui';
 import { Card } from '@urganize/ui';
 import { Logo } from '@urganize/ui';
+import { LoadingScreen } from '@urganize/ui';
 import { Mail, Lock } from 'lucide-react';
 import { errorMessage } from "@/lib/errors";
 
@@ -224,6 +225,24 @@ export default function AuthPage() {
       setIsGoogleLoading(false);
     }
   };
+
+  // Returning users must never see the login form. While the persisted
+  // session is still restoring (authLoading) — or once it's confirmed
+  // (isAuthenticated), while the redirect effect above navigates into the
+  // app — show a neutral loader instead of the form, exactly like the root
+  // `/` page. Interactive submits are excluded (local isLoading /
+  // isGoogleLoading) so the form keeps its inline "Signing in…" + error UX
+  // during a login attempt. The auth-store's INITIAL_SESSION handler always
+  // resolves authLoading, so this can't hang.
+  if ((authLoading || isAuthenticated) && !isLoading && !isGoogleLoading) {
+    return (
+      <LoadingScreen
+        variant="shell"
+        title="Opening Urganize"
+        description="Checking your session…"
+      />
+    );
+  }
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-bg-base p-4">
