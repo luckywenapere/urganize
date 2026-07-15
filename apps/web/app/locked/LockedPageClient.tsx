@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Card, Logo } from '@urganize/ui';
 import {
   DEFAULT_PRICING_CURRENCY,
+  SALES_CONTACT_EMAIL,
   SUPPORTED_CURRENCIES,
   formatPlanCyclePrice,
   getPlan,
@@ -154,6 +155,10 @@ export default function LockedPage() {
   }, [checkAuth, router]);
 
   const handleSubscribe = useCallback(async () => {
+    // Defensive: sales-led tiers have no self-serve checkout (the UI renders
+    // a mailto instead of the Subscribe button for them). Never POST a
+    // contactSales plan to start-checkout — it would 500.
+    if (getPlan(selectedPlan).contactSales) return;
     setCheckoutError(null);
     setIsStartingCheckout(true);
     try {
@@ -274,7 +279,9 @@ export default function LockedPage() {
                           <p className="mt-1 text-xs text-content-secondary">{plan.description}</p>
                         </div>
                         <p className="shrink-0 text-sm font-semibold text-content-primary">
-                          {formatPlanCyclePrice(planId, selectedCurrency)}
+                          {plan.contactSales
+                            ? 'Contact us'
+                            : formatPlanCyclePrice(planId, selectedCurrency)}
                         </p>
                       </button>
                     );
@@ -283,16 +290,28 @@ export default function LockedPage() {
               </div>
 
               <div className="flex flex-col gap-3">
-                <Button
-                  variant="primary"
-                  className="w-full"
-                  disabled={isStartingCheckout}
-                  onClick={handleSubscribe}
-                >
-                  {isStartingCheckout
-                    ? 'Redirecting to checkout…'
-                    : `Subscribe ${formatPlanCyclePrice(selectedPlan, selectedCurrency)}`}
-                </Button>
+                {getPlan(selectedPlan).contactSales ? (
+                  // Sales-led tier (Label): no self-serve checkout — that
+                  // path was never wired and 500s. Send the roster buyer to
+                  // the founders instead of a Subscribe button.
+                  <a
+                    href={`mailto:${SALES_CONTACT_EMAIL}?subject=${encodeURIComponent('Urganize Label plan enquiry')}`}
+                    className="inline-flex w-full items-center justify-center rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover"
+                  >
+                    Contact us about {getPlan(selectedPlan).label}
+                  </a>
+                ) : (
+                  <Button
+                    variant="primary"
+                    className="w-full"
+                    disabled={isStartingCheckout}
+                    onClick={handleSubscribe}
+                  >
+                    {isStartingCheckout
+                      ? 'Redirecting to checkout…'
+                      : `Subscribe ${formatPlanCyclePrice(selectedPlan, selectedCurrency)}`}
+                  </Button>
+                )}
 
                 {trialUsed ? (
                   <div className="flex items-center gap-2 text-sm text-content-secondary px-3 py-2 rounded-md bg-bg-elevated">
