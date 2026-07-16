@@ -14,7 +14,7 @@ const SHARE_IMAGE = {
   url: `${SITE_URL}/opengraph-image.png`,
   width: 1200,
   height: 630,
-  alt: "Urganize — music release management for teams",
+  alt: "Every artist. Every release. One home. Urganize.",
 };
 
 // Shared per-page metadata shape (canonical + OG + Twitter) so every
