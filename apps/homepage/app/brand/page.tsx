@@ -143,9 +143,10 @@ export default function BrandPage() {
               <div>
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Who it’s for</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Urganize is built for the independent artist manager — the person running one to
-                  three artists’ releases and holding every moving part together. Labels running a
-                  full roster are served by the premium Label tier, with the founders on call.
+                  Urganize is built for artist managers and small labels running more than one
+                  artist. If a roster means multiple release calendars, multiple masters to track,
+                  and a scatter of chats holding it together, this is the system for that. Labels
+                  running a bigger roster get the premium Label tier, with the founders on call.
                 </p>
               </div>
 
@@ -169,8 +170,8 @@ export default function BrandPage() {
                 <p className="mt-2 text-[var(--marketing-text)]">
                   Urganize is the system of record for music releases: a hand-crafted rollout plan,
                   tasks with owners and due dates, and every release file in one workspace. Built
-                  for independent artist managers running the campaign, with a Label tier for teams
-                  managing a full roster.
+                  for artist managers and small labels running more than one artist, with a Label
+                  tier for teams managing a bigger roster hands-on.
                 </p>
               </div>
 

@@ -15,6 +15,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.14.6",
+    date: "July 16, 2026",
+    highlights: [
+      "Refreshed the homepage to speak to labels and artist managers running more than one artist, not just a single act.",
+    ],
+  },
+  {
     version: "0.14.5",
     date: "July 16, 2026",
     highlights: [

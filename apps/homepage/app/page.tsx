@@ -19,7 +19,7 @@ import {
 export const metadata: Metadata = buildPageMetadata({
   title: "Urganize | Music Release Management for Teams",
   description:
-    "How independent artist managers run a release across their freelance team, so tasks and handoffs don't slip through WhatsApp and notes.",
+    "How labels and artist managers run releases across their team, so handoffs and tasks don't slip through WhatsApp and notes.",
   path: "/",
 });
 

@@ -60,12 +60,12 @@ export function HeroSection() {
     >
       <div className="mx-auto flex max-w-[64rem] flex-col items-center text-center">
         <p className="hero-fade-in mono-label text-[var(--marketing-text-subtle)]">
-          For independent artist managers
+          For labels and artist managers
         </p>
 
         <div className="mt-8 flex flex-col items-center gap-8 sm:gap-10">
           <h1 className="hero-fade-in hero-delay-1 mx-auto max-w-[22ch] text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.4rem] lg:text-[5.6rem]">
-            Stop running releases out of{" "}
+            Stop running your artists&apos; releases out of{" "}
             <span className="italic text-[var(--marketing-accent)]">
               WhatsApp threads
             </span>{" "}
@@ -108,8 +108,8 @@ export function MirrorSection() {
       >
         <div className="mx-auto flex w-full flex-col items-center text-center">
           <h2 className={`mx-auto max-w-[52rem] ${centeredHeadlineClass}`}>
-            Most teams run releases across WhatsApp, Drive, Asana, and Notion,
-            or no system at all.
+            A roster means multiple release calendars, multiple sets of
+            masters, and a scatter of chats holding it all together.
           </h2>
 
           <div className="mt-14 grid w-full max-w-[60rem] grid-cols-1 gap-px bg-[color:var(--marketing-border)] sm:grid-cols-2 lg:grid-cols-4">
@@ -132,8 +132,7 @@ export function MirrorSection() {
           </div>
 
           <p className={`mx-auto mt-14 block w-full max-w-[40rem] text-center ${mutedLeadClass}`}>
-            Urganize replaces all of that with one structured workspace your
-            entire team can actually use.
+            Urganize replaces all of that with a system built for the release.
           </p>
         </div>
       </SectionShell>
