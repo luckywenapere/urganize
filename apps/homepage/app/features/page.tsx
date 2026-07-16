@@ -69,22 +69,6 @@ const features = [
   },
 ] as const;
 
-// Chappi's UI is in the product but the conversational AI is off until a
-// capable model is wired, so it stays under "coming soon" with a subtle
-// (not accent) kicker color and an explicit "not live yet" point. Describe
-// what Chappi actually is — a conversational release assistant — not the
-// old cover-art-brief framing, which never matched its scope.
-const comingSoon = {
-  kicker: "Coming soon",
-  title: "Just ask Chappi.",
-  body: "Chappi is the conversational assistant we're building into your dashboard. Ask about any release or task in plain language, or just tell it what to do, and it takes the action inside your workspace.",
-  points: [
-    "In development, not live yet",
-    "Answers questions about your releases and tasks",
-    "Takes actions for you: create a release, add or complete tasks, draft a status update",
-  ],
-} as const;
-
 const nonFeatures = [
   {
     title: "Revenue tracking",
@@ -178,46 +162,6 @@ export default function FeaturesPage() {
             </SectionShell>
           </ScrollReveal>
         ))}
-
-        {/* COMING SOON — kept visually identical to the feature blocks above
-            except for the subtle (not accent) kicker color and the explicit
-            "not live yet" point, so it never reads as a shipped feature. */}
-        <ScrollReveal>
-          <SectionShell
-            className="py-[60px] lg:py-[80px]"
-            containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
-          >
-            <div className="mx-auto grid max-w-[64rem] items-start gap-10 border-t border-[color:var(--marketing-border)] pt-14 lg:grid-cols-2 lg:gap-16">
-              <div>
-                <p className="mono-label text-[var(--marketing-text-subtle)]">
-                  {comingSoon.kicker}
-                </p>
-                <h2 className={`mt-5 ${headlineClass}`}>{comingSoon.title}</h2>
-              </div>
-              <div>
-                <p className="text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
-                  {comingSoon.body}
-                </p>
-                <ul className="mt-7 space-y-3">
-                  {comingSoon.points.map((point) => (
-                    <li
-                      key={point}
-                      className="flex items-baseline gap-4 text-[0.95rem] leading-7 text-[var(--marketing-text)]"
-                    >
-                      <span
-                        className="font-mono text-[0.72rem] text-[var(--marketing-text-subtle)]"
-                        aria-hidden
-                      >
-                        —
-                      </span>
-                      {point}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </SectionShell>
-        </ScrollReveal>
 
         {/* WHAT IT DOESN'T DO */}
         <ScrollReveal>
