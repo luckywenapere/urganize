@@ -4,9 +4,10 @@ import { ThemeToggle } from "./ThemeToggle";
 
 const APP_AUTH_URL = "https://app.urganize.app/auth";
 
-// One header for every marketing page. The product is live and sells a
-// 28-day no-card trial, so the primary CTA goes straight to app signup —
-// no waitlist gate anywhere on the funnel.
+// One header for every marketing page. The public funnel is waitlist-only:
+// the single CTA is the inline waitlist capture in the page body, and there
+// is deliberately NO "Start free" / signup link competing with it up here.
+// The one remaining app link is Login, for existing customers to sign in.
 export function MarketingHeader() {
   return (
     <>
@@ -47,12 +48,6 @@ export function MarketingHeader() {
               Login
             </Link>
             <ThemeToggle />
-            <Link
-              href={APP_AUTH_URL}
-              className="inline-flex items-center justify-center rounded-full border border-[color:var(--marketing-border-strong)] px-4 py-2.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text)] hover:border-[color:var(--marketing-text)] hover:bg-[var(--marketing-surface)] sm:px-5"
-            >
-              Start free
-            </Link>
           </div>
         </div>
       </header>

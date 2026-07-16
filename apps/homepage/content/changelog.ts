@@ -15,6 +15,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.14.5",
+    date: "July 16, 2026",
+    highlights: [
+      "The marketing site now has one clear way in: join the waitlist. Removed the direct sign-up shortcut in the header so every visitor goes through the same door.",
+    ],
+  },
+  {
     version: "0.14.4",
     date: "July 15, 2026",
     highlights: [
