@@ -10,51 +10,21 @@ export type Release = {
 // by adding a release entry at the top AND bumping every package.json to
 // match (see CLAUDE.md → Versioning for the procedure and bump rules).
 //
+// SCOPE: entries cover the product app (apps/web) ONLY. Marketing-site
+// (apps/homepage) changes, however visible on the site, never earn an
+// entry or a version bump. Marketing entries were purged retroactively on
+// 2026-07-18; removed numbers stay retired, so the sequence has gaps.
+//
 // Versions before v0.10.0 are reconstructed milestones — the product was
 // informally versioned until then. From v0.10.0 on, every release increments
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
-  {
-    version: "0.14.7",
-    date: "July 16, 2026",
-    highlights: [
-      "Updated the link-preview image shown when sharing an Urganize link, so it reflects the current product positioning.",
-    ],
-  },
-  {
-    version: "0.14.6",
-    date: "July 16, 2026",
-    highlights: [
-      "Refreshed the homepage to speak to labels and artist managers running more than one artist, not just a single act.",
-    ],
-  },
-  {
-    version: "0.14.5",
-    date: "July 16, 2026",
-    highlights: [
-      "The marketing site now has one clear way in: join the waitlist. Removed the direct sign-up shortcut in the header so every visitor goes through the same door.",
-    ],
-  },
-  {
-    version: "0.14.4",
-    date: "July 15, 2026",
-    highlights: [
-      "The Label plan is now tailored to your roster — instead of a fixed price, get in touch and we'll set it up with you directly.",
-    ],
-  },
   {
     version: "0.14.3",
     date: "July 15, 2026",
     highlights: [
       "Chappi now carries a Beta badge everywhere it appears, so it's clear the assistant is still finding its feet.",
       "Chappi's welcome message now speaks to what it's really for: taking the release off your mind, then inviting you to tell it what's going on.",
-    ],
-  },
-  {
-    version: "0.14.2",
-    date: "July 15, 2026",
-    highlights: [
-      "Updated Monthly and Annual subscription pricing.",
     ],
   },
   {
@@ -68,7 +38,6 @@ export const changelog: Release[] = [
     version: "0.14.0",
     date: "July 15, 2026",
     highlights: [
-      "Joining Urganize now starts with a waitlist — tap Join now anywhere on the site, leave your details, and we'll reach out. Existing teams still log in as usual.",
       "Chappi now floats with you: an Ask Chappi button at the bottom-right of every page opens a chat panel that follows you around the app — same conversation as the full Chappi page, expandable any time, with a direct line to the founder in its footer. (Rolling out with Chappi.)",
       "Chappi's home got a polish: the greeting now sits centered in the page, and managers get a one-tap banner for inviting their teammates.",
     ],
@@ -88,21 +57,6 @@ export const changelog: Release[] = [
     ],
   },
   {
-    version: "0.12.1",
-    date: "July 14, 2026",
-    highlights: [
-      "Updated Monthly, Annual, and Label subscription pricing.",
-    ],
-  },
-  {
-    version: "0.12.0",
-    date: "July 13, 2026",
-    highlights: [
-      "Public roadmap: vote on what we build next. Sign in at /roadmap to suggest ideas and upvote the features you want most, ranked by demand.",
-      "New Brand page: our story, voice, logos, and downloadable brand and press assets, all in one place (it replaces the old press kit).",
-    ],
-  },
-  {
     version: "0.11.0",
     date: "July 13, 2026",
     highlights: [
@@ -114,9 +68,7 @@ export const changelog: Release[] = [
     date: "July 13, 2026",
     highlights: [
       "Chappi, a conversational assistant, is now built into the dashboard as the front door — ask about your releases and take actions in plain language. (Rolling out behind a flag; falls back to a command bar until fully switched on.)",
-      "Added a public changelog page.",
-      "Fixed link-preview images site-wide, so sharing an Urganize link on X and other platforms now shows the branded card.",
-      "Added light mode across the app and marketing site, with automatic system-preference detection and a manual toggle.",
+      "Added light mode across the app, with automatic system-preference detection and a manual toggle.",
       "Faster load times — cut the app's initial load size by over 20%.",
       "Task completion is now instant and reliable, with no more silent failures when checking off a task.",
       "Fixed notification bugs, including notifications not clearing when their task was deleted.",
@@ -132,7 +84,7 @@ export const changelog: Release[] = [
       "Event milestones — listening parties, video shoots, and release day appear as dated points on the release timeline.",
       "Consolidated everything onto one workspace screen: releases and their tasks together, instead of separate pages.",
       "Real-time notifications with a notification bell.",
-      "Recurring monthly and annual subscriptions plus a Label plan, with a public pricing page and Naira/USD switching.",
+      "Recurring monthly and annual subscriptions plus a Label plan, with Naira and USD billing.",
       "28-day free trial (no card required) for every new account.",
       "Google sign-in alongside email and password, and end-to-end team invites.",
       "Workspace logo that automatically fills in as placeholder cover art for releases without their own artwork.",
@@ -148,7 +100,6 @@ export const changelog: Release[] = [
       "Introduced the first combined releases + tasks workspace.",
       "Added a guided onboarding flow for new accounts.",
       "Added in-app support so you can reach the founder directly.",
-      "Rebuilt the marketing site with a new editorial look, real product screenshots, and a walkthrough video.",
     ],
   },
 ];
