@@ -10,8 +10,18 @@ const SITE_NAME = "Urganize";
 // runtime deployment host, which on Vercel is an SSO-gated *.vercel.app
 // preview URL — social crawlers hit a login redirect and showed no card.
 // A hardcoded absolute URL sidesteps host resolution entirely.
+//
+// SHARE_IMAGE_VERSION cache-busts social crawlers (URG-156). X and other
+// platforms cache whatever bytes they first fetch at a given image URL and
+// don't reliably refetch on a silent file swap — after URG-149 replaced the
+// PNG, X kept serving its old cached copy at the same unversioned URL.
+// Bump this string every time public/opengraph-image.png changes so the
+// URL is new to every platform and the very next fetch pulls fresh bytes,
+// instead of depending on a manual re-scrape request or an unknown TTL.
+const SHARE_IMAGE_VERSION = "2026-07-18";
+
 const SHARE_IMAGE = {
-  url: `${SITE_URL}/opengraph-image.png`,
+  url: `${SITE_URL}/opengraph-image.png?v=${SHARE_IMAGE_VERSION}`,
   width: 1200,
   height: 630,
   alt: "Every artist. Every release. One home. Urganize.",
