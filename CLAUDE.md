@@ -699,16 +699,17 @@ The earlier decision (2026-07-10) NOT to version was an early-stage call and has
 
 - **Single source of truth:** `apps/homepage/content/changelog.ts`. The **top entry's `version`** is the current product version, exported as `CURRENT_VERSION` (derived from `changelog[0].version`, so it can't drift). There is no separate VERSION file — the ledger is the record.
 - **All `package.json` versions mirror it.** Root + every workspace (`apps/*`, `packages/*`) carry the same number. They are bumped together with the ledger, never independently.
-- **Current version: `0.10.0`** (Chappi built into the UI = the minor bump from the real v0.9.0 May cut). Versions before v0.10.0 in the ledger are reconstructed milestones; strict per-release semver applies from v0.10.0 forward.
+- **App-only scope (founder decision, 2026-07-18):** the changelog and the version track the product app (`apps/web`) ONLY. Marketing-site (`apps/homepage`) changes, however visible on the site (homepage copy, pricing display, OG/share images, brand/team/press/roadmap pages), never earn a ledger entry or a version bump. Pricing display updates count as marketing under this rule. Applied retroactively on 2026-07-18: marketing entries were purged from the ledger and the version recalculated (0.14.7 dropped to 0.14.3). Removed numbers stay retired, survivors keep their historical numbers, and gaps in the sequence are expected.
+- **Current version:** whatever the ledger's top entry says, always read it from there. Do not restate the number in this file: an earlier revision hardcoded `0.10.0` here and drifted. Versions before v0.10.0 in the ledger are reconstructed milestones; strict per-release semver applies from v0.10.0 forward.
 - **Bump rules (pre-1.0 semver):** patch (`0.10.x`) = fixes/polish; minor (`0.x.0`) = new user-facing feature(s). **`v1.0.0` is reserved for AI activation** — the moment Chappi + the rollout planner + the status generator are switched on for users.
 - **`v1.0.0` note:** at 1.0, "breaking change → major" semver begins in earnest; until then the middle number is the feature counter.
 
 ### Release procedure (how to ship a version)
 
-When shipping a **user-facing** change (new feature, visible behavior change, or a bug fix a user would notice):
+When shipping a **user-facing app change** (a new feature, visible behavior change, or bug fix in `apps/web` that a user of the product would notice):
 
 1. Add a release entry at the **top** of `changelog` in `apps/homepage/content/changelog.ts`: `{ version, date, highlights }`. Bump `version` per the rules above; `date` is a display string (e.g. `"July 13, 2026"`); `highlights` are plain-English, benefit-framed, no jargon/file names — match the existing voice. Batch same-day changes into one entry rather than minting a version per commit.
 2. Set every `package.json` `version` (root + all workspaces) to the new number.
 3. That's the whole ceremony — no git tag, no separate CHANGELOG.md. Production still deploys continuously from `main`; the ledger renders publicly at `/changelog` with a "current version" badge.
 
-Skip internal-only work (refactors, dependency bumps, test/tooling, docs) — it is invisible to users, does not earn a ledger entry, and by itself does not require a version bump. gstack `/ship`'s version step now **applies** here (steps 1–2 above) rather than being skipped; PR titles still use plain conventional-commit prefixes (no `vX.Y.Z` prefix).
+Skip internal-only work (refactors, dependency bumps, test/tooling, docs) AND all marketing-site (`apps/homepage`) work, however visible on the site: neither earns a ledger entry, and neither requires a version bump (see the app-only scope rule under Versioning). gstack `/ship`'s version step now **applies** here (steps 1–2 above) rather than being skipped, but only for `apps/web` changes; PR titles still use plain conventional-commit prefixes (no `vX.Y.Z` prefix).
