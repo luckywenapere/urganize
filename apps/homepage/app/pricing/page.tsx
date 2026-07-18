@@ -10,7 +10,7 @@ import { PricingPageClient } from "./PricingPageClient";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing",
   description:
-    "Simple pricing for independent artist managers: monthly, annual, or a Label plan for a whole roster. Join the waitlist to get started.",
+    "Simple pricing for labels and artist managers running more than one artist: monthly, annual, or a Label plan for a roster. Join the waitlist.",
   path: "/pricing",
 });
 
