@@ -29,7 +29,7 @@ const members = [
   },
   {
     name: "Adamu Kabiru",
-    role: "Growth Lead",
+    role: "Community Lead",
     initials: "AK",
     bio: "Manages an artist and is deeply active in Nigeria's underground music scene.",
     linkedin: null,
