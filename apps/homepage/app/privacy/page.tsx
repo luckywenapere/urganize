@@ -15,7 +15,7 @@ export const metadata: Metadata = buildPageMetadata({
 // Keep this date REAL. It only moves when the policy text actually changes —
 // never wire it to new Date() (the old version did, which made the policy
 // claim it was updated every day).
-const LAST_UPDATED = "June 11, 2026";
+const LAST_UPDATED = "July 18, 2026";
 
 const CONTACT_HREF =
   "mailto:contact@urganize.app?subject=Privacy%20question%20-%20Urganize";
@@ -139,11 +139,21 @@ export default function PrivacyPolicy() {
               </p>
               <p>
                 <strong className="text-[var(--marketing-text)]">
-                  Waitlist and survey data.
+                  Waitlist data.
                 </strong>{" "}
-                If you joined our earlier waitlist or answer an in-product
-                survey (via Formbricks), we keep what you submitted, typically
-                your email and your answers.
+                If you join our waitlist, we collect your email, name, and
+                phone number, plus a few qualification questions (your role,
+                team size, how many releases you run, and what you need
+                most). We also capture basic marketing attribution: the page
+                you signed up from, how you found us, and any campaign
+                parameters in the URL, to understand what&apos;s working.
+              </p>
+              <p>
+                <strong className="text-[var(--marketing-text)]">
+                  Survey data.
+                </strong>{" "}
+                If you answer an in-product survey (via Formbricks), we keep
+                what you submitted.
               </p>
             </Section>
 
