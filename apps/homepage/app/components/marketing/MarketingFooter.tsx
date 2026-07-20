@@ -43,14 +43,13 @@ const socialLinks = [
 // flipping that one env var in Vercel is the entire "go live" action.
 const ROADMAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_ROADMAP === "true";
 
+// Product pages (Features, Pricing, Why Urganize, Privacy) are deliberately
+// absent — they live only in the header's ProductMenu dropdown (URG-161).
 const footerLinks = [
-  { href: "/features", label: "Features" },
-  { href: "/pricing", label: "Pricing" },
   { href: "/team", label: "Team" },
   { href: "/brand", label: "Brand" },
   { href: "/changelog", label: "Changelog" },
   ...(ROADMAP_ENABLED ? [{ href: "/roadmap", label: "Roadmap" }] : []),
-  { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
 ] as const;
 
