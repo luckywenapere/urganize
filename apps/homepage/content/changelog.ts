@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.15.1",
+    date: "July 20, 2026",
+    highlights: [
+      "Fixed the first-time setup wizard incorrectly appearing for existing accounts, and gave it a solid background so it no longer overlaps the page behind it.",
+    ],
+  },
+  {
     version: "0.15.0",
     date: "July 20, 2026",
     highlights: [
