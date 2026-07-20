@@ -22,7 +22,7 @@ import type { Template } from './types';
 export const SINGLE_RELEASE_TEMPLATE: Template = {
   id: 'single_v0.3',
   release_type: 'single',
-  name: 'Single Release — 11 Week Rollout',
+  name: 'Single Release: 11 Week Rollout',
   description:
     '8 weeks of pre-release work plus 3 weeks of post-release follow-up. Designed for independent managers handling a single drop.',
   default_duration_days: 84,
@@ -35,7 +35,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'w8_lock_master',
       title: 'Lock the master file',
       description:
-        'Confirm the final mix and final mastered version are delivered and signed off. This is the file that goes to the distributor — no further edits after this point.',
+        'Confirm the final mix and final mastered version are delivered and signed off. This is the file that goes to the distributor. No further edits after this point.',
       role: 'artist',
       type: 'task',
       offset_days: -56,
@@ -199,7 +199,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'w6_content_shoot',
       title: 'Content shoot executed',
       description:
-        'Run the content shoot: promo videos, photos, social clips. The footage feeds the entire rollout — assigned to whoever on the team is running the shoot.',
+        'Run the content shoot: promo videos, photos, social clips. The footage feeds the entire rollout. Assigned to whoever on the team is running the shoot.',
       role: 'team',
       type: 'task',
       offset_days: -42,
@@ -315,7 +315,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'w5_cover_art_final_approved',
       title: 'Cover art final approved',
       description:
-        'Sign off on the final cover art. Same file used everywhere — distributor, social, press, merch. Owner: manager with artist sign-off (Artist + Manager in v0.3).',
+        'Sign off on the final cover art. Same file used everywhere: distributor, social, press, merch. Owner: manager with artist sign-off (Artist + Manager in v0.3).',
       role: 'manager',
       type: 'task',
       offset_days: -35,
@@ -327,7 +327,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'w5_editorial_pitch',
       title: 'Editorial playlist pitch with final assets',
       description:
-        'Pitch editorial playlists with final assets. 4+ weeks pre-release is the editorial window — earlier and the pitch is incomplete, later and the editorial slot has closed.',
+        'Pitch editorial playlists with final assets. 4+ weeks pre-release is the editorial window. Earlier and the pitch is incomplete, later and the editorial slot has closed.',
       role: 'marketing_lead',
       type: 'task',
       offset_days: -35,
@@ -381,7 +381,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'w4_teaser_rollout',
       title: 'Begin teaser content rollout (1 piece every 2-3 days)',
       description:
-        'Open the teaser content rollout — short clips, behind-the-scenes, mood pieces. Cadence of one piece every 2-3 days across the week.',
+        'Open the teaser content rollout: short clips, behind-the-scenes, mood pieces. Cadence of one piece every 2-3 days across the week.',
       role: 'marketing_lead',
       type: 'task',
       offset_days: -28,
@@ -421,7 +421,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'w3_increase_teaser_frequency',
       title: 'Increase teaser content frequency',
       description:
-        'Step up the teaser cadence — daily posts, more channels, more variation. The release is now visible on the horizon and momentum should be building.',
+        'Step up the teaser cadence: daily posts, more channels, more variation. The release is now visible on the horizon and momentum should be building.',
       role: 'marketing_lead',
       type: 'task',
       offset_days: -21,
@@ -433,7 +433,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'w3_schedule_release_day_posts',
       title: 'Schedule release-day social posts',
       description:
-        'Queue release-day posts in the scheduler — drop announcement, thank-you, distributor go-live confirmation. Release day should not require live composition.',
+        'Queue release-day posts in the scheduler: drop announcement, thank-you, distributor go-live confirmation. Release day should not require live composition.',
       role: 'marketing_lead',
       type: 'task',
       offset_days: -21,
@@ -445,7 +445,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'w3_confirm_release_day_events',
       title: 'Confirm any release-day events',
       description:
-        'Confirm any release-day events (listening session, IG live, etc.) — date, time, attendees, equipment, link. Lock the logistics so release day runs cleanly.',
+        'Confirm any release-day events (listening session, IG live, etc.): date, time, attendees, equipment, link. Lock the logistics so release day runs cleanly.',
       role: 'manager',
       type: 'task',
       offset_days: -21,
@@ -538,7 +538,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'w1_countdown_content',
       title: '7 days out: countdown content begins',
       description:
-        'Start the explicit countdown — "7 days", "6 days", etc. Pin a release post. Switch artist bios and profile art to release-week assets.',
+        'Start the explicit countdown: "7 days", "6 days", etc. Pin a release post. Switch artist bios and profile art to release-week assets.',
       role: 'artist',
       type: 'task',
       offset_days: -7,
@@ -562,7 +562,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'w1_presave_reminder',
       title: '1 day out: pre-save reminder to mailing list / fans',
       description:
-        'Send the final pre-save reminder to the mailing list and top fans. Last call before release day — story posts, DMs, mailing list blast.',
+        'Send the final pre-save reminder to the mailing list and top fans. Last call before release day: story posts, DMs, mailing list blast.',
       role: 'manager',
       type: 'task',
       offset_days: -1,
@@ -574,7 +574,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'release_day_announcement',
       title: 'Release day: post drop announcement across all platforms',
       description:
-        'Post the drop announcement across every artist platform — IG, TikTok, X, YouTube, mailing list. The single is live.',
+        'Post the drop announcement across every artist platform: IG, TikTok, X, YouTube, mailing list. The single is live.',
       role: 'artist',
       type: 'event_milestone',
       offset_days: 0,
