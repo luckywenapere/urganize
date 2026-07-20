@@ -55,7 +55,11 @@ const preset = {
         // a consumer that never defines the variables.
         sans: ["var(--font-sans)", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
         display: ["var(--font-display)", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
-        mono: ["JetBrains Mono", "Fira Code", "monospace"]
+        // Space Mono carries the Brand Bible's "catalog" metadata voice —
+        // dates, statuses, counts, IDs. Resolves through --font-mono
+        // (bound in apps/web/app/globals.css to next/font's Space Mono),
+        // same pattern as sans/display above.
+        mono: ["var(--font-mono)", "JetBrains Mono", "monospace"]
       },
       fontSize: {
         xs: ["11px", { lineHeight: "16px" }],
@@ -85,15 +89,12 @@ const preset = {
       boxShadow: {
         sm: "var(--shadow-sm)",
         md: "var(--shadow-md)",
-        lg: "var(--shadow-lg)",
-        glow: "var(--shadow-glow)",
-        "glow-sm": "var(--shadow-glow-sm)"
+        lg: "var(--shadow-lg)"
       },
       animation: {
         "fade-in": "fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         "scale-in": "scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         "slide-in": "slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
-        "pulse-glow": "pulseGlow 2s cubic-bezier(0.65, 0, 0.35, 1) infinite",
         shimmer: "shimmer 1.4s ease-in-out infinite",
         spin: "spin 1s linear infinite",
         "bounce-in": "bounceIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards"
@@ -110,10 +111,6 @@ const preset = {
         slideInLeft: {
           "0%": { opacity: "0", transform: "translateX(-10px)" },
           "100%": { opacity: "1", transform: "translateX(0)" }
-        },
-        pulseGlow: {
-          "0%, 100%": { boxShadow: "0 0 0 0 rgba(62, 207, 142, 0.28)" },
-          "50%": { boxShadow: "0 0 0 8px transparent" }
         },
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },

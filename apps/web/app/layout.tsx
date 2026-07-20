@@ -1,24 +1,32 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { IBM_Plex_Sans, Space_Grotesk } from 'next/font/google';
+import { Space_Grotesk, Fraunces, Space_Mono } from 'next/font/google';
 import { AppShell } from '@/components/app/AppShell';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import './globals.css';
 
-// Self-hosted via next/font (preloaded, no third-party request chain). These
-// replace the render-blocking Google Fonts @import that used to sit at the
-// top of globals.css; that file's --font-sans/--font-display/--font-accent
-// consume the two variables bound on <html> below.
-const plexSans = IBM_Plex_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-  variable: '--font-plex-sans',
-});
+// Self-hosted via next/font (preloaded, no third-party request chain). Per
+// the Urganize Brand Bible (URG 001): Space Grotesk is the body/UI workhorse
+// (--font-sans), Fraunces is the display face used large and with restraint
+// for headlines (--font-display), Space Mono carries the "catalog" metadata
+// voice — dates, statuses, counts, IDs (--font-mono). IBM Plex Sans is
+// retired; globals.css binds all three variables below.
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-space-grotesk',
+});
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  weight: ['500', '600'],
+  display: 'swap',
+  variable: '--font-fraunces',
+});
+const spaceMono = Space_Mono({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  display: 'swap',
+  variable: '--font-space-mono',
 });
 
 const appName = 'Urganize';
@@ -80,7 +88,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="en"
       suppressHydrationWarning
       data-theme="dark"
-      className={`dark ${plexSans.variable} ${spaceGrotesk.variable}`}
+      className={`dark ${spaceGrotesk.variable} ${fraunces.variable} ${spaceMono.variable}`}
     >
       <head>
         <script
