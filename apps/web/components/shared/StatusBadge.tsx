@@ -21,7 +21,7 @@ export function StatusBadge({ label, tone = 'neutral', size = 'md', className = 
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border font-semibold uppercase ${sizeClass} ${toneClass} ${className}`}
+      className={`inline-flex items-center rounded-full border font-mono font-semibold uppercase ${sizeClass} ${toneClass} ${className}`}
     >
       {label}
     </span>
