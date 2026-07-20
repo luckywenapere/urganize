@@ -15,8 +15,13 @@ export function FirstTimeOnboardingGate() {
     return null;
   }
 
+  // Solid background — this is a full-screen takeover, nothing behind it
+  // should read. The previous bg-bg-base/98 silently generated NO class at
+  // all (98 is not in Tailwind's default opacity scale, unlike the /95 used
+  // elsewhere in these steps), leaving the overlay fully transparent and the
+  // wizard rendering as text soup over the dashboard (URG-168).
   return (
-    <div className="fixed inset-0 z-[9998] overflow-y-auto bg-bg-base/98 text-content-primary">
+    <div className="fixed inset-0 z-[9998] overflow-y-auto bg-bg-base text-content-primary">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-16 top-12 h-56 w-56 rounded-full bg-brand/12 blur-[90px]" />
         <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-status-info/8 blur-[110px]" />
