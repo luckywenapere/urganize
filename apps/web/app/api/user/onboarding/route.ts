@@ -5,6 +5,7 @@ import {
   deriveOnboardingRoleFromPersona,
   isOnboardingBiggestHeadache,
   isOnboardingPersona,
+  isOnboardingPlanningPreference,
   isOnboardingReleaseProcess,
   isUserRole,
   normalizeOnboardingState,
@@ -24,6 +25,7 @@ type ProfileOnboardingRecord = {
   onboarding_persona: string | null;
   onboarding_release_process: string | null;
   onboarding_biggest_headache: string | null;
+  onboarding_planning_preference: string | null;
   onboarding_release_id: string | null;
   onboarding_task_id: string | null;
 };
@@ -35,7 +37,7 @@ type SupabaseConfig = {
 };
 
 const ONBOARDING_PROFILE_SELECT =
-  'id,name,email,role,onboarding_completed,onboarding_step,onboarding_completed_at,onboarding_role,onboarding_persona,onboarding_release_process,onboarding_biggest_headache,onboarding_release_id,onboarding_task_id';
+  'id,name,email,role,onboarding_completed,onboarding_step,onboarding_completed_at,onboarding_role,onboarding_persona,onboarding_release_process,onboarding_biggest_headache,onboarding_planning_preference,onboarding_release_id,onboarding_task_id';
 const TASKS_TABLE = 'tasks';
 
 const isProfileOnboardingSchemaMissing = (error: unknown): boolean => {
@@ -139,6 +141,7 @@ const toProfileSeed = (user: {
     onboarding_persona: null,
     onboarding_release_process: null,
     onboarding_biggest_headache: null,
+    onboarding_planning_preference: null,
     onboarding_release_id: null,
     onboarding_task_id: null,
     updated_at: new Date().toISOString(),
@@ -446,6 +449,20 @@ export async function PATCH(request: NextRequest) {
     }
 
     updates.onboarding_biggest_headache = body.onboardingBiggestHeadache;
+  }
+
+  if (body.onboardingPlanningPreference !== undefined) {
+    if (
+      body.onboardingPlanningPreference !== null &&
+      !isOnboardingPlanningPreference(body.onboardingPlanningPreference)
+    ) {
+      return NextResponse.json(
+        { error: 'Onboarding planning preference is invalid.' } satisfies OnboardingApiError,
+        { status: 400 }
+      );
+    }
+
+    updates.onboarding_planning_preference = body.onboardingPlanningPreference;
   }
 
   if (body.releaseId !== undefined) {

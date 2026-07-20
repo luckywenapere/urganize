@@ -16,6 +16,7 @@ export type OnboardingBiggestHeadache =
   | 'tracking_whats_done_and_whats_next'
   | 'collecting_credits_and_metadata'
   | 'managing_multiple_releases_at_once';
+export type OnboardingPlanningPreference = 'ai_recommendations' | 'start_from_scratch';
 
 export const ONBOARDING_TASK_CREATED_EVENT = 'urganize:onboarding-task-created';
 export const ONBOARDING_INVITE_SENT_EVENT = 'urganize:onboarding-invite-sent';
@@ -28,6 +29,7 @@ export interface OnboardingState {
   onboardingPersona: OnboardingPersona | null;
   onboardingReleaseProcess: OnboardingReleaseProcess | null;
   onboardingBiggestHeadache: OnboardingBiggestHeadache | null;
+  onboardingPlanningPreference: OnboardingPlanningPreference | null;
   releaseId: string | null;
   taskId: string | null;
 }
@@ -49,6 +51,7 @@ export interface UpdateOnboardingBody {
   onboardingPersona?: OnboardingPersona | null;
   onboardingReleaseProcess?: OnboardingReleaseProcess | null;
   onboardingBiggestHeadache?: OnboardingBiggestHeadache | null;
+  onboardingPlanningPreference?: OnboardingPlanningPreference | null;
   releaseId?: string | null;
   taskId?: string | null;
 }
@@ -61,6 +64,7 @@ export const PROFILE_ONBOARDING_SQL = [
   'alter table public.profiles add column if not exists onboarding_persona text null;',
   'alter table public.profiles add column if not exists onboarding_release_process text null;',
   'alter table public.profiles add column if not exists onboarding_biggest_headache text null;',
+  'alter table public.profiles add column if not exists onboarding_planning_preference text null;',
   'alter table public.profiles add column if not exists onboarding_release_id uuid null references public.releases(id) on delete set null;',
   'alter table public.profiles add column if not exists onboarding_task_id uuid null references public.tasks(id) on delete set null;',
   '',
@@ -102,6 +106,11 @@ export const ONBOARDING_BIGGEST_HEADACHE_LABELS: Record<OnboardingBiggestHeadach
   managing_multiple_releases_at_once: 'Managing multiple releases at once',
 };
 
+export const ONBOARDING_PLANNING_PREFERENCE_LABELS: Record<OnboardingPlanningPreference, string> = {
+  ai_recommendations: 'Give me AI recommendations',
+  start_from_scratch: 'I prefer to start from scratch',
+};
+
 export const isUserRole = (value: unknown): value is UserRole =>
   value === 'artist' || value === 'manager' || value === 'label' || value === 'other';
 
@@ -123,6 +132,9 @@ export const isOnboardingBiggestHeadache = (value: unknown): value is Onboarding
   value === 'tracking_whats_done_and_whats_next' ||
   value === 'collecting_credits_and_metadata' ||
   value === 'managing_multiple_releases_at_once';
+
+export const isOnboardingPlanningPreference = (value: unknown): value is OnboardingPlanningPreference =>
+  value === 'ai_recommendations' || value === 'start_from_scratch';
 
 export const deriveOnboardingRoleFromPersona = (persona: OnboardingPersona | null): UserRole | null => {
   if (persona === 'independent_artist') {
@@ -202,6 +214,9 @@ export const normalizeOnboardingState = (value: unknown): OnboardingState => {
   const onboardingBiggestHeadache = isOnboardingBiggestHeadache(row.onboarding_biggest_headache)
     ? row.onboarding_biggest_headache
     : null;
+  const onboardingPlanningPreference = isOnboardingPlanningPreference(row.onboarding_planning_preference)
+    ? row.onboarding_planning_preference
+    : null;
   const releaseId = typeof row.onboarding_release_id === 'string' ? row.onboarding_release_id : null;
   const taskId = typeof row.onboarding_task_id === 'string' ? row.onboarding_task_id : null;
 
@@ -213,6 +228,7 @@ export const normalizeOnboardingState = (value: unknown): OnboardingState => {
     onboardingPersona,
     onboardingReleaseProcess,
     onboardingBiggestHeadache,
+    onboardingPlanningPreference,
     releaseId,
     taskId,
   };

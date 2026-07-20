@@ -46,6 +46,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
+import { ONBOARDING_PLANNING_PREFERENCE_LABELS, type OnboardingPlanningPreference } from '@/lib/onboarding';
 import {
   EMPTY_ONBOARDING_DRAFT,
   ONBOARDING_RELEASE_TYPES,
@@ -119,6 +120,27 @@ const INVITE_ROLE_OPTIONS = [
 ] as const;
 
 const MAX_INVITE_ROWS = 5;
+
+// URG-158: preference captured on step 4 ("Your first move"), right where
+// the AI-suggested next task is already on screen. Two options, one
+// preselected — see EMPTY_ONBOARDING_DRAFT.planningPreference for why
+// 'ai_recommendations' is the default.
+const PLANNING_PREFERENCE_OPTIONS: Array<{
+  value: OnboardingPlanningPreference;
+  label: string;
+  helper: string;
+}> = [
+  {
+    value: 'ai_recommendations',
+    label: ONBOARDING_PLANNING_PREFERENCE_LABELS.ai_recommendations,
+    helper: 'See a suggested next step like the one above, every time you start a release.',
+  },
+  {
+    value: 'start_from_scratch',
+    label: ONBOARDING_PLANNING_PREFERENCE_LABELS.start_from_scratch,
+    helper: 'Skip the suggestions — go straight to the full task list and plan it yourself.',
+  },
+];
 
 // Onboarding role choice. Matches the two values the standalone /auth signup
 // produces. 'artist' fires the ArtistNameGate downstream (AppShell.tsx:59-65)
@@ -417,6 +439,7 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           onboardingCompleted: true,
           onboardingStep: 5,
+          onboardingPlanningPreference: draft.planningPreference,
         }),
       }).catch(() => undefined);
     }
@@ -975,6 +998,40 @@ export default function OnboardingPage() {
                   {aiMoment.releaseTypeNote}
                 </p>
               ) : null}
+
+              {/* URG-158: one-time planning preference, captured right where
+                  the value of an AI-suggested next step is already visible. */}
+              <fieldset className="mt-6 space-y-2">
+                <legend className={labelBase}>How do you want to plan releases?</legend>
+                <div className="space-y-2">
+                  {PLANNING_PREFERENCE_OPTIONS.map((option) => {
+                    const selected = draft.planningPreference === option.value;
+                    return (
+                      <label
+                        key={option.value}
+                        className={`flex items-start gap-3 border bg-bg-elevated px-4 py-3 cursor-pointer transition-colors duration-fast ease-standard ${
+                          selected
+                            ? 'border-brand bg-brand/8'
+                            : 'border-stroke-default hover:border-stroke-strong'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="onboarding-planning-preference"
+                          value={option.value}
+                          checked={selected}
+                          onChange={() => setDraft((current) => ({ ...current, planningPreference: option.value }))}
+                          className="mt-0.5 h-4 w-4 accent-brand"
+                        />
+                        <span className="flex-1">
+                          <span className="block text-sm text-content-primary">{option.label}</span>
+                          <span className="mt-1 block text-xs text-content-tertiary">{option.helper}</span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
             </div>
           ) : null}
 
