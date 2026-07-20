@@ -39,11 +39,10 @@ type WorkspaceDesktopFocusedProps = {
  *
  * Reuses two components verbatim — `WorkspaceReleaseCard` for the centered
  * focus card and every rail card, and `TasksPanel` for the bucketed task list
- * (Done group + catch_up + drawer all flow through unchanged). Per-release
- * files surface from a "Files" toggle in TasksPanel's header that expands an
- * inline collapsible segment at the top of that panel's task area — no
- * overlay, the bucket list shifts down to make room. This file is purely
- * arrangement: it doesn't reach into any task or asset logic.
+ * (Done group + catch_up + drawer all flow through unchanged). Files and the
+ * content calendar are their own pages, linked from TasksPanel's header
+ * (URG-165, URG-157) — this file is purely arrangement: it doesn't reach
+ * into any task, file, or asset logic.
  */
 export function WorkspaceDesktopFocused({
   selected,

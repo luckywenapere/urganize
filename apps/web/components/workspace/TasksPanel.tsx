@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { CalendarDays, ChevronDown, FolderOpen, Plus, X } from 'lucide-react';
+import { CalendarDays, ChevronDown, FolderOpen, Plus } from 'lucide-react';
 import {
   TASK_PRIORITY_OPTIONS,
   TASK_STATUS_OPTIONS,
@@ -22,7 +22,6 @@ import { TaskRow } from '@/components/tasks/TaskRow';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { ScopePill } from './ScopePill';
-import { FilesPanel } from './FilesPanel';
 
 // Content calendar entry point (URG-157): the workspace is the surface users
 // actually land on after login, so the scoped-release header carries the
@@ -175,13 +174,6 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
     }
   }, []);
 
-  // Whether the inline Files segment is expanded. Collapsed by default so the
-  // workspace opens on tasks, not files. Lives here because the Files toggle
-  // sits in this panel's header. No overlay/drawer — the segment renders
-  // inline at the top of the task area and the bucket list shifts down to
-  // make room.
-  const [isFilesOpen, setIsFilesOpen] = useState(false);
-
   // No auto-expand on scope changes: bucket state is user-owned. Scoping a
   // release updates the header counts; which buckets are open stays exactly
   // as the user last left it.
@@ -222,13 +214,10 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
             New task
           </button>
-          {/* Files toggle: only renders when a release is scoped — without a
-              release there are no per-release files to surface (assets is
-              release-scoped, see /api/releases/{id}/assets). Expands an
-              INLINE segment at the top of the task area (between this header
-              and the bucket list); the task list shifts down, nothing
-              overlays. Wraps the same FilesPanel / AssetSection used
-              elsewhere — single source of files truth, no parallel UI. */}
+          {/* Files link: its own page (URG-165), not a segment nested under
+              the task list — files are a peer of tasks, not a child of them.
+              Only renders when a release is scoped (assets is release-scoped,
+              see /api/releases/{id}/assets). */}
           {/* Calendar link: the primary navigation into the release's content
               calendar (URG-157). A nav Link, not a toggle — the calendar is a
               full page (month grid needs width the panel doesn't have). Only
@@ -243,20 +232,13 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
             </Link>
           ) : null}
           {scopedRelease ? (
-            <button
-              type="button"
-              onClick={() => setIsFilesOpen((v) => !v)}
-              aria-expanded={isFilesOpen}
-              aria-controls="workspace-files-segment"
-              className={`motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors ${
-                isFilesOpen
-                  ? 'border-brand bg-brand/10 text-brand hover:bg-brand/15'
-                  : 'border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover'
-              }`}
+            <Link
+              href={`/dashboard/releases/${scopedRelease.id}/files`}
+              className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
             >
               <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
               Files
-            </button>
+            </Link>
           ) : null}
           {/* ScopePill is desktop-only. Below lg the mobile drill-down model
               in WorkspaceView replaces it with a dedicated back+title header
@@ -268,38 +250,6 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
           </div>
         </div>
       </div>
-
-      {/* Inline Files segment — top of the task area, between the header and
-          the filters/buckets. Same collapsible-in-place pattern as the bucket
-          headers below: conditional render, no overlay, the rest of the panel
-          shifts down to make room. Mounts only when a release is scoped
-          (matches the Files button's render gate). FilesPanel is keyed on the
-          release id so AssetSection's internal state resets when the user
-          switches release with the segment open. */}
-      {scopedRelease && isFilesOpen ? (
-        <section
-          id="workspace-files-segment"
-          aria-label={`Files for ${scopedRelease.title}`}
-          className="border border-stroke-default bg-bg-surface"
-        >
-          <div className="flex items-center justify-between gap-3 border-b border-stroke-subtle px-4 py-3">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-              Files
-            </h3>
-            <button
-              type="button"
-              onClick={() => setIsFilesOpen(false)}
-              aria-label="Close files"
-              className="motion-focus motion-press grid h-7 w-7 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </div>
-          <div className="px-4 py-4">
-            <FilesPanel key={scopedRelease.id} scopedRelease={scopedRelease} />
-          </div>
-        </section>
-      ) : null}
 
       {/*
         Native <select> dropdowns: the open option-list popup is rendered by
