@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, CalendarDays, X } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
 import {
   TaskDependenciesSection,
@@ -229,19 +230,31 @@ export function TaskDetailView({
             </div>
           ) : null}
           {/* Title — the page heading, not a boxed form field. Borderless
-              until focus; blur saves, same as before. */}
-          <input
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            onBlur={() => {
-              if (title.trim() && title.trim() !== task.title) {
-                void onSavePatch({ title: title.trim() });
+              until focus; blur saves, same as before. The completion
+              checkbox sits to its left, mirroring the row layout
+              ([checkbox] [title]) from TaskRow. */}
+          <div className="flex items-center gap-3">
+            <TaskCompletionCheckbox
+              taskId={task.id}
+              status={task.status}
+              taskTitle={task.title}
+              onToggle={() =>
+                onSavePatch({ status: task.status === 'done' ? 'todo' : 'done' })
               }
-            }}
-            aria-label="Title"
-            placeholder="Task title"
-            className="motion-focus w-full border-b border-transparent bg-transparent pb-1 font-display text-xl font-semibold leading-snug text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-stroke-strong sm:text-2xl"
-          />
+            />
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              onBlur={() => {
+                if (title.trim() && title.trim() !== task.title) {
+                  void onSavePatch({ title: title.trim() });
+                }
+              }}
+              aria-label="Title"
+              placeholder="Task title"
+              className="motion-focus min-w-0 flex-1 border-b border-transparent bg-transparent pb-1 font-display text-xl font-semibold leading-snug text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-stroke-strong sm:text-2xl"
+            />
+          </div>
 
           <div className="space-y-1.5">
             <label className={PROPERTY_ROW_CLASS}>

@@ -16,6 +16,12 @@ type TaskCompletionCheckboxProps = {
    * readers can disambiguate among the many checkboxes in a task list. */
   taskTitle?: string;
   className?: string;
+  /** Overrides the click behavior — called instead of hitting the store
+   * directly. Used by TaskDetailView, whose completion must go through
+   * TaskUIProvider's onSavePatch so the inline view's own task state (header
+   * pill, blocker banner) refreshes correctly rather than only the store's
+   * list state. */
+  onToggle?: () => Promise<void> | void;
 };
 
 /**
@@ -41,6 +47,7 @@ export function TaskCompletionCheckbox({
   onBlocker,
   taskTitle,
   className = '',
+  onToggle,
 }: TaskCompletionCheckboxProps) {
   const isDone = status === TASK_DONE_STATUS;
   const isLocked = status === TASK_LOCKED_STATUS;
@@ -48,6 +55,10 @@ export function TaskCompletionCheckbox({
 
   const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
+    if (onToggle) {
+      await onToggle();
+      return;
+    }
     const result = await useTaskStore.getState().completeTask(taskId);
     if (!result) {
       const blocker = useTaskStore.getState().error;
