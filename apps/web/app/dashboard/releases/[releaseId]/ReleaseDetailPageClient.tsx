@@ -16,6 +16,7 @@ import { ProgressBar } from '@/components/shared/ProgressBar';
 import { Toast } from '@/components/shared/Toast';
 import { ReleaseInfoSection } from '@/components/releases/ReleaseInfoSection';
 import { AssetSection } from '@/components/releases/AssetSection';
+import { ContentCalendarSection } from '@/components/releases/ContentCalendarSection';
 import dynamic from 'next/dynamic';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { supabase } from '@/lib/supabase/client';
@@ -26,6 +27,7 @@ import { type ReleaseContext } from '@/lib/release-tailoring';
 // this client component. The API routes guard the same flags server-side.
 const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
 const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
+const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 
 // The AI modals are dynamic AND only rendered behind their flag (bottom of
 // the JSX): while a flag is off — as both are in production today — the
@@ -274,6 +276,18 @@ export default function ReleaseDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            {/* Top-of-page calendar entry (URG-157): the section further down
+                lists/manages calendars, but navigation belongs up here in the
+                header where the other release actions live. */}
+            {CONTENT_CALENDAR_ENABLED ? (
+              <Link
+                href={`/dashboard/releases/${releaseId}/calendar`}
+                className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+              >
+                <CalendarDays className="h-3.5 w-3.5" />
+                Content calendar
+              </Link>
+            ) : null}
             {TAILOR_PLAN_ENABLED ? (
               <button
                 type="button"
@@ -460,6 +474,8 @@ export default function ReleaseDetailPage() {
             </>
           )}
         </section>
+
+        <ContentCalendarSection releaseId={releaseId} />
 
         <AssetSection
           releaseId={releaseId}
