@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ProductMenu } from "./ProductMenu";
 import { ThemeToggle } from "./ThemeToggle";
 
 const APP_AUTH_URL = "https://app.urganize.app/auth";
@@ -8,6 +9,9 @@ const APP_AUTH_URL = "https://app.urganize.app/auth";
 // the single CTA is the inline waitlist capture in the page body, and there
 // is deliberately NO "Start free" / signup link competing with it up here.
 // The one remaining app link is Login, for existing customers to sign in.
+// Product pages (Features, Pricing, Why Urganize, Privacy) live in the
+// ProductMenu dropdown — their ONLY home; they're deliberately not in the
+// footer (URG-161).
 export function MarketingHeader() {
   return (
     <>
@@ -29,18 +33,7 @@ export function MarketingHeader() {
           </Link>
 
           <div className="flex items-center gap-4 sm:gap-6">
-            <Link
-              href="/features"
-              className="hidden text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)] sm:inline"
-            >
-              Features
-            </Link>
-            <Link
-              href="/pricing"
-              className="hidden text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)] sm:inline"
-            >
-              Pricing
-            </Link>
+            <ProductMenu />
             <Link
               href={APP_AUTH_URL}
               className="text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)]"
