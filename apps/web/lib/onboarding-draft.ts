@@ -1,8 +1,11 @@
 // Anonymous onboarding draft state. Lives in sessionStorage so that step
 // navigation and a mid-flow refresh don't lose progress. Phase 1 is plumbing
 // only — the only fields the hand-off actually consumes are releaseType,
-// title, and releaseDate. The qualitative fields (whereStuck, stage) are
-// captured for future use; they're not sent to the server yet.
+// title, releaseDate, and planningPreference. The other qualitative fields
+// (whereStuck, stage) are captured for future use; they're not sent to the
+// server yet.
+
+import { isOnboardingPlanningPreference, type OnboardingPlanningPreference } from './onboarding';
 
 export type OnboardingReleaseType = 'single' | 'ep' | 'album' | 'music_video';
 
@@ -57,6 +60,11 @@ export interface OnboardingDraft {
   stage: OnboardingStage | null;
   title: string;
   releaseDate: string;
+  // URG-158: which way the user wants releases planned going forward.
+  // Defaults to 'ai_recommendations' — the "Your first move" step (4)
+  // already demonstrates a tailored suggestion, so that's the path of
+  // least friction; the user can switch to 'start_from_scratch' there.
+  planningPreference: OnboardingPlanningPreference;
 }
 
 export const EMPTY_ONBOARDING_DRAFT: OnboardingDraft = {
@@ -65,6 +73,7 @@ export const EMPTY_ONBOARDING_DRAFT: OnboardingDraft = {
   stage: null,
   title: '',
   releaseDate: '',
+  planningPreference: 'ai_recommendations',
 };
 
 const STORAGE_KEY = 'urganize.onboarding.draft';
@@ -95,6 +104,9 @@ export function loadOnboardingDraft(): OnboardingDraft {
       stage: isStage(parsed.stage) ? parsed.stage : null,
       title: typeof parsed.title === 'string' ? parsed.title : '',
       releaseDate: typeof parsed.releaseDate === 'string' ? parsed.releaseDate : '',
+      planningPreference: isOnboardingPlanningPreference(parsed.planningPreference)
+        ? parsed.planningPreference
+        : EMPTY_ONBOARDING_DRAFT.planningPreference,
     };
   } catch {
     return EMPTY_ONBOARDING_DRAFT;
