@@ -47,6 +47,7 @@ const ROADMAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_ROADMAP === "true";
 // absent — they live only in the header's ProductMenu dropdown (URG-161).
 const footerLinks = [
   { href: "/team", label: "Team" },
+  { href: "/community", label: "Community" },
   { href: "/brand", label: "Brand" },
   { href: "/changelog", label: "Changelog" },
   ...(ROADMAP_ENABLED ? [{ href: "/roadmap", label: "Roadmap" }] : []),

@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         has: [{ type: "host", value: "community.urganize.app" }],
-        destination: "https://chat.whatsapp.com/DGUGyC2GK3d5v6KPGw5aft",
+        destination: "https://urganize.app/community",
         permanent: false,
       },
     ];
