@@ -138,7 +138,7 @@ const PLANNING_PREFERENCE_OPTIONS: Array<{
   {
     value: 'start_from_scratch',
     label: ONBOARDING_PLANNING_PREFERENCE_LABELS.start_from_scratch,
-    helper: 'Skip the suggestions — go straight to the full task list and plan it yourself.',
+    helper: 'Skip the suggestions. Go straight to the full task list and plan it yourself.',
   },
 ];
 
@@ -816,7 +816,7 @@ export default function OnboardingPage() {
           {step === 0 ? (
             <div className="mt-5 space-y-4">
               <p className="text-sm leading-relaxed text-content-secondary">
-                Urganize is built around a single artist — pick the release for that artist. Only release
+                Urganize is built around a single artist. Pick the release for that artist. Only release
                 types backed by a working playbook are selectable; others are marked &quot;coming soon&quot;
                 until their template ships.
               </p>
@@ -864,7 +864,7 @@ export default function OnboardingPage() {
           {step === 1 ? (
             <div className="mt-5 space-y-4">
               <p className="text-sm leading-relaxed text-content-secondary">
-                Select every one that fits. We use this to decide what to put in front of you first — it
+                Select every one that fits. We use this to decide what to put in front of you first. It
                 doesn&apos;t lock you in.
               </p>
               <div className="space-y-2">
@@ -955,7 +955,7 @@ export default function OnboardingPage() {
                   required
                 />
                 <span className="block text-xs text-content-tertiary">
-                  Even a working date is fine — you can change it later.
+                  Even a working date is fine. You can change it later.
                 </span>
               </label>
             </div>
@@ -976,7 +976,7 @@ export default function OnboardingPage() {
                 <div className="mt-5">
                   <div className="mb-1.5 flex items-center justify-between text-xs text-content-tertiary">
                     <span>Progress</span>
-                    <span>{aiMoment.progressPercent}% — 0 of 1 done</span>
+                    <span>{aiMoment.progressPercent}% · 0 of 1 done</span>
                   </div>
                   <div
                     role="progressbar"
@@ -1097,7 +1097,7 @@ export default function OnboardingPage() {
                     required
                   />
                   <span className="block text-xs text-content-tertiary">
-                    Used across the app — change later in Settings.
+                    Used across the app. Change later in Settings.
                   </span>
                 </label>
               ) : null}
@@ -1200,7 +1200,7 @@ export default function OnboardingPage() {
           {step === 6 ? (
             <div className="mt-5 space-y-5">
               <p className="text-sm leading-relaxed text-content-secondary">
-                Optional — bring the people who&apos;ll touch this release with you. We&apos;ll email them
+                Optional. Bring the people who&apos;ll touch this release with you. We&apos;ll email them
                 an invite to join your workspace. You can do this later from Settings.
               </p>
               <div className="space-y-3">
@@ -1275,7 +1275,7 @@ export default function OnboardingPage() {
                     + Add another
                   </button>
                 ) : (
-                  <p className="text-xs text-content-tertiary">Maximum {MAX_INVITE_ROWS} invites in onboarding — add more later from Settings.</p>
+                  <p className="text-xs text-content-tertiary">Maximum {MAX_INVITE_ROWS} invites in onboarding. Add more later from Settings.</p>
                 )}
               </div>
             </div>

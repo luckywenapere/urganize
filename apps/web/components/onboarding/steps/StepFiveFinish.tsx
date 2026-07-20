@@ -19,10 +19,10 @@ export function StepFiveFinish({
 
           <div className="mt-8 flex flex-col items-center">
             <p className="text-[clamp(1.5rem,4vw,2.4rem)] font-medium tracking-tight text-content-primary">
-              Unlock your full potential
+              Your release is set up.
             </p>
             <p className="mt-4 max-w-lg text-center text-lg text-content-secondary">
-              You have full access to all Urganize Pro features. Start managing your releases with structured workflows and collaboration tools today.
+              You have full access to Urganize. Your first tasks are already in your workspace, ready when you are.
             </p>
           </div>
 

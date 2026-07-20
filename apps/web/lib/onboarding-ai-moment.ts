@@ -83,27 +83,27 @@ const STAGE_TO_TASK_ID: Record<OnboardingStage, string> = {
 const WHY_BY_STAGE: Record<OnboardingStage, { withSpecifics: string; generic: string }> = {
   just_starting: {
     withSpecifics:
-      "everything downstream — artwork, distribution, promo — is gated on the master file being final. Get this signed off and the rest of the rollout has something to anchor to.",
+      "everything downstream (artwork, distribution, promo) is gated on the master file being final. Get this signed off and the rest of the rollout has something to anchor to.",
     generic:
       'The master file is the single source of truth for every downstream step. Locking it first stops the rollout from churning on a moving target.',
   },
   recorded: {
     withSpecifics:
-      "getting your metadata right now — ISRC, songwriter splits, producer credits, language — clears the way for a clean distributor upload. Splits are the field that bites later when they're not locked early.",
+      "getting your metadata right now (ISRC, songwriter splits, producer credits, language) clears the way for a clean distributor upload. Splits are the field that bites later when they're not locked early.",
     generic:
-      'Getting song metadata right early — ISRC, songwriter splits, producer credits, language — clears the way for a clean distributor upload. Splits are the field that bites later when they\'re not locked early.',
+      'Getting song metadata right early (ISRC, songwriter splits, producer credits, language) clears the way for a clean distributor upload. Splits are the field that bites later when they\'re not locked early.',
   },
   preparing: {
     withSpecifics:
-      "briefing your designer now kicks off the cover-art pipeline that every later channel — distributor, socials, press — pulls from. Starting early buys time for the revisions that always happen.",
+      "briefing your designer now kicks off the cover-art pipeline that every later channel (distributor, socials, press) pulls from. Starting early buys time for the revisions that always happen.",
     generic:
-      'Cover art is the asset every later channel — distributor, socials, press — pulls from. Briefing the designer first kicks off the pipeline and buys time for the revisions that always happen.',
+      'Cover art is the asset every later channel (distributor, socials, press) pulls from. Briefing the designer first kicks off the pipeline and buys time for the revisions that always happen.',
   },
   date_set: {
     withSpecifics:
-      "getting your track and metadata to your distributor now locks in your DSP delivery — everything downstream (editorial pitching, pre-save links, release-day go-live) depends on it.",
+      "getting your track and metadata to your distributor now locks in your DSP delivery. Everything downstream (editorial pitching, pre-save links, release-day go-live) depends on it.",
     generic:
-      'The distributor upload is the central pre-release gate. Every DSP delivery downstream depends on it, and metadata errors only surface after submission — start it sooner than feels necessary.',
+      'The distributor upload is the central pre-release gate. Every DSP delivery downstream depends on it, and metadata errors only surface after submission. Start it sooner than feels necessary.',
   },
   promoting: {
     withSpecifics:
@@ -113,9 +113,9 @@ const WHY_BY_STAGE: Record<OnboardingStage, { withSpecifics: string; generic: st
   },
   post_release: {
     withSpecifics:
-      "the first-week numbers are the baseline every later decision compares against — playlist pitches, ad spend, the next single. Pull them while they’re fresh.",
+      "the first-week numbers are the baseline every later decision compares against: playlist pitches, ad spend, the next single. Pull them while they’re fresh.",
     generic:
-      "The first-week numbers are the baseline every later decision compares against — playlist pitches, ad spend, the next single. Pull them while they’re fresh.",
+      "The first-week numbers are the baseline every later decision compares against: playlist pitches, ad spend, the next single. Pull them while they’re fresh.",
   },
 };
 
@@ -160,7 +160,7 @@ const buildReleaseTypeNote = (draft: OnboardingDraft): string | null => {
   // is not promised tasks the dashboard won't actually show.
   if (draft.releaseType === 'single') return null;
   if (draft.releaseType === null) return null;
-  return 'This entry task comes from our single-release playbook — the EP, album, and music-video playbooks are next. Your release will be created, and you can build the task list manually until the matching template lands.';
+  return 'This entry task comes from our single-release playbook. The EP, album, and music-video playbooks are next. Your release will be created, and you can build the task list manually until the matching template lands.';
 };
 
 export function getOnboardingAiMoment(draft: OnboardingDraft): OnboardingAiMoment | null {
