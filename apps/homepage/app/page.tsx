@@ -3,6 +3,7 @@ import { MarketingFooter } from "./components/marketing/MarketingFooter";
 import { MarketingHeader } from "./components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 import {
+  AskAISection,
   FinalCTASection,
   HeroSection,
   MirrorSection,
@@ -36,6 +37,7 @@ export default function Home() {
           <TemplatePlanSection />
           <ThreeFeaturesSection />
           <TestimonialSection />
+          <AskAISection />
           <FinalCTASection />
         </main>
 
