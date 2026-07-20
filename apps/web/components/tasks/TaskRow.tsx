@@ -153,13 +153,13 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
             aria-hidden="true"
           />
           {isMilestone ? (
-            <span className="inline-flex items-center gap-1 whitespace-nowrap text-status-info">
+            <span className="inline-flex items-center gap-1 whitespace-nowrap font-mono text-status-info">
               <CalendarDays className="h-3 w-3" aria-label="Event milestone" />
               {formatMilestoneDate(task.dueDate)}
             </span>
           ) : (
             <span
-              className={`whitespace-nowrap ${due.isOverdue ? 'font-semibold text-status-error' : ''}`}
+              className={`whitespace-nowrap font-mono ${due.isOverdue ? 'font-semibold text-status-error' : ''}`}
             >
               {due.label}
             </span>
@@ -225,9 +225,9 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
           <span>{getAssigneeLabel(task)}</span>
           <span className="text-content-tertiary">•</span>
           {isMilestone ? (
-            <span className="text-status-info">{formatMilestoneDate(task.dueDate)}</span>
+            <span className="font-mono text-status-info">{formatMilestoneDate(task.dueDate)}</span>
           ) : (
-            <span className={due.isOverdue ? 'font-semibold text-status-error' : ''}>{due.label}</span>
+            <span className={`font-mono ${due.isOverdue ? 'font-semibold text-status-error' : ''}`}>{due.label}</span>
           )}
         </div>
       </div>

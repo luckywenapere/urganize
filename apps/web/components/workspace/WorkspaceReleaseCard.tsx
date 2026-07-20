@@ -89,7 +89,7 @@ export function WorkspaceReleaseCard({
       <div className="mt-3">
         <div className="mb-1.5 flex items-center justify-between text-[11px]">
           <span className="font-medium text-content-tertiary">Progress</span>
-          <span className="font-semibold text-content-primary">
+          <span className="font-mono font-semibold text-content-primary">
             {tasksDone} of {tasksTotal} done
           </span>
         </div>
