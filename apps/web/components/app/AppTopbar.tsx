@@ -81,7 +81,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
         <button
           type="button"
           onClick={onNewRelease}
-          className="motion-focus motion-press hidden h-10 items-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse shadow-[0_18px_36px_-28px_rgba(62,207,142,0.55)] hover:bg-brand-hover sm:inline-flex"
+          className="motion-focus motion-press hidden h-10 items-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse shadow-[0_18px_36px_-28px_rgb(var(--color-brand)/0.55)] hover:bg-brand-hover sm:inline-flex"
         >
           <Plus className="h-4 w-4" />
           <span>New release</span>

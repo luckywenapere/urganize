@@ -20,7 +20,7 @@ function EducationCardPreview({
               key={phase}
               className={`rounded-[24px] border px-4 py-4 transition-all duration-500 ${
                 index === activePhase
-                  ? 'border-brand/35 bg-brand-muted shadow-[0_18px_36px_-30px_rgba(62,207,142,0.7)]'
+                  ? 'border-brand/35 bg-brand-muted shadow-[0_18px_36px_-30px_rgb(var(--color-brand)/0.7)]'
                   : 'border-stroke-default bg-bg-elevated/85'
               }`}
             >
@@ -33,7 +33,7 @@ function EducationCardPreview({
                 </div>
                 <div
                   className={`h-3 w-3 rounded-full transition-all duration-500 ${
-                    index === activePhase ? 'bg-brand shadow-[0_0_24px_rgba(62,207,142,0.8)]' : 'bg-content-quaternary'
+                    index === activePhase ? 'bg-brand shadow-[0_0_24px_rgb(var(--color-brand)/0.8)]' : 'bg-content-quaternary'
                   }`}
                 />
               </div>

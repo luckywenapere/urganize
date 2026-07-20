@@ -357,7 +357,7 @@ export function ReleaseCombobox({
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,rgba(62,207,142,0.2),transparent_48%),linear-gradient(180deg,rgb(var(--color-stroke)/0.05),rgb(var(--color-stroke)/0.01))]">
+                        <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,rgb(var(--color-brand)/0.2),transparent_48%),linear-gradient(180deg,rgb(var(--color-stroke)/0.05),rgb(var(--color-stroke)/0.01))]">
                           <span className="text-[11px] font-semibold tracking-[-0.04em] text-content-primary">
                             {coverFallbackMonogram}
                           </span>

@@ -49,7 +49,7 @@ export function StepFourComparison({
                   className="animate-in rounded-[22px] border border-status-error/15 bg-bg-surface/80 px-4 py-4"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  <p className="text-sm leading-6 text-[rgba(226,226,226,0.72)]">{row.without}</p>
+                  <p className="text-sm leading-6 text-[rgb(var(--color-text-primary)/0.72)]">{row.without}</p>
                 </div>
               ))}
             </div>

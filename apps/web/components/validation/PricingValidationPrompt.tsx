@@ -94,7 +94,7 @@ export function PricingValidationPrompt({
               onClick={() => setWillingness(option.value)}
               className={`rounded-2xl border px-4 py-4 text-left transition ${
                 isSelected
-                  ? 'border-brand/50 bg-brand-muted text-content-primary shadow-[0_16px_40px_-24px_rgba(62,207,142,0.34)]'
+                  ? 'border-brand/50 bg-brand-muted text-content-primary shadow-[0_16px_40px_-24px_rgb(var(--color-brand)/0.34)]'
                   : 'border-stroke-default bg-bg-elevated/70 text-content-primary hover:border-stroke-strong hover:bg-bg-hover/70'
               }`}
             >
