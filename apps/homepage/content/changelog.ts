@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.16.1",
+    date: "July 20, 2026",
+    highlights: [
+      "Files now have their own page instead of sitting nested under the task list, so it's clear they're their own thing.",
+    ],
+  },
+  {
     version: "0.16.0",
     date: "July 20, 2026",
     highlights: [

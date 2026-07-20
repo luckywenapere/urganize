@@ -154,10 +154,10 @@ export function WorkspaceView() {
     const isMobileDrillIn = stacked && nextScope !== null;
     setScope(nextScope, isMobileDrillIn ? { push: true } : undefined);
 
-    // On mobile drill-in, the Level 2 content (back header → TasksPanel →
-    // FilesPanel) becomes the new screen. Scroll the page to the top so
-    // the back affordance is the first thing the user sees, instead of
-    // landing wherever they were in the releases list.
+    // On mobile drill-in, the Level 2 content (back header → TasksPanel)
+    // becomes the new screen. Scroll the page to the top so the back
+    // affordance is the first thing the user sees, instead of landing
+    // wherever they were in the releases list.
     if (isMobileDrillIn) {
       requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
     }
@@ -231,9 +231,10 @@ export function WorkspaceView() {
 
         {/* ====================================================================
             MOBILE (< lg): drill-down. Level 1 shows the release list; Level 2
-            shows back header + TasksPanel + FilesPanel for the scoped release.
-            Behavior matches the pre-centered-focus implementation — this
-            block is intentionally unchanged.
+            shows back header + TasksPanel for the scoped release (Files and
+            Calendar are now their own pages, linked from TasksPanel's header
+            — see URG-165). Behavior matches the pre-centered-focus
+            implementation — this block is intentionally unchanged.
             ==================================================================== */}
         <div className="lg:hidden">
           {isTaskOpen ? (
@@ -301,9 +302,8 @@ export function WorkspaceView() {
             DESKTOP (≥ lg): centered focus. At rest the whole main area is a
             release grid (Option A). On select, the non-selected cards split
             into LEFT + RIGHT rails and the selected release sits centered
-            above its TasksPanel + FilesPanel. This REPLACES the legacy
-            two-pane (3fr/2fr) desktop layout — the old grid wrapper has been
-            removed entirely.
+            above its TasksPanel. This REPLACES the legacy two-pane (3fr/2fr)
+            desktop layout — the old grid wrapper has been removed entirely.
             ==================================================================== */}
         <div className="hidden lg:block">
           {isDesktopFocusedMode && selectedCard && scopedReleaseSlim ? (
