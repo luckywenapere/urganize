@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ChevronDown, FolderOpen, Plus, X } from 'lucide-react';
+import { CalendarDays, ChevronDown, FolderOpen, Plus, X } from 'lucide-react';
 import {
   TASK_PRIORITY_OPTIONS,
   TASK_STATUS_OPTIONS,
@@ -22,6 +23,12 @@ import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { ScopePill } from './ScopePill';
 import { FilesPanel } from './FilesPanel';
+
+// Content calendar entry point (URG-157): the workspace is the surface users
+// actually land on after login, so the scoped-release header carries the
+// calendar affordance alongside Files rather than hiding it on the release
+// detail page alone.
+const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 
 // Overdue first (genuine slippage, most urgent), then Catch Up (start-here
 // for compressed-runway plans — calm, neutral framing), then standard
@@ -222,6 +229,19 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
               and the bucket list); the task list shifts down, nothing
               overlays. Wraps the same FilesPanel / AssetSection used
               elsewhere — single source of files truth, no parallel UI. */}
+          {/* Calendar link: the primary navigation into the release's content
+              calendar (URG-157). A nav Link, not a toggle — the calendar is a
+              full page (month grid needs width the panel doesn't have). Only
+              renders when a release is scoped, same gate as Files. */}
+          {CONTENT_CALENDAR_ENABLED && scopedRelease ? (
+            <Link
+              href={`/dashboard/releases/${scopedRelease.id}/calendar`}
+              className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+            >
+              <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+              Calendar
+            </Link>
+          ) : null}
           {scopedRelease ? (
             <button
               type="button"

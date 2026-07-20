@@ -242,6 +242,43 @@ html[data-theme='light'] .app-wordmark {
   filter: invert(1);
 }
 
+/* Content-calendar brand island (URG-157). The ONLY place this feature's
+   colors are defined; every component consumes the vars via Tailwind
+   arbitrary values. Follows the app's data-theme toggle (founder decision,
+   2026-07-20, reversing the earlier dark-locked call): dark renders the
+   Urganize Brand Bible's screen mode (ink/forest/spring/cream), light
+   renders its paper mode (cream/paper-ink/forest). Spring fails contrast on
+   cream, so light mode's accent is forest — the Bible's own 6.4:1 pairing.
+   Chips are self-contained forest surfaces in BOTH modes, so the on-fill
+   family (text/glyphs sitting on forest) never flips. */
+.cc-island {
+  color-scheme: dark;
+  --cc-ground: #0d120e;
+  --cc-fill: #14643a;
+  --cc-accent: #7fd99a;
+  --cc-text: #f5f0e6;
+  --cc-text-muted: rgba(245, 240, 230, 0.64);
+  --cc-text-faint: rgba(245, 240, 230, 0.4);
+  --cc-border: rgba(245, 240, 230, 0.12);
+  --cc-on-fill: #f5f0e6;
+  --cc-on-fill-muted: rgba(245, 240, 230, 0.64);
+  --cc-chip-accent: #7fd99a;
+}
+
+html[data-theme='light'] .cc-island {
+  color-scheme: light;
+  --cc-ground: #f5f0e6;
+  --cc-fill: #14643a;
+  --cc-accent: #14643a;
+  --cc-text: #1a1611;
+  --cc-text-muted: rgba(26, 22, 17, 0.64);
+  --cc-text-faint: rgba(26, 22, 17, 0.4);
+  --cc-border: rgba(26, 22, 17, 0.14);
+  --cc-on-fill: #f5f0e6;
+  --cc-on-fill-muted: rgba(245, 240, 230, 0.64);
+  --cc-chip-accent: #7fd99a;
+}
+
 html[data-theme='dark'] {
   --color-bg-base: 15 15 15;
   --color-bg-sidebar: 20 20 20;
