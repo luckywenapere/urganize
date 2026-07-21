@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.16.3",
+    date: "July 21, 2026",
+    highlights: [
+      "Deleting a release now lives in one place: Settings, where you can see every release and delete deliberately. Removed the quick-delete icon from the workspace so it's no longer one accidental tap away.",
+    ],
+  },
+  {
     version: "0.16.2",
     date: "July 21, 2026",
     highlights: [
