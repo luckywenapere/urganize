@@ -1,0 +1,89 @@
+workflows:
+  ios-capacitor:
+    name: Urganize iOS (Capacitor)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    # Created in Codemagic → Team settings → Integrations → App Store Connect.
+    # That's where your Apple Developer account actually gets connected — a
+    # dashboard step, not something this file can do. See
+    # docs/mobile/codemagic-setup.md for the exact walkthrough.
+    integrations:
+      app_store_connect: urganize_asc # [FILL IN]: the integration name you give it in Codemagic
+
+    environment:
+      # Automatic code signing: Codemagic fetches/creates the right
+      # certificate + provisioning profile from the App Store Connect
+      # integration above using this bundle ID — no .p12/.mobileprovision
+      # files to manage by hand.
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.urganize.app
+      vars:
+        XCODE_WORKSPACE: "apps/mobile/ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+        # Your app's Apple ID (a numeric id, NOT the bundle identifier) from
+        # App Store Connect → App Information. Only used to look up the
+        # latest build number so this workflow can increment past it.
+        APP_STORE_APPLE_ID: 0000000000 # [FILL IN]
+      node: 20
+      xcode: latest
+      cocoapods: default
+
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "ios-v*"
+          include: true
+      cancel_previous_builds: true
+
+    scripts:
+      - name: Install pnpm via corepack
+        script: |
+          corepack enable
+          corepack prepare pnpm@10.6.4 --activate
+
+      - name: Install workspace dependencies
+        script: pnpm install --frozen-lockfile
+
+      # Runs `cap sync ios` (see apps/mobile/package.json's `ios-ci` script) —
+      # copies capacitor.config.ts into the native project and runs
+      # `pod install`. Unlike a Windows dev machine, CocoaPods is present on
+      # Codemagic's macOS runners, so this actually installs pods here.
+      - name: Sync the Capacitor iOS project
+        script: pnpm mobile:ios-ci
+
+      - name: Set up code signing from the App Store Connect integration
+        script: xcode-project use-profiles
+
+      - name: Increment the build number past App Store Connect's latest
+        script: |
+          cd apps/mobile/ios/App
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-build-number "$APP_STORE_APPLE_ID" || echo 0)
+          agvtool new-version -all $(($LATEST_BUILD_NUMBER + 1))
+
+      - name: Build the .ipa
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com # [FILL IN]
+        notify:
+          success: true
+          failure: true
+      # Uploads the build straight to TestFlight once it's signed. Leave
+      # submit_to_app_store off until you're actually ready to ship a public
+      # release — TestFlight is the right default for every build before that.
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
