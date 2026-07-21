@@ -8,6 +8,8 @@ const productLinks = [
   { href: "/features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
   { href: "/why-urganize", label: "Why Urganize" },
+  { href: "/for-managers", label: "For managers" },
+  { href: "/for-labels", label: "For labels" },
   { href: "/privacy", label: "Privacy" },
 ] as const;
 
