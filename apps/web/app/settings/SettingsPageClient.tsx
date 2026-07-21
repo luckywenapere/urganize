@@ -4,8 +4,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+import { useReleaseStore } from '@/stores/useReleaseStore';
+import { useTaskStore } from '@/stores/useTaskStore';
+import { DeleteReleaseDialog } from '@/components/workspace/DeleteReleaseDialog';
+import type { Release } from '@/types/releases';
 import {
   ASSET_MIME_ALLOWLIST,
   ASSET_SIZE_LIMITS,
@@ -106,6 +111,17 @@ export default function SettingsPage() {
   const [workspaceLogoMessage, setWorkspaceLogoMessage] = useState('');
   const [workspaceLogoError, setWorkspaceLogoError] = useState('');
 
+  // Release deletion (URG-163): the only place a release can be deleted from
+  // is this page — the workspace's per-release trash icons (mobile header +
+  // desktop focused header) were removed. Reuses the same store + dialog the
+  // workspace used, just relocated.
+  const { releases, isInitialLoading: isLoadingReleases, loadCommandCenter, removeReleaseLocal } =
+    useReleaseStore();
+  const tasks = useTaskStore((state) => state.tasks);
+  const [releaseToDelete, setReleaseToDelete] = useState<Pick<Release, 'id' | 'title'> | null>(
+    null
+  );
+
   const rolePermissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
   const isManagerAccount = rolePermissions.role === 'manager';
 
@@ -125,6 +141,22 @@ export default function SettingsPage() {
     setName(user.name || '');
     setArtistProfileName(String(user.artist_name || ''));
   }, [authLoading, router, user]);
+
+  // Settings can be the FIRST route a session hydrates (direct link, refresh)
+  // — the store's own recency guard makes this a no-op if a workspace visit
+  // already loaded it, so it's safe to call unconditionally here too.
+  useEffect(() => {
+    if (authLoading || !user) return;
+    void loadCommandCenter();
+  }, [authLoading, loadCommandCenter, user]);
+
+  const handleReleaseDeleted = (releaseId: string) => {
+    setReleaseToDelete(null);
+    // Drop the release + its tasks from local state immediately, then
+    // re-sync against the server — same two-step handoff the workspace used.
+    removeReleaseLocal(releaseId);
+    void loadCommandCenter({ force: true });
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -978,6 +1010,53 @@ export default function SettingsPage() {
         )}
 
         <section className={`${panelClass} mt-6`}>
+          <h2 className="mb-1 text-xl">Releases</h2>
+          <p className="mb-4 text-sm text-content-secondary">
+            Deleting a release is only available here. This permanently
+            removes it, its tasks, and its attached files.
+          </p>
+          {isLoadingReleases ? (
+            <div className="space-y-2">
+              <SkeletonBlock className="h-14 w-full rounded-lg" />
+              <SkeletonBlock className="h-14 w-full rounded-lg" />
+            </div>
+          ) : releases.length === 0 ? (
+            <p className="text-sm text-content-secondary">No releases yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {[...releases]
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                .map((release) => (
+                  <div
+                    key={release.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-content-primary">
+                        {release.title}
+                      </p>
+                      <p className="truncate text-xs text-content-secondary">
+                        {release.artistName || 'Unassigned artist'}
+                        {' · '}
+                        {release.status.replace(/_/g, ' ')}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReleaseToDelete({ id: release.id, title: release.title })}
+                      aria-label={`Delete ${release.title}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-xs font-semibold text-content-tertiary transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      Delete
+                    </button>
+                  </div>
+                ))}
+            </div>
+          )}
+        </section>
+
+        <section className={`${panelClass} mt-6`}>
           <h2 className="mb-4 text-xl">Session</h2>
           <div className="rounded-lg border border-stroke-subtle bg-bg-elevated p-4">
             <p className="text-sm text-content-secondary">Signed in as {user.email}.</p>
@@ -1021,6 +1100,16 @@ export default function SettingsPage() {
         </section>
         </div>
       </div>
+
+      <DeleteReleaseDialog
+        open={releaseToDelete !== null}
+        release={releaseToDelete}
+        tasksTotal={
+          releaseToDelete ? tasks.filter((task) => task.releaseId === releaseToDelete.id).length : 0
+        }
+        onClose={() => setReleaseToDelete(null)}
+        onDeleted={handleReleaseDeleted}
+      />
     </main>
   );
 }

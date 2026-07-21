@@ -118,8 +118,9 @@ function TasksPanelSkeleton() {
 
 /**
  * Mobile focused shape (< lg): the drill-down back header (back button,
- * artist eyebrow + title, delete button — see `WorkspaceView`'s mobile
- * branch) above the tasks panel. No release rail on mobile; it's a single
+ * artist eyebrow + title — see `WorkspaceView`'s mobile branch; deleting a
+ * release moved to Settings-only, URG-163, so there's no second button here
+ * anymore) above the tasks panel. No release rail on mobile; it's a single
  * column, matching the real drill-down.
  */
 function MobileFocusedSkeleton() {
@@ -131,7 +132,6 @@ function MobileFocusedSkeleton() {
           <SkeletonBlock className="h-2.5 w-24" />
           <SkeletonBlock className="h-5 w-40" />
         </div>
-        <SkeletonBlock className="h-10 w-10 shrink-0" />
       </div>
       <TasksPanelSkeleton />
     </div>
@@ -139,8 +139,8 @@ function MobileFocusedSkeleton() {
 }
 
 /**
- * Desktop focused shape (≥ lg): mirrors `WorkspaceDesktopFocused` — a back +
- * delete row, then the 3-column grid (rail / centered focused card + tasks
+ * Desktop focused shape (≥ lg): mirrors `WorkspaceDesktopFocused` — a back
+ * button, then the 3-column grid (rail / centered focused card + tasks
  * panel / rail). Rail widths match the real breakpoints (220px at lg,
  * 260px at xl) so the center column doesn't visibly resize when content
  * replaces the skeleton.
@@ -148,10 +148,7 @@ function MobileFocusedSkeleton() {
 function DesktopFocusedSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <SkeletonBlock className="h-8 w-44" />
-        <SkeletonBlock className="h-8 w-8" />
-      </div>
+      <SkeletonBlock className="h-8 w-44" />
 
       <div className="grid items-start gap-6 lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]">
         <div className="min-w-0 space-y-3">

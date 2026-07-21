@@ -11,7 +11,8 @@ import { SkeletonBlock } from './SkeletonBlock';
  * content doesn't jump on load: the top `grid-cols-2` row (Profile,
  * Appearance, Security — 3 panels, so the grid wraps exactly like the real
  * page) plus the full-width stacked panels below it (Workspace artist,
- * Workspace logo, Notifications, Teammates, Session, Delete account).
+ * Workspace logo, Notifications, Teammates, Releases, Session, Delete
+ * account).
  * Panel corners/border match `panelClass` (`rounded-3xl`) so the skeleton
  * doesn't visibly "un-round" when real content swaps in. Each slot is a
  * single dim block rather than mocked inputs/labels — same convention as
@@ -41,13 +42,14 @@ export function SettingsPageSkeleton() {
           </div>
 
           {/* Workspace artist, Workspace logo, Notifications, Teammates,
-              Session, Delete account — stacked full-width, same order as
-              the real page. */}
+              Releases, Session, Delete account — stacked full-width, same
+              order as the real page. */}
           <div className="mt-6 space-y-6">
             <div className="h-40 rounded-3xl border border-stroke-default bg-bg-surface" />
             <div className="h-56 rounded-3xl border border-stroke-default bg-bg-surface" />
             <div className="h-40 rounded-3xl border border-stroke-default bg-bg-surface" />
             <div className="h-48 rounded-3xl border border-stroke-default bg-bg-surface" />
+            <div className="h-40 rounded-3xl border border-stroke-default bg-bg-surface" />
             <div className="h-32 rounded-3xl border border-stroke-default bg-bg-surface" />
             <div className="h-40 rounded-3xl border border-status-error/35 bg-status-error/10" />
           </div>
