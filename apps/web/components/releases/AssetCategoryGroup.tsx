@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { Download, FileText, Trash2 } from 'lucide-react';
 import { type AssetCategory, formatFileSize } from '@/lib/asset-constants';
 import { supabase } from '@/lib/supabase/client';
+import { isNativePlatform } from '@/lib/platform';
+import { openExternalUrl } from '@/lib/external-link';
 import type { Asset, AssetToastTone } from './AssetSection';
 
 type AssetCategoryGroupProps = {
@@ -65,6 +67,17 @@ export function AssetCategoryGroup({
     }
   };
 
+  // A remote-file target="_blank" anchor commonly opens blank inside the
+  // Capacitor webview (no "new tab" concept there) — hand it to the system
+  // browser instead when running natively; on the web, let the anchor's
+  // normal target="_blank" behavior proceed untouched.
+  const handleOpenAsset = (event: React.MouseEvent<HTMLAnchorElement>, url: string) => {
+    if (isNativePlatform()) {
+      event.preventDefault();
+      void openExternalUrl(url);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center gap-2">
@@ -89,6 +102,7 @@ export function AssetCategoryGroup({
                   href={asset.download_url ?? '#'}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={(event) => handleOpenAsset(event, asset.download_url ?? '')}
                   className="block h-20 w-20 shrink-0 overflow-hidden border border-stroke-default bg-bg-elevated"
                   aria-label={`Open ${asset.file_name}`}
                 >
@@ -136,6 +150,7 @@ export function AssetCategoryGroup({
                   href={asset.download_url ?? '#'}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={(event) => handleOpenAsset(event, asset.download_url ?? '')}
                   className="inline-flex h-8 items-center gap-1.5 border border-stroke-default bg-bg-elevated px-3 text-xs font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary"
                 >
                   <Download className="h-3 w-3" />

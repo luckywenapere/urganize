@@ -7,6 +7,8 @@ import { useChappiStore } from '@/stores/useChappiStore';
 import { ChappiBetaBadge } from './ChappiBetaBadge';
 import { ChappiConversation } from './ChappiConversation';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { isNativePlatform } from '@/lib/platform';
+import { openExternalUrl } from '@/lib/external-link';
 
 // Direct line to the founder — same number SupportChat uses. When the Chappi
 // flag is on, the standalone WhatsApp pill is replaced by this dock and the
@@ -167,6 +169,12 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Chat with the founder — report a bug or contact support"
+        onClick={(event) => {
+          if (isNativePlatform()) {
+            event.preventDefault();
+            void openExternalUrl(WHATSAPP_URL);
+          }
+        }}
         className="flex shrink-0 items-center justify-center gap-1.5 border-t border-stroke-subtle px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
       >
         Chat with the founder

@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Space_Grotesk, Fraunces, Space_Mono } from 'next/font/google';
 import { AppShell } from '@/components/app/AppShell';
@@ -80,6 +80,20 @@ export const metadata: Metadata = {
     description: appDescription,
     images: ['/opengraph-image.png'],
   },
+};
+
+// `viewportFit: 'cover'` lets content extend under the notch/home-indicator
+// area on iOS so the existing `env(safe-area-inset-*)` CSS in globals.css has
+// something to actually inset against — without it, iOS letterboxes the page
+// instead of extending it. themeColor matches the Brand Bible's ink ground so
+// the native status bar (and the mobile Chrome/Safari UI chrome) doesn't
+// flash white before the app's own dark background paints. No effect on the
+// existing web deploy beyond that same status-bar-color meta tag.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#0d120e',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

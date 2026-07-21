@@ -6,6 +6,14 @@ import { supabase, type Profile, handleSupabaseError } from './supabase/client';
 import { errorMessage } from "@/lib/errors";
 import { installAccessRedirect } from './access-redirect';
 import { isAllowlistedEmail } from './paywall-allowlist';
+import { isNativePlatform } from './platform';
+
+// Custom URL scheme registered in the native shell's Info.plist /
+// AndroidManifest.xml (apps/mobile) — see docs/mobile/auth-setup.md. Google
+// blocks its OAuth consent screen inside embedded/non-system webviews, so on
+// native the flow opens in the system browser and returns via this scheme
+// instead of a plain https redirect back into the webview.
+const NATIVE_OAUTH_SCHEME = 'com.urganize.app://';
 
 // Install the global 402 → /locked interceptor as soon as the auth store
 // is loaded on the client. Idempotent.
@@ -367,11 +375,34 @@ export const useAuthStore = create<AuthState>()(
         try {
           set({ isLoading: true, error: null });
           const normalizedNextPath = String(nextPath || '').trim();
-          const redirectUrl =
+          const nextQuery =
             normalizedNextPath && normalizedNextPath.startsWith('/')
-              ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(normalizedNextPath)}`
-              : `${window.location.origin}/auth/callback`;
-          
+              ? `?next=${encodeURIComponent(normalizedNextPath)}`
+              : '';
+
+          if (isNativePlatform()) {
+            // Redirect to the custom scheme, not the https origin — a plain
+            // https redirect would land back in the SYSTEM browser (where we
+            // just opened the consent screen), not back inside the app.
+            // skipBrowserRedirect keeps supabase-js from navigating the
+            // current (webview) window at all; we open the returned
+            // authorize URL in the system browser ourselves instead.
+            const { Browser } = await import('@capacitor/browser');
+            const { data, error } = await supabase.auth.signInWithOAuth({
+              provider: 'google',
+              options: {
+                redirectTo: `${NATIVE_OAUTH_SCHEME}auth/callback${nextQuery}`,
+                skipBrowserRedirect: true,
+              },
+            });
+            if (error) throw error;
+            if (data?.url) {
+              await Browser.open({ url: data.url });
+            }
+            return;
+          }
+
+          const redirectUrl = `${window.location.origin}/auth/callback${nextQuery}`;
           const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {

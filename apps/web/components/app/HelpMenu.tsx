@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { openExternalUrl } from '@/lib/external-link';
 
 type ShortcutDefinition = {
   keys: string[];
@@ -46,7 +47,7 @@ const isEditableTarget = (target: EventTarget | null) => {
 };
 
 function openExternalLink(url: string) {
-  window.open(url, '_blank', 'noopener,noreferrer');
+  void openExternalUrl(url);
 }
 
 function ItemIcon({

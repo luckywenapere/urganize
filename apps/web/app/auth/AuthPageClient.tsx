@@ -153,7 +153,14 @@ export default function AuthPage() {
       setEmail(inviteEmail);
       return;
     }
-    const lastEmail = localStorage.getItem(LAST_AUTH_EMAIL_KEY) || '';
+    // A throw here (restricted storage context) must not crash the whole
+    // auth page — it's just a convenience prefill.
+    let lastEmail = '';
+    try {
+      lastEmail = localStorage.getItem(LAST_AUTH_EMAIL_KEY) || '';
+    } catch {
+      // Ignore.
+    }
     if (lastEmail && !email) {
       setEmail(lastEmail);
     }
@@ -200,8 +207,15 @@ export default function AuthPage() {
 
     try {
       await login(email, password);
+      // Best-effort convenience write — must not turn a successful login
+      // into a reported failure if storage throws (restricted webview
+      // context).
       if (typeof window !== 'undefined') {
-        localStorage.setItem(LAST_AUTH_EMAIL_KEY, normalizedLoginEmail);
+        try {
+          localStorage.setItem(LAST_AUTH_EMAIL_KEY, normalizedLoginEmail);
+        } catch {
+          // Ignore.
+        }
       }
       router.push(nextPath);
     } catch (loginError) {
@@ -217,7 +231,11 @@ export default function AuthPage() {
 
     try {
       if (typeof window !== 'undefined' && email.trim()) {
-        localStorage.setItem(LAST_AUTH_EMAIL_KEY, normalizedLoginEmail);
+        try {
+          localStorage.setItem(LAST_AUTH_EMAIL_KEY, normalizedLoginEmail);
+        } catch {
+          // Ignore — must not block the actual Google sign-in below.
+        }
       }
       await loginWithGoogle(nextPath);
     } catch {

@@ -10,6 +10,7 @@ import { AppTopbar } from '@/components/app/AppTopbar';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { ToastProvider } from '@/components/shared/ToastProvider';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
 
 // None of these are needed for first paint — the onboarding wizard, the
 // create-release modal, and the two floating support widgets used to be
@@ -116,6 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     // provider is available for any future "save succeeded" / "upload failed"
     // moments that currently render inline toast boxes.
     <ToastProvider>
+    <CapacitorAuthBridge />
     <TaskUIProvider>
       {requiresArtistNameGate ? (
         <ArtistNameGate />
