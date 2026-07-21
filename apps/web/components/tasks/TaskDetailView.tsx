@@ -26,6 +26,8 @@ import {
 } from '@/lib/tasks';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { DEFAULT_GROUP_COLOR, GROUP_PRESETS } from '@/lib/group-presets';
+import { isNativePlatform } from '@/lib/platform';
+import { openExternalUrl } from '@/lib/external-link';
 
 const WORKSPACE_FLAG_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
@@ -482,6 +484,15 @@ export function TaskDetailView({
                       target="_blank"
                       rel="noreferrer"
                       className="min-w-0 flex-1 text-left"
+                      onClick={(event) => {
+                        // A remote-file target="_blank" anchor commonly opens
+                        // blank inside the Capacitor webview — hand it to the
+                        // system browser instead when running natively.
+                        if (isNativePlatform()) {
+                          event.preventDefault();
+                          void openExternalUrl(attachment.fileUrl);
+                        }
+                      }}
                     >
                       <p className="truncate text-sm font-semibold text-content-primary">{attachment.fileName}</p>
                       <p className="mt-1 text-xs text-content-secondary">

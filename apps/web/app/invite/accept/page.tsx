@@ -249,7 +249,12 @@ export default function InviteAcceptPage() {
       await loginWithGoogle(`/invite/accept?token=${encodeURIComponent(token)}`);
     } catch (oauthError) {
       if (typeof window !== 'undefined') {
-        window.sessionStorage.removeItem(RESUME_STORAGE_KEY);
+        try {
+          window.sessionStorage.removeItem(RESUME_STORAGE_KEY);
+        } catch {
+          // Best-effort cleanup — a storage throw here must not skip the
+          // error/loading-state resets below.
+        }
       }
       setError(errorMessage(oauthError, 'Could not start Google sign-in.'));
       setIsGoogleRedirecting(false);

@@ -116,7 +116,15 @@ export default function AuthCallbackPage() {
         }
 
         if (url.searchParams.get('reauth') === '1') {
-          localStorage.setItem('urganize.reauth.ts', String(Date.now()));
+          // Best-effort only — a restricted storage context (some embedded
+          // webviews) throwing here must not fail a sign-in that otherwise
+          // succeeded; the outer catch below would wrongly redirect to
+          // /auth?error=callback_failed for what is just a missed timestamp.
+          try {
+            localStorage.setItem('urganize.reauth.ts', String(Date.now()));
+          } catch {
+            // Ignore — nothing downstream depends on this succeeding.
+          }
         }
 
         const hasExplicitNext = Boolean(next && next.startsWith('/'));

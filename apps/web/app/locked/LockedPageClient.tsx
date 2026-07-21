@@ -19,6 +19,8 @@ import { supabase } from '@/lib/supabase/client';
 import { type AccountStatus } from '@/lib/subscription-access';
 import { errorMessage } from '@/lib/errors';
 import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
+import { isIOSApp, isNativePlatform } from '@/lib/platform';
+import { openExternalUrl } from '@/lib/external-link';
 
 // Recurring billing /locked page.
 //
@@ -67,6 +69,16 @@ export default function LockedPage() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<BillingPlanId>('annual');
   const [selectedCurrency, setSelectedCurrency] = useState<PricingCurrencyCode>(DEFAULT_PRICING_CURRENCY);
+  // Apple IAP policy forbids linking to external payment for a digital
+  // subscription from inside a reviewed iOS app — defaults to false (the
+  // normal web paywall) so server-rendered HTML and the pre-hydration client
+  // render match; flips true post-mount once Capacitor's native bridge is
+  // actually present (see docs/mobile/capacitor-audit.md, section 4).
+  const [isIOSNativeApp, setIsIOSNativeApp] = useState(false);
+
+  useEffect(() => {
+    setIsIOSNativeApp(isIOSApp());
+  }, []);
 
   // Allowlisted emails never see this page. Bounce them out before render
   // can flash any locked UI.
@@ -184,7 +196,14 @@ export default function LockedPage() {
         throw new Error(payload.error || 'Could not start checkout.');
       }
 
-      if (typeof window !== 'undefined') {
+      // Android has no Apple-style ban on external payment links, but a
+      // Paystack checkout page still shouldn't take over the app's own
+      // webview — open it in the system browser instead. iOS never reaches
+      // this branch: the Subscribe button doesn't render there at all.
+      if (isNativePlatform()) {
+        await openExternalUrl(payload.authorizationUrl);
+        setIsStartingCheckout(false);
+      } else if (typeof window !== 'undefined') {
         window.location.href = payload.authorizationUrl;
       }
     } catch (error) {
@@ -225,94 +244,119 @@ export default function LockedPage() {
 
           {isAuthenticated ? (
             <>
-              <div className="flex flex-col gap-4">
-                {/* Currency toggle — small affordance up top so the plan
-                    cards below reflect the right number on first paint. */}
-                <div className="flex items-center justify-between text-xs text-content-tertiary">
-                  <span className="uppercase tracking-[0.16em]">Currency</span>
-                  <div className="inline-flex overflow-hidden rounded-full border border-stroke-default">
-                    {SUPPORTED_CURRENCIES.map((currency) => {
-                      const isActive = selectedCurrency === currency;
-                      return (
-                        <button
-                          key={currency}
-                          type="button"
-                          onClick={() => setSelectedCurrency(currency)}
-                          className={`px-3 py-1 text-xs font-semibold transition-colors ${
-                            isActive
-                              ? 'bg-brand text-content-inverse'
-                              : 'bg-transparent text-content-secondary hover:text-content-primary'
-                          }`}
-                          aria-pressed={isActive}
-                        >
-                          {currency}
-                        </button>
-                      );
-                    })}
-                  </div>
+              {isIOSNativeApp ? (
+                // Apple IAP policy: no linking to external payment for a
+                // digital subscription from inside a reviewed iOS app. Plan
+                // pricing and the Subscribe button never render here — only
+                // a pointer to manage billing on the web, opened in the
+                // system browser (see docs/mobile/capacitor-audit.md, §4).
+                <div className="rounded-lg border border-stroke-default bg-bg-elevated p-4 text-sm text-content-secondary">
+                  <p>
+                    Subscriptions are managed on the web. Visit{' '}
+                    <button
+                      type="button"
+                      onClick={() => openExternalUrl('https://app.urganize.app/locked')}
+                      className="underline text-content-primary hover:text-brand"
+                    >
+                      app.urganize.app
+                    </button>{' '}
+                    in your browser to subscribe, or start a free trial below.
+                  </p>
                 </div>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-4">
+                    {/* Currency toggle — small affordance up top so the plan
+                        cards below reflect the right number on first paint. */}
+                    <div className="flex items-center justify-between text-xs text-content-tertiary">
+                      <span className="uppercase tracking-[0.16em]">Currency</span>
+                      <div className="inline-flex overflow-hidden rounded-full border border-stroke-default">
+                        {SUPPORTED_CURRENCIES.map((currency) => {
+                          const isActive = selectedCurrency === currency;
+                          return (
+                            <button
+                              key={currency}
+                              type="button"
+                              onClick={() => setSelectedCurrency(currency)}
+                              className={`px-3 py-1 text-xs font-semibold transition-colors ${
+                                isActive
+                                  ? 'bg-brand text-content-inverse'
+                                  : 'bg-transparent text-content-secondary hover:text-content-primary'
+                              }`}
+                              aria-pressed={isActive}
+                            >
+                              {currency}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
 
-                {/* Plan radio cards. Annual first (recommended), monthly
-                    second, label (roster tier) last. Each card is a real
-                    <button role="radio"> bound to a fieldset so screen
-                    readers + keyboard selection work the same as a native
-                    radio group. */}
-                <div role="radiogroup" aria-label="Choose a plan" className="flex flex-col gap-2">
-                  {(['annual', 'monthly', 'label'] as const).map((planId) => {
-                    const plan = getPlan(planId);
-                    const isActive = selectedPlan === planId;
-                    return (
-                      <button
-                        key={planId}
-                        type="button"
-                        role="radio"
-                        aria-checked={isActive}
-                        onClick={() => setSelectedPlan(planId)}
-                        className={`flex items-start justify-between gap-3 rounded-lg border p-4 text-left transition-colors ${
-                          isActive
-                            ? 'border-brand bg-brand/5'
-                            : 'border-stroke-default bg-bg-elevated hover:border-stroke-strong'
-                        }`}
+                    {/* Plan radio cards. Annual first (recommended), monthly
+                        second, label (roster tier) last. Each card is a real
+                        <button role="radio"> bound to a fieldset so screen
+                        readers + keyboard selection work the same as a native
+                        radio group. */}
+                    <div role="radiogroup" aria-label="Choose a plan" className="flex flex-col gap-2">
+                      {(['annual', 'monthly', 'label'] as const).map((planId) => {
+                        const plan = getPlan(planId);
+                        const isActive = selectedPlan === planId;
+                        return (
+                          <button
+                            key={planId}
+                            type="button"
+                            role="radio"
+                            aria-checked={isActive}
+                            onClick={() => setSelectedPlan(planId)}
+                            className={`flex items-start justify-between gap-3 rounded-lg border p-4 text-left transition-colors ${
+                              isActive
+                                ? 'border-brand bg-brand/5'
+                                : 'border-stroke-default bg-bg-elevated hover:border-stroke-strong'
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-content-primary">{plan.label}</p>
+                              <p className="mt-1 text-xs text-content-secondary">{plan.description}</p>
+                            </div>
+                            <p className="shrink-0 text-sm font-semibold text-content-primary">
+                              {plan.contactSales
+                                ? 'Contact us'
+                                : formatPlanCyclePrice(planId, selectedCurrency)}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    {getPlan(selectedPlan).contactSales ? (
+                      // Sales-led tier (Label): no self-serve checkout — that
+                      // path was never wired and 500s. Send the roster buyer to
+                      // the founders instead of a Subscribe button.
+                      <a
+                        href={`mailto:${SALES_CONTACT_EMAIL}?subject=${encodeURIComponent('Urganize Label plan enquiry')}`}
+                        className="inline-flex w-full items-center justify-center rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover"
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-content-primary">{plan.label}</p>
-                          <p className="mt-1 text-xs text-content-secondary">{plan.description}</p>
-                        </div>
-                        <p className="shrink-0 text-sm font-semibold text-content-primary">
-                          {plan.contactSales
-                            ? 'Contact us'
-                            : formatPlanCyclePrice(planId, selectedCurrency)}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                        Contact us about {getPlan(selectedPlan).label}
+                      </a>
+                    ) : (
+                      <Button
+                        variant="primary"
+                        className="w-full"
+                        disabled={isStartingCheckout}
+                        onClick={handleSubscribe}
+                      >
+                        {isStartingCheckout
+                          ? 'Redirecting to checkout…'
+                          : `Subscribe ${formatPlanCyclePrice(selectedPlan, selectedCurrency)}`}
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
 
               <div className="flex flex-col gap-3">
-                {getPlan(selectedPlan).contactSales ? (
-                  // Sales-led tier (Label): no self-serve checkout — that
-                  // path was never wired and 500s. Send the roster buyer to
-                  // the founders instead of a Subscribe button.
-                  <a
-                    href={`mailto:${SALES_CONTACT_EMAIL}?subject=${encodeURIComponent('Urganize Label plan enquiry')}`}
-                    className="inline-flex w-full items-center justify-center rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover"
-                  >
-                    Contact us about {getPlan(selectedPlan).label}
-                  </a>
-                ) : (
-                  <Button
-                    variant="primary"
-                    className="w-full"
-                    disabled={isStartingCheckout}
-                    onClick={handleSubscribe}
-                  >
-                    {isStartingCheckout
-                      ? 'Redirecting to checkout…'
-                      : `Subscribe ${formatPlanCyclePrice(selectedPlan, selectedCurrency)}`}
-                  </Button>
-                )}
-
                 {trialUsed ? (
                   <div className="flex items-center gap-2 text-sm text-content-secondary px-3 py-2 rounded-md bg-bg-elevated">
                     <CheckCircle2 className="size-4 text-content-tertiary" />
@@ -354,9 +398,10 @@ export default function LockedPage() {
 
               {user?.email ? (
                 <p className="text-xs text-content-tertiary">
-                  Signed in as <span className="text-content-secondary">{user.email}</span>. Paystack
-                  will charge the card you enter at checkout — your subscription is bound to this
-                  account automatically.
+                  Signed in as <span className="text-content-secondary">{user.email}</span>.{' '}
+                  {isIOSNativeApp
+                    ? 'Your subscription is bound to this account automatically.'
+                    : 'Paystack will charge the card you enter at checkout — your subscription is bound to this account automatically.'}
                 </p>
               ) : null}
             </>

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { isNativePlatform } from '@/lib/platform';
+import { openExternalUrl } from '@/lib/external-link';
 
 // Direct line to the founder. Number lives here only — change it in one place.
 const WHATSAPP_URL = 'https://wa.me/2347067367057';
@@ -53,6 +55,15 @@ export function SupportChat() {
       aria-label="Chat with the founder on WhatsApp — report a bug or contact support"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={(event) => {
+        // A plain target="_blank" anchor can silently no-op inside the
+        // Capacitor webview (no "new tab" concept there) — route through the
+        // system browser instead when running natively.
+        if (isNativePlatform()) {
+          event.preventDefault();
+          void openExternalUrl(WHATSAPP_URL);
+        }
+      }}
       className="group fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-none border border-stroke-default bg-bg-elevated py-2.5 pl-3.5 pr-4 shadow-2xl transition-all duration-150 hover:border-stroke-strong hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:bottom-6 md:right-6"
     >
       <span className="text-brand">
