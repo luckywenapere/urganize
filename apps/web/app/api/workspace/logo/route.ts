@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   WORKSPACES_TABLE,
-  ensureOwnedWorkspace,
+  loadWorkspaceAccessContext,
   requireAuthenticatedAdmin,
 } from '@/lib/tasks-server';
 import {
@@ -71,10 +71,19 @@ export async function GET(request: NextRequest) {
   const { adminClient } = auth;
 
   try {
-    const workspace = await ensureOwnedWorkspace(adminClient, auth.user);
-    const logo = await buildLogoPayload(adminClient, workspace.id);
+    // Read-first resolution, matching /api/workspace/artist -- avoids the
+    // unconditional membership UPSERT + full org-member sync that
+    // ensureOwnedWorkspace performs on every call (see lib/tasks-server.ts's
+    // own comment on loadWorkspaceAccessContext for why that was fixed there
+    // once already; this route just never got the same fix applied to it).
+    const access = await loadWorkspaceAccessContext(adminClient, auth.user);
+    if (!access.primaryWorkspaceId) {
+      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+    }
 
-    return NextResponse.json({ workspaceId: workspace.id, logo });
+    const logo = await buildLogoPayload(adminClient, access.primaryWorkspaceId);
+
+    return NextResponse.json({ workspaceId: access.primaryWorkspaceId, logo });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Could not load workspace logo.' },
@@ -116,11 +125,15 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const workspace = await ensureOwnedWorkspace(adminClient, auth.user);
+    const access = await loadWorkspaceAccessContext(adminClient, auth.user);
+    if (!access.primaryWorkspaceId) {
+      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+    }
+    const workspaceId = access.primaryWorkspaceId;
 
     // Defense in depth: the path must live under this workspace's namespace.
     // Prevents a client from claiming someone else's upload as their logo.
-    if (!storagePath.startsWith(workspaceLogoPathPrefix(workspace.id))) {
+    if (!storagePath.startsWith(workspaceLogoPathPrefix(workspaceId))) {
       return NextResponse.json(
         { error: 'storage_path does not belong to this workspace.' },
         { status: 400 }
@@ -148,7 +161,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Upload not found at storage_path.' }, { status: 400 });
     }
 
-    const previousLogo = await getWorkspaceLogo(adminClient, workspace.id);
+    const previousLogo = await getWorkspaceLogo(adminClient, workspaceId);
 
     const updateResult = await adminClient
       .from(WORKSPACES_TABLE)
@@ -157,7 +170,7 @@ export async function PUT(request: NextRequest) {
         logo_file_name: fileName,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', workspace.id);
+      .eq('id', workspaceId);
 
     if (updateResult.error) {
       // The bytes are already in storage. Drop them so the user can retry.
@@ -172,8 +185,8 @@ export async function PUT(request: NextRequest) {
       await removeStorageObject(adminClient, previousLogo.storagePath);
     }
 
-    const logo = await buildLogoPayload(adminClient, workspace.id);
-    return NextResponse.json({ workspaceId: workspace.id, logo });
+    const logo = await buildLogoPayload(adminClient, workspaceId);
+    return NextResponse.json({ workspaceId, logo });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Could not save workspace logo.' },
@@ -193,8 +206,12 @@ export async function DELETE(request: NextRequest) {
   const { adminClient } = auth;
 
   try {
-    const workspace = await ensureOwnedWorkspace(adminClient, auth.user);
-    const previousLogo = await getWorkspaceLogo(adminClient, workspace.id);
+    const access = await loadWorkspaceAccessContext(adminClient, auth.user);
+    if (!access.primaryWorkspaceId) {
+      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+    }
+    const workspaceId = access.primaryWorkspaceId;
+    const previousLogo = await getWorkspaceLogo(adminClient, workspaceId);
 
     if (previousLogo) {
       const updateResult = await adminClient
@@ -204,7 +221,7 @@ export async function DELETE(request: NextRequest) {
           logo_file_name: null,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', workspace.id);
+        .eq('id', workspaceId);
 
       if (updateResult.error) {
         return NextResponse.json(
@@ -217,7 +234,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Idempotent: deleting an absent logo succeeds with logo: null.
-    return NextResponse.json({ workspaceId: workspace.id, logo: null });
+    return NextResponse.json({ workspaceId, logo: null });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Could not remove workspace logo.' },

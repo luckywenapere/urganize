@@ -218,6 +218,7 @@ interface AuthState {
   loginWithGoogle: (nextPath?: string) => Promise<void>;
   signup: (email: string, password: string, name: string, role: string, artistName?: string) => Promise<void>;
   updateArtistName: (artistName: string) => Promise<void>;
+  updateProfileName: (name: string) => Promise<void>;
   updateRole: (role: Profile['role']) => Promise<void>;
   setNeedsOnboarding: (needsOnboarding: boolean) => void;
   logout: () => Promise<void>;
@@ -562,6 +563,33 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: false, error: errorMessage });
           throw new Error(errorMessage);
         }
+      },
+
+      // Same "patch the store directly from the update's returned row, no
+      // checkAuth() re-fetch needed" shape as updateArtistName above -- but
+      // deliberately does NOT toggle the shared `isLoading` flag the way
+      // updateArtistName does. That flag also gates whether SettingsPage
+      // renders its full-page skeleton, so toggling it mid-save would flash
+      // the whole page back to the skeleton for the ~1 request this takes.
+      // Callers use their own local isSaving state instead.
+      updateProfileName: async (name: string) => {
+        const currentUser = get().user;
+        const normalized = String(name || '').trim();
+        if (!currentUser) throw new Error('User not found');
+        if (!normalized) throw new Error('Name is required');
+
+        const { data: updatedProfile, error } = await supabase
+          .from('profiles')
+          .update({ name: normalized, updated_at: new Date().toISOString() })
+          .eq('id', currentUser.id)
+          .select('*')
+          .single();
+
+        if (error) {
+          throw new Error(handleSupabaseError(error));
+        }
+
+        set({ user: updatedProfile, error: null });
       },
 
       logout: async () => {

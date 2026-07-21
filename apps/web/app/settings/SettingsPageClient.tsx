@@ -1,226 +1,146 @@
 'use client';
 
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
-import { useReleaseStore } from '@/stores/useReleaseStore';
-import { useTaskStore } from '@/stores/useTaskStore';
-import { DeleteReleaseDialog } from '@/components/workspace/DeleteReleaseDialog';
-import type { Release } from '@/types/releases';
-import {
-  ASSET_MIME_ALLOWLIST,
-  ASSET_SIZE_LIMITS,
-  formatFileSize,
-} from '@/lib/asset-constants';
 import { getRolePermissions } from '@/lib/role-permissions';
+import { ASSET_MIME_ALLOWLIST, ASSET_SIZE_LIMITS, formatFileSize } from '@/lib/asset-constants';
+import { errorMessage } from '@/lib/errors';
+import type { WorkspaceMember } from '@/types/auth';
+import { SettingsPageSkeleton } from '@/components/loading/SettingsPageSkeleton';
+import { getAccessToken } from '@/components/settings/getAccessToken';
+import { ProfileSection } from '@/components/settings/ProfileSection';
+import { AppearanceSection } from '@/components/settings/AppearanceSection';
+import { SecuritySection } from '@/components/settings/SecuritySection';
 import {
-  SettingsPageSkeleton,
-  SettingsTeamMembersSectionSkeleton,
-} from '@/components/loading/SettingsPageSkeleton';
-import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
-import { errorMessage } from "@/lib/errors";
-import { ThemeToggle } from '@urganize/ui';
+  WorkspaceArtistSection,
+  type WorkspaceArtist,
+} from '@/components/settings/WorkspaceArtistSection';
+import {
+  WorkspaceLogoSection,
+  type WorkspaceLogo,
+} from '@/components/settings/WorkspaceLogoSection';
+import { ArtistProfileSection } from '@/components/settings/ArtistProfileSection';
+import { NotificationsSection } from '@/components/settings/NotificationsSection';
+import { TeammatesSection } from '@/components/settings/TeammatesSection';
+import { ReleasesSection } from '@/components/settings/ReleasesSection';
+import { SessionSection } from '@/components/settings/SessionSection';
+import { DeleteAccountSection } from '@/components/settings/DeleteAccountSection';
 
-type WorkspaceMember = {
-  id: string;
-  user_id: string;
-  role: string;
-  name: string;
-  email: string;
-};
+// Workspace artist/logo editors are gated by the same flag that hides the
+// legacy artist input in the create-release modal. Lifting to many artists
+// later is a UI change only — the schema (artists.workspace_id, partial
+// unique on (workspace_id, slug)) already permits multiple rows per
+// workspace.
+const WORKSPACE_FEATURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
-const panelClass =
-  'rounded-3xl border border-stroke-default bg-bg-surface/95 p-5 shadow-[0_10px_30px_var(--shadow-settings-panel)] backdrop-blur-sm sm:p-6';
-
-// Workspace artist editor is gated by the same flag that hides the legacy
-// artist input in the create-release modal. Lifting to many artists later is
-// a UI change only — the schema (artists.workspace_id, partial unique on
-// (workspace_id, slug)) already permits multiple rows per workspace.
-const WORKSPACE_FEATURE_ENABLED =
-  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
+const LOGO_MIME_ALLOWLIST = ASSET_MIME_ALLOWLIST.cover_art;
+const LOGO_SIZE_LIMIT = ASSET_SIZE_LIMITS.cover_art;
 
 type WorkspaceArtistResponse = {
   workspaceId?: string;
-  artist: { id: string; name: string; slug: string } | null;
+  artist: WorkspaceArtist | null;
   releasesUpdated?: number;
   error?: string;
 };
 
 type WorkspaceLogoResponse = {
   workspaceId?: string;
-  logo: { fileName: string | null; url: string } | null;
+  logo: WorkspaceLogo | null;
   error?: string;
 };
 
-// The logo shares cover art's image constraints — it renders in the same
-// cover-art slot on release cards (see /api/workspace/logo/upload-url).
-const LOGO_MIME_ALLOWLIST = ASSET_MIME_ALLOWLIST.cover_art;
-const LOGO_SIZE_LIMIT = ASSET_SIZE_LIMITS.cover_art;
-
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, logout, checkAuth, updateArtistName, isLoading: authLoading } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
+  const authLoading = useAuthStore((state) => state.isLoading);
 
-  const [name, setName] = useState('');
-  const [artistProfileName, setArtistProfileName] = useState('');
-  const [isSavingName, setIsSavingName] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isSavingPassword, setIsSavingPassword] = useState(false);
-  const [notificationsEmail, setNotificationsEmail] = useState(true);
-  const [notificationsProduct, setNotificationsProduct] = useState(false);
-  const [isSavingNotifications, setIsSavingNotifications] = useState(false);
+  const rolePermissions = getRolePermissions(user?.role);
+  const isManagerAccount = rolePermissions.role === 'manager';
+  const isArtistAccount = user?.role === 'artist';
 
-  const [confirmationText, setConfirmationText] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  // Hoisted, resolved ONCE per mount rather than once per section — the
+  // three mount-time loaders below fire within milliseconds of each other,
+  // so this dedupes near-simultaneous calls to the same
+  // supabase.auth.getSession(), not a page-wide cache. Click-triggered
+  // handlers (invite, upload, etc., inside the section components) still
+  // fetch their own token fresh — see components/settings/getAccessToken.ts.
+  const [accessToken, setAccessToken] = useState('');
 
-  // Workspace teammates
   const [teammates, setTeammates] = useState<WorkspaceMember[]>([]);
   const [isLoadingTeammates, setIsLoadingTeammates] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<string>('viewer');
-  const [isInviting, setIsInviting] = useState(false);
-  const [teammateMessage, setTeammateMessage] = useState('');
-  const [teammateError, setTeammateError] = useState('');
 
-  // Workspace artist (Phase 4: single workspace artist, write-through cache).
-  // null = unloaded, undefined = loaded-but-empty, {} = loaded artist.
-  const [workspaceArtist, setWorkspaceArtist] = useState<
-    { id: string; name: string; slug: string } | null | undefined
-  >(null);
+  const [workspaceArtist, setWorkspaceArtist] = useState<WorkspaceArtist | null | undefined>(null);
   const [workspaceArtistInput, setWorkspaceArtistInput] = useState('');
   const [isLoadingWorkspaceArtist, setIsLoadingWorkspaceArtist] = useState(false);
   const [isSavingWorkspaceArtist, setIsSavingWorkspaceArtist] = useState(false);
   const [workspaceArtistMessage, setWorkspaceArtistMessage] = useState('');
   const [workspaceArtistError, setWorkspaceArtistError] = useState('');
 
-  // Workspace logo (record label / team logo). Releases without their own
-  // cover art display it automatically until artwork is uploaded.
-  // null = unloaded/failed, undefined = loaded-but-none, {} = loaded logo.
-  const [workspaceLogo, setWorkspaceLogo] = useState<
-    { fileName: string | null; url: string } | null | undefined
-  >(null);
+  const [workspaceLogo, setWorkspaceLogo] = useState<WorkspaceLogo | null | undefined>(null);
   const [isLoadingWorkspaceLogo, setIsLoadingWorkspaceLogo] = useState(false);
   const [isSavingWorkspaceLogo, setIsSavingWorkspaceLogo] = useState(false);
   const [workspaceLogoMessage, setWorkspaceLogoMessage] = useState('');
   const [workspaceLogoError, setWorkspaceLogoError] = useState('');
 
-  // Release deletion (URG-163): the only place a release can be deleted from
-  // is this page — the workspace's per-release trash icons (mobile header +
-  // desktop focused header) were removed. Reuses the same store + dialog the
-  // workspace used, just relocated.
-  const { releases, isInitialLoading: isLoadingReleases, loadCommandCenter, removeReleaseLocal } =
-    useReleaseStore();
-  const tasks = useTaskStore((state) => state.tasks);
-  const [releaseToDelete, setReleaseToDelete] = useState<Pick<Release, 'id' | 'title'> | null>(
-    null
-  );
-
-  const rolePermissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
-  const isManagerAccount = rolePermissions.role === 'manager';
-
-  const getAccessToken = async (): Promise<string> => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    return session?.access_token || '';
-  };
-
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
       router.replace('/auth');
-      return;
     }
-    setName(user.name || '');
-    setArtistProfileName(String(user.artist_name || ''));
   }, [authLoading, router, user]);
-
-  // Settings can be the FIRST route a session hydrates (direct link, refresh)
-  // — the store's own recency guard makes this a no-op if a workspace visit
-  // already loaded it, so it's safe to call unconditionally here too.
-  useEffect(() => {
-    if (authLoading || !user) return;
-    void loadCommandCenter();
-  }, [authLoading, loadCommandCenter, user]);
-
-  const handleReleaseDeleted = (releaseId: string) => {
-    setReleaseToDelete(null);
-    // Drop the release + its tasks from local state immediately, then
-    // re-sync against the server — same two-step handoff the workspace used.
-    removeReleaseLocal(releaseId);
-    void loadCommandCenter({ force: true });
-  };
 
   useEffect(() => {
     if (!user) return;
-
-    const notificationsRaw = localStorage.getItem(`urganize.notifications.${user.id}`);
-    if (notificationsRaw) {
-      try {
-        const parsed = JSON.parse(notificationsRaw);
-        setNotificationsEmail(parsed.notificationsEmail ?? true);
-        setNotificationsProduct(parsed.notificationsProduct ?? false);
-      } catch {
-        setNotificationsEmail(true);
-        setNotificationsProduct(false);
-      }
-    }
+    let cancelled = false;
+    getAccessToken().then((token) => {
+      if (!cancelled) setAccessToken(token);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
-  useEffect(() => {
-    if (!user || !isManagerAccount) return;
-    let cancelled = false;
-
-    const loadTeammates = async () => {
-      setIsLoadingTeammates(true);
-      try {
-        const token = await getAccessToken();
-        if (!token) return;
-
-        const response = await fetch('/api/workspace/members', {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: 'no-store',
-        });
-
-        const payload = (await response.json().catch(() => ({}))) as {
-          members?: WorkspaceMember[];
-          error?: string;
-        };
-
-        if (!cancelled && response.ok && Array.isArray(payload.members)) {
-          setTeammates(payload.members);
-        }
-      } catch {
-        // Non-blocking
-      } finally {
-        if (!cancelled) setIsLoadingTeammates(false);
+  const loadTeammates = useCallback(async () => {
+    if (!accessToken) return;
+    setIsLoadingTeammates(true);
+    try {
+      const response = await fetch('/api/workspace/members', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        members?: WorkspaceMember[];
+        error?: string;
+      };
+      if (response.ok && Array.isArray(payload.members)) {
+        setTeammates(payload.members);
       }
-    };
+    } catch {
+      // Non-blocking
+    } finally {
+      setIsLoadingTeammates(false);
+    }
+  }, [accessToken]);
 
-    void loadTeammates();
-    return () => { cancelled = true; };
-  }, [user, isManagerAccount]);
-
-  // Load the workspace artist behind the flag. Mirrors loadTeammates' shape
-  // so the feedback paths and cleanup-on-unmount semantics stay consistent.
   useEffect(() => {
-    if (!user || !WORKSPACE_FEATURE_ENABLED) return;
+    if (!user || !isManagerAccount || !accessToken) return;
+    void loadTeammates();
+  }, [user, isManagerAccount, accessToken, loadTeammates]);
+
+  // Load the workspace artist behind the flag. Mirrors the logo loader's
+  // shape so the feedback paths and cleanup-on-unmount semantics stay
+  // consistent.
+  useEffect(() => {
+    if (!user || !WORKSPACE_FEATURE_ENABLED || !accessToken) return;
     let cancelled = false;
 
-    const loadWorkspaceArtist = async () => {
+    const load = async () => {
       setIsLoadingWorkspaceArtist(true);
       try {
-        const token = await getAccessToken();
-        if (!token) return;
         const response = await fetch('/api/workspace/artist', {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
           cache: 'no-store',
         });
         const payload = (await response.json().catch(() => ({}))) as WorkspaceArtistResponse;
@@ -234,26 +154,24 @@ export default function SettingsPage() {
       }
     };
 
-    void loadWorkspaceArtist();
+    void load();
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, accessToken]);
 
-  // Load the workspace logo behind the flag. Mirrors loadWorkspaceArtist's
+  // Load the workspace logo behind the flag. Mirrors the artist loader's
   // shape so the feedback paths and cleanup-on-unmount semantics stay
   // consistent.
   useEffect(() => {
-    if (!user || !WORKSPACE_FEATURE_ENABLED) return;
+    if (!user || !WORKSPACE_FEATURE_ENABLED || !accessToken) return;
     let cancelled = false;
 
-    const loadWorkspaceLogo = async () => {
+    const load = async () => {
       setIsLoadingWorkspaceLogo(true);
       try {
-        const token = await getAccessToken();
-        if (!token) return;
         const response = await fetch('/api/workspace/logo', {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
           cache: 'no-store',
         });
         const payload = (await response.json().catch(() => ({}))) as WorkspaceLogoResponse;
@@ -266,14 +184,16 @@ export default function SettingsPage() {
       }
     };
 
-    void loadWorkspaceLogo();
+    void load();
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, accessToken]);
 
   // Same three-step flow as release asset uploads (AssetUploadControl):
   // signed upload URL → PUT bytes directly to storage → record the pointer.
+  // Click-triggered, so it fetches its own fresh token rather than reusing
+  // the hoisted mount-time one — see the accessToken comment above.
   const handleUploadWorkspaceLogo = async (file: File) => {
     if (!user) return;
     setWorkspaceLogoError('');
@@ -341,9 +261,7 @@ export default function SettingsPage() {
       }
 
       setWorkspaceLogo(recordPayload.logo);
-      setWorkspaceLogoMessage(
-        'Logo saved. Releases without cover art now show it automatically.'
-      );
+      setWorkspaceLogoMessage('Logo saved. Releases without cover art now show it automatically.');
     } catch (err) {
       setWorkspaceLogoError(errorMessage(err, 'Could not upload logo.'));
     } finally {
@@ -420,211 +338,18 @@ export default function SettingsPage() {
     }
   };
 
-  const clearFeedback = () => {
-    setError('');
-    setSuccess('');
-  };
-
-  const handleSaveProfile = async () => {
-    if (!user) return;
-    if (!name.trim()) {
-      setError('Name cannot be empty');
-      return;
-    }
-
-    clearFeedback();
-    setIsSavingName(true);
-    try {
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ name: name.trim(), updated_at: new Date().toISOString() })
-        .eq('id', user.id);
-      if (updateError) throw updateError;
-
-      await checkAuth();
-      setSuccess('Profile updated');
-    } catch (err) {
-      setError(errorMessage(err, 'Failed to update profile'));
-    } finally {
-      setIsSavingName(false);
-    }
-  };
-
-  const handleSaveArtistProfileName = async () => {
-    if (!user || user.role !== 'artist') return;
-    clearFeedback();
-    const normalized = artistProfileName.trim();
-    if (!normalized) {
-      setError('Artist name cannot be empty');
-      return;
-    }
-
-    setIsSavingName(true);
-    try {
-      await updateArtistName(normalized);
-      await checkAuth();
-      setSuccess('Artist name updated');
-    } catch (err) {
-      setError(errorMessage(err, 'Failed to update artist name'));
-    } finally {
-      setIsSavingName(false);
-    }
-  };
-
-  const handleSavePassword = async () => {
-    clearFeedback();
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    setIsSavingPassword(true);
-    try {
-      const { error: passwordError } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-      if (passwordError) throw passwordError;
-
-      setNewPassword('');
-      setConfirmPassword('');
-      setSuccess('Password updated');
-    } catch (err) {
-      setError(errorMessage(err, 'Failed to update password'));
-    } finally {
-      setIsSavingPassword(false);
-    }
-  };
-
-  const handleSaveNotifications = async () => {
-    if (!user) return;
-    clearFeedback();
-    setIsSavingNotifications(true);
-    try {
-      localStorage.setItem(
-        `urganize.notifications.${user.id}`,
-        JSON.stringify({ notificationsEmail, notificationsProduct })
-      );
-      setSuccess('Notification preferences saved');
-    } finally {
-      setIsSavingNotifications(false);
-    }
-  };
-
-  const handleDeleteNow = async () => {
-    clearFeedback();
-    if (!user) return;
-
-    if (confirmationText.trim() !== 'DELETE') {
-      setError('Type DELETE exactly to confirm');
-      return;
-    }
-
-    setIsDeleting(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        throw new Error('Session expired. Please sign in again.');
-      }
-
-      const res = await fetch('/api/account/delete-now', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ confirmationText }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Could not delete account');
-
-      await logout();
-      router.push('/auth');
-    } catch (err) {
-      setError(errorMessage(err, 'Could not delete account'));
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleInviteTeammate = async () => {
-    const email = inviteEmail.trim().toLowerCase();
-    if (!email || !email.includes('@')) {
-      setTeammateError('Enter a valid email.');
-      return;
-    }
-
-    setIsInviting(true);
-    setTeammateError('');
-    setTeammateMessage('');
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Session expired. Please sign in again.');
-      const response = await fetch('/api/workspace/members/invite', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ email, role: inviteRole }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        member?: WorkspaceMember;
-        error?: string;
-      };
-      if (!response.ok) {
-        throw new Error(payload.error || 'Could not invite teammate.');
-      }
-      if (payload.member) {
-        setTeammates((current) => {
-          const idx = current.findIndex((m) => m.user_id === payload.member?.user_id);
-          if (idx === -1) return [...current, payload.member as WorkspaceMember];
-          const next = [...current];
-          next[idx] = payload.member as WorkspaceMember;
-          return next;
-        });
-      }
-      setInviteEmail('');
-      setInviteRole('viewer');
-      setTeammateMessage('Invite sent.');
-    } catch (err) {
-      setTeammateError(errorMessage(err, 'Could not invite teammate.'));
-    } finally {
-      setIsInviting(false);
-    }
-  };
-
-  const handleRemoveTeammate = async (memberId: string) => {
-    setTeammateError('');
-    setTeammateMessage('');
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Session expired. Please sign in again.');
-      const response = await fetch(`/api/workspace/members/${memberId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const payload = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) throw new Error(payload.error || 'Could not remove teammate.');
-      setTeammates((current) => current.filter((m) => m.id !== memberId));
-      setTeammateMessage('Teammate removed.');
-    } catch (err) {
-      setTeammateError(errorMessage(err, 'Could not remove teammate.'));
-    }
-  };
-
   // ONE skeleton, rendered here (no route-segment Suspense fallback). SSR
   // serializes this into HTML; hydration is a no-op reconciliation — no
   // shimmer restart, no blank gap. Stays visible until auth resolves AND
   // the user is known.
-  if (authLoading || !user) return <SettingsPageSkeleton />;
+  if (authLoading || !user) {
+    return (
+      <SettingsPageSkeleton
+        isManagerAccount={isManagerAccount}
+        isArtistAccount={isArtistAccount}
+      />
+    );
+  }
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
@@ -658,458 +383,56 @@ export default function SettingsPage() {
             </Link>
           </div>
 
-          {error && <p className="mb-5 rounded-lg border border-status-error/40 bg-status-error/10 px-4 py-3 text-sm text-status-error">{error}</p>}
-          {success && <p className="mb-5 rounded-lg border border-brand/35 bg-brand-muted px-4 py-3 text-sm text-brand">{success}</p>}
-
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <section className={panelClass}>
-            <h2 className="mb-4 text-xl">Profile</h2>
-            <div className="space-y-4">
-              <label className="block">
-                <span className="mb-1 block text-sm text-content-secondary">Name</span>
-                <input
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-sm text-content-secondary">Email</span>
-                <input value={user.email} disabled className="w-full rounded-lg border border-stroke-subtle bg-bg-overlay px-3 py-2 text-content-secondary" />
-              </label>
-              <button
-                type="button"
-                onClick={handleSaveProfile}
-                disabled={isSavingName}
-                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-              >
-                {isSavingName ? 'Saving...' : 'Save profile'}
-              </button>
-            </div>
-          </section>
-
-          <section className={panelClass}>
-            <h2 className="mb-4 text-xl">Appearance</h2>
-            <p className="mb-4 text-sm text-content-secondary">
-              Choose how Urganize looks on this device.
-            </p>
-            <ThemeToggle />
-          </section>
-
-          <section className={panelClass}>
-            <h2 className="mb-4 text-xl">Security</h2>
-            <div className="space-y-4">
-              <label className="block">
-                <span className="mb-1 block text-sm text-content-secondary">New password</span>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-sm text-content-secondary">Confirm new password</span>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={handleSavePassword}
-                disabled={isSavingPassword}
-                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-              >
-                {isSavingPassword ? 'Updating...' : 'Update password'}
-              </button>
-            </div>
-          </section>
-        </div>
-
-        {WORKSPACE_FEATURE_ENABLED && (
-          <section className={`${panelClass} mt-6`}>
-            <h2 className="mb-1 text-xl">Workspace artist</h2>
-            <p className="mb-4 text-sm text-content-secondary">
-              The single artist this workspace works on. Renaming here updates
-              every release&apos;s cached artist label.
-            </p>
-            {isLoadingWorkspaceArtist ? (
-              <div className="space-y-2">
-                <SkeletonBlock className="h-3 w-20" />
-                <SkeletonBlock className="h-10 w-full rounded-lg" />
-              </div>
-            ) : workspaceArtist === undefined ? (
-              <p className="text-sm text-content-secondary">
-                No workspace artist yet. Create a release to seed one.
-              </p>
-            ) : workspaceArtist === null ? (
-              <p className="text-sm text-content-secondary">
-                Could not load workspace artist.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                <label className="block">
-                  <span className="mb-1 block text-sm text-content-secondary">Artist name</span>
-                  <input
-                    value={workspaceArtistInput}
-                    onChange={(event) => setWorkspaceArtistInput(event.target.value)}
-                    className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
-                    placeholder="e.g. Tems"
-                    maxLength={120}
-                  />
-                </label>
-                {workspaceArtistMessage && (
-                  <p className="rounded-lg border border-brand/35 bg-brand-muted px-3 py-2 text-sm text-brand">
-                    {workspaceArtistMessage}
-                  </p>
-                )}
-                {workspaceArtistError && (
-                  <p className="rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
-                    {workspaceArtistError}
-                  </p>
-                )}
-                <button
-                  type="button"
-                  onClick={() => void handleSaveWorkspaceArtist()}
-                  disabled={isSavingWorkspaceArtist}
-                  className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-                >
-                  {isSavingWorkspaceArtist ? 'Saving…' : 'Save artist name'}
-                </button>
-              </div>
-            )}
-          </section>
-        )}
-
-        {WORKSPACE_FEATURE_ENABLED && (
-          <section className={`${panelClass} mt-6`}>
-            <h2 className="mb-1 text-xl">Workspace logo</h2>
-            <p className="mb-4 text-sm text-content-secondary">
-              Your record label or team logo. Releases without cover art — new
-              and existing — display it automatically until you upload their
-              artwork.
-            </p>
-            {isLoadingWorkspaceLogo ? (
-              <div className="flex items-center gap-4">
-                <SkeletonBlock className="h-24 w-24" />
-                <SkeletonBlock className="h-10 w-32 rounded-lg" />
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {workspaceLogo ? (
-                  <div className="flex items-center gap-4">
-                    <Image
-                      src={workspaceLogo.url}
-                      alt="Workspace logo"
-                      width={96}
-                      height={96}
-                      className="h-24 w-24 border border-stroke-subtle bg-bg-elevated object-cover"
-                    />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm text-content-primary">
-                        {workspaceLogo.fileName || 'Logo'}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => void handleRemoveWorkspaceLogo()}
-                        disabled={isSavingWorkspaceLogo}
-                        className="mt-1 text-sm text-status-error hover:underline disabled:opacity-60"
-                      >
-                        Remove logo
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-content-secondary">
-                    No logo yet. JPEG, PNG, or WebP up to{' '}
-                    {formatFileSize(LOGO_SIZE_LIMIT)}.
-                  </p>
-                )}
-                {workspaceLogoMessage && (
-                  <p className="rounded-lg border border-brand/35 bg-brand-muted px-3 py-2 text-sm text-brand">
-                    {workspaceLogoMessage}
-                  </p>
-                )}
-                {workspaceLogoError && (
-                  <p className="rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
-                    {workspaceLogoError}
-                  </p>
-                )}
-                <label
-                  className={`inline-flex cursor-pointer items-center rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover ${
-                    isSavingWorkspaceLogo ? 'cursor-not-allowed opacity-60' : ''
-                  }`}
-                >
-                  <input
-                    type="file"
-                    className="sr-only"
-                    accept={LOGO_MIME_ALLOWLIST.join(',')}
-                    disabled={isSavingWorkspaceLogo}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (!file) return;
-                      // Reset so re-selecting the same file fires onChange.
-                      event.target.value = '';
-                      void handleUploadWorkspaceLogo(file);
-                    }}
-                  />
-                  {isSavingWorkspaceLogo
-                    ? 'Uploading…'
-                    : workspaceLogo
-                      ? 'Replace logo'
-                      : 'Upload logo'}
-                </label>
-              </div>
-            )}
-          </section>
-        )}
-
-        {user.role === 'artist' && (
-          <section className={`${panelClass} mt-6`}>
-            <h2 className="mb-4 text-xl">Artist profile</h2>
-            <p className="mb-3 text-sm text-content-secondary">
-              This name is reused across the app.
-            </p>
-            <div className="space-y-3">
-              <label className="block">
-                <span className="mb-1 block text-sm text-content-secondary">Artist name</span>
-                <input
-                  value={artistProfileName}
-                  onChange={(event) => setArtistProfileName(event.target.value)}
-                  className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
-                  placeholder="e.g. Tems"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={handleSaveArtistProfileName}
-                disabled={isSavingName}
-                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-              >
-                {isSavingName ? 'Saving...' : 'Save artist name'}
-              </button>
-            </div>
-          </section>
-        )}
-
-        <section className={`${panelClass} mt-6`}>
-          <h2 className="mb-4 text-xl">Notifications</h2>
-          <div className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex items-center justify-between gap-4 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2">
-                <span className="text-sm text-content-primary">Release reminders by email</span>
-                <input
-                  type="checkbox"
-                  checked={notificationsEmail}
-                  onChange={(event) => setNotificationsEmail(event.target.checked)}
-                  className="h-4 w-4"
-                />
-              </label>
-              <label className="flex items-center justify-between gap-4 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2">
-                <span className="text-sm text-content-primary">Product updates and launch notes</span>
-                <input
-                  type="checkbox"
-                  checked={notificationsProduct}
-                  onChange={(event) => setNotificationsProduct(event.target.checked)}
-                  className="h-4 w-4"
-                />
-              </label>
-            </div>
-            <button
-              type="button"
-              onClick={handleSaveNotifications}
-              disabled={isSavingNotifications}
-              className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-            >
-              {isSavingNotifications ? 'Saving...' : 'Save notifications'}
-            </button>
+            <ProfileSection />
+            <AppearanceSection />
+            <SecuritySection />
           </div>
-        </section>
 
-        {/* id + scroll-mt on the section: deep-link target for Chappi's
-            invite banner (/settings#teammates); scroll-mt clears the sticky
-            topbar. */}
-        {isManagerAccount && (
-        <section id="teammates" className={`${panelClass} mt-6 scroll-mt-24`}>
-          <h2 className="mb-4 text-xl">Teammates</h2>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-            <input
-              value={inviteEmail}
-              onChange={(event) => setInviteEmail(event.target.value)}
-              placeholder="teammate@email.com"
-              className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
+          {WORKSPACE_FEATURE_ENABLED && (
+            <WorkspaceArtistSection
+              artist={workspaceArtist}
+              input={workspaceArtistInput}
+              onInputChange={setWorkspaceArtistInput}
+              isLoading={isLoadingWorkspaceArtist}
+              isSaving={isSavingWorkspaceArtist}
+              message={workspaceArtistMessage}
+              error={workspaceArtistError}
+              onSave={() => void handleSaveWorkspaceArtist()}
             />
-            <select
-              value={inviteRole}
-              onChange={(event) => setInviteRole(event.target.value)}
-              className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-            >
-              <option value="manager">Manager</option>
-              <option value="artist">Artist</option>
-              <option value="team-member">Team Member</option>
-              <option value="viewer">Viewer</option>
-            </select>
-            <button
-              type="button"
-              onClick={() => void handleInviteTeammate()}
-              disabled={isInviting}
-              className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-            >
-              {isInviting ? 'Inviting...' : 'Invite'}
-            </button>
-          </div>
-
-          {teammateMessage && (
-            <p className="mt-3 rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
-              {teammateMessage}
-            </p>
-          )}
-          {teammateError && (
-            <p className="mt-3 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
-              {teammateError}
-            </p>
           )}
 
-          {isLoadingTeammates ? (
-            <SettingsTeamMembersSectionSkeleton />
-          ) : teammates.length === 0 ? (
-            <p className="mt-4 text-sm text-content-secondary">No teammates yet. Invite someone to get started.</p>
-          ) : (
-            <div className="mt-4 space-y-2">
-              {teammates.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-content-primary">{member.name || 'Unknown'}</p>
-                    <p className="text-xs text-content-secondary">{member.email || 'No email'}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded border border-stroke-subtle bg-bg-surface px-2 py-1 text-xs capitalize text-content-primary">
-                      {(member.role || 'viewer').replace(/-/g, ' ')}
-                    </span>
-                    {member.user_id !== user.id && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTeammate(member.id)}
-                        className="text-xs text-status-error hover:underline"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+          {WORKSPACE_FEATURE_ENABLED && (
+            <WorkspaceLogoSection
+              logo={workspaceLogo}
+              isLoading={isLoadingWorkspaceLogo}
+              isSaving={isSavingWorkspaceLogo}
+              message={workspaceLogoMessage}
+              error={workspaceLogoError}
+              mimeAllowlist={LOGO_MIME_ALLOWLIST}
+              sizeLimit={LOGO_SIZE_LIMIT}
+              onUpload={(file) => void handleUploadWorkspaceLogo(file)}
+              onRemove={() => void handleRemoveWorkspaceLogo()}
+            />
           )}
-        </section>
-        )}
 
-        <section className={`${panelClass} mt-6`}>
-          <h2 className="mb-1 text-xl">Releases</h2>
-          <p className="mb-4 text-sm text-content-secondary">
-            Deleting a release is only available here. This permanently
-            removes it, its tasks, and its attached files.
-          </p>
-          {isLoadingReleases ? (
-            <div className="space-y-2">
-              <SkeletonBlock className="h-14 w-full rounded-lg" />
-              <SkeletonBlock className="h-14 w-full rounded-lg" />
-            </div>
-          ) : releases.length === 0 ? (
-            <p className="text-sm text-content-secondary">No releases yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {[...releases]
-                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                .map((release) => (
-                  <div
-                    key={release.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-content-primary">
-                        {release.title}
-                      </p>
-                      <p className="truncate text-xs text-content-secondary">
-                        {release.artistName || 'Unassigned artist'}
-                        {' · '}
-                        {release.status.replace(/_/g, ' ')}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setReleaseToDelete({ id: release.id, title: release.title })}
-                      aria-label={`Delete ${release.title}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-xs font-semibold text-content-tertiary transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      Delete
-                    </button>
-                  </div>
-                ))}
-            </div>
+          <ArtistProfileSection />
+          <NotificationsSection />
+
+          {isManagerAccount && (
+            <TeammatesSection
+              teammates={teammates}
+              isLoadingTeammates={isLoadingTeammates}
+              onTeammatesChange={setTeammates}
+              onRefetch={() => void loadTeammates()}
+            />
           )}
-        </section>
 
-        <section className={`${panelClass} mt-6`}>
-          <h2 className="mb-4 text-xl">Session</h2>
-          <div className="rounded-lg border border-stroke-subtle bg-bg-elevated p-4">
-            <p className="text-sm text-content-secondary">Signed in as {user.email}.</p>
-            <button
-              type="button"
-              onClick={async () => {
-                await logout();
-                router.push('/auth');
-              }}
-              className="mt-4 rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover"
-            >
-              Log out
-            </button>
-          </div>
-        </section>
-
-        <section className="mt-6 rounded-3xl border border-status-error/35 bg-status-error/10 p-6">
-          <h2 className="mb-2 text-xl text-status-error">Delete account</h2>
-          <p className="mb-4 text-sm text-content-secondary">
-            This permanently deletes your account. This action cannot be undone.
-          </p>
-          <div className="space-y-4">
-            <label className="block">
-              <span className="mb-1 block text-sm text-content-secondary">Type DELETE</span>
-              <input
-                value={confirmationText}
-                onChange={(event) => setConfirmationText(event.target.value)}
-                className="w-full rounded-lg border border-status-error/35 bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-status-error"
-              />
-            </label>
-
-            <button
-              type="button"
-              onClick={handleDeleteNow}
-              disabled={isDeleting}
-              className="rounded-lg bg-status-error px-4 py-2 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:opacity-55"
-            >
-              {isDeleting ? 'Deleting...' : 'Delete account'}
-            </button>
-          </div>
-        </section>
+          <ReleasesSection />
+          <SessionSection />
+          <DeleteAccountSection />
         </div>
       </div>
-
-      <DeleteReleaseDialog
-        open={releaseToDelete !== null}
-        release={releaseToDelete}
-        tasksTotal={
-          releaseToDelete ? tasks.filter((task) => task.releaseId === releaseToDelete.id).length : 0
-        }
-        onClose={() => setReleaseToDelete(null)}
-        onDeleted={handleReleaseDeleted}
-      />
     </main>
   );
 }
