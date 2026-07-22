@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.16.4",
+    date: "July 22, 2026",
+    highlights: [
+      "Removed the Files section from the release page and the workspace while we rework file storage. Nothing you've uploaded was touched or deleted, it's just hidden from the app for now.",
+    ],
+  },
+  {
     version: "0.16.3",
     date: "July 21, 2026",
     highlights: [

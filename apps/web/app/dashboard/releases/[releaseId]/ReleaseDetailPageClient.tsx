@@ -28,6 +28,8 @@ import { type ReleaseContext } from '@/lib/release-tailoring';
 const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
 const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
+// Files (URG-182): the assets API routes 404 on the same flag server-side.
+const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 
 // The AI modals are dynamic AND only rendered behind their flag (bottom of
 // the JSX): while a flag is off — as both are in production today — the
@@ -477,10 +479,12 @@ export default function ReleaseDetailPage() {
 
         <ContentCalendarSection releaseId={releaseId} />
 
-        <AssetSection
-          releaseId={releaseId}
-          onToast={(message, tone) => setToast({ message, tone })}
-        />
+        {FILES_ENABLED ? (
+          <AssetSection
+            releaseId={releaseId}
+            onToast={(message, tone) => setToast({ message, tone })}
+          />
+        ) : null}
 
         <ReleaseInfoSection releaseId={releaseId} />
       </div>

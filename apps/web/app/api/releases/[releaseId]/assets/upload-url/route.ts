@@ -19,10 +19,18 @@ type UploadUrlBody = {
   file_size?: unknown;
 };
 
+// Feature flag (URG-182): same flag as the parent assets routes.
+const isFilesFeatureEnabled = (): boolean =>
+  process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
+  if (!isFilesFeatureEnabled()) {
+    return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  }
+
   const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 

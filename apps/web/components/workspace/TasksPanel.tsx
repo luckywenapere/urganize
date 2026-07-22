@@ -29,6 +29,10 @@ import { ScopePill } from './ScopePill';
 // detail page alone.
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 
+// Files entry point (URG-182): same flag gates the assets API routes and the
+// release detail page's Asset section.
+const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
+
 // Overdue first (genuine slippage, most urgent), then Catch Up (start-here
 // for compressed-runway plans — calm, neutral framing), then standard
 // time-based buckets. Catch Up is empty on long-running releases where every
@@ -231,7 +235,7 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
               Calendar
             </Link>
           ) : null}
-          {scopedRelease ? (
+          {FILES_ENABLED && scopedRelease ? (
             <Link
               href={`/dashboard/releases/${scopedRelease.id}/files`}
               className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
