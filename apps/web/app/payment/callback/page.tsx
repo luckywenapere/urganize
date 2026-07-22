@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
+import { useEntitlementsStore } from '@/stores/useEntitlementsStore';
 import { HOME_PATH } from '@/lib/home-path';
 import { isBillingPlanId, getPlan } from '@urganize/pricing';
 import { Loader2 } from 'lucide-react';
@@ -64,6 +65,11 @@ function PaymentCallbackContent() {
           setStatus('success');
           setResult(payload);
           await checkAuth();
+          // URG-178: paid-tier flags flip live on the server the moment the
+          // webhook credits the account, but the client-side entitlements
+          // store only fetched once at session start — refetch now so the
+          // upgrade unlocks nav/upsells without a full page reload.
+          void useEntitlementsStore.getState().load();
           return;
         }
 

@@ -14,6 +14,7 @@ import {
 } from '@urganize/pricing';
 import { Lock, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
+import { useEntitlementsStore } from '@/stores/useEntitlementsStore';
 import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { type AccountStatus } from '@/lib/subscription-access';
@@ -159,6 +160,10 @@ export default function LockedPage() {
       }
 
       await checkAuth();
+      // URG-178: a started trial grants full paid-tier entitlement too —
+      // refetch so the redirect target sees it live, not stale from before
+      // the trial started.
+      void useEntitlementsStore.getState().load();
       router.replace(HOME_PATH);
     } catch (error) {
       setTrialError(errorMessage(error, 'Could not start trial.'));
