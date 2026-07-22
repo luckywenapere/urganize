@@ -22,3 +22,14 @@ model User {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @default(now()) @updatedAt
 }
+
+// URG-178: tiny key/value config store for marketing-site toggles that need
+// to flip without a redeploy. First (and so far only) use: pricing_page_mode
+// ('free' | 'paid'). Deliberately generic rather than a dedicated
+// PricingPageMode model — the next runtime toggle reuses this row shape
+// instead of a new migration.
+model AppConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt
+}

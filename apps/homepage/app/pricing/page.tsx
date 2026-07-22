@@ -5,6 +5,7 @@ import {
   type PricingCurrencyCode,
 } from "@urganize/pricing";
 import { buildPageMetadata } from "@/lib/seo";
+import { getPricingPageMode } from "@/lib/app-config";
 import { PricingPageClient } from "./PricingPageClient";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -32,6 +33,7 @@ function resolveCurrencyForCountry(country: string | null): PricingCurrencyCode 
 export default async function PricingPage() {
   const requestHeaders = await headers();
   const country = requestHeaders.get("x-vercel-ip-country");
+  const mode = await getPricingPageMode();
 
-  return <PricingPageClient initialCurrency={resolveCurrencyForCountry(country)} />;
+  return <PricingPageClient initialCurrency={resolveCurrencyForCountry(country)} mode={mode} />;
 }

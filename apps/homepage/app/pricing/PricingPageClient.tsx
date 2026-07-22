@@ -6,6 +6,7 @@ import { RiCheckLine } from "react-icons/ri";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import type { PricingPageMode } from "@/lib/app-config";
 import {
   SALES_CONTACT_EMAIL,
   SUPPORTED_CURRENCIES,
@@ -27,6 +28,11 @@ import {
 // marketing-side framing, not a billing concern. Editing the copy here
 // does not change what a customer is charged.
 
+// MANTRA / AUDIENCE LINE (URG-178) — used verbatim, no paraphrasing.
+const MANTRA = "Urganize is how your music gets the release it deserves.";
+const AUDIENCE_LINE = "Built for artist managers and small labels running more than one artist.";
+const APP_AUTH_URL = "https://app.urganize.app/auth";
+
 // Tier CTAs anchor to the on-page waitlist form (#waitlist) — the whole
 // public funnel is waitlist-gated (URG-125/URG-136); only the header's
 // Login / Start free links still go straight to the app. The old in-app
@@ -44,17 +50,17 @@ import {
 // waitlist-gated it no longer appears in the hero either — the trial is
 // only mentioned in the FAQ, as the answer to the question, not as a CTA.
 //
-// Refreshed 2026-07-14 (alongside the pricing reprice) with two bullets for
-// capability that shipped since this list was last written: light/dark mode
-// and real-time notifications. Chappi is deliberately NOT listed — it's
-// flag-gated off in production (NEXT_PUBLIC_FEATURE_CHAPPI defaults false),
-// and this page doesn't advertise what isn't live yet.
+// URG-178: release creation + task assignment are free on every account,
+// forever — not a Monthly/Annual benefit. This list only names what's
+// actually EXTRA on the paid plan: the roster-wide view, Chappi, file
+// storage, and cross-release insights, plus the general-purpose extras
+// (light/dark mode, notifications) that shipped alongside them.
 const MONTHLY_FEATURES = [
-  "Unlimited releases on one workspace",
-  "Hand-crafted single-release rollout template",
-  "Tasks with assignees, dependencies, due dates",
-  "Per-release file storage for masters, artwork, contracts",
-  "Event milestones: listening parties, video shoots, release day",
+  "Everything in the free plan, on every release",
+  "See your whole roster at a glance, not one release at a time",
+  "Chappi as your assistant — ask questions, get things done by asking",
+  "Keep artwork, masters, contracts, and split sheets on the release itself",
+  "A rollup of health and status across every release you run",
   "Invite your A&R, PR, distributor",
   "Light and dark mode, matching your system automatically",
   "Real-time notifications when things change on your releases",
@@ -65,7 +71,7 @@ const MONTHLY_FEATURES = [
 // priority support, single yearly invoice, locked pricing. The "best for
 // teams committed to a release year" line is positioning, not a feature
 // — included because annual is genuinely the wrong choice for someone
-// testing the water (they should pick Monthly or the 28-day trial).
+// testing the water (they should pick Monthly or the free plan).
 const ANNUAL_FEATURES = [
   "Everything in Monthly",
   "Priority email support",
@@ -89,29 +95,29 @@ const LABEL_FEATURES = [
 // two never drift.
 const FAQ_ITEMS = [
   {
-    question: "Can I try Urganize first?",
+    question: "Is any of this actually free?",
     answer:
-      "Yes. The 28-day free trial doesn't ask for a card. Start it from the app. Once it ends, pick a plan or stop using it.",
+      "Yes — creating a release, getting its rollout plan, and assigning and completing tasks is free on every account, with no time limit. Paid plans add the roster-wide view, Chappi, file storage, and cross-release insights.",
   },
   {
     question: "What's actually different between monthly and annual?",
     answer:
-      "The same workspace, same features. Annual is one invoice instead of twelve — the plan for teams already committed to their release calendar for the year.",
+      "The same paid plan, same features. Annual is one invoice instead of twelve — the plan for teams already committed to their release calendar for the year.",
   },
   {
     question: "Do I pay per teammate?",
     answer:
-      "No. One workspace, one price. Invite your A&R, PR, and distributor at no extra cost.",
+      "No. One plan, one price. Invite your A&R, PR, and distributor at no extra cost.",
   },
   {
     question: "Who is the Label plan for?",
     answer:
-      "Labels and management companies running a roster. Same workspace, plus the founders work with you directly: we onboard each artist's releases, tailor the templates to your workflow, and stay a message away on priority support.",
+      "Labels and management companies running a roster. Same paid plan, plus the founders work with you directly: we onboard each artist's releases, tailor the templates to your workflow, and stay a message away on priority support.",
   },
   {
     question: "How does billing work?",
     answer:
-      "Paystack processes the card. We charge in NGN or USD, your choice. You can cancel anytime from Settings and keep access through the period you paid for.",
+      "Paystack processes the card. We charge in NGN or USD, your choice. You can cancel anytime from Settings and keep access through the period you paid for — and the free plan's core (release + task) keeps working regardless.",
   },
 ] as const;
 
@@ -128,7 +134,7 @@ const faqSchema = {
   })),
 } as const;
 
-const MONTHLY_SUMMARY = "Billed every month. Full access, no long-term commitment.";
+const MONTHLY_SUMMARY = "Billed every month. Everything on top of the free plan, no long-term commitment.";
 const ANNUAL_SUMMARY = "Billed once a year. Built for teams running a full release calendar.";
 const LABEL_SUMMARY =
   "For labels and management companies running a roster. Priced to your roster, set up with the founders directly.";
@@ -158,12 +164,14 @@ const fadeInUp = {
 
 export function PricingPageClient({
   initialCurrency,
+  mode,
 }: {
   initialCurrency: PricingCurrencyCode;
+  mode: PricingPageMode;
 }) {
   // Initial value is geo-resolved server-side (see page.tsx): NGN for
   // Nigerian visitors, USD everywhere else. The toggle below still lets
-  // anyone switch manually.
+  // anyone switch manually. Irrelevant in free mode (no prices shown).
   const [currency, setCurrency] = useState<PricingCurrencyCode>(initialCurrency);
 
   return (
@@ -174,170 +182,307 @@ export function PricingPageClient({
       <MarketingHeader />
 
       <main className="relative z-10">
-        {/* HERO */}
-        <section className="relative px-6 pb-12 pt-14 sm:pt-20">
-          <div className="mx-auto max-w-4xl text-center">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mb-8 inline-flex items-center gap-2 rounded-full border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-accent)]"
-            >
-              <span className="h-1.5 w-1.5 animate-ping rounded-full bg-[var(--marketing-accent)]" />
-              Pricing
-            </motion.div>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="mb-8 text-5xl font-black leading-[0.95] tracking-tighter sm:text-6xl md:text-7xl"
-            >
-              Built for the release.
-              <br />
-              <span className="text-[var(--marketing-accent)]">Priced per workspace.</span>
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl"
-            >
-              One workspace, every release your team runs. Join the waitlist and
-              we&apos;ll reach out.
-            </motion.p>
-
-            {/* Currency toggle. Default is geo-resolved (NGN in Nigeria,
-                USD elsewhere). Sticky in local state for this session; no
-                persistence — the in-app /locked screen has its own toggle
-                with the same options. */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.55 }}
-              className="mt-10 inline-flex items-center gap-3 text-xs font-bold uppercase tracking-[0.18em] text-[var(--marketing-text-subtle)]"
-            >
-              <span>Currency</span>
-              <div
-                role="radiogroup"
-                aria-label="Display currency"
-                className="inline-flex overflow-hidden rounded-full border border-[var(--marketing-border-strong)] bg-[var(--marketing-surface)]"
-              >
-                {SUPPORTED_CURRENCIES.map((code) => {
-                  const isActive = currency === code;
-                  return (
-                    <button
-                      key={code}
-                      type="button"
-                      role="radio"
-                      aria-checked={isActive}
-                      onClick={() => setCurrency(code)}
-                      className={
-                        isActive
-                          ? "bg-[var(--marketing-accent)] px-4 py-1.5 text-[var(--marketing-primary-text)]"
-                          : "px-4 py-1.5 text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)]"
-                      }
-                    >
-                      {code}
-                    </button>
-                  );
-                })}
-              </div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* PRICING CARDS */}
-        <section className="relative px-6 pb-20">
-          <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-3">
-            <PricingTierCard
-              name="Monthly"
-              price={formatPlanCyclePrice("monthly", currency)}
-              summary={MONTHLY_SUMMARY}
-              features={MONTHLY_FEATURES}
-              cta={{ label: "Join now", href: "#waitlist" }}
-            />
-            <PricingTierCard
-              name="Annual"
-              price={formatPlanCyclePrice("annual", currency)}
-              priceSubline={monthlyEquivalent("annual", currency)}
-              summary={ANNUAL_SUMMARY}
-              features={ANNUAL_FEATURES}
-              cta={{ label: "Join now", href: "#waitlist" }}
-              highlight
-              badge="Best value"
-            />
-            {/* Label is sales-led (contactSales in @urganize/pricing): no
-                price, no monthly-equivalent — a roster deal is scoped and
-                quoted per label, so the CTA opens an email to the founders
-                instead of the waitlist. */}
-            <PricingTierCard
-              name="Label"
-              price="Contact us"
-              summary={LABEL_SUMMARY}
-              features={LABEL_FEATURES}
-              cta={{
-                label: "Talk to the founders",
-                href: `mailto:${SALES_CONTACT_EMAIL}?subject=${encodeURIComponent("Urganize Label plan enquiry")}`,
-              }}
-            />
-          </div>
-
-          {/* Caption under the card row. Matches the card-row width
-              (max-w-6xl on the parent) so it reads as a caption, not a
-              floating paragraph. Paystack mention removed — the billing
-              FAQ below covers it once, that's enough. */}
-          <motion.p
-            {...fadeInUp}
-            className="mt-10 text-center text-sm text-[var(--marketing-text-subtle)]"
-          >
-            All prices in {currency} unless toggled. Cancel anytime from Settings.
-          </motion.p>
-        </section>
-
-        {/* FAQ — kept tight. Pricing pages live or die on whether the
-            obvious questions get clean answers. */}
-        <section className="relative px-6 pb-28">
-          <div className="mx-auto max-w-3xl space-y-4">
-            <motion.h2
-              {...fadeInUp}
-              className="text-center text-3xl font-black tracking-tight md:text-4xl"
-            >
-              Questions we get
-            </motion.h2>
-
-            <div className="mt-8 space-y-4">
-              {FAQ_ITEMS.map((item) => (
-                <FaqRow key={item.question} question={item.question} answer={item.answer} />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* WAITLIST — the target of every tier card's "Join now" anchor.
-            scroll-mt keeps the heading clear of the fixed header on jump. */}
-        <section id="waitlist" className="relative scroll-mt-28 px-6 pb-28">
-          <div className="mx-auto max-w-3xl text-center">
-            <motion.h2
-              {...fadeInUp}
-              className="text-3xl font-black tracking-tight md:text-4xl"
-            >
-              Ready when you are.
-            </motion.h2>
-            <div className="mt-8">
-              <WaitlistForm source="pricing" />
-            </div>
-          </div>
-        </section>
+        {mode === "free" ? (
+          <FreeModeContent />
+        ) : (
+          <PaidModeContent currency={currency} setCurrency={setCurrency} />
+        )}
       </main>
 
       <MarketingFooter />
 
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-      />
+      {mode === "paid" ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+      ) : null}
     </div>
+  );
+}
+
+// ─── free mode ───────────────────────────────────────────────────────────────
+
+// URG-178: no price table by design — this mode exists to sell the free
+// core loop (release creation + task assignment, no time limit) on its own
+// terms. "Get Started Free" goes straight into the app (a genuinely free
+// offer is a different proposition than the paid trial the waitlist-first
+// funnel decision was about), unlike paid mode's waitlist-anchored CTAs.
+function FreeModeContent() {
+  return (
+    <section className="relative px-6 pb-24 pt-16 sm:pt-24">
+      <div className="mx-auto max-w-3xl text-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="mb-8 inline-flex items-center gap-2 rounded-full border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-accent)]"
+        >
+          <span className="h-1.5 w-1.5 animate-ping rounded-full bg-[var(--marketing-accent)]" />
+          Free, no time limit
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-6 text-5xl font-black leading-[0.95] tracking-tighter sm:text-6xl md:text-7xl"
+        >
+          {MANTRA}
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="mx-auto max-w-xl text-sm font-semibold uppercase tracking-[0.14em] text-[var(--marketing-text-subtle)]"
+        >
+          {AUDIENCE_LINE}
+        </motion.p>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="mx-auto mt-8 max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl"
+        >
+          Every release gets a rollout plan. Assign tasks, see what&apos;s done, what&apos;s next,
+          and who&apos;s on it. Free, no time limit.
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55 }}
+          className="mt-10"
+        >
+          <a
+            href={APP_AUTH_URL}
+            className="inline-flex items-center justify-center rounded-full bg-[var(--marketing-primary)] px-8 py-4 text-base font-semibold tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_18px_48px_var(--marketing-shadow-strong)] hover:bg-[var(--marketing-primary-hover)]"
+          >
+            Get Started Free
+          </a>
+        </motion.div>
+
+        <motion.ul
+          {...fadeInUp}
+          className="mx-auto mt-16 grid max-w-2xl gap-4 text-left sm:grid-cols-2"
+        >
+          {[
+            "A hand-crafted rollout plan for every release you create",
+            "Tasks with owners, due dates, and dependencies",
+            "See what's done, what's blocked, and what's due this week",
+            "No card required, no trial countdown — it just stays free",
+          ].map((line) => (
+            <li
+              key={line}
+              className="flex items-start gap-3 rounded-2xl border border-[color:var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-4 text-sm leading-6 text-[var(--marketing-text-muted)]"
+            >
+              <RiCheckLine
+                className="mt-0.5 size-4 shrink-0 text-[var(--marketing-accent)]"
+                aria-hidden="true"
+              />
+              <span>{line}</span>
+            </li>
+          ))}
+        </motion.ul>
+      </div>
+    </section>
+  );
+}
+
+// ─── paid mode ───────────────────────────────────────────────────────────────
+
+function PaidModeContent({
+  currency,
+  setCurrency,
+}: {
+  currency: PricingCurrencyCode;
+  setCurrency: (code: PricingCurrencyCode) => void;
+}) {
+  return (
+    <>
+      {/* HERO */}
+      <section className="relative px-6 pb-12 pt-14 sm:pt-20">
+        <div className="mx-auto max-w-4xl text-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mb-8 inline-flex items-center gap-2 rounded-full border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-accent)]"
+          >
+            <span className="h-1.5 w-1.5 animate-ping rounded-full bg-[var(--marketing-accent)]" />
+            Pricing
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-4 text-5xl font-black leading-[0.95] tracking-tighter sm:text-6xl md:text-7xl"
+          >
+            Built for the release.
+            <br />
+            <span className="text-[var(--marketing-accent)]">Free to start.</span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mx-auto max-w-xl text-sm font-semibold uppercase tracking-[0.14em] text-[var(--marketing-text-subtle)]"
+          >
+            {AUDIENCE_LINE}
+          </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl"
+          >
+            Release creation, rollout plans, and task assignment are free on every account, no
+            time limit. Join the waitlist for the paid plan below and we&apos;ll reach out.
+          </motion.p>
+
+          {/* Currency toggle. Default is geo-resolved (NGN in Nigeria,
+              USD elsewhere). Sticky in local state for this session; no
+              persistence — the in-app /locked screen has its own toggle
+              with the same options. */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.55 }}
+            className="mt-10 inline-flex items-center gap-3 text-xs font-bold uppercase tracking-[0.18em] text-[var(--marketing-text-subtle)]"
+          >
+            <span>Currency</span>
+            <div
+              role="radiogroup"
+              aria-label="Display currency"
+              className="inline-flex overflow-hidden rounded-full border border-[var(--marketing-border-strong)] bg-[var(--marketing-surface)]"
+            >
+              {SUPPORTED_CURRENCIES.map((code) => {
+                const isActive = currency === code;
+                return (
+                  <button
+                    key={code}
+                    type="button"
+                    role="radio"
+                    aria-checked={isActive}
+                    onClick={() => setCurrency(code)}
+                    className={
+                      isActive
+                        ? "bg-[var(--marketing-accent)] px-4 py-1.5 text-[var(--marketing-primary-text)]"
+                        : "px-4 py-1.5 text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)]"
+                    }
+                  >
+                    {code}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* PRICING CARDS */}
+      <section className="relative px-6 pb-20">
+        {/* Founding Member: a lock on the PAID-TIER price only — the free
+            core (release + task) is free regardless of when someone signs
+            up, so there's nothing to "grandfather" there. */}
+        <motion.div
+          {...fadeInUp}
+          className="mx-auto mb-10 max-w-3xl rounded-2xl border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/8 p-5 text-center"
+        >
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--marketing-accent)]">
+            Founding Member
+          </p>
+          <p className="mt-2 text-sm leading-6 text-[var(--marketing-text-muted)]">
+            Join now on Monthly or Annual and your price is locked in for as long as you stay
+            subscribed, even as our list price goes up later. This lock applies to what you pay
+            for the paid plan — the free plan stays free for everyone regardless.
+          </p>
+        </motion.div>
+
+        <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-3">
+          <PricingTierCard
+            name="Monthly"
+            price={formatPlanCyclePrice("monthly", currency)}
+            summary={MONTHLY_SUMMARY}
+            features={MONTHLY_FEATURES}
+            cta={{ label: "Join now", href: "#waitlist" }}
+          />
+          <PricingTierCard
+            name="Annual"
+            price={formatPlanCyclePrice("annual", currency)}
+            priceSubline={monthlyEquivalent("annual", currency)}
+            summary={ANNUAL_SUMMARY}
+            features={ANNUAL_FEATURES}
+            cta={{ label: "Join now", href: "#waitlist" }}
+            highlight
+            badge="Best value"
+          />
+          {/* Label is sales-led (contactSales in @urganize/pricing): no
+              price, no monthly-equivalent — a roster deal is scoped and
+              quoted per label, so the CTA opens an email to the founders
+              instead of the waitlist. */}
+          <PricingTierCard
+            name="Label"
+            price="Contact us"
+            summary={LABEL_SUMMARY}
+            features={LABEL_FEATURES}
+            cta={{
+              label: "Talk to the founders",
+              href: `mailto:${SALES_CONTACT_EMAIL}?subject=${encodeURIComponent("Urganize Label plan enquiry")}`,
+            }}
+          />
+        </div>
+
+        {/* Caption under the card row. Matches the card-row width
+            (max-w-6xl on the parent) so it reads as a caption, not a
+            floating paragraph. Paystack mention removed — the billing
+            FAQ below covers it once, that's enough. */}
+        <motion.p
+          {...fadeInUp}
+          className="mt-10 text-center text-sm text-[var(--marketing-text-subtle)]"
+        >
+          All prices in {currency} unless toggled. Cancel anytime from Settings.
+        </motion.p>
+      </section>
+
+      {/* FAQ — kept tight. Pricing pages live or die on whether the
+          obvious questions get clean answers. */}
+      <section className="relative px-6 pb-28">
+        <div className="mx-auto max-w-3xl space-y-4">
+          <motion.h2
+            {...fadeInUp}
+            className="text-center text-3xl font-black tracking-tight md:text-4xl"
+          >
+            Questions we get
+          </motion.h2>
+
+          <div className="mt-8 space-y-4">
+            {FAQ_ITEMS.map((item) => (
+              <FaqRow key={item.question} question={item.question} answer={item.answer} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* WAITLIST — the target of every tier card's "Join now" anchor.
+          scroll-mt keeps the heading clear of the fixed header on jump. */}
+      <section id="waitlist" className="relative scroll-mt-28 px-6 pb-28">
+        <div className="mx-auto max-w-3xl text-center">
+          <motion.h2
+            {...fadeInUp}
+            className="text-3xl font-black tracking-tight md:text-4xl"
+          >
+            Ready when you are.
+          </motion.h2>
+          <div className="mt-8">
+            <WaitlistForm source="pricing" />
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
 

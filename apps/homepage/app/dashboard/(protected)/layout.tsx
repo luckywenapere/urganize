@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Tags } from "lucide-react";
 import {
   clearDashboardSession,
   requireDashboardAuth,
@@ -53,6 +53,13 @@ export default async function DashboardLayout({
           >
             <TrendingUp className="h-4 w-4" aria-hidden="true" />
             Growth
+          </Link>
+          <Link
+            href="/dashboard/pricing-mode"
+            className="mt-2 flex items-center gap-3 rounded-md border border-white/10 px-3 py-2.5 text-sm font-medium text-[#d7e4d9] hover:border-white/25 hover:text-white"
+          >
+            <Tags className="h-4 w-4" aria-hidden="true" />
+            Pricing mode
           </Link>
         </nav>
 

@@ -130,9 +130,9 @@ export default function WhyUrganizePage() {
               </h2>
               <p className="mx-auto mt-6 max-w-[38rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
                 This isn&apos;t about deleting apps. WhatsApp is still where
-                you talk; Drive is still fine for general storage. Urganize
-                replaces them as the system of record for the release: the one
-                place where the plan lives, the work happens, and the team
+                you talk; Drive is still fine for general storage. Urganize is
+                how your music gets the release it deserves: the one place
+                where the plan lives, the work happens, and the team
                 sees status.
               </p>
             </div>

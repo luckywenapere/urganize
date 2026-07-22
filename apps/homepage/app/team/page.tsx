@@ -6,7 +6,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Team",
   description:
-    "The team behind Urganize — artist managers, artists, and engineers building the system of record for music releases.",
+    "The team behind Urganize — artist managers, artists, and engineers building how your music gets the release it deserves.",
   path: "/team",
 });
 
@@ -70,8 +70,8 @@ export default function TeamPage() {
                 Urganize started in December 2025, mid-chaos. Lucky was sorting
                 out tasks for a third artist&apos;s release — across chats,
                 notes, and memory — when it became obvious the problem
-                wasn&apos;t effort. It was that no system of record existed for
-                the release.
+                wasn&apos;t effort. His music wasn&apos;t getting the release it
+                deserved.
               </p>
               <p>
                 Nine years in the industry as a videographer, director, and

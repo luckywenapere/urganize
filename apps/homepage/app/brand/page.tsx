@@ -15,7 +15,7 @@ export const metadata: Metadata = buildPageMetadata({
 const VOICE_PILLARS = [
   {
     title: "Plain-spoken, no jargon",
-    body: "We call it a “system of record,” not a “synergistic platform.” If a sentence needs a decoder, rewrite it.",
+    body: "We say “how your music gets the release it deserves,” not “synergistic platform.” If a sentence needs a decoder, rewrite it.",
     say: "Every file, filed.",
     avoid: "Holistic asset-lifecycle management.",
   },
@@ -128,15 +128,16 @@ export default function BrandPage() {
                 <p className={`mt-1.5 ${bodyText}`}>
                   The music industry runs on chaos — tribal knowledge, scattered group chats,
                   spreadsheets, and one overworked person holding every release together. Urganize
-                  is the system of record for the release: where the plan lives, where the work
-                  happens, where the team sees status.
+                  is how your music gets the release it deserves: where the plan lives, where the
+                  work happens, where the team sees status.
                 </p>
               </div>
 
               <div>
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Positioning</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Operational infrastructure for music industry teams. The system of record for the release.
+                  Operational infrastructure for music industry teams. How your music gets the
+                  release it deserves.
                 </p>
               </div>
 
@@ -159,7 +160,7 @@ export default function BrandPage() {
                   <li>Opinionated by default — if it doesn’t reduce operational chaos, it’s out.</li>
                   <li>
                     So we don’t do: revenue tracking, legal contracts, analytics dashboards, or
-                    distribution. We stay the system of record.
+                    distribution. We stay focused on the release.
                   </li>
                 </ul>
               </div>
@@ -168,10 +169,10 @@ export default function BrandPage() {
               <div className="border border-[color:var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
                 <p className={sectionEyebrow}>Boilerplate — copy / paste</p>
                 <p className="mt-2 text-[var(--marketing-text)]">
-                  Urganize is the system of record for music releases: a hand-crafted rollout plan,
-                  tasks with owners and due dates, and every release file in one workspace. Built
-                  for artist managers and small labels running more than one artist, with a Label
-                  tier for teams managing a bigger roster hands-on.
+                  Urganize is how your music gets the release it deserves: a hand-crafted rollout
+                  plan, tasks with owners and due dates, and every release file kept with the
+                  release itself. Built for artist managers and small labels running more than one
+                  artist, with a Label tier for teams managing a bigger roster hands-on.
                 </p>
               </div>
 

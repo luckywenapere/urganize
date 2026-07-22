@@ -113,8 +113,8 @@ export default function FeaturesPage() {
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              Urganize is the system of record for the release: where the plan
-              lives, where the work happens, where the team sees status.
+              Urganize is how your music gets the release it deserves: where the
+              plan lives, where the work happens, where the team sees status.
             </p>
           </div>
         </SectionShell>
