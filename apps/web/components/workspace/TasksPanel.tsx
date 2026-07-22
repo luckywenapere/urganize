@@ -21,6 +21,8 @@ import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { TaskRow } from '@/components/tasks/TaskRow';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { useEntitlementsStore } from '@/stores/useEntitlementsStore';
+import { useUpsellStore } from '@/stores/useUpsellStore';
 import { ScopePill } from './ScopePill';
 
 // Content calendar entry point (URG-157): the workspace is the surface users
@@ -119,6 +121,11 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
   // overlay — the center column itself becomes the task detail.
   const { openTask, openQuickCreate } = useTaskUI();
   const searchParams = useSearchParams();
+  const entitlements = useEntitlementsStore((state) => state.entitlements);
+  const showUpsell = useUpsellStore((state) => state.show);
+  // Same "unknown → don't block" rule as the topbar Chappi icon — the Files
+  // page itself and the server routes are the real enforcement.
+  const filesEntitled = entitlements === null || entitlements.fileManagement;
 
   const priorityFilter = (searchParams.get('priority') || '') as TaskPriority | '';
   const statusFilter = (searchParams.get('status') || '') as TaskStatus | '';
@@ -236,13 +243,24 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
             </Link>
           ) : null}
           {FILES_ENABLED && scopedRelease ? (
-            <Link
-              href={`/dashboard/releases/${scopedRelease.id}/files`}
-              className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
-            >
-              <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
-              Files
-            </Link>
+            filesEntitled ? (
+              <Link
+                href={`/dashboard/releases/${scopedRelease.id}/files`}
+                className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+              >
+                <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
+                Files
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => showUpsell('fileManagement', 'workspace_files_link')}
+                className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-tertiary transition-colors hover:bg-bg-hover"
+              >
+                <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
+                Files
+              </button>
+            )
           ) : null}
           {/* ScopePill is desktop-only. Below lg the mobile drill-down model
               in WorkspaceView replaces it with a dedicated back+title header

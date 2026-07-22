@@ -10,6 +10,8 @@ import { AppTopbar } from '@/components/app/AppTopbar';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { ToastProvider } from '@/components/shared/ToastProvider';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { useEntitlementsStore } from '@/stores/useEntitlementsStore';
+import { UpsellModal } from '@/components/shared/UpsellModal';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
 
 // None of these are needed for first paint — the onboarding wizard, the
@@ -110,6 +112,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [checkAuth, isAuthenticated, user]);
 
+  // URG-178: load once per authenticated session — the store's own
+  // in-flight guard makes this safe to call from every mount of AppShell.
+  const loadEntitlements = useEntitlementsStore((state) => state.load);
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      void loadEntitlements();
+    }
+  }, [isAuthenticated, loadEntitlements, user]);
+
   return (
     // ToastProvider wraps TaskUIProvider so any surface inside the app shell
     // (task drawer, workspace, notifications bell) can call `useToast()`.
@@ -161,6 +172,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           void useReleaseStore.getState().loadCommandCenter();
         }}
       />
+      <UpsellModal />
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
       {isLockedRoute || isOnboardingRoute || isInviteRoute ? null : (
         <Suspense fallback={null}>

@@ -16,6 +16,8 @@ import { ProgressBar } from '@/components/shared/ProgressBar';
 import { Toast } from '@/components/shared/Toast';
 import { ReleaseInfoSection } from '@/components/releases/ReleaseInfoSection';
 import { AssetSection } from '@/components/releases/AssetSection';
+import { FeatureUpsellCard } from '@/components/shared/FeatureUpsellCard';
+import { useEntitlementsStore } from '@/stores/useEntitlementsStore';
 import { ContentCalendarSection } from '@/components/releases/ContentCalendarSection';
 import dynamic from 'next/dynamic';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
@@ -70,6 +72,7 @@ export default function ReleaseDetailPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
+  const entitlements = useEntitlementsStore((state) => state.entitlements);
   const tasks = useTaskStore((s) => s.tasks);
   const { openTask, openQuickCreate, isTaskOpen } = useTaskUI();
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -480,10 +483,17 @@ export default function ReleaseDetailPage() {
         <ContentCalendarSection releaseId={releaseId} />
 
         {FILES_ENABLED ? (
-          <AssetSection
-            releaseId={releaseId}
-            onToast={(message, tone) => setToast({ message, tone })}
-          />
+          entitlements === null ? null : entitlements.fileManagement ? (
+            <AssetSection
+              releaseId={releaseId}
+              onToast={(message, tone) => setToast({ message, tone })}
+            />
+          ) : (
+            <FeatureUpsellCard
+              title="File storage is part of the paid plan"
+              body="Keep artwork, masters, contracts, and split sheets attached to the release itself, once you upgrade."
+            />
+          )
         ) : null}
 
         <ReleaseInfoSection releaseId={releaseId} />

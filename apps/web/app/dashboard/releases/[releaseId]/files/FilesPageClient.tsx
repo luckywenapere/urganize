@@ -6,10 +6,14 @@ import Link from 'next/link';
 import { AlertCircle, ChevronLeft } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { useEntitlementsStore } from '@/stores/useEntitlementsStore';
 import { formatArtistName } from '@/lib/release-execution';
 import { FilesPageSkeleton } from '@/components/loading/FilesPageSkeleton';
 import { Toast } from '@/components/shared/Toast';
 import { AssetSection, type AssetToastTone } from '@/components/releases/AssetSection';
+import { FeatureUpsellCard } from '@/components/shared/FeatureUpsellCard';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { createPostHogEvent } from '@/lib/analytics/shared';
 
 type ToastState = {
   message: string;
@@ -34,6 +38,7 @@ export default function FilesPageClient() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
+  const entitlements = useEntitlementsStore((state) => state.entitlements);
   const [toast, setToast] = useState<ToastState | null>(null);
 
   useEffect(() => {
@@ -58,6 +63,17 @@ export default function FilesPageClient() {
   }, [release?.title]);
 
   useEffect(() => {
+    if (entitlements && !entitlements.fileManagement) {
+      captureAnalyticsEvent(
+        createPostHogEvent('gated_feature_attempted', {
+          flag: 'fileManagement',
+          surface: 'files_page',
+        })
+      );
+    }
+  }, [entitlements]);
+
+  useEffect(() => {
     if (!toast) return;
     const timeout = window.setTimeout(() => setToast(null), toast.tone === 'warning' ? 6000 : 2600);
     return () => window.clearTimeout(timeout);
@@ -65,7 +81,7 @@ export default function FilesPageClient() {
 
   if (!FILES_ENABLED) return null;
 
-  if (authLoading || isInitialLoading) {
+  if (authLoading || isInitialLoading || entitlements === null) {
     return <FilesPageSkeleton />;
   }
 
@@ -118,10 +134,17 @@ export default function FilesPageClient() {
         </h1>
 
         <div className="mt-6">
-          <AssetSection
-            releaseId={releaseId}
-            onToast={(message, tone) => setToast({ message, tone })}
-          />
+          {entitlements.fileManagement ? (
+            <AssetSection
+              releaseId={releaseId}
+              onToast={(message, tone) => setToast({ message, tone })}
+            />
+          ) : (
+            <FeatureUpsellCard
+              title="File storage is part of the paid plan"
+              body="Keep artwork, masters, contracts, and split sheets attached to the release itself, once you upgrade."
+            />
+          )}
         </div>
       </div>
     </main>

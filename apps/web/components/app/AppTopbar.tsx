@@ -6,6 +6,8 @@ import { LayoutGrid, MessageCircle, Plus } from 'lucide-react';
 import { Logo } from '@urganize/ui';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
+import { useEntitlementsStore } from '@/stores/useEntitlementsStore';
+import { useUpsellStore } from '@/stores/useUpsellStore';
 
 // Same flag ChappiPageClient reads. Inlined at build time (NEXT_PUBLIC_
 // prefix) so the icon only appears once Chappi's own dedicated page is
@@ -46,6 +48,12 @@ function getRouteTitle(pathname: string | null) {
 export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
   const pathname = usePathname();
   const routeTitle = getRouteTitle(pathname);
+  const entitlements = useEntitlementsStore((state) => state.entitlements);
+  const showUpsell = useUpsellStore((state) => state.show);
+  // Entitlements haven't loaded yet (null) → don't block navigation on a
+  // guess; the page-level gate (ChappiPageClient) and the server route are
+  // the real enforcement either way. Once loaded, an explicit false gates.
+  const chappiEntitled = entitlements === null || entitlements.chappiAssistant;
 
   return (
     <header className="sticky top-0 z-30 border-b border-stroke-subtle bg-bg-base/88 backdrop-blur-xl">
@@ -107,18 +115,30 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             >
               <LayoutGrid className="h-4 w-4" aria-hidden="true" />
             </Link>
-            <Link
-              href="/dashboard/chappi"
-              aria-label="Chappi"
-              title="Chappi"
-              className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center border transition-colors ${
-                pathname === '/dashboard/chappi'
-                  ? 'border-brand bg-brand/10 text-brand'
-                  : 'border-stroke-default bg-bg-elevated text-content-primary hover:bg-bg-hover'
-              }`}
-            >
-              <MessageCircle className="h-4 w-4" aria-hidden="true" />
-            </Link>
+            {chappiEntitled ? (
+              <Link
+                href="/dashboard/chappi"
+                aria-label="Chappi"
+                title="Chappi"
+                className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center border transition-colors ${
+                  pathname === '/dashboard/chappi'
+                    ? 'border-brand bg-brand/10 text-brand'
+                    : 'border-stroke-default bg-bg-elevated text-content-primary hover:bg-bg-hover'
+                }`}
+              >
+                <MessageCircle className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            ) : (
+              <button
+                type="button"
+                aria-label="Chappi — part of the paid plan"
+                title="Chappi — part of the paid plan"
+                onClick={() => showUpsell('chappiAssistant', 'topbar_chappi_icon')}
+                className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center border border-stroke-default bg-bg-elevated text-content-tertiary transition-colors hover:bg-bg-hover"
+              >
+                <MessageCircle className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
           </>
         ) : null}
 

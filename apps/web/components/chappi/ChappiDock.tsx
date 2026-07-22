@@ -9,6 +9,8 @@ import { ChappiConversation } from './ChappiConversation';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { isNativePlatform } from '@/lib/platform';
 import { openExternalUrl } from '@/lib/external-link';
+import { useEntitlementsStore } from '@/stores/useEntitlementsStore';
+import { FeatureUpsellCard } from '@/components/shared/FeatureUpsellCard';
 
 // Direct line to the founder — same number SupportChat uses. When the Chappi
 // flag is on, the standalone WhatsApp pill is replaced by this dock and the
@@ -54,6 +56,8 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
   const pathname = usePathname();
   const messages = useChappiStore((state) => state.messages);
   const reset = useChappiStore((state) => state.reset);
+  const entitlements = useEntitlementsStore((state) => state.entitlements);
+  const chappiEntitled = entitlements === null || entitlements.chappiAssistant;
   const [isOpen, setIsOpen] = useState(false);
 
   const setOpenPersisted = useCallback((next: boolean) => {
@@ -159,7 +163,16 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
       </div>
 
       <div className="min-h-0 flex-1 px-3 pb-3 pt-2">
-        <ChappiConversation variant="panel" onNewRelease={onNewRelease} />
+        {chappiEntitled ? (
+          <ChappiConversation variant="panel" onNewRelease={onNewRelease} />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <FeatureUpsellCard
+              title="Chappi is part of the paid plan"
+              body="Ask questions about your releases and tasks, and let Chappi take actions for you, once you upgrade."
+            />
+          </div>
+        )}
       </div>
 
       {/* Human fallback — the WhatsApp founder line the standalone pill used

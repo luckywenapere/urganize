@@ -4,11 +4,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { useEntitlementsStore } from '@/stores/useEntitlementsStore';
 import { ChappiConversation } from '@/components/chappi/ChappiConversation';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { ChappiPageSkeleton } from '@/components/loading/ChappiPageSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { FirstReleaseWin } from '@/components/workspace/FirstReleaseWin';
+import { FeatureUpsellCard } from '@/components/shared/FeatureUpsellCard';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { createPostHogEvent } from '@/lib/analytics/shared';
 
 // Same flag AppTopbar reads for the nav icon — if a direct link is followed
 // while the flag is off, bounce to the workspace instead of 404ing (the
@@ -23,6 +27,7 @@ export default function ChappiPageClient() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
   const { releases, isInitialLoading, loadCommandCenter } = useReleaseStore();
+  const entitlements = useEntitlementsStore((state) => state.entitlements);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [winReleaseId, setWinReleaseId] = useState<string | null>(null);
 
@@ -39,13 +44,38 @@ export default function ChappiPageClient() {
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
 
+  useEffect(() => {
+    if (entitlements && !entitlements.chappiAssistant) {
+      captureAnalyticsEvent(
+        createPostHogEvent('gated_feature_attempted', {
+          flag: 'chappiAssistant',
+          surface: 'chappi_page',
+        })
+      );
+    }
+  }, [entitlements]);
+
   if (!CHAPPI_ENABLED) return null;
 
   // ONE skeleton, rendered here (not as a route-segment Suspense fallback) —
   // same rationale as WorkspaceView: SSR serializes the skeleton, hydration
-  // reconciles the same JSX, no remount.
-  if (authLoading || isInitialLoading) {
+  // reconciles the same JSX, no remount. entitlements === null holds the
+  // skeleton one beat longer so paid users never see the upsell flash.
+  if (authLoading || isInitialLoading || entitlements === null) {
     return <ChappiPageSkeleton />;
+  }
+
+  if (!entitlements.chappiAssistant) {
+    return (
+      <div className="flex min-h-[24rem] items-center justify-center">
+        <div className="max-w-md">
+          <FeatureUpsellCard
+            title="Chappi is part of the paid plan"
+            body="Ask questions about your releases and tasks, and let Chappi take actions for you, once you upgrade."
+          />
+        </div>
+      </div>
+    );
   }
 
   return (
