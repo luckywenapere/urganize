@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   buildTaskSchemaResponse,
-  requireAuthenticatedAdmin,
+  getAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadReleaseTaskBoard,
 } from '@/lib/tasks-server';
@@ -10,7 +10,7 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }

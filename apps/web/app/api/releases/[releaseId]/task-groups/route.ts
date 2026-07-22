@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   TASK_GROUPS_TABLE,
   buildTaskSchemaResponse,
-  requireAuthenticatedAdmin,
+  getAuthenticatedAdmin,
   isTaskSchemaMissingError,
   resolveReleaseTaskWorkspace,
   type TaskGroupRow,
@@ -31,7 +31,7 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }

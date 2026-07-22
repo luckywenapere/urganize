@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   buildTaskSchemaResponse,
-  requireAuthenticatedAdmin,
+  getAuthenticatedAdmin,
   isTaskSchemaMissingError,
   listNotifications,
 } from '@/lib/tasks-server';
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }

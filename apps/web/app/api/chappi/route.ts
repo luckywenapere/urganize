@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuthenticatedAdmin } from '@/app/api/_shared/auth';
+import { getAuthenticatedAdmin } from '@/app/api/_shared/auth';
+import { requireEntitlement } from '@/lib/entitlements';
 import { isChappiEnabled, isChappiModelConfigured } from '@/lib/chappi/config';
 import { resolveChappiContext } from '@/lib/chappi/dispatch';
 import { buildChappiSystemPrompt } from '@/lib/chappi/system-prompt';
@@ -38,8 +39,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
+
+  // Chappi is paid-tier (URG-178) — a live entitlement check, not the static
+  // NEXT_PUBLIC_FEATURE_CHAPPI flag above (that's the master on/off switch;
+  // this is per-user, based on subscription/founding-member/allowlist state).
+  const entitlement = await requireEntitlement(
+    'chappiAssistant',
+    auth.user.id,
+    auth.user.email,
+    auth.adminClient
+  );
+  if ('error' in entitlement) return entitlement.error;
 
   // Degraded mode: no capable model configured → tell the client to run the
   // deterministic intent-router. This is what keeps the front door useful

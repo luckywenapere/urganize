@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   UI_DRAFTS_TABLE,
   UI_DRAFTS_TABLE_SQL,
-  requireAuthenticatedAdmin,
+  getAuthenticatedAdmin,
   isOptionalTableMissingError,
 } from './_shared';
 
@@ -10,7 +10,7 @@ const normalizeScope = (value: string | null): string => String(value || '').tri
 const normalizeDraftKey = (value: string | null): string => String(value || '').trim();
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
   const { adminClient } = auth;
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
   const { adminClient } = auth;
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
   const { adminClient } = auth;

@@ -463,6 +463,7 @@ export {
   getAuthenticatedUser,
   requireActiveAuthenticatedUser,
   requireAuthenticatedAdmin,
+  getAuthenticatedAdmin,
   createAdminClient,
 } from '@/app/api/_shared/auth';
 

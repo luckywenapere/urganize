@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   NOTIFICATIONS_TABLE,
   buildTaskSchemaResponse,
-  requireAuthenticatedAdmin,
+  getAuthenticatedAdmin,
   isTaskSchemaMissingError,
 } from '@/lib/tasks-server';
 
@@ -13,7 +13,7 @@ type MarkNotificationsReadBody = {
 const readString = (value: unknown): string => String(value || '').trim();
 
 export async function PATCH(request: NextRequest) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }

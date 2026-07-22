@@ -8,11 +8,18 @@ import {
   createTaskNotification,
   ensureTaskAccess,
   loadTaskDetail,
-  requireAuthenticatedAdmin,
+  getAuthenticatedAdmin,
   isTaskSchemaMissingError,
   type TaskRow,
 } from '@/lib/tasks-server';
 import { TaskService } from '@/lib/services/task-service';
+import { TASK_DONE_STATUS } from '@/lib/execution-types';
+import {
+  captureServerAnalyticsEvent,
+  createPostHogEvent,
+  createServerPostHogClient,
+  shutdownServerAnalytics,
+} from '@/lib/posthog';
 
 // Allowed PATCH body fields → tasks-table column names. The route is the API
 // boundary that translates camelCase client payloads into snake_case columns
@@ -63,7 +70,7 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
   const { adminClient } = auth;
@@ -91,13 +98,14 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
   const { adminClient } = auth;
 
   const { id } = await context.params;
   const taskService = new TaskService(adminClient);
+  const posthogServer = createServerPostHogClient();
 
   try {
     const access = await ensureTaskAccess(adminClient, id, auth.user);
@@ -192,6 +200,37 @@ export async function PATCH(
       }
     }
 
+    // URG-178 growth metric: fires the first time this user's task lands on
+    // done. .neq('id', id) excludes the task just updated so the count
+    // reflects state BEFORE this completion regardless of query ordering.
+    if (
+      typeof mapped.updates.status === 'string' &&
+      mapped.updates.status === TASK_DONE_STATUS &&
+      previousStatus !== TASK_DONE_STATUS &&
+      auth.user.created_at
+    ) {
+      const priorDoneCountResult = await adminClient
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .eq('assigned_to_user_id', auth.user.id)
+        .eq('status', TASK_DONE_STATUS)
+        .neq('id', id);
+
+      if (!priorDoneCountResult.error && priorDoneCountResult.count === 0) {
+        const secondsSinceSignup = Math.max(
+          0,
+          Math.round((Date.now() - new Date(auth.user.created_at).getTime()) / 1000)
+        );
+        captureServerAnalyticsEvent(
+          posthogServer,
+          auth.user.id,
+          createPostHogEvent('time_to_first_completed_task', {
+            seconds_since_signup: secondsSinceSignup,
+          })
+        );
+      }
+    }
+
     return NextResponse.json({ task });
   } catch (error) {
     if (isTaskSchemaMissingError(error)) return buildTaskSchemaResponse();
@@ -199,6 +238,8 @@ export async function PATCH(
       { error: error instanceof Error ? error.message : 'Could not update task.' },
       { status: 500 }
     );
+  } finally {
+    await shutdownServerAnalytics(posthogServer);
   }
 }
 
@@ -206,7 +247,7 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
   const { adminClient } = auth;

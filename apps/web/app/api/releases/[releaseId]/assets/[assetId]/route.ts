@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   createAdminClient,
   ensureReleaseOwnership,
-  requireActiveAuthenticatedUser,
+  getAuthenticatedUser,
   isOptionalTableMissingError,
 } from '../../../_shared';
+import { requireEntitlement } from '@/lib/entitlements';
 import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-helpers';
 
 const ASSETS_TABLE = 'assets';
@@ -21,7 +22,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await getAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
   const { releaseId, assetId } = await context.params;
@@ -36,6 +37,16 @@ export async function DELETE(
   if (!adminClient) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
+
+  // file_management is paid-tier (URG-178) — live entitlement check on top
+  // of the NEXT_PUBLIC_FEATURE_FILES master switch above.
+  const entitlement = await requireEntitlement(
+    'fileManagement',
+    auth.user.id,
+    auth.user.email,
+    adminClient
+  );
+  if ('error' in entitlement) return entitlement.error;
 
   const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
   if ('error' in ownership) return ownership.error;

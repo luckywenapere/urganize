@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sortTasks, type AllTasksResponse } from '@/lib/tasks';
 import {
   buildTaskSchemaResponse,
-  requireAuthenticatedAdmin,
+  getAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadWorkspaceAccessContext,
   normalizeTaskFilters,
@@ -10,7 +10,7 @@ import {
 import { TaskService } from '@/lib/services/task-service';
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
   const { adminClient } = auth;

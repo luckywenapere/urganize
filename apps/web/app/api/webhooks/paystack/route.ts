@@ -9,6 +9,12 @@ import {
   type RecurringPlanId,
 } from '@/lib/billing-plans';
 import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
+import {
+  captureServerAnalyticsEvent,
+  createPostHogEvent,
+  createServerPostHogClient,
+  shutdownServerAnalytics,
+} from '@/lib/posthog';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Paystack webhook — recurring billing edition.
@@ -242,6 +248,10 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
   if (payment?.user_id && payment.plan) {
     const userId = payment.user_id;
     const planString = String(payment.plan);
+    // URG-178 growth metric: this reference hadn't succeeded before this
+    // delivery, so this is the genuine first-time conversion moment, not a
+    // webhook redelivery re-processing an already-credited payment.
+    const isFirstTimeSuccess = payment.status !== 'success';
 
     // Flip the reserved row to success (idempotent — re-deliveries hit this).
     if (payment.status !== 'success') {
@@ -252,6 +262,16 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
       if (updateError) {
         console.error('[paystack-webhook] payments status update error:', updateError.message);
       }
+    }
+
+    if (isFirstTimeSuccess) {
+      const posthogServer = createServerPostHogClient();
+      captureServerAnalyticsEvent(
+        posthogServer,
+        userId,
+        createPostHogEvent('free_to_paid_conversion', { plan: planString })
+      );
+      await shutdownServerAnalytics(posthogServer);
     }
 
     if (isRecurringPlan(planString)) {

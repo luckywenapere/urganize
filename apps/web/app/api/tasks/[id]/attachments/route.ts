@@ -5,7 +5,7 @@ import {
   buildStoragePathForTaskAttachment,
   buildTaskSchemaResponse,
   ensureTaskAccess,
-  requireAuthenticatedAdmin,
+  getAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadTaskAttachments,
 } from '@/lib/tasks-server';
@@ -14,7 +14,7 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }

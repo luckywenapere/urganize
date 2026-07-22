@@ -76,6 +76,14 @@ export interface AnalyticsEventPropertiesMap {
   pricing_validation_submitted: Record<string, unknown>;
   trial_started: Record<string, unknown>;
   trial_converted: Record<string, unknown>;
+  // URG-178: free core + paid tier gating.
+  gated_feature_attempted: {
+    flag: 'catalogView' | 'chappiAssistant' | 'fileManagement' | 'crossReleaseInsights';
+    surface: string;
+  };
+  free_to_paid_conversion: { plan: string | null };
+  time_to_first_release: { seconds_since_signup: number };
+  time_to_first_completed_task: { seconds_since_signup: number };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;

@@ -4,7 +4,7 @@ import {
   TASK_ATTACHMENTS_BUCKET,
   buildTaskSchemaResponse,
   ensureTaskAccess,
-  requireAuthenticatedAdmin,
+  getAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadTaskAttachments,
 } from '@/lib/tasks-server';
@@ -15,7 +15,7 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string; attachmentId: string }> }
 ) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }

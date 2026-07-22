@@ -4,7 +4,7 @@ import {
   buildMissingTableResponse,
   createAdminClient,
   ensureReleaseOwnership,
-  requireActiveAuthenticatedUser,
+  getAuthenticatedUser,
   isOptionalTableMissingError,
   loadReleaseCommandCenterData,
 } from '../../_shared';
@@ -13,7 +13,7 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await getAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
   const { releaseId } = await context.params;

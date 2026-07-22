@@ -3,7 +3,7 @@ import { groupTasksIntoSections } from '@/lib/tasks';
 import {
   TASKS_TABLE,
   buildTaskSchemaResponse,
-  requireAuthenticatedAdmin,
+  getAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadWorkspaceAccessContext,
   ensureWorkspaceAccess,
@@ -47,7 +47,7 @@ function validateTaskPostBody(body: unknown): { ok: true } | { error: string } {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
   const { adminClient } = auth;
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
   const { adminClient } = auth;

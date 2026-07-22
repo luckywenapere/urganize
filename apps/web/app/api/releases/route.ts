@@ -7,7 +7,7 @@ import {
   buildMissingTableResponse,
   createAdminClient,
   ensureReleaseOpsSchema,
-  requireAuthenticatedAdmin,
+  getAuthenticatedAdmin,
   isOptionalTableMissingError,
   parseOptionalReleaseDate,
 } from './_shared';
@@ -197,7 +197,7 @@ function normalizeReleaseCreatedSource(value: unknown): ReleaseCreatedSource {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) return auth.error;
 
   const { adminClient } = auth;
@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
   const posthogServer = createServerPostHogClient();
 
   try {
-    const auth = await requireAuthenticatedAdmin(request);
+    const auth = await getAuthenticatedAdmin(request);
     if ('error' in auth) return auth.error;
 
     const { adminClient } = auth;
@@ -541,6 +541,24 @@ export async function POST(request: NextRequest) {
         source: releaseSource,
       })
     );
+
+    // URG-178 growth metric: only fires on the very first release (the count
+    // was read before this insert), using the auth user's signup timestamp
+    // as the reference point — server-side so it's accurate regardless of
+    // which client/onboarding path created the release.
+    if (existingReleaseCountResult.count === 0 && auth.user.created_at) {
+      const secondsSinceSignup = Math.max(
+        0,
+        Math.round((Date.now() - new Date(auth.user.created_at).getTime()) / 1000)
+      );
+      captureServerAnalyticsEvent(
+        posthogServer,
+        auth.user.id,
+        createPostHogEvent('time_to_first_release', {
+          seconds_since_signup: secondsSinceSignup,
+        })
+      );
+    }
 
     if (releaseDateResult.value) {
       captureServerAnalyticsEvent(

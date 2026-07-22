@@ -79,3 +79,18 @@ export async function requireAuthenticatedAdmin(request: NextRequest) {
   }
   return { user: auth.user, supabaseUrl: auth.supabaseUrl, adminClient };
 }
+
+// Auth + admin client, WITHOUT the paywall gate. For the free core (release
+// creation, task assignment/completion, team assignment) which stays
+// available regardless of subscription state — see lib/entitlements.ts for
+// the four features that DO gate on subscription (catalog view, Chappi,
+// file management, cross-release insights).
+export async function getAuthenticatedAdmin(request: NextRequest) {
+  const auth = await getAuthenticatedUser(request);
+  if ('error' in auth) return { error: auth.error };
+  const adminClient = createAdminClient(auth.supabaseUrl);
+  if (!adminClient) {
+    return { error: NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 }) };
+  }
+  return { user: auth.user, supabaseUrl: auth.supabaseUrl, adminClient };
+}

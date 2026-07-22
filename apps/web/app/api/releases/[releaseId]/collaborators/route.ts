@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePaidAccess } from '../../../_shared/paywall';
 import {
   RELEASE_COLLABORATORS_TABLE,
   RELEASE_EVENTS_TABLE,
   buildMissingTableResponse,
   createAdminClient,
   ensureReleaseOwnership,
-  requireActiveAuthenticatedUser,
+  getAuthenticatedUser,
   isOptionalTableMissingError,
   loadReleaseCommandCenterData,
 } from '../../_shared';
@@ -15,7 +14,7 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await getAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
   const { releaseId } = await context.params;
@@ -40,14 +39,8 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await getAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
-
-  const paywallResponse = await requirePaidAccess(auth.user.id, {
-    feature: 'credits_tools',
-    message: 'Upgrade required to add collaborators.',
-  });
-  if (paywallResponse) return paywallResponse;
 
   const { releaseId } = await context.params;
   if (!releaseId) return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   buildTaskSchemaResponse,
   ensureTaskAccess,
-  requireAuthenticatedAdmin,
+  getAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadTaskComments,
   logTaskActivity,
@@ -20,7 +20,7 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string; commentId: string }> }
 ) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }
@@ -83,7 +83,7 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string; commentId: string }> }
 ) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }

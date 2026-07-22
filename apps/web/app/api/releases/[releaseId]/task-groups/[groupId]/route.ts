@@ -3,7 +3,7 @@ import {
   TASK_GROUPS_TABLE,
   TASKS_TABLE,
   buildTaskSchemaResponse,
-  requireAuthenticatedAdmin,
+  getAuthenticatedAdmin,
   isTaskSchemaMissingError,
   resolveReleaseTaskWorkspace,
   type TaskGroupRow,
@@ -34,7 +34,7 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string; groupId: string }> }
 ) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }
@@ -94,7 +94,7 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string; groupId: string }> }
 ) {
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await getAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
   }
