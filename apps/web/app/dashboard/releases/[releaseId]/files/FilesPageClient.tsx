@@ -16,6 +16,10 @@ type ToastState = {
   tone: AssetToastTone;
 };
 
+// Same NEXT_PUBLIC_ inlining convention as every other flag in the app; the
+// asset API routes 404 on the same flag server-side (URG-182).
+const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
+
 /**
  * Files get their own dedicated page (URG-165) instead of an inline
  * collapsible segment nested under Tasks in the workspace — cognitively,
@@ -33,13 +37,19 @@ export default function FilesPageClient() {
   const [toast, setToast] = useState<ToastState | null>(null);
 
   useEffect(() => {
+    // Flag-off bounce back to the release page, and the auth guard, combined
+    // into one effect (the calendar page precedent).
+    if (!FILES_ENABLED) {
+      router.replace(`/dashboard/releases/${releaseId}`);
+      return;
+    }
     if (authLoading) return;
     if (!user) {
       router.replace('/auth');
       return;
     }
     void loadCommandCenter();
-  }, [authLoading, loadCommandCenter, router, user]);
+  }, [authLoading, loadCommandCenter, releaseId, router, user]);
 
   const release = releases.find((r) => r.id === releaseId);
 
@@ -52,6 +62,8 @@ export default function FilesPageClient() {
     const timeout = window.setTimeout(() => setToast(null), toast.tone === 'warning' ? 6000 : 2600);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  if (!FILES_ENABLED) return null;
 
   if (authLoading || isInitialLoading) {
     return <FilesPageSkeleton />;

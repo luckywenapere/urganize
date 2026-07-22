@@ -362,6 +362,8 @@ v1 is built across six phases. Each phase corresponds to one of the v1 scope ite
 
 Constraint: Supabase Free plan caps individual uploads at 50 MB. Category size limits configured in `asset-helpers.ts` accordingly (40 MiB audio/video, 10 MiB documents, 5 MiB images).
 
+**2026-07-22 (URG-182):** the feature is hidden behind `NEXT_PUBLIC_FEATURE_FILES`, default `false` — see "File storage flagged off" in Working notes. Everything above still describes the built feature; it's gated, not deleted.
+
 **Phase 4 — Event milestone rendering.** Tasks with `type: 'event_milestone'` in their template metadata render differently from regular tasks: a calendar icon, a `status-info` left-border accent, and an "On <date>" label instead of the "Due ..." framing, plus an "Event" pill in the task drawer. The read path was fixed so `metadata.template.task_type` surfaces on the `Task` model (`isEventMilestone` helper). ✅ Complete.
 
 **Phase 5 — AI rollout planner.** Code complete and gated behind `NEXT_PUBLIC_FEATURE_TAILOR_PLAN` feature flag. Migration applied to production (`release_context` and `ai_tailoring_response` columns on releases). Activation pending: (1) Anthropic API key configured, (2) Zuplo gateway routed to Claude Sonnet for the tailoring endpoint (currently routes to `qwen2.5:3b` which is insufficient for structured JSON tailoring). Once both are in place, set the feature flag to true and verify end-to-end with a real release.
@@ -673,7 +675,18 @@ A workspace-level record label / team logo that automatically stands in as cover
 
 ---
 
-*Last updated: 2026-07-13 (reconciled the ICP line with the Label tier — labels are the premium roster tier, not excluded).*
+## File storage flagged off (2026-07-22, URG-182)
+
+Linear issue URG-182 asked to "remove file storage feature from the app." No feature flag existed for Phase 3 — it had shipped always-on. Given production already holds real files for real releases, the founder confirmed a flag-based turn-off over a full rip-out: reversible, no data touched. Added `NEXT_PUBLIC_FEATURE_FILES`, default `false`.
+
+- **Gated:** the release detail page's inline `AssetSection`, the standalone `/dashboard/releases/[releaseId]/files` page (bounces back to the release page when off, mirroring the content-calendar precedent), the workspace `TasksPanel` "Files" link, and all three assets API routes (`GET`/`POST /api/releases/[releaseId]/assets`, `POST .../assets/upload-url`, `DELETE .../assets/[assetId]`) — each 404s when off (tailor-plan precedent).
+- **Not touched:** the `assets` DB table, the `release-assets` Supabase Storage bucket, and existing rows/objects for releases that already have files. Workspace logo upload (`lib/workspace-logo.ts`, gated separately by `NEXT_PUBLIC_FEATURE_WORKSPACE`) and task attachments (own `TASK_ATTACHMENTS_BUCKET`) are distinct features that happen to share code/bucket context and were left alone. Storage cleanup on release deletion and account deletion (`app/api/releases/[releaseId]/route.ts`, `app/api/account/delete-now/route.ts`) also left alone — it cleans up whatever's actually in storage regardless of this flag.
+- Re-enabling is a one-line env change (`NEXT_PUBLIC_FEATURE_FILES=true`); no migration either direction.
+- Ledger: v0.16.4.
+
+---
+
+*Last updated: 2026-07-22 (URG-182 — file storage flagged off).*
 
 ---
 

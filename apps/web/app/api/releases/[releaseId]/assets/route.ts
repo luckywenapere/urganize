@@ -16,6 +16,14 @@ import {
 const ASSETS_TABLE = 'assets';
 const RELEASES_TABLE = 'releases';
 
+// Feature flag (URG-182): the file storage feature stays dark until
+// NEXT_PUBLIC_FEATURE_FILES is 'true'. Every handler checks this first and
+// 404s when off, so direct API calls cannot reach it either (the tailor-plan
+// route precedent). Existing rows/storage objects are untouched by this
+// flag — it only gates access.
+const isFilesFeatureEnabled = (): boolean =>
+  process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
+
 type AssetRow = {
   id: string;
   owner_user_id: string;
@@ -38,6 +46,10 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
+  if (!isFilesFeatureEnabled()) {
+    return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  }
+
   const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
@@ -111,6 +123,10 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
+  if (!isFilesFeatureEnabled()) {
+    return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  }
+
   const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 

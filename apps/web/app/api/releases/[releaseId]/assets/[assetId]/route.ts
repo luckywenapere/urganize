@@ -9,10 +9,18 @@ import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-helpers';
 
 const ASSETS_TABLE = 'assets';
 
+// Feature flag (URG-182): same flag as the parent assets routes.
+const isFilesFeatureEnabled = (): boolean =>
+  process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
+
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string; assetId: string }> }
 ) {
+  if (!isFilesFeatureEnabled()) {
+    return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  }
+
   const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
