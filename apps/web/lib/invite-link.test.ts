@@ -17,10 +17,25 @@ describe('invite-link tokens', () => {
     const { token, expiresAt } = mintInviteLinkToken('ws-123');
     expect(isInviteLinkToken(token)).toBe(true);
     const verdict = verifyInviteLinkToken(token);
-    expect(verdict).toEqual({ status: 'valid', workspaceId: 'ws-123', role: 'member' });
+    expect(verdict).toEqual({
+      status: 'valid',
+      workspaceId: 'ws-123',
+      role: 'member',
+      artistScopeId: null,
+    });
     const msLeft = Date.parse(expiresAt) - Date.now();
     expect(msLeft).toBeGreaterThan((INVITE_LINK_TTL_DAYS - 1) * 24 * 60 * 60 * 1000);
     expect(msLeft).toBeLessThanOrEqual(INVITE_LINK_TTL_DAYS * 24 * 60 * 60 * 1000);
+  });
+
+  it('carries the artist scope for artist links', () => {
+    const { token } = mintInviteLinkToken('ws-123', 'artist-9');
+    expect(verifyInviteLinkToken(token)).toEqual({
+      status: 'valid',
+      workspaceId: 'ws-123',
+      role: 'member',
+      artistScopeId: 'artist-9',
+    });
   });
 
   it('rejects a tampered payload (workspace swap)', () => {

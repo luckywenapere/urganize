@@ -225,7 +225,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: releasesResult.error.message || 'Could not load releases.' }, { status: 500 });
   }
 
-  const releases = Array.isArray(releasesResult.data) ? (releasesResult.data as ReleaseRow[]) : [];
+  // Artist-scoped members only see their own artist's releases.
+  const releases = (Array.isArray(releasesResult.data) ? (releasesResult.data as ReleaseRow[]) : []).filter(
+    (release) => {
+      const scope = access.artistScopeByOwnerId[String(release.owner_user_id || '')];
+      if (!scope) return true;
+      return String(release.artist_id || '') === scope;
+    }
+  );
 
   const metadataResult = await loadReleaseMetadataMap(
     adminClient,

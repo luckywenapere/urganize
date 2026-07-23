@@ -19,6 +19,9 @@ import {
 type InviteWorkspaceMemberBody = {
   email?: unknown;
   role?: unknown;
+  /** Artist-scope for ARTIST invites (founder decision, 2026-07-23): the
+   * invitee only sees releases whose artist_id matches. */
+  artistId?: unknown;
 };
 
 const WORKSPACE_ROLE_OPTIONS: WorkspaceMemberRole[] = ['owner', 'admin', 'member', 'guest'];
@@ -77,6 +80,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json().catch(() => ({}))) as InviteWorkspaceMemberBody;
     const email = normalizeEmail(body.email);
     const role = normalizeRole(body.role);
+    const artistScopeId = readString(body.artistId).slice(0, 100) || null;
 
     if (!isValidEmail(email)) {
       return NextResponse.json({ error: 'A valid email is required.' }, { status: 400 });
@@ -131,6 +135,11 @@ export async function POST(request: NextRequest) {
         updatePayload.invite_token = inviteToken;
         updatePayload.invite_expires_at = expiresAtIso;
       }
+      // Only written when set — keeps unscoped invites working before the
+      // artist_scope_id migration is applied.
+      if (artistScopeId) {
+        updatePayload.artist_scope_id = artistScopeId;
+      }
 
       const updateResult = await adminClient
         .from(WORKSPACE_MEMBERS_TABLE)
@@ -150,7 +159,7 @@ export async function POST(request: NextRequest) {
         activeToken = '';
       }
     } else {
-      const insertResult = await adminClient.from(WORKSPACE_MEMBERS_TABLE).insert({
+      const insertPayload: Record<string, unknown> = {
         workspace_id: workspaceId,
         user_id: null,
         email,
@@ -161,7 +170,11 @@ export async function POST(request: NextRequest) {
         invited_at: nowIso,
         joined_at: null,
         updated_at: nowIso,
-      });
+      };
+      if (artistScopeId) {
+        insertPayload.artist_scope_id = artistScopeId;
+      }
+      const insertResult = await adminClient.from(WORKSPACE_MEMBERS_TABLE).insert(insertPayload);
 
       if (insertResult.error) {
         if (isTaskSchemaMissingError(insertResult.error)) {

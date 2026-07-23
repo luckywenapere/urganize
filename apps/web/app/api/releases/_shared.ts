@@ -210,6 +210,11 @@ export async function ensureReleaseReadAccess(
     if (!access.releaseOwnerIds.includes(ownerId)) {
       return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
     }
+    // Artist-scoped members only see their own artist's releases.
+    const scope = access.artistScopeByOwnerId[ownerId];
+    if (scope && String((release as Record<string, unknown>).artist_id || '') !== scope) {
+      return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
+    }
   }
 
   return { release: toReleaseSummary(release as Record<string, unknown>) };

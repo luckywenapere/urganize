@@ -246,7 +246,7 @@ export async function POST(
 
     const email = String(userResult.data.user.email || '').trim().toLowerCase();
     const nowIso = new Date().toISOString();
-    const insertResult = await admin.from(WORKSPACE_MEMBERS_TABLE).insert({
+    const insertPayload: Record<string, unknown> = {
       workspace_id: verdict.workspaceId,
       user_id: userId,
       email,
@@ -257,7 +257,13 @@ export async function POST(
       invited_at: nowIso,
       joined_at: nowIso,
       updated_at: nowIso,
-    });
+    };
+    // Artist links scope the joiner to that artist's releases. Only written
+    // when set so unscoped links work before the artist_scope_id migration.
+    if (verdict.artistScopeId) {
+      insertPayload.artist_scope_id = verdict.artistScopeId;
+    }
+    const insertResult = await admin.from(WORKSPACE_MEMBERS_TABLE).insert(insertPayload);
 
     if (insertResult.error) {
       // A pending email-invite row for the same address would collide on the
