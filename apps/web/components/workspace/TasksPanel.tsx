@@ -1,20 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { CalendarDays, ChevronDown, FolderOpen, Plus } from 'lucide-react';
 import {
-  TASK_PRIORITY_OPTIONS,
-  TASK_STATUS_OPTIONS,
-  getTaskPriorityLabel,
   getTaskSectionLabel,
-  getTaskStatusLabel,
   groupTasksIntoSections,
   type Task,
-  type TaskPriority,
   type TaskSectionKey,
-  type TaskStatus,
 } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
@@ -86,44 +79,15 @@ type TasksPanelProps = {
 };
 
 export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPanelProps) {
-  const router = useRouter();
-  const pathname = usePathname();
   // openTask flips the TaskUIProvider into "task open" state, which causes
   // WorkspaceDesktopFocused (or the mobile drill-down in WorkspaceView) to
   // swap this panel for TaskDetailInline in the same surface. No drawer /
   // overlay — the center column itself becomes the task detail.
   const { openTask, openQuickCreate } = useTaskUI();
-  const searchParams = useSearchParams();
 
-  const priorityFilter = (searchParams.get('priority') || '') as TaskPriority | '';
-  const statusFilter = (searchParams.get('status') || '') as TaskStatus | '';
-
-  // Mirrors the syncFilter pattern in app/dashboard/tasks/page.tsx so the
-  // ?priority= / ?status= params are written the same way and remain
-  // round-trippable with that page until it's retired.
-  const syncFilter = useCallback(
-    (next: Record<string, string>) => {
-      const params = new URLSearchParams(searchParams.toString());
-      Object.entries(next).forEach(([key, value]) => {
-        if (value) {
-          params.set(key, value);
-        } else {
-          params.delete(key);
-        }
-      });
-      const query = params.toString();
-      router.replace(`${pathname ?? ''}${query ? `?${query}` : ''}`, { scroll: false });
-    },
-    [pathname, router, searchParams]
-  );
-
-  const filteredTasks = useMemo(() => {
-    return tasks.filter((task) => {
-      if (priorityFilter && task.priority !== priorityFilter) return false;
-      if (statusFilter && task.status !== statusFilter) return false;
-      return true;
-    });
-  }, [tasks, priorityFilter, statusFilter]);
+  // The ?priority= / ?status= filter dropdowns were removed entirely
+  // (founder call, 2026-07-23) — the bucket structure IS the filter now.
+  // Restore from git history if per-panel filtering ever returns.
 
   // Pending-completion override: just-ticked tasks keep their original
   // time-based bucket for ~1.5s before sliding into Done. The store owns
@@ -132,8 +96,8 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
   const pendingCompletionIds = useTaskStore((state) => state.pendingCompletionIds);
 
   const sections = useMemo(
-    () => groupTasksIntoSections(filteredTasks, pendingCompletionIds),
-    [filteredTasks, pendingCompletionIds]
+    () => groupTasksIntoSections(tasks, pendingCompletionIds),
+    [tasks, pendingCompletionIds]
   );
 
   // Per-bucket open/closed state. Starts from the all-collapsed defaults so
@@ -236,71 +200,12 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
         </div>
       </div>
 
-      {/*
-        Native <select> dropdowns: the open option-list popup is rendered by
-        the OS/browser, not the page DOM. We drop the global `.input` class
-        (which uses a near-transparent white bg that some browsers read as a
-        light surface and then paint a light popup over) in favour of:
-          - solid dark surface tokens on the closed select
-          - `[color-scheme:dark]` directly on the element so the open popup
-            is painted in dark even if the page-level `color-scheme: dark`
-            isn't inherited reliably for form controls
-          - explicit `bg-bg-surface text-content-primary` on each <option> as
-            a fallback for browsers that honor option styling
-        Caveats: Safari/macOS may still render the popup in light mode for
-        "fully native" selects regardless.
-
-        The "PRIORITY" / "STATUS" eyebrow labels above each select were
-        removed — the default option ("All priorities" / "All statuses")
-        already communicates the filter's purpose, and the eyebrows broke
-        the panel's `space-y-3` rhythm. `aria-label` was moved onto each
-        <select> so screen readers still announce what the control does.
-      */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <select
-          value={priorityFilter}
-          onChange={(event) => syncFilter({ priority: event.target.value })}
-          aria-label="Filter tasks by priority"
-          className="motion-focus h-10 w-full rounded-lg border border-stroke-default bg-bg-surface px-3 text-sm text-content-primary transition-colors [color-scheme:dark] hover:border-stroke-strong focus:border-brand"
-        >
-          <option value="" className="bg-bg-surface text-content-primary">
-            All priorities
-          </option>
-          {TASK_PRIORITY_OPTIONS.map((priority) => (
-            <option key={priority} value={priority} className="bg-bg-surface text-content-primary">
-              {getTaskPriorityLabel(priority)}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={statusFilter}
-          onChange={(event) => syncFilter({ status: event.target.value })}
-          aria-label="Filter tasks by status"
-          className="motion-focus h-10 w-full rounded-lg border border-stroke-default bg-bg-surface px-3 text-sm text-content-primary transition-colors [color-scheme:dark] hover:border-stroke-strong focus:border-brand"
-        >
-          <option value="" className="bg-bg-surface text-content-primary">
-            All statuses
-          </option>
-          {TASK_STATUS_OPTIONS.map((status) => (
-            <option key={status} value={status} className="bg-bg-surface text-content-primary">
-              {getTaskStatusLabel(status)}
-            </option>
-          ))}
-        </select>
-      </div>
-
       <div className="space-y-3">
-        {/* Every bucket empty (no tasks at all, or the filters exclude them
-            all): the buckets above have all suppressed themselves, so leave
-            one quiet line instead of filters floating over nothing. */}
+        {/* Every bucket empty: the buckets below have all suppressed
+            themselves, so leave one quiet line instead of a blank panel. */}
         {sectionOrder.every((sectionKey) => sections[sectionKey].length === 0) ? (
           <p className="px-1 py-4 text-xs text-content-tertiary">
-            {priorityFilter || statusFilter
-              ? 'No tasks match these filters.'
-              : scopedRelease
-                ? 'No tasks for this release yet.'
-                : 'No tasks yet.'}
+            {scopedRelease ? 'No tasks for this release yet.' : 'No tasks yet.'}
           </p>
         ) : null}
         {sectionOrder.map((sectionKey) => {
