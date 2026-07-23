@@ -34,8 +34,15 @@ const appDescription =
   'Urganize is a music campaign execution workspace for planning releases, tracking tasks, and keeping your team aligned.';
 
 function getMetadataBase() {
+  // Production fallback is the CANONICAL domain, never the *.vercel.app
+  // deployment host: Vercel Deployment Protection walls that host behind an
+  // SSO login, so absolute og:image / twitter:image URLs minted from it are
+  // unfetchable by social crawlers — the share card silently stays stale
+  // (found 2026-07-23; same root cause as the invite-link fix in
+  // lib/tasks-server.ts resolveAppBaseUrl). NEXT_PUBLIC_APP_URL still wins.
   const configuredUrl =
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    (process.env.VERCEL_ENV === 'production' ? 'https://app.urganize.app' : '') ||
     process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
     process.env.VERCEL_URL?.trim();
 
