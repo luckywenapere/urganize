@@ -177,16 +177,13 @@ export function WorkspaceView() {
     ? `Showing activities for ${scopedReleaseSlim.title}`
     : 'Showing all activities';
 
-  // min-h-screen is dropped in focused mode — the focused surface sizes
-  // itself to the viewport (h-[calc(100dvh-…)]), and forcing a full-screen
-  // minimum here re-added ~125px of page scroll below it, defeating the
-  // viewport lock. It's also dropped below sm: stacked with the topbar and
-  // AppShell's mobile pb-28, it pushed even a one-release catalog past the
-  // viewport (the background is already painted by the app shell).
+  // NO min-h-screen here (founder call, 2026-07-23): this main renders
+  // INSIDE AppShell's already-full-height column, ~85px below the top, so a
+  // full-screen minimum pushed every page 125px past the viewport — a
+  // permanent scrollbar even when three releases fit comfortably. The app
+  // shell paints the background; this main sizes to its content.
   return (
-    <main
-      className={`bg-bg-base text-content-primary ${isDesktopFocusedMode ? '' : 'sm:min-h-screen'}`}
-    >
+    <main className="bg-bg-base text-content-primary">
       {/* Mobile gutter comes from AppShell's <main> (px-4). Layering another
           px-4 here on mobile compounded to 32px each side, eating content
           area on phones where TasksPanel fills the screen full-width. The

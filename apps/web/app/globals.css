@@ -359,6 +359,15 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* The document scrollbar is hidden app-wide (founder call, 2026-07-23):
+     pages that fit show no bar, pages that overflow still scroll normally
+     (wheel / trackpad / touch / keys) — the mobile-app feel. Inner scroll
+     regions keep their own scrollbars untouched. */
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
 }
 
 body {

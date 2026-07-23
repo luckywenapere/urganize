@@ -63,7 +63,7 @@ function LegacyDashboard() {
     .slice(0, 5);
 
   return (
-    <main className="min-h-screen bg-bg-base text-content-primary">
+    <main className="bg-bg-base text-content-primary">
       <div className="mx-auto max-w-[1200px] px-4 pb-24 pt-10 sm:px-6">
         <div>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-content-primary sm:text-3xl">

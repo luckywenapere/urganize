@@ -227,7 +227,7 @@ export default function ReleaseDetailPage() {
 
   if (!release) {
     return (
-      <main className="min-h-screen bg-bg-base text-content-primary">
+      <main className="bg-bg-base text-content-primary">
         <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-10 sm:px-6">
           <div className="flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -251,7 +251,7 @@ export default function ReleaseDetailPage() {
   // the release content stays mounted underneath.
 
   return (
-    <main className="min-h-screen bg-bg-base text-content-primary">
+    <main className="bg-bg-base text-content-primary">
       {/* The artist + title moved into the topbar's middle (AppTopbar's
           ContextTitle, founder call 2026-07-23) — the page starts straight
           at the meta/actions row so the activities fill the freed space.
