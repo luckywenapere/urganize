@@ -275,8 +275,9 @@ export default function ReleaseDetailPage() {
               <CalendarDays className="h-3.5 w-3.5 text-content-tertiary" />
               {formatDate(release.releaseDate)}
             </span>
-            <span className="rounded-full border border-stroke-default bg-bg-elevated px-2 py-0.5 text-[11px] font-medium capitalize text-content-secondary">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-stroke-default bg-bg-elevated px-2 py-0.5 text-[11px] font-medium capitalize text-content-secondary">
               {normalizedStatus}
+              <span className="rounded-full bg-brand/15 px-1 py-px text-[9px] font-bold uppercase tracking-wide text-brand">Beta</span>
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
