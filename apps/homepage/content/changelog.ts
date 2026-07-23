@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.23.2",
+    date: "July 23, 2026",
+    highlights: [
+      "Fixed the single-release view scrolling the whole page when your roster is large — the screen now stays locked and the release rails scroll on their own, which also makes switching between releases reliable.",
+      "The motion tracker is back on the single-release view — a progress bar with the done count (like 2 of 64) sits right at the top, next to a smaller back button.",
+      "Chappi's welcome screen is simpler — straight to the greeting and the message box.",
+    ],
+  },
+  {
     version: "0.23.1",
     date: "July 23, 2026",
     highlights: [

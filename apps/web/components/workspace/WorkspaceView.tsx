@@ -177,8 +177,14 @@ export function WorkspaceView() {
     ? `Showing activities for ${scopedReleaseSlim.title}`
     : 'Showing all activities';
 
+  // min-h-screen is dropped in focused mode — the focused surface sizes
+  // itself to the viewport (h-[calc(100dvh-…)]), and forcing a full-screen
+  // minimum here re-added ~125px of page scroll below it, defeating the
+  // viewport lock. At-rest and mobile keep the full-height canvas.
   return (
-    <main className="min-h-screen bg-bg-base text-content-primary">
+    <main
+      className={`bg-bg-base text-content-primary ${isDesktopFocusedMode ? '' : 'min-h-screen'}`}
+    >
       {/* Mobile gutter comes from AppShell's <main> (px-4). Layering another
           px-4 here on mobile compounded to 32px each side, eating content
           area on phones where TasksPanel fills the screen full-width. The

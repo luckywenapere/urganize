@@ -45,28 +45,52 @@ export function WorkspaceDesktopFocused({
   onSelect,
   onClose,
 }: WorkspaceDesktopFocusedProps) {
+  // Motion tracker data — done/total across the scoped release's activities
+  // (same `status === 'done'` rule WorkspaceView uses for the grid cards).
+  const tasksTotal = scopedTasks.length;
+  const tasksDone = scopedTasks.filter((t) => t.status === 'done').length;
+  const motionProgress = tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0;
+
   // Viewport-locked (founder call, 2026-07-23): the surface fills the space
   // under the topbar exactly — 100dvh minus the vertical chrome around it
-  // (topbar 4rem + AppShell main pt-5/pb-10 = 3.75rem + workspace pt-6
-  // 1.5rem; the workspace wrapper drops its pb in focused mode). The page
+  // (topbar 4rem + its 1px border + AppShell main pt-5/pb-10 = 3.75rem +
+  // workspace pt-6 1.5rem; the wrapper drops its pb in focused mode). The page
   // never scrolls here; long activity lists and long rails scroll inside
   // their own columns, so the back button and context never leave view.
   return (
-    <div className="workspace-mode-enter flex h-[calc(100dvh-9.25rem)] min-h-[24rem] flex-col gap-4">
-      {/* Back affordance — sits above the 3-column grid. The center card can
-          ALSO be clicked to deselect (existing toggle in handleSelect), but
-          a dedicated back button is the canonical close path. Deleting a
-          release is Settings-only (URG-163) — no delete affordance lives
-          here anymore. */}
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Back to all releases"
-        className="motion-focus motion-press inline-flex items-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-        Back to all releases
-      </button>
+    <div className="workspace-mode-enter flex h-[calc(100dvh-9.25rem-1px)] min-h-[24rem] flex-col gap-4">
+      {/* Top row — a COMPACT back affordance (icon-only; the old full-width
+          "Back to all releases" label read too long — founder call,
+          2026-07-23) with the release's motion tracker filling the freed
+          space: label + progress bar + done/total count, same voice as the
+          release cards' Motion strip. Deleting a release is Settings-only
+          (URG-163) — no delete affordance lives here. */}
+      <div className="flex shrink-0 items-center gap-4">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Back to all releases"
+          title="Back to all releases"
+          className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        </button>
+
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+            Motion
+          </span>
+          <div className="h-1 min-w-0 flex-1 rounded-full bg-bg-elevated" aria-hidden="true">
+            <div
+              className="h-full rounded-full bg-brand transition-[width] duration-300"
+              style={{ width: `${motionProgress}%` }}
+            />
+          </div>
+          <span className="shrink-0 font-mono text-[11px] font-semibold text-content-primary">
+            {tasksDone}/{tasksTotal}
+          </span>
+        </div>
+      </div>
 
       {/*
         Three-column layout. Rail widths step up at xl so the cards inside
@@ -77,7 +101,10 @@ export function WorkspaceDesktopFocused({
         forcing horizontal scroll. The rails are aligned to the top, not
         center, so the first rail card lines up with the centered card.
       */}
-      <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]">
+      {/* grid-rows-[minmax(0,1fr)] pins the single row to the free space —
+          without it the auto row grows with rail content (many releases →
+          tall rails → the whole page scrolls again, defeating the lock). */}
+      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-6 overflow-hidden lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]">
         <RailColumn cards={leftRail} onSelect={onSelect} ariaLabel="Other releases (left)" />
 
         {/* Center column — the activities list fills and SCROLLS the column
