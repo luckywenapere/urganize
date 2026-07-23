@@ -67,7 +67,7 @@ export function WorkspaceSkeleton() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary" aria-hidden="true">
-      <div className="pb-24 pt-6 sm:px-6">
+      <div className="pb-6 pt-6 sm:px-6 sm:pb-24">
         <section className="lg:hidden">
           {isFocused ? (
             <MobileFocusedSkeleton />
@@ -97,11 +97,15 @@ export function WorkspaceSkeleton() {
  * (the typical roster size) so the resolved cards land where the skeleton
  * stood instead of collapsing from a fuller placeholder grid. */
 function ReleaseGridSkeleton({ count, columns }: { count: number; columns: string }) {
+  // max-sm: cards center at the golden-section width, matching
+  // ReleasesColumn's phone layout (61.8vw cap, not edge to edge).
   return (
     <div className="space-y-3 lg:space-y-4">
-      <div className={`grid gap-3 lg:gap-4 ${columns}`}>
+      <div className={`grid gap-3 max-sm:justify-items-center lg:gap-4 ${columns}`}>
         {Array.from({ length: count }).map((_, index) => (
-          <ReleaseCardSkeleton key={`release-card-${index}`} />
+          <div key={`release-card-${index}`} className="w-full max-w-[61.8vw] sm:max-w-none">
+            <ReleaseCardSkeleton />
+          </div>
         ))}
       </div>
     </div>
@@ -155,6 +159,12 @@ function MobileFocusedSkeleton() {
           <SkeletonBlock className="h-2.5 w-24" />
           <SkeletonBlock className="h-5 w-40" />
         </div>
+      </div>
+      {/* Motion tracker strip (label + bar + count), mirrors the real one. */}
+      <div className="flex items-center gap-3">
+        <SkeletonBlock className="h-2.5 w-14" />
+        <SkeletonBlock className="h-1 flex-1 rounded-full" />
+        <SkeletonBlock className="h-2.5 w-8" />
       </div>
       <TasksPanelSkeleton />
     </div>

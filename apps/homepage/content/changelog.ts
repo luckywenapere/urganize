@@ -20,6 +20,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.24.0",
+    date: "July 23, 2026",
+    highlights: [
+      "The app now remembers what it showed you — your catalog, activities, and settings paint instantly on every visit, like a proper mobile app, refreshing quietly in the background.",
+      "The mobile catalog is redesigned: release cards are centered at a comfortable size instead of edge to edge, and a single release fits your screen with no scrolling.",
+      "The motion tracker now shows on mobile too when you open a release.",
+      "Chappi on mobile behaves like a real chat app — the page stays put, the conversation scrolls on its own, the message box stays pinned, and tapping it no longer zooms the screen.",
+      "The account button in the top bar is now a clean profile icon instead of your initials, drawn in the house style.",
+    ],
+  },
+  {
     version: "0.23.2",
     date: "July 23, 2026",
     highlights: [

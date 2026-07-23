@@ -180,10 +180,12 @@ export function WorkspaceView() {
   // min-h-screen is dropped in focused mode — the focused surface sizes
   // itself to the viewport (h-[calc(100dvh-…)]), and forcing a full-screen
   // minimum here re-added ~125px of page scroll below it, defeating the
-  // viewport lock. At-rest and mobile keep the full-height canvas.
+  // viewport lock. It's also dropped below sm: stacked with the topbar and
+  // AppShell's mobile pb-28, it pushed even a one-release catalog past the
+  // viewport (the background is already painted by the app shell).
   return (
     <main
-      className={`bg-bg-base text-content-primary ${isDesktopFocusedMode ? '' : 'min-h-screen'}`}
+      className={`bg-bg-base text-content-primary ${isDesktopFocusedMode ? '' : 'sm:min-h-screen'}`}
     >
       {/* Mobile gutter comes from AppShell's <main> (px-4). Layering another
           px-4 here on mobile compounded to 32px each side, eating content
@@ -194,7 +196,12 @@ export function WorkspaceView() {
           wrapper — see AppShell.tsx PAGE WIDTH SOURCE OF TRUTH. This div
           intentionally has NO max-width so dashboard / settings can't drift
           apart again. */}
-      <div className={`pt-6 sm:px-6 ${isDesktopFocusedMode ? 'pb-24 lg:pb-0' : 'pb-24'}`}>
+      {/* Bottom padding is slimmer below sm — AppShell's <main> already
+          carries pb-28 there for dock clearance, and the doubled-up 208px
+          made even a one-release catalog scroll on phones. */}
+      <div
+        className={`pt-6 sm:px-6 ${isDesktopFocusedMode ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
+      >
         {/* Screen-reader-only live region. Polite mode waits for the SR to be
             idle, atomic="true" re-reads the whole message. Mirrors the visible
             workspace state so SR users get the same context. */}
@@ -236,6 +243,32 @@ export function WorkspaceView() {
                     {scopedReleaseSlim.title}
                   </h2>
                 </div>
+              </div>
+              {/* Motion tracker — same strip the desktop focused view carries
+                  in its top row, so mobile shows release progress too. */}
+              <div className="mb-4 flex items-center gap-3">
+                <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+                  Motion
+                </span>
+                <div className="h-1 min-w-0 flex-1 rounded-full bg-bg-elevated" aria-hidden="true">
+                  <div
+                    className="h-full rounded-full bg-brand transition-[width] duration-300"
+                    style={{
+                      width: `${
+                        scopedTasks.length > 0
+                          ? Math.round(
+                              (scopedTasks.filter((t) => t.status === 'done').length /
+                                scopedTasks.length) *
+                                100
+                            )
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+                <span className="shrink-0 font-mono text-[11px] font-semibold text-content-primary">
+                  {scopedTasks.filter((t) => t.status === 'done').length}/{scopedTasks.length}
+                </span>
               </div>
               <TasksPanel
                 id={TASKS_PANEL_ID}
