@@ -77,8 +77,11 @@ export function ReleasesSection() {
                     </p>
                     <p className="truncate text-xs text-content-secondary">
                       {release.artistName || 'Unassigned artist'}
-                      {' · '}
-                      {release.status.replace(/_/g, ' ')}
+                      {/* Same rule as the catalog cards: 'draft' is the
+                          universal starting status, so showing it on every
+                          row is noise — the status appears only once the
+                          release has moved past it. */}
+                      {release.status !== 'draft' ? ` · ${release.status.replace(/_/g, ' ')}` : ''}
                     </p>
                   </div>
                   <button
