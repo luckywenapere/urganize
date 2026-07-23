@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CalendarDays, X } from 'lucide-react';
+import { useReleaseStore } from '@/stores/useReleaseStore';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
@@ -122,6 +123,25 @@ export function TaskDetailView({
   const [description, setDescription] = useState('');
   const [assigneeQuery, setAssigneeQuery] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState<WorkspaceMember | null>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+
+  // The release this activity belongs to, for the header. The fetched detail
+  // carries `task.release`; the optimistic store-seeded task may not, so fall
+  // back to resolving `releaseId` against the release store.
+  const storeReleases = useReleaseStore((state) => state.releases);
+  const releaseTitle =
+    task?.release?.title ??
+    (task?.releaseId ? storeReleases.find((r) => r.id === task.releaseId)?.title : null) ??
+    null;
+
+  // Title is a textarea (so long titles WRAP on narrow screens instead of
+  // cropping inside a single-line input) that auto-grows to fit its content.
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [title]);
 
   useEffect(() => {
     if (!task) {
@@ -168,6 +188,22 @@ export function TaskDetailView({
                   Event
                 </span>
               ) : null}
+              {/* The release this activity belongs to — between the status
+                  pill and the due label, so the header reads
+                  "To do · <release> · Due in 11 days". */}
+              {releaseTitle ? (
+                <>
+                  <span
+                    className="min-w-0 max-w-[12rem] truncate text-sm text-content-secondary"
+                    title={releaseTitle}
+                  >
+                    {releaseTitle}
+                  </span>
+                  <span aria-hidden="true" className="text-content-tertiary">
+                    ·
+                  </span>
+                </>
+              ) : null}
               <span
                 className={
                   due.isOverdue
@@ -213,7 +249,10 @@ export function TaskDetailView({
               until focus; blur saves, same as before. The completion
               checkbox sits to its left, mirroring the row layout
               ([checkbox] [title]) from TaskRow. */}
-          <div className="flex items-center gap-3">
+          {/* items-start (not center) + a small top offset on the checkbox:
+              a long title wraps to multiple lines on narrow screens, and the
+              checkbox should hold the first line, not float mid-block. */}
+          <div className="flex items-start gap-3">
             <TaskCompletionCheckbox
               taskId={task.id}
               status={task.status}
@@ -221,10 +260,24 @@ export function TaskDetailView({
               onToggle={() =>
                 onSavePatch({ status: task.status === 'done' ? 'todo' : 'done' })
               }
+              className="mt-0.5 sm:mt-1"
             />
-            <input
+            {/* A textarea, not an input: single-line inputs CROP long titles
+                on mobile. rows=1 + the auto-grow effect above keep it looking
+                like a heading while letting the text fold onto more lines.
+                Enter commits (blur-saves) instead of inserting a newline —
+                titles are one logical line that merely wraps visually. */}
+            <textarea
+              ref={titleRef}
+              rows={1}
               value={title}
-              onChange={(event) => setTitle(event.target.value)}
+              onChange={(event) => setTitle(event.target.value.replace(/\n/g, ' '))}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  event.currentTarget.blur();
+                }
+              }}
               onBlur={() => {
                 if (title.trim() && title.trim() !== task.title) {
                   void onSavePatch({ title: title.trim() });
@@ -232,7 +285,7 @@ export function TaskDetailView({
               }}
               aria-label="Title"
               placeholder="Activity title"
-              className="motion-focus min-w-0 flex-1 border-b border-transparent bg-transparent pb-1 font-display text-xl font-semibold leading-snug text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-stroke-strong sm:text-2xl"
+              className="motion-focus min-w-0 flex-1 resize-none overflow-hidden border-b border-transparent bg-transparent pb-1 font-display text-xl font-semibold leading-snug text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-stroke-strong sm:text-2xl"
             />
           </div>
 
