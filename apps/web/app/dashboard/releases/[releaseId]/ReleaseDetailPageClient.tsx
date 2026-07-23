@@ -310,7 +310,7 @@ export default function ReleaseDetailPage() {
         {/* Progress */}
         <div className="mt-6 border border-stroke-default bg-bg-surface p-4">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-content-secondary">Task progress</span>
+            <span className="font-medium text-content-secondary">Motion</span>
             <span className="text-content-primary">
               {doneTasks.length} of {releaseTasks.length} done
             </span>
