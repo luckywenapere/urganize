@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { readPersistedState } from '@/lib/persisted-state';
 import { SkeletonBlock } from './SkeletonBlock';
+import { useKnownReleaseCount } from './known-counts';
 
 // Same URL param useReleaseScope reads (`?release=`). Knowing this at
 // skeleton-render time (before release data has loaded) lets the skeleton
@@ -11,31 +10,6 @@ import { SkeletonBlock } from './SkeletonBlock';
 // grid — the two are visually very different, and landing on a scoped URL
 // (a release deep link, a notification click, a refresh) is a common path.
 const SCOPE_PARAM = 'release';
-
-// Last-known roster size, written by useReleaseStore on every successful
-// command-center load. Lets the skeleton render THIS user's shape — one
-// release gets one centered slot, three get three — instead of a generic
-// grid that collapses when real data lands (founder call, 2026-07-23).
-const COUNT_KEY = 'urganize.workspace.release-count';
-const DEFAULT_COUNT = 4;
-
-function useKnownReleaseCount(): number {
-  // SSR/first paint uses the default; the persisted value hydrates in a
-  // mount effect (same pattern as TasksPanel's bucket state) to avoid a
-  // server/client HTML mismatch.
-  const [count, setCount] = useState(DEFAULT_COUNT);
-  useEffect(() => {
-    const persisted = readPersistedState<number>(
-      COUNT_KEY,
-      1,
-      (value): value is number => typeof value === 'number' && Number.isFinite(value)
-    );
-    if (persisted !== null && persisted >= 0) {
-      setCount(Math.max(1, Math.min(12, Math.round(persisted))));
-    }
-  }, []);
-  return count;
-}
 
 /**
  * Workspace loading state, rendered inline by `WorkspaceView` (and the
@@ -78,7 +52,7 @@ export function WorkspaceSkeleton() {
 
         <section className="hidden lg:block">
           {isFocused ? (
-            <DesktopFocusedSkeleton />
+            <DesktopFocusedSkeleton knownCount={knownCount} />
           ) : (
             <ReleaseGridSkeleton
               count={knownCount}
@@ -178,14 +152,27 @@ function MobileFocusedSkeleton() {
  * 260px at xl) so the center column doesn't visibly resize when content
  * replaces the skeleton.
  */
-function DesktopFocusedSkeleton() {
+function DesktopFocusedSkeleton({ knownCount }: { knownCount: number }) {
+  // Rails mirror WorkspaceDesktopFocused's split of the NON-selected
+  // releases: ceiling on the left, floor on the right (count-aware,
+  // founder call 2026-07-23). Capped at 3 per rail — beyond that the rail
+  // scrolls anyway, so more placeholders add nothing.
+  const nonSelected = Math.max(0, knownCount - 1);
+  const leftCount = Math.min(3, Math.ceil(nonSelected / 2));
+  const rightCount = Math.min(3, Math.floor(nonSelected / 2));
   return (
     <div className="space-y-4">
-      <SkeletonBlock className="h-8 w-44" />
+      {/* Compact back button + motion tracker strip. */}
+      <div className="flex items-center gap-4">
+        <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
+        <SkeletonBlock className="h-2.5 w-14" />
+        <SkeletonBlock className="h-1 flex-1 rounded-full" />
+        <SkeletonBlock className="h-2.5 w-8" />
+      </div>
 
       <div className="grid items-start gap-6 lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]">
         <div className="min-w-0 space-y-3">
-          {Array.from({ length: 2 }).map((_, index) => (
+          {Array.from({ length: leftCount }).map((_, index) => (
             <ReleaseCardSkeleton key={`rail-left-${index}`} />
           ))}
         </div>
@@ -197,7 +184,7 @@ function DesktopFocusedSkeleton() {
         </div>
 
         <div className="min-w-0 space-y-3">
-          {Array.from({ length: 2 }).map((_, index) => (
+          {Array.from({ length: rightCount }).map((_, index) => (
             <ReleaseCardSkeleton key={`rail-right-${index}`} />
           ))}
         </div>
