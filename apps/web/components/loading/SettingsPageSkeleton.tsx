@@ -56,20 +56,18 @@ export function SettingsPageSkeleton({
           {/* Flat single-column sections divided by hairlines — mirrors the
               redesigned page (2026-07-23): each slot is a dim kicker line +
               content block, no card boxes. Gating matches the real page's
-              conditionals; order: Profile -> Appearance -> Security ->
-              Workspace artist -> Workspace logo -> Artist profile ->
-              Notifications -> Teammates -> Releases -> Session -> Delete. */}
+              conditionals; order (artist first — we serve the artist):
+              Workspace artist -> Artist profile -> Profile -> Appearance ->
+              Teammates -> Releases -> Security -> Session -> Delete. */}
           <div className="divide-y divide-stroke-subtle">
             {[
+              { key: 'workspace-artist', height: 'h-28', show: WORKSPACE_FEATURE_ENABLED },
+              { key: 'artist-profile', height: 'h-28', show: isArtistAccount },
               { key: 'profile', height: 'h-40', show: true },
               { key: 'appearance', height: 'h-24', show: true },
-              { key: 'security', height: 'h-40', show: true },
-              { key: 'workspace-artist', height: 'h-28', show: WORKSPACE_FEATURE_ENABLED },
-              { key: 'workspace-logo', height: 'h-28', show: WORKSPACE_FEATURE_ENABLED },
-              { key: 'artist-profile', height: 'h-28', show: isArtistAccount },
-              { key: 'notifications', height: 'h-32', show: true },
               { key: 'teammates', height: 'h-32', show: isManagerAccount },
               { key: 'releases', height: 'h-32', show: true },
+              { key: 'security', height: 'h-40', show: true },
               { key: 'session', height: 'h-20', show: true },
               { key: 'delete', height: 'h-28', show: true },
             ]
