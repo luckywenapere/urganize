@@ -85,8 +85,11 @@ function ContextTitle() {
   // beside the kicker + title. This IS the focused release card now
   // (founder call, 2026-07-23): the card left the page body entirely so the
   // activities fill that space; its picture and name live here instead.
+  // Hidden below sm (founder call, 2026-07-23): on phones the drill-down's
+  // own back header already names the release, and the topbar needs the
+  // room for its controls.
   return (
-    <div className="flex min-w-0 items-center gap-3">
+    <div className="hidden min-w-0 items-center gap-3 sm:flex">
       <div className="hidden h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-stroke-subtle bg-bg-elevated sm:block">
         {release.coverArtUrl ? (
           <Image

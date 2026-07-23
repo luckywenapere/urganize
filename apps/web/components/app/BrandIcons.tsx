@@ -108,3 +108,17 @@ export function SignalIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
     </svg>
   );
 }
+
+/** Profile: a listener — head and shoulders under a headphone band. The
+ * account trigger stopped showing initials (founder call, 2026-07-23);
+ * this keeps the person shape music-coded like the rest of the set. */
+export function ProfileIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="10" r="3.1" />
+      <path d="M5.8 19.5a6.2 6.2 0 0 1 12.4 0" strokeLinecap="round" />
+      <path d="M7.9 9.4a4.1 4.1 0 0 1 8.2 0" strokeLinecap="round" />
+      <path d="M7.9 9.4v1.5M16.1 9.4v1.5" strokeLinecap="round" />
+    </svg>
+  );
+}

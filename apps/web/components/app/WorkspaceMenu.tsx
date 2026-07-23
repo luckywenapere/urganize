@@ -2,19 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { ExitIcon, GearIcon } from '@/components/app/BrandIcons';
+import { ExitIcon, GearIcon, ProfileIcon } from '@/components/app/BrandIcons';
 import { useAuthStore } from '@/lib/auth-store';
 
 type WorkspaceMenuProps = {
-  /** Display name used to derive the monogram on the trigger. Falls back to
-   * "U" when empty so the button is never blank. */
+  /** Display name shown in the menu's identity header. The trigger itself
+   * renders the ProfileIcon (person shape), not initials. */
   userName?: string;
 };
 
 /**
  * Top-bar workspace menu. Replaces the avatar slot that briefly lived in the
  * topbar (and the workspace identity that lived in the sidebar footer pre-
- * Stage-2). Renders a square monogram trigger; clicking opens a small menu
+ * Stage-2). Renders a round person-icon trigger; clicking opens a small menu
  * with exactly two items: Settings (navigates to /settings) and Sign out
  * (calls the existing useAuthStore.logout flow, then redirects to /auth).
  *
@@ -40,8 +40,6 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
-
-  const monogram = (userName || 'U').trim().slice(0, 1).toUpperCase() || 'U';
 
   const closeMenu = useCallback((returnFocus = false) => {
     setOpen(false);
@@ -132,9 +130,11 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Workspace menu"
-        className="motion-focus motion-press grid h-10 w-10 place-items-center rounded-full border border-stroke-default bg-bg-elevated text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+        className="motion-focus motion-press grid h-10 w-10 place-items-center rounded-full border border-stroke-default bg-bg-elevated text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
       >
-        {monogram}
+        {/* Person icon, not initials (founder call, 2026-07-23) — drawn in
+            the house style like the rest of the topbar set. */}
+        <ProfileIcon className="h-[18px] w-[18px]" />
       </button>
 
       {open ? (
@@ -155,8 +155,8 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
             role="presentation"
             className="flex items-center gap-3 border-b border-stroke-subtle px-3 py-3"
           >
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-elevated text-xs font-semibold text-content-primary">
-              {monogram}
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-elevated text-content-secondary">
+              <ProfileIcon className="h-4 w-4" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-content-primary">

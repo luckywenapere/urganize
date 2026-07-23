@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import type { CommandCenterData, ExecutionRelease, ExecutionTask } from '@/lib/execution-types';
 import { useActivityStore } from '@/stores/useActivityStore';
 import { useTaskStore } from '@/stores/useTaskStore';
-import { writePersistedState } from '@/lib/persisted-state';
+import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 
 type ReleaseStore = {
   releases: ExecutionRelease[];
@@ -40,6 +40,33 @@ const COMMAND_CENTER_FRESH_MS = 10_000;
 let commandCenterLoadedAt = 0;
 let commandCenterInFlight: Promise<CommandCenterData | null> | null = null;
 
+// Cache-first hydration (founder call, 2026-07-23: "persistent state
+// throughout the app, like a proper mobile app"). The last successful
+// command-center payload is persisted; a fresh mount renders it INSTANTLY
+// (no skeleton) while the network fetch continues as a silent background
+// refresh. Keyed to the owning user so an account switch on the same device
+// never shows someone else's roster. Activity is deliberately excluded to
+// keep the record small — no mounted surface renders it before the refresh.
+const COMMAND_CENTER_CACHE_KEY = 'urganize.cache.command-center';
+const COMMAND_CENTER_CACHE_VERSION = 1;
+
+type CommandCenterCache = {
+  userId: string;
+  releases: ExecutionRelease[];
+  tasks: ExecutionTask[];
+  todaysDirective: ExecutionTask | null;
+};
+
+const isCommandCenterCache = (value: unknown): value is CommandCenterCache => {
+  if (typeof value !== 'object' || value === null) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.userId === 'string' &&
+    Array.isArray(record.releases) &&
+    Array.isArray(record.tasks)
+  );
+};
+
 export const useReleaseStore = create<ReleaseStore>((set, get) => ({
   releases: [],
   todaysDirective: null,
@@ -67,14 +94,43 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
     }
 
     const run = (async (): Promise<CommandCenterData | null> => {
+      // Session first: its user id keys the cache. The AUTH STORE's user is
+      // deliberately not used here — the first load often races the store's
+      // profile hydration (the Supabase session is readable immediately,
+      // the profile isn't), and keying off it silently skipped the cache.
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || '';
+      const sessionUserId = session?.user?.id || '';
+
       const hasData = get().releases.length > 0;
       if (!hasData) {
-        set({ isInitialLoading: true, error: '' });
+        // Cache-first: hydrate the last-known payload for THIS user so the
+        // UI paints immediately; the fetch below becomes a silent refresh.
+        const cached = sessionUserId
+          ? readPersistedState<CommandCenterCache>(
+              COMMAND_CENTER_CACHE_KEY,
+              COMMAND_CENTER_CACHE_VERSION,
+              isCommandCenterCache
+            )
+          : null;
+        if (cached && cached.userId === sessionUserId && cached.releases.length > 0) {
+          useTaskStore.getState().setTasks(cached.tasks);
+          set({
+            releases: cached.releases,
+            todaysDirective: cached.todaysDirective ?? null,
+            isInitialLoading: false,
+            isRefreshing: true,
+            error: '',
+          });
+        } else {
+          set({ isInitialLoading: true, error: '' });
+        }
       } else {
         set({ isRefreshing: true, error: '' });
       }
 
-      const accessToken = await getAccessToken();
       if (!accessToken) {
         set({ isInitialLoading: false, isRefreshing: false, error: 'Session expired. Please sign in again.' });
         return null;
@@ -94,6 +150,15 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       // Remember the roster size so the catalog skeleton can render THIS
       // user's shape on the next fresh load (see WorkspaceSkeleton).
       writePersistedState('urganize.workspace.release-count', 1, payload.releases.length);
+      // Refresh the cache-first record for the next mount.
+      if (sessionUserId) {
+        writePersistedState<CommandCenterCache>(COMMAND_CENTER_CACHE_KEY, COMMAND_CENTER_CACHE_VERSION, {
+          userId: sessionUserId,
+          releases: payload.releases,
+          tasks: (payload.tasks || []) as ExecutionTask[],
+          todaysDirective: payload.todaysDirective || null,
+        });
+      }
       useActivityStore.getState().setActivity(payload.activity || []);
       commandCenterLoadedAt = Date.now();
       set({ releases: payload.releases, todaysDirective: payload.todaysDirective || null, isInitialLoading: false, isRefreshing: false, error: '' });

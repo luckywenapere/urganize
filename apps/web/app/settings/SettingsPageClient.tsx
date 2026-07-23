@@ -22,6 +22,7 @@ import { TeammatesSection } from '@/components/settings/TeammatesSection';
 import { ReleasesSection } from '@/components/settings/ReleasesSection';
 import { SessionSection } from '@/components/settings/SessionSection';
 import { DeleteAccountSection } from '@/components/settings/DeleteAccountSection';
+import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 
 // 2026-07-23 (founder calls): the Workspace logo section was removed from
 // Settings entirely (its API routes + read-time cover-art fallback stay
@@ -44,6 +45,30 @@ type WorkspaceArtistResponse = {
   error?: string;
 };
 
+// Cache-first (founder call, 2026-07-23): entering Settings must SHOW
+// settings, not loaders. The last-known workspace artist and teammates list
+// are persisted per user; a fresh visit renders them instantly while the
+// fetches below refresh silently in the background. Same pattern as
+// useReleaseStore's command-center cache.
+const ARTIST_CACHE_KEY = 'urganize.settings.workspace-artist';
+const TEAMMATES_CACHE_KEY = 'urganize.settings.teammates';
+const SETTINGS_CACHE_VERSION = 1;
+
+type ArtistCache = { userId: string; artist: WorkspaceArtist | null };
+type TeammatesCache = { userId: string; members: WorkspaceMember[] };
+
+const isArtistCache = (value: unknown): value is ArtistCache =>
+  typeof value === 'object' &&
+  value !== null &&
+  typeof (value as Record<string, unknown>).userId === 'string' &&
+  'artist' in (value as Record<string, unknown>);
+
+const isTeammatesCache = (value: unknown): value is TeammatesCache =>
+  typeof value === 'object' &&
+  value !== null &&
+  typeof (value as Record<string, unknown>).userId === 'string' &&
+  Array.isArray((value as Record<string, unknown>).members);
+
 export default function SettingsPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
@@ -63,6 +88,10 @@ export default function SettingsPage() {
 
   const [teammates, setTeammates] = useState<WorkspaceMember[]>([]);
   const [isLoadingTeammates, setIsLoadingTeammates] = useState(false);
+  // "Primed" = hydrated from the per-user cache; the sections then render
+  // real content immediately and never show their skeletons for this visit.
+  const [teammatesPrimed, setTeammatesPrimed] = useState(false);
+  const [artistPrimed, setArtistPrimed] = useState(false);
 
   const [workspaceArtist, setWorkspaceArtist] = useState<WorkspaceArtist | null | undefined>(null);
   const [workspaceArtistInput, setWorkspaceArtistInput] = useState('');
@@ -96,6 +125,32 @@ export default function SettingsPage() {
     };
   }, [userId]);
 
+  // Cache-first hydration: paint the last-known artist + teammates for THIS
+  // user before any fetch resolves. The loaders below still run and replace
+  // these with fresh data silently.
+  useEffect(() => {
+    if (!userId) return;
+    const artistCache = readPersistedState<ArtistCache>(
+      ARTIST_CACHE_KEY,
+      SETTINGS_CACHE_VERSION,
+      isArtistCache
+    );
+    if (artistCache && artistCache.userId === userId) {
+      setWorkspaceArtist(artistCache.artist ?? undefined);
+      setWorkspaceArtistInput(artistCache.artist?.name ?? '');
+      setArtistPrimed(true);
+    }
+    const teammatesCache = readPersistedState<TeammatesCache>(
+      TEAMMATES_CACHE_KEY,
+      SETTINGS_CACHE_VERSION,
+      isTeammatesCache
+    );
+    if (teammatesCache && teammatesCache.userId === userId) {
+      setTeammates(teammatesCache.members);
+      setTeammatesPrimed(true);
+    }
+  }, [userId]);
+
   const loadTeammates = useCallback(async () => {
     if (!accessToken) return;
     setIsLoadingTeammates(true);
@@ -110,13 +165,19 @@ export default function SettingsPage() {
       };
       if (response.ok && Array.isArray(payload.members)) {
         setTeammates(payload.members);
+        if (userId) {
+          writePersistedState<TeammatesCache>(TEAMMATES_CACHE_KEY, SETTINGS_CACHE_VERSION, {
+            userId,
+            members: payload.members,
+          });
+        }
       }
     } catch {
       // Non-blocking
     } finally {
       setIsLoadingTeammates(false);
     }
-  }, [accessToken]);
+  }, [accessToken, userId]);
 
   useEffect(() => {
     if (!userId || !isManagerAccount || !accessToken) return;
@@ -142,6 +203,10 @@ export default function SettingsPage() {
         if (response.ok) {
           setWorkspaceArtist(payload.artist ?? undefined);
           setWorkspaceArtistInput(payload.artist?.name ?? '');
+          writePersistedState<ArtistCache>(ARTIST_CACHE_KEY, SETTINGS_CACHE_VERSION, {
+            userId,
+            artist: payload.artist ?? null,
+          });
         }
       } finally {
         if (!cancelled) setIsLoadingWorkspaceArtist(false);
@@ -186,6 +251,10 @@ export default function SettingsPage() {
       }
       setWorkspaceArtist(payload.artist);
       setWorkspaceArtistInput(payload.artist.name);
+      writePersistedState<ArtistCache>(ARTIST_CACHE_KEY, SETTINGS_CACHE_VERSION, {
+        userId,
+        artist: payload.artist,
+      });
       const releasesNote =
         typeof payload.releasesUpdated === 'number' && payload.releasesUpdated > 0
           ? ` (${payload.releasesUpdated} release${payload.releasesUpdated === 1 ? '' : 's'} updated)`
@@ -255,7 +324,7 @@ export default function SettingsPage() {
               artist={workspaceArtist}
               input={workspaceArtistInput}
               onInputChange={setWorkspaceArtistInput}
-              isLoading={isLoadingWorkspaceArtist}
+              isLoading={isLoadingWorkspaceArtist && !artistPrimed}
               isSaving={isSavingWorkspaceArtist}
               message={workspaceArtistMessage}
               error={workspaceArtistError}
@@ -279,8 +348,16 @@ export default function SettingsPage() {
           {isManagerAccount && (
             <TeammatesSection
               teammates={teammates}
-              isLoadingTeammates={isLoadingTeammates}
-              onTeammatesChange={setTeammates}
+              isLoadingTeammates={isLoadingTeammates && !teammatesPrimed}
+              onTeammatesChange={(next) => {
+                setTeammates(next);
+                if (userId) {
+                  writePersistedState<TeammatesCache>(TEAMMATES_CACHE_KEY, SETTINGS_CACHE_VERSION, {
+                    userId,
+                    members: next,
+                  });
+                }
+              }}
               onRefetch={() => void loadTeammates()}
             />
           )}

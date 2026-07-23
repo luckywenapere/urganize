@@ -36,7 +36,7 @@ export function ReleasesColumn({
       <button
         type="button"
         onClick={onCreateRelease}
-        className="motion-focus motion-press inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:hidden"
+        className="motion-focus motion-press mx-auto flex h-11 w-full max-w-[61.8vw] items-center justify-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:hidden"
       >
         <Plus className="h-4 w-4" />
         New release
@@ -63,17 +63,26 @@ export function ReleasesColumn({
         // ~566px at 1280 viewport — 3-up gives ~180px cards with the square
         // cover art shrinking proportionally, instead of the 2-up ~277px
         // banners that wasted vertical space).
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        //
+        // Below sm (phones) the cards used to run edge to edge, so the
+        // square cover art ballooned into a full-screen banner (founder
+        // call, 2026-07-23). Each card is now centered and capped at the
+        // GOLDEN SECTION of the viewport width (100vw/φ ≈ 61.8vw) — with
+        // the square art plus the meta block, the card itself lands almost
+        // exactly on a 1:1.618 golden rectangle, and a one-release catalog
+        // fits a phone screen without scrolling.
+        <div className="grid gap-3 max-sm:justify-items-center sm:grid-cols-2 lg:grid-cols-3">
           {releases.map(({ release, tasksDone, tasksTotal, coverArtUrl }) => (
-            <WorkspaceReleaseCard
-              key={release.id}
-              release={release}
-              tasksDone={tasksDone}
-              tasksTotal={tasksTotal}
-              selected={scopedReleaseId === release.id}
-              onSelect={onSelect}
-              coverArtUrl={coverArtUrl}
-            />
+            <div key={release.id} className="w-full max-w-[61.8vw] sm:max-w-none">
+              <WorkspaceReleaseCard
+                release={release}
+                tasksDone={tasksDone}
+                tasksTotal={tasksTotal}
+                selected={scopedReleaseId === release.id}
+                onSelect={onSelect}
+                coverArtUrl={coverArtUrl}
+              />
+            </div>
           ))}
         </div>
       )}

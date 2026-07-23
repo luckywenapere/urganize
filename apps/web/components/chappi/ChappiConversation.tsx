@@ -264,7 +264,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           placeholder="Ask Chappi or type a command…"
           aria-label="Message Chappi"
           disabled={isThinking}
-          className="min-w-0 flex-1 bg-transparent text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none disabled:opacity-60"
+          className="min-w-0 flex-1 bg-transparent text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none disabled:opacity-60 sm:text-sm"
         />
         <button
           type="submit"
@@ -338,7 +338,10 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // it — its own header carries reset/expand/close).
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      {/* overscroll-contain stops the transcript's scroll from chaining to
+          the page on mobile — the input never rides away (Claude-app
+          mechanics, founder call, 2026-07-23). */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {/* min-h-full + justify-end anchors the conversation to the BOTTOM
             (founder call, 2026-07-23): the first messages sit right above
             the input like a messenger, growing upward until the column

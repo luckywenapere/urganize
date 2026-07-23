@@ -50,19 +50,22 @@ export default function ChappiPageClient() {
 
   return (
     <>
-      <InviteTeamBanner />
-
-      {/* The conversation's empty state centers itself with justify-center,
-          which needs a DEFINITE height to center within — AppShell's <main>
-          is flex-1 under a min-h-screen column, so a child h-full resolves
-          to content height and the block hugged the topbar. This wrapper
-          pins the height to the viewport minus the chrome around it
-          (topbar min-h-16 = 4rem, main pt-5 = 1.25rem, main pb-28 = 7rem
-          mobile / md:pb-10 = 2.5rem), giving the PostHog-style vertical
-          centering. Floor keeps short viewports usable; the active
-          conversation scrolls inside the same box. */}
-      <div className="h-[calc(100dvh-12.25rem)] min-h-[24rem] md:h-[calc(100dvh-7.75rem)]">
-        <ChappiConversation onNewRelease={() => setIsCreateModalOpen(true)} />
+      {/* One viewport-locked column (Claude-app mechanics, founder call,
+          2026-07-23): the PAGE never scrolls — the transcript scrolls inside
+          ChappiConversation and the input stays pinned at the bottom. The
+          height is the viewport minus the chrome around it (topbar min-h-16
+          = 4rem + its 1px border, main pt-5 = 1.25rem, main pb-28 = 7rem
+          mobile / md:pb-10 = 2.5rem). The invite banner lives INSIDE the
+          locked column — as a sibling above it, its height overflowed the
+          calc and re-introduced page scroll. Floor keeps short viewports
+          usable; the empty state centers within the definite height. */}
+      <div className="flex h-[calc(100dvh-12.25rem-1px)] min-h-[24rem] flex-col md:h-[calc(100dvh-7.75rem-1px)]">
+        <div className="shrink-0">
+          <InviteTeamBanner />
+        </div>
+        <div className="min-h-0 flex-1">
+          <ChappiConversation onNewRelease={() => setIsCreateModalOpen(true)} />
+        </div>
       </div>
 
       <CreateReleaseModal

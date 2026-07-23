@@ -102,7 +102,7 @@ export function WorkspaceReleaseCard({
         ) : null}
       </div>
 
-      <h3 className="mt-2 line-clamp-2 font-display text-lg font-semibold leading-snug text-content-primary">
+      <h3 className="mt-2 line-clamp-2 font-display text-base font-semibold leading-snug text-content-primary sm:text-lg">
         {release.title}
       </h3>
 
