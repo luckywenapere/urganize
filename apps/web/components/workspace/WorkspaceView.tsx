@@ -174,8 +174,8 @@ export function WorkspaceView() {
   }
 
   const scopeAnnouncement = scopedReleaseSlim
-    ? `Showing tasks for ${scopedReleaseSlim.title}`
-    : 'Showing all tasks';
+    ? `Showing activities for ${scopedReleaseSlim.title}`
+    : 'Showing all activities';
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">

@@ -1,9 +1,11 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Logo } from '@urganize/ui';
+import { useReleaseStore } from '@/stores/useReleaseStore';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
@@ -47,6 +49,37 @@ function getRouteTitle(pathname: string | null) {
   return routeTitles.find((item) => item.match(safePathname)) || routeTitles[0];
 }
 
+/**
+ * When a release is scoped on the workspace (?release=), its identity fills
+ * the topbar's empty middle — mono "ACTIVITIES" kicker over the song title —
+ * so the open release owns that full space between the logo and the nav
+ * (founder call, 2026-07-23; replaces the scope pill that sat inside the
+ * tasks panel). Own component under Suspense because useSearchParams needs a
+ * boundary when it renders from layout-level chrome.
+ */
+function ScopedActivitiesTitle() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const releases = useReleaseStore((state) => state.releases);
+
+  if (pathname !== '/dashboard') return null;
+  const scopedId = searchParams.get('release');
+  if (!scopedId) return null;
+  const release = releases.find((r) => r.id === scopedId);
+  if (!release) return null;
+
+  return (
+    <div className="min-w-0">
+      <p className="hidden font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary sm:block">
+        Activities
+      </p>
+      <h1 className="truncate font-display text-lg font-semibold leading-6 text-content-primary sm:text-xl">
+        {release.title}
+      </h1>
+    </div>
+  );
+}
+
 export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
   const pathname = usePathname();
   const routeTitle = getRouteTitle(pathname);
@@ -70,6 +103,12 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             Eyebrow + title are conditional so empty routeTitle entries
             (e.g. /dashboard) don't reserve vertical space. */}
         <div className="min-w-0 flex-1">
+          {/* On the scoped workspace, the open release's activities own this
+              space; static route titles fill it elsewhere. Both are empty on
+              the at-rest /dashboard, keeping the controls flush right. */}
+          <Suspense fallback={null}>
+            <ScopedActivitiesTitle />
+          </Suspense>
           {routeTitle.eyebrow ? (
             <p className="hidden text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary sm:block">
               {routeTitle.eyebrow}

@@ -36,7 +36,7 @@ export function WorkspaceDesktopGrid({
       {releases.length === 0 ? (
         <EmptyState
           title="No releases yet"
-          description="Create your first release to start planning tasks."
+          description="Create your first release to start planning activities."
           action={
             <button
               type="button"

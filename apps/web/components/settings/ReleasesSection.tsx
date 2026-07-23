@@ -53,7 +53,7 @@ export function ReleasesSection() {
         <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Releases</h2>
         <p className="mb-4 text-sm text-content-secondary">
           Deleting a release is only available here. This permanently removes
-          it, its tasks, and its attached files.
+          it, its activities, and its attached files.
         </p>
         {isLoadingReleases ? (
           <div className="space-y-2">

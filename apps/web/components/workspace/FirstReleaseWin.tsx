@@ -154,7 +154,7 @@ export function FirstReleaseWin({ releaseId, onDone }: FirstReleaseWinProps) {
                   {releaseTasks.length || '—'}
                 </p>
                 <p className="mt-1 text-xs uppercase tracking-[0.14em] text-content-tertiary">
-                  tasks
+                  activities
                 </p>
               </div>
               <div>
@@ -208,10 +208,10 @@ export function FirstReleaseWin({ releaseId, onDone }: FirstReleaseWinProps) {
               </span>
             </div>
             <h2 className="mt-3 font-display text-2xl font-semibold leading-tight text-content-primary">
-              Assign tasks to your team
+              Assign activities to your team
             </h2>
             <p className="mt-2 text-sm text-content-secondary">
-              Invite a teammate to “{release?.title || 'this release'}” so you can hand off tasks —
+              Invite a teammate to “{release?.title || 'this release'}” so you can hand off activities —
               or do it later from Settings.
             </p>
 

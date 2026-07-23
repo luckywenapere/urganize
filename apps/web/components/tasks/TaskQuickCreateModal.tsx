@@ -156,7 +156,7 @@ export function TaskQuickCreateModal({
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Quick Create</p>
-            <h2 id={headingId} className="mt-2 text-2xl font-semibold tracking-tight text-content-primary">Create task</h2>
+            <h2 id={headingId} className="mt-2 text-2xl font-semibold tracking-tight text-content-primary">Create activity</h2>
           </div>
 
           <button
@@ -253,7 +253,7 @@ export function TaskQuickCreateModal({
               disabled={isSaving || !canSubmit}
               className="min-h-11 rounded-[18px] bg-brand px-5 py-3 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isSaving ? 'Creating...' : 'Create task'}
+              {isSaving ? 'Creating...' : 'Create activity'}
             </button>
           </div>
         </form>

@@ -75,9 +75,6 @@ type TaskDetailRenderState = {
   onSavePatch: (patch: TaskDetailPatchInput) => Promise<void>;
   onOpenPrerequisite: (taskId: string) => void;
   onDeleteTask: () => Promise<void>;
-  onAddComment: (content: string) => Promise<boolean>;
-  onUpdateComment: (commentId: string, content: string) => Promise<boolean>;
-  onDeleteComment: (commentId: string) => Promise<void>;
   onUploadAttachment: (file: File) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
 };
@@ -575,67 +572,8 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     dispatchTasksChanged();
   };
 
-  // Comment/attachment mutations report success so the view can decide what
-  // local state is safe to discard (the comment draft, the edit box). They
-  // used to throw with no catch — a failed save silently swallowed the text
-  // the user typed, and a failed delete left the row on screen with no
-  // explanation. Failures now land in the drawer error banner.
-  const addComment = async (content: string): Promise<boolean> => {
-    if (!activeTaskId || !content.trim()) {
-      return false;
-    }
-
-    try {
-      await requestJson<{ comments: TaskDetail['comments'] }>(`/api/tasks/${activeTaskId}/comments`, {
-        method: 'POST',
-        body: JSON.stringify({ content }),
-      });
-    } catch (error) {
-      setDrawerError(error instanceof Error ? error.message : 'Could not add comment.');
-      return false;
-    }
-
-    await refreshOpenTask();
-    dispatchTasksChanged();
-    return true;
-  };
-
-  const updateComment = async (commentId: string, content: string): Promise<boolean> => {
-    if (!activeTaskId || !commentId || !content.trim()) {
-      return false;
-    }
-
-    try {
-      await requestJson<{ comments: TaskDetail['comments'] }>(`/api/tasks/${activeTaskId}/comments/${commentId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ content }),
-      });
-    } catch (error) {
-      setDrawerError(error instanceof Error ? error.message : 'Could not save the comment edit.');
-      return false;
-    }
-
-    await refreshOpenTask();
-    return true;
-  };
-
-  const deleteComment = async (commentId: string) => {
-    if (!activeTaskId || !commentId) {
-      return;
-    }
-
-    try {
-      await requestJson<{ comments: TaskDetail['comments'] }>(`/api/tasks/${activeTaskId}/comments/${commentId}`, {
-        method: 'DELETE',
-      });
-    } catch (error) {
-      setDrawerError(error instanceof Error ? error.message : 'Could not delete the comment.');
-      return;
-    }
-
-    await refreshOpenTask();
-  };
-
+  // Comments were removed from the activity view (founder call,
+  // 2026-07-23) — the /api/tasks/[id]/comments routes stay dormant.
   const uploadAttachment = async (file: File) => {
     if (!activeTaskId) {
       return;
@@ -718,7 +656,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       }));
   }, [storeTasks, task?.dependencies]);
 
-  // Plain object — saveTaskPatch / deleteTask / addComment / etc. are
+  // Plain object — saveTaskPatch / deleteTask / uploadAttachment / etc. are
   // recreated every render today (no useCallback wrap), so memoizing this
   // would either need the whole callback set wrapped (out of scope) or
   // include them in deps (defeating the memo). Recreating the value each
@@ -738,9 +676,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     onSavePatch: saveTaskPatch,
     onOpenPrerequisite: openTask,
     onDeleteTask: deleteTask,
-    onAddComment: addComment,
-    onUpdateComment: updateComment,
-    onDeleteComment: deleteComment,
     onUploadAttachment: uploadAttachment,
     onDeleteAttachment: deleteAttachment,
   };
@@ -842,7 +777,7 @@ function TaskDetailModal() {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Task detail"
+        aria-label="Activity detail"
         className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border-t border-stroke-strong bg-bg-surface sm:rounded-2xl shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200 sm:max-h-[85dvh] sm:max-w-2xl sm:border"
       >
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6">
@@ -859,9 +794,6 @@ function TaskDetailModal() {
             onSavePatch={state.onSavePatch}
             onOpenPrerequisite={state.onOpenPrerequisite}
             onDeleteTask={state.onDeleteTask}
-            onAddComment={state.onAddComment}
-            onUpdateComment={state.onUpdateComment}
-            onDeleteComment={state.onDeleteComment}
             onUploadAttachment={state.onUploadAttachment}
             onDeleteAttachment={state.onDeleteAttachment}
           />

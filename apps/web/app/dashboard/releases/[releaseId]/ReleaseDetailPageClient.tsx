@@ -346,7 +346,7 @@ export default function ReleaseDetailPage() {
           <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">Activities</h2>
           {releaseTasks.length === 0 ? (
             <div className="mt-3 rounded-xl border border-stroke-default bg-bg-surface p-6 text-center">
-              <p className="text-sm text-content-secondary">No tasks yet for this release.</p>
+              <p className="text-sm text-content-secondary">No activities yet for this release.</p>
               <button
                 type="button"
                 onClick={() => openQuickCreate({ releaseId, source: 'inline' })}
