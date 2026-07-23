@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AlertCircle, CalendarDays, ChevronDown, Lock, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
@@ -17,6 +17,7 @@ import { Toast } from '@/components/shared/Toast';
 import { ReleaseInfoSection } from '@/components/releases/ReleaseInfoSection';
 import { AssetSection } from '@/components/releases/AssetSection';
 import { ContentCalendarSection } from '@/components/releases/ContentCalendarSection';
+import { NewReleaseGuide } from '@/components/releases/NewReleaseGuide';
 import dynamic from 'next/dynamic';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { supabase } from '@/lib/supabase/client';
@@ -68,6 +69,7 @@ const statusLabel: Record<string, string> = {
 export default function ReleaseDetailPage() {
   const { releaseId } = useParams<{ releaseId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, isLoading: authLoading } = useAuthStore();
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
   const tasks = useTaskStore((s) => s.tasks);
@@ -79,6 +81,18 @@ export default function ReleaseDetailPage() {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isGeneratingStatus, setIsGeneratingStatus] = useState(false);
   const [statusUpdate, setStatusUpdate] = useState('');
+  // One-time getting-started guide (NewReleaseGuide), triggered by ?new=1
+  // from the create flows. Read into state once, then the param is
+  // stripped via router.replace so a refresh never re-triggers it — the
+  // guide's own visibility is controlled purely by this boolean from then
+  // on (dismiss just flips it false, no further URL churn).
+  const [showNewReleaseGuide, setShowNewReleaseGuide] = useState(false);
+  useEffect(() => {
+    if (searchParams.get('new') !== '1') return;
+    setShowNewReleaseGuide(true);
+    router.replace(`/dashboard/releases/${releaseId}`, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per mount to consume the param; router/searchParams identity churn shouldn't re-fire this.
+  }, []);
 
   const generateStatus = async () => {
     setIsStatusOpen(true);
@@ -244,6 +258,10 @@ export default function ReleaseDetailPage() {
           <div className="mb-4">
             <Toast message={toast.message} tone={toast.tone} />
           </div>
+        ) : null}
+
+        {showNewReleaseGuide ? (
+          <NewReleaseGuide onDismiss={() => setShowNewReleaseGuide(false)} />
         ) : null}
 
         {/* Header */}

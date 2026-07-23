@@ -56,9 +56,7 @@ type CreateReleaseResponse = {
   error?: string;
 };
 
-type FieldErrors = Partial<Record<'title' | 'releaseDate' | 'description', string>>;
-
-const MAX_DESCRIPTION_LENGTH = 500;
+type FieldErrors = Partial<Record<'title' | 'releaseDate', string>>;
 
 async function getAccessToken(): Promise<string> {
   const {
@@ -85,7 +83,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState('');
   const [releaseDate, setReleaseDate] = useState('');
-  const [description, setDescription] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -134,7 +131,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     return lockBodyScroll();
   }, [open]);
 
-  const characterCount = description.length;
   const canSubmit = useMemo(
     () => title.trim().length > 0 && releaseDate.length > 0 && !isSubmitting,
     [isSubmitting, releaseDate, title]
@@ -190,10 +186,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
       nextErrors.releaseDate = dateError;
     }
 
-    if (description.length > MAX_DESCRIPTION_LENGTH) {
-      nextErrors.description = `Description must be ${MAX_DESCRIPTION_LENGTH} characters or fewer.`;
-    }
-
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -222,7 +214,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
         body: JSON.stringify({
           title: title.trim(),
           releaseDate: releaseDate || undefined,
-          description: description.trim(),
           source: 'dashboard',
         }),
       });
@@ -239,7 +230,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
 
       setTitle('');
       setReleaseDate('');
-      setDescription('');
       setErrors({});
       // Resync the store here, with force, so the new release is guaranteed
       // to appear no matter which caller opened the modal. Callers' own
@@ -292,9 +282,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
               <h2 id="create-release-title" className="mt-2 font-display text-2xl font-semibold text-content-primary">
                 New release
               </h2>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-content-secondary">
-                Add the release basics. You can add tasks, assets, and collaborators after creating.
-              </p>
             </div>
             <IconButton
               type="button"
@@ -355,24 +342,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                     early tasks will show as &ldquo;Catch up&rdquo; so you can prioritize them.
                   </p>
                 ) : null}
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-content-primary">Description</span>
-                <textarea
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  rows={5}
-                  className="input min-h-32 resize-none rounded-none border-stroke-default bg-bg-elevated"
-                  placeholder="Release context, campaign notes, or internal goals"
-                  aria-invalid={Boolean(errors.description)}
-                />
-                <span className="mt-2 flex justify-between gap-3 text-xs">
-                  <span className="text-status-error">{errors.description || ''}</span>
-                  <span className={characterCount > MAX_DESCRIPTION_LENGTH ? 'text-status-error' : 'text-content-tertiary'}>
-                    {characterCount}/{MAX_DESCRIPTION_LENGTH}
-                  </span>
-                </span>
               </label>
           </div>
 

@@ -39,7 +39,7 @@ export function WorkspaceDesktopGrid({
       {releases.length === 0 ? (
         <EmptyState
           title="No releases yet"
-          description="Create your first release to start collecting tasks and assets."
+          description="Create your first release to start planning tasks."
           action={
             <button
               type="button"
@@ -52,11 +52,16 @@ export function WorkspaceDesktopGrid({
           }
         />
       ) : (
-        // 3-up at lg (1024px → ~285px cards) and 4-up at xl (1280px+ →
-        // ~280px cards). The wider real estate vs. the old 2-pane left
-        // column means we can show more releases above the fold at rest
-        // without resizing the underlying card primitive.
-        <div className="grid gap-4 lg:grid-cols-3 xl:grid-cols-4">
+        // Auto-fit columns capped at 280px, centered as a row (founder call,
+        // 2026-07-23): with `repeat(auto-fit, minmax(...))` the browser fits
+        // as many ~280px columns as the container allows — 3 at lg width,
+        // 4 at xl, same as the old explicit lg:grid-cols-3 xl:grid-cols-4 —
+        // but `justify-center` centers the row when there are FEWER
+        // releases than fit, instead of the previous grid leaving them
+        // left-anchored with dead space to the right. A full row (4 at xl)
+        // fills edge to edge exactly as before; centering only kicks in
+        // below that count.
+        <div className="grid justify-center gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,280px))]">
           {releases.map(({ release, tasksDone, tasksTotal, coverArtUrl }) => (
             <WorkspaceReleaseCard
               key={release.id}

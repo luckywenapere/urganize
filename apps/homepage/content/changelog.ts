@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.20.0",
+    date: "July 23, 2026",
+    highlights: [
+      "The new-release form is shorter — the description field is gone. Once you're in your new release, a quick dismissible guide points you to what matters: the tasks below.",
+      "The quick \"create task\" shortcut (press C) no longer shows a leftover Tag picker from an earlier version of the app.",
+      "The releases view now centers your releases as a group instead of bunching them to one side when you have fewer than a full row.",
+    ],
+  },
+  {
     version: "0.19.3",
     date: "July 23, 2026",
     highlights: [

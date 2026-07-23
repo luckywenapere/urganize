@@ -49,7 +49,7 @@ export function ReleasesColumn({
       {releases.length === 0 ? (
         <EmptyState
           title="No releases yet"
-          description="Create your first release to start collecting tasks and assets."
+          description="Create your first release to start planning tasks."
           action={
             <button
               type="button"
