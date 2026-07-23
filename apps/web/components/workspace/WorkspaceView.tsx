@@ -188,7 +188,7 @@ export function WorkspaceView() {
           wrapper — see AppShell.tsx PAGE WIDTH SOURCE OF TRUTH. This div
           intentionally has NO max-width so dashboard / settings can't drift
           apart again. */}
-      <div className="pb-24 pt-6 sm:px-6">
+      <div className={`pt-6 sm:px-6 ${isDesktopFocusedMode ? 'pb-24 lg:pb-0' : 'pb-24'}`}>
         {/* Screen-reader-only live region. Polite mode waits for the SR to be
             idle, atomic="true" re-reads the whole message. Mirrors the visible
             workspace state so SR users get the same context. */}

@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.23.1",
+    date: "July 23, 2026",
+    highlights: [
+      "Opening a release now keeps everything on one screen — the page stays put and the activities list scrolls on its own, so the back button and your other releases never leave view.",
+      "The release row at the top of the app is cleaner: just the cover art, release name, and date.",
+      "Chappi conversations now start from the bottom, right above the message box — like every chat you already use.",
+    ],
+  },
+  {
     version: "0.23.0",
     date: "July 23, 2026",
     highlights: [

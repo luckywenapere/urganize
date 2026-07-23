@@ -344,9 +344,13 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className={`mx-auto w-full ${isPanel ? '' : 'max-w-[46rem] px-1'}`}>
+        {/* min-h-full + justify-end anchors the conversation to the BOTTOM
+            (founder call, 2026-07-23): the first messages sit right above
+            the input like a messenger, growing upward until the column
+            fills, then scrolling normally. */}
+        <div className={`mx-auto flex min-h-full w-full flex-col justify-end ${isPanel ? '' : 'max-w-[46rem] px-1'}`}>
           {isPanel ? null : (
-            <div className="flex justify-end pb-3 pt-1">
+            <div className="flex shrink-0 justify-end pb-3 pt-1">
               <button
                 type="button"
                 onClick={reset}
