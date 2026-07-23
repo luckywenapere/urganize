@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.17.1",
+    date: "July 23, 2026",
+    highlights: [
+      "Task sections now only show up when there's something in them. No more empty \"Overdue (0)\" or \"Upcoming (0)\" rows — a section appears when a task moves into it and disappears when it empties out.",
+    ],
+  },
+  {
     version: "0.17.0",
     date: "July 23, 2026",
     highlights: [
