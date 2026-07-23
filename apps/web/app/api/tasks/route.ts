@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { groupTasksIntoSections } from '@/lib/tasks';
 import {
   TASKS_TABLE,
+  buildReadOnlyResponse,
   buildTaskSchemaResponse,
   requireAuthenticatedAdmin,
   isTaskSchemaMissingError,
+  isReadOnlyWorkspaceMember,
   loadWorkspaceAccessContext,
   ensureWorkspaceAccess,
 } from '@/lib/tasks-server';
@@ -118,6 +120,11 @@ export async function POST(request: NextRequest) {
 
     const workspaceAccess = await ensureWorkspaceAccess(adminClient, workspaceId, auth.user, access);
     if ('error' in workspaceAccess) return workspaceAccess.error;
+
+    // Guests are read-only (founder decision, 2026-07-23).
+    if (isReadOnlyWorkspaceMember(access, workspaceId)) {
+      return buildReadOnlyResponse();
+    }
 
     const task = await taskService.createTask(auth.user.id, workspaceId, body);
 

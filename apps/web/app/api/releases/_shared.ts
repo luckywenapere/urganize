@@ -11,6 +11,7 @@ import {
   type ReleaseSummary,
 } from '@/lib/release-ops';
 import { createAdminClient } from '@/app/api/_shared/auth';
+import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
 
 export {
   ARTISTS_TABLE,
@@ -166,6 +167,49 @@ export async function ensureReleaseOwnership(
   const ownerId = String(release?.owner_user_id || '');
   if (!release || ownerId !== userId) {
     return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
+  }
+
+  return { release: toReleaseSummary(release as Record<string, unknown>) };
+}
+
+/**
+ * Read access for RELEASE detail: the owner OR any member of the owner's
+ * workspace (whole-workspace visibility, founder decision 2026-07-23).
+ * Mutating routes keep `ensureReleaseOwnership` — teammates work through
+ * activities; the release object itself stays the owner's to change.
+ */
+export async function ensureReleaseReadAccess(
+  adminClient: ReturnType<typeof createAdminClient>,
+  releaseId: string,
+  user: Parameters<typeof loadWorkspaceAccessContext>[1]
+) {
+  if (!adminClient) {
+    return { error: NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 }) };
+  }
+
+  const { data: release, error } = await adminClient
+    .from('releases')
+    .select('id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
+    .eq('id', releaseId)
+    .maybeSingle();
+
+  if (error) {
+    if (isOptionalTableMissingError(error)) {
+      return { error: buildMissingTableResponse() };
+    }
+    return { error: NextResponse.json({ error: error.message || 'Could not load release.' }, { status: 500 }) };
+  }
+
+  const ownerId = String(release?.owner_user_id || '');
+  if (!release) {
+    return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
+  }
+
+  if (ownerId !== user.id) {
+    const access = await loadWorkspaceAccessContext(adminClient, user);
+    if (!access.releaseOwnerIds.includes(ownerId)) {
+      return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
+    }
   }
 
   return { release: toReleaseSummary(release as Record<string, unknown>) };

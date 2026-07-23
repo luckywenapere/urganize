@@ -4,9 +4,11 @@ import {
   TASK_ATTACHMENTS_BUCKET,
   WORKSPACE_MEMBERS_TABLE,
   WORKSPACES_TABLE,
+  buildReadOnlyResponse,
   buildTaskSchemaResponse,
   createTaskNotification,
   ensureTaskAccess,
+  isReadOnlyWorkspaceMember,
   loadTaskDetail,
   requireAuthenticatedAdmin,
   isTaskSchemaMissingError,
@@ -109,6 +111,11 @@ export async function PATCH(
   try {
     const access = await ensureTaskAccess(adminClient, id, auth.user);
     if ('error' in access) return access.error;
+
+    // Guests are read-only (founder decision, 2026-07-23).
+    if (isReadOnlyWorkspaceMember(access.access, access.task.workspace_id)) {
+      return buildReadOnlyResponse();
+    }
 
     const body = await request.json();
     const mapped = mapTaskPatchBody(body);
@@ -254,6 +261,11 @@ export async function DELETE(
   try {
     const access = await ensureTaskAccess(adminClient, id, auth.user);
     if ('error' in access) return access.error;
+
+    // Guests are read-only (founder decision, 2026-07-23).
+    if (isReadOnlyWorkspaceMember(access.access, access.task.workspace_id)) {
+      return buildReadOnlyResponse();
+    }
 
     // Clean up attachments
     const attachmentResult = await adminClient

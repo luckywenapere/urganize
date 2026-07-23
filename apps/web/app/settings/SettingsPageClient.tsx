@@ -179,10 +179,12 @@ export default function SettingsPage() {
     }
   }, [accessToken, userId]);
 
+  // Loads for EVERY account (founder decision, 2026-07-23): teammates see
+  // their team read-only; TeammatesSection gates invite/remove internally.
   useEffect(() => {
-    if (!userId || !isManagerAccount || !accessToken) return;
+    if (!userId || !accessToken) return;
     void loadTeammates();
-  }, [userId, isManagerAccount, accessToken, loadTeammates]);
+  }, [userId, accessToken, loadTeammates]);
 
   // Load the workspace artist behind the flag. Mirrors the logo loader's
   // shape so the feedback paths and cleanup-on-unmount semantics stay
@@ -345,7 +347,9 @@ export default function SettingsPage() {
             <PushNotificationsSection />
           </div>
 
-          {isManagerAccount && (
+          {/* Rendered for every account — the section itself is read-only
+              for non-managers (the shared "who's on this team" surface). */}
+          {(
             <TeammatesSection
               teammates={teammates}
               isLoadingTeammates={isLoadingTeammates && !teammatesPrimed}

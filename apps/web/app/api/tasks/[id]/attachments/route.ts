@@ -5,6 +5,8 @@ import {
   buildStoragePathForTaskAttachment,
   buildTaskSchemaResponse,
   ensureTaskAccess,
+  isReadOnlyWorkspaceMember,
+  buildReadOnlyResponse,
   requireAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadTaskAttachments,
@@ -27,6 +29,11 @@ export async function POST(
     const access = await ensureTaskAccess(adminClient, id, auth.user);
     if ('error' in access) {
       return access.error;
+    }
+
+    // Guests are read-only (founder decision, 2026-07-23).
+    if (isReadOnlyWorkspaceMember(access.access, access.task.workspace_id)) {
+      return buildReadOnlyResponse();
     }
 
     const formData = await request.formData().catch(() => null);

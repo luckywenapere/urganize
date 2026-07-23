@@ -52,9 +52,14 @@ export async function GET(request: NextRequest) {
   const taskService = new TaskService(adminClient);
 
   try {
-    const releases = await releaseService.getReleasesForUser(auth.user.id);
+    // Access first: its releaseOwnerIds drive whole-workspace release
+    // visibility (a teammate sees the shared catalog, not just their own).
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
-    
+    const releases = await releaseService.getReleasesForUser(
+      auth.user.id,
+      access.releaseOwnerIds
+    );
+
     let tasks: ExecutionTask[] = [];
     if (access.workspaceIds.length && access.membershipIds.length) {
       tasks = await taskService.getTasksForUser(auth.user.id, access.workspaceIds) as ExecutionTask[];

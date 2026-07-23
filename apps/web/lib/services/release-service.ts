@@ -7,13 +7,23 @@ import { loadWorkspaceLogoFallbackUrl } from '@/lib/workspace-logo';
 export class ReleaseService {
   constructor(private adminClient: SupabaseClient) {}
 
-  async getReleasesForUser(userId: string) {
+  /**
+   * Releases visible to this user. `visibleOwnerIds` implements the
+   * whole-workspace visibility model (founder decision, 2026-07-23): pass
+   * the owners of every workspace the user belongs to
+   * (WorkspaceAccessContext.releaseOwnerIds) and a teammate sees the whole
+   * shared catalog. Omitted → owner-only, the pre-collaboration behavior.
+   */
+  async getReleasesForUser(userId: string, visibleOwnerIds?: string[]) {
+    const ownerIds = Array.from(
+      new Set([userId, ...(visibleOwnerIds || [])].filter(Boolean))
+    );
     const { data, error } = await this.adminClient
       .from('releases')
       .select(
         'id,title,artist_id,artist_name,release_date,description,status,state,readiness_score,metadata,artwork_asset_id,created_at,updated_at'
       )
-      .eq('owner_user_id', userId)
+      .in('owner_user_id', ownerIds)
       .order('release_date', { ascending: true, nullsFirst: false });
 
     if (error) throw error;

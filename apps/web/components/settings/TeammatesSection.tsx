@@ -47,7 +47,11 @@ export function TeammatesSection({
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  if (!user || rolePermissions.role !== 'manager') return null;
+  if (!user) return null;
+  // Read-only for non-managers (founder decision, 2026-07-23): every
+  // teammate can SEE the team they belong to — the shared "we're on the
+  // same roster" surface — but inviting and removing stay manager-only.
+  const canManage = rolePermissions.role === 'manager';
 
   const handleCopyInviteLink = async () => {
     if (!inviteUrl) return;
@@ -133,6 +137,7 @@ export function TeammatesSection({
   return (
     <section id="teammates" className={`${panelClass} scroll-mt-24`}>
       <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Teammates</h2>
+      {canManage ? (
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
         <input
           value={inviteEmail}
@@ -159,6 +164,7 @@ export function TeammatesSection({
           {isInviting ? 'Inviting...' : 'Invite'}
         </button>
       </div>
+      ) : null}
 
       {teammateMessage && (
         <div className="mt-3 rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
@@ -194,7 +200,11 @@ export function TeammatesSection({
       {isLoadingTeammates && teammates.length === 0 ? (
         <SettingsTeamMembersSectionSkeleton />
       ) : teammates.length === 0 ? (
-        <p className="mt-4 text-sm text-content-secondary">No teammates yet. Invite someone to get started.</p>
+        <p className="mt-4 text-sm text-content-secondary">
+          {canManage
+            ? 'No teammates yet. Invite someone to get started.'
+            : 'No teammates to show yet.'}
+        </p>
       ) : (
         <div className="mt-4 space-y-2">
           {teammates.map((member) => (
@@ -203,14 +213,24 @@ export function TeammatesSection({
               className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2"
             >
               <div>
-                <p className="text-sm font-medium text-content-primary">{member.name || 'Unknown'}</p>
+                <p className="flex items-center gap-2 text-sm font-medium text-content-primary">
+                  {member.name || 'Unknown'}
+                  {/* Pending invites finally announce themselves (founder
+                      call, 2026-07-23) — this pill is the "did my invite
+                      go through?" answer. It disappears on accept. */}
+                  {member.status !== 'active' ? (
+                    <span className="rounded-full bg-status-warning/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-status-warning">
+                      Invited
+                    </span>
+                  ) : null}
+                </p>
                 <p className="text-xs text-content-secondary">{member.email || 'No email'}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="rounded-lg border border-stroke-subtle bg-bg-surface px-2 py-1 text-xs capitalize text-content-primary">
                   {(member.role || 'viewer').replace(/-/g, ' ')}
                 </span>
-                {member.userId !== user.id && (
+                {canManage && member.userId !== user.id && (
                   <button
                     type="button"
                     onClick={() => void handleRemoveTeammate(member.id)}
