@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { getRolePermissions } from '@/lib/role-permissions';
-import { ASSET_MIME_ALLOWLIST, ASSET_SIZE_LIMITS, formatFileSize } from '@/lib/asset-constants';
 import { errorMessage } from '@/lib/errors';
 import type { WorkspaceMember } from '@/types/auth';
 import { SettingsPageSkeleton } from '@/components/loading/SettingsPageSkeleton';
@@ -17,16 +16,18 @@ import {
   WorkspaceArtistSection,
   type WorkspaceArtist,
 } from '@/components/settings/WorkspaceArtistSection';
-import {
-  WorkspaceLogoSection,
-  type WorkspaceLogo,
-} from '@/components/settings/WorkspaceLogoSection';
 import { ArtistProfileSection } from '@/components/settings/ArtistProfileSection';
-import { NotificationsSection } from '@/components/settings/NotificationsSection';
 import { TeammatesSection } from '@/components/settings/TeammatesSection';
 import { ReleasesSection } from '@/components/settings/ReleasesSection';
 import { SessionSection } from '@/components/settings/SessionSection';
 import { DeleteAccountSection } from '@/components/settings/DeleteAccountSection';
+
+// 2026-07-23 (founder calls): the Workspace logo section and the
+// Notifications section were removed from Settings entirely. The logo's
+// API routes + read-time cover-art fallback stay dormant (an already-
+// uploaded logo keeps working; there's just no UI to change it), and the
+// notifications prefs were device-local placebos — email delivery was
+// never wired. Restore either from git history.
 
 // Workspace artist/logo editors are gated by the same flag that hides the
 // legacy artist input in the create-release modal. Lifting to many artists
@@ -35,19 +36,10 @@ import { DeleteAccountSection } from '@/components/settings/DeleteAccountSection
 // workspace.
 const WORKSPACE_FEATURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
-const LOGO_MIME_ALLOWLIST = ASSET_MIME_ALLOWLIST.cover_art;
-const LOGO_SIZE_LIMIT = ASSET_SIZE_LIMITS.cover_art;
-
 type WorkspaceArtistResponse = {
   workspaceId?: string;
   artist: WorkspaceArtist | null;
   releasesUpdated?: number;
-  error?: string;
-};
-
-type WorkspaceLogoResponse = {
-  workspaceId?: string;
-  logo: WorkspaceLogo | null;
   error?: string;
 };
 
@@ -77,12 +69,6 @@ export default function SettingsPage() {
   const [isSavingWorkspaceArtist, setIsSavingWorkspaceArtist] = useState(false);
   const [workspaceArtistMessage, setWorkspaceArtistMessage] = useState('');
   const [workspaceArtistError, setWorkspaceArtistError] = useState('');
-
-  const [workspaceLogo, setWorkspaceLogo] = useState<WorkspaceLogo | null | undefined>(null);
-  const [isLoadingWorkspaceLogo, setIsLoadingWorkspaceLogo] = useState(false);
-  const [isSavingWorkspaceLogo, setIsSavingWorkspaceLogo] = useState(false);
-  const [workspaceLogoMessage, setWorkspaceLogoMessage] = useState('');
-  const [workspaceLogoError, setWorkspaceLogoError] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
@@ -159,140 +145,6 @@ export default function SettingsPage() {
       cancelled = true;
     };
   }, [user, accessToken]);
-
-  // Load the workspace logo behind the flag. Mirrors the artist loader's
-  // shape so the feedback paths and cleanup-on-unmount semantics stay
-  // consistent.
-  useEffect(() => {
-    if (!user || !WORKSPACE_FEATURE_ENABLED || !accessToken) return;
-    let cancelled = false;
-
-    const load = async () => {
-      setIsLoadingWorkspaceLogo(true);
-      try {
-        const response = await fetch('/api/workspace/logo', {
-          headers: { Authorization: `Bearer ${accessToken}` },
-          cache: 'no-store',
-        });
-        const payload = (await response.json().catch(() => ({}))) as WorkspaceLogoResponse;
-        if (cancelled) return;
-        if (response.ok) {
-          setWorkspaceLogo(payload.logo ?? undefined);
-        }
-      } finally {
-        if (!cancelled) setIsLoadingWorkspaceLogo(false);
-      }
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [user, accessToken]);
-
-  // Same three-step flow as release asset uploads (AssetUploadControl):
-  // signed upload URL → PUT bytes directly to storage → record the pointer.
-  // Click-triggered, so it fetches its own fresh token rather than reusing
-  // the hoisted mount-time one — see the accessToken comment above.
-  const handleUploadWorkspaceLogo = async (file: File) => {
-    if (!user) return;
-    setWorkspaceLogoError('');
-    setWorkspaceLogoMessage('');
-
-    const mimeType = file.type || 'application/octet-stream';
-    if (!LOGO_MIME_ALLOWLIST.includes(mimeType)) {
-      setWorkspaceLogoError('Logo must be a JPEG, PNG, or WebP image.');
-      return;
-    }
-    if (file.size > LOGO_SIZE_LIMIT) {
-      setWorkspaceLogoError(`Logo must be ${formatFileSize(LOGO_SIZE_LIMIT)} or smaller.`);
-      return;
-    }
-
-    setIsSavingWorkspaceLogo(true);
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Session expired. Please sign in again.');
-
-      const uploadUrlResponse = await fetch('/api/workspace/logo/upload-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          file_name: file.name,
-          mime_type: mimeType,
-          file_size: file.size,
-        }),
-      });
-      const uploadUrlPayload = (await uploadUrlResponse.json().catch(() => ({}))) as {
-        upload_url?: string;
-        storage_path?: string;
-        error?: string;
-      };
-      if (!uploadUrlResponse.ok || !uploadUrlPayload.upload_url || !uploadUrlPayload.storage_path) {
-        throw new Error(uploadUrlPayload.error || 'Could not create upload URL.');
-      }
-
-      const storageResponse = await fetch(uploadUrlPayload.upload_url, {
-        method: 'PUT',
-        headers: { 'Content-Type': mimeType },
-        body: file,
-      });
-      if (!storageResponse.ok) {
-        throw new Error(`Storage upload failed (${storageResponse.status}).`);
-      }
-
-      const recordResponse = await fetch('/api/workspace/logo', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          storage_path: uploadUrlPayload.storage_path,
-          file_name: file.name,
-        }),
-      });
-      const recordPayload = (await recordResponse.json().catch(() => ({}))) as WorkspaceLogoResponse;
-      if (!recordResponse.ok || !recordPayload.logo) {
-        throw new Error(recordPayload.error || 'Could not save logo.');
-      }
-
-      setWorkspaceLogo(recordPayload.logo);
-      setWorkspaceLogoMessage('Logo saved. Releases without cover art now show it automatically.');
-    } catch (err) {
-      setWorkspaceLogoError(errorMessage(err, 'Could not upload logo.'));
-    } finally {
-      setIsSavingWorkspaceLogo(false);
-    }
-  };
-
-  const handleRemoveWorkspaceLogo = async () => {
-    if (!user || !workspaceLogo) return;
-    setWorkspaceLogoError('');
-    setWorkspaceLogoMessage('');
-    setIsSavingWorkspaceLogo(true);
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Session expired. Please sign in again.');
-      const response = await fetch('/api/workspace/logo', {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const payload = (await response.json().catch(() => ({}))) as WorkspaceLogoResponse;
-      if (!response.ok) {
-        throw new Error(payload.error || 'Could not remove logo.');
-      }
-      setWorkspaceLogo(undefined);
-      setWorkspaceLogoMessage('Logo removed. Releases without cover art show the neutral placeholder again.');
-    } catch (err) {
-      setWorkspaceLogoError(errorMessage(err, 'Could not remove logo.'));
-    } finally {
-      setIsSavingWorkspaceLogo(false);
-    }
-  };
 
   const handleSaveWorkspaceArtist = async () => {
     if (!user || !workspaceArtist) return;
@@ -383,11 +235,13 @@ export default function SettingsPage() {
             </Link>
           </div>
 
+          {/* Section order (founder call, 2026-07-23): the workspace artist
+              leads — we're serving the artist, so the artist comes first.
+              Then the day-to-day surfaces (profile, appearance, team,
+              releases), and account plumbing (password, session, delete)
+              sits at the bottom where rarely-used, high-consequence actions
+              belong. */}
           <div className="divide-y divide-stroke-subtle">
-          <ProfileSection />
-          <AppearanceSection />
-          <SecuritySection />
-
           {WORKSPACE_FEATURE_ENABLED && (
             <WorkspaceArtistSection
               artist={workspaceArtist}
@@ -401,22 +255,9 @@ export default function SettingsPage() {
             />
           )}
 
-          {WORKSPACE_FEATURE_ENABLED && (
-            <WorkspaceLogoSection
-              logo={workspaceLogo}
-              isLoading={isLoadingWorkspaceLogo}
-              isSaving={isSavingWorkspaceLogo}
-              message={workspaceLogoMessage}
-              error={workspaceLogoError}
-              mimeAllowlist={LOGO_MIME_ALLOWLIST}
-              sizeLimit={LOGO_SIZE_LIMIT}
-              onUpload={(file) => void handleUploadWorkspaceLogo(file)}
-              onRemove={() => void handleRemoveWorkspaceLogo()}
-            />
-          )}
-
           <ArtistProfileSection />
-          <NotificationsSection />
+          <ProfileSection />
+          <AppearanceSection />
 
           {isManagerAccount && (
             <TeammatesSection
@@ -428,6 +269,7 @@ export default function SettingsPage() {
           )}
 
           <ReleasesSection />
+          <SecuritySection />
           <SessionSection />
           <DeleteAccountSection />
           </div>

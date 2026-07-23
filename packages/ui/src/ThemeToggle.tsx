@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Moon, Sun } from 'lucide-react';
 import { applyTheme, persistTheme, resolveInitialTheme, type ThemeMode } from './theme';
 
 type ThemeToggleProps = {
@@ -8,6 +9,18 @@ type ThemeToggleProps = {
   compact?: boolean;
 };
 
+const MODES = [
+  { mode: 'light' as ThemeMode, label: 'Light', Icon: Sun },
+  { mode: 'dark' as ThemeMode, label: 'Dark', Icon: Moon },
+];
+
+/**
+ * Segmented Light/Dark control (redesigned 2026-07-23 — the old single
+ * cycling pill read as dated). Two labeled segments with a thumb that
+ * slides to the active side over 200ms; sharp corners per the Brand Bible.
+ * Both options are always visible, so there's no guessing what clicking
+ * will do — you pick a mode, you don't toggle into the unknown.
+ */
 export function ThemeToggle({ className = '', compact = false }: ThemeToggleProps) {
   const [mounted, setMounted] = useState(false);
   const [theme, setTheme] = useState<ThemeMode>('dark');
@@ -19,38 +32,59 @@ export function ThemeToggle({ className = '', compact = false }: ThemeToggleProp
     setMounted(true);
   }, []);
 
-  const handleToggle = () => {
-    const nextTheme: ThemeMode = theme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
-    applyTheme(nextTheme);
-    persistTheme(nextTheme);
+  const selectMode = (next: ThemeMode) => {
+    if (next === theme) return;
+    setTheme(next);
+    applyTheme(next);
+    persistTheme(next);
   };
 
   if (!mounted) {
+    // Same footprint as the mounted control so the layout doesn't shift.
     return (
-      <button
-        type="button"
-        disabled
+      <div
         aria-hidden
-        className={`inline-flex h-10 w-10 items-center justify-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary opacity-70 ${className}`}
-      >
-        <span className="inline-block h-4 w-4 animate-breathe rounded-full bg-content-tertiary/60" />
-      </button>
+        className={`inline-block h-9 ${compact ? 'w-[84px]' : 'w-[176px]'} border border-stroke-default bg-bg-surface opacity-70 ${className}`}
+      />
     );
   }
 
+  const activeIndex = MODES.findIndex((entry) => entry.mode === theme);
+
   return (
-    <button
-      type="button"
-      onClick={handleToggle}
-      className={`inline-flex items-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-3 py-2 text-xs font-medium text-content-primary transition hover:bg-bg-hover ${className}`}
-      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-      title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+    <div
+      role="radiogroup"
+      aria-label="Theme"
+      className={`relative inline-grid h-9 ${compact ? 'w-[84px]' : 'w-[176px]'} grid-cols-2 border border-stroke-default bg-bg-surface p-0.5 ${className}`}
     >
-      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-bg-elevated text-sm">
-        {theme === 'dark' ? 'L' : 'D'}
-      </span>
-      {!compact && <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>}
-    </button>
+      {/* Sliding thumb — sized to one cell, translated by its own width to
+          land on the active segment. transform (not left) so it animates on
+          the compositor. */}
+      <span
+        aria-hidden
+        className="absolute inset-y-0.5 left-0.5 w-[calc(50%-2px)] border border-stroke-strong bg-bg-elevated transition-transform duration-200 ease-out"
+        style={{ transform: `translateX(${activeIndex * 100}%)` }}
+      />
+      {MODES.map(({ mode, label, Icon }) => {
+        const isActive = theme === mode;
+        return (
+          <button
+            key={mode}
+            type="button"
+            role="radio"
+            aria-checked={isActive}
+            onClick={() => selectMode(mode)}
+            className={`relative z-[1] inline-flex items-center justify-center gap-1.5 text-xs font-medium transition-colors ${
+              isActive
+                ? 'text-content-primary'
+                : 'text-content-tertiary hover:text-content-secondary'
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+            {!compact && label}
+          </button>
+        );
+      })}
+    </div>
   );
 }

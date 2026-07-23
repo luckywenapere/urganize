@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.18.1",
+    date: "July 23, 2026",
+    highlights: [
+      "Settings polish: your artist now leads the page — it's the first thing you see. Password and session controls moved to the bottom where account plumbing belongs.",
+      "The light/dark mode switch is now a proper two-sided control with a sliding highlight — tap the side you want.",
+      "Removed the workspace logo and notification-preferences sections; neither was earning its place.",
+    ],
+  },
+  {
     version: "0.18.0",
     date: "July 23, 2026",
     highlights: [
