@@ -25,12 +25,13 @@ type WorkspaceDesktopFocusedProps = {
  * Desktop-only focused workspace surface. The 3-column grid pattern matches
  * the spec: non-selected releases redistribute to LEFT + RIGHT rails (split
  * computed in WorkspaceView so the same release always lands on the same
- * side across reselects), and the selected release sits in the centered
- * column above its scoped tasks + files. Mobile (< lg) never mounts this;
- * it uses the existing drill-down pattern in WorkspaceView.
+ * side across reselects), and the selected release's activities fill the
+ * center column (its identity — art + title — renders in the topbar via
+ * ContextTitle). Mobile (< lg) never mounts this; it uses the existing
+ * drill-down pattern in WorkspaceView.
  *
- * Reuses two components verbatim — `WorkspaceReleaseCard` for the centered
- * focus card and every rail card, and `TasksPanel` for the bucketed task list
+ * Reuses two components verbatim — `WorkspaceReleaseCard` for every rail
+ * card, and `TasksPanel` for the bucketed task list
  * (Done group + catch_up + drawer all flow through unchanged). Files and the
  * content calendar are their own pages, linked from TasksPanel's header
  * (URG-165, URG-157) — this file is purely arrangement: it doesn't reach
@@ -44,8 +45,14 @@ export function WorkspaceDesktopFocused({
   onSelect,
   onClose,
 }: WorkspaceDesktopFocusedProps) {
+  // Viewport-locked (founder call, 2026-07-23): the surface fills the space
+  // under the topbar exactly — 100dvh minus the vertical chrome around it
+  // (topbar 4rem + AppShell main pt-5/pb-10 = 3.75rem + workspace pt-6
+  // 1.5rem; the workspace wrapper drops its pb in focused mode). The page
+  // never scrolls here; long activity lists and long rails scroll inside
+  // their own columns, so the back button and context never leave view.
   return (
-    <div className="workspace-mode-enter space-y-4">
+    <div className="workspace-mode-enter flex h-[calc(100dvh-9.25rem)] min-h-[24rem] flex-col gap-4">
       {/* Back affordance — sits above the 3-column grid. The center card can
           ALSO be clicked to deselect (existing toggle in handleSelect), but
           a dedicated back button is the canonical close path. Deleting a
@@ -70,15 +77,13 @@ export function WorkspaceDesktopFocused({
         forcing horizontal scroll. The rails are aligned to the top, not
         center, so the first rail card lines up with the centered card.
       */}
-      <div className="grid items-start gap-6 lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]">
+      <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]">
         <RailColumn cards={leftRail} onSelect={onSelect} ariaLabel="Other releases (left)" />
 
-        <div className="min-w-0 space-y-6">
-          {/* Center column body — the activities list fills the column. The
-              focused release card moved into the TOPBAR (AppTopbar's
-              ContextTitle: cover art + artist + title), founder call
-              2026-07-23, so the list owns this space. Clicking a row opens
-              the global activity pop-up. */}
+        {/* Center column — the activities list fills and SCROLLS the column
+            (the focused card lives in the topbar). Clicking a row opens the
+            global activity pop-up. */}
+        <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain pb-4 pr-1">
           <TasksPanel tasks={scopedTasks} scopedRelease={scopedRelease} />
         </div>
 
@@ -103,7 +108,10 @@ function RailColumn({ cards, onSelect, ariaLabel }: RailColumnProps) {
     return <div aria-hidden="true" />;
   }
   return (
-    <aside aria-label={ariaLabel} className="min-w-0 space-y-3">
+    <aside
+      aria-label={ariaLabel}
+      className="min-h-0 min-w-0 space-y-3 overflow-y-auto overscroll-contain pb-4"
+    >
       {cards.map(({ release, tasksDone, tasksTotal, coverArtUrl }) => (
         <WorkspaceReleaseCard
           key={release.id}

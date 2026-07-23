@@ -53,15 +53,13 @@ function getRouteTitle(pathname: string | null) {
 }
 
 /**
- * The current release's identity fills the topbar's empty middle — a mono
- * kicker over the song title — so the open release owns that full space
+ * The current release's identity fills the topbar's empty middle — cover
+ * art + release title + date — so the open release owns that full space
  * between the logo and the nav (founder calls, 2026-07-23; replaces the
  * scope pill that sat inside the tasks panel AND the release page's own
- * mid-page header). Two contexts:
- *  - workspace with ?release= → "ACTIVITIES" kicker + title
- *  - /dashboard/releases/[id] → artist-name kicker + title
- * Own component under Suspense because useSearchParams needs a boundary
- * when it renders from layout-level chrome.
+ * mid-page header). Two contexts trigger it: the workspace with ?release=
+ * and /dashboard/releases/[id]. Own component under Suspense because
+ * useSearchParams needs a boundary when it renders from layout-level chrome.
  */
 const RELEASE_DETAIL_PATH = /^\/dashboard\/releases\/([^/]+)$/;
 
@@ -82,9 +80,6 @@ function ContextTitle() {
 
   const release = releases.find((r) => r.id === releaseId);
   if (!release) return null;
-  // The kicker is the ARTIST, matching the card this row replaced (founder
-  // annotation, 2026-07-23 — the "ACTIVITIES" wording was crossed out).
-  const kicker = release.artistName || 'Release';
 
   // The full identity row — cover art thumbnail (or the U-mark default)
   // beside the kicker + title. This IS the focused release card now
@@ -113,10 +108,9 @@ function ContextTitle() {
           </div>
         )}
       </div>
+      {/* Release name only — the artist kicker was dropped (founder call,
+          2026-07-23: one artist per roster makes it redundant up here). */}
       <div className="min-w-0">
-        <p className="hidden truncate font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary sm:block">
-          {kicker}
-        </p>
         <div className="flex min-w-0 items-baseline gap-3">
           <h1 className="truncate font-display text-lg font-semibold leading-6 text-content-primary sm:text-xl">
             {release.title}
