@@ -23,11 +23,27 @@ type InviteWorkspaceMemberBody = {
 
 const WORKSPACE_ROLE_OPTIONS: WorkspaceMemberRole[] = ['owner', 'admin', 'member', 'guest'];
 
+// The invite form's picker sends PROFILE-flavored roles (Manager / Artist /
+// Team Member / Viewer). These map onto workspace roles; before this map
+// existed every choice silently fell through to 'member' (2026-07-23
+// collaboration audit). Viewer → guest = read-only.
+const PROFILE_TO_WORKSPACE_ROLE: Record<string, WorkspaceMemberRole> = {
+  manager: 'admin',
+  artist: 'member',
+  'team-member': 'member',
+  viewer: 'guest',
+};
+
 const readString = (value: unknown): string => String(value || '').trim();
 const normalizeEmail = (value: unknown): string => readString(value).toLowerCase();
 
 function normalizeRole(value: unknown): WorkspaceMemberRole {
-  const normalized = readString(value) as WorkspaceMemberRole;
+  const raw = readString(value).toLowerCase();
+  const mapped = PROFILE_TO_WORKSPACE_ROLE[raw];
+  if (mapped) return mapped;
+  const normalized = raw as WorkspaceMemberRole;
+  // 'owner' can't be granted via invite — there is one owner per workspace.
+  if (normalized === 'owner') return 'admin';
   return WORKSPACE_ROLE_OPTIONS.includes(normalized) ? normalized : 'member';
 }
 

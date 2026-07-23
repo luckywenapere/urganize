@@ -207,10 +207,17 @@ export async function GET(request: NextRequest) {
   // 3-queries-per-release fan-out — had no callers left (the product's list
   // view loads through /api/command-center), so it was removed 2026-07-10
   // rather than hardened. Every GET now returns the selector payload.
+  // Whole-workspace visibility (founder decision, 2026-07-23): the selector
+  // lists releases owned by ANY owner of a workspace the caller belongs to,
+  // so teammates can pick the shared releases too.
+  const access = await loadWorkspaceAccessContext(adminClient, auth.user);
+  const visibleOwnerIds = access.releaseOwnerIds.length
+    ? access.releaseOwnerIds
+    : [auth.user.id];
   const releasesResult = await adminClient
     .from('releases')
     .select('id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,artwork_asset_id,created_at,updated_at')
-    .eq('owner_user_id', auth.user.id)
+    .in('owner_user_id', visibleOwnerIds)
     .order('release_date', { ascending: true, nullsFirst: false });
 
   if (releasesResult.error) {

@@ -1,6 +1,6 @@
 {
   "name": "@urganize/mobile",
-  "version": "0.25.2",
+  "version": "0.26.0",
   "private": true,
   "description": "Capacitor native shell (iOS + Android) for the Urganize product app. Loads the production web app remotely; see docs/mobile/capacitor-audit.md for the strategy decision.",
   "scripts": {

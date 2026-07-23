@@ -330,6 +330,12 @@ type WorkspaceAccessContext = {
   membershipIds: string[];
   primaryWorkspaceId: string | null;
   primaryWorkspace: Workspace | null;
+  /** Unique owner ids of EVERY workspace the user belongs to (always
+   * includes the user themself). Releases are owned per-user, not
+   * per-workspace, so "releases visible to this user" = releases owned by
+   * any of these ids — the whole-workspace visibility model (founder
+   * decision, 2026-07-23). */
+  releaseOwnerIds: string[];
 };
 
 const TASK_STATUS_SET = new Set<TaskStatus>([
@@ -788,10 +794,45 @@ async function resolveWorkspaceAccessContext(
       return left.invitedAt.localeCompare(right.invitedAt);
     });
 
-  const primaryMembership = memberships[0] || null;
+  // Primary-workspace pick. Default: the owner-first sort above (a manager's
+  // own workspace is their team). EXCEPTION (founder decision, 2026-07-23):
+  // an invitee also gets an auto-provisioned personal workspace, and with
+  // owner-first that empty shell won as their primary — so their Teammates
+  // list and assignee picker showed only themself, never the team that
+  // invited them. When the user owns ZERO releases and belongs to someone
+  // else's workspace, the earliest-joined team workspace is their primary.
+  let primaryMembership = memberships[0] || null;
+  const joinedMemberships = memberships.filter((member) => {
+    const workspace = workspaceById.get(member.workspaceId);
+    return workspace && workspace.owner_id !== user.id;
+  });
+  if (
+    primaryMembership &&
+    joinedMemberships.length > 0 &&
+    workspaceById.get(primaryMembership.workspaceId)?.owner_id === user.id
+  ) {
+    const ownReleases = await adminClient
+      .from(RELEASES_TABLE)
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_user_id', user.id);
+    if (!ownReleases.error && (ownReleases.count ?? 0) === 0) {
+      primaryMembership = joinedMemberships[0];
+    }
+  }
   const primaryWorkspace = primaryMembership
     ? toWorkspace(workspaceById.get(primaryMembership.workspaceId) as WorkspaceRow)
     : null;
+
+  // Whole-workspace release visibility: the owners of every workspace this
+  // user belongs to, plus the user themself.
+  const releaseOwnerIds = Array.from(
+    new Set([
+      user.id,
+      ...memberships
+        .map((member) => workspaceById.get(member.workspaceId)?.owner_id || '')
+        .filter(Boolean),
+    ])
+  );
 
   // "Provisioned" means BOTH halves of what ensureOwnedWorkspace guarantees
   // exist: a workspace this user owns (workspaces.owner_id) AND their
@@ -813,6 +854,7 @@ async function resolveWorkspaceAccessContext(
       membershipIds: memberships.map((member) => member.id),
       primaryWorkspaceId: primaryMembership?.workspaceId || null,
       primaryWorkspace,
+      releaseOwnerIds,
     },
     hasProvisionedOwnWorkspace,
   };
@@ -1195,15 +1237,31 @@ export async function resolveReleaseTaskWorkspace(
 
   const release = releaseResult.data as ReleaseRow;
   const ownerId = release.owner_user_id || '';
-  const ownerWorkspaceMembership =
-    access.memberships.find((member) => member.userId === ownerId && member.role === 'owner') ||
-    access.memberships.find((member) => member.userId === ownerId);
 
-  if (!ownerWorkspaceMembership?.workspaceId) {
+  // Resolve the workspace that OWNS this release, then require the caller
+  // to be a member of it. The previous implementation matched the caller's
+  // own membership rows against the release owner's user id — every row's
+  // userId is the CALLER's, so it only ever matched when the caller WAS the
+  // owner, and every non-owner teammate got "Release workspace not found."
+  // (found in the 2026-07-23 collaboration audit).
+  const ownerWorkspacesResult = await adminClient
+    .from(WORKSPACES_TABLE)
+    .select('id,owner_id')
+    .eq('owner_id', ownerId);
+
+  if (ownerWorkspacesResult.error) {
+    throw ownerWorkspacesResult.error;
+  }
+
+  const releaseWorkspaceId = (ownerWorkspacesResult.data || [])
+    .map((row) => String((row as { id?: unknown }).id || ''))
+    .find((id) => id && access.workspaceIds.includes(id));
+
+  if (!releaseWorkspaceId) {
     throw new Error('Release workspace not found.');
   }
 
-  await createDefaultReleaseTaskGroups(adminClient, ownerWorkspaceMembership.workspaceId, releaseId);
+  await createDefaultReleaseTaskGroups(adminClient, releaseWorkspaceId, releaseId);
 
   return {
     release: {
@@ -1211,8 +1269,8 @@ export async function resolveReleaseTaskWorkspace(
       title: release.title,
       artistName: release.artist_name,
     },
-    workspaceId: ownerWorkspaceMembership.workspaceId,
-    members: await loadWorkspaceMembers(adminClient, ownerWorkspaceMembership.workspaceId, user.id),
+    workspaceId: releaseWorkspaceId,
+    members: await loadWorkspaceMembers(adminClient, releaseWorkspaceId, user.id),
   };
 }
 
@@ -1668,6 +1726,28 @@ function resolveAppBaseUrl(): string {
  * at /auth?email=... and rely on the auth.users INSERT trigger to link
  * the new user to the matching pending row.
  */
+/**
+ * Guest role = read-only (founder decision, 2026-07-23): guests can see the
+ * whole workspace but cannot create, edit, complete, or delete activities.
+ * Owners, admins, and members can all act. Callers pass the workspace the
+ * mutation targets; an unknown membership is treated as read-only.
+ */
+export function isReadOnlyWorkspaceMember(
+  access: WorkspaceAccessContext,
+  workspaceId: string
+): boolean {
+  const membership = access.memberships.find((member) => member.workspaceId === workspaceId);
+  if (!membership) return true;
+  return membership.role === 'guest';
+}
+
+export function buildReadOnlyResponse(): NextResponse {
+  return NextResponse.json(
+    { error: 'Your role in this workspace is view-only.' },
+    { status: 403 }
+  );
+}
+
 export function buildInviteUrl(token: string): string {
   return `${resolveAppBaseUrl()}/invite/accept?token=${encodeURIComponent(token)}`;
 }

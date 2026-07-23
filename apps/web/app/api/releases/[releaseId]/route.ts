@@ -6,6 +6,7 @@ import {
   buildMissingTableResponse,
   createAdminClient,
   ensureReleaseOwnership,
+  ensureReleaseReadAccess,
   requireActiveAuthenticatedUser,
   isOptionalTableMissingError,
   loadReleaseCommandCenterData,
@@ -160,7 +161,9 @@ export async function GET(
   if (!releaseId) return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
 
   const adminClient = createAdminClient(auth.supabaseUrl);
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  // Read path allows any member of the owner's workspace (whole-workspace
+  // visibility); PATCH/DELETE below keep owner-only ensureReleaseOwnership.
+  const ownership = await ensureReleaseReadAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   // Independent lookups — run together instead of serializing the request.
