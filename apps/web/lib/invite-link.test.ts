@@ -2,7 +2,9 @@ import { createHmac } from 'crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   INVITE_LINK_TTL_DAYS,
+  generateInviteLinkCode,
   isInviteLinkToken,
+  looksLikeInviteLinkCode,
   mintInviteLinkToken,
   verifyInviteLinkToken,
 } from './invite-link';
@@ -75,6 +77,22 @@ describe('invite-link tokens', () => {
       .update(`${prefix}.${staleB64}`)
       .digest('base64url');
     expect(verifyInviteLinkToken(`${prefix}.${staleB64}.${sig}`)).toEqual({ status: 'expired' });
+  });
+
+  it('generates short, URL-clean, well-formed join codes', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 200; i += 1) {
+      const code = generateInviteLinkCode();
+      expect(code).toMatch(/^[A-Za-z0-9]{12}$/);
+      // Ambiguous glyphs are excluded from the alphabet.
+      expect(code).not.toMatch(/[0O1lI]/);
+      expect(looksLikeInviteLinkCode(code)).toBe(true);
+      seen.add(code);
+    }
+    expect(seen.size).toBe(200);
+    // Codes must never be mistaken for the other token kinds.
+    expect(looksLikeInviteLinkCode('550e8400-e29b-41d4-a716-446655440000')).toBe(false);
+    expect(looksLikeInviteLinkCode('wl.abc.def')).toBe(false);
   });
 
   it('rejects garbage tokens', () => {

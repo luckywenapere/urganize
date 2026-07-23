@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   buildInviteUrl,
+  buildJoinUrl,
   loadWorkspaceAccessContext,
   requireAuthenticatedAdmin,
 } from '@/lib/tasks-server';
-import { INVITE_LINK_TTL_DAYS, mintInviteLinkToken } from '@/lib/invite-link';
+import {
+  INVITE_LINK_TTL_DAYS,
+  generateInviteLinkCode,
+  mintInviteLinkToken,
+} from '@/lib/invite-link';
 
 /**
  * POST — mint a shareable workspace invite LINK (founder request,
@@ -40,6 +45,37 @@ export async function POST(request: NextRequest) {
     const body = (await request.json().catch(() => ({}))) as { artistId?: unknown };
     const artistScopeId = String(body?.artistId || '').trim().slice(0, 100) || null;
 
+    // Preferred form: a SHORT /join/<code> link backed by
+    // workspace_invite_links (presentable, Linear-style, revocable later).
+    // If the table isn't migrated yet, fall back to the stateless wl.*
+    // token so the feature never hard-fails.
+    const code = generateInviteLinkCode();
+    const expiresAtIso = new Date(
+      Date.now() + INVITE_LINK_TTL_DAYS * 24 * 60 * 60 * 1000
+    ).toISOString();
+    const insertResult = await adminClient.from('workspace_invite_links').insert({
+      workspace_id: workspaceId,
+      code,
+      role: 'member',
+      artist_scope_id: artistScopeId,
+      created_by: auth.user.id,
+      expires_at: expiresAtIso,
+    });
+
+    if (!insertResult.error) {
+      return NextResponse.json({
+        ok: true,
+        inviteUrl: buildJoinUrl(code),
+        expiresAt: expiresAtIso,
+        ttlDays: INVITE_LINK_TTL_DAYS,
+        artistScopeId,
+      });
+    }
+
+    console.warn(
+      '[invite-link] short-code insert failed (table not migrated yet?):',
+      insertResult.error.message
+    );
     const { token, expiresAt } = mintInviteLinkToken(workspaceId, artistScopeId);
     return NextResponse.json({
       ok: true,

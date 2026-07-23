@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.28.2",
+    date: "July 23, 2026",
+    highlights: [
+      "Invite links are now short and clean — app.urganize.app/join/… with a small code, instead of the long token they used to carry. Old links keep working until they expire.",
+    ],
+  },
+  {
     version: "0.28.1",
     date: "July 23, 2026",
     highlights: [

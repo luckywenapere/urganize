@@ -1821,6 +1821,13 @@ export function buildInviteUrl(token: string): string {
   return `${resolveAppBaseUrl()}/invite/accept?token=${encodeURIComponent(token)}`;
 }
 
+/** Short presentable form for join-code links: /join/<code> (founder
+ * request, 2026-07-23 — Linear-style). The route redirects into the same
+ * /invite/accept flow. */
+export function buildJoinUrl(code: string): string {
+  return `${resolveAppBaseUrl()}/join/${encodeURIComponent(code)}`;
+}
+
 export function buildWorkspaceMembersResponse(
   workspace: Workspace,
   members: WorkspaceMember[]
