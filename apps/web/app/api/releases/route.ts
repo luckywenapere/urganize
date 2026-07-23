@@ -12,6 +12,7 @@ import {
   parseOptionalReleaseDate,
 } from './_shared';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
+import { getEntitlements } from '@/lib/entitlements';
 import { type ReleaseOption } from '@/lib/release-helpers';
 
 type ReleaseSelectorListResponse = { releases: ReleaseOption[] };
@@ -219,6 +220,27 @@ export async function GET(request: NextRequest) {
   }
 
   const releases = Array.isArray(releasesResult.data) ? (releasesResult.data as ReleaseRow[]) : [];
+
+  // URG-178: the selector exists so task assignment (free core) can pick a
+  // release by NAME — but per-release dates and cover art are roster
+  // overview data, which is paid (catalog_view). Free accounts get the slim
+  // picker payload; the metadata/cover-art lookups are skipped entirely.
+  const entitlements = await getEntitlements(auth.user.id, auth.user.email, adminClient);
+  if (!entitlements.catalogView) {
+    const payload: ReleaseSelectorListResponse = {
+      releases: releases.map((release) => ({
+        id: release.id,
+        artistId: release.artist_id || '',
+        artistName: release.artist_name || '',
+        title: release.title || '',
+        releaseDate: null,
+        coverArtUrl: null,
+        createdAt: release.created_at || '',
+        updatedAt: release.updated_at || '',
+      })),
+    };
+    return NextResponse.json(payload);
+  }
 
   const metadataResult = await loadReleaseMetadataMap(
     adminClient,

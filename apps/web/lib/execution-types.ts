@@ -1,5 +1,6 @@
 import type { Release } from '@/types/releases';
 import type { Task, TaskStatus, TaskRequirement } from '@/types/tasks';
+import type { Entitlements } from '@/lib/entitlements';
 
 export type { TaskRequirement };
 
@@ -35,6 +36,15 @@ export type CommandCenterData = {
   tasks: ExecutionTask[];
   activity: ActivityLogEntry[];
   todaysDirective: ExecutionTask | null;
+  /** URG-178: server-resolved paid-tier flags, delivered atomically with the
+   * data so the workspace renders the right shape (roster grid vs.
+   * tasks-only) on first paint with no entitlement-flash. When catalogView
+   * is false the `releases` above are slim records (id/title/artist only) —
+   * the server strips roster overview data, this flag just tells the client
+   * which layout to draw. Optional because older cached payload shapes may
+   * lack it; absent means "assume entitled" (server enforcement still
+   * holds). */
+  entitlements?: Entitlements;
 };
 
 export const TASK_DONE_STATUS: TaskStatus = 'done';

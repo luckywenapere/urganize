@@ -2,13 +2,16 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Plus } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { type Task } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { createPostHogEvent } from '@/lib/analytics/shared';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
+import { FeatureUpsellCard } from '@/components/shared/FeatureUpsellCard';
 import { FirstReleaseWin } from './FirstReleaseWin';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { TaskDetailInline, useTaskUI } from '@/components/tasks/TaskUIProvider';
@@ -38,7 +41,8 @@ function toCreatedMs(value: string): number {
 export function WorkspaceView() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
-  const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
+  const { releases, catalogViewEntitled, isInitialLoading, error, loadCommandCenter } =
+    useReleaseStore();
   const tasks = useTaskStore((state) => state.tasks);
   const { scopedReleaseId, setScope } = useReleaseScope();
   // `isTaskOpen` swaps the workspace center (mobile drill-down OR desktop
@@ -59,6 +63,22 @@ export function WorkspaceView() {
     }
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
+
+  // URG-178: landing on the workspace without the roster entitlement IS the
+  // "reached for the catalog" moment — there's no nav item to click, the
+  // grid just doesn't render. Fires once per load (the flag only flips when
+  // a command-center payload lands), mirroring ChappiPageClient/
+  // FilesPageClient's on-surface pattern.
+  useEffect(() => {
+    if (!isInitialLoading && !catalogViewEntitled) {
+      captureAnalyticsEvent(
+        createPostHogEvent('gated_feature_attempted', {
+          flag: 'catalogView',
+          surface: 'workspace_roster',
+        })
+      );
+    }
+  }, [isInitialLoading, catalogViewEntitled]);
 
   // ExecutionTask extends Task by intersection; assignable without cast.
   const taskList: Task[] = tasks;
@@ -190,6 +210,87 @@ export function WorkspaceView() {
   const scopeAnnouncement = scopedReleaseSlim
     ? `Showing tasks for ${scopedReleaseSlim.title}`
     : 'Showing all tasks';
+
+  // ====================================================================
+  // URG-178 free tier: the task feature only. No roster grid on desktop,
+  // no releases list on mobile — the roster-wide catalog view is paid
+  // (the server already stripped its data from the payload; this branch
+  // just draws the matching layout). Release creation stays (it's core),
+  // task detail opens in place, and an inline upsell explains what the
+  // roster view adds instead of a dead surface.
+  // ====================================================================
+  if (!catalogViewEntitled) {
+    return (
+      <main className="min-h-screen bg-bg-base text-content-primary">
+        <div className="pb-24 pt-6 sm:px-6">
+          <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+            {scopeAnnouncement}
+          </div>
+
+          {error ? (
+            <div className="mb-6 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{error}</p>
+            </div>
+          ) : null}
+
+          <div className="mx-auto max-w-3xl space-y-6">
+            {isTaskOpen ? (
+              <TaskDetailInline />
+            ) : (
+              <>
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+                  >
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                    New release
+                  </button>
+                </div>
+                <TasksPanel
+                  id={TASKS_PANEL_ID}
+                  tasks={scopedTasks}
+                  scopedRelease={scopedReleaseSlim}
+                  onClearScope={handleClose}
+                />
+                <FeatureUpsellCard
+                  title="See your whole roster at a glance"
+                  body="Upgrade to see all your releases side by side — status, dates, and progress for each — and jump between them as you work."
+                />
+              </>
+            )}
+          </div>
+        </div>
+
+        <CreateReleaseModal
+          open={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreated={(releaseId) => {
+            setIsCreateModalOpen(false);
+            void loadCommandCenter();
+            if (FIRST_WIN_ENABLED && releases.length === 0) {
+              setWinReleaseId(releaseId);
+            } else {
+              router.push(`/dashboard/releases/${releaseId}`);
+            }
+          }}
+        />
+
+        {winReleaseId ? (
+          <FirstReleaseWin
+            releaseId={winReleaseId}
+            onDone={() => {
+              const target = winReleaseId;
+              setWinReleaseId(null);
+              router.push(`/dashboard/releases/${target}`);
+            }}
+          />
+        ) : null}
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">

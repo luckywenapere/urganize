@@ -9,6 +9,13 @@ import { useTaskStore } from '@/stores/useTaskStore';
 type ReleaseStore = {
   releases: ExecutionRelease[];
   todaysDirective: ExecutionTask | null;
+  /** URG-178: whether this account may see the roster-wide catalog view.
+   * Set from the command-center payload (server-resolved, arrives atomically
+   * with the data — no flash). Defaults true so paid users never see the
+   * stripped layout flicker; the server strips roster data from the payload
+   * for free accounts regardless, so a stale `true` here can't leak
+   * anything. */
+  catalogViewEntitled: boolean;
   isInitialLoading: boolean;
   isRefreshing: boolean;
   error: string;
@@ -42,6 +49,7 @@ let commandCenterInFlight: Promise<CommandCenterData | null> | null = null;
 export const useReleaseStore = create<ReleaseStore>((set, get) => ({
   releases: [],
   todaysDirective: null,
+  catalogViewEntitled: true,
   // Default true so the in-component `if (authLoading || isInitialLoading)
   // return null;` guard in WorkspaceView / release-detail / LegacyDashboard
   // stays active during the brief window between auth-resolve and the first
@@ -92,7 +100,16 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       useTaskStore.getState().setTasks((payload.tasks || []) as CommandCenterData['tasks']);
       useActivityStore.getState().setActivity(payload.activity || []);
       commandCenterLoadedAt = Date.now();
-      set({ releases: payload.releases, todaysDirective: payload.todaysDirective || null, isInitialLoading: false, isRefreshing: false, error: '' });
+      set({
+        releases: payload.releases,
+        todaysDirective: payload.todaysDirective || null,
+        // Absent entitlements block (older payload shape) → assume entitled;
+        // the server already stripped the payload if the account isn't.
+        catalogViewEntitled: payload.entitlements ? payload.entitlements.catalogView : true,
+        isInitialLoading: false,
+        isRefreshing: false,
+        error: '',
+      });
       return payload as CommandCenterData;
     })();
 

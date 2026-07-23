@@ -7,7 +7,8 @@ import {
 } from '@/lib/tasks-server';
 import { TaskService } from '@/lib/services/task-service';
 import { ReleaseService } from '@/lib/services/release-service';
-import type { ActivityLogEntry, ExecutionTask } from '@/lib/execution-types';
+import { getEntitlements } from '@/lib/entitlements';
+import type { ActivityLogEntry, ExecutionRelease, ExecutionTask } from '@/lib/execution-types';
 
 const ACTIVITY_LOG_TABLE = 'activity_logs';
 
@@ -52,6 +53,16 @@ export async function GET(request: NextRequest) {
   const taskService = new TaskService(adminClient);
 
   try {
+    // URG-178: the roster-wide catalog view is a paid-tier feature. The
+    // entitlement is resolved server-side here (not just hidden in the UI)
+    // so a free account can't pull roster overview data by calling this
+    // endpoint directly. Tasks + release creation stay free, and task rows
+    // still need to NAME their release, so the free payload carries slim
+    // release records (id/title/artist + createdAt for stable ordering)
+    // with the overview fields (status, dates, progress inputs, cover art,
+    // readiness) stripped — see the mapping below.
+    const entitlements = await getEntitlements(auth.user.id, auth.user.email, adminClient);
+
     const releases = await releaseService.getReleasesForUser(auth.user.id);
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     
@@ -103,7 +114,37 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ releases, tasks, activity, todaysDirective });
+    // getReleasesForUser never selected owner_user_id (every row is the
+    // caller's own), so fill it here to satisfy the Release shape — it's the
+    // authenticated user's id, not a leak.
+    const releasesPayload: ExecutionRelease[] = entitlements.catalogView
+      ? releases.map((release) => ({ ...release, ownerUserId: auth.user.id }))
+      : releases.map((release) => ({
+          id: release.id,
+          title: release.title,
+          artistId: release.artistId,
+          artistName: release.artistName,
+          createdAt: release.createdAt,
+          // Overview fields stripped for free accounts — neutral fillers keep
+          // the ExecutionRelease shape without leaking roster state.
+          ownerUserId: '',
+          releaseDate: null,
+          description: null,
+          status: 'draft',
+          state: 'idea',
+          readinessScore: 0,
+          metadata: {},
+          updatedAt: '',
+          coverArtUrl: null,
+        }));
+
+    return NextResponse.json({
+      releases: releasesPayload,
+      tasks,
+      activity,
+      todaysDirective,
+      entitlements,
+    });
   } catch (error) {
     if (isTaskSchemaMissingError(error)) {
       return NextResponse.json({ error: 'Schema missing' }, { status: 501 });
