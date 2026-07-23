@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { readPersistedState } from '@/lib/persisted-state';
 import { SkeletonBlock } from './SkeletonBlock';
 
 // Same URL param useReleaseScope reads (`?release=`). Knowing this at
@@ -9,6 +11,31 @@ import { SkeletonBlock } from './SkeletonBlock';
 // grid — the two are visually very different, and landing on a scoped URL
 // (a release deep link, a notification click, a refresh) is a common path.
 const SCOPE_PARAM = 'release';
+
+// Last-known roster size, written by useReleaseStore on every successful
+// command-center load. Lets the skeleton render THIS user's shape — one
+// release gets one centered slot, three get three — instead of a generic
+// grid that collapses when real data lands (founder call, 2026-07-23).
+const COUNT_KEY = 'urganize.workspace.release-count';
+const DEFAULT_COUNT = 4;
+
+function useKnownReleaseCount(): number {
+  // SSR/first paint uses the default; the persisted value hydrates in a
+  // mount effect (same pattern as TasksPanel's bucket state) to avoid a
+  // server/client HTML mismatch.
+  const [count, setCount] = useState(DEFAULT_COUNT);
+  useEffect(() => {
+    const persisted = readPersistedState<number>(
+      COUNT_KEY,
+      1,
+      (value): value is number => typeof value === 'number' && Number.isFinite(value)
+    );
+    if (persisted !== null && persisted >= 0) {
+      setCount(Math.max(1, Math.min(12, Math.round(persisted))));
+    }
+  }, []);
+  return count;
+}
 
 /**
  * Workspace loading state, rendered inline by `WorkspaceView` (and the
@@ -36,12 +63,17 @@ const SCOPE_PARAM = 'release';
 export function WorkspaceSkeleton() {
   const searchParams = useSearchParams();
   const isFocused = Boolean(searchParams.get(SCOPE_PARAM));
+  const knownCount = useKnownReleaseCount();
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary" aria-hidden="true">
       <div className="pb-24 pt-6 sm:px-6">
         <section className="lg:hidden">
-          {isFocused ? <MobileFocusedSkeleton /> : <ReleaseGridSkeleton count={4} columns="sm:grid-cols-2" />}
+          {isFocused ? (
+            <MobileFocusedSkeleton />
+          ) : (
+            <ReleaseGridSkeleton count={Math.min(knownCount, 6)} columns="sm:grid-cols-2" />
+          )}
         </section>
 
         <section className="hidden lg:block">
@@ -49,7 +81,7 @@ export function WorkspaceSkeleton() {
             <DesktopFocusedSkeleton />
           ) : (
             <ReleaseGridSkeleton
-              count={4}
+              count={knownCount}
               columns="justify-center [grid-template-columns:repeat(auto-fit,minmax(240px,280px))]"
             />
           )}

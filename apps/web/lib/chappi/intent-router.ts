@@ -9,14 +9,14 @@ import type { ChappiChip, ChappiIntent, ChappiReply } from './types';
  * app action wired up in ChappiHero. */
 export const CHAPPI_CHIPS: ChappiChip[] = [
   { id: 'new-release', label: 'New release', intent: 'new_release' },
-  { id: 'add-task', label: 'Add task', intent: 'add_task' },
+  { id: 'add-task', label: 'Add activity', intent: 'add_task' },
   { id: 'todays-focus', label: "Today's focus", intent: 'todays_focus' },
   { id: 'generate-status', label: 'Generate status', intent: 'generate_status' },
 ];
 
 /**
  * Map free-text to one of the deterministic intents by keyword. Order matters:
- * a phrase like "add a task for the release" mentions both "task" and
+ * a phrase like "add an activity for the release" mentions both "task" and
  * "release", and the user's verb is add-a-task — so task is checked first.
  */
 export function resolveIntent(raw: string): ChappiIntent {
@@ -47,7 +47,7 @@ export function buildHelpReply(): ChappiReply {
     text: "I can help you run your releases. I'm still learning to chat — for now, try one of these:",
     suggestions: [
       'Create a new release',
-      'Add a task',
+      'Add an activity',
       'What should I focus on today?',
       'Generate a status update',
     ],

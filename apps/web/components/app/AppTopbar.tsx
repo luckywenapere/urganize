@@ -38,7 +38,9 @@ type AppTopbarProps = {
 const routeTitles = [
   { match: (pathname: string) => pathname === '/dashboard', title: '', eyebrow: '' },
   { match: (pathname: string) => pathname === '/dashboard/chappi', title: '', eyebrow: '' },
-  { match: (pathname: string) => pathname.startsWith('/dashboard/releases'), title: 'Release', eyebrow: 'Release detail' },
+  // Release detail's identity renders live (artist + title) via
+  // ContextTitle below — no static fallback text.
+  { match: (pathname: string) => pathname.startsWith('/dashboard/releases'), title: '', eyebrow: '' },
   // Settings carries no topbar title either (founder call, 2026-07-23) —
   // the page's own section kickers say where you are.
   { match: (pathname: string) => pathname.startsWith('/settings'), title: '', eyebrow: '' },
@@ -50,28 +52,42 @@ function getRouteTitle(pathname: string | null) {
 }
 
 /**
- * When a release is scoped on the workspace (?release=), its identity fills
- * the topbar's empty middle — mono "ACTIVITIES" kicker over the song title —
- * so the open release owns that full space between the logo and the nav
- * (founder call, 2026-07-23; replaces the scope pill that sat inside the
- * tasks panel). Own component under Suspense because useSearchParams needs a
- * boundary when it renders from layout-level chrome.
+ * The current release's identity fills the topbar's empty middle — a mono
+ * kicker over the song title — so the open release owns that full space
+ * between the logo and the nav (founder calls, 2026-07-23; replaces the
+ * scope pill that sat inside the tasks panel AND the release page's own
+ * mid-page header). Two contexts:
+ *  - workspace with ?release= → "ACTIVITIES" kicker + title
+ *  - /dashboard/releases/[id] → artist-name kicker + title
+ * Own component under Suspense because useSearchParams needs a boundary
+ * when it renders from layout-level chrome.
  */
-function ScopedActivitiesTitle() {
+const RELEASE_DETAIL_PATH = /^\/dashboard\/releases\/([^/]+)$/;
+
+function ContextTitle() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const releases = useReleaseStore((state) => state.releases);
 
-  if (pathname !== '/dashboard') return null;
-  const scopedId = searchParams.get('release');
-  if (!scopedId) return null;
-  const release = releases.find((r) => r.id === scopedId);
+  let releaseId: string | null = null;
+  let kicker = 'Activities';
+
+  if (pathname === '/dashboard') {
+    releaseId = searchParams.get('release');
+  } else {
+    const detailMatch = (pathname || '').match(RELEASE_DETAIL_PATH);
+    if (detailMatch) releaseId = detailMatch[1];
+  }
+  if (!releaseId) return null;
+
+  const release = releases.find((r) => r.id === releaseId);
   if (!release) return null;
+  if (pathname !== '/dashboard') kicker = release.artistName || 'Release';
 
   return (
     <div className="min-w-0">
-      <p className="hidden font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary sm:block">
-        Activities
+      <p className="hidden truncate font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary sm:block">
+        {kicker}
       </p>
       <h1 className="truncate font-display text-lg font-semibold leading-6 text-content-primary sm:text-xl">
         {release.title}
@@ -107,7 +123,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
               space; static route titles fill it elsewhere. Both are empty on
               the at-rest /dashboard, keeping the controls flush right. */}
           <Suspense fallback={null}>
-            <ScopedActivitiesTitle />
+            <ContextTitle />
           </Suspense>
           {routeTitle.eyebrow ? (
             <p className="hidden text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary sm:block">

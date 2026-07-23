@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { openExternalUrl } from '@/lib/external-link';
-import { GearIcon } from '@/components/app/BrandIcons';
 
 // The keyboard-shortcuts panel (and its "?" hotkey + menu item) was removed
-// 2026-07-23 (founder call) — the menu is Docs / Contact / Settings plus the
-// Community link. Restore from git history if a shortcuts panel ever returns.
+// 2026-07-23 (founder call) — the menu is Docs / Contact plus the
+// Community link (Settings lives ONLY in the account/profile menu now —
+// founder call, removing the duplicate entry). Restore from git history if
+// a shortcuts panel ever returns.
 
 function openExternalLink(url: string) {
   void openExternalUrl(url);
@@ -77,7 +78,6 @@ function CommunityIcon() {
 
 export function HelpMenu() {
   const pathname = usePathname();
-  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -96,15 +96,6 @@ export function HelpMenu() {
             window.location.href = 'mailto:contact@urganize.app';
           },
         },
-        {
-          label: 'Settings',
-          icon: <GearIcon />,
-          onClick: () => {
-            if (pathname !== '/settings') {
-              router.push('/settings');
-            }
-          },
-        },
       ],
       [
         {
@@ -116,7 +107,7 @@ export function HelpMenu() {
         },
       ],
     ],
-    [pathname, router]
+    []
   );
 
   useEffect(() => {

@@ -23,9 +23,10 @@ export const changelog: Release[] = [
     version: "0.22.0",
     date: "July 23, 2026",
     highlights: [
-      "Tasks are now called activities everywhere — and when you're working a release, its name sits right in the top bar under an \"Activities\" marker, owning that space.",
+      "Tasks are now called activities everywhere — and the release you're working on now lives in the top bar (artist and title), so the page below is all activities and actions.",
       "The activity view got simpler: comments are gone, and attachments and assigning are marked Beta while we refine them.",
       "Chatting with Chappi now feels like a proper messenger: a clean centered conversation, your messages in bubbles, replies as plain text, and the writing box always at the bottom — no more full-width sprawl or name labels.",
+      "Loading screens now mirror your own catalog — if you have two releases, you see two loading cards, centered, exactly where they'll land. Settings now lives in one place: your profile menu.",
     ],
   },
   {

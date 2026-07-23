@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import type { CommandCenterData, ExecutionRelease, ExecutionTask } from '@/lib/execution-types';
 import { useActivityStore } from '@/stores/useActivityStore';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { writePersistedState } from '@/lib/persisted-state';
 
 type ReleaseStore = {
   releases: ExecutionRelease[];
@@ -90,6 +91,9 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       }
 
       useTaskStore.getState().setTasks((payload.tasks || []) as CommandCenterData['tasks']);
+      // Remember the roster size so the catalog skeleton can render THIS
+      // user's shape on the next fresh load (see WorkspaceSkeleton).
+      writePersistedState('urganize.workspace.release-count', 1, payload.releases.length);
       useActivityStore.getState().setActivity(payload.activity || []);
       commandCenterLoadedAt = Date.now();
       set({ releases: payload.releases, todaysDirective: payload.todaysDirective || null, isInitialLoading: false, isRefreshing: false, error: '' });

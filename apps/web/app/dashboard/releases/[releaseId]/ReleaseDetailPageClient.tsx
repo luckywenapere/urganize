@@ -9,7 +9,6 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { TASK_DONE_STATUS, TASK_LOCKED_STATUS } from '@/lib/execution-types';
 import { formatMilestoneDate, isEventMilestone } from '@/lib/tasks';
-import { formatArtistName } from '@/lib/release-execution';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { ReleaseDetailSkeleton } from '@/components/loading/ReleaseDetailSkeleton';
 import { ProgressBar } from '@/components/shared/ProgressBar';
@@ -253,7 +252,11 @@ export default function ReleaseDetailPage() {
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-10 sm:px-6">
+      {/* The artist + title moved into the topbar's middle (AppTopbar's
+          ContextTitle, founder call 2026-07-23) — the page starts straight
+          at the meta/actions row so the activities fill the freed space.
+          pt trimmed accordingly; the max-width column keeps its proportion. */}
+      <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-6 sm:px-6">
         {toast ? (
           <div className="mb-4">
             <Toast message={toast.message} tone={toast.tone} />
@@ -264,24 +267,17 @@ export default function ReleaseDetailPage() {
           <NewReleaseGuide onDismiss={() => setShowNewReleaseGuide(false)} />
         ) : null}
 
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-              {formatArtistName(release.artistName)}
-            </p>
-            <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-content-primary sm:text-3xl">
-              {release.title}
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-content-secondary">
-              <span className="flex items-center gap-1.5">
-                <CalendarDays className="h-3.5 w-3.5 text-content-tertiary" />
-                {formatDate(release.releaseDate)}
-              </span>
-              <span className="border border-stroke-default bg-bg-elevated px-2 py-0.5 text-[11px] font-medium capitalize text-content-secondary">
-                {normalizedStatus}
-              </span>
-            </div>
+        {/* Meta + actions row — date/status on the left, the action cluster
+            (Content calendar Beta, flag-gated AI buttons) on the right. */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-3 text-sm text-content-secondary">
+            <span className="flex items-center gap-1.5">
+              <CalendarDays className="h-3.5 w-3.5 text-content-tertiary" />
+              {formatDate(release.releaseDate)}
+            </span>
+            <span className="rounded-full border border-stroke-default bg-bg-elevated px-2 py-0.5 text-[11px] font-medium capitalize text-content-secondary">
+              {normalizedStatus}
+            </span>
           </div>
           <div className="flex flex-wrap gap-2">
             {/* Top-of-page calendar entry (URG-157): the section further down

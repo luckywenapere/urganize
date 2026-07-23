@@ -56,7 +56,7 @@ const CHIP_ICONS: Record<ChappiChipIntent, LucideIcon> = {
 // this page exists to preserve, kept compact per the PostHog-style landing.
 const CHIP_DESCRIPTIONS: Record<ChappiChipIntent, string> = {
   new_release: 'Start a new release with a rollout plan',
-  add_task: 'Create a task for one of your releases',
+  add_task: 'Create an activity for one of your releases',
   todays_focus: "See what needs your attention right now",
   generate_status: 'Draft a status update for a release',
 };
@@ -143,7 +143,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         // 'quick_create' is the canonical source; TaskCreateSource has no
         // 'chappi' member and adding one is out of scope.
         openQuickCreate({ source: 'quick_create' });
-        appendAssistantReply('Opening a new task.');
+        appendAssistantReply('Opening a new activity.');
         return;
       case 'todays_focus':
         if (todaysDirective) {
