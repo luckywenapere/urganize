@@ -1646,6 +1646,12 @@ export async function listNotifications(
 function resolveAppBaseUrl(): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || '';
   if (appUrl) return appUrl.replace(/\/$/, '');
+  // Production fallback is the CANONICAL domain, never the *.vercel.app
+  // deployment host: Vercel Deployment Protection walls that host behind a
+  // Vercel SSO login, so invite links minted from it were unopenable for
+  // anyone without a Vercel account (found 2026-07-23 when a real invite
+  // hit the SSO wall). NEXT_PUBLIC_APP_URL, when set, still wins above.
+  if (process.env.VERCEL_ENV === 'production') return 'https://app.urganize.app';
   const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
   if (vercelHost) return `https://${vercelHost}`;
   return 'http://localhost:3000';
