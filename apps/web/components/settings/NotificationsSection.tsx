@@ -50,15 +50,15 @@ export function NotificationsSection() {
   };
 
   return (
-    <section className={`${panelClass} mt-6`}>
-      <h2 className="mb-4 text-xl">Notifications</h2>
+    <section className={panelClass}>
+      <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Notifications</h2>
       <p className="mb-4 text-sm text-content-secondary">
         Saved to this device for now — email delivery isn&apos;t wired up yet, so
         these preferences don&apos;t control anything sent to you.
       </p>
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex items-center justify-between gap-4 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2">
+          <label className="flex items-center justify-between gap-4 rounded-none border border-stroke-subtle bg-bg-elevated px-3 py-2">
             <span className="text-sm text-content-primary">Release reminders by email</span>
             <input
               type="checkbox"
@@ -67,7 +67,7 @@ export function NotificationsSection() {
               className="h-4 w-4"
             />
           </label>
-          <label className="flex items-center justify-between gap-4 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2">
+          <label className="flex items-center justify-between gap-4 rounded-none border border-stroke-subtle bg-bg-elevated px-3 py-2">
             <span className="text-sm text-content-primary">Product updates and launch notes</span>
             <input
               type="checkbox"
@@ -82,7 +82,7 @@ export function NotificationsSection() {
           type="button"
           onClick={handleSave}
           disabled={isSaving}
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+          className="rounded-none bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
         >
           {isSaving ? 'Saving...' : 'Save notifications'}
         </button>

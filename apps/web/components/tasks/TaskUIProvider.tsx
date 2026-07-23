@@ -16,7 +16,7 @@ import { type DependencyTaskSummary } from '@/components/tasks/TaskDependenciesS
 import { TaskQuickCreateModal } from '@/components/tasks/TaskQuickCreateModal';
 import { UndoCompletionToast } from '@/components/tasks/UndoCompletionToast';
 import { type ReleaseOption } from '@/lib/release-helpers';
-import { isTypingTarget, type TaskCreateSource, type TaskDetail, type TaskPriority, type WorkspaceMember } from '@/lib/tasks';
+import { isTypingTarget, type TaskCreateSource, type TaskDetail, type WorkspaceMember } from '@/lib/tasks';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { supabase } from '@/lib/supabase/client';
 
@@ -45,10 +45,10 @@ type TaskUIContextValue = {
   openTask: (taskId: string) => void;
   openQuickCreate: (defaults?: QuickCreateDefaults) => void;
   closeTask: () => void;
-  /** True while a task detail is open. Consumers use this to swap their
-   * main-area content from "list" to TaskDetailInline. There is no drawer /
-   * overlay anywhere — every entry point (workspace row click, notification
-   * bell, release detail page) renders the inline view in place. */
+  /** True while the task detail pop-up is open. Since 2026-07-23 the detail
+   * renders as a centered modal mounted BY THIS PROVIDER — consumers no
+   * longer swap their layout; they just call openTask and the pop-up
+   * appears over whatever surface they're on. */
   isTaskOpen: boolean;
 };
 
@@ -394,13 +394,8 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     title?: string;
     description?: string | null;
     status?: string;
-    priority?: TaskPriority;
     dueDate?: string | null;
     assignedToUserId?: string | null;
-    releaseId?: string | null;
-    groupId?: string | null;
-    groupName?: string | null;
-    groupColor?: string | null;
   }) => {
     if (!activeTaskId) {
       return;
@@ -756,11 +751,12 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         onSubmit={createQuickTask}
       />
 
-      {/* TaskDetailDrawer is gone — every entry point now renders the in-place
-          TaskDetailView via `<TaskDetailInline />` in the consumer's own
-          layout (workspace center column, release detail page). The drawer's
-          fixed overlay + slide-in animation introduced perceived jank that
-          we're explicitly trading for in-flow rendering. */}
+      {/* Task detail pop-up (2026-07-23, founder call — reverses the earlier
+          inline-view decision): a single centered modal mounted here at the
+          provider so every entry point (workspace row, release detail row,
+          notification bell, Chappi chip) opens the same surface without any
+          consumer layout swaps. */}
+      <TaskDetailModal />
 
       {/* Global undo-completion toast. The store owns the lifecycle; this
           renders the affordance wherever TaskUIProvider is mounted (currently
@@ -772,39 +768,77 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * In-place task detail. Renders the same body the legacy TaskDetailDrawer
- * used, but inline in the consumer's container — no fixed overlay, no
- * backdrop, no slide-in animation. Returns `null` until a task is open.
+ * The task detail pop-up. Mounted once by TaskUIProvider; renders nothing
+ * until a task is open, then a centered dialog over a blurred scrim.
  *
- * Consumers (workspace center column, release detail page) mount this where
- * the task list would otherwise render and conditionally swap based on
- * `useTaskUI().isTaskOpen`.
+ * Pop-up mechanics, deliberately tuned:
+ * - Scrim: same treatment as TaskQuickCreateModal (black/55 + subtle blur),
+ *   click-outside closes. z-[170] — the app's modal tier, above ChappiDock.
+ * - Entrance: 200ms fade + slight scale/rise (tailwindcss-animate), so the
+ *   panel lands rather than snaps.
+ * - The panel owns its scroll: max-height caps it inside the viewport and
+ *   long bodies (comments, attachments) scroll INSIDE the dialog with
+ *   overscroll containment — the page behind never scrolls.
+ * - Body scroll lock while open (restored on close/unmount).
+ * - On phones it docks to the bottom edge sheet-style, full-width; from sm
+ *   up it floats centered.
+ * - Escape closes (handled inside TaskDetailView, with a typing guard so
+ *   Escape mid-edit doesn't dismiss the pop-up).
  */
-export function TaskDetailInline() {
+function TaskDetailModal() {
   const state = useContext(TaskDetailRenderContext);
+  const isOpen = Boolean(state?.isOpen);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
   if (!state || !state.isOpen) {
     return null;
   }
 
   return (
-    <TaskDetailView
-      isLoading={state.isLoading}
-      isLoadingMembers={state.isLoadingMembers}
-      error={state.error}
-      task={state.task}
-      members={state.members}
-      isUploadingAttachment={state.isUploadingAttachment}
-      prerequisites={state.prerequisites}
-      statusBlockerMessage={state.statusBlockerMessage}
-      onBack={state.onBack}
-      onSavePatch={state.onSavePatch}
-      onOpenPrerequisite={state.onOpenPrerequisite}
-      onDeleteTask={state.onDeleteTask}
-      onAddComment={state.onAddComment}
-      onUpdateComment={state.onUpdateComment}
-      onDeleteComment={state.onDeleteComment}
-      onUploadAttachment={state.onUploadAttachment}
-      onDeleteAttachment={state.onDeleteAttachment}
-    />
+    <div
+      className="fixed inset-0 z-[170] flex items-end justify-center bg-black/55 backdrop-blur-[2px] animate-in fade-in duration-200 sm:items-center sm:p-6"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          state.onBack();
+        }
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Task detail"
+        className="flex max-h-[92dvh] w-full flex-col overflow-hidden border-t border-stroke-strong bg-bg-surface shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200 sm:max-h-[85dvh] sm:max-w-2xl sm:border"
+      >
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6">
+          <TaskDetailView
+            isLoading={state.isLoading}
+            isLoadingMembers={state.isLoadingMembers}
+            error={state.error}
+            task={state.task}
+            members={state.members}
+            isUploadingAttachment={state.isUploadingAttachment}
+            prerequisites={state.prerequisites}
+            statusBlockerMessage={state.statusBlockerMessage}
+            onBack={state.onBack}
+            onSavePatch={state.onSavePatch}
+            onOpenPrerequisite={state.onOpenPrerequisite}
+            onDeleteTask={state.onDeleteTask}
+            onAddComment={state.onAddComment}
+            onUpdateComment={state.onUpdateComment}
+            onDeleteComment={state.onDeleteComment}
+            onUploadAttachment={state.onUploadAttachment}
+            onDeleteAttachment={state.onDeleteAttachment}
+          />
+        </div>
+      </div>
+    </div>
   );
 }

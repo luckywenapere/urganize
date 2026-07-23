@@ -26,17 +26,13 @@ type SettingsPageSkeletonProps = {
  * auth/profile data are in flight (no `app/settings/loading.tsx` route
  * fallback — same inline-swap rationale as `WorkspaceSkeleton`).
  *
- * Reserves the settings frame (outer chrome + 960px inner column) so
- * content doesn't jump on load: the top `grid-cols-2` row (Profile,
- * Appearance, Security — 3 panels, so the grid wraps exactly like the real
- * page) plus the full-width stacked panels below it, each now gated to
- * match the real page's own conditionals instead of always showing every
- * block (Workspace artist / Workspace logo gated on the workspace flag,
+ * Reserves the settings frame (outer chrome + 760px inner column) so
+ * content doesn't jump on load: one flat column of hairline-divided section
+ * slots matching the redesigned page, each gated to the real page's own
+ * conditionals (Workspace artist / Workspace logo on the workspace flag,
  * Artist profile on `isArtistAccount`, Teammates on `isManagerAccount`;
- * Notifications, Releases, and Session stay unconditional).
- * Panel corners/border match `panelClass` (`rounded-3xl`) so the skeleton
- * doesn't visibly "un-round" when real content swaps in. Each slot is a
- * single dim block rather than mocked inputs/labels — same convention as
+ * the rest unconditional). Each slot is a dim kicker line + one dim block
+ * rather than mocked inputs/labels — same convention as
  * `ReleaseDetailSkeleton`. Shimmer respects `prefers-reduced-motion` via
  * the global rule in `globals.css`.
  *
@@ -50,44 +46,40 @@ export function SettingsPageSkeleton({
   return (
     <main className="min-h-screen bg-bg-base text-content-primary" aria-hidden="true">
       <div className="relative pb-24 pt-6 sm:px-6">
-        <div className="relative mx-auto w-full max-w-[960px]">
+        <div className="relative mx-auto w-full max-w-[760px]">
           {/* Mirrors the page's header row: no in-page "Settings" heading
-              (the topbar titles the route), just the Dashboard shortcut pill. */}
-          <div className="mb-8 flex sm:justify-end">
-            <SkeletonBlock className="h-10 w-full rounded-full sm:w-28" />
+              (the topbar titles the route), just the Dashboard shortcut. */}
+          <div className="mb-4 flex sm:justify-end">
+            <SkeletonBlock className="h-10 w-full sm:w-28" />
           </div>
 
-          {/* Profile, Appearance, Security — 3 panels in a 2-col grid, same
-              wrap as the real page (row 2 has one panel, not two). Always
-              shown — none of these three are role/flag-gated. */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="h-56 rounded-3xl border border-stroke-default bg-bg-surface" />
-            <div className="h-56 rounded-3xl border border-stroke-default bg-bg-surface" />
-            <div className="h-56 rounded-3xl border border-stroke-default bg-bg-surface lg:col-start-1" />
-          </div>
-
-          {/* Full-width stacked panels below, each gated to match the real
-              page's own conditional exactly (see SettingsPageClient.tsx),
-              in the real page's order: Workspace artist -> Workspace logo ->
-              Artist profile -> Notifications -> Teammates -> Releases ->
-              Session -> Delete account. */}
-          <div className="mt-6 space-y-6">
-            {WORKSPACE_FEATURE_ENABLED && (
-              <div className="h-40 rounded-3xl border border-stroke-default bg-bg-surface" />
-            )}
-            {WORKSPACE_FEATURE_ENABLED && (
-              <div className="h-56 rounded-3xl border border-stroke-default bg-bg-surface" />
-            )}
-            {isArtistAccount && (
-              <div className="h-40 rounded-3xl border border-stroke-default bg-bg-surface" />
-            )}
-            <div className="h-48 rounded-3xl border border-stroke-default bg-bg-surface" />
-            {isManagerAccount && (
-              <div className="h-32 rounded-3xl border border-stroke-default bg-bg-surface" />
-            )}
-            <div className="h-40 rounded-3xl border border-stroke-default bg-bg-surface" />
-            <div className="h-32 rounded-3xl border border-stroke-default bg-bg-surface" />
-            <div className="h-40 rounded-3xl border border-status-error/35 bg-status-error/10" />
+          {/* Flat single-column sections divided by hairlines — mirrors the
+              redesigned page (2026-07-23): each slot is a dim kicker line +
+              content block, no card boxes. Gating matches the real page's
+              conditionals; order: Profile -> Appearance -> Security ->
+              Workspace artist -> Workspace logo -> Artist profile ->
+              Notifications -> Teammates -> Releases -> Session -> Delete. */}
+          <div className="divide-y divide-stroke-subtle">
+            {[
+              { key: 'profile', height: 'h-40', show: true },
+              { key: 'appearance', height: 'h-24', show: true },
+              { key: 'security', height: 'h-40', show: true },
+              { key: 'workspace-artist', height: 'h-28', show: WORKSPACE_FEATURE_ENABLED },
+              { key: 'workspace-logo', height: 'h-28', show: WORKSPACE_FEATURE_ENABLED },
+              { key: 'artist-profile', height: 'h-28', show: isArtistAccount },
+              { key: 'notifications', height: 'h-32', show: true },
+              { key: 'teammates', height: 'h-32', show: isManagerAccount },
+              { key: 'releases', height: 'h-32', show: true },
+              { key: 'session', height: 'h-20', show: true },
+              { key: 'delete', height: 'h-28', show: true },
+            ]
+              .filter((section) => section.show)
+              .map((section) => (
+                <div key={section.key} className="py-9">
+                  <SkeletonBlock className="mb-5 h-3 w-28" />
+                  <SkeletonBlock className={`${section.height} w-full`} />
+                </div>
+              ))}
           </div>
         </div>
       </div>

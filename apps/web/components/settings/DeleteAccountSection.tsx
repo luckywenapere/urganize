@@ -49,9 +49,12 @@ export function DeleteAccountSection() {
     }
   };
 
+  // Danger zone: flat like every other section — the red left rule and red
+  // kicker carry the warning; no filled box (Brand Bible: hairlines over
+  // panels).
   return (
-    <section className="mt-6 rounded-3xl border border-status-error/35 bg-status-error/10 p-6">
-      <h2 className="mb-2 text-xl text-status-error">Delete account</h2>
+    <section className="relative border-l-2 border-status-error/50 py-9 pl-5">
+      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-status-error">Delete account</h2>
       <p className="mb-4 text-sm text-content-secondary">
         This permanently deletes your account. This action cannot be undone.
       </p>
@@ -61,7 +64,7 @@ export function DeleteAccountSection() {
           <input
             value={confirmationText}
             onChange={(event) => setConfirmationText(event.target.value)}
-            className="w-full rounded-lg border border-status-error/35 bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-status-error"
+            className="w-full rounded-none border border-status-error/35 bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-status-error"
           />
         </label>
         {error && <p className="text-sm text-status-error">{error}</p>}
@@ -69,7 +72,7 @@ export function DeleteAccountSection() {
           type="button"
           onClick={() => void handleDeleteNow()}
           disabled={isDeleting}
-          className="rounded-lg bg-status-error px-4 py-2 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:opacity-55"
+          className="rounded-none bg-status-error px-4 py-2 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:opacity-55"
         >
           {isDeleting ? 'Deleting...' : 'Delete account'}
         </button>

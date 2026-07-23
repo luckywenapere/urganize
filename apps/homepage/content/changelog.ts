@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.18.0",
+    date: "July 23, 2026",
+    highlights: [
+      "Tasks now open in a smooth pop-up right over your list instead of taking over the whole page — close it and you're exactly where you left off.",
+      "Simplified the task view: priorities, tags, and the activity feed are gone. A task is its title, status, owner, due date, notes, files, and comments.",
+      "Settings got a full redesign: one clean page with clear sections instead of scattered boxed cards.",
+    ],
+  },
+  {
     version: "0.17.2",
     date: "July 23, 2026",
     highlights: [
