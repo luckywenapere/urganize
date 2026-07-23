@@ -1,6 +1,15 @@
 'use client';
 
 import { Sparkles, X } from 'lucide-react';
+import {
+  getTemplate,
+  getTemplateLeadTimeDays,
+  getTemplateSpanDays,
+} from '@/lib/release-templates/loader';
+
+const TEMPLATE = getTemplate('single');
+const LEAD_WEEKS = Math.round(getTemplateLeadTimeDays(TEMPLATE) / 7);
+const SPAN_WEEKS = Math.round(getTemplateSpanDays(TEMPLATE) / 7);
 
 type NewReleaseGuideProps = {
   onDismiss: () => void;
@@ -27,8 +36,9 @@ export function NewReleaseGuide({ onDismiss }: NewReleaseGuideProps) {
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-content-primary">Your release is set up</p>
         <p className="mt-1 text-sm leading-6 text-content-secondary">
-          The rollout plan below is a starting point — edit any activity, add your own, or
-          reassign them to your team. Invite teammates any time from Settings.
+          This rollout plans ~{SPAN_WEEKS} weeks of work, starting {LEAD_WEEKS} weeks before
+          release. It&apos;s a starting point — edit any activity, add your own, or reassign
+          them to your team. Invite teammates any time from Settings.
         </p>
       </div>
       <button
