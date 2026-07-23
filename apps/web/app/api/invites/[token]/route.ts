@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { isInviteLinkToken, verifyInviteLinkToken } from '@/lib/invite-link';
 
 // Public + authenticated endpoints for token-based invite acceptance.
 //
@@ -79,6 +80,40 @@ function isExpired(expiresAt: string | null): boolean {
   return ms <= Date.now();
 }
 
+// Shared context lookup for both invite kinds: workspace name + the owner's
+// display name for the "invited to X by Y" line on the accept page.
+async function loadWorkspaceContext(
+  admin: SupabaseClient,
+  workspaceId: string
+): Promise<{ workspaceName: string; inviterName: string | null }> {
+  const [workspaceResult, ownerProfileResult] = await Promise.all([
+    admin.from(WORKSPACES_TABLE).select('id,owner_id,name').eq('id', workspaceId).maybeSingle(),
+    admin
+      .from(WORKSPACE_MEMBERS_TABLE)
+      .select('user_id')
+      .eq('workspace_id', workspaceId)
+      .eq('role', 'owner')
+      .eq('status', 'active')
+      .maybeSingle(),
+  ]);
+
+  const workspaceName = workspaceResult.data?.name || 'a workspace';
+  const ownerUserId = ownerProfileResult.data?.user_id || workspaceResult.data?.owner_id || null;
+
+  let inviterName: string | null = null;
+  if (ownerUserId) {
+    const ownerProfile = await admin
+      .from(PROFILES_TABLE)
+      .select('name,email,artist_name')
+      .eq('id', ownerUserId)
+      .maybeSingle();
+    inviterName =
+      ownerProfile.data?.name || ownerProfile.data?.artist_name || ownerProfile.data?.email || null;
+  }
+
+  return { workspaceName, inviterName };
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // GET — metadata for the /invite/accept page
 // ────────────────────────────────────────────────────────────────────────────
@@ -99,6 +134,33 @@ export async function GET(
   }
 
   const admin = createAdmin(config);
+
+  // Shareable LINK tokens (wl.*) are stateless — verified by signature, not
+  // a DB row. Multi-use until expiry; whoever holds one joins as a member.
+  if (isInviteLinkToken(token)) {
+    const verdict = verifyInviteLinkToken(token);
+    if (verdict.status === 'invalid') {
+      return NextResponse.json({ error: 'Invite not found.' }, { status: 404 });
+    }
+    if (verdict.status === 'expired') {
+      return NextResponse.json({
+        status: 'expired',
+        workspaceName: 'a workspace',
+        inviterName: null,
+        invitedEmail: '',
+        role: 'member',
+      });
+    }
+    const context = await loadWorkspaceContext(admin, verdict.workspaceId);
+    return NextResponse.json({
+      status: 'valid',
+      workspaceName: context.workspaceName,
+      inviterName: context.inviterName,
+      invitedEmail: '',
+      role: verdict.role,
+    });
+  }
+
   const invite = await loadInvite(admin, token);
   if (!invite) {
     return NextResponse.json({ error: 'Invite not found.' }, { status: 404 });
@@ -107,38 +169,7 @@ export async function GET(
   // Fetch the workspace + inviter so the accept page can show context.
   // The inviter is the workspace owner; we don't have a separate "invited_by"
   // column on workspace_members today, so we infer from owner.
-  const [workspaceResult, ownerProfileResult] = await Promise.all([
-    admin
-      .from(WORKSPACES_TABLE)
-      .select('id,owner_id,name')
-      .eq('id', invite.workspace_id)
-      .maybeSingle(),
-    admin
-      .from(WORKSPACE_MEMBERS_TABLE)
-      .select('user_id')
-      .eq('workspace_id', invite.workspace_id)
-      .eq('role', 'owner')
-      .eq('status', 'active')
-      .maybeSingle(),
-  ]);
-
-  const workspaceName = workspaceResult.data?.name || 'a workspace';
-  const ownerUserId =
-    ownerProfileResult.data?.user_id || workspaceResult.data?.owner_id || null;
-
-  let inviterName: string | null = null;
-  if (ownerUserId) {
-    const ownerProfile = await admin
-      .from(PROFILES_TABLE)
-      .select('name,email,artist_name')
-      .eq('id', ownerUserId)
-      .maybeSingle();
-    inviterName =
-      ownerProfile.data?.name ||
-      ownerProfile.data?.artist_name ||
-      ownerProfile.data?.email ||
-      null;
-  }
+  const { workspaceName, inviterName } = await loadWorkspaceContext(admin, invite.workspace_id);
 
   const expired = isExpired(invite.invite_expires_at);
   const status: 'valid' | 'expired' | 'accepted' =
@@ -186,6 +217,76 @@ export async function POST(
   }
 
   const admin = createAdmin(config);
+
+  // Shareable LINK tokens (wl.*): verify the signature, then ADD the caller
+  // as an active member (multi-use — the token is not consumed). Idempotent
+  // for existing members.
+  if (isInviteLinkToken(token)) {
+    const verdict = verifyInviteLinkToken(token);
+    if (verdict.status === 'invalid') {
+      return NextResponse.json({ error: 'Invite not found.' }, { status: 404 });
+    }
+    if (verdict.status === 'expired') {
+      return NextResponse.json(
+        { error: 'This invite link has expired. Ask the workspace owner for a new one.' },
+        { status: 410 }
+      );
+    }
+
+    const existingMembership = await admin
+      .from(WORKSPACE_MEMBERS_TABLE)
+      .select('id,status')
+      .eq('workspace_id', verdict.workspaceId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existingMembership.data?.id) {
+      return NextResponse.json({ status: 'already_member', workspaceId: verdict.workspaceId });
+    }
+
+    const email = String(userResult.data.user.email || '').trim().toLowerCase();
+    const nowIso = new Date().toISOString();
+    const insertResult = await admin.from(WORKSPACE_MEMBERS_TABLE).insert({
+      workspace_id: verdict.workspaceId,
+      user_id: userId,
+      email,
+      role: verdict.role,
+      status: 'active',
+      invite_token: null,
+      invite_expires_at: null,
+      invited_at: nowIso,
+      joined_at: nowIso,
+      updated_at: nowIso,
+    });
+
+    if (insertResult.error) {
+      // A pending email-invite row for the same address would collide on the
+      // (workspace_id, email) unique — activate that row instead.
+      if (email) {
+        const pendingResult = await admin
+          .from(WORKSPACE_MEMBERS_TABLE)
+          .update({
+            user_id: userId,
+            status: 'active',
+            joined_at: nowIso,
+            invite_token: null,
+            invite_expires_at: null,
+            updated_at: nowIso,
+          })
+          .eq('workspace_id', verdict.workspaceId)
+          .eq('email', email)
+          .is('user_id', null);
+        if (!pendingResult.error) {
+          return NextResponse.json({ status: 'accepted', workspaceId: verdict.workspaceId });
+        }
+      }
+      console.error('[invites/token] link join insert error:', insertResult.error.message);
+      return NextResponse.json({ error: 'Could not accept invite.' }, { status: 500 });
+    }
+
+    return NextResponse.json({ status: 'accepted', workspaceId: verdict.workspaceId });
+  }
+
   const invite = await loadInvite(admin, token);
   if (!invite) {
     return NextResponse.json({ error: 'Invite not found.' }, { status: 404 });

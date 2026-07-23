@@ -21,7 +21,7 @@ export class ReleaseService {
     const { data, error } = await this.adminClient
       .from('releases')
       .select(
-        'id,title,artist_id,artist_name,release_date,description,status,state,readiness_score,metadata,artwork_asset_id,created_at,updated_at'
+        'id,owner_user_id,title,artist_id,artist_name,release_date,description,status,state,readiness_score,metadata,artwork_asset_id,created_at,updated_at'
       )
       .in('owner_user_id', ownerIds)
       .order('release_date', { ascending: true, nullsFirst: false });
@@ -49,6 +49,9 @@ export class ReleaseService {
       const id = String(row.id || '');
       return {
         id,
+        // Lets the client tell "mine" from "shared with me" — deletion (and
+        // other owner-only affordances) hide on releases the user doesn't own.
+        ownerUserId: String(row.owner_user_id || ''),
         title: String(row.title || 'Untitled release'),
         artistId: String(row.artist_id || ''),
         artistName: String(row.artist_name || 'Unknown artist'),

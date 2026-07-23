@@ -46,6 +46,7 @@ export function TeammatesSection({
   const [teammateError, setTeammateError] = useState('');
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isCreatingLink, setIsCreatingLink] = useState(false);
 
   if (!user) return null;
   // Read-only for non-managers (founder decision, 2026-07-23): every
@@ -115,6 +116,47 @@ export function TeammatesSection({
     }
   };
 
+  // Shareable invite link (founder request, 2026-07-23) — for when you
+  // don't have the person's email. Reuses the same link display + Copy UI
+  // the email invite already renders.
+  const handleCreateInviteLink = async () => {
+    setIsCreatingLink(true);
+    setTeammateError('');
+    setTeammateMessage('');
+    setInviteUrl(null);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch('/api/workspace/invite-link', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        inviteUrl?: string;
+        ttlDays?: number;
+        error?: string;
+      };
+      if (!response.ok || !payload.inviteUrl) {
+        throw new Error(payload.error || 'Could not create invite link.');
+      }
+      setInviteUrl(payload.inviteUrl);
+      setTeammateMessage(
+        `Invite link created — anyone with it joins as a Team Member. Valid for ${payload.ttlDays ?? 7} days.`
+      );
+      try {
+        await navigator.clipboard.writeText(payload.inviteUrl);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1800);
+      } catch {
+        // Clipboard can fail on insecure origins — the link is shown below.
+      }
+    } catch (err) {
+      setTeammateError(errorMessage(err, 'Could not create invite link.'));
+    } finally {
+      setIsCreatingLink(false);
+    }
+  };
+
   const handleRemoveTeammate = async (memberId: string) => {
     setTeammateError('');
     setTeammateMessage('');
@@ -136,7 +178,14 @@ export function TeammatesSection({
 
   return (
     <section id="teammates" className={`${panelClass} scroll-mt-24`}>
-      <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Teammates</h2>
+      <h2 className="mb-5 flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+        Teammates
+        {/* Team invites are Beta (founder call, 2026-07-23) — same pill as
+            the other Beta-tagged surfaces (statuses, attachments, calendar). */}
+        <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+          Beta
+        </span>
+      </h2>
       {canManage ? (
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
         <input
@@ -164,6 +213,21 @@ export function TeammatesSection({
           {isInviting ? 'Inviting...' : 'Invite'}
         </button>
       </div>
+      ) : null}
+
+      {canManage ? (
+        <div className="mt-2">
+          {/* No email? Share a link instead — Linear-style. */}
+          <button
+            type="button"
+            onClick={() => void handleCreateInviteLink()}
+            disabled={isCreatingLink}
+            className="motion-focus inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary disabled:opacity-60"
+          >
+            <Copy className="h-3 w-3" aria-hidden="true" />
+            {isCreatingLink ? 'Creating link…' : 'Copy invite link'}
+          </button>
+        </div>
       ) : null}
 
       {teammateMessage && (

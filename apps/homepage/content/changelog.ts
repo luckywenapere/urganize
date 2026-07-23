@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.27.0",
+    date: "July 23, 2026",
+    highlights: [
+      "Invite by link: don't have someone's email? Copy invite link from Settings → Teammates and share it anywhere — anyone who opens it joins your team as a Team Member. Links stay valid for 7 days.",
+      "Only you can delete your releases — teammates never see a Delete button on releases they don't own.",
+      "Team invites are now marked Beta while we refine collaboration.",
+    ],
+  },
+  {
     version: "0.26.1",
     date: "July 23, 2026",
     highlights: [
