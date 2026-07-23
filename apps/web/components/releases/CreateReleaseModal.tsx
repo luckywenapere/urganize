@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, CalendarDays, Loader2, X } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CalendarDays, Loader2, X } from 'lucide-react';
 import { Button, IconButton } from '@urganize/ui';
+import { BlankSheetIllustration, PlanIllustration } from '@/components/app/BrandIcons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -28,10 +29,15 @@ function formatYmdHuman(value: string): string {
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(parsed);
 }
 
+export type ReleasePlanChoice = 'template' | 'blank';
+
 type CreateReleaseModalProps = {
   open: boolean;
   onClose: () => void;
-  onCreated: (releaseId: string) => void;
+  /** `plan` tells the caller HOW the release was created — template
+   * creations get the post-create rollout guide (?new=1); blank ones don't
+   * (its copy describes the plan that doesn't exist). */
+  onCreated: (releaseId: string, plan: ReleasePlanChoice) => void;
 };
 
 type CreateReleaseResponse = {
@@ -74,6 +80,10 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Step 1 (founder call, 2026-07-23): pick HOW to start — the rollout plan
+  // (template, recommended) or a blank release. null = the chooser screen;
+  // picking one advances to the title/date form. Resets on every open.
+  const [plan, setPlan] = useState<ReleasePlanChoice | null>(null);
 
   // Portal mount-guard. The modal renders into document.body via createPortal
   // to escape AppShell's `lazy-fade` wrapper, which carries a `transform` —
@@ -85,14 +95,21 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     setIsMounted(true);
   }, []);
 
+  // Fresh chooser on every open.
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      setPlan(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !plan) {
       return;
     }
 
     const timer = window.setTimeout(() => titleInputRef.current?.focus(), 80);
     return () => window.clearTimeout(timer);
-  }, [open]);
+  }, [open, plan]);
 
   useEffect(() => {
     if (!open) {
@@ -196,6 +213,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
           title: title.trim(),
           releaseDate: releaseDate || undefined,
           source: 'dashboard',
+          plan: plan || 'template',
         }),
       });
 
@@ -217,7 +235,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
       // follow-up non-forced loadCommandCenter() calls piggyback on this
       // in-flight load instead of firing a duplicate fetch.
       void useReleaseStore.getState().loadCommandCenter({ force: true });
-      onCreated(releaseId);
+      onCreated(releaseId, plan || 'template');
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Could not create release.');
     } finally {
@@ -257,11 +275,22 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
         >
           <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stroke-subtle p-4 sm:p-5">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
                 Create release
+                {plan ? (
+                  <button
+                    type="button"
+                    onClick={() => setPlan(null)}
+                    disabled={isSubmitting}
+                    className="motion-focus inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary"
+                  >
+                    <ArrowLeft className="h-3 w-3" aria-hidden="true" />
+                    {plan === 'template' ? 'Rollout plan' : 'Blank release'}
+                  </button>
+                ) : null}
               </p>
               <h2 id="create-release-title" className="mt-2 font-display text-2xl font-semibold text-content-primary">
-                New release
+                {plan ? 'New release' : 'How do you want to start?'}
               </h2>
             </div>
             <IconButton
@@ -275,10 +304,55 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
             </IconButton>
           </div>
 
+          {/* Step 1 — the chooser (founder call, 2026-07-23): two option
+              cards side by side, Linear-style. Rollout plan is the
+              recommended default; Blank is the empty canvas. */}
+          {!plan ? (
+            <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
+              <button
+                type="button"
+                onClick={() => setPlan('template')}
+                className="motion-focus motion-press group flex flex-col items-start gap-3 rounded-xl border border-stroke-default bg-bg-elevated p-4 text-left transition-colors hover:border-brand/50 hover:bg-bg-hover sm:p-5"
+              >
+                <span className="grid h-12 w-12 place-items-center rounded-xl bg-brand/10 text-brand">
+                  <PlanIllustration className="h-7 w-7" />
+                </span>
+                <span className="flex items-center gap-2 font-display text-base font-semibold text-content-primary">
+                  Rollout plan
+                  <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+                    Recommended
+                  </span>
+                </span>
+                <span className="text-sm leading-6 text-content-secondary">
+                  Start with the proven release plan — every activity from first
+                  prep to release day, scheduled around your date and ready to
+                  edit.
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPlan('blank')}
+                className="motion-focus motion-press group flex flex-col items-start gap-3 rounded-xl border border-stroke-default bg-bg-elevated p-4 text-left transition-colors hover:border-stroke-strong hover:bg-bg-hover sm:p-5"
+              >
+                <span className="grid h-12 w-12 place-items-center rounded-xl bg-bg-surface text-content-secondary">
+                  <BlankSheetIllustration className="h-7 w-7" />
+                </span>
+                <span className="font-display text-base font-semibold text-content-primary">
+                  Blank release
+                </span>
+                <span className="text-sm leading-6 text-content-secondary">
+                  An empty release with no plan attached. Add your own
+                  activities as you go — you know your process.
+                </span>
+              </button>
+            </div>
+          ) : null}
+
           {/* The body scrolls internally when the form exceeds the viewport
               (small phones). Header + footer stay pinned via `shrink-0` so the
               submit button is always reachable without scrolling the page. */}
-          <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
+          <div className={plan ? 'flex-1 space-y-4 overflow-y-auto p-4 sm:p-5' : 'hidden'}>
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-content-primary">Release title</span>
                 <input
@@ -309,7 +383,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                   aria-required="true"
                 />
                 {errors.releaseDate ? <p className="mt-2 text-xs text-status-error">{errors.releaseDate}</p> : null}
-                {!errors.releaseDate && compressedNote ? (
+                {!errors.releaseDate && compressedNote && plan === 'template' ? (
                   <p className="mt-2 text-xs leading-5 text-content-secondary">
                     Heads up — a {compressedNote.displayDate} release compresses the first ~
                     {compressedNote.compressedWeeks}{' '}
@@ -327,19 +401,21 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
             </div>
           ) : null}
 
-          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-stroke-subtle p-4 sm:flex-row sm:justify-end sm:p-5">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={!canSubmit}
-              isLoading={isSubmitting}
-              leftIcon={isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
-            >
-              Create release
-            </Button>
-          </div>
+          {plan ? (
+            <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-stroke-subtle p-4 sm:flex-row sm:justify-end sm:p-5">
+              <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!canSubmit}
+                isLoading={isSubmitting}
+                leftIcon={isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+              >
+                Create release
+              </Button>
+            </div>
+          ) : null}
         </form>
       </div>
     </div>

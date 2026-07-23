@@ -122,3 +122,30 @@ export function ProfileIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
     </svg>
   );
 }
+
+/** Rollout plan illustration (create-release chooser): a laminate checklist
+ * — dated rows with the first tick already filled. */
+export function PlanIllustration({ className = 'h-9 w-9' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="4.5" y="3.5" width="15" height="17" rx="1.8" />
+      <circle cx="8.3" cy="8.2" r="1" fill="currentColor" stroke="none" />
+      <path d="M11.2 8.2h5.3" strokeLinecap="round" />
+      <circle cx="8.3" cy="12" r="1" />
+      <path d="M11.2 12h5.3" strokeLinecap="round" />
+      <circle cx="8.3" cy="15.8" r="1" />
+      <path d="M11.2 15.8h3.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Blank release illustration (create-release chooser): an empty sheet with
+ * a plus — build it up yourself. */
+export function BlankSheetIllustration({ className = 'h-9 w-9' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="4.5" y="3.5" width="15" height="17" rx="1.8" />
+      <path d="M12 9.2v5.6M9.2 12h5.6" strokeLinecap="round" />
+    </svg>
+  );
+}

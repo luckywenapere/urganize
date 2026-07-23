@@ -319,7 +319,7 @@ export function WorkspaceView() {
       <CreateReleaseModal
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onCreated={(releaseId) => {
+        onCreated={(releaseId, plan) => {
           setIsCreateModalOpen(false);
           // CreateReleaseModal already force-resyncs the store on success;
           // this non-forced call piggybacks on that in-flight load (or the
@@ -332,9 +332,13 @@ export function WorkspaceView() {
             setWinReleaseId(releaseId);
           } else {
             // ?new=1 triggers the one-time dismissible getting-started guide
-            // on the release detail page (NewReleaseGuide); the page strips
-            // the param itself once read, so it never survives a refresh.
-            router.push(`/dashboard/releases/${releaseId}?new=1`);
+            // (NewReleaseGuide) — only for TEMPLATE creations; its copy
+            // describes the rollout plan a blank release doesn't have.
+            router.push(
+              plan === 'template'
+                ? `/dashboard/releases/${releaseId}?new=1`
+                : `/dashboard/releases/${releaseId}`
+            );
           }
         }}
       />

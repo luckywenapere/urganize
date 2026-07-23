@@ -71,15 +71,19 @@ export default function ChappiPageClient() {
       <CreateReleaseModal
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onCreated={(releaseId) => {
+        onCreated={(releaseId, plan) => {
           setIsCreateModalOpen(false);
           void loadCommandCenter();
           if (FIRST_WIN_ENABLED && releases.length === 0) {
             setWinReleaseId(releaseId);
           } else {
             // Same one-time getting-started guide as the workspace's create
-            // flow — see WorkspaceView's onCreated for the param contract.
-            router.push(`/dashboard/releases/${releaseId}?new=1`);
+            // flow — template creations only (see WorkspaceView's onCreated).
+            router.push(
+              plan === 'template'
+                ? `/dashboard/releases/${releaseId}?new=1`
+                : `/dashboard/releases/${releaseId}`
+            );
           }
         }}
       />
