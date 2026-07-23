@@ -46,6 +46,29 @@ function formatReleaseDate(value: string | null): string {
   }).format(parsed);
 }
 
+/**
+ * Default cover art for releases with no artwork (founder call, 2026-07-23):
+ * the Urganize "U" mark (the upside-down headphones), quietly centered on
+ * the elevated panel. The PNG is white-on-transparent — correct on dark;
+ * the shared `.app-wordmark` rule inverts it in light mode, so the mark
+ * follows the theme like the rest of the chrome. Render-time only: nothing
+ * is written to releases, so it covers every existing and future release
+ * automatically, and real artwork takes over the moment it's uploaded.
+ */
+function DefaultCoverArt({ markClassName }: { markClassName: string }) {
+  return (
+    <div className="grid h-full w-full place-items-center bg-bg-elevated" aria-hidden="true">
+      <Image
+        src="/images/urganize-mark.png"
+        alt=""
+        width={161}
+        height={173}
+        className={`app-wordmark h-auto opacity-35 ${markClassName}`}
+      />
+    </div>
+  );
+}
+
 export function WorkspaceReleaseCard({
   release,
   tasksDone,
@@ -131,7 +154,7 @@ export function WorkspaceReleaseCard({
                 sizes="144px"
               />
             ) : (
-              <div className="h-full w-full bg-bg-elevated" aria-hidden="true" />
+              <DefaultCoverArt markClassName="w-10 sm:w-12" />
             )}
           </div>
           <div className="min-w-0 flex-1 px-4 py-4">{meta}</div>
@@ -148,8 +171,9 @@ export function WorkspaceReleaseCard({
       className={frameClass}
     >
       {/* Cover-art banner — same aspect-square + next/image pattern the
-          previous grid ReleaseCard used. Neutral placeholder when null
-          (per spec: muted surface-toned panel, no letter monogram). */}
+          previous grid ReleaseCard used. Releases without artwork show the
+          Urganize "U" mark as default cover art (founder call, 2026-07-23 —
+          replaces the earlier empty muted panel). */}
       <div className="aspect-square overflow-hidden border-b border-stroke-subtle bg-bg-elevated">
         {coverArtUrl ? (
           <Image
@@ -161,7 +185,7 @@ export function WorkspaceReleaseCard({
             sizes="(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw"
           />
         ) : (
-          <div className="h-full w-full bg-bg-elevated" aria-hidden="true" />
+          <DefaultCoverArt markClassName="w-14 sm:w-16" />
         )}
       </div>
 

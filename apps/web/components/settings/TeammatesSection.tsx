@@ -189,7 +189,9 @@ export function TeammatesSection({
         </p>
       )}
 
-      {isLoadingTeammates ? (
+      {/* Skeleton only on the FIRST load — a background refetch with rows
+          already on screen keeps them visible instead of flashing. */}
+      {isLoadingTeammates && teammates.length === 0 ? (
         <SettingsTeamMembersSectionSkeleton />
       ) : teammates.length === 0 ? (
         <p className="mt-4 text-sm text-content-secondary">No teammates yet. Invite someone to get started.</p>

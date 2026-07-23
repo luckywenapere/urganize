@@ -64,8 +64,9 @@ export function SettingsPageSkeleton({
               { key: 'workspace-artist', height: 'h-28', show: WORKSPACE_FEATURE_ENABLED },
               { key: 'artist-profile', height: 'h-28', show: isArtistAccount },
               { key: 'profile', height: 'h-40', show: true },
-              { key: 'appearance', height: 'h-24', show: true },
-              { key: 'push-notifications', height: 'h-20', show: true },
+              // Appearance + Notifications share one two-column row on the
+              // real page — special-cased in the render below.
+              { key: 'appearance-notifications', height: 'h-24', show: true },
               { key: 'teammates', height: 'h-32', show: isManagerAccount },
               { key: 'releases', height: 'h-32', show: true },
               { key: 'security', height: 'h-40', show: true },
@@ -73,12 +74,25 @@ export function SettingsPageSkeleton({
               { key: 'delete', height: 'h-28', show: true },
             ]
               .filter((section) => section.show)
-              .map((section) => (
-                <div key={section.key} className="py-9">
-                  <SkeletonBlock className="mb-5 h-3 w-28" />
-                  <SkeletonBlock className={`${section.height} w-full`} />
-                </div>
-              ))}
+              .map((section) =>
+                section.key === 'appearance-notifications' ? (
+                  <div key={section.key} className="grid gap-x-10 py-9 sm:grid-cols-2">
+                    <div>
+                      <SkeletonBlock className="mb-5 h-3 w-28" />
+                      <SkeletonBlock className={`${section.height} w-full`} />
+                    </div>
+                    <div className="hidden sm:block">
+                      <SkeletonBlock className="mb-5 h-3 w-28" />
+                      <SkeletonBlock className={`${section.height} w-full`} />
+                    </div>
+                  </div>
+                ) : (
+                  <div key={section.key} className="py-9">
+                    <SkeletonBlock className="mb-5 h-3 w-28" />
+                    <SkeletonBlock className={`${section.height} w-full`} />
+                  </div>
+                )
+              )}
           </div>
         </div>
       </div>

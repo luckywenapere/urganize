@@ -78,8 +78,15 @@ export default function SettingsPage() {
     }
   }, [authLoading, router, user]);
 
+  // Keyed on the user's ID, not the user object: background auth refreshes
+  // (token refresh, window refocus) replace the store's user object with a
+  // fresh identity for the same person, and keying on the object re-fired
+  // every loader below — sections visibly flashed back to their loading
+  // states mid-session with no user action. Same person = same effects.
+  const userId = user?.id || '';
+
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     let cancelled = false;
     getAccessToken().then((token) => {
       if (!cancelled) setAccessToken(token);
@@ -87,7 +94,7 @@ export default function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [userId]);
 
   const loadTeammates = useCallback(async () => {
     if (!accessToken) return;
@@ -112,15 +119,15 @@ export default function SettingsPage() {
   }, [accessToken]);
 
   useEffect(() => {
-    if (!user || !isManagerAccount || !accessToken) return;
+    if (!userId || !isManagerAccount || !accessToken) return;
     void loadTeammates();
-  }, [user, isManagerAccount, accessToken, loadTeammates]);
+  }, [userId, isManagerAccount, accessToken, loadTeammates]);
 
   // Load the workspace artist behind the flag. Mirrors the logo loader's
   // shape so the feedback paths and cleanup-on-unmount semantics stay
   // consistent.
   useEffect(() => {
-    if (!user || !WORKSPACE_FEATURE_ENABLED || !accessToken) return;
+    if (!userId || !WORKSPACE_FEATURE_ENABLED || !accessToken) return;
     let cancelled = false;
 
     const load = async () => {
@@ -145,7 +152,7 @@ export default function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [user, accessToken]);
+  }, [userId, accessToken]);
 
   const handleSaveWorkspaceArtist = async () => {
     if (!user || !workspaceArtist) return;
@@ -258,8 +265,16 @@ export default function SettingsPage() {
 
           <ArtistProfileSection />
           <ProfileSection />
-          <AppearanceSection />
-          <PushNotificationsSection />
+          {/* Appearance + Notifications share one row (founder call,
+              2026-07-23): both are small per-device toggles. One divide-y
+              child, two columns from sm up; stacked below sm with their own
+              hairline (the sm:divide-y-0 flip). If push is unsupported the
+              Notifications half renders null and Appearance keeps its
+              column. */}
+          <div className="grid gap-x-10 divide-y divide-stroke-subtle sm:grid-cols-2 sm:divide-y-0">
+            <AppearanceSection />
+            <PushNotificationsSection />
+          </div>
 
           {isManagerAccount && (
             <TeammatesSection
