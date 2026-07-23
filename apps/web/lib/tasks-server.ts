@@ -1433,10 +1433,10 @@ function buildTaskPushPayload(
   taskId: string,
   releaseId: string | null
 ): PushPayload {
-  const quoted = taskTitle ? `“${taskTitle}”` : 'A task';
+  const quoted = taskTitle ? `“${taskTitle}”` : 'An activity';
   const copy: Partial<Record<NotificationType, { title: string; body: string }>> = {
-    task_assigned: { title: 'New task for you', body: `${quoted} was assigned to you.` },
-    task_status_changed: { title: 'Task update', body: `${quoted} changed status.` },
+    task_assigned: { title: 'New activity for you', body: `${quoted} was assigned to you.` },
+    task_status_changed: { title: 'Activity update', body: `${quoted} changed status.` },
     task_due_soon: { title: 'Due soon', body: `${quoted} is due within 24 hours.` },
     task_overdue: { title: 'Overdue', body: `${quoted} is overdue.` },
     task_commented: { title: 'New comment', body: `New comment on ${quoted}.` },

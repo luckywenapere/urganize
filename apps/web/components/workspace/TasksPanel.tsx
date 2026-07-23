@@ -131,10 +131,10 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
     // panel's "shrink to fit container" contract holds regardless of how
     // the surrounding layout was wired.
     <aside id={id} className="min-w-0 space-y-3 scroll-mt-20">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Tasks
-        </h2>
+      {/* No "Tasks" eyebrow on the left (founder call, 2026-07-23 — the
+          list is activities now and the scope pill already names the song);
+          the header row keeps only the action cluster, right-aligned. */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <div className="flex items-center gap-2">
           {/* New-task affordance: opens the global Quick Create modal with the
               currently-scoped release pre-selected (or empty when nothing is
@@ -153,7 +153,7 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
             className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
           >
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-            New task
+            New activity
           </button>
           {/* Files link: its own page (URG-165), not a segment nested under
               the task list — files are a peer of tasks, not a child of them.
@@ -203,7 +203,7 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
             themselves, so leave one quiet line instead of a blank panel. */}
         {sectionOrder.every((sectionKey) => sections[sectionKey].length === 0) ? (
           <p className="px-1 py-4 text-xs text-content-tertiary">
-            {scopedRelease ? 'No tasks for this release yet.' : 'No tasks yet.'}
+            {scopedRelease ? 'No activities for this release yet.' : 'No activities yet.'}
           </p>
         ) : null}
         {sectionOrder.map((sectionKey) => {

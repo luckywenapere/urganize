@@ -76,12 +76,6 @@ type TaskDetailViewProps = {
   onSavePatch: (patch: TaskDetailPatchInput) => Promise<void>;
   onOpenPrerequisite: (taskId: string) => void;
   onDeleteTask: () => Promise<void>;
-  // Resolve true only when the mutation actually persisted — the view keeps
-  // the typed text (comment draft, edit box) until then, so a failed save
-  // never throws user input away.
-  onAddComment: (content: string) => Promise<boolean>;
-  onUpdateComment: (commentId: string, content: string) => Promise<boolean>;
-  onDeleteComment: (commentId: string) => Promise<void>;
   onUploadAttachment: (file: File) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
 };
@@ -121,9 +115,6 @@ export function TaskDetailView({
   onSavePatch,
   onOpenPrerequisite,
   onDeleteTask,
-  onAddComment,
-  onUpdateComment,
-  onDeleteComment,
   onUploadAttachment,
   onDeleteAttachment,
 }: TaskDetailViewProps) {
@@ -131,9 +122,6 @@ export function TaskDetailView({
   const [description, setDescription] = useState('');
   const [assigneeQuery, setAssigneeQuery] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState<WorkspaceMember | null>(null);
-  const [commentDraft, setCommentDraft] = useState('');
-  const [editingCommentId, setEditingCommentId] = useState('');
-  const [editingCommentContent, setEditingCommentContent] = useState('');
 
   useEffect(() => {
     if (!task) {
@@ -161,7 +149,7 @@ export function TaskDetailView({
   const due = task ? getRelativeDueLabel(task) : { label: 'No due date', isOverdue: false };
 
   return (
-    <section aria-label="Task detail" className="min-w-0">
+    <section aria-label="Activity detail" className="min-w-0">
       {/* Pop-up header — at-a-glance status pill / event pill / due label on
           the left, a single X close on the right. The modal shell already
           separates this surface from the page; no back-button framing. */}
@@ -196,7 +184,7 @@ export function TaskDetailView({
         <button
           type="button"
           onClick={onBack}
-          aria-label="Close task"
+          aria-label="Close activity"
           className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-transparent text-content-tertiary transition-colors hover:border-stroke-default hover:bg-bg-hover hover:text-content-primary"
         >
           <X className="h-4 w-4" aria-hidden="true" />
@@ -243,7 +231,7 @@ export function TaskDetailView({
                 }
               }}
               aria-label="Title"
-              placeholder="Task title"
+              placeholder="Activity title"
               className="motion-focus min-w-0 flex-1 border-b border-transparent bg-transparent pb-1 font-display text-xl font-semibold leading-snug text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-stroke-strong sm:text-2xl"
             />
           </div>
@@ -278,7 +266,12 @@ export function TaskDetailView({
             {/* The visible row label lives here; the combobox keeps its own
                 sr-only "Assignee" label for the input's accessible name. */}
             <div className={PROPERTY_ROW_CLASS}>
-              <span className={PROPERTY_LABEL_CLASS}>Assignee</span>
+              <span className={`${PROPERTY_LABEL_CLASS} flex items-center gap-1.5`}>
+                Assignee
+                <span className="rounded-full bg-brand/15 px-1 py-px text-[9px] font-bold uppercase tracking-wide text-brand">
+                  Beta
+                </span>
+              </span>
               <div className="md:max-w-[300px]">
                 <TaskMemberCombobox
                   density="compact"
@@ -332,7 +325,12 @@ export function TaskDetailView({
           <section className="rounded-[24px] border border-stroke-default bg-bg-elevated/50 p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-content-primary">Attachments</h3>
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-content-primary">
+                  Attachments
+                  <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+                    Beta
+                  </span>
+                </h3>
                 <p className="mt-1 text-xs text-content-secondary">Upload files for briefs, decks, or assets.</p>
               </div>
               <label className="inline-flex min-h-10 cursor-pointer items-center rounded-[16px] bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover">
@@ -397,135 +395,17 @@ export function TaskDetailView({
             </div>
           </section>
 
-          <section className="rounded-[24px] border border-stroke-default bg-bg-elevated/50 p-4">
-            <h3 className="text-sm font-semibold text-content-primary">Comments</h3>
-            <div className="mt-4 space-y-3">
-              {isLoading && task.comments.length === 0 ? (
-                <SkeletonBlock className="h-12 w-full rounded-[18px]" />
-              ) : null}
-              {task.comments.map((comment) => (
-                <div key={comment.id} className="rounded-[18px] border border-stroke-subtle bg-bg-surface px-3 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-content-primary">{comment.authorName}</p>
-                      <p className="mt-1 text-xs text-content-secondary">
-                        {new Date(comment.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    {comment.isOwnComment ? (
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingCommentId(comment.id);
-                            setEditingCommentContent(comment.content);
-                          }}
-                          className="text-xs font-semibold uppercase tracking-[0.12em] text-content-secondary hover:text-content-primary"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void onDeleteComment(comment.id)}
-                          className="text-xs font-semibold uppercase tracking-[0.12em] text-status-error"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {editingCommentId === comment.id ? (
-                    <div className="mt-3 space-y-3">
-                      <textarea
-                        value={editingCommentContent}
-                        onChange={(event) => setEditingCommentContent(event.target.value)}
-                        className="input min-h-[96px] rounded-[16px] py-3"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            void onUpdateComment(comment.id, editingCommentContent).then(
-                              (saved) => {
-                                // Stay in edit mode with the text intact when
-                                // the save failed — the drawer error banner
-                                // says why.
-                                if (saved) {
-                                  setEditingCommentId('');
-                                  setEditingCommentContent('');
-                                }
-                              }
-                            );
-                          }}
-                          className="rounded-[14px] bg-brand px-3 py-2 text-xs font-semibold text-content-inverse"
-                        >
-                          Save
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingCommentId('');
-                            setEditingCommentContent('');
-                          }}
-                          className="rounded-[14px] border border-stroke-default px-3 py-2 text-xs font-semibold text-content-secondary"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-content-secondary">
-                      {comment.content}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <textarea
-                value={commentDraft}
-                onChange={(event) => setCommentDraft(event.target.value)}
-                className="input min-h-[96px] rounded-[18px] py-3"
-                placeholder="Add context for the team."
-              />
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!commentDraft.trim()) {
-                      return;
-                    }
-
-                    // Clear the draft only after the save lands — clearing
-                    // eagerly meant a failed request discarded what the user
-                    // typed with no way back.
-                    void onAddComment(commentDraft).then((saved) => {
-                      if (saved) {
-                        setCommentDraft('');
-                      }
-                    });
-                  }}
-                  className="rounded-[16px] bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
-                >
-                  Add comment
-                </button>
-              </div>
-            </div>
-          </section>
-
           <div className="pt-2">
             <button
               type="button"
               onClick={() => {
-                if (window.confirm('Delete this task? This cannot be undone.')) {
+                if (window.confirm('Delete this activity? This cannot be undone.')) {
                   void onDeleteTask();
                 }
               }}
               className="rounded-[16px] border border-status-error/35 bg-status-error/10 px-4 py-3 text-sm font-semibold text-status-error"
             >
-              Delete task
+              Delete activity
             </button>
           </div>
         </div>
@@ -550,7 +430,7 @@ export function TaskDetailView({
           <div className="h-[120px] rounded-[18px] skeleton-shimmer" />
         </div>
       ) : (
-        <p className="text-sm text-content-secondary">Select a task to inspect the full context.</p>
+        <p className="text-sm text-content-secondary">Select an activity to inspect the full context.</p>
       )}
     </section>
   );

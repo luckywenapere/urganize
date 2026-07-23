@@ -27,8 +27,8 @@ export function NewReleaseGuide({ onDismiss }: NewReleaseGuideProps) {
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-content-primary">Your release is set up</p>
         <p className="mt-1 text-sm leading-6 text-content-secondary">
-          The rollout plan below is a starting point — edit any task, add your own, or reassign
-          them to your team. Invite teammates any time from Settings.
+          The rollout plan below is a starting point — edit any activity, add your own, or
+          reassign them to your team. Invite teammates any time from Settings.
         </p>
       </div>
       <button

@@ -56,7 +56,7 @@ const CHIP_ICONS: Record<ChappiChipIntent, LucideIcon> = {
 // this page exists to preserve, kept compact per the PostHog-style landing.
 const CHIP_DESCRIPTIONS: Record<ChappiChipIntent, string> = {
   new_release: 'Start a new release with a rollout plan',
-  add_task: 'Create a task for one of your releases',
+  add_task: 'Create an activity for one of your releases',
   todays_focus: "See what needs your attention right now",
   generate_status: 'Draft a status update for a release',
 };
@@ -143,7 +143,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         // 'quick_create' is the canonical source; TaskCreateSource has no
         // 'chappi' member and adding one is out of scope.
         openQuickCreate({ source: 'quick_create' });
-        appendAssistantReply('Opening a new task.');
+        appendAssistantReply('Opening a new activity.');
         return;
       case 'todays_focus':
         if (todaysDirective) {
@@ -253,10 +253,11 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   };
 
   // One input, two positions: centered mid-screen on the empty landing
-  // (PostHog-home style), pinned at the bottom once a conversation exists.
+  // (PostHog-home style), pinned at the bottom once a conversation exists —
+  // the Claude-desktop shape (founder call, 2026-07-23).
   const inputForm = (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className="flex items-center gap-2 border border-stroke-default bg-bg-surface px-3 py-2 transition-colors focus-within:border-brand">
+      <div className="flex items-center gap-2 rounded-2xl border border-stroke-default bg-bg-surface px-3 py-2 transition-colors focus-within:border-brand">
         <input
           value={input}
           onChange={(event) => setInput(event.target.value)}
@@ -269,7 +270,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           type="submit"
           aria-label="Send"
           disabled={!input.trim() || isThinking}
-          className="motion-press grid h-8 w-8 shrink-0 place-items-center bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
+          className="motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
         >
           {isThinking ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -322,7 +323,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
                 type="button"
                 onClick={() => handleChipClick(chip)}
                 title={CHIP_DESCRIPTIONS[chip.intent]}
-                className="motion-focus motion-press inline-flex items-center gap-1.5 border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
+                className="motion-focus motion-press inline-flex items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
               >
                 <Icon className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
                 {chip.label}
@@ -334,43 +335,41 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     );
   }
 
+  // Active conversation — the Claude-desktop shape (founder call,
+  // 2026-07-23): a NARROW centered column (the transcript never expands to
+  // the full page width), no greeting/name header once chatting has begun,
+  // and the input pinned to the bottom of the surface. The only chrome is a
+  // quiet "New chat" reset at the top of the column (the dock variant skips
+  // it — its own header carries reset/expand/close).
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Panel variant skips the header — the dock's own header carries the
-          title and the reset/expand/close controls. */}
-      {isPanel ? null : (
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stroke-subtle pb-4">
-          <div className="min-w-0">
-            <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
-              Chappi
-              <ChappiBetaBadge />
-            </p>
-            <h1 className="mt-1 truncate font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
-              {greeting}
-            </h1>
-          </div>
-          <button
-            type="button"
-            onClick={reset}
-            className="motion-focus motion-press inline-flex shrink-0 items-center gap-1.5 border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
-          >
-            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-            New conversation
-          </button>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className={`mx-auto w-full ${isPanel ? '' : 'max-w-[46rem] px-1'}`}>
+          {isPanel ? null : (
+            <div className="flex justify-end pb-3 pt-1">
+              <button
+                type="button"
+                onClick={reset}
+                className="motion-focus inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary"
+              >
+                <RotateCcw className="h-3 w-3" aria-hidden="true" />
+                New chat
+              </button>
+            </div>
+          )}
+          <Transcript
+            messages={messages}
+            isThinking={isThinking}
+            suggestions={reply?.suggestions}
+            onSuggestion={sendUserTurn}
+            bottomRef={bottomRef}
+          />
         </div>
-      )}
-
-      <div className={`min-h-0 flex-1 overflow-y-auto ${isPanel ? '' : 'mt-4'}`}>
-        <Transcript
-          messages={messages}
-          isThinking={isThinking}
-          suggestions={reply?.suggestions}
-          onSuggestion={sendUserTurn}
-          bottomRef={bottomRef}
-        />
       </div>
 
-      <div className="mt-4 shrink-0">{inputForm}</div>
+      <div className="mt-3 shrink-0">
+        <div className={`mx-auto w-full ${isPanel ? '' : 'max-w-[46rem] px-1'}`}>{inputForm}</div>
+      </div>
     </div>
   );
 }
@@ -383,50 +382,47 @@ type TranscriptProps = {
   bottomRef: RefObject<HTMLDivElement | null>;
 };
 
-/** The scrolling conversation log — every turn, user and assistant. */
+/**
+ * The scrolling conversation log — Claude-style (founder call, 2026-07-23):
+ * no "You" / "Chappi" role labels. The user's turns sit right-aligned in
+ * soft rounded bubbles; the assistant's replies are plain text flowing the
+ * column's width. Streamlined and quiet.
+ */
 function Transcript({ messages, isThinking, suggestions, onSuggestion, bottomRef }: TranscriptProps) {
   return (
-    <div className="space-y-4">
-      {messages.map((message) => {
-        const isUser = message.role === 'user';
-        return (
-          <div key={message.id} className={isUser ? 'ml-auto max-w-[85%] sm:max-w-[70%]' : 'mr-auto max-w-[85%] sm:max-w-[70%]'}>
-            <p
-              className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${
-                isUser ? 'text-right text-content-tertiary' : 'text-brand'
-              }`}
-            >
-              {isUser ? 'You' : 'Chappi'}
-            </p>
-            <div
-              className={`mt-1 whitespace-pre-wrap border p-3 text-sm text-content-primary ${
-                isUser ? 'border-stroke-default bg-bg-surface' : 'border-brand/25 bg-brand/5'
-              }`}
-            >
+    <div className="space-y-5 pb-2">
+      {messages.map((message) =>
+        message.role === 'user' ? (
+          <div key={message.id} className="flex justify-end">
+            <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-bg-elevated px-4 py-2.5 text-sm leading-6 text-content-primary">
               {message.content}
             </div>
           </div>
-        );
-      })}
+        ) : (
+          <div
+            key={message.id}
+            className="whitespace-pre-wrap text-sm leading-7 text-content-primary"
+          >
+            {message.content}
+          </div>
+        )
+      )}
 
       {isThinking ? (
-        <div className="mr-auto max-w-[85%] sm:max-w-[70%]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Chappi</p>
-          <div className="mt-1 flex items-center gap-2 border border-brand/25 bg-brand/5 p-3 text-sm text-content-secondary">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-            Thinking…
-          </div>
+        <div className="flex items-center gap-2 text-sm text-content-tertiary">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          Thinking…
         </div>
       ) : null}
 
       {suggestions?.length ? (
-        <div className="mr-auto flex max-w-[85%] flex-wrap gap-2 sm:max-w-[70%]">
+        <div className="flex flex-wrap gap-2">
           {suggestions.map((suggestion) => (
             <button
               key={suggestion}
               type="button"
               onClick={() => onSuggestion(suggestion)}
-              className="motion-focus border border-stroke-default px-2.5 py-1 text-xs text-brand transition-colors hover:border-brand"
+              className="motion-focus rounded-full border border-stroke-default px-3 py-1 text-xs text-brand transition-colors hover:border-brand"
             >
               {suggestion}
             </button>

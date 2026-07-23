@@ -1,9 +1,11 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Logo } from '@urganize/ui';
+import { useReleaseStore } from '@/stores/useReleaseStore';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
@@ -36,7 +38,9 @@ type AppTopbarProps = {
 const routeTitles = [
   { match: (pathname: string) => pathname === '/dashboard', title: '', eyebrow: '' },
   { match: (pathname: string) => pathname === '/dashboard/chappi', title: '', eyebrow: '' },
-  { match: (pathname: string) => pathname.startsWith('/dashboard/releases'), title: 'Release', eyebrow: 'Release detail' },
+  // Release detail's identity renders live (artist + title) via
+  // ContextTitle below — no static fallback text.
+  { match: (pathname: string) => pathname.startsWith('/dashboard/releases'), title: '', eyebrow: '' },
   // Settings carries no topbar title either (founder call, 2026-07-23) —
   // the page's own section kickers say where you are.
   { match: (pathname: string) => pathname.startsWith('/settings'), title: '', eyebrow: '' },
@@ -45,6 +49,51 @@ const routeTitles = [
 function getRouteTitle(pathname: string | null) {
   const safePathname = pathname || '/dashboard';
   return routeTitles.find((item) => item.match(safePathname)) || routeTitles[0];
+}
+
+/**
+ * The current release's identity fills the topbar's empty middle — a mono
+ * kicker over the song title — so the open release owns that full space
+ * between the logo and the nav (founder calls, 2026-07-23; replaces the
+ * scope pill that sat inside the tasks panel AND the release page's own
+ * mid-page header). Two contexts:
+ *  - workspace with ?release= → "ACTIVITIES" kicker + title
+ *  - /dashboard/releases/[id] → artist-name kicker + title
+ * Own component under Suspense because useSearchParams needs a boundary
+ * when it renders from layout-level chrome.
+ */
+const RELEASE_DETAIL_PATH = /^\/dashboard\/releases\/([^/]+)$/;
+
+function ContextTitle() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const releases = useReleaseStore((state) => state.releases);
+
+  let releaseId: string | null = null;
+  let kicker = 'Activities';
+
+  if (pathname === '/dashboard') {
+    releaseId = searchParams.get('release');
+  } else {
+    const detailMatch = (pathname || '').match(RELEASE_DETAIL_PATH);
+    if (detailMatch) releaseId = detailMatch[1];
+  }
+  if (!releaseId) return null;
+
+  const release = releases.find((r) => r.id === releaseId);
+  if (!release) return null;
+  if (pathname !== '/dashboard') kicker = release.artistName || 'Release';
+
+  return (
+    <div className="min-w-0">
+      <p className="hidden truncate font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary sm:block">
+        {kicker}
+      </p>
+      <h1 className="truncate font-display text-lg font-semibold leading-6 text-content-primary sm:text-xl">
+        {release.title}
+      </h1>
+    </div>
+  );
 }
 
 export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
@@ -70,6 +119,12 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             Eyebrow + title are conditional so empty routeTitle entries
             (e.g. /dashboard) don't reserve vertical space. */}
         <div className="min-w-0 flex-1">
+          {/* On the scoped workspace, the open release's activities own this
+              space; static route titles fill it elsewhere. Both are empty on
+              the at-rest /dashboard, keeping the controls flush right. */}
+          <Suspense fallback={null}>
+            <ContextTitle />
+          </Suspense>
           {routeTitle.eyebrow ? (
             <p className="hidden text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary sm:block">
               {routeTitle.eyebrow}

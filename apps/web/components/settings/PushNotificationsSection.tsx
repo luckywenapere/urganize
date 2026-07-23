@@ -20,8 +20,8 @@ const STATUS_COPY: Record<PushStatus, string> = {
   unsupported: 'This browser does not support push notifications.',
   blocked:
     'Notifications are blocked for this site at the browser level. Allow them in your browser settings, then try again.',
-  enabled: 'This device gets a notification when a task is assigned to you, is due, or changes status.',
-  disabled: 'Turn on notifications to hear about task assignments, due dates, and status changes on this device.',
+  enabled: 'This device gets a notification when an activity is assigned to you, is due, or changes status.',
+  disabled: 'Turn on notifications to hear about activity assignments, due dates, and status changes on this device.',
 };
 
 export function PushNotificationsSection() {

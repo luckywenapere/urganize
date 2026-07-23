@@ -138,7 +138,7 @@ const PLANNING_PREFERENCE_OPTIONS: Array<{
   {
     value: 'start_from_scratch',
     label: ONBOARDING_PLANNING_PREFERENCE_LABELS.start_from_scratch,
-    helper: 'Skip the suggestions. Go straight to the full task list and plan it yourself.',
+    helper: 'Skip the suggestions. Go straight to the full activity list and plan it yourself.',
   },
 ];
 

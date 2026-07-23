@@ -171,17 +171,17 @@ export function getTaskPriorityLabel(priority: TaskPriority): string {
 export function getNotificationMessage(notification: TaskNotification): string {
   switch (notification.type) {
     case 'task_assigned':
-      return `${notification.actorName} assigned you a task`;
+      return `${notification.actorName} assigned you an activity`;
     case 'task_commented':
-      return `${notification.actorName} commented on a task`;
+      return `${notification.actorName} commented on an activity`;
     case 'task_due_soon':
-      return 'A task is due soon';
+      return 'An activity is due soon';
     case 'task_overdue':
-      return 'A task is overdue';
+      return 'An activity is overdue';
     case 'task_status_changed':
-      return `${notification.actorName} changed a task status`;
+      return `${notification.actorName} changed an activity's status`;
     default:
-      return 'Task update';
+      return 'Activity update';
   }
 }
 
