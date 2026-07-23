@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.28.1",
+    date: "July 23, 2026",
+    highlights: [
+      "Sharing an app.urganize.app link now shows the current branded card — the share image was stale and its URL could resolve to an address social crawlers couldn't reach.",
+    ],
+  },
+  {
     version: "0.28.0",
     date: "July 23, 2026",
     highlights: [
