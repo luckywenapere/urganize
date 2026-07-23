@@ -86,9 +86,21 @@ export type ChappiToolResult = {
   clientAction?: ChappiClientAction;
 };
 
+/**
+ * A release the user pinned the conversation to via the scope picker under
+ * the prompt box (Linear-style context selector, founder call 2026-07-23).
+ * Advisory: the server re-validates every id tools touch; this only steers
+ * the model's interpretation of ambiguous instructions.
+ */
+export type ChappiReleaseScope = {
+  id: string;
+  title: string;
+};
+
 /** Request body the client POSTs to /api/chappi. */
 export type ChappiRequestBody = {
   messages: ChappiMessage[];
+  releaseScope?: ChappiReleaseScope | null;
 };
 
 /** Route response union. `deterministic` tells the client to run the local

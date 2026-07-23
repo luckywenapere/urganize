@@ -4,7 +4,7 @@ import { isChappiEnabled, isChappiModelConfigured } from '@/lib/chappi/config';
 import { resolveChappiContext } from '@/lib/chappi/dispatch';
 import { buildChappiSystemPrompt } from '@/lib/chappi/system-prompt';
 import { runChappiAgent } from '@/lib/chappi/runner';
-import type { ChappiMessage, ChappiResponse } from '@/lib/chappi/types';
+import type { ChappiMessage, ChappiReleaseScope, ChappiResponse } from '@/lib/chappi/types';
 
 // Same budget rationale as the tailor-plan route: the agent's tool rounds +
 // model latency must fit inside Vercel's function ceiling, so the loop is
@@ -31,6 +31,20 @@ function parseMessages(raw: unknown): ChappiMessage[] {
     }
   }
   return messages;
+}
+
+// The optional release scope the client's picker pinned the conversation to.
+// Advisory only — every tool re-validates ids against live rows — so shape
+// validation (non-empty strings, sane lengths) is all that's needed here.
+function parseReleaseScope(raw: unknown): ChappiReleaseScope | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const scope = (raw as { releaseScope?: unknown }).releaseScope;
+  if (!scope || typeof scope !== 'object') return null;
+  const id = (scope as { id?: unknown }).id;
+  const title = (scope as { title?: unknown }).title;
+  if (typeof id !== 'string' || !id.trim() || id.length > 100) return null;
+  if (typeof title !== 'string' || !title.trim()) return null;
+  return { id: id.trim(), title: title.trim().slice(0, 200) };
 }
 
 export async function POST(request: NextRequest) {
@@ -64,7 +78,11 @@ export async function POST(request: NextRequest) {
       origin,
       authToken,
     });
-    const system = await buildChappiSystemPrompt(ctx);
+    const releaseScope = parseReleaseScope(body);
+    let system = await buildChappiSystemPrompt(ctx);
+    if (releaseScope) {
+      system += `\n\nThe user has scoped this conversation to the release "${releaseScope.title}" (release id: ${releaseScope.id}). Unless they clearly name a different release, interpret questions and actions as being about this release and pass its id to tools. If the id doesn't resolve, say so instead of guessing.`;
+    }
     const { reply, clientActions } = await runChappiAgent({
       ctx,
       system,
