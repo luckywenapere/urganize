@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.22.2",
+    date: "July 23, 2026",
+    highlights: [
+      "The release row in the top bar now reads like the card it replaced — artist name over the title, with the release date alongside.",
+      "The help menu's icons joined the house set: a tour laminate for Docs, a studio microphone for Contact, a speaker cab for Community.",
+      "Trimmed the notifications setting to a single quiet status line once it's on.",
+    ],
+  },
+  {
     version: "0.22.1",
     date: "July 23, 2026",
     highlights: [

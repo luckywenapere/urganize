@@ -71,7 +71,6 @@ function ContextTitle() {
   const releases = useReleaseStore((state) => state.releases);
 
   let releaseId: string | null = null;
-  let kicker = 'Activities';
 
   if (pathname === '/dashboard') {
     releaseId = searchParams.get('release');
@@ -83,7 +82,9 @@ function ContextTitle() {
 
   const release = releases.find((r) => r.id === releaseId);
   if (!release) return null;
-  if (pathname !== '/dashboard') kicker = release.artistName || 'Release';
+  // The kicker is the ARTIST, matching the card this row replaced (founder
+  // annotation, 2026-07-23 — the "ACTIVITIES" wording was crossed out).
+  const kicker = release.artistName || 'Release';
 
   // The full identity row — cover art thumbnail (or the U-mark default)
   // beside the kicker + title. This IS the focused release card now
@@ -116,9 +117,20 @@ function ContextTitle() {
         <p className="hidden truncate font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary sm:block">
           {kicker}
         </p>
-        <h1 className="truncate font-display text-lg font-semibold leading-6 text-content-primary sm:text-xl">
-          {release.title}
-        </h1>
+        <div className="flex min-w-0 items-baseline gap-3">
+          <h1 className="truncate font-display text-lg font-semibold leading-6 text-content-primary sm:text-xl">
+            {release.title}
+          </h1>
+          {release.releaseDate ? (
+            <span className="hidden shrink-0 font-mono text-[11px] text-content-tertiary md:inline">
+              {new Intl.DateTimeFormat('en', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              }).format(new Date(`${release.releaseDate}T00:00:00`))}
+            </span>
+          ) : null}
+        </div>
       </div>
     </div>
   );

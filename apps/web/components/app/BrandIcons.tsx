@@ -40,6 +40,40 @@ export function ChappiIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
   );
 }
 
+/** Docs: a tour laminate — your crew pass to how everything works. */
+export function DocsIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M9.5 6.5 12 4.2l2.5 2.3" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="6" y="6.5" width="12" height="13" rx="1.5" />
+      <circle cx="12" cy="9.6" r="0.4" fill="currentColor" />
+      <path d="M9 13.2h6M9 16.2h4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Contact: a studio microphone — talk to us, on the record. */
+export function ContactIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="9.5" y="3.5" width="5" height="9.5" rx="2.5" />
+      <path d="M6.8 11a5.2 5.2 0 0 0 10.4 0" strokeLinecap="round" />
+      <path d="M12 16.4v3.1M9.3 19.5h5.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Community: a speaker cab — the room the whole crowd gathers around. */
+export function CommunityIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="5.5" y="4.5" width="13" height="15" rx="1.5" />
+      <circle cx="12" cy="13.8" r="2.9" />
+      <circle cx="12" cy="8" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 /** Settings: mixing-desk faders — you tune Urganize like a board, not a
  * machine. Replaces the stock gear (2026-07-23, founder call: no shapes
  * every other app uses). */

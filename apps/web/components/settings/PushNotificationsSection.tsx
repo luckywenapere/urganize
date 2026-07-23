@@ -20,7 +20,9 @@ const STATUS_COPY: Record<PushStatus, string> = {
   unsupported: 'This browser does not support push notifications.',
   blocked:
     'Notifications are blocked for this site at the browser level. Allow them in your browser settings, then try again.',
-  enabled: 'This device gets a notification when an activity is assigned to you, is due, or changes status.',
+  // Enabled state carries no description (founder call, 2026-07-23) — the
+  // lit icon + the "Turn off" button say everything.
+  enabled: '',
   disabled: 'Turn on notifications to hear about activity assignments, due dates, and status changes on this device.',
 };
 
@@ -69,7 +71,11 @@ export function PushNotificationsSection() {
             className={`mt-0.5 h-4 w-4 shrink-0 ${status === 'enabled' ? 'text-brand' : 'text-content-tertiary'}`}
             aria-hidden="true"
           />
-          <p className="max-w-[46ch] text-sm text-content-secondary">{STATUS_COPY[status]}</p>
+          {STATUS_COPY[status] ? (
+            <p className="max-w-[46ch] text-sm text-content-secondary">{STATUS_COPY[status]}</p>
+          ) : (
+            <p className="text-sm text-content-secondary">On for this device.</p>
+          )}
         </div>
         {status !== 'blocked' ? (
           <button
