@@ -64,7 +64,7 @@ export function DeleteAccountSection() {
           <input
             value={confirmationText}
             onChange={(event) => setConfirmationText(event.target.value)}
-            className="w-full rounded-none border border-status-error/35 bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-status-error"
+            className="w-full rounded-lg border border-status-error/35 bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-status-error"
           />
         </label>
         {error && <p className="text-sm text-status-error">{error}</p>}
@@ -72,7 +72,7 @@ export function DeleteAccountSection() {
           type="button"
           onClick={() => void handleDeleteNow()}
           disabled={isDeleting}
-          className="rounded-none bg-status-error px-4 py-2 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:opacity-55"
+          className="rounded-lg bg-status-error px-4 py-2 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:opacity-55"
         >
           {isDeleting ? 'Deleting...' : 'Delete account'}
         </button>

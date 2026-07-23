@@ -127,7 +127,7 @@ export function FirstReleaseWin({ releaseId, onDone }: FirstReleaseWinProps) {
         role="dialog"
         aria-modal="true"
         aria-label="Your first release is planned"
-        className={`relative w-full max-w-lg border border-stroke-default bg-bg-surface p-6 shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))] transition-all duration-500 sm:p-8 ${
+        className={`relative w-full max-w-lg rounded-2xl border border-stroke-default bg-bg-surface p-6 shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))] transition-all duration-500 sm:p-8 ${
           isMounted ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
         }`}
       >

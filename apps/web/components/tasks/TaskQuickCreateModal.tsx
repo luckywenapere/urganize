@@ -157,9 +157,6 @@ export function TaskQuickCreateModal({
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Quick Create</p>
             <h2 id={headingId} className="mt-2 text-2xl font-semibold tracking-tight text-content-primary">Create task</h2>
-            <p className="mt-2 text-sm text-content-secondary">
-              Title is enough to create a task. Everything else is optional.
-            </p>
           </div>
 
           <button

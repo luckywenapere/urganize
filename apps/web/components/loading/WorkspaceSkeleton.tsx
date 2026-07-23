@@ -48,7 +48,10 @@ export function WorkspaceSkeleton() {
           {isFocused ? (
             <DesktopFocusedSkeleton />
           ) : (
-            <ReleaseGridSkeleton count={8} columns="lg:grid-cols-3 xl:grid-cols-4" />
+            <ReleaseGridSkeleton
+              count={4}
+              columns="justify-center [grid-template-columns:repeat(auto-fit,minmax(240px,280px))]"
+            />
           )}
         </section>
       </div>
@@ -56,11 +59,14 @@ export function WorkspaceSkeleton() {
   );
 }
 
-/** At-rest surface: "Releases" label + a grid of card slots. */
+/** At-rest surface: a grid of card slots. No label line — the real grid
+ * dropped its "Releases" eyebrow (2026-07-23), and the desktop variant uses
+ * the SAME centered auto-fit template as WorkspaceDesktopGrid with 4 slots
+ * (the typical roster size) so the resolved cards land where the skeleton
+ * stood instead of collapsing from a fuller placeholder grid. */
 function ReleaseGridSkeleton({ count, columns }: { count: number; columns: string }) {
   return (
     <div className="space-y-3 lg:space-y-4">
-      <SkeletonBlock className="h-3 w-20" />
       <div className={`grid gap-3 lg:gap-4 ${columns}`}>
         {Array.from({ length: count }).map((_, index) => (
           <ReleaseCardSkeleton key={`release-card-${index}`} />
@@ -73,7 +79,7 @@ function ReleaseGridSkeleton({ count, columns }: { count: number; columns: strin
 /** Tile-variant card slot: square art block + eyebrow/title/date/progress. */
 function ReleaseCardSkeleton() {
   return (
-    <div className="overflow-hidden border border-stroke-default bg-bg-surface">
+    <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
       <div className="aspect-square border-b border-stroke-subtle bg-bg-elevated" />
       <div className="space-y-2.5 px-4 py-4">
         <SkeletonBlock className="h-2.5 w-20" />
@@ -88,7 +94,7 @@ function ReleaseCardSkeleton() {
 /** Focused-variant card slot: fixed thumbnail beside the meta block. */
 function FocusedCardSkeleton() {
   return (
-    <div className="flex overflow-hidden border border-stroke-default bg-bg-surface">
+    <div className="flex overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
       <div className="w-28 shrink-0 border-r border-stroke-subtle bg-bg-elevated sm:w-36" />
       <div className="min-w-0 flex-1 space-y-2.5 px-4 py-4">
         <SkeletonBlock className="h-2.5 w-20" />
@@ -111,7 +117,7 @@ function TasksPanelSkeleton() {
           <SkeletonBlock className="h-8 w-20 rounded-full" />
         </div>
       </div>
-      <div className="h-72 border border-stroke-default bg-bg-surface" />
+      <div className="h-72 rounded-xl border border-stroke-default bg-bg-surface" />
     </div>
   );
 }

@@ -44,7 +44,7 @@ export function WorkspaceArtistSection({
       {isLoading && !artist ? (
         <div className="space-y-2">
           <SkeletonBlock className="h-3 w-20" />
-          <SkeletonBlock className="h-10 w-full rounded-none" />
+          <SkeletonBlock className="h-10 w-full rounded-lg" />
         </div>
       ) : artist === undefined ? (
         <p className="text-sm text-content-secondary">
@@ -59,18 +59,18 @@ export function WorkspaceArtistSection({
             <input
               value={input}
               onChange={(event) => onInputChange(event.target.value)}
-              className="w-full rounded-none border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+              className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
               placeholder="e.g. Tems"
               maxLength={120}
             />
           </label>
           {message && (
-            <p className="rounded-none border border-brand/35 bg-brand-muted px-3 py-2 text-sm text-brand">
+            <p className="rounded-lg border border-brand/35 bg-brand-muted px-3 py-2 text-sm text-brand">
               {message}
             </p>
           )}
           {error && (
-            <p className="rounded-none border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+            <p className="rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
               {error}
             </p>
           )}
@@ -78,7 +78,7 @@ export function WorkspaceArtistSection({
             type="button"
             onClick={onSave}
             disabled={isSaving}
-            className="rounded-none bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
           >
             {isSaving ? 'Saving…' : 'Save artist name'}
           </button>

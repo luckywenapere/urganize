@@ -30,18 +30,6 @@ function normalizeValue(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function getCoverFallbackMonogram(release: ReleaseOption): string {
-  const source = `${release.artistName} ${release.title}`.trim();
-  const letters = source
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((segment) => segment[0]?.toUpperCase() || '')
-    .join('');
-
-  return letters || 'U';
-}
-
 export function ReleaseCombobox({
   releases,
   selectedRelease,
@@ -318,8 +306,6 @@ export function ReleaseCombobox({
                   );
                 }
 
-                const coverFallbackMonogram = getCoverFallbackMonogram(item.release);
-
                 // Compact row: smaller thumbnail (h-9 vs h-12), tighter
                 // vertical padding (py-2 vs py-3), smaller secondary text
                 // (text-[11px] vs text-xs), and a subtler date eyebrow. The
@@ -357,10 +343,16 @@ export function ReleaseCombobox({
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,rgb(var(--color-brand)/0.2),transparent_48%),linear-gradient(180deg,rgb(var(--color-stroke)/0.05),rgb(var(--color-stroke)/0.01))]">
-                          <span className="text-[11px] font-semibold tracking-[-0.04em] text-content-primary">
-                            {coverFallbackMonogram}
-                          </span>
+                        // Same default cover art as the catalog cards
+                        // (founder call, 2026-07-23): the Urganize U mark,
+                        // theme-aware via the shared .app-wordmark invert —
+                        // not derived initials.
+                        <div className="flex h-full w-full items-center justify-center bg-bg-elevated" aria-hidden="true">
+                          <img
+                            src="/images/urganize-mark.png"
+                            alt=""
+                            className="app-wordmark h-4 w-auto opacity-40"
+                          />
                         </div>
                       )}
                     </div>

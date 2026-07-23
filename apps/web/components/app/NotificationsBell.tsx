@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell } from 'lucide-react';
+import { SignalIcon } from '@/components/app/BrandIcons';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
@@ -366,9 +366,9 @@ export function NotificationsBell() {
         aria-label={
           hasUnread ? `Notifications, ${unreadCount} unread` : 'Notifications'
         }
-        className="motion-focus motion-press relative grid h-10 w-10 place-items-center border border-stroke-default bg-bg-elevated text-content-primary transition-colors hover:bg-bg-hover"
+        className="motion-focus motion-press relative grid h-10 w-10 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
       >
-        <Bell className="h-4 w-4" aria-hidden="true" />
+        <SignalIcon className="h-[18px] w-[18px]" />
         {hasUnread ? (
           <span
             aria-hidden="true"
@@ -392,7 +392,7 @@ export function NotificationsBell() {
           // panel; it's full-width and viewport-pinned, so the math is the
           // same. From `sm` up it reverts to the WorkspaceMenu-style
           // trigger-anchored dropdown.
-          className="animate-menu-down fixed inset-x-4 top-[4.5rem] z-50 origin-top-right border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]"
+          className="animate-menu-down fixed inset-x-4 top-[4.5rem] z-50 origin-top-right rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]"
         >
           <div className="flex items-center justify-between border-b border-stroke-subtle px-3 py-3">
             <p className="text-sm font-semibold text-content-primary">Notifications</p>

@@ -197,7 +197,7 @@ export function TaskDetailView({
           type="button"
           onClick={onBack}
           aria-label="Close task"
-          className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center border border-transparent text-content-tertiary transition-colors hover:border-stroke-default hover:bg-bg-hover hover:text-content-primary"
+          className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-transparent text-content-tertiary transition-colors hover:border-stroke-default hover:bg-bg-hover hover:text-content-primary"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>

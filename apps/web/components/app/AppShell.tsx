@@ -14,15 +14,12 @@ import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge'
 import { registerPushServiceWorker } from '@/lib/push';
 
 // None of these are needed for first paint — the onboarding wizard, the
-// create-release modal, and the two floating support widgets used to be
+// create-release modal, and the floating support widgets used to be
 // static imports, which shipped their code (the ~1,000-line onboarding flow
 // included) in the render-blocking bundle of every route, /auth included.
-// next/dynamic moves each into its own async chunk that loads after hydration
-// (or, for HelpMenu/SupportChat, only on the authenticated routes that render
-// them). ssr:false is safe: all four render nothing on the server today.
-const HelpMenu = dynamic(() => import('@/components/app/HelpMenu').then((m) => m.HelpMenu), {
-  ssr: false,
-});
+// next/dynamic moves each into its own async chunk that loads after hydration.
+// ssr:false is safe: all render nothing on the server today. (HelpMenu moved
+// into AppTopbar's right cluster 2026-07-23 and rides its bundle now.)
 const SupportChat = dynamic(
   () => import('@/components/support/SupportChat').then((m) => m.SupportChat),
   { ssr: false }
@@ -156,7 +153,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       ) : (
         <div className="app-layout lazy-fade lazy-fade-in">{children}</div>
       )}
-      {showHelpMenu ? <HelpMenu /> : null}
+      {/* HelpMenu moved into AppTopbar's right cluster (2026-07-23). */}
       {showHelpMenu ? (
         CHAPPI_ENABLED ? <ChappiDock onNewRelease={openCreateRelease} /> : <SupportChat />
       ) : null}

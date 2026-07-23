@@ -50,7 +50,7 @@ export function ProfileSection() {
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="w-full rounded-none border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+            className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
           />
         </label>
         <label className="block">
@@ -58,7 +58,7 @@ export function ProfileSection() {
           <input
             value={user.email}
             disabled
-            className="w-full rounded-none border border-stroke-subtle bg-bg-overlay px-3 py-2 text-content-secondary"
+            className="w-full rounded-lg border border-stroke-subtle bg-bg-overlay px-3 py-2 text-content-secondary"
           />
         </label>
         {error && <p className="text-sm text-status-error">{error}</p>}
@@ -67,7 +67,7 @@ export function ProfileSection() {
           type="button"
           onClick={() => void handleSave()}
           disabled={isSaving}
-          className="rounded-none bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
         >
           {isSaving ? 'Saving...' : 'Save profile'}
         </button>
