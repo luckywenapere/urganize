@@ -74,31 +74,6 @@ const isPersistedExpanded = (value: unknown): value is Partial<Record<TaskSectio
   value !== null &&
   Object.values(value).every((entry) => typeof entry === 'boolean');
 
-// Per-bucket empty-state copy. The unscoped copy is celebratory ("You're
-// caught up"); the scoped copy is factual because a single release with no
-// overdue items is the expected state, not an achievement. Done has no
-// "scoped" variant worth distinguishing — an empty Done is just "no tasks
-// completed yet" either way.
-const UNSCOPED_EMPTY: Record<TaskSectionKey, string> = {
-  overdue: "You're caught up.",
-  catch_up: 'No catch-up tasks.',
-  today: 'Nothing due today.',
-  week: 'Nothing due this week.',
-  upcoming: 'Nothing queued yet.',
-  no_due_date: 'No unscheduled tasks.',
-  done: 'No tasks completed yet.',
-};
-
-const SCOPED_EMPTY: Record<TaskSectionKey, string> = {
-  overdue: 'No overdue tasks for this release.',
-  catch_up: 'No catch-up tasks for this release.',
-  today: 'Nothing due today for this release.',
-  week: 'Nothing due this week for this release.',
-  upcoming: 'Nothing upcoming for this release.',
-  no_due_date: 'No unscheduled tasks for this release.',
-  done: 'Nothing completed for this release yet.',
-};
-
 type TasksPanelProps = {
   /** Tasks already filtered by `?release=` scope (handled in parent). */
   tasks: Task[];
@@ -316,16 +291,27 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
       </div>
 
       <div className="space-y-3">
+        {/* Every bucket empty (no tasks at all, or the filters exclude them
+            all): the buckets above have all suppressed themselves, so leave
+            one quiet line instead of filters floating over nothing. */}
+        {sectionOrder.every((sectionKey) => sections[sectionKey].length === 0) ? (
+          <p className="px-1 py-4 text-xs text-content-tertiary">
+            {priorityFilter || statusFilter
+              ? 'No tasks match these filters.'
+              : scopedRelease
+                ? 'No tasks for this release yet.'
+                : 'No tasks yet.'}
+          </p>
+        ) : null}
         {sectionOrder.map((sectionKey) => {
           const sectionTasks = sections[sectionKey];
           const isOpen = expanded[sectionKey];
           const isDoneBucket = sectionKey === 'done';
-          // Done is suppressed entirely when empty — the count alone is the
-          // signal, and a 0-count Done bucket adds noise to the bottom of
-          // the panel without earning its space. Every other bucket still
-          // renders so the user can see "Overdue (0)" as proof they're
-          // caught up.
-          if (isDoneBucket && sectionTasks.length === 0) return null;
+          // Empty buckets don't render at all (founder call, 2026-07-23,
+          // extending what Done already did): a bucket appears the moment a
+          // task moves into it and disappears when its last task leaves.
+          // The all-empty case gets a single quiet line below the list.
+          if (sectionTasks.length === 0) return null;
           const bodyId = `workspace-bucket-${sectionKey}`;
           return (
             <div
@@ -366,29 +352,21 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
               </button>
               {isOpen ? (
                 <div id={bodyId}>
-                  {sectionTasks.length === 0 ? (
-                    <div className="px-4 py-5">
-                      <p className="text-xs text-content-tertiary">
-                        {scopedRelease ? SCOPED_EMPTY[sectionKey] : UNSCOPED_EMPTY[sectionKey]}
-                      </p>
-                    </div>
-                  ) : (
-                    sectionTasks.map((task) => {
-                      const isLeaving = Boolean(pendingCompletionIds[task.id]);
-                      return (
-                        <div
-                          key={task.id}
-                          className={isLeaving ? 'task-row-pending-completion' : ''}
-                        >
-                          <TaskRow
-                            task={task}
-                            density="compact"
-                            onClick={(t) => openTask(t.id)}
-                          />
-                        </div>
-                      );
-                    })
-                  )}
+                  {sectionTasks.map((task) => {
+                    const isLeaving = Boolean(pendingCompletionIds[task.id]);
+                    return (
+                      <div
+                        key={task.id}
+                        className={isLeaving ? 'task-row-pending-completion' : ''}
+                      >
+                        <TaskRow
+                          task={task}
+                          density="compact"
+                          onClick={(t) => openTask(t.id)}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               ) : null}
             </div>
