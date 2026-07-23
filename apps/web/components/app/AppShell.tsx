@@ -11,6 +11,7 @@ import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { ToastProvider } from '@/components/shared/ToastProvider';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
+import { registerPushServiceWorker } from '@/lib/push';
 
 // None of these are needed for first paint — the onboarding wizard, the
 // create-release modal, and the two floating support widgets used to be
@@ -109,6 +110,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       void checkAuth();
     }
   }, [checkAuth, isAuthenticated, user]);
+
+  // Register the push service worker once per load. Registration alone never
+  // prompts for permission — the prompt only fires when the user explicitly
+  // enables notifications in Settings (PushNotificationsSection). Having the
+  // worker registered early means an already-subscribed device keeps
+  // receiving pushes even before the user navigates anywhere.
+  useEffect(() => {
+    void registerPushServiceWorker();
+  }, []);
 
   return (
     // ToastProvider wraps TaskUIProvider so any surface inside the app shell

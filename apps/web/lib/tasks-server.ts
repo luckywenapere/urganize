@@ -29,6 +29,7 @@ import {
   type WorkspaceMemberRole,
   type WorkspaceMembersResponse,
 } from '@/lib/tasks';
+import { sendPushToUsers, type PushPayload } from '@/lib/push-server';
 
 export const WORKSPACES_TABLE = 'workspaces';
 export const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
@@ -1422,6 +1423,32 @@ export async function logTaskActivity(
   });
 }
 
+// Web Push copy per notification type. Bodies get the task title injected;
+// the click deep-links to the workspace scoped to the task's release (same
+// destination NotificationsBell navigates to). Tagged per task+type so a
+// re-fired notification replaces the stale one instead of stacking.
+function buildTaskPushPayload(
+  type: NotificationType,
+  taskTitle: string,
+  taskId: string,
+  releaseId: string | null
+): PushPayload {
+  const quoted = taskTitle ? `“${taskTitle}”` : 'A task';
+  const copy: Partial<Record<NotificationType, { title: string; body: string }>> = {
+    task_assigned: { title: 'New task for you', body: `${quoted} was assigned to you.` },
+    task_status_changed: { title: 'Task update', body: `${quoted} changed status.` },
+    task_due_soon: { title: 'Due soon', body: `${quoted} is due within 24 hours.` },
+    task_overdue: { title: 'Overdue', body: `${quoted} is overdue.` },
+    task_commented: { title: 'New comment', body: `New comment on ${quoted}.` },
+  };
+  const entry = copy[type] || { title: 'Urganize', body: `${quoted} was updated.` };
+  return {
+    ...entry,
+    url: releaseId ? `/dashboard?release=${releaseId}` : '/dashboard',
+    tag: `task-${taskId}-${type}`,
+  };
+}
+
 export async function createTaskNotification(
   adminClient: SupabaseClient,
   input: {
@@ -1453,12 +1480,33 @@ export async function createTaskNotification(
     return;
   }
 
-  await adminClient.from(NOTIFICATIONS_TABLE).insert({
+  const insertResult = await adminClient.from(NOTIFICATIONS_TABLE).insert({
     user_id: input.userId,
     type: input.type,
     task_id: input.taskId,
     actor_id: input.actorId || null,
   });
+
+  if (insertResult.error) {
+    return;
+  }
+
+  // Web Push delivery — mirrors the in-app row 1:1 (same dedup guard above,
+  // so a duplicate never pushes twice). No-op when VAPID keys aren't
+  // configured or the user has no registered devices; a push failure never
+  // fails the notification itself.
+  try {
+    const taskResult = await adminClient
+      .from(TASKS_TABLE)
+      .select('title,release_id')
+      .eq('id', input.taskId)
+      .maybeSingle();
+    const taskTitle = String(taskResult.data?.title || '').trim();
+    const releaseId = taskResult.data?.release_id ? String(taskResult.data.release_id) : null;
+    await sendPushToUsers(adminClient, [input.userId], buildTaskPushPayload(input.type, taskTitle, input.taskId, releaseId));
+  } catch (error) {
+    console.error('[push] task notification push failed', error);
+  }
 }
 
 // Runs across every user's tasks in one pass — called from the
