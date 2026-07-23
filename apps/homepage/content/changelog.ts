@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.25.2",
+    date: "July 23, 2026",
+    highlights: [
+      "Teammate invite links now always point at app.urganize.app — invitees land straight on the accept page instead of hitting a hosting login wall. Re-send any invite that didn't work.",
+    ],
+  },
+  {
     version: "0.25.1",
     date: "July 23, 2026",
     highlights: [
