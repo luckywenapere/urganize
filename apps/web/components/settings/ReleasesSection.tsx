@@ -39,6 +39,16 @@ export function ReleasesSection() {
 
   if (!user) return null;
 
+  // Deletion is OWNER-ONLY (founder decision, 2026-07-23; the API already
+  // enforces it via ensureReleaseOwnership). With whole-workspace visibility
+  // the store now carries shared releases too — this list shows only the
+  // ones the user actually owns, so teammates never see a Delete button
+  // that would be refused. Legacy rows without ownerUserId (pre-0.27 cache)
+  // are treated as owned — they only ever came from the owner-only query.
+  const ownedReleases = releases.filter(
+    (release) => !release.ownerUserId || release.ownerUserId === user.id
+  );
+
   const handleReleaseDeleted = (releaseId: string) => {
     setReleaseToDelete(null);
     // Drop the release + its tasks from local state immediately, then
@@ -60,11 +70,11 @@ export function ReleasesSection() {
             <SkeletonBlock className="h-14 w-full rounded-lg" />
             <SkeletonBlock className="h-14 w-full rounded-lg" />
           </div>
-        ) : releases.length === 0 ? (
+        ) : ownedReleases.length === 0 ? (
           <p className="text-sm text-content-secondary">No releases yet.</p>
         ) : (
           <div className="space-y-2">
-            {[...releases]
+            {[...ownedReleases]
               .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
               .map((release) => (
                 <div
