@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
+import { readPreviousLocation } from '@/lib/nav-history';
 import { useAuthStore } from '@/lib/auth-store';
 import { getRolePermissions } from '@/lib/role-permissions';
 import { errorMessage } from '@/lib/errors';
@@ -302,16 +303,22 @@ export default function SettingsPage() {
             suit the single-column rhythm. */}
         <div className="relative mx-auto w-full max-w-[760px]">
           {/* No in-page "Settings" heading — the topbar already titles this
-              route (AppTopbar routeTitles: eyebrow "Account", title
-              "Settings"), so an h1 here doubled the heading. The row keeps
-              only the Dashboard shortcut. */}
+              route. The row carries a BACK button (founder request,
+              2026-07-23) that returns to the exact page the user came from
+              (via lib/nav-history), falling back to the workspace when
+              Settings was opened directly. */}
           <div className="mb-4 flex sm:justify-end">
-            <Link
-              href="/dashboard"
-              className="w-full rounded-full border border-stroke-default bg-bg-surface px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
+            <button
+              type="button"
+              onClick={() => {
+                const previous = readPreviousLocation();
+                router.push(previous && !previous.startsWith('/settings') ? previous : '/dashboard');
+              }}
+              className="motion-focus motion-press inline-flex w-full items-center justify-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
             >
-              Dashboard
-            </Link>
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              Back
+            </button>
           </div>
 
           {/* Section order (founder call, 2026-07-23): the workspace artist

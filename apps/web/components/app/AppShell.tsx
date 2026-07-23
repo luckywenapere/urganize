@@ -8,6 +8,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { AppTopbar } from '@/components/app/AppTopbar';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
+import { NavigationTracker } from '@/components/app/NavigationTracker';
 import { ToastProvider } from '@/components/shared/ToastProvider';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
@@ -125,6 +126,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     // moments that currently render inline toast boxes.
     <ToastProvider>
     <CapacitorAuthBridge />
+    {/* Records every route change so back affordances (Settings' back
+        button) can return to the exact previous page. */}
+    <NavigationTracker />
     <TaskUIProvider>
       {requiresArtistNameGate ? (
         <ArtistNameGate />

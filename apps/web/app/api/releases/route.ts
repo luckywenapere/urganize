@@ -65,6 +65,9 @@ type CreateReleaseBody = {
   releaseType?: unknown;
   coverArtUrl?: unknown;
   source?: unknown;
+  /** 'template' (default) instantiates the rollout plan; 'blank' creates an
+   * empty release the user builds up themself (founder call, 2026-07-23). */
+  plan?: unknown;
 };
 
 function toSelectorRelease(
@@ -294,6 +297,7 @@ export async function POST(request: NextRequest) {
     const releaseType = trimString(body?.releaseType) || 'single';
     const coverArtUrl = trimString(body?.coverArtUrl);
     const releaseSource = normalizeReleaseCreatedSource(body?.source);
+    const releasePlan = trimString(body?.plan) === 'blank' ? 'blank' : 'template';
 
     if (!title) return NextResponse.json({ error: 'Release title is required.' }, { status: 400 });
 
@@ -523,28 +527,32 @@ export async function POST(request: NextRequest) {
     // release_type has no template yet (ep, album, music_video at v1), and
     // TemplateInstantiationError with reason 'missing_release_date' when the
     // release was created without a date.
-    try {
-      // Reuse the workspace id the artist branch already resolved — a normal
-      // create used to run the full ensureOwnedWorkspace (upsert + org sync)
-      // twice in one request.
-      const workspaceIdForTemplate =
-        workspaceIdForArtist ?? (await ensureOwnedWorkspace(adminClient, auth.user)).id;
-      const template = getTemplate(releaseType as ReleaseType);
-      await instantiateTemplate({
-        template,
-        releaseId,
-        releaseDate: releaseResult.data.release_date
-          ? String(releaseResult.data.release_date)
-          : null,
-        workspaceId: workspaceIdForTemplate,
-        ownerUserId: auth.user.id,
-        supabaseClient: adminClient,
-      });
-    } catch (templateError) {
-      console.error(
-        `Release ${releaseId} created without tasks: template instantiation failed.`,
-        templateError
-      );
+    // Blank releases (founder call, 2026-07-23) skip the rollout plan
+    // entirely — the user builds their own activities from zero.
+    if (releasePlan !== 'blank') {
+      try {
+        // Reuse the workspace id the artist branch already resolved — a normal
+        // create used to run the full ensureOwnedWorkspace (upsert + org sync)
+        // twice in one request.
+        const workspaceIdForTemplate =
+          workspaceIdForArtist ?? (await ensureOwnedWorkspace(adminClient, auth.user)).id;
+        const template = getTemplate(releaseType as ReleaseType);
+        await instantiateTemplate({
+          template,
+          releaseId,
+          releaseDate: releaseResult.data.release_date
+            ? String(releaseResult.data.release_date)
+            : null,
+          workspaceId: workspaceIdForTemplate,
+          ownerUserId: auth.user.id,
+          supabaseClient: adminClient,
+        });
+      } catch (templateError) {
+        console.error(
+          `Release ${releaseId} created without tasks: template instantiation failed.`,
+          templateError
+        );
+      }
     }
 
     captureServerAnalyticsEvent(
