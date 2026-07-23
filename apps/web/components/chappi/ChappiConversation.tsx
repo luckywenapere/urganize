@@ -360,17 +360,33 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         </div>
       )}
 
+      {/* The input lives INSIDE this scroller, sticky to its bottom edge,
+          rather than as a sibling below it. A sibling only stays put if the
+          outer dvh-based height calc (ChappiPageClient) stays exactly right;
+          on mobile, focusing the input and the on-screen keyboard opening
+          can shift that math. Sticky-inside-the-scroller tracks whatever the
+          browser currently treats as the visible scrolled area, so the
+          input — and whatever the user's mid-typing — stays put regardless. */}
       <div className={`min-h-0 flex-1 overflow-y-auto ${isPanel ? '' : 'mt-4'}`}>
-        <Transcript
-          messages={messages}
-          isThinking={isThinking}
-          suggestions={reply?.suggestions}
-          onSuggestion={sendUserTurn}
-          bottomRef={bottomRef}
-        />
+        <div className="flex min-h-full flex-col">
+          <div className="flex-1">
+            <Transcript
+              messages={messages}
+              isThinking={isThinking}
+              suggestions={reply?.suggestions}
+              onSuggestion={sendUserTurn}
+              bottomRef={bottomRef}
+            />
+          </div>
+          <div
+            className={`mobile-safe-bottom sticky bottom-0 z-10 mt-4 shrink-0 pt-3 ${
+              isPanel ? 'bg-bg-surface' : 'bg-bg-base'
+            }`}
+          >
+            {inputForm}
+          </div>
+        </div>
       </div>
-
-      <div className="mt-4 shrink-0">{inputForm}</div>
     </div>
   );
 }
