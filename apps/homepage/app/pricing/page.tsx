@@ -1,37 +1,18 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import {
-  DEFAULT_PRICING_CURRENCY,
-  type PricingCurrencyCode,
-} from "@urganize/pricing";
 import { buildPageMetadata } from "@/lib/seo";
 import { PricingPageClient } from "./PricingPageClient";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing",
   description:
-    "Simple pricing for labels and artist managers running more than one artist: monthly, annual, or a Label plan for a roster. Join the waitlist.",
+    "No price table right now — we set up every team personally. Book a demo with the founders. Built for artist managers and small labels running more than one artist.",
   path: "/pricing",
 });
 
-// GEO-RESOLVED DEFAULT CURRENCY
-//
-// Vercel sets x-vercel-ip-country on every request. Nigerian visitors see
-// NGN (primary market, matches the Paystack NGN flow); everyone else sees
-// USD. When the header is absent (local dev, non-Vercel hosts) we fall
-// back to the package default (NGN) rather than guessing.
-//
-// Reading headers() opts this route into dynamic rendering — that's the
-// cost of per-visitor defaults and it's fine at marketing-site traffic.
-// The visitor can always switch manually via the toggle on the page.
-function resolveCurrencyForCountry(country: string | null): PricingCurrencyCode {
-  if (!country) return DEFAULT_PRICING_CURRENCY;
-  return country === "NG" ? "NGN" : "USD";
-}
-
-export default async function PricingPage() {
-  const requestHeaders = await headers();
-  const country = requestHeaders.get("x-vercel-ip-country");
-
-  return <PricingPageClient initialCurrency={resolveCurrencyForCountry(country)} />;
+// BOOK-A-DEMO MODE (2026-07-23): the page no longer shows prices, so the
+// geo-resolved currency default (x-vercel-ip-country → NGN/USD) that used to
+// live here is gone with it — this route is statically renderable again.
+// See PricingPageClient for the full context and the restore path.
+export default function PricingPage() {
+  return <PricingPageClient />;
 }

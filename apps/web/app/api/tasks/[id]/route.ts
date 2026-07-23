@@ -13,6 +13,12 @@ import {
   type TaskRow,
 } from '@/lib/tasks-server';
 import { TaskService } from '@/lib/services/task-service';
+import {
+  captureServerAnalyticsEvent,
+  createPostHogEvent,
+  createServerPostHogClient,
+  shutdownServerAnalytics,
+} from '@/lib/posthog';
 
 // Allowed PATCH body fields → tasks-table column names. The route is the API
 // boundary that translates camelCase client payloads into snake_case columns
@@ -98,6 +104,7 @@ export async function PATCH(
 
   const { id } = await context.params;
   const taskService = new TaskService(adminClient);
+  const posthogServer = createServerPostHogClient();
 
   try {
     const access = await ensureTaskAccess(adminClient, id, auth.user);
@@ -144,6 +151,21 @@ export async function PATCH(
 
     const previousAssigneeUserId = access.task.assigned_to_user_id;
     const previousStatus = access.task.status;
+
+    // Activation timing: fire time_to_first_completed_task once per account,
+    // on the first transition into 'done' of any task assigned to this user.
+    // The count runs BEFORE the update below, so 0 means this is the first.
+    // (Template instantiation assigns every generated task to the release
+    // owner, so "assigned to me + done" is the right first-completion proxy.)
+    let isFirstCompletion = false;
+    if (mapped.updates.status === 'done' && previousStatus !== 'done') {
+      const priorDoneCountResult = await adminClient
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .eq('assigned_to_user_id', auth.user.id)
+        .eq('status', 'done');
+      isFirstCompletion = !priorDoneCountResult.error && priorDoneCountResult.count === 0;
+    }
 
     // updateTask returns the fresh post-update row via .select() — hydrate
     // from that instead of a third select of the same task. (access.task
@@ -192,6 +214,19 @@ export async function PATCH(
       }
     }
 
+    if (isFirstCompletion) {
+      const signupMs = new Date(auth.user.created_at || '').getTime();
+      if (Number.isFinite(signupMs)) {
+        captureServerAnalyticsEvent(
+          posthogServer,
+          auth.user.id,
+          createPostHogEvent('time_to_first_completed_task', {
+            seconds_since_signup: Math.max(0, Math.round((Date.now() - signupMs) / 1000)),
+          })
+        );
+      }
+    }
+
     return NextResponse.json({ task });
   } catch (error) {
     if (isTaskSchemaMissingError(error)) return buildTaskSchemaResponse();
@@ -199,6 +234,8 @@ export async function PATCH(
       { error: error instanceof Error ? error.message : 'Could not update task.' },
       { status: 500 }
     );
+  } finally {
+    await shutdownServerAnalytics(posthogServer);
   }
 }
 

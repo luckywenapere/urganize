@@ -76,6 +76,11 @@ export interface AnalyticsEventPropertiesMap {
   pricing_validation_submitted: Record<string, unknown>;
   trial_started: Record<string, unknown>;
   trial_converted: Record<string, unknown>;
+  // Activation funnel timing (2026-07-23): the two numbers that matter while
+  // the app is free and the founders onboard teams personally. Both fire
+  // server-side, once per account, computed from auth.user.created_at.
+  time_to_first_release: { seconds_since_signup: number };
+  time_to_first_completed_task: { seconds_since_signup: number };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;

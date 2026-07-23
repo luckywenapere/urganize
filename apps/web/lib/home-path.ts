@@ -4,12 +4,8 @@
 // promo redemption, post-checkout) imports this instead of hardcoding
 // '/dashboard', so the landing surface can't drift between entries.
 //
-// Chappi (when enabled) is the landing surface; the releases/tasks
-// workspace stays at /dashboard, one click away via the topbar. Uses the
-// SAME flag as ChappiPageClient's own guard (which bounces
-// /dashboard/chappi → /dashboard when off), so a flag-off build can never
-// land users on a route that immediately bounces them.
-//
-// NEXT_PUBLIC_ env is inlined at build time, so this is a plain constant.
-export const HOME_PATH =
-  process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true' ? '/dashboard/chappi' : '/dashboard';
+// 2026-07-23 (founder decision): the releases view at /dashboard is the
+// landing surface again — signing in drops you on your releases, not on
+// Chappi. Chappi keeps its page (/dashboard/chappi), topbar icon, and
+// floating dock when its flag is on; it's just no longer the front door.
+export const HOME_PATH = '/dashboard';

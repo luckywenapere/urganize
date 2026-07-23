@@ -28,6 +28,20 @@ export async function requireActiveAccount(
   userId: string,
   email?: string | null
 ) {
+  // ── PAYWALL OFF (founder decision, 2026-07-23) ──────────────────────────
+  // The app is free while the founders talk to every prospective team
+  // directly (marketing /pricing now books a demo instead of selling
+  // self-serve). Every authenticated account passes; no route returns 402
+  // and nothing routes users to /locked. The billing plumbing (Paystack
+  // webhook, checkout, verify, subscription-status, the /locked page
+  // itself) stays in the codebase dormant.
+  //
+  // To restore the paywall: delete this early return — the original gate
+  // below (allowlist → subscription snapshot → 402) is unchanged — and
+  // re-enable the login bounce in lib/auth-store.ts
+  // (ensureActiveAccessOrRedirect).
+  if (userId) return null;
+
   // Allowlist check first — before any DB work — per the spec.
   if (isAllowlistedEmail(email)) {
     console.log(

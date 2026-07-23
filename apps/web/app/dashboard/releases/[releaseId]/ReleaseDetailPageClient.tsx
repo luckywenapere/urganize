@@ -288,6 +288,11 @@ export default function ReleaseDetailPage() {
               >
                 <CalendarDays className="h-3.5 w-3.5" />
                 Content calendar
+                {/* Beta stamp (2026-07-23) — matches the workspace Calendar
+                    link and the calendar page header. */}
+                <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+                  Beta
+                </span>
               </Link>
             ) : null}
             {TAILOR_PLAN_ENABLED ? (

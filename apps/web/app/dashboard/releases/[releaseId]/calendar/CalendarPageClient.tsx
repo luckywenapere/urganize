@@ -460,9 +460,17 @@ export default function CalendarPageClient() {
             <p className="mt-2 font-[family-name:var(--font-cc-mono)] text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cc-accent)]">
               {formatArtistName(release.artistName)} / SINGLE
             </p>
-            <h1 className="mt-1 font-[family-name:var(--font-cc-display)] text-3xl font-medium tracking-tight text-[var(--cc-text)]">
-              {release.title}
-            </h1>
+            <div className="mt-1 flex items-center gap-3">
+              <h1 className="font-[family-name:var(--font-cc-display)] text-3xl font-medium tracking-tight text-[var(--cc-text)]">
+                {release.title}
+              </h1>
+              {/* The content calendar ships as Beta (founder call, 2026-07-23)
+                  — same stamp on the workspace's Calendar link. Mono type to
+                  match the island's metadata voice. */}
+              <span className="shrink-0 border border-[var(--cc-accent)] px-1.5 py-0.5 font-[family-name:var(--font-cc-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--cc-accent)]">
+                Beta
+              </span>
+            </div>
           </div>
 
           {activeCalendar ? (
