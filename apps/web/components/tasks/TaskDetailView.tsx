@@ -238,7 +238,10 @@ export function TaskDetailView({
 
           <div className="space-y-1.5">
             <label className={PROPERTY_ROW_CLASS}>
-              <span className={PROPERTY_LABEL_CLASS}>Status</span>
+              <span className={`${PROPERTY_LABEL_CLASS} flex items-center gap-1.5`}>
+                Status
+                <span className="rounded-full bg-brand/15 px-1 py-px text-[9px] font-bold uppercase tracking-wide text-brand">Beta</span>
+              </span>
               <select
                 value={task.status}
                 onChange={(event) => void onSavePatch({ status: event.target.value as TaskStatus })}

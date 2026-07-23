@@ -1,79 +1,104 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Moon, Sun } from 'lucide-react';
-import { applyTheme, persistTheme, resolveInitialTheme, type ThemeMode } from './theme';
+import { Moon, MonitorSmartphone, Sun } from 'lucide-react';
+import {
+  applyTheme,
+  clearStoredTheme,
+  getSystemTheme,
+  persistTheme,
+  readStoredPreference,
+  type ThemePreference,
+} from './theme';
 
 type ThemeToggleProps = {
   className?: string;
   compact?: boolean;
 };
 
-const MODES = [
-  { mode: 'light' as ThemeMode, label: 'Light', Icon: Sun },
-  { mode: 'dark' as ThemeMode, label: 'Dark', Icon: Moon },
+const MODES: Array<{ pref: ThemePreference; label: string; Icon: typeof Sun }> = [
+  { pref: 'light', label: 'Light', Icon: Sun },
+  { pref: 'dark', label: 'Dark', Icon: Moon },
+  { pref: 'system', label: 'System', Icon: MonitorSmartphone },
 ];
 
 /**
- * Segmented Light/Dark control (redesigned 2026-07-23 — the old single
- * cycling pill read as dated). Two labeled segments with a thumb that
- * slides to the active side over 200ms; sharp corners per the Brand Bible.
- * Both options are always visible, so there's no guessing what clicking
- * will do — you pick a mode, you don't toggle into the unknown.
+ * Segmented Light / Dark / System control. "System" (2026-07-23, founder
+ * call) clears the stored preference and follows the OS live — flipping the
+ * machine's appearance re-themes the app without a reload. Pill-rounded,
+ * sliding thumb, both options always visible.
  */
 export function ThemeToggle({ className = '', compact = false }: ThemeToggleProps) {
   const [mounted, setMounted] = useState(false);
-  const [theme, setTheme] = useState<ThemeMode>('dark');
+  const [preference, setPreference] = useState<ThemePreference>('system');
 
   useEffect(() => {
-    const resolved = resolveInitialTheme();
-    setTheme(resolved);
-    applyTheme(resolved);
+    const stored = readStoredPreference();
+    setPreference(stored);
+    applyTheme(stored === 'system' ? getSystemTheme() : stored);
     setMounted(true);
   }, []);
 
-  const selectMode = (next: ThemeMode) => {
-    if (next === theme) return;
-    setTheme(next);
-    applyTheme(next);
-    persistTheme(next);
+  // Live-follow the OS while on System: the media-query listener re-applies
+  // the theme the moment the machine flips appearance.
+  useEffect(() => {
+    if (preference !== 'system' || typeof window === 'undefined') return;
+    const mq = window.matchMedia('(prefers-color-scheme: light)');
+    const onChange = () => applyTheme(getSystemTheme());
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [preference]);
+
+  const selectPreference = (next: ThemePreference) => {
+    if (next === preference) return;
+    setPreference(next);
+    if (next === 'system') {
+      clearStoredTheme();
+      applyTheme(getSystemTheme());
+    } else {
+      persistTheme(next);
+      applyTheme(next);
+    }
   };
+
+  const width = compact ? 'w-[126px]' : 'w-[252px]';
 
   if (!mounted) {
     // Same footprint as the mounted control so the layout doesn't shift.
     return (
       <div
         aria-hidden
-        className={`inline-block h-9 ${compact ? 'w-[84px]' : 'w-[176px]'} rounded-full border border-stroke-default bg-bg-surface opacity-70 ${className}`}
+        className={`inline-block h-9 ${width} rounded-full border border-stroke-default bg-bg-surface opacity-70 ${className}`}
       />
     );
   }
 
-  const activeIndex = MODES.findIndex((entry) => entry.mode === theme);
+  const activeIndex = MODES.findIndex((entry) => entry.pref === preference);
 
   return (
     <div
       role="radiogroup"
       aria-label="Theme"
-      className={`relative inline-grid h-9 ${compact ? 'w-[84px]' : 'w-[176px]'} grid-cols-2 rounded-full border border-stroke-default bg-bg-surface p-0.5 ${className}`}
+      className={`relative inline-grid h-9 ${width} grid-cols-3 rounded-full border border-stroke-default bg-bg-surface p-0.5 ${className}`}
     >
       {/* Sliding thumb — sized to one cell, translated by its own width to
           land on the active segment. transform (not left) so it animates on
           the compositor. */}
       <span
         aria-hidden
-        className="absolute inset-y-0.5 left-0.5 w-[calc(50%-2px)] rounded-full border border-stroke-strong bg-bg-elevated transition-transform duration-200 ease-out"
+        className="absolute inset-y-0.5 left-0.5 w-[calc(33.333%-1.33px)] rounded-full border border-stroke-strong bg-bg-elevated transition-transform duration-200 ease-out"
         style={{ transform: `translateX(${activeIndex * 100}%)` }}
       />
-      {MODES.map(({ mode, label, Icon }) => {
-        const isActive = theme === mode;
+      {MODES.map(({ pref, label, Icon }) => {
+        const isActive = preference === pref;
         return (
           <button
-            key={mode}
+            key={pref}
             type="button"
             role="radio"
             aria-checked={isActive}
-            onClick={() => selectMode(mode)}
+            onClick={() => selectPreference(pref)}
+            title={pref === 'system' ? 'Match this device’s appearance' : undefined}
             className={`relative z-[1] inline-flex items-center justify-center gap-1.5 text-xs font-medium transition-colors ${
               isActive
                 ? 'text-content-primary'

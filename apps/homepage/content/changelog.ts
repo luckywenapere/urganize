@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.23.0",
+    date: "July 23, 2026",
+    highlights: [
+      "Appearance gains a System option — pick it and the app follows your device's light/dark setting automatically, switching live the moment your device does.",
+      "Release statuses now carry a Beta tag everywhere they appear (release cards, the release page, and the activity view) while we refine how statuses work.",
+    ],
+  },
+  {
     version: "0.22.3",
     date: "July 23, 2026",
     highlights: [

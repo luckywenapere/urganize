@@ -31,3 +31,17 @@ export const persistTheme = (mode: ThemeMode) => {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(THEME_STORAGE_KEY, mode);
 };
+
+/** Selecting "System" clears the stored preference — an absent key IS the
+ * system setting (the pre-hydration boot script in the app's layout already
+ * falls back to prefers-color-scheme when nothing is stored). */
+export const clearStoredTheme = () => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(THEME_STORAGE_KEY);
+};
+
+export type ThemePreference = ThemeMode | 'system';
+
+export const readStoredPreference = (): ThemePreference => {
+  return readStoredTheme() ?? 'system';
+};
