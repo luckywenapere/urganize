@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.22.3",
+    date: "July 23, 2026",
+    highlights: [
+      "The new-release form is down to its essentials — the rollout-timing explainer now appears after you create the release, inside the dismissible guide, where it's actually useful.",
+    ],
+  },
+  {
     version: "0.22.2",
     date: "July 23, 2026",
     highlights: [

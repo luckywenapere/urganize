@@ -7,31 +7,19 @@ import { Button, IconButton } from '@urganize/ui';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
-import {
-  getTemplate,
-  getTemplateLeadTimeDays,
-  getTemplateSpanDays,
-} from '@/lib/release-templates/loader';
+import { getTemplate, getTemplateLeadTimeDays } from '@/lib/release-templates/loader';
 
 // The modal currently only creates 'single' releases (CreateReleaseBody on the
 // API also defaults releaseType to 'single'). When the modal grows a type
 // picker, look this up dynamically from the picked type instead.
 const ACTIVE_TEMPLATE = getTemplate('single');
 const LEAD_TIME_DAYS = getTemplateLeadTimeDays(ACTIVE_TEMPLATE);
-const LEAD_TIME_WEEKS = Math.round(LEAD_TIME_DAYS / 7);
-const SPAN_WEEKS = Math.round(getTemplateSpanDays(ACTIVE_TEMPLATE) / 7);
 
 function formatYmdLocal(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-}
-
-function addDaysYmd(base: Date, days: number): string {
-  const copy = new Date(base);
-  copy.setDate(copy.getDate() + days);
-  return formatYmdLocal(copy);
 }
 
 function formatYmdHuman(value: string): string {
@@ -136,17 +124,10 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     [isSubmitting, releaseDate, title]
   );
 
-  // Anchor "today" and the recommended date once per modal mount. Re-deriving on
-  // every render would make the recommendation flicker across midnight while the
-  // modal is open — exceedingly unlikely in practice, but the mounted-once
-  // anchor also keeps the `min` attribute stable for the duration of the dialog.
-  const { todayYmd, recommendedYmd } = useMemo(() => {
-    const now = new Date();
-    return {
-      todayYmd: formatYmdLocal(now),
-      recommendedYmd: addDaysYmd(now, LEAD_TIME_DAYS),
-    };
-  }, []);
+  // Anchor "today" once per modal mount so the `min` attribute stays stable
+  // for the duration of the dialog. (The lead-time explainer moved to the
+  // post-create guide, NewReleaseGuide — founder call, 2026-07-23.)
+  const todayYmd = useMemo(() => formatYmdLocal(new Date()), []);
 
   // Calm "compressed runway" note: only fires when the picked date is valid AND
   // sooner than the template's lead time. The note frames the consequence in
@@ -317,12 +298,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                   <CalendarDays className="h-4 w-4 text-content-tertiary" />
                   Release date
                 </span>
-                <p className="mb-2 text-xs leading-5 text-content-secondary">
-                  This single rollout plans ~{SPAN_WEEKS} weeks of work, starting{' '}
-                  {LEAD_TIME_WEEKS} weeks before release. For full lead time, aim for{' '}
-                  <span className="font-medium text-content-primary">{formatYmdHuman(recommendedYmd)}</span>{' '}
-                  or later.
-                </p>
                 <input
                   type="date"
                   required
