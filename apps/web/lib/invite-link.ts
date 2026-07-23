@@ -30,6 +30,8 @@ type InviteLinkPayload = {
   w: string;
   /** Role granted on join — always 'member' in v1. */
   r: 'member';
+  /** Optional artist scope: the joiner only sees this artist's releases. */
+  a?: string;
   /** Expiry, epoch seconds. */
   exp: number;
 };
@@ -45,12 +47,18 @@ export function isInviteLinkToken(token: string): boolean {
   return token.startsWith(`${TOKEN_PREFIX}.`);
 }
 
-/** Mint a link token for a workspace. Throws if the server secret is missing. */
-export function mintInviteLinkToken(workspaceId: string): { token: string; expiresAt: string } {
+/** Mint a link token for a workspace. Throws if the server secret is missing.
+ * `artistScopeId` makes it an ARTIST link — the joiner only sees that
+ * artist's releases (founder decision, 2026-07-23). */
+export function mintInviteLinkToken(
+  workspaceId: string,
+  artistScopeId?: string | null
+): { token: string; expiresAt: string } {
   const secret = getSecret();
   if (!secret) throw new Error('Server environment is not configured.');
   const exp = Math.floor(Date.now() / 1000) + INVITE_LINK_TTL_DAYS * 24 * 60 * 60;
   const payload: InviteLinkPayload = { w: workspaceId, r: 'member', exp };
+  if (artistScopeId) payload.a = artistScopeId;
   const encoded = b64url(JSON.stringify(payload));
   return {
     token: `${TOKEN_PREFIX}.${encoded}.${sign(encoded, secret)}`,
@@ -59,7 +67,7 @@ export function mintInviteLinkToken(workspaceId: string): { token: string; expir
 }
 
 export type InviteLinkVerdict =
-  | { status: 'valid'; workspaceId: string; role: 'member' }
+  | { status: 'valid'; workspaceId: string; role: 'member'; artistScopeId: string | null }
   | { status: 'expired' }
   | { status: 'invalid' };
 
@@ -85,7 +93,12 @@ export function verifyInviteLinkToken(token: string): InviteLinkVerdict {
       return { status: 'invalid' };
     }
     if (payload.exp * 1000 <= Date.now()) return { status: 'expired' };
-    return { status: 'valid', workspaceId: payload.w, role: 'member' };
+    return {
+      status: 'valid',
+      workspaceId: payload.w,
+      role: 'member',
+      artistScopeId: typeof payload.a === 'string' && payload.a ? payload.a : null,
+    };
   } catch {
     return { status: 'invalid' };
   }

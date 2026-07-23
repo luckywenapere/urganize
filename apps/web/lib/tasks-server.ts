@@ -336,6 +336,15 @@ type WorkspaceAccessContext = {
    * any of these ids — the whole-workspace visibility model (founder
    * decision, 2026-07-23). */
   releaseOwnerIds: string[];
+  /** Artist-scoped memberships (founder decision, 2026-07-23): when the
+   * caller's membership in an owner's workspace carries artist_scope_id,
+   * they only see that owner's releases whose artist_id matches. Keyed by
+   * OWNER user id; absent/null = full visibility. Empty pre-migration —
+   * the scope column is read tolerantly so nothing breaks before
+   * 20260723200000_workspace_members_artist_scope.sql is applied. */
+  artistScopeByOwnerId: Record<string, string>;
+  /** Same scopes keyed by workspace id — for task/board checks. */
+  artistScopeByWorkspaceId: Record<string, string>;
 };
 
 const TASK_STATUS_SET = new Set<TaskStatus>([
@@ -834,6 +843,37 @@ async function resolveWorkspaceAccessContext(
     ])
   );
 
+  // Artist scopes — read in a SEPARATE, tolerant query so the app keeps
+  // working before the artist_scope_id migration is applied (the main
+  // membership select must never reference a column that may not exist).
+  const artistScopeByOwnerId: Record<string, string> = {};
+  const artistScopeByWorkspaceId: Record<string, string> = {};
+  if (membershipRows.length) {
+    try {
+      const scopeResult = await adminClient
+        .from(WORKSPACE_MEMBERS_TABLE)
+        .select('id,workspace_id,artist_scope_id')
+        .in('id', membershipRows.map((row) => row.id));
+      if (!scopeResult.error && Array.isArray(scopeResult.data)) {
+        for (const row of scopeResult.data as Array<{
+          id: string;
+          workspace_id: string;
+          artist_scope_id: string | null;
+        }>) {
+          const scope = String(row.artist_scope_id || '');
+          if (!scope) continue;
+          const workspace = workspaceById.get(row.workspace_id);
+          // Never scope the user against their OWN workspace.
+          if (!workspace || workspace.owner_id === user.id) continue;
+          artistScopeByWorkspaceId[row.workspace_id] = scope;
+          if (workspace.owner_id) artistScopeByOwnerId[workspace.owner_id] = scope;
+        }
+      }
+    } catch {
+      // Pre-migration environments: treat every membership as unscoped.
+    }
+  }
+
   // "Provisioned" means BOTH halves of what ensureOwnedWorkspace guarantees
   // exist: a workspace this user owns (workspaces.owner_id) AND their
   // owner-role membership row in it. Checking the role alone is not enough —
@@ -855,6 +895,8 @@ async function resolveWorkspaceAccessContext(
       primaryWorkspaceId: primaryMembership?.workspaceId || null,
       primaryWorkspace,
       releaseOwnerIds,
+      artistScopeByOwnerId,
+      artistScopeByWorkspaceId,
     },
     hasProvisionedOwnWorkspace,
   };
@@ -1167,7 +1209,25 @@ export async function ensureTaskAccess(
     return { error: NextResponse.json({ error: 'Task not found.' }, { status: 404 }) };
   }
 
-  return { task: result.data as TaskRow, access };
+  const task = result.data as TaskRow;
+
+  // Artist-scoped members only touch activities on THEIR artist's releases.
+  const artistScope = access.artistScopeByWorkspaceId[String(task.workspace_id || '')];
+  if (artistScope && task.release_id) {
+    const releaseResult = await adminClient
+      .from(RELEASES_TABLE)
+      .select('id,artist_id')
+      .eq('id', task.release_id)
+      .maybeSingle();
+    const releaseArtistId = String(
+      (releaseResult.data as { artist_id?: unknown } | null)?.artist_id || ''
+    );
+    if (releaseArtistId !== artistScope) {
+      return { error: NextResponse.json({ error: 'Task not found.' }, { status: 404 }) };
+    }
+  }
+
+  return { task, access };
 }
 
 export async function createDefaultReleaseTaskGroups(
@@ -1227,7 +1287,7 @@ export async function resolveReleaseTaskWorkspace(
   const access = await loadWorkspaceAccessContext(adminClient, user);
   const releaseResult = await adminClient
     .from(RELEASES_TABLE)
-    .select('id,title,artist_name,owner_user_id')
+    .select('id,title,artist_name,artist_id,owner_user_id')
     .eq('id', releaseId)
     .maybeSingle();
 
@@ -1258,6 +1318,15 @@ export async function resolveReleaseTaskWorkspace(
     .find((id) => id && access.workspaceIds.includes(id));
 
   if (!releaseWorkspaceId) {
+    throw new Error('Release workspace not found.');
+  }
+
+  // Artist-scoped members only reach boards for THEIR artist's releases.
+  const artistScope = access.artistScopeByWorkspaceId[releaseWorkspaceId];
+  if (
+    artistScope &&
+    String((releaseResult.data as { artist_id?: unknown }).artist_id || '') !== artistScope
+  ) {
     throw new Error('Release workspace not found.');
   }
 

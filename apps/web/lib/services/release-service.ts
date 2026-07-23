@@ -14,7 +14,11 @@ export class ReleaseService {
    * (WorkspaceAccessContext.releaseOwnerIds) and a teammate sees the whole
    * shared catalog. Omitted → owner-only, the pre-collaboration behavior.
    */
-  async getReleasesForUser(userId: string, visibleOwnerIds?: string[]) {
+  async getReleasesForUser(
+    userId: string,
+    visibleOwnerIds?: string[],
+    artistScopeByOwnerId?: Record<string, string>
+  ) {
     const ownerIds = Array.from(
       new Set([userId, ...(visibleOwnerIds || [])].filter(Boolean))
     );
@@ -28,7 +32,16 @@ export class ReleaseService {
 
     if (error) throw error;
 
-    const rows = data || [];
+    // Artist-scoped memberships (founder decision, 2026-07-23): an artist
+    // invited to a manager's workspace only sees THEIR releases. Filtered
+    // in JS — the per-owner OR-of-ANDs doesn't express cleanly in a single
+    // PostgREST filter, and roster-scale row counts make this free.
+    const scopeMap = artistScopeByOwnerId || {};
+    const rows = (data || []).filter((row) => {
+      const scope = scopeMap[String(row.owner_user_id || '')];
+      if (!scope) return true;
+      return String(row.artist_id || '') === scope;
+    });
 
     // Resolve Phase 3 cover art (signed URLs) via the shared helper that
     // /api/releases also uses. Releases without artwork fall back to the

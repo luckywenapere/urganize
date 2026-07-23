@@ -35,12 +35,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { token, expiresAt } = mintInviteLinkToken(workspaceId);
+    // Optional ARTIST scope (founder decision, 2026-07-23): an artist link
+    // admits the joiner with visibility limited to that artist's releases.
+    const body = (await request.json().catch(() => ({}))) as { artistId?: unknown };
+    const artistScopeId = String(body?.artistId || '').trim().slice(0, 100) || null;
+
+    const { token, expiresAt } = mintInviteLinkToken(workspaceId, artistScopeId);
     return NextResponse.json({
       ok: true,
       inviteUrl: buildInviteUrl(token),
       expiresAt,
       ttlDays: INVITE_LINK_TTL_DAYS,
+      artistScopeId,
     });
   } catch (error) {
     return NextResponse.json(

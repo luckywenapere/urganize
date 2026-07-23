@@ -57,12 +57,20 @@ export async function GET(request: NextRequest) {
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     const releases = await releaseService.getReleasesForUser(
       auth.user.id,
-      access.releaseOwnerIds
+      access.releaseOwnerIds,
+      access.artistScopeByOwnerId
     );
 
     let tasks: ExecutionTask[] = [];
     if (access.workspaceIds.length && access.membershipIds.length) {
       tasks = await taskService.getTasksForUser(auth.user.id, access.workspaceIds) as ExecutionTask[];
+      // Artist-scoped members only see activities for THEIR releases — the
+      // release list above is already scope-filtered, so it doubles as the
+      // allow-list. Unscoped users skip this entirely.
+      if (Object.keys(access.artistScopeByOwnerId).length > 0) {
+        const visibleReleaseIds = new Set(releases.map((release) => release.id));
+        tasks = tasks.filter((task) => task.releaseId && visibleReleaseIds.has(task.releaseId));
+      }
     }
 
     // owner_user_id is NOT NULL, so a plain eq matches everything this user

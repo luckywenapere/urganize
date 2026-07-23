@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
+import { useReleaseStore } from '@/stores/useReleaseStore';
 import { getRolePermissions } from '@/lib/role-permissions';
 import { errorMessage } from '@/lib/errors';
 import type { WorkspaceMember } from '@/types/auth';
@@ -39,14 +40,33 @@ export function TeammatesSection({
   // check on every unrelated store update).
   const rolePermissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
 
+  // Distinct artists on the roster, derived from the releases already in the
+  // store — the picker for ARTIST invites (an artist only sees their own
+  // releases; founder decision, 2026-07-23).
+  const releases = useReleaseStore((state) => state.releases);
+  const rosterArtists = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const release of releases) {
+      if (release.artistId && !byId.has(release.artistId)) {
+        byId.set(release.artistId, release.artistName || 'Unnamed artist');
+      }
+    }
+    return Array.from(byId, ([id, name]) => ({ id, name }));
+  }, [releases]);
+
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('viewer');
+  const [inviteArtistId, setInviteArtistId] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [teammateMessage, setTeammateMessage] = useState('');
   const [teammateError, setTeammateError] = useState('');
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
+
+  // Artist invites need a concrete artist to scope to.
+  const isArtistInvite = inviteRole === 'artist';
+  const scopedArtistId = isArtistInvite ? inviteArtistId : '';
 
   if (!user) return null;
   // Read-only for non-managers (founder decision, 2026-07-23): every
@@ -74,6 +94,11 @@ export function TeammatesSection({
       return;
     }
 
+    if (isArtistInvite && !scopedArtistId) {
+      setTeammateError('Pick which artist this invite is for.');
+      return;
+    }
+
     setIsInviting(true);
     setTeammateError('');
     setTeammateMessage('');
@@ -87,7 +112,11 @@ export function TeammatesSection({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ email, role: inviteRole }),
+        body: JSON.stringify({
+          email,
+          role: inviteRole,
+          artistId: scopedArtistId || undefined,
+        }),
       });
       const payload = (await response.json().catch(() => ({}))) as {
         inviteUrl?: string | null;
@@ -120,6 +149,10 @@ export function TeammatesSection({
   // don't have the person's email. Reuses the same link display + Copy UI
   // the email invite already renders.
   const handleCreateInviteLink = async () => {
+    if (isArtistInvite && !scopedArtistId) {
+      setTeammateError('Pick which artist this invite link is for.');
+      return;
+    }
     setIsCreatingLink(true);
     setTeammateError('');
     setTeammateMessage('');
@@ -129,7 +162,8 @@ export function TeammatesSection({
       if (!token) throw new Error('Session expired. Please sign in again.');
       const response = await fetch('/api/workspace/invite-link', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ artistId: scopedArtistId || undefined }),
       });
       const payload = (await response.json().catch(() => ({}))) as {
         inviteUrl?: string;
@@ -140,8 +174,13 @@ export function TeammatesSection({
         throw new Error(payload.error || 'Could not create invite link.');
       }
       setInviteUrl(payload.inviteUrl);
+      const scopedArtistName = scopedArtistId
+        ? rosterArtists.find((artist) => artist.id === scopedArtistId)?.name
+        : null;
       setTeammateMessage(
-        `Invite link created — anyone with it joins as a Team Member. Valid for ${payload.ttlDays ?? 7} days.`
+        scopedArtistName
+          ? `Artist invite link created — whoever joins with it only sees ${scopedArtistName}'s releases. Valid for ${payload.ttlDays ?? 7} days.`
+          : `Invite link created — anyone with it joins as a Team Member. Valid for ${payload.ttlDays ?? 7} days.`
       );
       try {
         await navigator.clipboard.writeText(payload.inviteUrl);
@@ -204,6 +243,23 @@ export function TeammatesSection({
           <option value="team-member">Team Member</option>
           <option value="viewer">Viewer</option>
         </select>
+        {/* ARTIST invites scope visibility to one artist's releases —
+            pick which artist this person is (founder decision, 2026-07-23). */}
+        {isArtistInvite ? (
+          <select
+            value={inviteArtistId}
+            onChange={(event) => setInviteArtistId(event.target.value)}
+            aria-label="Which artist is this invite for?"
+            className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
+          >
+            <option value="">Which artist?</option>
+            {rosterArtists.map((artist) => (
+              <option key={artist.id} value={artist.id}>
+                {artist.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
         <button
           type="button"
           onClick={() => void handleInviteTeammate()}
@@ -225,7 +281,11 @@ export function TeammatesSection({
             className="motion-focus inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary disabled:opacity-60"
           >
             <Copy className="h-3 w-3" aria-hidden="true" />
-            {isCreatingLink ? 'Creating link…' : 'Copy invite link'}
+            {isCreatingLink
+              ? 'Creating link…'
+              : isArtistInvite
+                ? 'Copy artist invite link'
+                : 'Copy invite link'}
           </button>
         </div>
       ) : null}
