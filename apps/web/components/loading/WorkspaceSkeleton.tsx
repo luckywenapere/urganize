@@ -123,21 +123,6 @@ function ReleaseCardSkeleton() {
   );
 }
 
-/** Focused-variant card slot: fixed thumbnail beside the meta block. */
-function FocusedCardSkeleton() {
-  return (
-    <div className="flex overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
-      <div className="w-28 shrink-0 border-r border-stroke-subtle bg-bg-elevated sm:w-36" />
-      <div className="min-w-0 flex-1 space-y-2.5 px-4 py-4">
-        <SkeletonBlock className="h-2.5 w-20" />
-        <SkeletonBlock className="h-4 w-3/4" />
-        <SkeletonBlock className="h-2.5 w-24" />
-        <SkeletonBlock className="mt-1.5 h-1 w-full" />
-      </div>
-    </div>
-  );
-}
-
 /** "Tasks" header row (New task + Files pills) + one dim block for the list. */
 function TasksPanelSkeleton() {
   return (
@@ -196,7 +181,8 @@ function DesktopFocusedSkeleton() {
         </div>
 
         <div className="min-w-0 space-y-6">
-          <FocusedCardSkeleton />
+          {/* The focused card lives in the topbar now — the center column
+              is the activities panel alone. */}
           <TasksPanelSkeleton />
         </div>
 

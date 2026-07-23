@@ -155,8 +155,7 @@ export function TaskQuickCreateModal({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Quick Create</p>
-            <h2 id={headingId} className="mt-2 text-2xl font-semibold tracking-tight text-content-primary">Create activity</h2>
+            <h2 id={headingId} className="text-2xl font-semibold tracking-tight text-content-primary">Create activity</h2>
           </div>
 
           <button

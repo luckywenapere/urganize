@@ -14,7 +14,6 @@ import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { TaskRow } from '@/components/tasks/TaskRow';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
-import { ScopePill } from './ScopePill';
 
 // Content calendar entry point (URG-157): the workspace is the surface users
 // actually land on after login, so the scoped-release header carries the
@@ -70,15 +69,14 @@ const isPersistedExpanded = (value: unknown): value is Partial<Record<TaskSectio
 type TasksPanelProps = {
   /** Tasks already filtered by `?release=` scope (handled in parent). */
   tasks: Task[];
-  /** Pill display data; null when no scope is set. */
+  /** Scoped release context (links, empty copy); null when unscoped. */
   scopedRelease: Pick<Release, 'id' | 'title' | 'artistName'> | null;
-  onClearScope: () => void;
   /** Optional DOM id, used by the parent to smooth-scroll into view when the
    * layout is stacked (below lg) and a release card is tapped. */
   id?: string;
 };
 
-export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPanelProps) {
+export function TasksPanel({ tasks, scopedRelease, id }: TasksPanelProps) {
   // openTask opens the global task detail pop-up mounted by TaskUIProvider —
   // this panel stays where it is underneath the modal.
   const { openTask, openQuickCreate } = useTaskUI();
@@ -187,14 +185,6 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
               Files
             </Link>
           ) : null}
-          {/* ScopePill is desktop-only. Below lg the mobile drill-down model
-              in WorkspaceView replaces it with a dedicated back+title header
-              above this panel — the pill's "showing tasks for X / × clear"
-              affordance is redundant when drilling IS the scope and the back
-              control IS the clear. */}
-          <div className="hidden lg:block">
-            <ScopePill release={scopedRelease} onClear={onClearScope} />
-          </div>
         </div>
       </div>
 
