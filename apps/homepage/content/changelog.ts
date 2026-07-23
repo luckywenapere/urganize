@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.19.0",
+    date: "July 23, 2026",
+    highlights: [
+      "Real notifications are here. Turn them on in Settings and your device tells you when a task is assigned to you, when something's due, and when a task changes status — even when the app is closed.",
+      "Urganize is now installable on your phone: add it to your home screen and it opens like an app, notifications included.",
+    ],
+  },
+  {
     version: "0.18.1",
     date: "July 23, 2026",
     highlights: [

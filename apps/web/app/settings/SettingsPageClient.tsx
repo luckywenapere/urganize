@@ -17,17 +17,18 @@ import {
   type WorkspaceArtist,
 } from '@/components/settings/WorkspaceArtistSection';
 import { ArtistProfileSection } from '@/components/settings/ArtistProfileSection';
+import { PushNotificationsSection } from '@/components/settings/PushNotificationsSection';
 import { TeammatesSection } from '@/components/settings/TeammatesSection';
 import { ReleasesSection } from '@/components/settings/ReleasesSection';
 import { SessionSection } from '@/components/settings/SessionSection';
 import { DeleteAccountSection } from '@/components/settings/DeleteAccountSection';
 
-// 2026-07-23 (founder calls): the Workspace logo section and the
-// Notifications section were removed from Settings entirely. The logo's
-// API routes + read-time cover-art fallback stay dormant (an already-
-// uploaded logo keeps working; there's just no UI to change it), and the
-// notifications prefs were device-local placebos — email delivery was
-// never wired. Restore either from git history.
+// 2026-07-23 (founder calls): the Workspace logo section was removed from
+// Settings entirely (its API routes + read-time cover-art fallback stay
+// dormant — an already-uploaded logo keeps working; there's just no UI to
+// change it). The old placebo notifications-prefs section was removed the
+// same day and replaced by PushNotificationsSection — REAL per-device Web
+// Push (see lib/push.ts / lib/push-server.ts).
 
 // Workspace artist/logo editors are gated by the same flag that hides the
 // legacy artist input in the create-release modal. Lifting to many artists
@@ -258,6 +259,7 @@ export default function SettingsPage() {
           <ArtistProfileSection />
           <ProfileSection />
           <AppearanceSection />
+          <PushNotificationsSection />
 
           {isManagerAccount && (
             <TeammatesSection
