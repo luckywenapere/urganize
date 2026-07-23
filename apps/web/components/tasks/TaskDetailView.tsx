@@ -530,10 +530,24 @@ export function TaskDetailView({
           </div>
         </div>
       ) : isLoading ? (
-        <div className="space-y-3">
-          <div className="h-10 rounded-[18px] skeleton-shimmer" />
-          <div className="h-24 rounded-[18px] skeleton-shimmer" />
-          <div className="h-24 rounded-[18px] skeleton-shimmer" />
+        // Mirrors the loaded pop-up's real layout — checkbox+title row, the
+        // three property rows (Status / Assignee / Due date), then the
+        // description block — so content lands where the skeleton stood
+        // instead of reflowing (same convention as the page skeletons).
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="h-5 w-5 shrink-0 rounded-full skeleton-shimmer" />
+            <div className="h-7 w-2/3 skeleton-shimmer" />
+          </div>
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={`task-prop-${index}`} className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-x-3">
+                <div className="h-3 w-16 skeleton-shimmer" />
+                <div className="h-9 w-full max-w-[300px] skeleton-shimmer" />
+              </div>
+            ))}
+          </div>
+          <div className="h-[120px] rounded-[18px] skeleton-shimmer" />
         </div>
       ) : (
         <p className="text-sm text-content-secondary">Select a task to inspect the full context.</p>

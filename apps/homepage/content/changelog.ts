@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.19.1",
+    date: "July 23, 2026",
+    highlights: [
+      "Task edits now show up in your list instantly — reassign or unassign someone, rename a task, or move a date, and the row updates the moment you do it. New and deleted tasks appear and disappear right away too.",
+      "Loading screens across the app now match what actually loads, so pages land in place instead of jumping around.",
+    ],
+  },
+  {
     version: "0.19.0",
     date: "July 23, 2026",
     highlights: [

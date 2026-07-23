@@ -449,6 +449,32 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         setTask(payload.task);
         setDrawerError('');
         setStatusBlockerMessage('');
+        // Sync the list row in place so every open surface (workspace
+        // buckets, release detail list) reflects the edit IMMEDIATELY —
+        // assignee cleared, title renamed, due date moved. The old
+        // TASKS_CHANGED_EVENT lost its listeners when the legacy pages were
+        // removed, so the store is the one live channel rows actually read.
+        const fresh = payload.task;
+        const taskStore = useTaskStore.getState();
+        taskStore.setTasks(
+          taskStore.tasks.map((row) =>
+            row.id === fresh.id
+              ? {
+                  ...row,
+                  title: fresh.title,
+                  description: fresh.description,
+                  status: fresh.status,
+                  priority: fresh.priority,
+                  dueDate: fresh.dueDate,
+                  assignedToUserId: fresh.assignedToUserId,
+                  assignee: fresh.assignee ?? null,
+                  groupName: fresh.groupName,
+                  groupColor: fresh.groupColor,
+                  updatedAt: fresh.updatedAt,
+                }
+              : row
+          )
+        );
         dispatchTasksChanged();
         }
     } catch (error) {
@@ -510,6 +536,14 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       });
 
       closeQuickCreate();
+
+      // Immediate-sync: append the created task to the store so it appears
+      // in the list right away (see the saveTaskPatch note — the changed
+      // event has no listeners anymore, the store is the live channel).
+      if (payload.task) {
+        const taskStore = useTaskStore.getState();
+        taskStore.setTasks([...taskStore.tasks, payload.task as (typeof taskStore.tasks)[number]]);
+      }
       dispatchTasksChanged();
 
       if (payload.task?.id) {
@@ -532,9 +566,15 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    await requestJson<{ ok: boolean }>(`/api/tasks/${activeTaskId}`, {
+    const deletedTaskId = activeTaskId;
+    await requestJson<{ ok: boolean }>(`/api/tasks/${deletedTaskId}`, {
       method: 'DELETE',
     });
+
+    // Same immediate-sync rationale as saveTaskPatch: drop the row from the
+    // store so it vanishes from the list the moment the modal closes.
+    const taskStore = useTaskStore.getState();
+    taskStore.setTasks(taskStore.tasks.filter((row) => row.id !== deletedTaskId));
 
     closeTask();
     setTask(null);

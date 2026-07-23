@@ -65,6 +65,7 @@ export function SettingsPageSkeleton({
               { key: 'artist-profile', height: 'h-28', show: isArtistAccount },
               { key: 'profile', height: 'h-40', show: true },
               { key: 'appearance', height: 'h-24', show: true },
+              { key: 'push-notifications', height: 'h-20', show: true },
               { key: 'teammates', height: 'h-32', show: isManagerAccount },
               { key: 'releases', height: 'h-32', show: true },
               { key: 'security', height: 'h-40', show: true },
