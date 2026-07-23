@@ -35,7 +35,9 @@ const routeTitles = [
   { match: (pathname: string) => pathname === '/dashboard', title: '', eyebrow: '' },
   { match: (pathname: string) => pathname === '/dashboard/chappi', title: '', eyebrow: '' },
   { match: (pathname: string) => pathname.startsWith('/dashboard/releases'), title: 'Release', eyebrow: 'Release detail' },
-  { match: (pathname: string) => pathname.startsWith('/settings'), title: 'Settings', eyebrow: 'Account' },
+  // Settings carries no topbar title either (founder call, 2026-07-23) —
+  // the page's own section kickers say where you are.
+  { match: (pathname: string) => pathname.startsWith('/settings'), title: '', eyebrow: '' },
 ];
 
 function getRouteTitle(pathname: string | null) {

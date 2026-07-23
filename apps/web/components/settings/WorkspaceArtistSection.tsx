@@ -39,7 +39,9 @@ export function WorkspaceArtistSection({
         The single artist this workspace works on. Renaming here updates
         every release&apos;s cached artist label.
       </p>
-      {isLoading ? (
+      {/* Skeleton only while nothing is loaded yet — a background refetch
+          with the editor already rendered keeps it in place. */}
+      {isLoading && !artist ? (
         <div className="space-y-2">
           <SkeletonBlock className="h-3 w-20" />
           <SkeletonBlock className="h-10 w-full rounded-none" />
