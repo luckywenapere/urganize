@@ -237,7 +237,7 @@ export default function ReleaseDetailPage() {
               <p className="mt-1 text-status-error/80">{error || 'This release may have been deleted.'}</p>
             </div>
           </div>
-          <Link href="/dashboard" className="mt-4 inline-flex border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-semibold text-content-primary hover:bg-bg-hover">
+          <Link href="/dashboard" className="mt-4 inline-flex rounded-full border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-semibold text-content-primary hover:bg-bg-hover">
             Back to dashboard
           </Link>
         </div>
@@ -290,7 +290,7 @@ export default function ReleaseDetailPage() {
             {CONTENT_CALENDAR_ENABLED ? (
               <Link
                 href={`/dashboard/releases/${releaseId}/calendar`}
-                className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                className="inline-flex h-9 items-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
               >
                 <CalendarDays className="h-3.5 w-3.5" />
                 Content calendar
@@ -305,7 +305,7 @@ export default function ReleaseDetailPage() {
               <button
                 type="button"
                 onClick={() => setIsTailorOpen(true)}
-                className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                className="inline-flex h-9 items-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 {hasTailoring ? 'Re-tailor plan' : 'Tailor plan'}
@@ -316,7 +316,7 @@ export default function ReleaseDetailPage() {
                 type="button"
                 onClick={() => void generateStatus()}
                 disabled={isGeneratingStatus}
-                className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary disabled:opacity-60"
+                className="inline-flex h-9 items-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary disabled:opacity-60"
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 {isGeneratingStatus ? 'Generating…' : 'Generate status update'}
@@ -326,7 +326,7 @@ export default function ReleaseDetailPage() {
         </div>
 
         {/* Progress */}
-        <div className="mt-6 border border-stroke-default bg-bg-surface p-4">
+        <div className="mt-6 rounded-xl border border-stroke-default bg-bg-surface p-4">
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium text-content-secondary">Motion</span>
             <span className="text-content-primary">
@@ -341,21 +341,23 @@ export default function ReleaseDetailPage() {
             at the bottom, collapsed by default, with the count as the
             primary signal. */}
         <section className="mt-6">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">Tasks</h2>
+          {/* "Activities", not "Tasks", on the release page (founder call,
+              2026-07-23) — the workspace panel keeps its Tasks framing. */}
+          <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">Activities</h2>
           {releaseTasks.length === 0 ? (
-            <div className="mt-3 border border-stroke-default bg-bg-surface p-6 text-center">
+            <div className="mt-3 rounded-xl border border-stroke-default bg-bg-surface p-6 text-center">
               <p className="text-sm text-content-secondary">No tasks yet for this release.</p>
               <button
                 type="button"
                 onClick={() => openQuickCreate({ releaseId, source: 'inline' })}
-                className="mt-3 inline-flex border border-brand/25 bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+                className="mt-3 inline-flex rounded-full border border-brand/25 bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
               >
                 Add tasks
               </button>
             </div>
           ) : (
             <>
-              <div className="mt-3 space-y-1">
+              <div className="mt-3 overflow-hidden rounded-xl border border-stroke-subtle">
                 {openTasks.map((task) => {
                   const isLocked = task.status === TASK_LOCKED_STATUS;
                   const isDone = task.status === TASK_DONE_STATUS;
@@ -418,7 +420,7 @@ export default function ReleaseDetailPage() {
               </div>
 
               {doneBucketTasks.length > 0 ? (
-                <div className="mt-3 border border-stroke-default bg-bg-surface/60">
+                <div className="mt-3 overflow-hidden rounded-xl border border-stroke-default bg-bg-surface/60">
                   <button
                     type="button"
                     onClick={() => setIsDoneBucketOpen((v) => !v)}
@@ -448,7 +450,7 @@ export default function ReleaseDetailPage() {
                         return (
                           <div
                             key={task.id}
-                            className={`flex w-full items-center gap-3 border border-stroke-default bg-bg-surface px-4 py-3 text-sm ${
+                            className={`flex w-full items-center gap-3 rounded-xl border border-stroke-default bg-bg-surface px-4 py-3 text-sm ${
                               isMilestone ? 'border-l-2 border-l-status-info' : ''
                             }`}
                           >

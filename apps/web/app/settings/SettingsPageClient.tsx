@@ -237,7 +237,7 @@ export default function SettingsPage() {
           <div className="mb-4 flex sm:justify-end">
             <Link
               href="/dashboard"
-              className="w-full border border-stroke-default bg-bg-surface px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
+              className="w-full rounded-full border border-stroke-default bg-bg-surface px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
             >
               Dashboard
             </Link>

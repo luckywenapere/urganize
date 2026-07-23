@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { openExternalUrl } from '@/lib/external-link';
+import { GearIcon } from '@/components/app/BrandIcons';
 
 // The keyboard-shortcuts panel (and its "?" hotkey + menu item) was removed
 // 2026-07-23 (founder call) — the menu is Docs / Contact / Settings plus the
@@ -18,7 +19,7 @@ function ItemIcon({
   children: ReactNode;
 }) {
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-none border border-stroke-subtle bg-bg-hover text-content-secondary group-hover:text-content-primary">
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-stroke-subtle bg-bg-hover text-content-secondary group-hover:text-content-primary">
       {children}
     </span>
   );
@@ -38,7 +39,7 @@ function HelpMenuItem({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="group flex min-h-[40px] w-full items-center gap-3 rounded-none px-3 py-1.5 text-left text-xs text-content-secondary transition hover:bg-bg-hover hover:text-content-primary"
+      className="group flex min-h-[40px] w-full items-center gap-3 rounded-lg px-3 py-1.5 text-left text-xs text-content-secondary transition hover:bg-bg-hover hover:text-content-primary"
     >
       <ItemIcon>{icon}</ItemIcon>
       <span className="min-w-0 flex-1 font-sans">{label}</span>
@@ -61,19 +62,6 @@ function ContactIcon() {
     <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M4.5 7.5A1.5 1.5 0 0 1 6 6h12a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 18 18H6a1.5 1.5 0 0 1-1.5-1.5v-9Z" />
       <path d="m6 8 6 4.5L18 8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function SettingsIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5Z" />
-      <path
-        d="M19 12a7.8 7.8 0 0 0-.08-1.08l2.02-1.58-1.92-3.32-2.45.74a7.8 7.8 0 0 0-1.87-1.08L14.5 3h-5l-.2 2.68c-.67.25-1.3.61-1.87 1.08l-2.45-.74L3.06 9.34l2.02 1.58A7.8 7.8 0 0 0 5 12c0 .37.03.73.08 1.08l-2.02 1.58 1.92 3.32 2.45-.74c.57.47 1.2.83 1.87 1.08L9.5 21h5l.2-2.68c.67-.25 1.3-.61 1.87-1.08l2.45.74 1.92-3.32-2.02-1.58c.05-.35.08-.71.08-1.08Z"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
     </svg>
   );
 }
@@ -110,7 +98,7 @@ export function HelpMenu() {
         },
         {
           label: 'Settings',
-          icon: <SettingsIcon />,
+          icon: <GearIcon />,
           onClick: () => {
             if (pathname !== '/settings') {
               router.push('/settings');
@@ -164,15 +152,28 @@ export function HelpMenu() {
     action();
   };
 
+  // Lives in the topbar's right cluster since 2026-07-23 (founder call) —
+  // the launcher keeps the quiet mono "?" it had bottom-left (that
+  // understatement IS the house look; see the Brand Bible notes in
+  // globals.css), it just sits with the rest of the navigation now and the
+  // menu drops DOWN instead of up.
   return (
-    <div
-      ref={containerRef}
-      className="fixed bottom-6 left-6 z-[115] hidden md:block"
-    >
+    <div ref={containerRef} className="relative hidden shrink-0 md:block">
+      <button
+        type="button"
+        aria-label="Open help menu"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((current) => !current)}
+        className="motion-focus grid h-10 w-10 place-items-center rounded-full font-mono text-[11px] text-content-quaternary transition-colors hover:bg-bg-hover hover:text-content-secondary"
+      >
+        ?
+      </button>
+
       {isOpen ? (
         <div
           role="menu"
-          className="absolute bottom-full left-0 mb-4 w-64 animate-in fade-in slide-in-from-bottom-1 duration-150 rounded-none border border-stroke-strong bg-bg-elevated p-2 shadow-2xl"
+          className="animate-menu-down absolute right-0 top-full z-50 mt-2 w-64 origin-top-right rounded-xl border border-stroke-default bg-bg-elevated p-2 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
         >
           {menuGroups.map((group, groupIndex) => (
             <div key={`help-group-${groupIndex}`}>
@@ -189,17 +190,6 @@ export function HelpMenu() {
           ))}
         </div>
       ) : null}
-
-      <button
-        type="button"
-        aria-label="Open help menu"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        onClick={() => setIsOpen((current) => !current)}
-        className="flex h-6 w-6 items-center justify-center font-mono text-[10px] text-content-quaternary transition-all duration-150 hover:text-content-secondary"
-      >
-        ?
-      </button>
     </div>
   );
 }

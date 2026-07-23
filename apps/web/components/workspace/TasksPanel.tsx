@@ -219,7 +219,7 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
           return (
             <div
               key={sectionKey}
-              className={`border border-stroke-default ${
+              className={`overflow-hidden rounded-xl border border-stroke-default ${
                 isDoneBucket ? 'bg-bg-surface/60' : 'bg-bg-surface'
               }`}
             >

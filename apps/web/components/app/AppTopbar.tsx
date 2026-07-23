@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, MessageCircle, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Logo } from '@urganize/ui';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
+import { HelpMenu } from '@/components/app/HelpMenu';
+import { CatalogIcon, ChappiIcon } from '@/components/app/BrandIcons';
 
 // Same flag ChappiPageClient reads. Inlined at build time (NEXT_PUBLIC_
 // prefix) so the icon only appears once Chappi's own dedicated page is
@@ -83,7 +85,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
         <button
           type="button"
           onClick={onNewRelease}
-          className="motion-focus motion-press hidden h-10 items-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse shadow-[0_18px_36px_-28px_rgb(var(--color-brand)/0.55)] hover:bg-brand-hover sm:inline-flex"
+          className="motion-focus motion-press hidden h-10 items-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse shadow-[0_18px_36px_-28px_rgb(var(--color-brand)/0.55)] hover:bg-brand-hover sm:inline-flex"
         >
           <Plus className="h-4 w-4" />
           <span>New release</span>
@@ -95,31 +97,36 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             Chappi exists as a surface — with the flag off, /dashboard is the
             only surface and needs no switcher. Sits left of
             NotificationsBell, same slot pattern. */}
+        {/* Nav icons follow the help "?"'s quiet voice (founder call,
+            2026-07-23): no boxed borders at rest — tertiary ink that
+            brightens on hover, a soft round hover fill, and brand ink only
+            on the active surface. The New release CTA stays the one filled
+            control up here. */}
         {CHAPPI_ENABLED ? (
           <>
             <Link
               href="/dashboard"
               aria-label="Workspace"
               title="Workspace"
-              className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center border transition-colors ${
+              className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
                 pathname === '/dashboard'
-                  ? 'border-brand bg-brand/10 text-brand'
-                  : 'border-stroke-default bg-bg-elevated text-content-primary hover:bg-bg-hover'
+                  ? 'bg-brand/10 text-brand'
+                  : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
               }`}
             >
-              <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+              <CatalogIcon className="h-[18px] w-[18px]" />
             </Link>
             <Link
               href="/dashboard/chappi"
               aria-label="Chappi"
               title="Chappi"
-              className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center border transition-colors ${
+              className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
                 pathname === '/dashboard/chappi'
-                  ? 'border-brand bg-brand/10 text-brand'
-                  : 'border-stroke-default bg-bg-elevated text-content-primary hover:bg-bg-hover'
+                  ? 'bg-brand/10 text-brand'
+                  : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
               }`}
             >
-              <MessageCircle className="h-4 w-4" aria-hidden="true" />
+              <ChappiIcon className="h-[18px] w-[18px]" />
             </Link>
           </>
         ) : null}
@@ -129,6 +136,10 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             as it was until the bell is flipped on. Sits left of WorkspaceMenu
             so the account monogram remains the rightmost control. */}
         <NotificationsBell />
+
+        {/* Help "?" — moved up from the bottom-left corner (2026-07-23);
+            same quiet mono launcher, now among the rest of the nav. */}
+        <HelpMenu />
 
         <WorkspaceMenu userName={userName} />
       </div>

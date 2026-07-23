@@ -54,7 +54,7 @@ export function ArtistProfileSection() {
           <input
             value={artistProfileName}
             onChange={(event) => setArtistProfileName(event.target.value)}
-            className="w-full rounded-none border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+            className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
             placeholder="e.g. Tems"
           />
         </label>
@@ -64,7 +64,7 @@ export function ArtistProfileSection() {
           type="button"
           onClick={() => void handleSave()}
           disabled={isSaving}
-          className="rounded-none bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
         >
           {isSaving ? 'Saving...' : 'Save artist name'}
         </button>

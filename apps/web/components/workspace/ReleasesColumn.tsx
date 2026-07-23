@@ -31,16 +31,12 @@ export function ReleasesColumn({
 }: ReleasesColumnProps) {
   return (
     <section className="space-y-3">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-        Releases
-      </h2>
-
       {/* Mobile-only full-width "New release". AppTopbar's New release button
           is `hidden sm:inline-flex`; this fills the gap below 640px. */}
       <button
         type="button"
         onClick={onCreateRelease}
-        className="motion-focus motion-press inline-flex h-11 w-full items-center justify-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:hidden"
+        className="motion-focus motion-press inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:hidden"
       >
         <Plus className="h-4 w-4" />
         New release
@@ -54,7 +50,7 @@ export function ReleasesColumn({
             <button
               type="button"
               onClick={onCreateRelease}
-              className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+              className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
             >
               <Plus className="h-4 w-4" />
               Create release

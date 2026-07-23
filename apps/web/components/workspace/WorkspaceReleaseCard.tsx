@@ -126,7 +126,7 @@ export function WorkspaceReleaseCard({
     </>
   );
 
-  const frameClass = `group motion-focus block w-full overflow-hidden border bg-bg-surface text-left transition-colors ${
+  const frameClass = `group motion-focus block w-full overflow-hidden rounded-xl border bg-bg-surface text-left transition-colors ${
     selected
       ? 'border-brand bg-brand/8'
       : 'border-stroke-default hover:border-stroke-strong hover:bg-bg-hover'

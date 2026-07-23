@@ -76,7 +76,7 @@ export function PushNotificationsSection() {
             type="button"
             onClick={() => void handleToggle()}
             disabled={isWorking}
-            className={`shrink-0 rounded-none px-4 py-2 text-sm font-semibold disabled:opacity-60 ${
+            className={`shrink-0 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60 ${
               status === 'enabled'
                 ? 'border border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover'
                 : 'bg-brand text-content-inverse hover:bg-brand-hover'

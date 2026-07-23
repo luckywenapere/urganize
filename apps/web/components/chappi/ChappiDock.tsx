@@ -97,7 +97,7 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
         type="button"
         onClick={() => setOpenPersisted(true)}
         aria-label="Ask Chappi (beta)"
-        className="group fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-none border border-stroke-default bg-bg-elevated py-2.5 pl-3.5 pr-4 shadow-2xl transition-all duration-150 hover:border-stroke-strong hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:bottom-6 md:right-6"
+        className="group fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-full border border-stroke-default bg-bg-elevated py-2.5 pl-3.5 pr-4 shadow-2xl transition-all duration-150 hover:border-stroke-strong hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:bottom-6 md:right-6"
       >
         <MessageCircle className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
         <span className="font-mono text-[10px] uppercase tracking-widest text-content-tertiary group-hover:text-content-primary">
@@ -112,7 +112,7 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
     <div
       role="dialog"
       aria-label="Chappi assistant"
-      className="fixed bottom-5 right-5 z-[130] flex h-[560px] max-h-[calc(100vh-6rem)] w-[380px] max-w-[calc(100vw-2.5rem)] flex-col border border-stroke-default bg-bg-surface shadow-2xl md:bottom-6 md:right-6"
+      className="fixed bottom-5 right-5 z-[130] flex h-[560px] max-h-[calc(100vh-6rem)] w-[380px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface shadow-2xl md:bottom-6 md:right-6"
     >
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-stroke-subtle px-3 py-2">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">

@@ -29,13 +29,10 @@ export function WorkspaceDesktopGrid({
   onCreateRelease,
 }: WorkspaceDesktopGridProps) {
   return (
+    // No "Releases" eyebrow (founder call, 2026-07-23): the centered grid
+    // IS the page — a left-anchored label over a centered row read as
+    // misaligned, and the topbar already orients the user.
     <section className="workspace-mode-enter space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Releases
-        </h2>
-      </div>
-
       {releases.length === 0 ? (
         <EmptyState
           title="No releases yet"
@@ -44,7 +41,7 @@ export function WorkspaceDesktopGrid({
             <button
               type="button"
               onClick={onCreateRelease}
-              className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+              className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
             >
               <Plus className="h-4 w-4" />
               Create release

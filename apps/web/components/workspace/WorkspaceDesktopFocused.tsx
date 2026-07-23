@@ -58,7 +58,7 @@ export function WorkspaceDesktopFocused({
         type="button"
         onClick={onClose}
         aria-label="Back to all releases"
-        className="motion-focus motion-press inline-flex items-center gap-2 border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+        className="motion-focus motion-press inline-flex items-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
       >
         <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
         Back to all releases

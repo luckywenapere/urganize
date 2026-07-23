@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { ExitIcon, GearIcon } from '@/components/app/BrandIcons';
 import { useAuthStore } from '@/lib/auth-store';
 
 type WorkspaceMenuProps = {
@@ -132,7 +132,7 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Workspace menu"
-        className="motion-focus motion-press grid h-10 w-10 place-items-center border border-stroke-default bg-bg-elevated text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+        className="motion-focus motion-press grid h-10 w-10 place-items-center rounded-full border border-stroke-default bg-bg-elevated text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover"
       >
         {monogram}
       </button>
@@ -142,7 +142,7 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
           ref={menuRef}
           role="menu"
           aria-label="Workspace menu"
-          className="animate-menu-down absolute right-0 top-full z-50 mt-2 w-60 origin-top-right border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
+          className="animate-menu-down absolute right-0 top-full z-50 mt-2 w-60 origin-top-right overflow-hidden rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
         >
           {/* Stage 2: the "Lucky / Workspace" identity used to live in the
               sidebar footer. With the sidebar gone it lives here, as a
@@ -155,7 +155,7 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
             role="presentation"
             className="flex items-center gap-3 border-b border-stroke-subtle px-3 py-3"
           >
-            <div className="grid h-9 w-9 shrink-0 place-items-center border border-stroke-default bg-bg-elevated text-xs font-semibold text-content-primary">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-elevated text-xs font-semibold text-content-primary">
               {monogram}
             </div>
             <div className="min-w-0 flex-1">
@@ -176,7 +176,7 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
             onKeyDown={(event) => handleItemKeyDown(event, 0)}
             className="motion-focus flex w-full items-center gap-3 px-3 py-2.5 text-sm text-content-primary transition-colors hover:bg-bg-hover focus:bg-bg-hover"
           >
-            <SettingsIcon className="h-4 w-4 text-content-tertiary" aria-hidden="true" />
+            <GearIcon className="h-4 w-4 text-content-tertiary" />
             Settings
           </button>
           <button
@@ -189,7 +189,7 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
             onKeyDown={(event) => handleItemKeyDown(event, 1)}
             className="motion-focus flex w-full items-center gap-3 border-t border-stroke-subtle px-3 py-2.5 text-sm text-content-primary transition-colors hover:bg-bg-hover focus:bg-bg-hover"
           >
-            <LogOut className="h-4 w-4 text-content-tertiary" aria-hidden="true" />
+            <ExitIcon className="h-4 w-4 text-content-tertiary" />
             Sign out
           </button>
         </div>

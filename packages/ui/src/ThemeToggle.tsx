@@ -44,7 +44,7 @@ export function ThemeToggle({ className = '', compact = false }: ThemeToggleProp
     return (
       <div
         aria-hidden
-        className={`inline-block h-9 ${compact ? 'w-[84px]' : 'w-[176px]'} border border-stroke-default bg-bg-surface opacity-70 ${className}`}
+        className={`inline-block h-9 ${compact ? 'w-[84px]' : 'w-[176px]'} rounded-full border border-stroke-default bg-bg-surface opacity-70 ${className}`}
       />
     );
   }
@@ -55,14 +55,14 @@ export function ThemeToggle({ className = '', compact = false }: ThemeToggleProp
     <div
       role="radiogroup"
       aria-label="Theme"
-      className={`relative inline-grid h-9 ${compact ? 'w-[84px]' : 'w-[176px]'} grid-cols-2 border border-stroke-default bg-bg-surface p-0.5 ${className}`}
+      className={`relative inline-grid h-9 ${compact ? 'w-[84px]' : 'w-[176px]'} grid-cols-2 rounded-full border border-stroke-default bg-bg-surface p-0.5 ${className}`}
     >
       {/* Sliding thumb — sized to one cell, translated by its own width to
           land on the active segment. transform (not left) so it animates on
           the compositor. */}
       <span
         aria-hidden
-        className="absolute inset-y-0.5 left-0.5 w-[calc(50%-2px)] border border-stroke-strong bg-bg-elevated transition-transform duration-200 ease-out"
+        className="absolute inset-y-0.5 left-0.5 w-[calc(50%-2px)] rounded-full border border-stroke-strong bg-bg-elevated transition-transform duration-200 ease-out"
         style={{ transform: `translateX(${activeIndex * 100}%)` }}
       />
       {MODES.map(({ mode, label, Icon }) => {

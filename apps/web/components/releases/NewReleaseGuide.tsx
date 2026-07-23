@@ -21,7 +21,7 @@ export function NewReleaseGuide({ onDismiss }: NewReleaseGuideProps) {
   return (
     <div
       role="status"
-      className="mb-6 flex items-start gap-3 border border-brand/30 bg-brand/5 p-4"
+      className="mb-6 flex items-start gap-3 rounded-xl border border-brand/30 bg-brand/5 p-4"
     >
       <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
       <div className="min-w-0 flex-1">

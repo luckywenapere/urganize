@@ -51,7 +51,7 @@ export function SecuritySection() {
             type="password"
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
-            className="w-full rounded-none border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+            className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
           />
         </label>
         <label className="block">
@@ -60,7 +60,7 @@ export function SecuritySection() {
             type="password"
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
-            className="w-full rounded-none border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+            className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
           />
         </label>
         {error && <p className="text-sm text-status-error">{error}</p>}
@@ -69,7 +69,7 @@ export function SecuritySection() {
           type="button"
           onClick={() => void handleSave()}
           disabled={isSaving}
-          className="rounded-none bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
         >
           {isSaving ? 'Updating...' : 'Update password'}
         </button>
