@@ -235,7 +235,6 @@ export function WorkspaceView() {
                 id={TASKS_PANEL_ID}
                 tasks={scopedTasks}
                 scopedRelease={scopedReleaseSlim}
-                onClearScope={handleMobileBack}
               />
               {/* The per-release files surface lives inside TasksPanel as an
                   inline collapsible segment at the top of the task area,
@@ -264,7 +263,6 @@ export function WorkspaceView() {
         <div className="hidden lg:block">
           {isDesktopFocusedMode && selectedCard && scopedReleaseSlim ? (
             <WorkspaceDesktopFocused
-              selected={selectedCard}
               leftRail={leftRail}
               rightRail={rightRail}
               scopedTasks={scopedTasks}

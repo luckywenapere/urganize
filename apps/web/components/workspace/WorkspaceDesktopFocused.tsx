@@ -8,8 +8,6 @@ import { TasksPanel } from './TasksPanel';
 import type { ReleaseCardData } from './ReleasesColumn';
 
 type WorkspaceDesktopFocusedProps = {
-  /** Selected release card data — rendered as the centered focus card. */
-  selected: ReleaseCardData;
   /** Non-selected releases routed to the left rail. Split rule lives in
    * WorkspaceView (ceiling on left, stable by grid order). */
   leftRail: ReleaseCardData[];
@@ -39,7 +37,6 @@ type WorkspaceDesktopFocusedProps = {
  * into any task, file, or asset logic.
  */
 export function WorkspaceDesktopFocused({
-  selected,
   leftRail,
   rightRail,
   scopedTasks,
@@ -77,23 +74,12 @@ export function WorkspaceDesktopFocused({
         <RailColumn cards={leftRail} onSelect={onSelect} ariaLabel="Other releases (left)" />
 
         <div className="min-w-0 space-y-6">
-          {/* variant="focused": the center column spans most of the viewport,
-              so the default tile layout's full-width square cover art became
-              a huge banner. The focused variant pins the art to a fixed
-              thumbnail beside the meta — a slim header row instead. */}
-          <WorkspaceReleaseCard
-            release={selected.release}
-            tasksDone={selected.tasksDone}
-            tasksTotal={selected.tasksTotal}
-            selected
-            onSelect={onSelect}
-            coverArtUrl={selected.coverArtUrl}
-            variant="focused"
-          />
-          {/* Center column body — the task list. Clicking a row opens the
-              global task detail pop-up (TaskUIProvider's TaskDetailModal);
-              this column no longer swaps to an inline detail view. */}
-          <TasksPanel tasks={scopedTasks} scopedRelease={scopedRelease} onClearScope={onClose} />
+          {/* Center column body — the activities list fills the column. The
+              focused release card moved into the TOPBAR (AppTopbar's
+              ContextTitle: cover art + artist + title), founder call
+              2026-07-23, so the list owns this space. Clicking a row opens
+              the global activity pop-up. */}
+          <TasksPanel tasks={scopedTasks} scopedRelease={scopedRelease} />
         </div>
 
         <RailColumn cards={rightRail} onSelect={onSelect} ariaLabel="Other releases (right)" />

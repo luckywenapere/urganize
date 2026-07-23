@@ -40,26 +40,26 @@ export function ChappiIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
   );
 }
 
-/** Settings: the same hand-drawn gear the help menu carries. */
+/** Settings: mixing-desk faders — you tune Urganize like a board, not a
+ * machine. Replaces the stock gear (2026-07-23, founder call: no shapes
+ * every other app uses). */
 export function GearIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5Z" />
-      <path
-        d="M19 12a7.8 7.8 0 0 0-.08-1.08l2.02-1.58-1.92-3.32-2.45.74a7.8 7.8 0 0 0-1.87-1.08L14.5 3h-5l-.2 2.68c-.67.25-1.3.61-1.87 1.08l-2.45-.74L3.06 9.34l2.02 1.58A7.8 7.8 0 0 0 5 12c0 .37.03.73.08 1.08l-2.02 1.58 1.92 3.32 2.45-.74c.57.47 1.2.83 1.87 1.08L9.5 21h5l.2-2.68c.67-.25 1.3-.61 1.87-1.08l2.45.74 1.92-3.32-2.02-1.58c.05-.35.08-.71.08-1.08Z"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M6.5 4.5v15M12 4.5v15M17.5 4.5v15" strokeLinecap="round" />
+      <circle cx="6.5" cy="9" r="2" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="15" r="2" fill="currentColor" stroke="none" />
+      <circle cx="17.5" cy="7.5" r="2" fill="currentColor" stroke="none" />
     </svg>
   );
 }
 
-/** Sign out: stepping out of the frame, drawn in-house. */
+/** Sign out: eject — tape-deck language for "take me out of here". */
 export function ExitIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M13.5 4.5H7A1.5 1.5 0 0 0 5.5 6v12A1.5 1.5 0 0 0 7 19.5h6.5" strokeLinecap="round" />
-      <path d="M16 8.5 19.5 12 16 15.5M19.2 12H10" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 5.5 18.5 13.5H5.5L12 5.5Z" strokeLinejoin="round" />
+      <path d="M6 18h12" strokeLinecap="round" />
     </svg>
   );
 }

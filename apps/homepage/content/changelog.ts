@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.22.1",
+    date: "July 23, 2026",
+    highlights: [
+      "Opening a release now puts the whole release — cover art and all — into the top bar, and the activities take over the page. The duplicate \"showing activities for\" pill is gone.",
+      "New in-house icons for Settings (mixing-desk faders) and Sign out (an eject button) — no more stock gear and door.",
+      "The create-activity window lost its redundant \"Quick Create\" label.",
+    ],
+  },
+  {
     version: "0.22.0",
     date: "July 23, 2026",
     highlights: [

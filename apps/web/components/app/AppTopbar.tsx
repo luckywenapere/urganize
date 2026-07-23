@@ -2,6 +2,7 @@
 
 import { Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Logo } from '@urganize/ui';
@@ -84,14 +85,41 @@ function ContextTitle() {
   if (!release) return null;
   if (pathname !== '/dashboard') kicker = release.artistName || 'Release';
 
+  // The full identity row — cover art thumbnail (or the U-mark default)
+  // beside the kicker + title. This IS the focused release card now
+  // (founder call, 2026-07-23): the card left the page body entirely so the
+  // activities fill that space; its picture and name live here instead.
   return (
-    <div className="min-w-0">
-      <p className="hidden truncate font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary sm:block">
-        {kicker}
-      </p>
-      <h1 className="truncate font-display text-lg font-semibold leading-6 text-content-primary sm:text-xl">
-        {release.title}
-      </h1>
+    <div className="flex min-w-0 items-center gap-3">
+      <div className="hidden h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-stroke-subtle bg-bg-elevated sm:block">
+        {release.coverArtUrl ? (
+          <Image
+            src={release.coverArtUrl}
+            alt=""
+            width={40}
+            height={40}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center" aria-hidden="true">
+            <Image
+              src="/images/urganize-mark.png"
+              alt=""
+              width={161}
+              height={173}
+              className="app-wordmark h-4 w-auto opacity-40"
+            />
+          </div>
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="hidden truncate font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary sm:block">
+          {kicker}
+        </p>
+        <h1 className="truncate font-display text-lg font-semibold leading-6 text-content-primary sm:text-xl">
+          {release.title}
+        </h1>
+      </div>
     </div>
   );
 }
