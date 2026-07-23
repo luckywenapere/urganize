@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { isInviteLinkToken, verifyInviteLinkToken } from '@/lib/invite-link';
+import {
+  isInviteLinkToken,
+  looksLikeInviteLinkCode,
+  verifyInviteLinkToken,
+} from '@/lib/invite-link';
 
 // Public + authenticated endpoints for token-based invite acceptance.
 //
@@ -114,6 +118,105 @@ async function loadWorkspaceContext(
   return { workspaceName, inviterName };
 }
 
+type LinkRow = {
+  id: string;
+  workspace_id: string;
+  role: string;
+  artist_scope_id: string | null;
+  expires_at: string | null;
+  revoked_at: string | null;
+};
+
+/** Look up a short /join/<code> link row. Null when the code doesn't match
+ * a row OR the table isn't migrated yet (tolerant read). */
+async function loadLinkByCode(admin: SupabaseClient, code: string): Promise<LinkRow | null> {
+  try {
+    const result = await admin
+      .from('workspace_invite_links')
+      .select('id,workspace_id,role,artist_scope_id,expires_at,revoked_at')
+      .eq('code', code)
+      .maybeSingle();
+    if (result.error) return null;
+    return (result.data as LinkRow | null) || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Shared multi-use JOIN for link-style invites (wl.* tokens and short
+ * codes): idempotent for existing members; a colliding pending email-invite
+ * row is activated instead of failing. */
+async function joinWorkspaceViaLink(
+  admin: SupabaseClient,
+  params: {
+    workspaceId: string;
+    userId: string;
+    email: string;
+    role: string;
+    artistScopeId: string | null;
+  }
+): Promise<NextResponse> {
+  const { workspaceId, userId, email, role, artistScopeId } = params;
+
+  const existingMembership = await admin
+    .from(WORKSPACE_MEMBERS_TABLE)
+    .select('id,status')
+    .eq('workspace_id', workspaceId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (existingMembership.data?.id) {
+    return NextResponse.json({ status: 'already_member', workspaceId });
+  }
+
+  const nowIso = new Date().toISOString();
+  const insertPayload: Record<string, unknown> = {
+    workspace_id: workspaceId,
+    user_id: userId,
+    email,
+    role,
+    status: 'active',
+    invite_token: null,
+    invite_expires_at: null,
+    invited_at: nowIso,
+    joined_at: nowIso,
+    updated_at: nowIso,
+  };
+  // Artist links scope the joiner to that artist's releases. Only written
+  // when set so unscoped links work before the artist_scope_id migration.
+  if (artistScopeId) {
+    insertPayload.artist_scope_id = artistScopeId;
+  }
+  const insertResult = await admin.from(WORKSPACE_MEMBERS_TABLE).insert(insertPayload);
+
+  if (insertResult.error) {
+    // A pending email-invite row for the same address would collide on the
+    // (workspace_id, email) unique — activate that row instead.
+    if (email) {
+      const pendingResult = await admin
+        .from(WORKSPACE_MEMBERS_TABLE)
+        .update({
+          user_id: userId,
+          status: 'active',
+          joined_at: nowIso,
+          invite_token: null,
+          invite_expires_at: null,
+          updated_at: nowIso,
+        })
+        .eq('workspace_id', workspaceId)
+        .eq('email', email)
+        .is('user_id', null);
+      if (!pendingResult.error) {
+        return NextResponse.json({ status: 'accepted', workspaceId });
+      }
+    }
+    console.error('[invites/token] link join insert error:', insertResult.error.message);
+    return NextResponse.json({ error: 'Could not accept invite.' }, { status: 500 });
+  }
+
+  return NextResponse.json({ status: 'accepted', workspaceId });
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // GET — metadata for the /invite/accept page
 // ────────────────────────────────────────────────────────────────────────────
@@ -159,6 +262,33 @@ export async function GET(
       invitedEmail: '',
       role: verdict.role,
     });
+  }
+
+  // Short /join/<code> links (workspace_invite_links). Checked BEFORE the
+  // legacy member-row lookup — codes never collide with UUID tokens (no
+  // dashes) and the lookup is tolerant of the table not being migrated.
+  if (looksLikeInviteLinkCode(token)) {
+    const link = await loadLinkByCode(admin, token);
+    if (link) {
+      if (link.revoked_at || isExpired(link.expires_at)) {
+        return NextResponse.json({
+          status: 'expired',
+          workspaceName: 'a workspace',
+          inviterName: null,
+          invitedEmail: '',
+          role: link.role || 'member',
+        });
+      }
+      const context = await loadWorkspaceContext(admin, link.workspace_id);
+      return NextResponse.json({
+        status: 'valid',
+        workspaceName: context.workspaceName,
+        inviterName: context.inviterName,
+        invitedEmail: '',
+        role: link.role || 'member',
+      });
+    }
+    // No matching link row — fall through to the legacy member-row lookup.
   }
 
   const invite = await loadInvite(admin, token);
@@ -233,64 +363,34 @@ export async function POST(
       );
     }
 
-    const existingMembership = await admin
-      .from(WORKSPACE_MEMBERS_TABLE)
-      .select('id,status')
-      .eq('workspace_id', verdict.workspaceId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (existingMembership.data?.id) {
-      return NextResponse.json({ status: 'already_member', workspaceId: verdict.workspaceId });
-    }
-
-    const email = String(userResult.data.user.email || '').trim().toLowerCase();
-    const nowIso = new Date().toISOString();
-    const insertPayload: Record<string, unknown> = {
-      workspace_id: verdict.workspaceId,
-      user_id: userId,
-      email,
+    return joinWorkspaceViaLink(admin, {
+      workspaceId: verdict.workspaceId,
+      userId,
+      email: String(userResult.data.user.email || '').trim().toLowerCase(),
       role: verdict.role,
-      status: 'active',
-      invite_token: null,
-      invite_expires_at: null,
-      invited_at: nowIso,
-      joined_at: nowIso,
-      updated_at: nowIso,
-    };
-    // Artist links scope the joiner to that artist's releases. Only written
-    // when set so unscoped links work before the artist_scope_id migration.
-    if (verdict.artistScopeId) {
-      insertPayload.artist_scope_id = verdict.artistScopeId;
-    }
-    const insertResult = await admin.from(WORKSPACE_MEMBERS_TABLE).insert(insertPayload);
+      artistScopeId: verdict.artistScopeId,
+    });
+  }
 
-    if (insertResult.error) {
-      // A pending email-invite row for the same address would collide on the
-      // (workspace_id, email) unique — activate that row instead.
-      if (email) {
-        const pendingResult = await admin
-          .from(WORKSPACE_MEMBERS_TABLE)
-          .update({
-            user_id: userId,
-            status: 'active',
-            joined_at: nowIso,
-            invite_token: null,
-            invite_expires_at: null,
-            updated_at: nowIso,
-          })
-          .eq('workspace_id', verdict.workspaceId)
-          .eq('email', email)
-          .is('user_id', null);
-        if (!pendingResult.error) {
-          return NextResponse.json({ status: 'accepted', workspaceId: verdict.workspaceId });
-        }
+  // Short /join/<code> links — same multi-use join semantics as wl.* tokens.
+  if (looksLikeInviteLinkCode(token)) {
+    const link = await loadLinkByCode(admin, token);
+    if (link) {
+      if (link.revoked_at || isExpired(link.expires_at)) {
+        return NextResponse.json(
+          { error: 'This invite link has expired. Ask the workspace owner for a new one.' },
+          { status: 410 }
+        );
       }
-      console.error('[invites/token] link join insert error:', insertResult.error.message);
-      return NextResponse.json({ error: 'Could not accept invite.' }, { status: 500 });
+      return joinWorkspaceViaLink(admin, {
+        workspaceId: link.workspace_id,
+        userId,
+        email: String(userResult.data.user.email || '').trim().toLowerCase(),
+        role: link.role || 'member',
+        artistScopeId: link.artist_scope_id || null,
+      });
     }
-
-    return NextResponse.json({ status: 'accepted', workspaceId: verdict.workspaceId });
+    // No matching link row — fall through to the legacy member-row lookup.
   }
 
   const invite = await loadInvite(admin, token);

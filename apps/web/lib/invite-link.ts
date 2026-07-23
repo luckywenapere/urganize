@@ -13,7 +13,7 @@
 // (there's no stored state to delete). The 7-day lifetime bounds that; a
 // revocable link needs a workspaces column and can layer on later.
 
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
 export const INVITE_LINK_TTL_DAYS = 7;
 const TOKEN_PREFIX = 'wl';
@@ -45,6 +45,31 @@ function sign(encodedPayload: string, secret: string): string {
 
 export function isInviteLinkToken(token: string): boolean {
   return token.startsWith(`${TOKEN_PREFIX}.`);
+}
+
+// ── Short join codes (founder request, 2026-07-23) ─────────────────────────
+// The presentable Linear-style form: app.urganize.app/join/<code>, backed by
+// the workspace_invite_links table. The stateless wl.* tokens above remain
+// verifiable so links minted before the table existed keep working until
+// they expire.
+
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+const CODE_LENGTH = 12;
+
+/** Short, URL-friendly, unambiguous (no 0/O/1/l/I) crypto-random code. */
+export function generateInviteLinkCode(): string {
+  const bytes = randomBytes(CODE_LENGTH);
+  let code = '';
+  for (let i = 0; i < CODE_LENGTH; i += 1) {
+    code += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length];
+  }
+  return code;
+}
+
+/** Shape check for a join code — distinct from UUIDs (which carry dashes)
+ * and wl.* tokens (which carry dots). */
+export function looksLikeInviteLinkCode(token: string): boolean {
+  return /^[A-Za-z0-9]{8,24}$/.test(token);
 }
 
 /** Mint a link token for a workspace. Throws if the server secret is missing.
