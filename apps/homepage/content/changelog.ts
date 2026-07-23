@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.26.1",
+    date: "July 23, 2026",
+    highlights: [
+      "The Releases list in Settings no longer labels every release \"draft\" — the status shows only once a release has actually moved past its starting point, same as the catalog cards.",
+    ],
+  },
+  {
     version: "0.26.0",
     date: "July 23, 2026",
     highlights: [
