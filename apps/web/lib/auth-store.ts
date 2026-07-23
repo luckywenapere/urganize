@@ -31,10 +31,18 @@ const isOnSafeAuthPath = (): boolean => {
   );
 };
 
+// PAYWALL OFF (2026-07-23): the app is free while the founders onboard
+// teams personally — nobody gets bounced to /locked on login. Mirrors the
+// server-side early return in app/api/_shared/paywall.ts
+// (requireActiveAccount); flip this back to true alongside removing that
+// return to restore the paywall.
+const PAYWALL_LOGIN_BOUNCE_ENABLED: boolean = false;
+
 const ensureActiveAccessOrRedirect = async (
   accessToken: string,
   email: string | null | undefined
 ): Promise<void> => {
+  if (!PAYWALL_LOGIN_BOUNCE_ENABLED) return;
   if (typeof window === 'undefined') return;
   if (isOnSafeAuthPath()) return;
   // Fast path — allowlisted emails never see the locked page. The server

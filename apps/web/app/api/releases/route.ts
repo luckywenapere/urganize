@@ -542,6 +542,22 @@ export async function POST(request: NextRequest) {
       })
     );
 
+    // Activation timing: this was the account's FIRST release (the ownership
+    // count above ran before this insert, so 0 means none existed). Once per
+    // account by construction — the count is never 0 again.
+    if (existingReleaseCountResult.count === 0) {
+      const signupMs = new Date(auth.user.created_at || '').getTime();
+      if (Number.isFinite(signupMs)) {
+        captureServerAnalyticsEvent(
+          posthogServer,
+          auth.user.id,
+          createPostHogEvent('time_to_first_release', {
+            seconds_since_signup: Math.max(0, Math.round((Date.now() - signupMs) / 1000)),
+          })
+        );
+      }
+    }
+
     if (releaseDateResult.value) {
       captureServerAnalyticsEvent(
         posthogServer,

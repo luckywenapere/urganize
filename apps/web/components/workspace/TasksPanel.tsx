@@ -233,6 +233,12 @@ export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPane
             >
               <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
               Calendar
+              {/* Beta stamp (2026-07-23): the content calendar ships as Beta —
+                  same tag on the calendar page's header and the release detail
+                  entry link. */}
+              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+                Beta
+              </span>
             </Link>
           ) : null}
           {FILES_ENABLED && scopedRelease ? (

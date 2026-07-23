@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.17.0",
+    date: "July 23, 2026",
+    highlights: [
+      "Urganize is now free to use — no trial countdown, no payment lock. We're setting up every team personally, so just sign in and run your releases.",
+      "Signing in now lands you straight on your releases. Chappi is still one tap away in the top bar.",
+      "The content calendar is now marked Beta while we keep improving it.",
+    ],
+  },
+  {
     version: "0.16.4",
     date: "July 22, 2026",
     highlights: [
