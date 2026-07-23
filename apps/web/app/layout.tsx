@@ -89,10 +89,15 @@ export const metadata: Metadata = {
 // the native status bar (and the mobile Chrome/Safari UI chrome) doesn't
 // flash white before the app's own dark background paints. No effect on the
 // existing web deploy beyond that same status-bar-color meta tag.
+// `interactiveWidget: 'resizes-content'` makes the layout viewport shrink
+// when the on-screen keyboard opens (Android Chrome's default overlays it
+// instead), so bottom-pinned inputs — Chappi's chat box — stay visible above
+// the keyboard while typing. iOS ignores the property and already resizes.
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  interactiveWidget: 'resizes-content',
   themeColor: '#0d120e',
 };
 

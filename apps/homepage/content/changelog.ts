@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.24.1",
+    date: "July 23, 2026",
+    highlights: [
+      "The activity view now names the release it belongs to, right between the status and the due date — no more guessing which release an activity is part of.",
+      "Long activity titles now wrap onto the next line on mobile instead of getting cut off at the edge of the screen.",
+      "On Android, the keyboard no longer covers the Chappi message box while you type — the page now makes room for it.",
+    ],
+  },
+  {
     version: "0.24.0",
     date: "July 23, 2026",
     highlights: [
