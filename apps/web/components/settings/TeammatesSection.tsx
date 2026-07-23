@@ -131,19 +131,19 @@ export function TeammatesSection({
   };
 
   return (
-    <section id="teammates" className={`${panelClass} mt-6 scroll-mt-24`}>
-      <h2 className="mb-4 text-xl">Teammates</h2>
+    <section id="teammates" className={`${panelClass} scroll-mt-24`}>
+      <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Teammates</h2>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
         <input
           value={inviteEmail}
           onChange={(event) => setInviteEmail(event.target.value)}
           placeholder="teammate@email.com"
-          className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
+          className="rounded-none border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
         />
         <select
           value={inviteRole}
           onChange={(event) => setInviteRole(event.target.value)}
-          className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+          className="rounded-none border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
         >
           <option value="manager">Manager</option>
           <option value="artist">Artist</option>
@@ -154,14 +154,14 @@ export function TeammatesSection({
           type="button"
           onClick={() => void handleInviteTeammate()}
           disabled={isInviting}
-          className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+          className="rounded-none bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
         >
           {isInviting ? 'Inviting...' : 'Invite'}
         </button>
       </div>
 
       {teammateMessage && (
-        <div className="mt-3 rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
+        <div className="mt-3 rounded-none border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
           <p>{teammateMessage}</p>
           {inviteUrl && (
             <div className="mt-2 flex items-center gap-2">
@@ -169,12 +169,12 @@ export function TeammatesSection({
                 readOnly
                 value={inviteUrl}
                 onFocus={(event) => event.target.select()}
-                className="min-w-0 flex-1 truncate rounded border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-secondary"
+                className="min-w-0 flex-1 truncate rounded-none border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-secondary"
               />
               <button
                 type="button"
                 onClick={() => void handleCopyInviteLink()}
-                className="inline-flex shrink-0 items-center gap-1 rounded border border-stroke-subtle bg-bg-surface px-2 py-1 text-xs text-content-primary hover:bg-bg-hover"
+                className="inline-flex shrink-0 items-center gap-1 rounded-none border border-stroke-subtle bg-bg-surface px-2 py-1 text-xs text-content-primary hover:bg-bg-hover"
               >
                 {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                 {copied ? 'Copied' : 'Copy'}
@@ -184,7 +184,7 @@ export function TeammatesSection({
         </div>
       )}
       {teammateError && (
-        <p className="mt-3 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+        <p className="mt-3 rounded-none border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
           {teammateError}
         </p>
       )}
@@ -198,14 +198,14 @@ export function TeammatesSection({
           {teammates.map((member) => (
             <div
               key={member.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-none border border-stroke-subtle bg-bg-elevated px-3 py-2"
             >
               <div>
                 <p className="text-sm font-medium text-content-primary">{member.name || 'Unknown'}</p>
                 <p className="text-xs text-content-secondary">{member.email || 'No email'}</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="rounded border border-stroke-subtle bg-bg-surface px-2 py-1 text-xs capitalize text-content-primary">
+                <span className="rounded-none border border-stroke-subtle bg-bg-surface px-2 py-1 text-xs capitalize text-content-primary">
                   {(member.role || 'viewer').replace(/-/g, ' ')}
                 </span>
                 {member.userId !== user.id && (

@@ -363,31 +363,30 @@ export default function SettingsPage() {
         <div className="pointer-events-none absolute -right-16 -top-12 h-52 w-52 rounded-full bg-brand/15 blur-3xl" />
         <div className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-status-info/12 blur-3xl" />
 
-        {/* Inner form wrapper. THIS is where Settings narrows for readability
-            — form fields like password / name would feel weird at 1440px
-            wide on a 1920px monitor. 960px is a conventional settings-page
-            column (Linear / Vercel / Stripe ballpark). The narrowing is
-            intentional and lives here, NOT at the outer page level, so the
-            visible chrome edges still match Dashboard. */}
-        <div className="relative mx-auto w-full max-w-[960px]">
+        {/* Inner form wrapper. Redesigned 2026-07-23 (founder call): the
+            boxed two-column card collage read as plastic. Settings is now ONE
+            flat column — sections divided by hairline rules (Linear/PostHog
+            style), mono uppercase kickers for section titles, sharp corners
+            throughout, per the Brand Bible. The column narrowed 960→760px to
+            suit the single-column rhythm. */}
+        <div className="relative mx-auto w-full max-w-[760px]">
           {/* No in-page "Settings" heading — the topbar already titles this
               route (AppTopbar routeTitles: eyebrow "Account", title
               "Settings"), so an h1 here doubled the heading. The row keeps
               only the Dashboard shortcut. */}
-          <div className="mb-8 flex sm:justify-end">
+          <div className="mb-4 flex sm:justify-end">
             <Link
               href="/dashboard"
-              className="w-full rounded-full border border-stroke-default bg-bg-elevated px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
+              className="w-full border border-stroke-default bg-bg-surface px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
             >
               Dashboard
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <ProfileSection />
-            <AppearanceSection />
-            <SecuritySection />
-          </div>
+          <div className="divide-y divide-stroke-subtle">
+          <ProfileSection />
+          <AppearanceSection />
+          <SecuritySection />
 
           {WORKSPACE_FEATURE_ENABLED && (
             <WorkspaceArtistSection
@@ -431,6 +430,7 @@ export default function SettingsPage() {
           <ReleasesSection />
           <SessionSection />
           <DeleteAccountSection />
+          </div>
         </div>
       </div>
     </main>

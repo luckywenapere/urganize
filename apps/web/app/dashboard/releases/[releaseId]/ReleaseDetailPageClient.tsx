@@ -10,7 +10,7 @@ import { useTaskStore } from '@/stores/useTaskStore';
 import { TASK_DONE_STATUS, TASK_LOCKED_STATUS } from '@/lib/execution-types';
 import { formatMilestoneDate, isEventMilestone } from '@/lib/tasks';
 import { formatArtistName } from '@/lib/release-execution';
-import { TaskDetailInline, useTaskUI } from '@/components/tasks/TaskUIProvider';
+import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { ReleaseDetailSkeleton } from '@/components/loading/ReleaseDetailSkeleton';
 import { ProgressBar } from '@/components/shared/ProgressBar';
 import { Toast } from '@/components/shared/Toast';
@@ -71,7 +71,7 @@ export default function ReleaseDetailPage() {
   const { user, isLoading: authLoading } = useAuthStore();
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
   const tasks = useTaskStore((s) => s.tasks);
-  const { openTask, openQuickCreate, isTaskOpen } = useTaskUI();
+  const { openTask, openQuickCreate } = useTaskUI();
   const [toast, setToast] = useState<ToastState | null>(null);
   const [isTailorOpen, setIsTailorOpen] = useState(false);
   const [savedContext, setSavedContext] = useState<ReleaseContext | null>(null);
@@ -233,21 +233,9 @@ export default function ReleaseDetailPage() {
 
   const normalizedStatus = statusLabel[release.status] || release.status.replace(/_/g, ' ');
 
-  // In-place task detail. When a task is opened from this page's task list
-  // (or from any other surface while this page is mounted — notification
-  // click is the cross-route case), the entire release content (header,
-  // progress, task list, assets, info) is replaced with TaskDetailInline.
-  // The drawer/overlay model is gone — see TaskUIProvider.tsx. Back inside
-  // the detail closes the task and the release content remounts in place.
-  if (isTaskOpen) {
-    return (
-      <main className="min-h-screen bg-bg-base text-content-primary">
-        <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-10 sm:px-6">
-          <TaskDetailInline />
-        </div>
-      </main>
-    );
-  }
+  // Task detail renders as a global pop-up mounted by TaskUIProvider
+  // (2026-07-23) — opening a task from this page's list overlays the modal;
+  // the release content stays mounted underneath.
 
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">

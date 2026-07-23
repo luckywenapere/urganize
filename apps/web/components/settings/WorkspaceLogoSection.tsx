@@ -33,8 +33,8 @@ export function WorkspaceLogoSection({
   onRemove,
 }: WorkspaceLogoSectionProps) {
   return (
-    <section className={`${panelClass} mt-6`}>
-      <h2 className="mb-1 text-xl">Workspace logo</h2>
+    <section className={panelClass}>
+      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Workspace logo</h2>
       <p className="mb-4 text-sm text-content-secondary">
         Your record label or team logo. Releases without cover art — new and
         existing — display it automatically until you upload their artwork.
@@ -42,7 +42,7 @@ export function WorkspaceLogoSection({
       {isLoading ? (
         <div className="flex items-center gap-4">
           <SkeletonBlock className="h-24 w-24" />
-          <SkeletonBlock className="h-10 w-32 rounded-lg" />
+          <SkeletonBlock className="h-10 w-32 rounded-none" />
         </div>
       ) : (
         <div className="space-y-3">
@@ -75,17 +75,17 @@ export function WorkspaceLogoSection({
             </p>
           )}
           {message && (
-            <p className="rounded-lg border border-brand/35 bg-brand-muted px-3 py-2 text-sm text-brand">
+            <p className="rounded-none border border-brand/35 bg-brand-muted px-3 py-2 text-sm text-brand">
               {message}
             </p>
           )}
           {error && (
-            <p className="rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+            <p className="rounded-none border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
               {error}
             </p>
           )}
           <label
-            className={`inline-flex cursor-pointer items-center rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover ${
+            className={`inline-flex cursor-pointer items-center rounded-none bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover ${
               isSaving ? 'cursor-not-allowed opacity-60' : ''
             }`}
           >

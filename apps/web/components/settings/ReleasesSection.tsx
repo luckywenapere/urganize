@@ -49,16 +49,16 @@ export function ReleasesSection() {
 
   return (
     <>
-      <section className={`${panelClass} mt-6`}>
-        <h2 className="mb-1 text-xl">Releases</h2>
+      <section className={panelClass}>
+        <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Releases</h2>
         <p className="mb-4 text-sm text-content-secondary">
           Deleting a release is only available here. This permanently removes
           it, its tasks, and its attached files.
         </p>
         {isLoadingReleases ? (
           <div className="space-y-2">
-            <SkeletonBlock className="h-14 w-full rounded-lg" />
-            <SkeletonBlock className="h-14 w-full rounded-lg" />
+            <SkeletonBlock className="h-14 w-full rounded-none" />
+            <SkeletonBlock className="h-14 w-full rounded-none" />
           </div>
         ) : releases.length === 0 ? (
           <p className="text-sm text-content-secondary">No releases yet.</p>
@@ -69,7 +69,7 @@ export function ReleasesSection() {
               .map((release) => (
                 <div
                   key={release.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-none border border-stroke-subtle bg-bg-elevated px-3 py-2"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-content-primary">
@@ -85,7 +85,7 @@ export function ReleasesSection() {
                     type="button"
                     onClick={() => setReleaseToDelete({ id: release.id, title: release.title })}
                     aria-label={`Delete ${release.title}`}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-xs font-semibold text-content-tertiary transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
+                    className="inline-flex items-center gap-1.5 rounded-none border border-transparent px-2 py-1.5 text-xs font-semibold text-content-tertiary transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                     Delete

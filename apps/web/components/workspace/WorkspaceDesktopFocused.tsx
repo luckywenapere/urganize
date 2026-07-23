@@ -3,7 +3,6 @@
 import { ArrowLeft } from 'lucide-react';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/lib/tasks';
-import { TaskDetailInline } from '@/components/tasks/TaskUIProvider';
 import { WorkspaceReleaseCard } from './WorkspaceReleaseCard';
 import { TasksPanel } from './TasksPanel';
 import type { ReleaseCardData } from './ReleasesColumn';
@@ -22,9 +21,6 @@ type WorkspaceDesktopFocusedProps = {
   scopedRelease: Pick<Release, 'id' | 'title' | 'artistName'>;
   onSelect: (releaseId: string) => void;
   onClose: () => void;
-  /** True while a task detail is open. Swaps the center column body from
-   * TasksPanel to TaskDetailInline; rails + focused card stay visible. */
-  isTaskOpen: boolean;
 };
 
 /**
@@ -50,7 +46,6 @@ export function WorkspaceDesktopFocused({
   scopedRelease,
   onSelect,
   onClose,
-  isTaskOpen,
 }: WorkspaceDesktopFocusedProps) {
   return (
     <div className="workspace-mode-enter space-y-4">
@@ -95,17 +90,10 @@ export function WorkspaceDesktopFocused({
             coverArtUrl={selected.coverArtUrl}
             variant="focused"
           />
-          {/* Center column body — list ↔ detail swap. When `isTaskOpen` is
-              true, the TasksPanel + inline FilesPanel (lives inside it)
-              are hidden and TaskDetailInline renders in their place. Back
-              inside TaskDetailInline closes the task and the list returns;
-              the focused release card above and the rails on either side
-              stay mounted across the swap, preserving the release context. */}
-          {isTaskOpen ? (
-            <TaskDetailInline />
-          ) : (
-            <TasksPanel tasks={scopedTasks} scopedRelease={scopedRelease} onClearScope={onClose} />
-          )}
+          {/* Center column body — the task list. Clicking a row opens the
+              global task detail pop-up (TaskUIProvider's TaskDetailModal);
+              this column no longer swaps to an inline detail view. */}
+          <TasksPanel tasks={scopedTasks} scopedRelease={scopedRelease} onClearScope={onClose} />
         </div>
 
         <RailColumn cards={rightRail} onSelect={onSelect} ariaLabel="Other releases (right)" />

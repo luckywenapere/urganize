@@ -33,8 +33,8 @@ export function WorkspaceArtistSection({
   onSave,
 }: WorkspaceArtistSectionProps) {
   return (
-    <section className={`${panelClass} mt-6`}>
-      <h2 className="mb-1 text-xl">Workspace artist</h2>
+    <section className={panelClass}>
+      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Workspace artist</h2>
       <p className="mb-4 text-sm text-content-secondary">
         The single artist this workspace works on. Renaming here updates
         every release&apos;s cached artist label.
@@ -42,7 +42,7 @@ export function WorkspaceArtistSection({
       {isLoading ? (
         <div className="space-y-2">
           <SkeletonBlock className="h-3 w-20" />
-          <SkeletonBlock className="h-10 w-full rounded-lg" />
+          <SkeletonBlock className="h-10 w-full rounded-none" />
         </div>
       ) : artist === undefined ? (
         <p className="text-sm text-content-secondary">
@@ -57,18 +57,18 @@ export function WorkspaceArtistSection({
             <input
               value={input}
               onChange={(event) => onInputChange(event.target.value)}
-              className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+              className="w-full rounded-none border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
               placeholder="e.g. Tems"
               maxLength={120}
             />
           </label>
           {message && (
-            <p className="rounded-lg border border-brand/35 bg-brand-muted px-3 py-2 text-sm text-brand">
+            <p className="rounded-none border border-brand/35 bg-brand-muted px-3 py-2 text-sm text-brand">
               {message}
             </p>
           )}
           {error && (
-            <p className="rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+            <p className="rounded-none border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
               {error}
             </p>
           )}
@@ -76,7 +76,7 @@ export function WorkspaceArtistSection({
             type="button"
             onClick={onSave}
             disabled={isSaving}
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+            className="rounded-none bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
           >
             {isSaving ? 'Saving…' : 'Save artist name'}
           </button>

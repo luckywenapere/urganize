@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CalendarDays, X } from 'lucide-react';
+import { CalendarDays, X } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
@@ -12,26 +12,26 @@ import {
 import {
   formatFileSize,
   getRelativeDueLabel,
-  getTaskPriorityLabel,
   getTaskStatusLabel,
   getTaskStatusTone,
   isEventMilestone,
   isTypingTarget,
-  TASK_PRIORITY_OPTIONS,
   TASK_STATUS_OPTIONS,
   type TaskDetail,
-  type TaskPriority,
   type TaskStatus,
   type WorkspaceMember,
 } from '@/lib/tasks';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
-import { DEFAULT_GROUP_COLOR, GROUP_PRESETS } from '@/lib/group-presets';
 import { isNativePlatform } from '@/lib/platform';
 import { openExternalUrl } from '@/lib/external-link';
 
-const WORKSPACE_FLAG_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
+// 2026-07-23 (founder calls): the Priority selector, the Tag row, and the
+// Activity feed were all removed from this view. Priority is gone as a
+// feature (no selector anywhere; rows no longer color by it); tags are gone
+// from this surface; the per-task activity feed (the task_activity audit
+// trail) is no longer rendered. Restore any of them from git history.
 
-// Linear-style property rows (Status / Priority / Assignee / Due date / Tag):
+// Linear-style property rows (Status / Assignee / Due date):
 // a slim tertiary label column + a ghost control that only reveals its bounds
 // on hover/focus. Replaces the stacked full-width form boxes that dominated
 // the viewport on mobile. Native selects keep the dark-popup treatment
@@ -52,11 +52,8 @@ export type TaskDetailPatchInput = {
   title?: string;
   description?: string | null;
   status?: TaskStatus;
-  priority?: TaskPriority;
   dueDate?: string | null;
   assignedToUserId?: string | null;
-  groupName?: string | null;
-  groupColor?: string | null;
 };
 
 type TaskDetailViewProps = {
@@ -105,15 +102,11 @@ function toDateTimeLocalValue(value: string | null): string {
 }
 
 /**
- * In-place task detail. Renders inside the consumer's main area (workspace
- * center column, release detail page) — no fixed-position shell, no overlay,
- * no backdrop, no body scroll lock. The only container is a semantic
- * <section>; the host layout decides width and surrounding context.
- *
- * Reuses the same field set as the prior TaskDetailDrawer body verbatim —
- * Title, Status, Priority, Assignee, Due date, Tag (workspace flag), Deps,
- * Description, Attachments, Comments, Activity, Delete. Only the container
- * (and the header's close → back affordance) changed.
+ * Task detail body. Since 2026-07-23 this renders inside the pop-up shell
+ * (`TaskDetailModal` in TaskUIProvider) — the modal owns the overlay, scrim,
+ * entrance animation, and scroll containment; this component owns the fields:
+ * Title, Status, Assignee, Due date, Dependencies, Description, Attachments,
+ * Comments, Delete. `onBack` closes the modal (the header X + Escape).
  */
 export function TaskDetailView({
   isLoading,
@@ -141,7 +134,6 @@ export function TaskDetailView({
   const [commentDraft, setCommentDraft] = useState('');
   const [editingCommentId, setEditingCommentId] = useState('');
   const [editingCommentContent, setEditingCommentContent] = useState('');
-  const [customTagDraft, setCustomTagDraft] = useState('');
 
   useEffect(() => {
     if (!task) {
@@ -154,10 +146,8 @@ export function TaskDetailView({
     setAssigneeQuery(task.assignee?.name || '');
   }, [task]);
 
-  // Escape returns to the list. Unlike the drawer, we do NOT lock body scroll
-  // — the inline view sits in the document flow and the page should scroll
-  // normally. Typing-target guard prevents Escape from popping out of the
-  // detail while the user is in the middle of editing a textarea/input.
+  // Escape closes the pop-up. Typing-target guard prevents Escape from
+  // closing the modal while the user is mid-edit in a textarea/input.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
@@ -172,45 +162,45 @@ export function TaskDetailView({
 
   return (
     <section aria-label="Task detail" className="min-w-0">
-      {/* Header — single horizontal row with back affordance + at-a-glance
-          status pill / event pill / due label. Sits flush against the top of
-          the host container; no shadow, no border-bottom — the body itself
-          carries the visual weight. */}
+      {/* Pop-up header — at-a-glance status pill / event pill / due label on
+          the left, a single X close on the right. The modal shell already
+          separates this surface from the page; no back-button framing. */}
       <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="flex min-h-8 flex-wrap items-center gap-2">
+          {task ? (
+            <>
+              <StatusBadge
+                label={getTaskStatusLabel(task.status)}
+                tone={getTaskStatusTone(task.status)}
+                size="sm"
+              />
+              {isEventMilestone(task) ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-status-info/40 bg-status-info/10 px-2 py-0.5 text-[11px] font-semibold text-status-info">
+                  <CalendarDays className="h-3 w-3" />
+                  Event
+                </span>
+              ) : null}
+              <span
+                className={
+                  due.isOverdue
+                    ? 'text-sm font-semibold text-status-error'
+                    : 'text-sm text-content-secondary'
+                }
+              >
+                {due.label}
+              </span>
+            </>
+          ) : null}
+        </div>
+
         <button
           type="button"
           onClick={onBack}
-          aria-label="Back to tasks"
-          className="motion-focus motion-press inline-flex items-center gap-2 border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          aria-label="Close task"
+          className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center border border-transparent text-content-tertiary transition-colors hover:border-stroke-default hover:bg-bg-hover hover:text-content-primary"
         >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-          Back to tasks
+          <X className="h-4 w-4" aria-hidden="true" />
         </button>
-
-        {task ? (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <StatusBadge
-              label={getTaskStatusLabel(task.status)}
-              tone={getTaskStatusTone(task.status)}
-              size="sm"
-            />
-            {isEventMilestone(task) ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-status-info/40 bg-status-info/10 px-2 py-0.5 text-[11px] font-semibold text-status-info">
-                <CalendarDays className="h-3 w-3" />
-                Event
-              </span>
-            ) : null}
-            <span
-              className={
-                due.isOverdue
-                  ? 'text-sm font-semibold text-status-error'
-                  : 'text-sm text-content-secondary'
-              }
-            >
-              {due.label}
-            </span>
-          </div>
-        ) : null}
       </div>
 
       {error && !task ? (
@@ -285,25 +275,6 @@ export function TaskDetailView({
               </div>
             ) : null}
 
-            <label className={PROPERTY_ROW_CLASS}>
-              <span className={PROPERTY_LABEL_CLASS}>Priority</span>
-              <select
-                value={task.priority}
-                onChange={(event) => void onSavePatch({ priority: event.target.value as TaskPriority })}
-                className={PROPERTY_CONTROL_CLASS}
-              >
-                {TASK_PRIORITY_OPTIONS.map((priorityOption) => (
-                  <option
-                    key={priorityOption}
-                    value={priorityOption}
-                    className="bg-bg-elevated text-content-primary"
-                  >
-                    {getTaskPriorityLabel(priorityOption)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
             {/* The visible row label lives here; the combobox keeps its own
                 sr-only "Assignee" label for the input's accessible name. */}
             <div className={PROPERTY_ROW_CLASS}>
@@ -335,92 +306,6 @@ export function TaskDetailView({
               />
             </label>
 
-            {WORKSPACE_FLAG_ENABLED ? (
-              <div className={`${PROPERTY_ROW_CLASS} items-start`}>
-                <span className={`${PROPERTY_LABEL_CLASS} pt-2`}>Tag</span>
-                <div className="flex flex-wrap items-center gap-1.5 py-1">
-                  {GROUP_PRESETS.map((preset) => {
-                    const isActive =
-                      (task.groupName || '').toLowerCase() === preset.name.toLowerCase();
-                    return (
-                      <button
-                        key={preset.name}
-                        type="button"
-                        onClick={() =>
-                          void onSavePatch({
-                            groupName: preset.name,
-                            groupColor: preset.color,
-                          })
-                        }
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${
-                          isActive
-                            ? 'border-brand bg-brand/10 text-content-primary'
-                            : 'border-stroke-default bg-bg-elevated text-content-secondary hover:bg-bg-hover hover:text-content-primary'
-                        }`}
-                        aria-pressed={isActive}
-                      >
-                        <span
-                          className="h-1.5 w-1.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: preset.color }}
-                          aria-hidden="true"
-                        />
-                        {preset.name}
-                      </button>
-                    );
-                  })}
-                  {task.groupName ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCustomTagDraft('');
-                        void onSavePatch({ groupName: null, groupColor: null });
-                      }}
-                      className="inline-flex items-center gap-1 rounded-full border border-stroke-default bg-bg-elevated px-2 py-1 text-[11px] font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-                      aria-label="Remove tag"
-                    >
-                      <X className="h-3 w-3" aria-hidden="true" />
-                      Remove
-                    </button>
-                  ) : null}
-                  <input
-                    type="text"
-                    value={customTagDraft}
-                    onChange={(event) => setCustomTagDraft(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault();
-                        const trimmed = customTagDraft.trim();
-                        if (!trimmed) return;
-                        void onSavePatch({
-                          groupName: trimmed,
-                          groupColor: DEFAULT_GROUP_COLOR,
-                        });
-                        setCustomTagDraft('');
-                      }
-                    }}
-                    placeholder="Custom tag"
-                    className="motion-focus h-7 w-32 border border-transparent bg-transparent px-2 text-xs text-content-primary transition-colors placeholder:text-content-tertiary hover:border-stroke-default hover:bg-bg-elevated focus:border-brand focus:bg-bg-elevated"
-                  />
-                  {customTagDraft.trim() ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const trimmed = customTagDraft.trim();
-                        if (!trimmed) return;
-                        void onSavePatch({
-                          groupName: trimmed,
-                          groupColor: DEFAULT_GROUP_COLOR,
-                        });
-                        setCustomTagDraft('');
-                      }}
-                      className="inline-flex h-7 items-center rounded-full border border-stroke-default bg-bg-elevated px-2.5 text-[11px] font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-                    >
-                      Apply
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
           </div>
 
           <TaskDependenciesSection
@@ -627,30 +512,6 @@ export function TaskDetailView({
                   Add comment
                 </button>
               </div>
-            </div>
-          </section>
-
-          <section className="rounded-[24px] border border-stroke-default bg-bg-elevated/50 p-4">
-            <h3 className="text-sm font-semibold text-content-primary">Activity</h3>
-            <div className="mt-4 space-y-3">
-              {task.activity.length === 0 ? (
-                isLoading ? (
-                  <SkeletonBlock className="h-10 w-full rounded-[18px]" />
-                ) : (
-                  <p className="text-sm text-content-secondary">No activity yet.</p>
-                )
-              ) : (
-                task.activity.map((entry) => (
-                  <div key={entry.id} className="rounded-[18px] border border-stroke-subtle bg-bg-surface px-3 py-3">
-                    <p className="text-sm text-content-primary">
-                      <span className="font-semibold">{entry.actorName}</span> {entry.message}
-                    </p>
-                    <p className="mt-1 text-xs text-content-secondary">
-                      {new Date(entry.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                ))
-              )}
             </div>
           </section>
 

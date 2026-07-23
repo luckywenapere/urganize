@@ -3,8 +3,6 @@
 import { CalendarDays, Lock } from 'lucide-react';
 import {
   formatMilestoneDate,
-  getPriorityBorderClass,
-  getPriorityDotClass,
   getRelativeDueLabel,
   getTaskStatusLabel,
   getTaskStatusTone,
@@ -63,9 +61,8 @@ type TaskRowProps = {
   /** Layout density. `comfortable` (default) is the wide release-detail layout:
    * single row, status badge on the right, release pill inline with the title,
    * assignee in the meta line. `compact` is the narrow workspace-panel layout:
-   * two stacked lines (title, then meta), no status badge / no assignee /
-   * no release pill — the surrounding workspace already shows scope context,
-   * and priority is still conveyed by the left border. */
+   * a single line (checkbox, title, meta pinned right), no status badge / no
+   * release pill — the surrounding workspace already shows scope context. */
   density?: 'compact' | 'comfortable';
 };
 
@@ -81,13 +78,14 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
   const due = getRelativeDueLabel(task);
   const isLocked = task.status === 'locked';
   const isMilestone = isEventMilestone(task);
-  // Left-border accent precedence: locked (muted gray, "not ready") wins, then
-  // event milestones (info blue, "dated point"), then the priority color.
+  // Left-border accent: locked (muted gray, "not ready"), event milestones
+  // (info blue, "dated point"), neutral otherwise. Priority coloring was
+  // removed 2026-07-23 — the priority feature is gone from the UI entirely.
   const borderClass = isLocked
     ? 'border-l-stroke-default'
     : isMilestone
       ? 'border-l-status-info'
-      : getPriorityBorderClass(task.priority);
+      : 'border-l-stroke-subtle';
 
   const isCompact = density === 'compact';
   const titleClass = `truncate text-sm font-semibold ${
@@ -109,7 +107,7 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
   if (isCompact) {
     // One-line layout: [checkbox] [title — flex-1 + truncate] [meta — shrink-0
     // pinned right]. The title is the only flexible track; the meta cluster
-    // (priority dot + due label + lock icon) is shrink-0 so the date never
+    // (due label + lock icon) is shrink-0 so the date never
     // wraps and never gets clipped. At the narrow workspace-panel widths
     // (~280–340px on mobile), long titles like
     // "Identify 3 priority playlists/curators to pitch" truncate with ellipsis
@@ -148,10 +146,6 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
               size="sm"
             />
           ) : null}
-          <span
-            className={`inline-block h-1.5 w-1.5 rounded-full ${getPriorityDotClass(task.priority)}`}
-            aria-hidden="true"
-          />
           {isMilestone ? (
             <span className="inline-flex items-center gap-1 whitespace-nowrap font-mono text-status-info">
               <CalendarDays className="h-3 w-3" aria-label="Event milestone" />

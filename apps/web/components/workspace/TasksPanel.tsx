@@ -79,10 +79,8 @@ type TasksPanelProps = {
 };
 
 export function TasksPanel({ tasks, scopedRelease, onClearScope, id }: TasksPanelProps) {
-  // openTask flips the TaskUIProvider into "task open" state, which causes
-  // WorkspaceDesktopFocused (or the mobile drill-down in WorkspaceView) to
-  // swap this panel for TaskDetailInline in the same surface. No drawer /
-  // overlay — the center column itself becomes the task detail.
+  // openTask opens the global task detail pop-up mounted by TaskUIProvider —
+  // this panel stays where it is underneath the modal.
   const { openTask, openQuickCreate } = useTaskUI();
 
   // The ?priority= / ?status= filter dropdowns were removed entirely

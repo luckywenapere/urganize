@@ -11,7 +11,6 @@ import type { Release } from '@/types/releases';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
-import { TaskDetailInline, useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { TasksPanel } from './TasksPanel';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
@@ -41,12 +40,8 @@ export function WorkspaceView() {
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
   const tasks = useTaskStore((state) => state.tasks);
   const { scopedReleaseId, setScope } = useReleaseScope();
-  // `isTaskOpen` swaps the workspace center (mobile drill-down OR desktop
-  // focused-mode center column) from the task list to TaskDetailInline. The
-  // rails / focused release card stay visible — only the list↔detail surface
-  // swaps. Notification clicks set `?release=` then call openTask, so this
-  // observes the same flag they all flow through.
-  const { isTaskOpen, closeTask } = useTaskUI();
+  // Task detail renders as a global pop-up mounted by TaskUIProvider
+  // (2026-07-23) — this view no longer swaps its layout when a task opens.
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   // Set to the new release's id when a first-release "win" reveal should show.
   const [winReleaseId, setWinReleaseId] = useState<string | null>(null);
@@ -133,11 +128,6 @@ export function WorkspaceView() {
   const isDesktopFocusedMode = Boolean(scopedReleaseId && selectedCard);
 
   const handleSelect = (releaseId: string) => {
-    // An open task detail belongs to the outgoing scope. Close it before the
-    // scope changes — otherwise the center column keeps showing the old
-    // task (rail clicks appear to do nothing) and, on deselect, `isTaskOpen`
-    // makes the detail take over the main area instead of the release grid.
-    if (isTaskOpen) closeTask();
     const nextScope = scopedReleaseId === releaseId ? null : releaseId;
     const stacked =
       typeof window !== 'undefined' &&
@@ -161,16 +151,12 @@ export function WorkspaceView() {
   };
 
   const handleClose = () => {
-    // Same invariant as handleSelect: clearing scope must land on the
-    // release grid, so any open task detail closes with it.
-    if (isTaskOpen) closeTask();
     // Replace-not-push so desktop deselects don't grow history with a
     // duplicate at-rest entry. Matches the mobile back affordance below.
     setScope(null);
   };
 
   const handleMobileBack = () => {
-    if (isTaskOpen) closeTask();
     setScope(null);
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'auto' });
@@ -225,13 +211,7 @@ export function WorkspaceView() {
             implementation — this block is intentionally unchanged.
             ==================================================================== */}
         <div className="lg:hidden">
-          {isTaskOpen ? (
-            // Mobile Level 3: task detail in place. Drills one level deeper
-            // than the tasks list. Back inside TaskDetailInline closes the
-            // task and returns to Level 2 (tasks list for the scoped
-            // release) — or Level 1 (releases) if no scope is set.
-            <TaskDetailInline />
-          ) : scopedReleaseId && scopedReleaseSlim ? (
+          {scopedReleaseId && scopedReleaseSlim ? (
             <>
               <div className="mb-4 flex items-center gap-3">
                 <button
@@ -291,15 +271,7 @@ export function WorkspaceView() {
               scopedRelease={scopedReleaseSlim}
               onSelect={handleSelect}
               onClose={handleClose}
-              isTaskOpen={isTaskOpen}
             />
-          ) : isTaskOpen ? (
-            // Edge case: task opened while unscoped (e.g. notification with
-            // no taskReleaseId, or task opened then scope cleared). With no
-            // selected release there's no centered focus card to anchor to,
-            // so the detail takes over the main area entirely. Back returns
-            // to the grid.
-            <TaskDetailInline />
           ) : (
             <WorkspaceDesktopGrid
               releases={releaseCards}
