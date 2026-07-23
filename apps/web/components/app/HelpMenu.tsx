@@ -4,47 +4,9 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { openExternalUrl } from '@/lib/external-link';
 
-type ShortcutDefinition = {
-  keys: string[];
-  description: string;
-};
-
-// Same flag ChappiDock/AppShell read — the Ctrl/Cmd+J toggle only exists
-// when the dock does.
-const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
-
-const shortcutDefinitions: ShortcutDefinition[] = [
-  {
-    keys: ['?'],
-    description: 'Open this keyboard shortcuts panel',
-  },
-  {
-    keys: ['Cmd', 'K'],
-    description: 'Search releases from the dashboard',
-  },
-  {
-    keys: ['Ctrl', 'K'],
-    description: 'Search releases from the dashboard on Windows',
-  },
-  ...(CHAPPI_ENABLED
-    ? [
-        {
-          keys: ['Cmd/Ctrl', 'J'],
-          description: 'Open or close the Chappi assistant',
-        },
-      ]
-    : []),
-  {
-    keys: ['Esc'],
-    description: 'Close open menus and dialogs',
-  },
-];
-
-const isEditableTarget = (target: EventTarget | null) => {
-  if (!(target instanceof HTMLElement)) return false;
-  const tagName = target.tagName.toLowerCase();
-  return target.isContentEditable || tagName === 'input' || tagName === 'textarea' || tagName === 'select';
-};
+// The keyboard-shortcuts panel (and its "?" hotkey + menu item) was removed
+// 2026-07-23 (founder call) — the menu is Docs / Contact / Settings plus the
+// Community link. Restore from git history if a shortcuts panel ever returns.
 
 function openExternalLink(url: string) {
   void openExternalUrl(url);
@@ -62,31 +24,13 @@ function ItemIcon({
   );
 }
 
-function ShortcutKeys({
-  keys,
-}: {
-  keys: string[];
-}) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      {keys.map((key) => (
-        <kbd key={key} className="kbd text-[10px] uppercase">
-          {key}
-        </kbd>
-      ))}
-    </span>
-  );
-}
-
 function HelpMenuItem({
   icon,
   label,
-  hint,
   onClick,
 }: {
   icon: ReactNode;
   label: string;
-  hint?: ReactNode;
   onClick: () => void;
 }) {
   return (
@@ -98,7 +42,6 @@ function HelpMenuItem({
     >
       <ItemIcon>{icon}</ItemIcon>
       <span className="min-w-0 flex-1 font-sans">{label}</span>
-      {hint ? <span className="shrink-0 text-content-quaternary group-hover:text-content-secondary">{hint}</span> : null}
     </button>
   );
 }
@@ -122,15 +65,6 @@ function ContactIcon() {
   );
 }
 
-function ShortcutsIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <rect x="4.5" y="6" width="15" height="12" rx="2.5" />
-      <path d="M8 10.5h.01M11.5 10.5h.01M15 10.5h.01M8 14h8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function SettingsIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -144,7 +78,7 @@ function SettingsIcon() {
   );
 }
 
-function ReleaseRoomIcon() {
+function CommunityIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M6.5 17.5 4.5 20V7A2.5 2.5 0 0 1 7 4.5h10A2.5 2.5 0 0 1 19.5 7v7A2.5 2.5 0 0 1 17 16.5H8l-1.5 1Z" strokeLinecap="round" strokeLinejoin="round" />
@@ -158,7 +92,6 @@ export function HelpMenu() {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
 
   const menuGroups = useMemo(
     () => [
@@ -176,14 +109,6 @@ export function HelpMenu() {
           },
         },
         {
-          label: 'Keyboard shortcuts',
-          icon: <ShortcutsIcon />,
-          hint: <ShortcutKeys keys={['?']} />,
-          onClick: () => {
-            setIsShortcutsModalOpen(true);
-          },
-        },
-        {
           label: 'Settings',
           icon: <SettingsIcon />,
           onClick: () => {
@@ -195,8 +120,10 @@ export function HelpMenu() {
       ],
       [
         {
-          label: 'The Release Room',
-          icon: <ReleaseRoomIcon />,
+          // Renamed from "The Release Room" (2026-07-23) — same WhatsApp
+          // community, plainer name.
+          label: 'Community',
+          icon: <CommunityIcon />,
           onClick: () => openExternalLink('https://chat.whatsapp.com/DGUGyC2GK3d5v6KPGw5aft'),
         },
       ],
@@ -232,120 +159,47 @@ export function HelpMenu() {
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    const handleShortcutsHotkey = (event: KeyboardEvent) => {
-      const pressedQuestionMark = event.key === '?' || (event.key === '/' && event.shiftKey);
-      if (!pressedQuestionMark || event.metaKey || event.ctrlKey || event.altKey || isEditableTarget(event.target)) {
-        return;
-      }
-
-      event.preventDefault();
-      setIsOpen(false);
-      setIsShortcutsModalOpen(true);
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsShortcutsModalOpen(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleShortcutsHotkey);
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('keydown', handleShortcutsHotkey);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, []);
-
   const runMenuAction = (action: () => void) => {
     setIsOpen(false);
     action();
   };
 
   return (
-    <>
-      <div
-        ref={containerRef}
-        className="fixed bottom-6 left-6 z-[115] hidden md:block"
-      >
-        {isOpen ? (
-          <div
-            role="menu"
-            className="absolute bottom-full left-0 mb-4 w-64 animate-in fade-in slide-in-from-bottom-1 duration-150 rounded-none border border-stroke-strong bg-bg-elevated p-2 shadow-2xl"
-          >
-            {menuGroups.map((group, groupIndex) => (
-              <div key={`help-group-${groupIndex}`}>
-                {group.map((item) => (
-                  <HelpMenuItem
-                    key={item.label}
-                    icon={item.icon}
-                    label={item.label}
-                    hint={item.hint}
-                    onClick={() => runMenuAction(item.onClick)}
-                  />
-                ))}
-                {groupIndex < menuGroups.length - 1 ? <div className="my-2 h-px bg-stroke-subtle" /> : null}
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        <button
-          type="button"
-          aria-label="Open help menu"
-          aria-haspopup="menu"
-          aria-expanded={isOpen}
-          onClick={() => setIsOpen((current) => !current)}
-          className="flex h-6 w-6 items-center justify-center font-mono text-[10px] text-content-quaternary transition-all duration-150 hover:text-content-secondary"
+    <div
+      ref={containerRef}
+      className="fixed bottom-6 left-6 z-[115] hidden md:block"
+    >
+      {isOpen ? (
+        <div
+          role="menu"
+          className="absolute bottom-full left-0 mb-4 w-64 animate-in fade-in slide-in-from-bottom-1 duration-150 rounded-none border border-stroke-strong bg-bg-elevated p-2 shadow-2xl"
         >
-          ?
-        </button>
-      </div>
-
-      {isShortcutsModalOpen ? (
-        <div className="fixed inset-0 z-[145] flex items-center justify-center p-4">
-          <button
-            type="button"
-            aria-label="Close keyboard shortcuts"
-            onClick={() => setIsShortcutsModalOpen(false)}
-            className="modal-scrim absolute inset-0"
-          />
-
-          <div className="relative z-[1] w-full max-w-md rounded-sm border border-stroke-strong bg-bg-elevated p-5 sm:p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.16em] text-content-tertiary">Keyboard shortcuts</p>
-                <h2 className="mt-2 text-2xl tracking-tight text-content-primary">Move faster around Urganize</h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsShortcutsModalOpen(false)}
-                className="rounded-none border border-stroke-strong bg-bg-hover px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-content-secondary transition hover:bg-bg-active hover:text-content-primary"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {shortcutDefinitions.map((shortcut) => (
-                <div
-                  key={`${shortcut.keys.join('-')}-${shortcut.description}`}
-                  className="flex items-center justify-between gap-4 rounded-none border border-stroke-subtle bg-bg-hover px-4 py-3"
-                >
-                  <p className="text-sm text-content-secondary">{shortcut.description}</p>
-                  <ShortcutKeys keys={shortcut.keys} />
-                </div>
+          {menuGroups.map((group, groupIndex) => (
+            <div key={`help-group-${groupIndex}`}>
+              {group.map((item) => (
+                <HelpMenuItem
+                  key={item.label}
+                  icon={item.icon}
+                  label={item.label}
+                  onClick={() => runMenuAction(item.onClick)}
+                />
               ))}
+              {groupIndex < menuGroups.length - 1 ? <div className="my-2 h-px bg-stroke-subtle" /> : null}
             </div>
-
-            <p className="mt-4 text-sm text-content-tertiary">
-              More app-specific shortcuts can be added here as the workspace grows.
-            </p>
-          </div>
+          ))}
         </div>
       ) : null}
-    </>
+
+      <button
+        type="button"
+        aria-label="Open help menu"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((current) => !current)}
+        className="flex h-6 w-6 items-center justify-center font-mono text-[10px] text-content-quaternary transition-all duration-150 hover:text-content-secondary"
+      >
+        ?
+      </button>
+    </div>
   );
 }

@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.17.2",
+    date: "July 23, 2026",
+    highlights: [
+      "Cleaned up the task panel: the priority and status filter dropdowns are gone — the task sections themselves are the filter now.",
+      "The help menu's community link is now simply called Community, and the keyboard shortcuts panel was removed.",
+    ],
+  },
+  {
     version: "0.17.1",
     date: "July 23, 2026",
     highlights: [
