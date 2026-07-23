@@ -298,6 +298,25 @@ export function NotificationsBell() {
     }
   }, [fetchNotifications, pushToast]);
 
+  // Clear ALL notifications (founder call, 2026-07-23) — optimistic empty
+  // with the same failure contract as markRead: on error, reconcile from
+  // the server and tell the user.
+  const clearAll = useCallback(async () => {
+    setNotifications([]);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Not signed in.');
+      const response = await fetch('/api/notifications', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('Server rejected the request.');
+    } catch {
+      pushToast('Could not clear notifications — please try again.', 'error');
+      void fetchNotifications();
+    }
+  }, [fetchNotifications, pushToast]);
+
   const handleToggle = () => {
     setIsOpen((open) => {
       const next = !open;
@@ -394,17 +413,28 @@ export function NotificationsBell() {
           // trigger-anchored dropdown.
           className="animate-menu-down fixed inset-x-4 top-[4.5rem] z-50 origin-top-right rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]"
         >
-          <div className="flex items-center justify-between border-b border-stroke-subtle px-3 py-3">
+          <div className="flex items-center justify-between gap-3 border-b border-stroke-subtle px-3 py-3">
             <p className="text-sm font-semibold text-content-primary">Notifications</p>
-            {hasUnread ? (
-              <button
-                type="button"
-                onClick={() => void markRead('all')}
-                className="motion-focus text-xs text-content-secondary transition-colors hover:text-content-primary"
-              >
-                Mark all read
-              </button>
-            ) : null}
+            <div className="flex items-center gap-3">
+              {hasUnread ? (
+                <button
+                  type="button"
+                  onClick={() => void markRead('all')}
+                  className="motion-focus text-xs text-content-secondary transition-colors hover:text-content-primary"
+                >
+                  Mark all read
+                </button>
+              ) : null}
+              {notifications.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void clearAll()}
+                  className="motion-focus text-xs text-content-secondary transition-colors hover:text-content-primary"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <div className="max-h-[360px] overflow-y-auto">

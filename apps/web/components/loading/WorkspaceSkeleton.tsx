@@ -66,7 +66,7 @@ export function WorkspaceSkeleton() {
   const knownCount = useKnownReleaseCount();
 
   return (
-    <main className="min-h-screen bg-bg-base text-content-primary" aria-hidden="true">
+    <main className="bg-bg-base text-content-primary" aria-hidden="true">
       <div className="pb-6 pt-6 sm:px-6 sm:pb-24">
         <section className="lg:hidden">
           {isFocused ? (

@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.25.1",
+    date: "July 23, 2026",
+    highlights: [
+      "No more phantom scrollbar — when your catalog fits the screen, the page doesn't scroll at all, and when it doesn't fit, you scroll without a visible scrollbar, like a native app.",
+      "Notifications can now be cleared — a Clear button in the notifications panel empties it in one tap.",
+    ],
+  },
+  {
     version: "0.25.0",
     date: "July 23, 2026",
     highlights: [

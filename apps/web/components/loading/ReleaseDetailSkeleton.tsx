@@ -21,7 +21,7 @@ import { SkeletonBlock } from './SkeletonBlock';
  */
 export function ReleaseDetailSkeleton() {
   return (
-    <main className="min-h-screen bg-bg-base text-content-primary" aria-hidden="true">
+    <main className="bg-bg-base text-content-primary" aria-hidden="true">
       <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-6 sm:px-6">
         {/* Meta/actions row: date + status pill left, action pills right. */}
         <div className="flex items-center justify-between gap-4">

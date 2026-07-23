@@ -11,7 +11,7 @@ import { SkeletonBlock } from './SkeletonBlock';
  */
 export function FilesPageSkeleton() {
   return (
-    <main className="min-h-screen bg-bg-base text-content-primary" aria-hidden="true">
+    <main className="bg-bg-base text-content-primary" aria-hidden="true">
       <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-10 sm:px-6">
         <SkeletonBlock className="h-3 w-24" />
         <div className="mt-4 space-y-2">

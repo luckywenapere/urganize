@@ -71,7 +71,7 @@ export default function FilesPageClient() {
 
   if (!release) {
     return (
-      <main className="min-h-screen bg-bg-base text-content-primary">
+      <main className="bg-bg-base text-content-primary">
         <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-10 sm:px-6">
           <div className="flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -92,7 +92,7 @@ export default function FilesPageClient() {
   }
 
   return (
-    <main className="min-h-screen bg-bg-base text-content-primary">
+    <main className="bg-bg-base text-content-primary">
       <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-10 sm:px-6">
         {toast ? (
           <div className="mb-4">

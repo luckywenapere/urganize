@@ -44,7 +44,7 @@ export function SettingsPageSkeleton({
   isArtistAccount = false,
 }: SettingsPageSkeletonProps) {
   return (
-    <main className="min-h-screen bg-bg-base text-content-primary" aria-hidden="true">
+    <main className="bg-bg-base text-content-primary" aria-hidden="true">
       <div className="relative pb-24 pt-6 sm:px-6">
         <div className="relative mx-auto w-full max-w-[760px]">
           {/* Mirrors the page's header row: no in-page "Settings" heading

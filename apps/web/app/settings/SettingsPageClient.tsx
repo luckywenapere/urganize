@@ -281,7 +281,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-bg-base text-content-primary">
+    <main className="bg-bg-base text-content-primary">
       {/* Outer chrome wrapper. NO max-width — the outer page width is owned
           by AppShell's mx-auto max-w-[1440px] wrapper (see AppShell.tsx
           PAGE WIDTH SOURCE OF TRUTH). `sm:px-6 pb-24 pt-6` matches
