@@ -74,7 +74,9 @@ export default function ChappiPageClient() {
           if (FIRST_WIN_ENABLED && releases.length === 0) {
             setWinReleaseId(releaseId);
           } else {
-            router.push(`/dashboard/releases/${releaseId}`);
+            // Same one-time getting-started guide as the workspace's create
+            // flow — see WorkspaceView's onCreated for the param contract.
+            router.push(`/dashboard/releases/${releaseId}?new=1`);
           }
         }}
       />

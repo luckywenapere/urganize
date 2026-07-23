@@ -297,7 +297,10 @@ export function WorkspaceView() {
           if (FIRST_WIN_ENABLED && releases.length === 0) {
             setWinReleaseId(releaseId);
           } else {
-            router.push(`/dashboard/releases/${releaseId}`);
+            // ?new=1 triggers the one-time dismissible getting-started guide
+            // on the release detail page (NewReleaseGuide); the page strips
+            // the param itself once read, so it never survives a refresh.
+            router.push(`/dashboard/releases/${releaseId}?new=1`);
           }
         }}
       />
