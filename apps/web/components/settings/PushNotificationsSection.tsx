@@ -62,8 +62,12 @@ export function PushNotificationsSection() {
 
   return (
     <section className={panelClass}>
-      <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+      <h2 className="mb-5 flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         Notifications
+        {/* Notifications are Beta (founder call, 2026-07-23) — standard pill. */}
+        <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+          Beta
+        </span>
       </h2>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">

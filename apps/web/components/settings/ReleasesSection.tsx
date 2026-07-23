@@ -7,6 +7,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { DeleteReleaseDialog } from '@/components/workspace/DeleteReleaseDialog';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import { useKnownReleaseCount } from '@/components/loading/known-counts';
 import type { Release } from '@/types/releases';
 import { panelClass } from './panelClass';
 
@@ -27,6 +28,8 @@ export function ReleasesSection() {
   const [releaseToDelete, setReleaseToDelete] = useState<Pick<Release, 'id' | 'title'> | null>(
     null
   );
+  // Count-aware loading rows — matches the user's last-known roster size.
+  const knownReleaseCount = useKnownReleaseCount(2, 6);
 
   // Settings can be the FIRST route a session hydrates (direct link,
   // refresh) — the store's own recency guard makes this a no-op if a
@@ -67,8 +70,9 @@ export function ReleasesSection() {
         </p>
         {isLoadingReleases ? (
           <div className="space-y-2">
-            <SkeletonBlock className="h-14 w-full rounded-lg" />
-            <SkeletonBlock className="h-14 w-full rounded-lg" />
+            {Array.from({ length: knownReleaseCount }).map((_, index) => (
+              <SkeletonBlock key={`release-row-skeleton-${index}`} className="h-14 w-full rounded-lg" />
+            ))}
           </div>
         ) : ownedReleases.length === 0 ? (
           <p className="text-sm text-content-secondary">No releases yet.</p>

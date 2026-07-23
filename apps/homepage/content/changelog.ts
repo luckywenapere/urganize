@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.28.3",
+    date: "July 23, 2026",
+    highlights: [
+      "Loading screens across Settings now mirror your real data — the Teammates and Releases lists show exactly as many placeholder rows as you have members and releases, so content lands where the placeholders stood.",
+      "The single-release loading screen matches its final shape too: back button, motion bar, and side rails sized to your roster.",
+      "Notifications are now marked Beta in Settings and in the notifications panel.",
+    ],
+  },
+  {
     version: "0.28.2",
     date: "July 23, 2026",
     highlights: [

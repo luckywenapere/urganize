@@ -1,6 +1,7 @@
 'use client';
 
 import { SkeletonBlock } from './SkeletonBlock';
+import { useKnownReleaseCount, useKnownTeammateCount } from './known-counts';
 
 // Same one-liner the real page reads at module scope (SettingsPageClient.tsx)
 // — a build-time env constant, synchronously knowable, never wrong.
@@ -43,6 +44,12 @@ export function SettingsPageSkeleton({
   isManagerAccount = false,
   isArtistAccount = false,
 }: SettingsPageSkeletonProps) {
+  // Count-aware slots (founder call, 2026-07-23): the Teammates and Releases
+  // sections render THIS user's last-known row counts so the resolved lists
+  // land exactly where their placeholders stood.
+  const teammateCount = useKnownTeammateCount(2, 6);
+  const releaseCount = useKnownReleaseCount(2, 6);
+
   return (
     <main className="bg-bg-base text-content-primary" aria-hidden="true">
       <div className="relative pb-24 pt-6 sm:px-6">
@@ -67,7 +74,10 @@ export function SettingsPageSkeleton({
               // Appearance + Notifications share one two-column row on the
               // real page — special-cased in the render below.
               { key: 'appearance-notifications', height: 'h-24', show: true },
-              { key: 'teammates', height: 'h-32', show: isManagerAccount },
+              // Teammates renders for EVERY account since v0.26.0 (read-only
+              // for non-managers) — count-aware rows, special-cased below.
+              { key: 'teammates', height: 'h-32', show: true },
+              // Count-aware release rows, special-cased below.
               { key: 'releases', height: 'h-32', show: true },
               { key: 'security', height: 'h-40', show: true },
               { key: 'session', height: 'h-20', show: true },
@@ -84,6 +94,33 @@ export function SettingsPageSkeleton({
                     <div className="hidden sm:block">
                       <SkeletonBlock className="mb-5 h-3 w-28" />
                       <SkeletonBlock className={`${section.height} w-full`} />
+                    </div>
+                  </div>
+                ) : section.key === 'teammates' ? (
+                  <div key={section.key} className="py-9">
+                    <SkeletonBlock className="mb-5 h-3 w-28" />
+                    {/* Invite controls exist for managers only. */}
+                    {isManagerAccount ? <SkeletonBlock className="mb-2 h-10 w-full rounded-lg" /> : null}
+                    <div className="space-y-2">
+                      {Array.from({ length: teammateCount }).map((_, index) => (
+                        <SkeletonBlock
+                          key={`teammate-row-${index}`}
+                          className="h-12 w-full rounded-lg"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : section.key === 'releases' ? (
+                  <div key={section.key} className="py-9">
+                    <SkeletonBlock className="mb-2 h-3 w-28" />
+                    <SkeletonBlock className="mb-4 h-3 w-3/4" />
+                    <div className="space-y-2">
+                      {Array.from({ length: releaseCount }).map((_, index) => (
+                        <SkeletonBlock
+                          key={`release-row-${index}`}
+                          className="h-14 w-full rounded-lg"
+                        />
+                      ))}
                     </div>
                   </div>
                 ) : (
@@ -106,12 +143,15 @@ export function SettingsPageSkeleton({
  * duplicate of the route-segment fallback.
  */
 export function SettingsTeamMembersSectionSkeleton() {
+  // Count-aware: renders the last-known number of teammate rows so the
+  // resolved list lands where the placeholders stood.
+  const teammateCount = useKnownTeammateCount(2, 6);
   return (
     <div className="mt-4 space-y-2">
-      {Array.from({ length: 3 }).map((_, index) => (
+      {Array.from({ length: teammateCount }).map((_, index) => (
         <div
           key={`team-member-skeleton-${index}`}
-          className="h-12 border border-stroke-subtle bg-bg-elevated"
+          className="h-12 rounded-lg border border-stroke-subtle bg-bg-elevated"
         />
       ))}
     </div>
