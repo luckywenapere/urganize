@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.25.0",
+    date: "July 23, 2026",
+    highlights: [
+      "Chappi chats can now be pinned to a specific release — a picker under the message box lists your releases by name (with their cover art), so instructions like \"add an activity\" land on the release you chose without naming it every time.",
+    ],
+  },
+  {
     version: "0.24.1",
     date: "July 23, 2026",
     highlights: [

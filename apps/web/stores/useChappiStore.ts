@@ -14,9 +14,14 @@ type ChappiStore = {
   reply: ChappiReply | null;
   /** Ephemeral conversation turns (Phase 2+). */
   messages: ChappiMessage[];
+  /** Release the conversation is pinned to via the scope picker under the
+   * prompt box; null = all releases. Survives `reset` deliberately — picking
+   * a release is a working-context choice, not part of one conversation. */
+  scopedReleaseId: string | null;
   setInput: (value: string) => void;
   setReply: (reply: ChappiReply | null) => void;
   appendMessage: (message: ChappiMessage) => void;
+  setScopedReleaseId: (releaseId: string | null) => void;
   reset: () => void;
 };
 
@@ -24,9 +29,11 @@ export const useChappiStore = create<ChappiStore>((set) => ({
   input: '',
   reply: null,
   messages: [],
+  scopedReleaseId: null,
   setInput: (value) => set({ input: value }),
   setReply: (reply) => set({ reply }),
   appendMessage: (message) =>
     set((current) => ({ messages: [...current.messages, message] })),
+  setScopedReleaseId: (releaseId) => set({ scopedReleaseId: releaseId }),
   reset: () => set({ input: '', reply: null, messages: [] }),
 }));

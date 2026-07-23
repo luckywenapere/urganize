@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { ChappiBetaBadge } from '@/components/chappi/ChappiBetaBadge';
+import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -109,7 +110,23 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const todaysDirective = useReleaseStore((state) => state.todaysDirective);
   const releases = useReleaseStore((state) => state.releases);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
-  const { input, setInput, reply, setReply, messages, appendMessage, reset } = useChappiStore();
+  const {
+    input,
+    setInput,
+    reply,
+    setReply,
+    messages,
+    appendMessage,
+    reset,
+    scopedReleaseId,
+    setScopedReleaseId,
+  } = useChappiStore();
+  // The release the conversation is pinned to (scope picker under the
+  // composer). Falls back to null if the id no longer resolves (deleted
+  // release, stale store) so the scope silently degrades to "All releases".
+  const scopedRelease = scopedReleaseId
+    ? releases.find((release) => release.id === scopedReleaseId) ?? null
+    : null;
   const { openQuickCreate, openTask } = useTaskUI();
   const [isThinking, setIsThinking] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -141,12 +158,22 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         return;
       case 'add_task':
         // 'quick_create' is the canonical source; TaskCreateSource has no
-        // 'chappi' member and adding one is out of scope.
-        openQuickCreate({ source: 'quick_create' });
-        appendAssistantReply('Opening a new activity.');
+        // 'chappi' member and adding one is out of scope. The scoped release
+        // (if any) pre-fills the activity's release.
+        openQuickCreate({ releaseId: scopedRelease?.id, source: 'quick_create' });
+        appendAssistantReply(
+          scopedRelease
+            ? `Opening a new activity for ${scopedRelease.title}.`
+            : 'Opening a new activity.'
+        );
         return;
       case 'todays_focus':
-        if (todaysDirective) {
+        if (scopedRelease && todaysDirective?.releaseId !== scopedRelease.id) {
+          // Scoped to a release the global directive doesn't belong to —
+          // open that release's activities instead of someone else's task.
+          router.push(`/dashboard?release=${scopedRelease.id}`);
+          appendAssistantReply(`Opening the activities for ${scopedRelease.title}.`);
+        } else if (todaysDirective) {
           // Cross-page open: the task detail view renders on the workspace
           // page, not here. Same pattern NotificationsBell uses — navigate
           // first, then openTask (route-agnostic; the state is picked up
@@ -160,7 +187,9 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         return;
       case 'generate_status': {
         const target =
-          todaysDirective?.releaseId ?? (releases.length === 1 ? releases[0]?.id : null);
+          scopedRelease?.id ??
+          todaysDirective?.releaseId ??
+          (releases.length === 1 ? releases[0]?.id : null);
         if (target) {
           router.push(`/dashboard/releases/${target}`);
           appendAssistantReply(
@@ -210,7 +239,12 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       const response = await fetch('/api/chappi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ messages: historyForApi }),
+        body: JSON.stringify({
+          messages: historyForApi,
+          releaseScope: scopedRelease
+            ? { id: scopedRelease.id, title: scopedRelease.title }
+            : undefined,
+        }),
         cache: 'no-store',
       });
       const data = (await response.json().catch(() => null)) as ChappiResponse | null;
@@ -257,27 +291,40 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // the Claude-desktop shape (founder call, 2026-07-23).
   const inputForm = (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className="flex items-center gap-2 rounded-2xl border border-stroke-default bg-bg-surface px-3 py-2 transition-colors focus-within:border-brand">
-        <input
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder="Ask Chappi or type a command…"
-          aria-label="Message Chappi"
-          disabled={isThinking}
-          className="min-w-0 flex-1 bg-transparent text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none disabled:opacity-60 sm:text-sm"
-        />
-        <button
-          type="submit"
-          aria-label="Send"
-          disabled={!input.trim() || isThinking}
-          className="motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
-        >
-          {isThinking ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <ArrowUp className="h-4 w-4" aria-hidden="true" />
-          )}
-        </button>
+      <div className="rounded-2xl border border-stroke-default bg-bg-surface px-3 py-2 transition-colors focus-within:border-brand">
+        <div className="flex items-center gap-2">
+          <input
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder="Ask Chappi or type a command…"
+            aria-label="Message Chappi"
+            disabled={isThinking}
+            className="min-w-0 flex-1 bg-transparent text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none disabled:opacity-60 sm:text-sm"
+          />
+          <button
+            type="submit"
+            aria-label="Send"
+            disabled={!input.trim() || isThinking}
+            className="motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
+          >
+            {isThinking ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <ArrowUp className="h-4 w-4" aria-hidden="true" />
+            )}
+          </button>
+        </div>
+        {/* Scope row — Linear-style release context picker (founder call,
+            2026-07-23): pick which release this conversation is about. Sits
+            inside the composer, under the text line; hidden while the user
+            has no releases (the picker renders null). */}
+        <div className="mt-1 flex justify-start">
+          <ChappiScopePicker
+            releases={releases}
+            scopedReleaseId={scopedReleaseId}
+            onSelect={setScopedReleaseId}
+          />
+        </div>
       </div>
     </form>
   );
