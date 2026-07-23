@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { openExternalUrl } from '@/lib/external-link';
+import { CommunityIcon, ContactIcon, DocsIcon } from '@/components/app/BrandIcons';
 
 // The keyboard-shortcuts panel (and its "?" hotkey + menu item) was removed
 // 2026-07-23 (founder call) — the menu is Docs / Contact plus the
@@ -45,34 +46,6 @@ function HelpMenuItem({
       <ItemIcon>{icon}</ItemIcon>
       <span className="min-w-0 flex-1 font-sans">{label}</span>
     </button>
-  );
-}
-
-function DocsIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M7 4.5h7l4.5 4.5V19A1.5 1.5 0 0 1 17 20.5H7A1.5 1.5 0 0 1 5.5 19V6A1.5 1.5 0 0 1 7 4.5Z" />
-      <path d="M14 4.5V9h4.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8.5 13h7M8.5 16.5h5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ContactIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M4.5 7.5A1.5 1.5 0 0 1 6 6h12a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 18 18H6a1.5 1.5 0 0 1-1.5-1.5v-9Z" />
-      <path d="m6 8 6 4.5L18 8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function CommunityIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M6.5 17.5 4.5 20V7A2.5 2.5 0 0 1 7 4.5h10A2.5 2.5 0 0 1 19.5 7v7A2.5 2.5 0 0 1 17 16.5H8l-1.5 1Z" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8.5 10.5h7M8.5 13.5H14" strokeLinecap="round" />
-    </svg>
   );
 }
 
