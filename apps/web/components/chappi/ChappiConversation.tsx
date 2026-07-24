@@ -336,7 +336,10 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     return (
       <div
         className={`flex h-full min-h-0 flex-col items-center px-2 text-center ${
-          isPanel ? 'justify-start overflow-y-auto pt-4' : 'justify-center'
+          // The dock panel bottom-anchors its empty state (founder call,
+          // 2026-07-23) — greeting, input, and chips sit right above the
+          // footer like a chat, not suspended at the top of the panel.
+          isPanel ? 'justify-end overflow-y-auto pb-2 pt-4' : 'justify-center'
         }`}
       >
         {/* The dock's own header already says "Chappi"; the page shows the
