@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.31.0",
+    date: "July 23, 2026",
+    highlights: [
+      "Urganize now cheers you on — a welcome when you arrive, a momentum nudge while you work, and a gentle reminder if you've been away a while, all as notifications on devices that have them on.",
+      "\"What's new\" announcements now only cover real feature releases — no more cards about tiny fixes.",
+      "Signing in is smoother for Google accounts — the password option always stays available alongside the Google suggestion.",
+    ],
+  },
+  {
     version: "0.30.1",
     date: "July 23, 2026",
     highlights: [

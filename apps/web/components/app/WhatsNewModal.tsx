@@ -21,6 +21,12 @@ const MAX_VERSIONS = 5;
 const isVersionString = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
 
+// FILTER (founder call, 2026-07-23): only FEATURE releases get announced —
+// x.Y.0 versions, per the repo's own bump rules (minor = new user-facing
+// feature, patch = fixes/polish). Nobody needs a push-up card about a
+// panel being nudged to the bottom.
+const isFeatureRelease = (version: string): boolean => /^\d+\.\d+\.0$/.test(version);
+
 export function WhatsNewModal() {
   const [seenVersion, setSeenVersion] = useState<string | null | undefined>(undefined);
   const [dismissed, setDismissed] = useState(false);
@@ -33,14 +39,16 @@ export function WhatsNewModal() {
   const freshEntries = useMemo(() => {
     if (seenVersion === undefined) return [];
     if (seenVersion === CURRENT_VERSION) return [];
-    if (seenVersion === null) {
-      // First visit on this device: announce only the current release —
-      // enough to say "here's what just landed" without a history dump.
-      return changelog.slice(0, 1);
-    }
-    const seenIndex = changelog.findIndex((entry) => entry.version === seenVersion);
-    const entries = seenIndex === -1 ? changelog.slice(0, 1) : changelog.slice(0, seenIndex);
-    return entries.slice(0, MAX_VERSIONS);
+    const candidates =
+      seenVersion === null
+        ? // First visit on this device: announce only the current release —
+          // enough to say "here's what just landed" without a history dump.
+          changelog.slice(0, 1)
+        : (() => {
+            const seenIndex = changelog.findIndex((entry) => entry.version === seenVersion);
+            return seenIndex === -1 ? changelog.slice(0, 1) : changelog.slice(0, seenIndex);
+          })();
+    return candidates.filter((entry) => isFeatureRelease(entry.version)).slice(0, MAX_VERSIONS);
   }, [seenVersion]);
 
   const open = !dismissed && freshEntries.length > 0;

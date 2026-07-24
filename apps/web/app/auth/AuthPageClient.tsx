@@ -72,21 +72,18 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [providerHint, setProviderHint] = useState<LoginProviderHint>('unknown');
   const [providerHintEmail, setProviderHintEmail] = useState('');
-  const [isCheckingProvider, setIsCheckingProvider] = useState(false);
   const [showEmailLogin, setShowEmailLogin] = useState(false);
-  const [showEmailLoginForGoogle, setShowEmailLoginForGoogle] = useState(false);
   const providerLookupRequestIdRef = useRef(0);
 
   const normalizedLoginEmail = normalizeAuthEmail(email);
   const hasLookupEligibleEmail = showEmailLogin && normalizedLoginEmail.includes('@');
-  const isProviderLookupPending =
-    hasLookupEligibleEmail &&
-    (isCheckingProvider || providerHintEmail !== normalizedLoginEmail);
-  const shouldHideEmailLogin =
+  // HINT, not a wall (founder bug report, 2026-07-23): the provider lookup
+  // is a heuristic — when it was wrong it locked the password field away
+  // entirely. Now it only surfaces a suggestion; email login always works.
+  const showGoogleHint =
     showEmailLogin &&
     providerHint === 'google' &&
-    providerHintEmail === normalizedLoginEmail &&
-    !showEmailLoginForGoogle;
+    providerHintEmail === normalizedLoginEmail;
 
   // Legacy ?mode=signup bookmarks: bounce to /onboarding immediately so
   // the user isn't stuck on a login form with no signup option. Runs
@@ -172,22 +169,15 @@ export default function AuthPage() {
     if (!showEmailLogin || !hasLookupEligibleEmail) {
       setProviderHint('unknown');
       setProviderHintEmail('');
-      setIsCheckingProvider(false);
       return;
     }
 
-    setIsCheckingProvider(true);
     const timer = window.setTimeout(async () => {
       const hint = await resolveLoginProviderHint(normalizedLoginEmail);
       if (providerLookupRequestIdRef.current !== requestId) return;
 
       setProviderHint(hint);
       setProviderHintEmail(normalizedLoginEmail);
-      setIsCheckingProvider(false);
-
-      if (hint === 'google') {
-        setShowEmailLoginForGoogle(false);
-      }
     }, 300);
 
     return () => {
@@ -197,11 +187,6 @@ export default function AuthPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isProviderLookupPending) return;
-    if (shouldHideEmailLogin) {
-      setError('Use Google to continue, or click "Use email instead".');
-      return;
-    }
     setError('');
     setIsLoading(true);
 
@@ -325,7 +310,6 @@ export default function AuthPage() {
                   disabled={isLoading || isGoogleLoading}
                   onClick={() => {
                     setShowEmailLogin(true);
-                    setShowEmailLoginForGoogle(false);
                     setPassword('');
                     setError('');
                   }}
@@ -364,35 +348,15 @@ export default function AuthPage() {
                       required
                     />
 
-                    {shouldHideEmailLogin && (
-                      <div className="space-y-3">
-                        <p className="text-center text-xs text-content-secondary">
-                          This account uses Google sign-in.
-                        </p>
-                        <Button
-                          type="button"
-                          className="w-full"
-                          disabled={isLoading || isGoogleLoading}
-                          onClick={handleGoogleLogin}
-                        >
-                          Continue with Google
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className="w-full"
-                          disabled={isLoading || isGoogleLoading}
-                          onClick={() => {
-                            setShowEmailLoginForGoogle(true);
-                            setError('');
-                          }}
-                        >
-                          Use email instead
-                        </Button>
-                      </div>
+                    {showGoogleHint && (
+                      <p className="text-center text-xs text-content-secondary">
+                        This account was created with Google — you can use
+                        &ldquo;Continue with Google&rdquo; above, or enter your
+                        password below.
+                      </p>
                     )}
 
-                    {!shouldHideEmailLogin && (
+                    {true && (
                       <>
                         <Input
                           label="Password"
@@ -405,7 +369,6 @@ export default function AuthPage() {
                           placeholder="••••••••"
                           leftIcon={<Lock className="w-4 h-4" />}
                           autoComplete="current-password"
-                          autoFocus={showEmailLoginForGoogle && providerHint === 'google'}
                           disabled={isLoading || isGoogleLoading}
                           required
                         />
@@ -425,7 +388,6 @@ export default function AuthPage() {
                       type="button"
                       onClick={() => {
                         setShowEmailLogin(false);
-                        setShowEmailLoginForGoogle(false);
                         setPassword('');
                         setError('');
                       }}
@@ -448,7 +410,7 @@ export default function AuthPage() {
             </Link>
           </p>
 
-          {showEmailLogin && !shouldHideEmailLogin && (
+          {showEmailLogin && (
             <p className="text-center text-sm text-content-tertiary mt-2">
               <Link href="/auth/forgot-password" className="text-brand hover:underline">
                 Forgot password?
