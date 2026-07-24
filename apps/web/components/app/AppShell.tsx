@@ -33,6 +33,10 @@ const CreateReleaseModal = dynamic(
   () => import('@/components/releases/CreateReleaseModal').then((m) => m.CreateReleaseModal),
   { ssr: false }
 );
+const WhatsNewModal = dynamic(
+  () => import('@/components/app/WhatsNewModal').then((m) => m.WhatsNewModal),
+  { ssr: false }
+);
 const FirstTimeOnboardingGate = dynamic(
   () =>
     import('@/components/onboarding/FirstTimeOnboardingGate').then(
@@ -172,6 +176,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           void useReleaseStore.getState().loadCommandCenter();
         }}
       />
+      {/* "What's new" (founder request, 2026-07-23): announces changelog
+          entries this device hasn't seen yet, once per release, on signed-in
+          app surfaces only. */}
+      {isAuthenticated && !isAuthLoading && showWorkspaceChrome ? <WhatsNewModal /> : null}
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
       {isLockedRoute || isOnboardingRoute || isInviteRoute ? null : (
         <Suspense fallback={null}>
