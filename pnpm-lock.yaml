@@ -29,6 +29,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.90.1
         version: 2.101.0
+      '@urganize/changelog':
+        specifier: workspace:*
+        version: link:../../packages/changelog
       '@urganize/pricing':
         specifier: workspace:*
         version: link:../../packages/pricing
@@ -142,6 +145,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.90.1
         version: 2.101.0
+      '@urganize/changelog':
+        specifier: workspace:*
+        version: link:../../packages/changelog
       '@urganize/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -227,6 +233,12 @@ importers:
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(vite@8.1.4(@types/node@22.19.15)(jiti@1.21.7))
+
+  packages/changelog:
+    devDependencies:
+      typescript:
+        specifier: ^5
+        version: 5.9.3
 
   packages/config:
     dependencies:
