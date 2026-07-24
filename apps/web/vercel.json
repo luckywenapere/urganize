@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/due-date-notifications",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/notifications",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

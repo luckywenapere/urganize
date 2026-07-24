@@ -122,6 +122,37 @@ export function AppShell({ children }: { children: ReactNode }) {
     void registerPushServiceWorker();
   }, []);
 
+  // Engagement drip (founder request, 2026-07-23): ping once per tab
+  // session after auth resolves. The server sends the welcome push (6h
+  // cooldown) and resets the user's scheduled come-back reminders — see
+  // lib/engagement-server.ts. sessionStorage guard keeps route changes
+  // from re-pinging.
+  useEffect(() => {
+    if (!isAuthenticated || isAuthLoading || !user) return;
+    try {
+      if (window.sessionStorage.getItem('urganize.engagement.pinged')) return;
+      window.sessionStorage.setItem('urganize.engagement.pinged', '1');
+    } catch {
+      // Restricted storage — ping anyway; the server's cooldown dedupes.
+    }
+    void (async () => {
+      try {
+        const { supabase } = await import('@/lib/supabase/client');
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        await fetch('/api/engagement/login-ping', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch {
+        // Best-effort — never let engagement plumbing affect the app.
+      }
+    })();
+  }, [isAuthenticated, isAuthLoading, user]);
+
   return (
     // ToastProvider wraps TaskUIProvider so any surface inside the app shell
     // (task drawer, workspace, notifications bell) can call `useToast()`.
