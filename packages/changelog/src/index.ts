@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.30.1",
+    date: "July 23, 2026",
+    highlights: [
+      "The Chappi dock's welcome now sits at the bottom of the panel, right above the footer — no more floating mid-air with empty space beneath it.",
+    ],
+  },
+  {
     version: "0.30.0",
     date: "July 23, 2026",
     highlights: [
