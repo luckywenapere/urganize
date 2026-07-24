@@ -414,13 +414,9 @@ export function NotificationsBell() {
           className="animate-menu-down fixed inset-x-4 top-[4.5rem] z-50 origin-top-right rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]"
         >
           <div className="flex items-center justify-between gap-3 border-b border-stroke-subtle px-3 py-3">
-            <p className="flex items-center gap-2 text-sm font-semibold text-content-primary">
-              Notifications
-              {/* Beta (founder call, 2026-07-23) — standard pill. */}
-              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-                Beta
-              </span>
-            </p>
+            {/* No Beta pill here (founder call, 2026-07-23) — the Settings
+                section keeps it; the bell panel stays clean. */}
+            <p className="text-sm font-semibold text-content-primary">Notifications</p>
             <div className="flex items-center gap-3">
               {hasUnread ? (
                 <button

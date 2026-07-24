@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.31.1",
+    date: "July 23, 2026",
+    highlights: [
+      "The notifications panel dropped its Beta tag — the label stays in Settings only.",
+    ],
+  },
+  {
     version: "0.31.0",
     date: "July 23, 2026",
     highlights: [
