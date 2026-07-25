@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
@@ -26,6 +27,13 @@ const features = [
       "Every task dated relative to your release day",
       "Edit, reorder, or delete anything: it's your plan",
     ],
+    // Real screenshot of the current release view (retaken 2026-07-25).
+    // Same house rule as the landing page: if the UI changes meaningfully,
+    // retake this — marketing imagery never lags the product.
+    image: {
+      src: "/images/product/workspace-tasks.png",
+      alt: "A release open in Urganize: the motion bar tracking 1 of 64, and the 64-activity rollout plan with owners and due dates on every row.",
+    },
   },
   {
     kicker: "Tasks",
@@ -160,6 +168,19 @@ export default function FeaturesPage() {
                   </ul>
                 </div>
               </div>
+
+              {"image" in feature ? (
+                <div className="mx-auto mt-14 max-w-[64rem] overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
+                  <Image
+                    src={feature.image.src}
+                    alt={feature.image.alt}
+                    width={1920}
+                    height={970}
+                    className="h-auto w-full"
+                    sizes="(min-width: 1088px) 1024px, 100vw"
+                  />
+                </div>
+              ) : null}
             </SectionShell>
           </ScrollReveal>
         ))}
