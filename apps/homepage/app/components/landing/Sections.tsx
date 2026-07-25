@@ -141,9 +141,9 @@ export function MirrorSection() {
   );
 }
 
-// Real screenshot of the current workspace (staged 2026-06-11). If the UI
-// changes meaningfully, retake this — never let marketing imagery lag the
-// product again.
+// Real screenshot of the current workspace (retaken 2026-07-25 after the
+// catalog/focused-view redesign). If the UI changes meaningfully, retake
+// this — never let marketing imagery lag the product again.
 export function WorkspaceShotSection() {
   return (
     <ScrollReveal>
@@ -157,9 +157,9 @@ export function WorkspaceShotSection() {
         <div className="overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
           <Image
             src="/images/product/workspace-releases.png"
-            alt="The Urganize workspace: four releases in flight, each with artist, release date, and task progress toward its 64-task plan."
-            width={1918}
-            height={974}
+            alt="The Urganize catalog: four releases across three artists, each with cover art, release date, and motion toward its 64-activity plan."
+            width={1920}
+            height={970}
             className="h-auto w-full"
             sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
           />
@@ -215,9 +215,9 @@ export function TemplatePlanSection() {
         <div className="mx-auto mt-14 max-w-[58rem] overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
           <Image
             src="/images/product/workspace-tasks.png"
-            alt="Tasks scoped to the release 'Born To Be Free', fresh from its 64-task plan, with owners and due dates on every row."
-            width={1918}
-            height={972}
+            alt="A single release open in Urganize: the motion bar, the 64-activity rollout plan with due dates on every row, and the rest of the roster one click away."
+            width={1920}
+            height={970}
             className="h-auto w-full"
             sizes="(min-width: 1024px) 928px, 100vw"
           />
