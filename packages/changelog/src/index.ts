@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.33.0",
+    date: "July 26, 2026",
+    highlights: [
+      "The AI status update generator is now live — read your release's current state and get a one-paragraph update ready to share.",
+      "AI rollout planning and status updates now retry more reliably behind the scenes, so a slow response is far less likely to show as an error.",
+    ],
+  },
+  {
     version: "0.32.0",
     date: "July 26, 2026",
     highlights: [
