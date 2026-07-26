@@ -253,9 +253,17 @@ export async function generateStructuredAiOutput<T>({
   parse,
   invalidFormatMessage = 'Model returned invalid JSON format',
 }: GenerateStructuredAiOutputOptions<T>): Promise<T> {
-  if (!getAiGatewayConfig()) {
+  const config = getAiGatewayConfig();
+  if (!config) {
     throw new Error('AI model environment is not configured');
   }
+
+  // With no model override on OpenRouter, each attempt is served by a
+  // different randomly-selected free model (openrouter/free) — a failure on
+  // one attempt says nothing about the next, so every failure is worth
+  // retrying. For a pinned model, keep the narrower classification: retrying
+  // the identical model after a parse/empty-content failure rarely helps.
+  const isFreeAutoRouter = !model && config.isOpenRouter;
 
   let lastError: unknown = null;
 
@@ -266,7 +274,7 @@ export async function generateStructuredAiOutput<T>({
       const raw = await requestAiGateway({ messages, timeoutMs, model });
       const parsed = parse(raw);
       if (!parsed) {
-        throw new AiProviderError(invalidFormatMessage, { retryable: false });
+        throw new AiProviderError(invalidFormatMessage, { retryable: isFreeAutoRouter });
       }
       return parsed;
     } catch (error) {
@@ -274,9 +282,12 @@ export async function generateStructuredAiOutput<T>({
       const typedError =
         error instanceof AiProviderError
           ? error
-          : new AiProviderError(String((error as { message?: string } | null)?.message || 'Unknown AI generation error'));
+          : new AiProviderError(
+              String((error as { message?: string } | null)?.message || 'Unknown AI generation error'),
+              { retryable: isFreeAutoRouter }
+            );
 
-      const shouldRetry = typedError.retryable && attempt < maxRetries;
+      const shouldRetry = (isFreeAutoRouter || typedError.retryable) && attempt < maxRetries;
       if (shouldRetry) {
         await sleep(Math.min(1500 * attempt, 4000));
         continue;
@@ -301,7 +312,8 @@ type GeneratePlainTextAiOutputOptions = {
  * timeout + error-mapping loop but requests free-form prose (no JSON format
  * constraint) and returns the trimmed string. Used by the status update
  * generator. Throws AiProviderError on exhausted retries; empty output throws
- * a non-retryable error so the caller can map it to a clear message.
+ * a non-retryable error so the caller can map it to a clear message — unless
+ * we're on the free auto-router, where a retry samples a different model.
  */
 export async function generatePlainTextAiOutput({
   messages,
@@ -309,9 +321,12 @@ export async function generatePlainTextAiOutput({
   maxRetries = DEFAULT_MAX_RETRIES,
   model,
 }: GeneratePlainTextAiOutputOptions): Promise<string> {
-  if (!getAiGatewayConfig()) {
+  const config = getAiGatewayConfig();
+  if (!config) {
     throw new Error('AI model environment is not configured');
   }
+
+  const isFreeAutoRouter = !model && config.isOpenRouter;
 
   let lastError: unknown = null;
 
@@ -320,7 +335,7 @@ export async function generatePlainTextAiOutput({
       const raw = await requestAiGateway({ messages, timeoutMs, model, format: 'text' });
       const trimmed = raw.trim();
       if (!trimmed) {
-        throw new AiProviderError('Model returned empty content', { retryable: false });
+        throw new AiProviderError('Model returned empty content', { retryable: isFreeAutoRouter });
       }
       return trimmed;
     } catch (error) {
@@ -328,9 +343,12 @@ export async function generatePlainTextAiOutput({
       const typedError =
         error instanceof AiProviderError
           ? error
-          : new AiProviderError(String((error as { message?: string } | null)?.message || 'Unknown AI generation error'));
+          : new AiProviderError(
+              String((error as { message?: string } | null)?.message || 'Unknown AI generation error'),
+              { retryable: isFreeAutoRouter }
+            );
 
-      const shouldRetry = typedError.retryable && attempt < maxRetries;
+      const shouldRetry = (isFreeAutoRouter || typedError.retryable) && attempt < maxRetries;
       if (shouldRetry) {
         await sleep(Math.min(1500 * attempt, 4000));
         continue;
