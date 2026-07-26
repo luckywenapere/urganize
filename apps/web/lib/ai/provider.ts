@@ -9,9 +9,10 @@ type GenerateStructuredAiOutputOptions<T> = {
   timeoutMs?: number;
   maxRetries?: number;
   /**
-   * Upstream model id. Defaults to AI_MODEL. Lets a caller route a specific
-   * request to a different model (e.g., the rollout planner to Claude Sonnet)
-   * provided the Zuplo gateway is configured to serve that model id.
+   * Upstream model id. Defaults per gateway: 'openrouter/free' when AI_API_BASE
+   * points at openrouter.ai, otherwise the Zuplo gateway's qwen2.5:3b. Lets a
+   * caller route a specific request to a different model (e.g., the rollout
+   * planner via AI_TAILORING_MODEL) provided the gateway serves that model id.
    */
   model?: string;
   parse: (raw: string) => T | null;
@@ -20,6 +21,7 @@ type GenerateStructuredAiOutputOptions<T> = {
 
 const DEFAULT_AI_API_BASE = 'https://urganize-main-34fd8f6.d2.zuplo.dev';
 const AI_MODEL = 'qwen2.5:3b';
+const OPENROUTER_DEFAULT_MODEL = 'openrouter/free';
 const DEFAULT_TIMEOUT_MS = 90_000;
 const DEFAULT_MAX_RETRIES = 3;
 const RETRYABLE_STATUS_CODES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
@@ -42,14 +44,26 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const getAiGatewayConfig = () => {
   const apiKey = String(process.env.AI_API_KEY || '').trim();
-  const apiBase = String(process.env.AI_API_BASE || DEFAULT_AI_API_BASE).trim();
+  const apiBase = String(process.env.AI_API_BASE || DEFAULT_AI_API_BASE).trim().replace(/\/+$/, '');
 
   if (!apiKey) return null;
+
+  const isOpenRouter = /(^|\.)openrouter\.ai$/i.test(safeHostname(apiBase));
 
   return {
     apiKey,
     apiBase,
+    isOpenRouter,
+    defaultModel: isOpenRouter ? OPENROUTER_DEFAULT_MODEL : AI_MODEL,
   };
+};
+
+const safeHostname = (url: string): string => {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
 };
 
 const extractMessageContent = (payload: Record<string, unknown>): string => {
@@ -151,7 +165,7 @@ const requestAiGateway = async ({
 }: {
   messages: AiMessage[];
   timeoutMs: number;
-  model: string;
+  model?: string;
   /**
    * 'json' constrains the model to JSON output (Ollama-style format param).
    * 'text' omits the constraint so the model returns free-form prose — used by
@@ -164,22 +178,44 @@ const requestAiGateway = async ({
     throw new Error('AI model environment is not configured');
   }
 
+  const resolvedModel = model || config.defaultModel;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  try {
-    const response = await fetch(`${config.apiBase}/api/chat`, {
-      method: 'POST',
-      headers: {
+  // OpenRouter speaks the OpenAI chat-completions protocol; the Zuplo gateway
+  // speaks Ollama's /api/chat. Same response parsing handles both shapes.
+  const endpoint = config.isOpenRouter
+    ? `${config.apiBase}${config.apiBase.endsWith('/api/v1') ? '' : '/api/v1'}/chat/completions`
+    : `${config.apiBase}/api/chat`;
+  const headers: Record<string, string> = config.isOpenRouter
+    ? {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.apiKey}`,
+      }
+    : {
         'Content-Type': 'application/json',
         'x-api-key': config.apiKey,
-      },
-      body: JSON.stringify({
-        model,
+      };
+  const body = config.isOpenRouter
+    ? {
+        model: resolvedModel,
+        messages,
+        stream: false,
+        ...(format === 'json' ? { response_format: { type: 'json_object' } } : {}),
+      }
+    : {
+        model: resolvedModel,
         messages,
         stream: false,
         ...(format === 'json' ? { format: 'json' } : {}),
-      }),
+      };
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
 
@@ -213,7 +249,7 @@ export async function generateStructuredAiOutput<T>({
   temperature = 0.25,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   maxRetries = DEFAULT_MAX_RETRIES,
-  model = AI_MODEL,
+  model,
   parse,
   invalidFormatMessage = 'Model returned invalid JSON format',
 }: GenerateStructuredAiOutputOptions<T>): Promise<T> {
@@ -271,7 +307,7 @@ export async function generatePlainTextAiOutput({
   messages,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   maxRetries = DEFAULT_MAX_RETRIES,
-  model = AI_MODEL,
+  model,
 }: GeneratePlainTextAiOutputOptions): Promise<string> {
   if (!getAiGatewayConfig()) {
     throw new Error('AI model environment is not configured');

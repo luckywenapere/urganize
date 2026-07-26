@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.32.0",
+    date: "July 26, 2026",
+    highlights: [
+      "The AI rollout planner is now live — when you create a release with a rollout plan, it's tailored by AI to your release's context, ready to review and edit before you commit it.",
+    ],
+  },
+  {
     version: "0.31.1",
     date: "July 23, 2026",
     highlights: [
