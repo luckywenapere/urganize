@@ -1337,6 +1337,40 @@ body:focus-within .keyboard-hint,
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.25rem);
 }
 
+/* The Chappi page's <main> bottom padding, replacing AppShell's default
+   pb-28 there. pb-28 exists to clear the floating ChappiDock launcher, but
+   ChappiDock renders null on /dashboard/chappi (the page IS the chat) — so
+   on mobile the 7rem gap just floats the message box mid-screen instead of
+   docking it to the bottom. A thin safe-area-aware gap replaces it. Desktop
+   keeps the same md:pb-10 AppShell already used. */
+.chappi-main-padding {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+}
+
+@media (min-width: 768px) {
+  .chappi-main-padding {
+    padding-bottom: 2.5rem;
+  }
+}
+
+/* Matches .chappi-main-padding above: the Chappi page's own viewport-locked
+   column height must shrink by the same amount AppShell's <main> padding
+   shrank by, on mobile only (desktop's md:pb-10 is unchanged from the
+   default, so its calc term stays 7.75rem). Shared by ChappiPageClient and
+   ChappiPageSkeleton — keep both in sync (see CLAUDE.md's loading-skeleton
+   rule). Chrome being subtracted: topbar min-h-16 + 1px border (4rem) +
+   main pt-5 (1.25rem) + main's chappi-main-padding (1rem + safe-area). */
+.chappi-shell-height {
+  height: calc(100dvh - 6.25rem - env(safe-area-inset-bottom, 0px) - 1px);
+  min-height: 24rem;
+}
+
+@media (min-width: 768px) {
+  .chappi-shell-height {
+    height: calc(100dvh - 7.75rem - 1px);
+  }
+}
+
 .mobile-safe-bottom-offset {
   bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
 }

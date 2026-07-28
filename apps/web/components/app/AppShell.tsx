@@ -75,6 +75,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname?.startsWith('/onboarding') ||
     pathname?.startsWith('/invite');
   const isDashboardRoute = pathname?.startsWith('/dashboard');
+  // ChappiDock renders null on this exact route (the page IS the chat), so
+  // the pb-28 every other dashboard page carries to clear the dock's corner
+  // launcher just floats the message box mid-screen here. See the
+  // .chappi-main-padding rule in globals.css.
+  const isChappiRoute = pathname === '/dashboard/chappi';
   const isPreSavePublicRoute = pathname?.startsWith('/p/');
   const isLockedRoute = pathname === '/locked';
   const isOnboardingRoute = pathname?.startsWith('/onboarding');
@@ -184,7 +189,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="app-layout lazy-fade lazy-fade-in">
           <div className="mx-auto flex min-h-screen w-full max-w-[1440px] flex-col">
             <AppTopbar onNewRelease={openCreateRelease} userName={workspaceUserName} />
-            <main className="min-w-0 flex-1 px-4 pb-28 pt-5 sm:px-5 md:px-6 md:pb-10 lg:px-8">
+            <main
+              className={`min-w-0 flex-1 px-4 pt-5 sm:px-5 md:px-6 lg:px-8 ${
+                isChappiRoute ? 'chappi-main-padding' : 'pb-28 md:pb-10'
+              }`}
+            >
               {children}
             </main>
           </div>

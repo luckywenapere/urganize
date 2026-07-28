@@ -52,14 +52,14 @@ export default function ChappiPageClient() {
     <>
       {/* One viewport-locked column (Claude-app mechanics, founder call,
           2026-07-23): the PAGE never scrolls — the transcript scrolls inside
-          ChappiConversation and the input stays pinned at the bottom. The
-          height is the viewport minus the chrome around it (topbar min-h-16
-          = 4rem + its 1px border, main pt-5 = 1.25rem, main pb-28 = 7rem
-          mobile / md:pb-10 = 2.5rem). The invite banner lives INSIDE the
-          locked column — as a sibling above it, its height overflowed the
-          calc and re-introduced page scroll. Floor keeps short viewports
-          usable; the empty state centers within the definite height. */}
-      <div className="flex h-[calc(100dvh-12.25rem-1px)] min-h-[24rem] flex-col md:h-[calc(100dvh-7.75rem-1px)]">
+          ChappiConversation and the input stays pinned at the bottom. Height
+          comes from .chappi-shell-height (globals.css), which matches
+          AppShell's .chappi-main-padding term-for-term. The invite banner
+          lives INSIDE the locked column — as a sibling above it, its height
+          overflowed the calc and re-introduced page scroll. Floor keeps
+          short viewports usable; the empty state centers within the
+          definite height. */}
+      <div className="chappi-shell-height flex flex-col">
         <div className="shrink-0">
           <InviteTeamBanner />
         </div>

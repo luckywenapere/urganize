@@ -20,10 +20,7 @@ import { SkeletonBlock } from './SkeletonBlock';
  */
 export function ChappiPageSkeleton() {
   return (
-    <div
-      className="h-[calc(100dvh-12.25rem)] min-h-[24rem] md:h-[calc(100dvh-7.75rem)]"
-      aria-hidden="true"
-    >
+    <div className="chappi-shell-height" aria-hidden="true">
       <div className="flex h-full min-h-0 flex-col items-center justify-center px-2">
         {/* Eyebrow row: "CHAPPI" + the Beta badge pill. */}
         <div className="flex items-center gap-2">

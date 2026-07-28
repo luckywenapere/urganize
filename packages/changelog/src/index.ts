@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.33.1",
+    date: "July 26, 2026",
+    highlights: [
+      "Fixed Chappi's message box floating mid-screen on mobile — it now sits properly at the bottom of the page.",
+    ],
+  },
+  {
     version: "0.33.0",
     date: "July 26, 2026",
     highlights: [
