@@ -29,8 +29,10 @@
 //      paywall (otherwise POST /api/releases 402s).
 //   3. POST /api/releases — same path the in-app modal uses; template tasks
 //      get instantiated via apps/web/lib/release-templates/instantiate.ts.
-//   4. PATCH /api/user/onboarding { onboardingCompleted: true } — so the
-//      FirstTimeOnboardingGate modal does not open on /dashboard.
+//   4. PATCH /api/user/onboarding { onboardingCompleted: true } — records that
+//      this account finished onboarding. (Until 2026-07-29 this also had to
+//      defuse FirstTimeOnboardingGate, a legacy dashboard takeover; that gate
+//      is deleted and THIS route is the only onboarding flow — see URG-191.)
 //   5a. Workspace flag ON  → advance to step 6 (invite).
 //   5b. Workspace flag OFF → router.replace(HOME_PATH).
 //

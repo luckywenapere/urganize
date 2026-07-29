@@ -334,50 +334,6 @@ const syncResumableOnboardingState = async (
   return nextState;
 };
 
-// Invited teammates join an EXISTING workspace — the new-workspace wizard is
-// wrong for them (it walks them into creating a phantom personal workspace)
-// and, being a non-dismissible takeover, traps them after accepting. The
-// invite-accept endpoint marks new acceptances complete; this heals accounts
-// that accepted BEFORE that fix and are still flagged incomplete. Best-effort:
-// any error here just leaves the state as-is.
-const healInviteeOnboarding = async (
-  adminClient: AdminClient,
-  userId: string,
-  profile: ProfileOnboardingRecord
-): Promise<ProfileOnboardingRecord> => {
-  if (profile.onboarding_completed === true) {
-    return profile;
-  }
-
-  try {
-    const membership = await adminClient
-      .from('workspace_members')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .neq('role', 'owner')
-      .limit(1)
-      .maybeSingle();
-
-    if (membership.error || !membership.data?.id) {
-      return profile;
-    }
-
-    const completedAt = new Date().toISOString();
-    const update = await adminClient
-      .from('profiles')
-      .update({ onboarding_completed: true, onboarding_completed_at: completedAt })
-      .eq('id', userId);
-    if (update.error) {
-      return profile;
-    }
-
-    return { ...profile, onboarding_completed: true, onboarding_completed_at: completedAt };
-  } catch {
-    return profile;
-  }
-};
-
 export async function GET(request: NextRequest) {
   const auth = await getAuthenticatedRequestUser(request);
   if ('error' in auth) {
@@ -389,8 +345,7 @@ export async function GET(request: NextRequest) {
     return profileResult.error;
   }
 
-  const profile = await healInviteeOnboarding(auth.adminClient, auth.user.id, profileResult.profile);
-  const onboarding = await syncResumableOnboardingState(auth.adminClient, auth.user.id, profile);
+  const onboarding = await syncResumableOnboardingState(auth.adminClient, auth.user.id, profileResult.profile);
 
   return NextResponse.json({
     onboarding,

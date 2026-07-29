@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.33.3",
+    date: "July 29, 2026",
+    highlights: [
+      "Removed an old, half-finished setup screen that could take over the dashboard and leave you stuck with no way out. Signing up walks through the proper setup flow, and joining a workspace by invite now takes you straight in.",
+    ],
+  },
+  {
     version: "0.33.2",
     date: "July 29, 2026",
     highlights: [
