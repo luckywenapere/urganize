@@ -31,7 +31,7 @@ const members = [
     name: "Adamu Kabiru",
     role: "Community Lead",
     initials: "AK",
-    bio: "Manages an artist and is deeply active in Nigeria's underground music scene.",
+    bio: "Known in Nigeria's underground music scene as Don Baba K, Adamu is an artist manager, A&R, event organiser, and music PR who manages three artists and helps foster the growth of upcoming talent.",
     linkedin: null,
   },
   {
