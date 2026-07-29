@@ -234,13 +234,9 @@ export const normalizeOnboardingState = (value: unknown): OnboardingState => {
   };
 };
 
-export const shouldShowOnboardingModal = (state: OnboardingState | null): boolean => {
-  if (!state) {
-    return false;
-  }
-
-  return state.onboardingCompleted !== true;
-};
+// shouldShowOnboardingModal was removed 2026-07-29 (URG-191) along with
+// FirstTimeOnboardingGate, its only caller. /onboarding is the sole
+// onboarding surface; nothing gates a dashboard overlay on this flag now.
 
 export const getDashboardEmptyStateCopy = (role: UserRole | null) => {
   if (role === 'manager') {

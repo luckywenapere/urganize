@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
@@ -37,14 +37,6 @@ const WhatsNewModal = dynamic(
   () => import('@/components/app/WhatsNewModal').then((m) => m.WhatsNewModal),
   { ssr: false }
 );
-const FirstTimeOnboardingGate = dynamic(
-  () =>
-    import('@/components/onboarding/FirstTimeOnboardingGate').then(
-      (m) => m.FirstTimeOnboardingGate
-    ),
-  { ssr: false }
-);
-
 const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === 'true';
 
 // When Chappi is on, the floating dock takes the bottom-right corner and the
@@ -81,7 +73,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   // .chappi-main-padding rule in globals.css.
   const isChappiRoute = pathname === '/dashboard/chappi';
   const isPreSavePublicRoute = pathname?.startsWith('/p/');
-  const isLockedRoute = pathname === '/locked';
   const isOnboardingRoute = pathname?.startsWith('/onboarding');
   const isInviteRoute = pathname?.startsWith('/invite');
   const isSettingsRoute = pathname === '/settings';
@@ -221,11 +212,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           app surfaces only. */}
       {isAuthenticated && !isAuthLoading && showWorkspaceChrome ? <WhatsNewModal /> : null}
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
-      {isLockedRoute || isOnboardingRoute || isInviteRoute ? null : (
-        <Suspense fallback={null}>
-          <FirstTimeOnboardingGate />
-        </Suspense>
-      )}
+      {/* FirstTimeOnboardingGate was mounted here until 2026-07-29 (URG-191).
+          It was a SECOND, legacy onboarding implementation — a 5-step
+          full-screen dashboard takeover that predated the current /onboarding
+          route and never got the 0.16/0.21 visual passes. It fired for any
+          profile with onboarding_completed !== true, which meant every path
+          into the app that wasn't /onboarding (invite acceptance above all)
+          hit a stale, unskippable wizard. /onboarding is the only onboarding
+          flow now; restore from git history if a post-signup overlay is ever
+          wanted again. */}
     </TaskUIProvider>
     </ToastProvider>
   );

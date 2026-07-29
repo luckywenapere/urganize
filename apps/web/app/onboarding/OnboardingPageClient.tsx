@@ -13,9 +13,10 @@
 //   6  invite teammates (workspace flag only)          ← Skip always reaches /dashboard
 //
 // Auth carve-out: /onboarding is allow-listed in apps/web/lib/access-redirect.ts
-// (SAFE_PATHS), apps/web/lib/auth-store.ts (SAFE_AUTH_PATHS), and
-// apps/web/components/onboarding/useOnboardingWizard.ts
-// (PUBLIC_ROUTE_PREFIXES). AppShell renders this route without workspace chrome.
+// (SAFE_PATHS) and apps/web/lib/auth-store.ts (SAFE_AUTH_PATHS). AppShell
+// renders this route without workspace chrome. (A third allowlist lived in
+// useOnboardingWizard.ts's PUBLIC_ROUTE_PREFIXES until that file was deleted
+// with FirstTimeOnboardingGate — see URG-191.)
 //
 // Release-type restriction: the step-0 radio is wired to the template registry
 // via getAvailableReleaseTypes(). Types whose template slot is null render
@@ -29,8 +30,10 @@
 //      paywall (otherwise POST /api/releases 402s).
 //   3. POST /api/releases — same path the in-app modal uses; template tasks
 //      get instantiated via apps/web/lib/release-templates/instantiate.ts.
-//   4. PATCH /api/user/onboarding { onboardingCompleted: true } — so the
-//      FirstTimeOnboardingGate modal does not open on /dashboard.
+//   4. PATCH /api/user/onboarding { onboardingCompleted: true } — records that
+//      this account finished onboarding. (Until 2026-07-29 this also had to
+//      defuse FirstTimeOnboardingGate, a legacy dashboard takeover; that gate
+//      is deleted and THIS route is the only onboarding flow — see URG-191.)
 //   5a. Workspace flag ON  → advance to step 6 (invite).
 //   5b. Workspace flag OFF → router.replace(HOME_PATH).
 //
