@@ -31,9 +31,12 @@
 //   3. POST /api/releases — same path the in-app modal uses; template tasks
 //      get instantiated via apps/web/lib/release-templates/instantiate.ts.
 //   4. PATCH /api/user/onboarding { onboardingCompleted: true } — records that
-//      this account finished onboarding. (Until 2026-07-29 this also had to
-//      defuse FirstTimeOnboardingGate, a legacy dashboard takeover; that gate
-//      is deleted and THIS route is the only onboarding flow — see URG-191.)
+//      this account finished onboarding, plus the three answers that live on
+//      the profile rather than the release: planningPreference, whereStuck and
+//      stage (the last two since URG-192; before that they were collected and
+//      then discarded). (Until 2026-07-29 this PATCH also had to defuse
+//      FirstTimeOnboardingGate, a legacy dashboard takeover; that gate is
+//      deleted and THIS route is the only onboarding flow — see URG-191.)
 //   5a. Workspace flag ON  → advance to step 6 (invite).
 //   5b. Workspace flag OFF → router.replace(HOME_PATH).
 //
@@ -430,10 +433,11 @@ export default function OnboardingPage() {
 
   const finishToDashboard = async (token: string | null) => {
     // Common tail: mark onboarding complete, refresh auth, clear draft, go.
-    // Best-effort — if the PATCH fails the gate modal will briefly flash on
-    // /dashboard but the user still reaches their workspace.
+    // Best-effort — if the PATCH fails the user still reaches their
+    // workspace; we just keep the draft (below) so the answers aren't lost.
+    let persisted = false;
     if (token) {
-      await fetch('/api/user/onboarding', {
+      const response = await fetch('/api/user/onboarding', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -443,11 +447,22 @@ export default function OnboardingPage() {
           onboardingCompleted: true,
           onboardingStep: 5,
           onboardingPlanningPreference: draft.planningPreference,
+          // URG-192: these two were collected and then thrown away for the
+          // whole life of this flow. They go to the server now.
+          onboardingWhereStuck: draft.whereStuck,
+          onboardingStage: draft.stage,
         }),
       }).catch(() => undefined);
+      persisted = Boolean(response?.ok);
     }
     await checkAuth();
-    clearOnboardingDraft();
+    // Only drop the draft once the server has the answers. If the PATCH
+    // failed, leaving sessionStorage intact is strictly better than wiping
+    // it — the answers survive for a retry instead of being destroyed, which
+    // is the bug URG-192 exists to fix.
+    if (persisted) {
+      clearOnboardingDraft();
+    }
     router.replace(HOME_PATH);
   };
 

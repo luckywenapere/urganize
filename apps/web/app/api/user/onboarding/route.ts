@@ -7,6 +7,8 @@ import {
   isOnboardingPersona,
   isOnboardingPlanningPreference,
   isOnboardingReleaseProcess,
+  isOnboardingStage,
+  isOnboardingWhereStuckList,
   isUserRole,
   normalizeOnboardingState,
   type OnboardingApiError,
@@ -26,6 +28,8 @@ type ProfileOnboardingRecord = {
   onboarding_release_process: string | null;
   onboarding_biggest_headache: string | null;
   onboarding_planning_preference: string | null;
+  onboarding_where_stuck: string[] | null;
+  onboarding_stage: string | null;
   onboarding_release_id: string | null;
   onboarding_task_id: string | null;
 };
@@ -37,7 +41,7 @@ type SupabaseConfig = {
 };
 
 const ONBOARDING_PROFILE_SELECT =
-  'id,name,email,role,onboarding_completed,onboarding_step,onboarding_completed_at,onboarding_role,onboarding_persona,onboarding_release_process,onboarding_biggest_headache,onboarding_planning_preference,onboarding_release_id,onboarding_task_id';
+  'id,name,email,role,onboarding_completed,onboarding_step,onboarding_completed_at,onboarding_role,onboarding_persona,onboarding_release_process,onboarding_biggest_headache,onboarding_planning_preference,onboarding_where_stuck,onboarding_stage,onboarding_release_id,onboarding_task_id';
 const TASKS_TABLE = 'tasks';
 
 const isProfileOnboardingSchemaMissing = (error: unknown): boolean => {
@@ -142,6 +146,8 @@ const toProfileSeed = (user: {
     onboarding_release_process: null,
     onboarding_biggest_headache: null,
     onboarding_planning_preference: null,
+    onboarding_where_stuck: null,
+    onboarding_stage: null,
     onboarding_release_id: null,
     onboarding_task_id: null,
     updated_at: new Date().toISOString(),
@@ -463,6 +469,33 @@ export async function PATCH(request: NextRequest) {
     }
 
     updates.onboarding_planning_preference = body.onboardingPlanningPreference;
+  }
+
+  // URG-192. Null is meaningful (clears back to "never asked"), so only an
+  // explicit non-null value gets list-validated.
+  if (body.onboardingWhereStuck !== undefined) {
+    if (
+      body.onboardingWhereStuck !== null &&
+      !isOnboardingWhereStuckList(body.onboardingWhereStuck)
+    ) {
+      return NextResponse.json(
+        { error: 'Onboarding where-stuck selection is invalid.' } satisfies OnboardingApiError,
+        { status: 400 }
+      );
+    }
+
+    updates.onboarding_where_stuck = body.onboardingWhereStuck;
+  }
+
+  if (body.onboardingStage !== undefined) {
+    if (body.onboardingStage !== null && !isOnboardingStage(body.onboardingStage)) {
+      return NextResponse.json(
+        { error: 'Onboarding stage is invalid.' } satisfies OnboardingApiError,
+        { status: 400 }
+      );
+    }
+
+    updates.onboarding_stage = body.onboardingStage;
   }
 
   if (body.releaseId !== undefined) {

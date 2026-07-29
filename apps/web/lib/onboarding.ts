@@ -17,6 +17,24 @@ export type OnboardingBiggestHeadache =
   | 'collecting_credits_and_metadata'
   | 'managing_multiple_releases_at_once';
 export type OnboardingPlanningPreference = 'ai_recommendations' | 'start_from_scratch';
+// URG-192: the signup wizard's two qualitative answers. Declared here (the
+// API-contract module) rather than in onboarding-draft.ts so the route
+// handler can validate them without importing a sessionStorage module;
+// onboarding-draft.ts re-exports both, so its own importers are unaffected.
+export type OnboardingWhereStuck =
+  | 'keeping_team_aligned'
+  | 'tracking_progress'
+  | 'collecting_credits'
+  | 'managing_multiple_releases'
+  | 'marketing_promo'
+  | 'distribution';
+export type OnboardingStage =
+  | 'just_starting'
+  | 'recorded'
+  | 'preparing'
+  | 'date_set'
+  | 'promoting'
+  | 'post_release';
 
 export const ONBOARDING_TASK_CREATED_EVENT = 'urganize:onboarding-task-created';
 export const ONBOARDING_INVITE_SENT_EVENT = 'urganize:onboarding-invite-sent';
@@ -30,6 +48,11 @@ export interface OnboardingState {
   onboardingReleaseProcess: OnboardingReleaseProcess | null;
   onboardingBiggestHeadache: OnboardingBiggestHeadache | null;
   onboardingPlanningPreference: OnboardingPlanningPreference | null;
+  // Null means "never asked" (a pre-URG-192 signup); an empty array means
+  // asked and nothing picked. Worth telling apart, so the column is
+  // nullable rather than defaulting to '{}'.
+  onboardingWhereStuck: OnboardingWhereStuck[] | null;
+  onboardingStage: OnboardingStage | null;
   releaseId: string | null;
   taskId: string | null;
 }
@@ -52,10 +75,20 @@ export interface UpdateOnboardingBody {
   onboardingReleaseProcess?: OnboardingReleaseProcess | null;
   onboardingBiggestHeadache?: OnboardingBiggestHeadache | null;
   onboardingPlanningPreference?: OnboardingPlanningPreference | null;
+  onboardingWhereStuck?: OnboardingWhereStuck[] | null;
+  onboardingStage?: OnboardingStage | null;
   releaseId?: string | null;
   taskId?: string | null;
 }
 
+// DEPRECATED schema-missing-fallback payload (see CLAUDE.md → "Patterns being
+// deprecated in v1"). Deliberately NOT extended with URG-192's
+// onboarding_where_stuck / onboarding_stage columns: those live only in
+// supabase/migrations/20260729120000_profiles_onboarding_where_stuck_stage.sql,
+// which is the source of truth per principle 9. Letting this string mint
+// columns is exactly how the earlier onboarding_* drift happened — the
+// 20260720100000 migration had to heal columns this fallback had created in
+// production and never backfilled. Run the migration instead.
 export const PROFILE_ONBOARDING_SQL = [
   'alter table public.profiles add column if not exists onboarding_completed boolean not null default false;',
   'alter table public.profiles add column if not exists onboarding_step integer not null default 1;',
@@ -135,6 +168,30 @@ export const isOnboardingBiggestHeadache = (value: unknown): value is Onboarding
 
 export const isOnboardingPlanningPreference = (value: unknown): value is OnboardingPlanningPreference =>
   value === 'ai_recommendations' || value === 'start_from_scratch';
+
+export const isOnboardingWhereStuck = (value: unknown): value is OnboardingWhereStuck =>
+  value === 'keeping_team_aligned' ||
+  value === 'tracking_progress' ||
+  value === 'collecting_credits' ||
+  value === 'managing_multiple_releases' ||
+  value === 'marketing_promo' ||
+  value === 'distribution';
+
+// Multi-select: every entry must be valid and the list must be unique, so a
+// crafted body can't smuggle in a 500-item array or repeat one value to skew
+// future aggregate counts.
+export const isOnboardingWhereStuckList = (value: unknown): value is OnboardingWhereStuck[] =>
+  Array.isArray(value) &&
+  value.every(isOnboardingWhereStuck) &&
+  new Set(value).size === value.length;
+
+export const isOnboardingStage = (value: unknown): value is OnboardingStage =>
+  value === 'just_starting' ||
+  value === 'recorded' ||
+  value === 'preparing' ||
+  value === 'date_set' ||
+  value === 'promoting' ||
+  value === 'post_release';
 
 export const deriveOnboardingRoleFromPersona = (persona: OnboardingPersona | null): UserRole | null => {
   if (persona === 'independent_artist') {
@@ -219,6 +276,15 @@ export const normalizeOnboardingState = (value: unknown): OnboardingState => {
     : null;
   const releaseId = typeof row.onboarding_release_id === 'string' ? row.onboarding_release_id : null;
   const taskId = typeof row.onboarding_task_id === 'string' ? row.onboarding_task_id : null;
+  // Preserve the null/empty distinction on the way out: an array (even an
+  // empty one) means the question was asked. Anything unrecognized —
+  // including a pre-migration undefined — reads as null. Unknown members are
+  // filtered rather than nulling the whole answer, so one stale value from an
+  // older option set doesn't discard the valid picks alongside it.
+  const onboardingWhereStuck = Array.isArray(row.onboarding_where_stuck)
+    ? row.onboarding_where_stuck.filter(isOnboardingWhereStuck)
+    : null;
+  const onboardingStage = isOnboardingStage(row.onboarding_stage) ? row.onboarding_stage : null;
 
   return {
     onboardingCompleted: row.onboarding_completed === true,
@@ -229,6 +295,8 @@ export const normalizeOnboardingState = (value: unknown): OnboardingState => {
     onboardingReleaseProcess,
     onboardingBiggestHeadache,
     onboardingPlanningPreference,
+    onboardingWhereStuck,
+    onboardingStage,
     releaseId,
     taskId,
   };

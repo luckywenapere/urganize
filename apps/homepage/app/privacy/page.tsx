@@ -115,6 +115,16 @@ export default function PrivacyPolicy() {
               </p>
               <p>
                 <strong className="text-[var(--marketing-text)]">
+                  Setup answers.
+                </strong>{" "}
+                The questions we ask when you first set up your workspace: what
+                you&apos;re working on, where your releases usually fall apart,
+                what stage the release is at, and how you want releases
+                planned. We keep these to decide what to put in front of you
+                first and to work out which parts of the product to sharpen.
+              </p>
+              <p>
+                <strong className="text-[var(--marketing-text)]">
                   Release data.
                 </strong>{" "}
                 Everything you put into the workspace: artists, releases,

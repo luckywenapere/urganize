@@ -1,11 +1,23 @@
 // Anonymous onboarding draft state. Lives in sessionStorage so that step
-// navigation and a mid-flow refresh don't lose progress. Phase 1 is plumbing
-// only — the only fields the hand-off actually consumes are releaseType,
-// title, releaseDate, and planningPreference. The other qualitative fields
-// (whereStuck, stage) are captured for future use; they're not sent to the
-// server yet.
+// navigation and a mid-flow refresh don't lose progress. Every field here is
+// consumed by the completion hand-off: releaseType, title and releaseDate
+// create the release; planningPreference, whereStuck and stage are PATCHed
+// onto the profile (whereStuck + stage since URG-192 — before that they were
+// collected and then discarded).
 
-import { isOnboardingPlanningPreference, type OnboardingPlanningPreference } from './onboarding';
+import {
+  isOnboardingPlanningPreference,
+  isOnboardingStage,
+  isOnboardingWhereStuck,
+  type OnboardingPlanningPreference,
+  type OnboardingStage,
+  type OnboardingWhereStuck,
+} from './onboarding';
+
+// Re-exported so existing importers (OnboardingPageClient, onboarding-ai-
+// moment) keep their import site. Canonical declarations live in
+// ./onboarding alongside the other onboarding answer types.
+export type { OnboardingStage, OnboardingWhereStuck };
 
 export type OnboardingReleaseType = 'single' | 'ep' | 'album' | 'music_video';
 
@@ -15,14 +27,6 @@ export const ONBOARDING_RELEASE_TYPES: Array<{ value: OnboardingReleaseType; lab
   { value: 'album', label: 'Album' },
   { value: 'music_video', label: 'Music Video' },
 ];
-
-export type OnboardingWhereStuck =
-  | 'keeping_team_aligned'
-  | 'tracking_progress'
-  | 'collecting_credits'
-  | 'managing_multiple_releases'
-  | 'marketing_promo'
-  | 'distribution';
 
 export const ONBOARDING_WHERE_STUCK_OPTIONS: Array<{ value: OnboardingWhereStuck; label: string }> = [
   { value: 'keeping_team_aligned', label: 'Keeping the team aligned' },
@@ -37,14 +41,6 @@ export const ONBOARDING_WHERE_STUCK_OPTIONS: Array<{ value: OnboardingWhereStuck
 // See apps/web/lib/onboarding-ai-moment.ts for the stage → entry-task mapping.
 // The labels are written so a user can pick the one that matches their
 // reality without overthinking — short, in their voice.
-export type OnboardingStage =
-  | 'just_starting'
-  | 'recorded'
-  | 'preparing'
-  | 'date_set'
-  | 'promoting'
-  | 'post_release';
-
 export const ONBOARDING_STAGE_OPTIONS: Array<{ value: OnboardingStage; label: string }> = [
   { value: 'just_starting', label: "Just starting — still writing or recording" },
   { value: 'recorded', label: 'Tracks recorded, working on mix and master' },
@@ -81,12 +77,6 @@ const STORAGE_KEY = 'urganize.onboarding.draft';
 const isReleaseType = (value: unknown): value is OnboardingReleaseType =>
   value === 'single' || value === 'ep' || value === 'album' || value === 'music_video';
 
-const isWhereStuck = (value: unknown): value is OnboardingWhereStuck =>
-  ONBOARDING_WHERE_STUCK_OPTIONS.some((option) => option.value === value);
-
-const isStage = (value: unknown): value is OnboardingStage =>
-  ONBOARDING_STAGE_OPTIONS.some((option) => option.value === value);
-
 export function loadOnboardingDraft(): OnboardingDraft {
   if (typeof window === 'undefined') {
     return EMPTY_ONBOARDING_DRAFT;
@@ -100,8 +90,10 @@ export function loadOnboardingDraft(): OnboardingDraft {
 
     return {
       releaseType: isReleaseType(parsed.releaseType) ? parsed.releaseType : null,
-      whereStuck: Array.isArray(parsed.whereStuck) ? parsed.whereStuck.filter(isWhereStuck) : [],
-      stage: isStage(parsed.stage) ? parsed.stage : null,
+      whereStuck: Array.isArray(parsed.whereStuck)
+        ? parsed.whereStuck.filter(isOnboardingWhereStuck)
+        : [],
+      stage: isOnboardingStage(parsed.stage) ? parsed.stage : null,
       title: typeof parsed.title === 'string' ? parsed.title : '',
       releaseDate: typeof parsed.releaseDate === 'string' ? parsed.releaseDate : '',
       planningPreference: isOnboardingPlanningPreference(parsed.planningPreference)
