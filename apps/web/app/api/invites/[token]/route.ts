@@ -51,6 +51,31 @@ function normalizeToken(raw: unknown): string {
   return String(raw || '').trim();
 }
 
+// Invitees join an EXISTING workspace — the first-time onboarding wizard
+// (FirstTimeOnboardingGate's "New Workspace" flow: tell us about your
+// release, create your first release) is wrong for them and, being a
+// non-dismissible full-screen takeover, traps them after acceptance.
+// Marking the profile complete here means every accept path (email
+// signup, Google, already-authed) lands the invitee straight on the
+// dashboard. Best-effort: a failure must never block the accept itself.
+async function markOnboardingComplete(admin: SupabaseClient, userId: string): Promise<void> {
+  try {
+    const result = await admin
+      .from(PROFILES_TABLE)
+      .update({
+        onboarding_completed: true,
+        onboarding_completed_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+      .eq('onboarding_completed', false);
+    if (result.error) {
+      console.error('[invites/token] onboarding-complete update error:', result.error.message);
+    }
+  } catch (error) {
+    console.error('[invites/token] onboarding-complete update threw:', error);
+  }
+}
+
 type InviteRow = {
   id: string;
   workspace_id: string;
@@ -166,6 +191,7 @@ async function joinWorkspaceViaLink(
     .maybeSingle();
 
   if (existingMembership.data?.id) {
+    await markOnboardingComplete(admin, userId);
     return NextResponse.json({ status: 'already_member', workspaceId });
   }
 
@@ -207,6 +233,7 @@ async function joinWorkspaceViaLink(
         .eq('email', email)
         .is('user_id', null);
       if (!pendingResult.error) {
+        await markOnboardingComplete(admin, userId);
         return NextResponse.json({ status: 'accepted', workspaceId });
       }
     }
@@ -214,6 +241,7 @@ async function joinWorkspaceViaLink(
     return NextResponse.json({ error: 'Could not accept invite.' }, { status: 500 });
   }
 
+  await markOnboardingComplete(admin, userId);
   return NextResponse.json({ status: 'accepted', workspaceId });
 }
 
@@ -402,6 +430,7 @@ export async function POST(
     // Already accepted. If THIS user is the one it was already accepted by,
     // treat as success (idempotent). Otherwise reject.
     if (invite.user_id === userId) {
+      await markOnboardingComplete(admin, userId);
       return NextResponse.json({
         status: 'already_accepted',
         workspaceId: invite.workspace_id,
@@ -442,6 +471,7 @@ export async function POST(
       })
       .eq('id', invite.id);
 
+    await markOnboardingComplete(admin, userId);
     return NextResponse.json({
       status: 'already_member',
       workspaceId: invite.workspace_id,
@@ -470,6 +500,7 @@ export async function POST(
     );
   }
 
+  await markOnboardingComplete(admin, userId);
   return NextResponse.json({
     status: 'accepted',
     workspaceId: invite.workspace_id,

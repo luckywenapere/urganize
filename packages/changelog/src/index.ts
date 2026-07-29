@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.33.2",
+    date: "July 29, 2026",
+    highlights: [
+      "Fixed invited teammates getting stuck on a first-time setup screen after accepting their invite — joining a workspace now takes you straight to the dashboard. Anyone already stuck is freed the next time they open the app.",
+    ],
+  },
+  {
     version: "0.33.1",
     date: "July 26, 2026",
     highlights: [
