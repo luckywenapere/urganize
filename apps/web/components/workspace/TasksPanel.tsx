@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, ChevronDown, FolderOpen, Plus } from 'lucide-react';
+import { CalendarDays, ChevronDown, FolderOpen, Newspaper, Plus } from 'lucide-react';
 import {
   getTaskSectionLabel,
   groupTasksIntoSections,
@@ -24,6 +24,11 @@ const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDA
 // Files entry point (URG-182): same flag gates the assets API routes and the
 // release detail page's Asset section.
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
+
+// Press kit entry point (URG-198): the EPK shipped (URG-196) reachable only
+// from the release detail page's side menu — invisible from the workspace
+// users actually land on. Same flag that gates the EPK page and API routes.
+const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 
 // Overdue first (genuine slippage, most urgent), then Catch Up (start-here
 // for compressed-runway plans — calm, neutral framing), then standard
@@ -183,6 +188,18 @@ export function TasksPanel({ tasks, scopedRelease, id }: TasksPanelProps) {
             >
               <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
               Files
+            </Link>
+          ) : null}
+          {/* Press kit link (URG-198): same shape as Calendar/Files above —
+              the workspace is where users land, so every release surface
+              gets its entry point here, not only on the detail page. */}
+          {EPK_ENABLED && scopedRelease ? (
+            <Link
+              href={`/dashboard/releases/${scopedRelease.id}/epk`}
+              className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+            >
+              <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
+              Press kit
             </Link>
           ) : null}
         </div>

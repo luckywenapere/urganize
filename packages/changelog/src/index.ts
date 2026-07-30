@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.33.4",
+    date: "July 30, 2026",
+    highlights: [
+      "The press kit is now one click from your dashboard — select a release and the Press kit button appears right next to Calendar and Files, no need to open the release first.",
+    ],
+  },
+  {
     version: "0.33.3",
     date: "July 29, 2026",
     highlights: [
