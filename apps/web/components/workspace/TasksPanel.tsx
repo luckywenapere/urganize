@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, ChevronDown, FolderOpen, Newspaper, Plus } from 'lucide-react';
+import { CalendarDays, ChevronDown, Disc3, FolderOpen, Newspaper, Plus } from 'lucide-react';
 import {
   getTaskSectionLabel,
   groupTasksIntoSections,
@@ -158,6 +158,20 @@ export function TasksPanel({ tasks, scopedRelease, id }: TasksPanelProps) {
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
             New activity
           </button>
+          {/* Overview link (URG-199): the release detail page — the surface
+              hosting the side menu and every scene — previously had NO entry
+              point from the workspace at all: Calendar/Files/Press kit each
+              got a pill here while the page they hang off didn't. Not
+              flag-gated; the detail page always exists. */}
+          {scopedRelease ? (
+            <Link
+              href={`/dashboard/releases/${scopedRelease.id}`}
+              className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+            >
+              <Disc3 className="h-3.5 w-3.5" aria-hidden="true" />
+              Overview
+            </Link>
+          ) : null}
           {/* Files link: its own page (URG-165), not a segment nested under
               the task list — files are a peer of tasks, not a child of them.
               Only renders when a release is scoped (assets is release-scoped,

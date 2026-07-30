@@ -28,7 +28,6 @@ import { type ReleaseContext } from '@/lib/release-tailoring';
 // this client component. The API routes guard the same flags server-side.
 const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
 const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
-const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 // Files (URG-182): the assets API routes 404 on the same flag server-side.
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 
@@ -289,23 +288,11 @@ export default function ReleaseDetailPage() {
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {/* Top-of-page calendar entry (URG-157): the section further down
-                lists/manages calendars, but navigation belongs up here in the
-                header where the other release actions live. */}
-            {CONTENT_CALENDAR_ENABLED ? (
-              <Link
-                href={`/dashboard/releases/${releaseId}/calendar`}
-                className="inline-flex h-9 items-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-              >
-                <CalendarDays className="h-3.5 w-3.5" />
-                Content calendar
-                {/* Beta stamp (2026-07-23) — matches the workspace Calendar
-                    link and the calendar page header. */}
-                <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-                  Beta
-                </span>
-              </Link>
-            ) : null}
+            {/* The Content calendar header link was removed (URG-199): the
+                side menu now owns navigation between release scenes, and two
+                entries to the same destination on one screen is exactly the
+                duplication the founder banned. The header keeps ACTIONS only
+                (Tailor plan / Generate status update). */}
             {TAILOR_PLAN_ENABLED ? (
               <button
                 type="button"

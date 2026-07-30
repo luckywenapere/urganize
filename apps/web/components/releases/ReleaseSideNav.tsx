@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  ArrowLeft,
   CalendarDays,
   Disc3,
   FolderOpen,
@@ -20,8 +21,11 @@ import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 // content (a fixed 12rem column would eat a phone's width).
 //
 // Items are release surfaces, so every entry is flag-gated the same way its
-// destination is. Overview is always present; the nav renders null with
-// fewer than two visible items (a one-item menu is dead chrome).
+// destination is. A "Dashboard" back-entry sits above the scene links
+// (URG-199: the detail page had no labeled route back — only the logo and
+// an icon-only topbar button — and the founder got stranded). Because that
+// entry is always present the nav always has ≥2 items, so the old
+// render-null-below-two rule is gone with the situation that needed it.
 //
 // Collapse state persists per device via lib/persisted-state.ts, hydrated in
 // a mount effect to avoid SSR mismatch (the TasksPanel precedent).
@@ -69,6 +73,14 @@ export function ReleaseSideNav({ releaseId }: ReleaseSideNavProps) {
 
   const items: NavItem[] = [
     {
+      key: 'dashboard',
+      label: 'Dashboard',
+      icon: ArrowLeft,
+      href: '/dashboard',
+      // Never highlighted — it's an exit, not a scene of this release.
+      isActive: () => false,
+    },
+    {
       key: 'overview',
       label: 'Overview',
       icon: Disc3,
@@ -110,8 +122,6 @@ export function ReleaseSideNav({ releaseId }: ReleaseSideNavProps) {
       : []),
   ];
 
-  if (items.length < 2) return null;
-
   const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
 
   return (
@@ -125,8 +135,16 @@ export function ReleaseSideNav({ releaseId }: ReleaseSideNavProps) {
         {items.map((item) => {
           const Icon = item.icon;
           const active = item.isActive(pathname);
+          const isExit = item.key === 'dashboard';
           return (
-            <li key={item.key} className="shrink-0 lg:shrink">
+            <li
+              key={item.key}
+              className={`shrink-0 lg:shrink ${
+                // Hairline under the Dashboard exit on desktop so the back
+                // path reads as a separate group from this release's scenes.
+                isExit ? 'lg:mb-1 lg:border-b lg:border-stroke-subtle lg:pb-1' : ''
+              }`}
+            >
               <Link
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
@@ -137,7 +155,9 @@ export function ReleaseSideNav({ releaseId }: ReleaseSideNavProps) {
                 } px-3 ${
                   active
                     ? 'bg-brand/10 font-medium text-brand'
-                    : 'text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+                    : isExit
+                      ? 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
+                      : 'text-content-secondary hover:bg-bg-hover hover:text-content-primary'
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -151,20 +171,22 @@ export function ReleaseSideNav({ releaseId }: ReleaseSideNavProps) {
       </ul>
 
       {/* Collapse toggle — desktop only; the mobile pill row has nothing to
-          collapse. */}
-      <button
-        type="button"
-        onClick={toggleCollapsed}
-        aria-pressed={collapsed}
-        aria-label={collapsed ? 'Expand release menu' : 'Collapse release menu'}
-        title={collapsed ? 'Expand' : 'Collapse'}
-        className={`motion-focus mt-2 hidden h-9 items-center gap-2.5 rounded-lg text-sm text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary lg:flex ${
-          collapsed ? 'lg:w-9 lg:justify-center lg:px-0' : 'px-3'
-        }`}
-      >
-        <CollapseIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-        <span className={`whitespace-nowrap ${collapsed ? 'lg:hidden' : ''}`}>Collapse</span>
-      </button>
+          collapse. Icon-only above a hairline (URG-199): with a text label
+          it rendered in the identical icon+label shape as the nav items
+          above it and read as a fifth destination. The aria-label and
+          tooltip keep it discoverable and accessible without the text. */}
+      <div className="mt-2 hidden border-t border-stroke-subtle pt-2 lg:block">
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-pressed={collapsed}
+          aria-label={collapsed ? 'Expand release menu' : 'Collapse release menu'}
+          title={collapsed ? 'Expand menu' : 'Collapse menu'}
+          className="motion-focus flex h-9 w-9 items-center justify-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary"
+        >
+          <CollapseIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+        </button>
+      </div>
     </nav>
   );
 }
