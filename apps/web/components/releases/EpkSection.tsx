@@ -6,10 +6,16 @@ import type { ReleaseEpk } from '@/types/epk';
 import { supabase } from '@/lib/supabase/client';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 
-// Release-page entry point for the EPK (URG-196). The ContentCalendarSection
-// pattern: self-contained, takes releaseId, fetches its own data, renders its
-// own loading/empty/error states. The kit itself is the public /epk/[token]
-// page — this section only creates, copies, and revokes the share link.
+// The EPK share-link manager (URG-196). Self-contained (the
+// ContentCalendarSection pattern): takes releaseId, fetches its own data,
+// renders its own loading/empty/error states. The kit itself is the public
+// /epk/[token] page — this surface only creates, copies, and revokes the
+// share link.
+//
+// Two variants (the ChappiConversation page/panel precedent):
+// 'section' renders the full release-page section framing (header + mt-8);
+// 'panel' renders bare content for the release side panel, whose shell
+// provides its own header.
 //
 // NEXT_PUBLIC_ prefix so the value is inlined at build time for this client
 // component. The API routes guard the same flag server-side (404 when off).
@@ -25,9 +31,10 @@ async function getAccessToken(): Promise<string> {
 type EpkSectionProps = {
   releaseId: string;
   onToast?: (message: string, tone: 'success' | 'error' | 'warning') => void;
+  variant?: 'section' | 'panel';
 };
 
-export function EpkSection({ releaseId, onToast }: EpkSectionProps) {
+export function EpkSection({ releaseId, onToast, variant = 'section' }: EpkSectionProps) {
   const [epk, setEpk] = useState<ReleaseEpk | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   // Distinguishes "no kit yet" from "the load failed", the same split
@@ -150,18 +157,8 @@ export function EpkSection({ releaseId, onToast }: EpkSectionProps) {
 
   if (!EPK_ENABLED) return null;
 
-  return (
-    <section className="mt-8">
-      <div>
-        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Press kit
-        </h2>
-        <p className="mt-1 text-sm text-content-secondary">
-          A shareable EPK assembled from this release&rsquo;s details and artwork — it stays in
-          sync as the release changes.
-        </p>
-      </div>
-
+  const body = (
+    <>
       {isLoading ? (
         <div className="mt-4">
           <SkeletonBlock className="h-12 w-full" />
@@ -253,6 +250,33 @@ export function EpkSection({ releaseId, onToast }: EpkSectionProps) {
           </p>
         </div>
       )}
+    </>
+  );
+
+  if (variant === 'panel') {
+    return (
+      <div>
+        <p className="text-sm text-content-secondary">
+          A shareable EPK assembled from this release&rsquo;s details and artwork — it stays in
+          sync as the release changes.
+        </p>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <section className="mt-8">
+      <div>
+        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+          Press kit
+        </h2>
+        <p className="mt-1 text-sm text-content-secondary">
+          A shareable EPK assembled from this release&rsquo;s details and artwork — it stays in
+          sync as the release changes.
+        </p>
+      </div>
+      {body}
     </section>
   );
 }

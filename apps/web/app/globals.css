@@ -292,6 +292,25 @@ html[data-theme='light'] .cc-island {
   --cc-chip-accent: #7fd99a;
 }
 
+/* Public EPK island (URG-196). Same single-source-of-truth pattern as
+   .cc-island above, but deliberately DARK-LOCKED — no light override: a
+   press kit is a branded artifact sent outside the product, so every
+   recipient sees the identical Bible screen-mode kit regardless of any
+   viewer theme state. Ink ground, cream text, spring accent, forest fill
+   (the Bible's 11.1:1 spring-on-ink pairing). The page and its side menu
+   consume these vars via Tailwind arbitrary values / inline styles. */
+.epk-island {
+  color-scheme: dark;
+  --epk-ground: #0d120e;
+  --epk-surface: #181d19;
+  --epk-fill: #14643a;
+  --epk-accent: #7fd99a;
+  --epk-text: #f5f0e6;
+  --epk-text-muted: rgba(245, 240, 230, 0.64);
+  --epk-text-faint: rgba(245, 240, 230, 0.4);
+  --epk-border: rgba(245, 240, 230, 0.12);
+}
+
 html[data-theme='dark'] {
   --color-bg-base: 13 18 14;
   --color-bg-sidebar: 18 23 19;

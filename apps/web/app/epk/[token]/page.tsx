@@ -9,16 +9,18 @@ import { loadPublicEpk } from '@/lib/epk-server';
 // the asset signed URLs must be minted fresh.
 export const dynamic = 'force-dynamic';
 
-// Brand palette (URG 001), hard-coded rather than themed: an EPK is a
-// branded artifact sent to press — every recipient sees the identical
-// ink-ground kit regardless of any viewer theme state.
-const INK = '#0d120e';
-const SURFACE = '#141a15';
-const STROKE = 'rgba(255,255,255,0.10)';
-const CREAM = '#f2f0e9';
-const MUTED = 'rgba(242,240,233,0.60)';
-const FAINT = 'rgba(242,240,233,0.38)';
-const BRAND = '#3ecf8e';
+// Brand palette (URG 001) via the dark-locked .epk-island vars in
+// globals.css — the single place this feature's colors are defined. An EPK
+// is a branded artifact sent to press, so every recipient sees the identical
+// Bible screen-mode kit (ink ground, cream text, spring accent) regardless
+// of any viewer theme state.
+const INK = 'var(--epk-ground)';
+const SURFACE = 'var(--epk-surface)';
+const STROKE = 'var(--epk-border)';
+const CREAM = 'var(--epk-text)';
+const MUTED = 'var(--epk-text-muted)';
+const FAINT = 'var(--epk-text-faint)';
+const BRAND = 'var(--epk-accent)';
 
 const RELEASE_TYPE_LABELS: Record<string, string> = {
   single: 'Single',
@@ -89,7 +91,7 @@ export default async function PublicEpkPage({ params }: PageProps) {
   if (epk.explicit !== null) metaRows.push({ label: 'Explicit', value: epk.explicit ? 'Yes' : 'No' });
 
   return (
-    <main className="min-h-screen" style={{ backgroundColor: INK, color: CREAM }}>
+    <main className="epk-island min-h-screen" style={{ backgroundColor: INK, color: CREAM }}>
       <div className="mx-auto max-w-[720px] px-5 pb-16 pt-12 sm:px-8 sm:pt-16">
         {/* Kit eyebrow */}
         <p className="font-mono text-[11px] uppercase tracking-[0.22em]" style={{ color: FAINT }}>

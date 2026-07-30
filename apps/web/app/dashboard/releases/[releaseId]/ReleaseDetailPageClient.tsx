@@ -16,7 +16,7 @@ import { Toast } from '@/components/shared/Toast';
 import { ReleaseInfoSection } from '@/components/releases/ReleaseInfoSection';
 import { AssetSection } from '@/components/releases/AssetSection';
 import { ContentCalendarSection } from '@/components/releases/ContentCalendarSection';
-import { EpkSection } from '@/components/releases/EpkSection';
+import { ReleaseSidePanel } from '@/components/releases/ReleaseSidePanel';
 import { NewReleaseGuide } from '@/components/releases/NewReleaseGuide';
 import dynamic from 'next/dynamic';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
@@ -490,11 +490,6 @@ export default function ReleaseDetailPage() {
 
         <ContentCalendarSection releaseId={releaseId} />
 
-        <EpkSection
-          releaseId={releaseId}
-          onToast={(message, tone) => setToast({ message, tone })}
-        />
-
         {FILES_ENABLED ? (
           <AssetSection
             releaseId={releaseId}
@@ -504,6 +499,14 @@ export default function ReleaseDetailPage() {
 
         <ReleaseInfoSection releaseId={releaseId} />
       </div>
+
+      {/* PostHog-style right rail + collapsible panel; the press kit is
+          accessed from here, not an inline section (founder call,
+          2026-07-30). Renders null while the EPK flag is off. */}
+      <ReleaseSidePanel
+        releaseId={releaseId}
+        onToast={(message, tone) => setToast({ message, tone })}
+      />
 
       {TAILOR_PLAN_ENABLED ? (
         <TailorPlanModal
