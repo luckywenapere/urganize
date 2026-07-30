@@ -20,7 +20,6 @@
     "@urganize/changelog": "workspace:*",
     "@urganize/pricing": "workspace:*",
     "@vercel/analytics": "^1.6.1",
-    "chart.js": "^4.5.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.562.0",
