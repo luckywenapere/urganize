@@ -16,7 +16,7 @@ import { Toast } from '@/components/shared/Toast';
 import { ReleaseInfoSection } from '@/components/releases/ReleaseInfoSection';
 import { AssetSection } from '@/components/releases/AssetSection';
 import { ContentCalendarSection } from '@/components/releases/ContentCalendarSection';
-import { ReleaseSidePanel } from '@/components/releases/ReleaseSidePanel';
+import { ReleaseSideNav } from '@/components/releases/ReleaseSideNav';
 import { NewReleaseGuide } from '@/components/releases/NewReleaseGuide';
 import dynamic from 'next/dynamic';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
@@ -256,8 +256,15 @@ export default function ReleaseDetailPage() {
       {/* The artist + title moved into the topbar's middle (AppTopbar's
           ContextTitle, founder call 2026-07-23) — the page starts straight
           at the meta/actions row so the activities fill the freed space.
-          pt trimmed accordingly; the max-width column keeps its proportion. */}
-      <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-6 sm:px-6">
+          pt trimmed accordingly.
+          Layout (URG-196): a PostHog-style release side menu sits left of
+          the content column on lg+, flattening to a horizontal pill row
+          above it on smaller screens; the content column keeps its 1000px
+          proportion. */}
+      <div className="mx-auto flex max-w-[1240px] flex-col gap-6 px-4 pb-24 pt-6 sm:px-6 lg:flex-row lg:gap-8">
+        <ReleaseSideNav releaseId={releaseId} />
+
+        <div className="min-w-0 flex-1 lg:max-w-[1000px]">
         {toast ? (
           <div className="mb-4">
             <Toast message={toast.message} tone={toast.tone} />
@@ -498,15 +505,8 @@ export default function ReleaseDetailPage() {
         ) : null}
 
         <ReleaseInfoSection releaseId={releaseId} />
+        </div>
       </div>
-
-      {/* PostHog-style right rail + collapsible panel; the press kit is
-          accessed from here, not an inline section (founder call,
-          2026-07-30). Renders null while the EPK flag is off. */}
-      <ReleaseSidePanel
-        releaseId={releaseId}
-        onToast={(message, tone) => setToast({ message, tone })}
-      />
 
       {TAILOR_PLAN_ENABLED ? (
         <TailorPlanModal
