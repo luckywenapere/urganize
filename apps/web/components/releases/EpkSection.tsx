@@ -8,14 +8,10 @@ import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 
 // The EPK share-link manager (URG-196). Self-contained (the
 // ContentCalendarSection pattern): takes releaseId, fetches its own data,
-// renders its own loading/empty/error states. The kit itself is the public
-// /epk/[token] page — this surface only creates, copies, and revokes the
-// share link.
-//
-// Two variants (the ChappiConversation page/panel precedent):
-// 'section' renders the full release-page section framing (header + mt-8);
-// 'panel' renders bare content for the release side panel, whose shell
-// provides its own header.
+// renders its own loading/empty/error states. Hosted by the dedicated
+// /dashboard/releases/[releaseId]/epk page, reached through the release
+// side menu. The kit itself is the public /epk/[token] page — this surface
+// only creates, copies, and revokes the share link.
 //
 // NEXT_PUBLIC_ prefix so the value is inlined at build time for this client
 // component. The API routes guard the same flag server-side (404 when off).
@@ -31,10 +27,9 @@ async function getAccessToken(): Promise<string> {
 type EpkSectionProps = {
   releaseId: string;
   onToast?: (message: string, tone: 'success' | 'error' | 'warning') => void;
-  variant?: 'section' | 'panel';
 };
 
-export function EpkSection({ releaseId, onToast, variant = 'section' }: EpkSectionProps) {
+export function EpkSection({ releaseId, onToast }: EpkSectionProps) {
   const [epk, setEpk] = useState<ReleaseEpk | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   // Distinguishes "no kit yet" from "the load failed", the same split
@@ -252,18 +247,6 @@ export function EpkSection({ releaseId, onToast, variant = 'section' }: EpkSecti
       )}
     </>
   );
-
-  if (variant === 'panel') {
-    return (
-      <div>
-        <p className="text-sm text-content-secondary">
-          A shareable EPK assembled from this release&rsquo;s details and artwork — it stays in
-          sync as the release changes.
-        </p>
-        {body}
-      </div>
-    );
-  }
 
   return (
     <section className="mt-8">

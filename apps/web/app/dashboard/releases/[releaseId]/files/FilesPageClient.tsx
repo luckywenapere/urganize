@@ -10,6 +10,7 @@ import { formatArtistName } from '@/lib/release-execution';
 import { FilesPageSkeleton } from '@/components/loading/FilesPageSkeleton';
 import { Toast } from '@/components/shared/Toast';
 import { AssetSection, type AssetToastTone } from '@/components/releases/AssetSection';
+import { ReleaseSideNav } from '@/components/releases/ReleaseSideNav';
 
 type ToastState = {
   message: string;
@@ -93,35 +94,41 @@ export default function FilesPageClient() {
 
   return (
     <main className="bg-bg-base text-content-primary">
-      <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-10 sm:px-6">
-        {toast ? (
-          <div className="mb-4">
-            <Toast message={toast.message} tone={toast.tone} />
+      {/* Same side-menu + content layout as the release detail and EPK
+          pages (URG-196), so the release menu persists across scenes. */}
+      <div className="mx-auto flex max-w-[1240px] flex-col gap-6 px-4 pb-24 pt-10 sm:px-6 lg:flex-row lg:gap-8">
+        <ReleaseSideNav releaseId={releaseId} />
+
+        <div className="min-w-0 flex-1 lg:max-w-[1000px]">
+          {toast ? (
+            <div className="mb-4">
+              <Toast message={toast.message} tone={toast.tone} />
+            </div>
+          ) : null}
+
+          {/* Back goes to the workspace scoped to this release, matching the
+              content calendar's "Back to release" fix (URG-157) — the
+              workspace is the surface users actually live in. */}
+          <Link
+            href={`/dashboard?release=${releaseId}`}
+            className="inline-flex items-center gap-1 text-xs text-content-tertiary hover:text-content-primary"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" /> Back to release
+          </Link>
+
+          <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+            {formatArtistName(release.artistName)}
+          </p>
+          <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-content-primary sm:text-3xl">
+            {release.title}
+          </h1>
+
+          <div className="mt-6">
+            <AssetSection
+              releaseId={releaseId}
+              onToast={(message, tone) => setToast({ message, tone })}
+            />
           </div>
-        ) : null}
-
-        {/* Back goes to the workspace scoped to this release, matching the
-            content calendar's "Back to release" fix (URG-157) — the
-            workspace is the surface users actually live in. */}
-        <Link
-          href={`/dashboard?release=${releaseId}`}
-          className="inline-flex items-center gap-1 text-xs text-content-tertiary hover:text-content-primary"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" /> Back to release
-        </Link>
-
-        <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          {formatArtistName(release.artistName)}
-        </p>
-        <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-content-primary sm:text-3xl">
-          {release.title}
-        </h1>
-
-        <div className="mt-6">
-          <AssetSection
-            releaseId={releaseId}
-            onToast={(message, tone) => setToast({ message, tone })}
-          />
         </div>
       </div>
     </main>
