@@ -12,7 +12,10 @@ import {
 } from 'lucide-react';
 
 // The admin hub's left menu — one place linking every internal dashboard
-// (founder request, 2026-07-30). Same visual pattern as ReleaseSideNav:
+// (founder request, 2026-07-30). Visual pattern inherited from the former
+// ReleaseSideNav (deleted URG-200 — the release pages navigate via header
+// links + a back link now; the admin hub keeps a menu because it has six
+// unrelated sections and no equivalent hub header to hang them off):
 // vertical sticky sidebar on lg+, flattening to a horizontal pill row above
 // the content below lg. No feature flags here: every entry is an internal
 // surface, and access is enforced server-side by ADMIN_EMAILS on each

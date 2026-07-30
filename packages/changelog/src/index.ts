@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.34.0",
+    date: "July 30, 2026",
+    highlights: [
+      "Simplified how you move around a release: the left side menu is gone. Every release page now has a plain Back link at the top, and the release page itself carries direct buttons to its content calendar and press kit — one click, nothing to collapse or expand.",
+    ],
+  },
+  {
     version: "0.33.5",
     date: "July 30, 2026",
     highlights: [
