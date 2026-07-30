@@ -16,6 +16,7 @@ import { Toast } from '@/components/shared/Toast';
 import { ReleaseInfoSection } from '@/components/releases/ReleaseInfoSection';
 import { AssetSection } from '@/components/releases/AssetSection';
 import { ContentCalendarSection } from '@/components/releases/ContentCalendarSection';
+import { EpkSection } from '@/components/releases/EpkSection';
 import { NewReleaseGuide } from '@/components/releases/NewReleaseGuide';
 import dynamic from 'next/dynamic';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
@@ -488,6 +489,11 @@ export default function ReleaseDetailPage() {
         </section>
 
         <ContentCalendarSection releaseId={releaseId} />
+
+        <EpkSection
+          releaseId={releaseId}
+          onToast={(message, tone) => setToast({ message, tone })}
+        />
 
         {FILES_ENABLED ? (
           <AssetSection

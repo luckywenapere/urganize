@@ -1,0 +1,206 @@
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { loadPublicEpk } from '@/lib/epk-server';
+
+// The public press kit (URG-196). Server component, no auth: the unguessable
+// share token is the access control, resolved by loadPublicEpk with the
+// service-role client. force-dynamic because the kit is assembled live from
+// release data on every request (that's the "stays in sync" guarantee) and
+// the asset signed URLs must be minted fresh.
+export const dynamic = 'force-dynamic';
+
+// Brand palette (URG 001), hard-coded rather than themed: an EPK is a
+// branded artifact sent to press — every recipient sees the identical
+// ink-ground kit regardless of any viewer theme state.
+const INK = '#0d120e';
+const SURFACE = '#141a15';
+const STROKE = 'rgba(255,255,255,0.10)';
+const CREAM = '#f2f0e9';
+const MUTED = 'rgba(242,240,233,0.60)';
+const FAINT = 'rgba(242,240,233,0.38)';
+const BRAND = '#3ecf8e';
+
+const RELEASE_TYPE_LABELS: Record<string, string> = {
+  single: 'Single',
+  ep: 'EP',
+  album: 'Album',
+};
+
+function formatReleaseDate(value: string | null): string | null {
+  if (!value) return null;
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Intl.DateTimeFormat('en', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(parsed);
+}
+
+type PageProps = { params: Promise<{ token: string }> };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { token } = await params;
+  const epk = await loadPublicEpk(token);
+  if (!epk) {
+    return { title: 'Press kit', robots: { index: false, follow: false } };
+  }
+  const heading = [epk.artistName, epk.title].filter(Boolean).join(' — ');
+  return {
+    title: `${heading} | Press kit`,
+    description:
+      epk.description ||
+      `Press kit for ${heading}${epk.releaseDate ? `, out ${formatReleaseDate(epk.releaseDate)}` : ''}.`,
+    // Kits are shared by link, never discovered by crawl — the token is the
+    // only gate, so keep these URLs out of search indexes.
+    robots: { index: false, follow: false },
+  };
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-6 border-b py-3" style={{ borderColor: STROKE }}>
+      <dt className="shrink-0 font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
+        {label}
+      </dt>
+      <dd className="text-right text-sm" style={{ color: CREAM }}>
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+export default async function PublicEpkPage({ params }: PageProps) {
+  const { token } = await params;
+  const epk = await loadPublicEpk(token);
+  if (!epk) notFound();
+
+  const typeLabel = RELEASE_TYPE_LABELS[epk.releaseType] || epk.releaseType;
+  const dateLabel = formatReleaseDate(epk.releaseDate);
+
+  const metaRows: Array<{ label: string; value: string }> = [];
+  if (dateLabel) metaRows.push({ label: 'Release date', value: dateLabel });
+  metaRows.push({ label: 'Format', value: typeLabel });
+  if (epk.genre) {
+    metaRows.push({ label: 'Genre', value: epk.subgenre ? `${epk.genre} / ${epk.subgenre}` : epk.genre });
+  }
+  if (epk.labelName) metaRows.push({ label: 'Label', value: epk.labelName });
+  if (epk.language) metaRows.push({ label: 'Language', value: epk.language });
+  if (epk.explicit !== null) metaRows.push({ label: 'Explicit', value: epk.explicit ? 'Yes' : 'No' });
+
+  return (
+    <main className="min-h-screen" style={{ backgroundColor: INK, color: CREAM }}>
+      <div className="mx-auto max-w-[720px] px-5 pb-16 pt-12 sm:px-8 sm:pt-16">
+        {/* Kit eyebrow */}
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em]" style={{ color: FAINT }}>
+          Press kit
+        </p>
+
+        {/* Cover art */}
+        {epk.coverArtUrl ? (
+          // Signed URL from a private bucket, minted per request — next/image
+          // optimization would cache/proxy a URL that expires, so the plain
+          // tag is deliberate here.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={epk.coverArtUrl}
+            alt={`${epk.title} cover art`}
+            className="mt-8 aspect-square w-full max-w-[420px] object-cover"
+            style={{ border: `1px solid ${STROKE}` }}
+          />
+        ) : null}
+
+        {/* Artist + title */}
+        <header className="mt-8">
+          <p className="text-sm font-medium uppercase tracking-[0.16em]" style={{ color: MUTED }}>
+            {epk.artistName}
+          </p>
+          <h1 className="font-display mt-2 text-4xl font-medium leading-tight sm:text-5xl">
+            {epk.title}
+          </h1>
+          {dateLabel ? (
+            <p className="mt-3 font-mono text-xs uppercase tracking-[0.18em]" style={{ color: BRAND }}>
+              {typeLabel} · Out {dateLabel}
+            </p>
+          ) : (
+            <p className="mt-3 font-mono text-xs uppercase tracking-[0.18em]" style={{ color: BRAND }}>
+              {typeLabel}
+            </p>
+          )}
+        </header>
+
+        {/* About */}
+        {epk.description ? (
+          <section className="mt-10">
+            <h2 className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
+              About the release
+            </h2>
+            <p className="mt-3 whitespace-pre-line text-base leading-relaxed" style={{ color: MUTED }}>
+              {epk.description}
+            </p>
+          </section>
+        ) : null}
+
+        {/* Release details */}
+        <section className="mt-10">
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
+            Release details
+          </h2>
+          <dl className="mt-3 border-t" style={{ borderColor: STROKE }}>
+            {metaRows.map((row) => (
+              <MetaRow key={row.label} label={row.label} value={row.value} />
+            ))}
+          </dl>
+        </section>
+
+        {/* Press photos */}
+        {epk.promoImageUrls.length > 0 ? (
+          <section className="mt-10">
+            <h2 className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
+              Press photos
+            </h2>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {epk.promoImageUrls.map((url, index) => (
+                <a
+                  key={url}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                  style={{ backgroundColor: SURFACE }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={`${epk.artistName} press photo ${index + 1}`}
+                    className="aspect-square w-full object-cover"
+                    style={{ border: `1px solid ${STROKE}` }}
+                    loading="lazy"
+                  />
+                </a>
+              ))}
+            </div>
+            <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em]" style={{ color: FAINT }}>
+              Click a photo to open full size
+            </p>
+          </section>
+        ) : null}
+
+        {/* Urganize branding — the distribution loop. Every kit lands in
+            front of music-industry people; the footer is the product's
+            signature on the artifact. */}
+        <footer className="mt-14 border-t pt-6" style={{ borderColor: STROKE }}>
+          <a
+            href="https://urganize.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-[11px] uppercase tracking-[0.18em]"
+            style={{ color: FAINT }}
+          >
+            Made with <span style={{ color: BRAND }}>Urganize</span> — the operating system for music business
+          </a>
+        </footer>
+      </div>
+    </main>
+  );
+}

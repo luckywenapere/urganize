@@ -80,6 +80,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname === '/' ||
     pathname?.startsWith('/credits/') ||
     pathname?.startsWith('/listen/') ||
+    pathname?.startsWith('/epk/') ||
     isPreSavePublicRoute ||
     isOnboardingRoute ||
     isInviteRoute;
