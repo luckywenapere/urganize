@@ -6,6 +6,7 @@ import {
   BadgeDollarSign,
   ClipboardList,
   LayoutDashboard,
+  Mic,
   Radio,
   TrendingUp,
   Users,
@@ -35,6 +36,7 @@ const ITEMS: Array<{
   },
   { key: 'waitlist', label: 'Waitlist', icon: Users, href: '/admin/waitlist' },
   { key: 'growth', label: 'Growth', icon: TrendingUp, href: '/admin/growth' },
+  { key: 'interviews', label: 'Interviews', icon: Mic, href: '/admin/interviews' },
 ];
 
 export function AdminNav() {

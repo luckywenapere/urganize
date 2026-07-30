@@ -12,6 +12,7 @@ import {
   ChevronRight,
   ClipboardList,
   Loader2,
+  Mic,
   Radio,
   TrendingUp,
   Users,
@@ -54,6 +55,12 @@ const SECTIONS: Array<{
     label: 'Growth',
     description: 'Cumulative signups per week over the last 12 weeks.',
     icon: TrendingUp,
+  },
+  {
+    href: '/admin/interviews',
+    label: 'Interviews',
+    description: 'Artist interview slots booked through the marketing site.',
+    icon: Mic,
   },
 ];
 
