@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Download, Loader2 } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 
@@ -179,26 +179,21 @@ export default function OnboardingAdminPageClient() {
 
   if (authLoading || !user || !checked || !data) {
     return (
-      <main className="grid min-h-screen place-items-center bg-bg-base text-content-tertiary">
+      <div className="grid min-h-[50vh] place-items-center text-content-tertiary">
         <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-      </main>
+      </div>
     );
   }
 
   const { summary, breakdowns, hasLegacyData, rows } = data;
 
+  // The page frame (outer <main>, padding, the AdminNav side menu) moved to
+  // app/admin/layout.tsx when the admin hub landed (2026-07-30); this
+  // component renders content only. The old "Back" button went with it —
+  // the hub menu is the way around.
   return (
-    <main className="min-h-screen bg-bg-base px-4 pb-24 pt-8 text-content-primary sm:px-6">
-      <div className="mx-auto w-full max-w-6xl">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => router.push('/dashboard')}
-            className="motion-focus motion-press inline-flex items-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Back
-          </button>
+    <div>
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <button
             type="button"
             onClick={() => void handleExportCsv()}
@@ -214,7 +209,7 @@ export default function OnboardingAdminPageClient() {
           </button>
         </div>
 
-        <p className="mt-8 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+        <p className="mt-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
           Admin
         </p>
         <h1 className="mt-2 font-display text-3xl font-semibold">Onboarding answers</h1>
@@ -315,7 +310,6 @@ export default function OnboardingAdminPageClient() {
             </tbody>
           </table>
         </div>
-      </div>
-    </main>
+    </div>
   );
 }

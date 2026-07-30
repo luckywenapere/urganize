@@ -5,9 +5,8 @@ export default function AdminLoading() {
     <LoadingScreen
       variant="shell"
       eyebrow="Admin"
-      title="Redirecting to dashboard"
-      description="Preparing your workspace and sending you to the main release view."
+      title="Loading admin"
+      description="Checking access and preparing the internal dashboards."
     />
   );
 }
-

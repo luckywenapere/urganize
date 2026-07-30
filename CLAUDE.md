@@ -701,7 +701,16 @@ The third sanctioned v1 scope expansion (see the 2026-07-30 note in "v1 scope").
 
 ---
 
-*Last updated: 2026-07-30 (URG-196 — EPK generator, third sanctioned scope expansion).*
+## Admin hub (2026-07-30)
+
+All internal dashboards are reachable from one place: **`/admin`** in `apps/web` (founder request). `app/admin/layout.tsx` owns the page frame and mounts `components/admin/AdminNav.tsx` (left menu, the ReleaseSideNav visual pattern) for every `/admin/*` page. Sections: Overview (`/admin`, was a bare redirect to /dashboard), Onboarding (URG-195), Broadcast, **Pricing validation** (`/admin/pricing-validation` — first-ever UI for the pre-existing `/api/admin/pricing-validation` endpoint), **Waitlist** (`/admin/waitlist`), **Growth** (`/admin/growth`). Internal-only → no ledger entry/version bump (Versioning rules).
+
+- **Waitlist + Growth are PORTS from apps/homepage** (`/admin/waitlist` and `/dashboard/(protected)/growth` there), re-gated behind the normal account login via `verifyAdmin`/`ADMIN_EMAILS` instead of the homepage's shared-secret cookie. They read the marketing site's **Neon** database directly: `@neondatabase/serverless` added to `apps/web`, `getNeonClient()` in `app/api/admin/_shared.ts`, backed by `GET /api/admin/waitlist` + `GET /api/admin/growth`. **Requires `DATABASE_URL` (the homepage's Neon connection string) set on the Vercel `Web` project** — unset, only those two pages error. Growth's chart is plain CSS bars, deliberately NOT chart.js (boring stack — the homepage keeps its chart.js version). The homepage originals were left untouched; retire them (and possibly `ADMIN_WAITLIST_TOKEN`) once the hub is proven.
+- **Gate pattern:** unchanged — each page's backing GET is the access check (bounce to /dashboard on 401/403); the landing page uses the new lightweight `GET /api/admin/me`. The old per-page "Back" buttons were removed (the hub menu replaces them); the page frame moved out of `OnboardingAdminPageClient`/`BroadcastPageClient` into the shared layout.
+
+---
+
+*Last updated: 2026-07-30 (URG-196 EPK generator + admin hub).*
 
 ---
 

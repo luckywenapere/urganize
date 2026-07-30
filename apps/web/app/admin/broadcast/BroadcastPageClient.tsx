@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { SignalIcon } from '@/components/app/BrandIcons';
 import { supabase } from '@/lib/supabase/client';
@@ -114,24 +114,18 @@ export default function BroadcastPageClient() {
 
   if (authLoading || !user || !checked) {
     return (
-      <main className="grid min-h-screen place-items-center bg-bg-base text-content-tertiary">
+      <div className="grid min-h-[50vh] place-items-center text-content-tertiary">
         <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-      </main>
+      </div>
     );
   }
 
+  // The page frame (outer <main>, padding, the AdminNav side menu) moved to
+  // app/admin/layout.tsx when the admin hub landed (2026-07-30); this
+  // component renders content only. The old "Back" button went with it —
+  // the hub menu is the way around.
   return (
-    <main className="min-h-screen bg-bg-base px-4 pb-24 pt-8 text-content-primary sm:px-6">
-      <div className="mx-auto w-full max-w-[640px]">
-        <button
-          type="button"
-          onClick={() => router.push('/dashboard')}
-          className="motion-focus motion-press mb-8 inline-flex items-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-4 py-2 text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back
-        </button>
-
+    <div className="w-full max-w-[640px]">
         <p className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
           <SignalIcon className="h-4 w-4" />
           Broadcast
@@ -223,7 +217,6 @@ export default function BroadcastPageClient() {
             ) : null}
           </div>
         </div>
-      </div>
-    </main>
+    </div>
   );
 }
