@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { TrendingUp } from "lucide-react";
+import { DashboardNav } from "@/app/components/dashboard/DashboardNav";
 import {
   clearDashboardSession,
   requireDashboardAuth,
@@ -43,18 +42,7 @@ export default async function DashboardLayout({
           </form>
         </div>
 
-        <nav className="mt-6">
-          <p className="font-mono text-[0.68rem] uppercase tracking-[0.2em] text-[#6f857c]">
-            Metrics
-          </p>
-          <Link
-            href="/dashboard/growth"
-            className="mt-3 flex items-center gap-3 rounded-md border border-[#9fe870]/25 bg-[#9fe870]/10 px-3 py-2.5 text-sm font-semibold text-[#eaffdf]"
-          >
-            <TrendingUp className="h-4 w-4" aria-hidden="true" />
-            Growth
-          </Link>
-        </nav>
+        <DashboardNav />
 
         <form action={signOut} className="mt-8 hidden lg:block">
           <button
