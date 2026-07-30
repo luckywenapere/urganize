@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { neon } from '@neondatabase/serverless';
+
+// The waitlist + growth dashboards were ported into this hub from
+// apps/homepage (founder request, 2026-07-30) and read the marketing site's
+// Neon database directly — the same DATABASE_URL the homepage uses, now
+// also set on the Web Vercel project. Returns null when unconfigured so
+// routes can 500 with a clear message instead of throwing.
+export const getNeonClient = (): ReturnType<typeof neon> | null => {
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  if (!databaseUrl) return null;
+  return neon(databaseUrl);
+};
 
 export const parseAdminEmails = (): string[] => {
   return String(process.env.ADMIN_EMAILS || '')
