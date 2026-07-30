@@ -20,6 +20,22 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.33.5",
+    date: "July 30, 2026",
+    highlights: [
+      "The release menu now has a Dashboard link at the top, so you can always get back home from any release page — no more hunting for the way out.",
+      "Selecting a release on the dashboard now shows an Overview button that opens the release page directly.",
+      "Cleaned up the release menu: the collapse control is a small icon instead of looking like another menu item, and the duplicate Content calendar button is gone from the release header.",
+    ],
+  },
+  {
+    version: "0.33.4",
+    date: "July 30, 2026",
+    highlights: [
+      "The press kit is now one click from your dashboard — select a release and the Press kit button appears right next to Calendar and Files, no need to open the release first.",
+    ],
+  },
+  {
     version: "0.33.3",
     date: "July 29, 2026",
     highlights: [

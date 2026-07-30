@@ -11,6 +11,14 @@ import { useKnownReleaseCount } from './known-counts';
 // (a release deep link, a notification click, a refresh) is a common path.
 const SCOPE_PARAM = 'release';
 
+// Same build-time flags TasksPanel reads for its scoped-header pills. The
+// skeleton renders one placeholder pill per REAL pill (URG-199) so the row
+// doesn't change width when content swaps in: New activity + Overview are
+// always present; Calendar / Files / Press kit appear per flag.
+const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
+const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
+const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
+
 /**
  * Workspace loading state, rendered inline by `WorkspaceView` (and the
  * legacy dashboard) while auth/the first command-center fetch are in
@@ -101,15 +109,26 @@ function ReleaseCardSkeleton() {
   );
 }
 
-/** "Tasks" header row (New task + Files pills) + one dim block for the list. */
+/** Tasks header row + one dim block for the list. Pill count mirrors the
+ * real scoped header exactly: New activity + Overview always, then one per
+ * enabled flag (Calendar / Files / Press kit) — see TasksPanel. Widths
+ * approximate each label so the row's footprint matches. */
 function TasksPanelSkeleton() {
+  const pillWidths = [
+    'w-28', // New activity
+    'w-24', // Overview
+    ...(CONTENT_CALENDAR_ENABLED ? ['w-28'] : []), // Calendar + Beta tag
+    ...(FILES_ENABLED ? ['w-16'] : []), // Files
+    ...(EPK_ENABLED ? ['w-24'] : []), // Press kit
+  ];
   return (
     <div className="min-w-0 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <SkeletonBlock className="h-3 w-14" />
-        <div className="flex items-center gap-2">
-          <SkeletonBlock className="h-8 w-24 rounded-full" />
-          <SkeletonBlock className="h-8 w-20 rounded-full" />
+        <div className="flex flex-wrap items-center gap-2">
+          {pillWidths.map((width, index) => (
+            <SkeletonBlock key={`pill-${index}`} className={`h-8 ${width} rounded-full`} />
+          ))}
         </div>
       </div>
       <div className="h-72 rounded-xl border border-stroke-default bg-bg-surface" />

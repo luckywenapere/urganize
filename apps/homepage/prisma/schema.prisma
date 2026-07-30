@@ -22,3 +22,17 @@ model User {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @default(now()) @updatedAt
 }
+
+// Artist interview booking. One row per booked slot; slotDate is a bare
+// calendar date (the time is always fixed at 6pm WAT, so it doesn't need
+// its own column) and is unique — the DB itself is the source of truth for
+// "is this slot taken," not a client-side check, so two artists racing for
+// the same day can't both win. See app/api/interview/route.ts.
+model InterviewSlot {
+  id         Int      @id @default(autoincrement())
+  artistName String
+  phone      String
+  imessage   String
+  slotDate   DateTime @unique @db.Date
+  createdAt  DateTime @default(now())
+}
