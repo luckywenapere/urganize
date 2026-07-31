@@ -309,14 +309,18 @@ html[data-marketing-theme="dark"] .marketing-wordmark {
    background. Never reverts to the native pointer on hover — the mark
    stays on buttons, links, and cards; text-entry fields keep the I-beam;
    disabled controls keep not-allowed. Mirrors apps/web/app/globals.css's
-   block; keep the two in sync if either changes. */
+   block; keep the two in sync if either changes.
+
+   URG-208: both PNGs got a thin contrasting outline baked in (same fix as
+   apps/web — see that file's comment for the full rationale). Hotspot
+   shifted 22 2 → 24 4 for the outline's 2px canvas margin. */
 @media (pointer: fine) {
   body {
-    cursor: url('/images/chappi-cursor-cream.png') 22 2, auto;
+    cursor: url('/images/chappi-cursor-cream.png') 24 4, auto;
   }
 
   html[data-marketing-theme='light'] body {
-    cursor: url('/images/chappi-cursor-ink.png') 22 2, auto;
+    cursor: url('/images/chappi-cursor-ink.png') 24 4, auto;
   }
 
   a,

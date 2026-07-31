@@ -437,14 +437,21 @@ html[data-theme='dark'] body {
    remaining signal that a control won't respond), and text-entry fields
    keep the I-beam (the mark's hotspot is its top tip, which makes caret
    placement between characters meaningfully harder). Both exceptions use
-   real cursor keywords so they still win over `inherit` by specificity. */
+   real cursor keywords so they still win over `inherit` by specificity.
+
+   URG-208: both PNGs got a thin contrasting outline baked in (cream mark →
+   ink edge, ink mark → cream edge), like an OS cursor — the ink mark used
+   to disappear over dark buttons/images, and the cream mark had the same
+   problem in reverse. Canvas grew 44x44 → 48x48 for the outline's 2px
+   margin, so the hotspot shifted 22 2 → 24 4 (same relative position on
+   the triangle's top tip). */
 @media (pointer: fine) {
   body {
-    cursor: url('/images/chappi-cursor-cream.png') 22 2, auto;
+    cursor: url('/images/chappi-cursor-cream.png') 24 4, auto;
   }
 
   html[data-theme='light'] body {
-    cursor: url('/images/chappi-cursor-ink.png') 22 2, auto;
+    cursor: url('/images/chappi-cursor-ink.png') 24 4, auto;
   }
 
   a,
