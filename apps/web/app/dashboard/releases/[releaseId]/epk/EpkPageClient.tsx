@@ -10,7 +10,6 @@ import { formatArtistName } from '@/lib/release-execution';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { Toast } from '@/components/shared/Toast';
 import { EpkSection } from '@/components/releases/EpkSection';
-import { ReleaseSideNav } from '@/components/releases/ReleaseSideNav';
 
 type ToastState = {
   message: string;
@@ -22,8 +21,10 @@ type ToastState = {
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 
 /**
- * The press kit's dedicated page (URG-196), reached through the release
- * side menu. Mirrors the files page's shape (thin server wrapper + client
+ * The press kit's dedicated page (URG-196), reached from the release page's
+ * header links or the workspace's scoped header (the release side menu that
+ * used to own this was removed in URG-200). Mirrors the files page's shape
+ * (thin server wrapper + client
  * component, flag-off bounce, auth guard) and stays on the standard app
  * tokens — the Brand Bible `.epk-island` treatment belongs to the PUBLIC
  * kit at /epk/[token], not this management surface.
@@ -102,17 +103,27 @@ export default function EpkPageClient() {
 
   return (
     <main className="bg-bg-base text-content-primary">
-      <div className="mx-auto flex max-w-[1240px] flex-col gap-6 px-4 pb-24 pt-10 sm:px-6 lg:flex-row lg:gap-8">
-        <ReleaseSideNav releaseId={releaseId} />
-
-        <div className="min-w-0 flex-1 lg:max-w-[1000px]">
+      <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-10 sm:px-6">
+        <div className="min-w-0">
           {toast ? (
             <div className="mb-4">
               <Toast message={toast.message} tone={toast.tone} />
             </div>
           ) : null}
 
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+          {/* Back to the workspace scoped to this release, matching the
+              calendar and files pages verbatim (URG-157's founder call). The
+              side menu used to be this page's only navigation — removing it
+              without this link would have stranded anyone who landed here
+              (URG-200). */}
+          <Link
+            href={`/dashboard?release=${releaseId}`}
+            className="inline-flex items-center gap-1 text-xs text-content-tertiary hover:text-content-primary"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" /> Back to release
+          </Link>
+
+          <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
             {formatArtistName(release.artistName)}
           </p>
           <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-content-primary sm:text-3xl">

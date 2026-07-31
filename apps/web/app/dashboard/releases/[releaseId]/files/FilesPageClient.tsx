@@ -10,7 +10,6 @@ import { formatArtistName } from '@/lib/release-execution';
 import { FilesPageSkeleton } from '@/components/loading/FilesPageSkeleton';
 import { Toast } from '@/components/shared/Toast';
 import { AssetSection, type AssetToastTone } from '@/components/releases/AssetSection';
-import { ReleaseSideNav } from '@/components/releases/ReleaseSideNav';
 
 type ToastState = {
   message: string;
@@ -96,10 +95,8 @@ export default function FilesPageClient() {
     <main className="bg-bg-base text-content-primary">
       {/* Same side-menu + content layout as the release detail and EPK
           pages (URG-196), so the release menu persists across scenes. */}
-      <div className="mx-auto flex max-w-[1240px] flex-col gap-6 px-4 pb-24 pt-10 sm:px-6 lg:flex-row lg:gap-8">
-        <ReleaseSideNav releaseId={releaseId} />
-
-        <div className="min-w-0 flex-1 lg:max-w-[1000px]">
+      <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-10 sm:px-6">
+        <div className="min-w-0">
           {toast ? (
             <div className="mb-4">
               <Toast message={toast.message} tone={toast.tone} />

@@ -3,7 +3,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { AlertCircle, CalendarDays, ChevronDown, Lock, Sparkles } from 'lucide-react';
+import {
+  AlertCircle,
+  CalendarDays,
+  ChevronDown,
+  ChevronLeft,
+  Lock,
+  Newspaper,
+  Sparkles,
+} from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -16,7 +24,6 @@ import { Toast } from '@/components/shared/Toast';
 import { ReleaseInfoSection } from '@/components/releases/ReleaseInfoSection';
 import { AssetSection } from '@/components/releases/AssetSection';
 import { ContentCalendarSection } from '@/components/releases/ContentCalendarSection';
-import { ReleaseSideNav } from '@/components/releases/ReleaseSideNav';
 import { NewReleaseGuide } from '@/components/releases/NewReleaseGuide';
 import dynamic from 'next/dynamic';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
@@ -30,6 +37,9 @@ const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'tru
 const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
 // Files (URG-182): the assets API routes 404 on the same flag server-side.
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
+// Content calendar + press kit: header links to the release's other scenes.
+const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
+const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 
 // The AI modals are dynamic AND only rendered behind their flag (bottom of
 // the JSX): while a flag is off — as both are in production today — the
@@ -256,14 +266,24 @@ export default function ReleaseDetailPage() {
           ContextTitle, founder call 2026-07-23) — the page starts straight
           at the meta/actions row so the activities fill the freed space.
           pt trimmed accordingly.
-          Layout (URG-196): a PostHog-style release side menu sits left of
-          the content column on lg+, flattening to a horizontal pill row
-          above it on smaller screens; the content column keeps its 1000px
-          proportion. */}
-      <div className="mx-auto flex max-w-[1240px] flex-col gap-6 px-4 pb-24 pt-6 sm:px-6 lg:flex-row lg:gap-8">
-        <ReleaseSideNav releaseId={releaseId} />
+          Layout (URG-200): the release side menu was removed — a single
+          content column again. Scene navigation lives in the header row
+          below (and on the workspace's scoped header), and the only
+          chrome added here is one back link. */}
+      <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-6 sm:px-6">
+        <div className="min-w-0">
+        {/* Back to the workspace scoped to this release — the same
+            destination the calendar / files / press kit pages use, and the
+            surface users actually live in (founder call, URG-157). Placed
+            top-left, above the meta row: the established position for this
+            link on every other release scene. */}
+        <Link
+          href={`/dashboard?release=${releaseId}`}
+          className="mb-4 inline-flex items-center gap-1 text-xs text-content-tertiary hover:text-content-primary"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" /> Back to workspace
+        </Link>
 
-        <div className="min-w-0 flex-1 lg:max-w-[1000px]">
         {toast ? (
           <div className="mb-4">
             <Toast message={toast.message} tone={toast.tone} />
@@ -288,11 +308,34 @@ export default function ReleaseDetailPage() {
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {/* The Content calendar header link was removed (URG-199): the
-                side menu now owns navigation between release scenes, and two
-                entries to the same destination on one screen is exactly the
-                duplication the founder banned. The header keeps ACTIONS only
-                (Tailor plan / Generate status update). */}
+            {/* Scene links restored here (URG-200) now that the side menu is
+                gone — one click to a sibling scene instead of routing back
+                through the workspace. These are the ONLY entries to those
+                destinations on this screen, so the no-duplication rule holds;
+                the workspace's scoped header carries its own copy, but that's
+                a different screen. Each is gated by its feature's flag,
+                exactly as its destination page is. */}
+            {CONTENT_CALENDAR_ENABLED ? (
+              <Link
+                href={`/dashboard/releases/${releaseId}/calendar`}
+                className="inline-flex h-9 items-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+              >
+                <CalendarDays className="h-3.5 w-3.5" />
+                Content calendar
+                <span className="rounded-full bg-brand/15 px-1 py-px text-[9px] font-bold uppercase tracking-wide text-brand">
+                  Beta
+                </span>
+              </Link>
+            ) : null}
+            {EPK_ENABLED ? (
+              <Link
+                href={`/dashboard/releases/${releaseId}/epk`}
+                className="inline-flex h-9 items-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+              >
+                <Newspaper className="h-3.5 w-3.5" />
+                Press kit
+              </Link>
+            ) : null}
             {TAILOR_PLAN_ENABLED ? (
               <button
                 type="button"
