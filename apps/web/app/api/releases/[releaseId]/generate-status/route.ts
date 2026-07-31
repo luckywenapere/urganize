@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createAdminClient,
-  requireActiveAuthenticatedUser,
+  requireActiveAuthenticatedUserOrInternal,
   isOptionalTableMissingError,
 } from '../../_shared';
 import { generatePlainTextAiOutput, isAiConfigured } from '@/lib/ai/provider';
@@ -132,7 +132,9 @@ export async function POST(
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 
-  const auth = await requireActiveAuthenticatedUser(request);
+  // *OrInternal: the Chappi/MCP tool layer generates status updates by calling
+  // this route internally, so it also accepts the MCP internal actor (URG-183).
+  const auth = await requireActiveAuthenticatedUserOrInternal(request);
   if ('error' in auth) return auth.error;
 
   const { releaseId } = await context.params;
