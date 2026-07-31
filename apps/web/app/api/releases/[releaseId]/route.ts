@@ -132,7 +132,7 @@ async function loadReleaseRetentionSummary(
         type: 'invite_team',
         title: 'Invite your team to assign work',
         description: 'Bring managers, publicists, and collaborators into the workspace so the release stops depending on one person.',
-        ctaLabel: 'Invite teammates',
+        ctaLabel: 'Invite artists, freelancers and team members',
         href: `/settings`,
       },
     };

@@ -38,7 +38,7 @@ export function NewReleaseGuide({ onDismiss }: NewReleaseGuideProps) {
         <p className="mt-1 text-sm leading-6 text-content-secondary">
           This rollout plans ~{SPAN_WEEKS} weeks of work, starting {LEAD_WEEKS} weeks before
           release. It&apos;s a starting point — edit any activity, add your own, or reassign
-          them to your team. Invite teammates any time from Settings.
+          them to your team. Invite artists, freelancers and team members any time from Settings.
         </p>
       </div>
       <button

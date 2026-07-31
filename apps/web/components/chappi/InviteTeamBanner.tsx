@@ -41,17 +41,17 @@ export function InviteTeamBanner() {
   if (!isManagerAccount || !isVisible) return null;
 
   return (
-    <div className="mb-4 flex items-center gap-3 border border-stroke-default bg-bg-surface px-3 py-2 sm:px-4">
-      <p className="min-w-0 flex-1 truncate text-sm text-content-secondary">
+    <div className="mb-4 flex flex-col items-start gap-3 border border-stroke-default bg-bg-surface px-3 py-2 sm:flex-row sm:items-center sm:px-4">
+      <p className="min-w-0 flex-1 text-sm text-content-secondary sm:truncate">
         Get more out of Urganize by inviting your team
       </p>
       <button
         type="button"
         onClick={() => router.push('/settings#teammates')}
-        className="motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 border border-stroke-default bg-bg-elevated px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+        className="motion-focus motion-press inline-flex h-auto min-h-8 shrink-0 items-center gap-1.5 self-stretch border border-stroke-default bg-bg-elevated px-3 py-1.5 text-left text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover sm:self-auto"
       >
-        <UserPlus className="h-3.5 w-3.5" aria-hidden="true" />
-        Invite teammates
+        <UserPlus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        Invite artists, freelancers and team members
       </button>
       <button
         type="button"
