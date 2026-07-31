@@ -214,6 +214,11 @@ export function TasksPanel({ tasks, scopedRelease, id }: TasksPanelProps) {
             >
               <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
               Press kit
+              {/* Beta stamp, same tag as Calendar above — the press kit
+                  generator shipped 2026-07-31 and is still early. */}
+              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+                Beta
+              </span>
             </Link>
           ) : null}
         </div>

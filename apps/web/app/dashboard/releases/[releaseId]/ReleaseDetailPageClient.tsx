@@ -334,6 +334,9 @@ export default function ReleaseDetailPage() {
               >
                 <Newspaper className="h-3.5 w-3.5" />
                 Press kit
+                <span className="rounded-full bg-brand/15 px-1 py-px text-[9px] font-bold uppercase tracking-wide text-brand">
+                  Beta
+                </span>
               </Link>
             ) : null}
             {TAILOR_PLAN_ENABLED ? (
