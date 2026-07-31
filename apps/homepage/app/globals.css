@@ -300,3 +300,50 @@ html[data-marketing-theme="dark"] .marketing-wordmark {
     transition: none !important;
   }
 }
+
+/* URG-207: the Chappi mark as the cursor, extended to the marketing site
+   (apps/web's version shipped in URG-202). Two assets for the SAME reason
+   apps/web needs two — this site has a real dark/light theme
+   (data-marketing-theme, layout.tsx), defaulting to dark, so a single
+   ink-only asset would vanish against the dark theme's near-black
+   background. Never reverts to the native pointer on hover — the mark
+   stays on buttons, links, and cards; text-entry fields keep the I-beam;
+   disabled controls keep not-allowed. Mirrors apps/web/app/globals.css's
+   block; keep the two in sync if either changes. */
+@media (pointer: fine) {
+  body {
+    cursor: url('/images/chappi-cursor-cream.png') 22 2, auto;
+  }
+
+  html[data-marketing-theme='light'] body {
+    cursor: url('/images/chappi-cursor-ink.png') 22 2, auto;
+  }
+
+  a,
+  button,
+  summary,
+  select,
+  label,
+  input[type='button'],
+  input[type='submit'],
+  input[type='reset'],
+  input[type='checkbox'],
+  input[type='radio'],
+  input[type='file'],
+  input[type='range'],
+  input[type='color'],
+  [role='button'] {
+    cursor: inherit;
+  }
+
+  :disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+
+  input:not([type='button']):not([type='submit']):not([type='reset']):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']),
+  textarea,
+  [contenteditable='true'] {
+    cursor: text;
+  }
+}
