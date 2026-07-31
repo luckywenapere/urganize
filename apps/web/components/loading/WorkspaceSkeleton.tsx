@@ -19,6 +19,12 @@ const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDA
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 
+// Same param useChatPanel reads (`?chat=1`) and same flag AppTopbar/
+// ChappiDock read. Refreshing on `/dashboard?chat=1&release=X` should show
+// the split immediately, not have it pop in once real data resolves.
+const CHAT_PARAM = 'chat';
+const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
 /**
  * Workspace loading state, rendered inline by `WorkspaceView` (and the
  * legacy dashboard) while auth/the first command-center fetch are in
@@ -45,29 +51,48 @@ const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 export function WorkspaceSkeleton() {
   const searchParams = useSearchParams();
   const isFocused = Boolean(searchParams.get(SCOPE_PARAM));
+  const isChatOpen = CHAPPI_ENABLED && Boolean(searchParams.get(CHAT_PARAM));
   const knownCount = useKnownReleaseCount();
 
   return (
     <main className="bg-bg-base text-content-primary" aria-hidden="true">
-      <div className="pb-6 pt-6 sm:px-6 sm:pb-24">
-        <section className="lg:hidden">
-          {isFocused ? (
-            <MobileFocusedSkeleton />
-          ) : (
-            <ReleaseGridSkeleton count={Math.min(knownCount, 6)} columns="sm:grid-cols-2" />
-          )}
-        </section>
+      <div className="lg:flex">
+        <div className="min-w-0 flex-1 pb-6 pt-6 sm:px-6 sm:pb-24">
+          <section className="lg:hidden">
+            {isFocused ? (
+              <MobileFocusedSkeleton />
+            ) : (
+              <ReleaseGridSkeleton count={Math.min(knownCount, 6)} columns="sm:grid-cols-2" />
+            )}
+          </section>
 
-        <section className="hidden lg:block">
-          {isFocused ? (
-            <DesktopFocusedSkeleton knownCount={knownCount} />
-          ) : (
-            <ReleaseGridSkeleton
-              count={knownCount}
-              columns="justify-center [grid-template-columns:repeat(auto-fit,minmax(240px,280px))]"
-            />
-          )}
-        </section>
+          <section className="hidden lg:block">
+            {isFocused ? (
+              <DesktopFocusedSkeleton knownCount={knownCount} hideRails={isChatOpen} />
+            ) : (
+              <ReleaseGridSkeleton
+                count={knownCount}
+                columns="justify-center [grid-template-columns:repeat(auto-fit,minmax(240px,280px))]"
+              />
+            )}
+          </section>
+        </div>
+
+        {isChatOpen ? (
+          <div
+            aria-hidden="true"
+            className="ml-6 hidden shrink-0 self-start rounded-2xl border border-stroke-default bg-bg-surface lg:block"
+            style={{
+              width: 'clamp(360px, 31vw, 460px)',
+              height: 'calc(100dvh - 7.75rem - 1px)',
+              minHeight: '24rem',
+              // Same offset math as ChappiSidePanel — reserving the exact
+              // slot so real content lands with zero layout shift.
+              position: 'sticky',
+              top: 'calc(5.25rem + 1px)',
+            }}
+          />
+        ) : null}
       </div>
     </main>
   );
@@ -171,7 +196,13 @@ function MobileFocusedSkeleton() {
  * 260px at xl) so the center column doesn't visibly resize when content
  * replaces the skeleton.
  */
-function DesktopFocusedSkeleton({ knownCount }: { knownCount: number }) {
+function DesktopFocusedSkeleton({
+  knownCount,
+  hideRails = false,
+}: {
+  knownCount: number;
+  hideRails?: boolean;
+}) {
   // Rails mirror WorkspaceDesktopFocused's split of the NON-selected
   // releases: ceiling on the left, floor on the right (count-aware,
   // founder call 2026-07-23). Capped at 3 per rail — beyond that the rail
@@ -189,12 +220,20 @@ function DesktopFocusedSkeleton({ knownCount }: { knownCount: number }) {
         <SkeletonBlock className="h-2.5 w-8" />
       </div>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]">
-        <div className="min-w-0 space-y-3">
-          {Array.from({ length: leftCount }).map((_, index) => (
-            <ReleaseCardSkeleton key={`rail-left-${index}`} />
-          ))}
-        </div>
+      <div
+        className={`grid items-start gap-6 ${
+          hideRails
+            ? 'grid-cols-[minmax(0,1fr)]'
+            : 'lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]'
+        }`}
+      >
+        {hideRails ? null : (
+          <div className="min-w-0 space-y-3">
+            {Array.from({ length: leftCount }).map((_, index) => (
+              <ReleaseCardSkeleton key={`rail-left-${index}`} />
+            ))}
+          </div>
+        )}
 
         <div className="min-w-0 space-y-6">
           {/* The focused card lives in the topbar now — the center column
@@ -202,11 +241,13 @@ function DesktopFocusedSkeleton({ knownCount }: { knownCount: number }) {
           <TasksPanelSkeleton />
         </div>
 
-        <div className="min-w-0 space-y-3">
-          {Array.from({ length: rightCount }).map((_, index) => (
-            <ReleaseCardSkeleton key={`rail-right-${index}`} />
-          ))}
-        </div>
+        {hideRails ? null : (
+          <div className="min-w-0 space-y-3">
+            {Array.from({ length: rightCount }).map((_, index) => (
+              <ReleaseCardSkeleton key={`rail-right-${index}`} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { ProofLine } from "../components/landing/ProofLine";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
@@ -10,13 +11,15 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Features",
   description:
-    "What Urganize does: a hand-crafted rollout plan, tasks your freelance team owns, per-release file storage, and event milestones, all in one workspace.",
+    "What Urganize does: a hand-crafted rollout plan, tasks your freelance team owns, a shareable press kit for every release, and an assistant built into the workspace.",
   path: "/features",
 });
 
 // Every claim on this page must describe the product as it ships today.
 // The honesty rule from /pricing applies here: we don't advertise what
-// isn't built (no AI-guidance claims, no credits, no pre-save, no stages).
+// isn't built (no credits, no pre-save, no stages). The Assistant block
+// below describes Chappi's live deterministic commands only — no
+// conversational-AI framing until a capable model is actually wired.
 const features = [
   {
     kicker: "The plan",
@@ -46,13 +49,23 @@ const features = [
     ],
   },
   {
-    kicker: "Files",
-    title: "Every file where it belongs.",
-    body: "Masters, artwork, contracts, and split sheets, attached to the release they belong to, organized by category, with image previews. Stop excavating Google Drive the night before delivery.",
+    kicker: "Press kit",
+    title: "One link, ready to send.",
+    body: "Generate a shareable press kit straight from the release: cover art, release details, and photos, assembled automatically and always in sync with the release. Send one link to press, curators, and bookers. Revoke it anytime.",
     points: [
-      "Per-release storage with categories",
-      "Audio, video, documents, and artwork",
-      "Download links your whole team can use",
+      "Assembled automatically from the release",
+      "Always in sync: no rebuilding it by hand",
+      "One link, revocable anytime",
+    ],
+  },
+  {
+    kicker: "Assistant",
+    title: "Chappi runs the busywork.",
+    body: "Chappi is the assistant built into your workspace. Tell it what you need in plain language, create a release, add a task, mark something done, and it does it, no menus to hunt through.",
+    points: [
+      "Create releases and tasks by typing what you want",
+      "Built into the workspace, not a separate app",
+      "Getting more capable as we build on it",
     ],
   },
   {
@@ -74,25 +87,6 @@ const features = [
       "Click a release to scope down to its work",
       "Overdue and due-today surfaced first",
     ],
-  },
-] as const;
-
-const nonFeatures = [
-  {
-    title: "Revenue tracking",
-    body: "We don't track streams, splits, or royalties. That's what distributors are for.",
-  },
-  {
-    title: "Legal contracts",
-    body: "We don't generate or enforce contracts. Get a lawyer for that. We'll store the PDF.",
-  },
-  {
-    title: "Analytics dashboards",
-    body: "We don't show streaming numbers or social metrics. Check your platforms.",
-  },
-  {
-    title: "Distribution",
-    body: "We don't upload to Spotify or Apple Music. Use your preferred distributor. We'll make sure it happens on time.",
   },
 ] as const;
 
@@ -185,43 +179,6 @@ export default function FeaturesPage() {
           </ScrollReveal>
         ))}
 
-        {/* WHAT IT DOESN'T DO */}
-        <ScrollReveal>
-          <SectionShell
-            className="py-[100px] lg:py-[120px]"
-            containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
-          >
-            <div className="mx-auto max-w-[52rem] text-center">
-              <p className="mono-label text-[var(--marketing-text-subtle)]">
-                On purpose
-              </p>
-              <h2 className={`mt-6 ${headlineClass}`}>
-                What Urganize doesn&apos;t do.
-              </h2>
-              <p className="mx-auto mt-6 max-w-[36rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
-                We&apos;re opinionated about what we build. If it doesn&apos;t
-                reduce operational chaos, it&apos;s out.
-              </p>
-            </div>
-
-            <div className="mx-auto mt-14 grid max-w-[60rem] grid-cols-1 gap-px bg-[color:var(--marketing-border)] sm:grid-cols-2">
-              {nonFeatures.map((item) => (
-                <div
-                  key={item.title}
-                  className="bg-[var(--marketing-bg)] px-6 py-7 text-left sm:px-7 sm:py-8"
-                >
-                  <p className="font-mono text-[0.95rem] font-semibold uppercase tracking-[0.06em] text-[var(--marketing-text)]">
-                    {item.title}
-                  </p>
-                  <p className="mt-3 text-[0.92rem] leading-7 text-[var(--marketing-text-muted)]">
-                    {item.body}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </SectionShell>
-        </ScrollReveal>
-
         {/* FINAL CTA */}
         <ScrollReveal>
           <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
@@ -231,6 +188,7 @@ export default function FeaturesPage() {
               </h2>
               <div className="mt-10 flex w-full flex-col items-center gap-3">
                 <WaitlistForm source="features_cta" />
+                <ProofLine id="antoine" className="mt-2" />
               </div>
             </div>
           </SectionShell>

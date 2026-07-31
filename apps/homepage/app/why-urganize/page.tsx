@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ProofLine } from "../components/landing/ProofLine";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
@@ -9,7 +10,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Why Urganize over WhatsApp and Google Drive",
   description:
-    "WhatsApp and Google Drive work for one artist and one release. Urganize is for when you're running several: a real rollout plan, owned tasks, files where they belong, and status at a glance.",
+    "WhatsApp and Google Drive work for one artist and one release. Urganize is for when you're running several: a real rollout plan, owned tasks, a press kit ready to send, and status at a glance.",
   path: "/why-urganize",
 });
 
@@ -31,10 +32,10 @@ const comparisons = [
     us: "Every task has an owner, a due date, and a priority. Dependencies keep the order honest: blocked tasks show exactly what's blocking them and unlock the moment it clears.",
   },
   {
-    kicker: "Files",
-    title: "Attached to the release, not scattered around it.",
-    them: "Masters in Drive, artwork in the group chat, the contract in email. The night before delivery is an excavation across three apps and four folder-naming schemes.",
-    us: "Masters, artwork, contracts, and split sheets attach to the release they belong to, organized by category, with image previews. One place, every time.",
+    kicker: "Press kit",
+    title: "Sent as one link, not rebuilt every time.",
+    them: "The press kit is a doc with dead links, rebuilt from scratch every time a curator or journalist asks for it.",
+    us: "Every release carries a shareable press kit: cover art, details, and photos assembled automatically, always current. One link, revocable anytime.",
   },
   {
     kicker: "Status",
@@ -130,10 +131,11 @@ export default function WhyUrganizePage() {
               </h2>
               <p className="mx-auto mt-6 max-w-[38rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
                 This isn&apos;t about deleting apps. WhatsApp is still where
-                you talk; Drive is still fine for general storage. Urganize is
-                how your music gets the release it deserves: the one place
-                where the plan lives, the work happens, and the team sees
-                status.
+                you talk, and Drive is still where your raw files live.
+                Urganize doesn&apos;t replace either one. It&apos;s the one
+                place where the plan lives, the work happens, and the team
+                sees status, so the plan itself never has to live in a chat
+                thread again.
               </p>
             </div>
           </SectionShell>
@@ -146,6 +148,7 @@ export default function WhyUrganizePage() {
               <h2 className={headlineClass}>Give your releases a home.</h2>
               <div className="mt-10 flex w-full flex-col items-center gap-3">
                 <WaitlistForm source="why_urganize_cta" />
+                <ProofLine id="tamuno" className="mt-2" />
               </div>
             </div>
           </SectionShell>

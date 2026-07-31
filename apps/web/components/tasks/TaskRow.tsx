@@ -120,7 +120,7 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
     return (
       <div
         className={`group flex items-center gap-3 border-l-4 border-t border-stroke-subtle bg-bg-surface px-4 py-2.5 transition first:border-t-0 motion-focus ${borderClass} ${
-          onClick ? 'cursor-pointer hover:bg-bg-hover' : ''
+          onClick ? 'hover:bg-bg-hover' : ''
         } ${isLocked ? 'bg-bg-surface/60' : ''}`}
         {...interactionHandlers}
         data-ph-capture-attribute-section="tasks"
@@ -173,7 +173,7 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
   return (
     <div
       className={`group flex min-h-[76px] items-center gap-4 border-l-4 border-t border-stroke-subtle bg-bg-surface px-4 py-3.5 transition first:border-t-0 motion-focus ${borderClass} ${
-        onClick ? 'cursor-pointer hover:bg-bg-hover' : ''
+        onClick ? 'hover:bg-bg-hover' : ''
       } ${isLocked ? 'bg-bg-surface/60' : ''}`}
       {...interactionHandlers}
       data-ph-capture-attribute-section="tasks"

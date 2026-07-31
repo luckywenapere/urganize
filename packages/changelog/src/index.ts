@@ -20,10 +20,31 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "0.36.0",
+    version: "0.37.0",
     date: "July 31, 2026",
     highlights: [
       "Release metadata is here: every release gets a Metadata page (next to Press kit) where you fill in distribution details — ISRC, UPC, genre, label, copyright lines — and generate a shareable link for collaborators. Send it to producers, co-writers, and engineers so they can submit their own publishing credits (splits, PRO, IPI, socials) without needing an Urganize account, and watch their submissions land on the page as they come in.",
+    ],
+  },
+  {
+    version: "0.36.0",
+    date: "July 31, 2026",
+    highlights: [
+      "Chappi now slides in beside your releases instead of taking over the screen — open it from the catalog, keep working with your releases in view, and expand to full screen whenever you want more room.",
+    ],
+  },
+  {
+    version: "0.35.6",
+    date: "July 31, 2026",
+    highlights: [
+      "The Chappi cursor now stays put — it used to flip back to the regular pointer over buttons and links, and now it doesn't. Fixed a glitch where opening a pop-up (creating a release, deleting one, and a few others) would turn the whole dimmed screen into a hand cursor.",
+    ],
+  },
+  {
+    version: "0.35.5",
+    date: "July 31, 2026",
+    highlights: [
+      "Signing in now lands you on Chappi first — ask it anything or jump straight into a quick action, with your releases and tasks always one tap away in the top bar.",
     ],
   },
   {

@@ -853,13 +853,14 @@ export default function OnboardingPage() {
                   return (
                     <label
                       key={option.value}
+                      aria-disabled={!available || undefined}
                       className={`flex items-center gap-3 border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
                         selected
                           ? 'border-brand bg-brand/8'
                           : available
                             ? 'border-stroke-default hover:border-stroke-strong'
                             : 'border-stroke-subtle opacity-60'
-                      } ${available ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                      }`}
                     >
                       <input
                         type="radio"
@@ -899,7 +900,7 @@ export default function OnboardingPage() {
                   return (
                     <label
                       key={option.value}
-                      className={`flex items-center gap-3 border bg-bg-elevated px-4 py-3 cursor-pointer transition-colors duration-fast ease-standard ${
+                      className={`flex items-center gap-3 border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
                         checked
                           ? 'border-brand bg-brand/8'
                           : 'border-stroke-default hover:border-stroke-strong'
@@ -932,7 +933,7 @@ export default function OnboardingPage() {
                   return (
                     <label
                       key={option.value}
-                      className={`flex items-center gap-3 border bg-bg-elevated px-4 py-3 cursor-pointer transition-colors duration-fast ease-standard ${
+                      className={`flex items-center gap-3 border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
                         selected
                           ? 'border-brand bg-brand/8'
                           : 'border-stroke-default hover:border-stroke-strong'
@@ -1035,7 +1036,7 @@ export default function OnboardingPage() {
                     return (
                       <label
                         key={option.value}
-                        className={`flex items-start gap-3 border bg-bg-elevated px-4 py-3 cursor-pointer transition-colors duration-fast ease-standard ${
+                        className={`flex items-start gap-3 border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
                           selected
                             ? 'border-brand bg-brand/8'
                             : 'border-stroke-default hover:border-stroke-strong'
@@ -1081,7 +1082,7 @@ export default function OnboardingPage() {
                     return (
                       <label
                         key={option.value}
-                        className={`flex items-start gap-3 border bg-bg-elevated px-4 py-3 cursor-pointer transition-colors duration-fast ease-standard ${
+                        className={`flex items-start gap-3 border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
                           selected
                             ? 'border-brand bg-brand/8'
                             : 'border-stroke-default hover:border-stroke-strong'

@@ -252,7 +252,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
       <button
         type="button"
         aria-label="Close post modal"
-        className="absolute inset-0 cursor-default"
+        className="absolute inset-0"
         onClick={() => {
           if (!isBusy) onClose();
         }}

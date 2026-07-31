@@ -15,8 +15,8 @@ export const metadata: Metadata = buildPageMetadata({
 const VOICE_PILLARS = [
   {
     title: "Plain-spoken, no jargon",
-    body: "We say “the plan, the tasks, and the files for your release,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
-    say: "Every file, filed.",
+    body: "We say “the plan, the tasks, and the press kit for your release,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
+    say: "One link, and the press kit is live.",
     avoid: "Holistic asset-lifecycle management.",
   },
   {
@@ -144,9 +144,10 @@ export default function BrandPage() {
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Who it’s for</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
                   Urganize is built for artist managers and small labels running more than one
-                  artist. If a roster means multiple release calendars, multiple masters to track,
-                  and a scatter of chats holding it together, this is the system for that. Labels
-                  running a bigger roster get the premium Label tier, with the founders on call.
+                  artist. If a roster means multiple release calendars, multiple rollouts in
+                  flight, and a scatter of chats holding it together, this is the system for that.
+                  Labels running a bigger roster get the premium Label tier, with the founders on
+                  call.
                 </p>
               </div>
 
@@ -169,9 +170,9 @@ export default function BrandPage() {
                 <p className={sectionEyebrow}>Boilerplate — copy / paste</p>
                 <p className="mt-2 text-[var(--marketing-text)]">
                   Urganize is how your music gets the release it deserves: a hand-crafted rollout
-                  plan, tasks with owners and due dates, and every release file attached to the
-                  release it belongs to. Built for artist managers and small labels running more
-                  than one artist, with a Label tier for teams managing a bigger roster hands-on.
+                  plan, tasks with owners and due dates, and a shareable press kit for every
+                  release. Built for artist managers and small labels running more than one
+                  artist, with a Label tier for teams managing a bigger roster hands-on.
                 </p>
               </div>
 

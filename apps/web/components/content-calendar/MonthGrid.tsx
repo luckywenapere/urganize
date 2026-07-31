@@ -121,7 +121,7 @@ function DayCell({
       onFocus={() => setFocusedDate(day.date)}
       onClick={() => onOpenDayList(day.date)}
       aria-label={`${dayPosts.length} post${dayPosts.length === 1 ? '' : 's'} on ${monthDayLabel}`}
-      className={`flex min-h-[72px] cursor-pointer flex-col gap-1 border-b border-r p-1.5 text-left transition-colors hover:bg-[var(--cc-text)]/[0.03] ${borderClass} ${
+      className={`flex min-h-[72px] flex-col gap-1 border-b border-r p-1.5 text-left transition-colors hover:bg-[var(--cc-text)]/[0.03] ${borderClass} ${
         isReleaseDay ? 'border-[var(--cc-accent)]' : ''
       }`}
     >
@@ -294,7 +294,7 @@ export function MonthGrid({ month, releaseDate, posts, today, onCreatePost, onOp
           <button
             type="button"
             aria-label="Close day list"
-            className="absolute inset-0 cursor-default"
+            className="absolute inset-0"
             onClick={() => setDayListDate(null)}
           />
           <div

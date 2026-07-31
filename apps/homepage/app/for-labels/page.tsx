@@ -43,12 +43,12 @@ const valueBlocks = [
     ],
   },
   {
-    kicker: "Files",
-    title: "Every master and contract, filed under the release it belongs to.",
-    body: "Masters, artwork, contracts, and split sheets attach to the release they're for, organized by category, with image previews. No more excavating shared drives across artists the night before delivery.",
+    kicker: "Press kit",
+    title: "One link per release, across the whole roster.",
+    body: "Generate a shareable press kit straight from any release: cover art, details, and photos, assembled automatically and always in sync. Send one link to press, curators, and bookers, same system for every artist.",
     points: [
-      "Per-release storage with categories",
-      "Audio, video, documents, and artwork",
+      "Assembled automatically from the release",
+      "Always in sync: no rebuilding it by hand",
       "The same system for every release on the roster",
     ],
   },
@@ -101,8 +101,8 @@ export default function ForLabelsPage() {
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              A roster means multiple release calendars, multiple sets of
-              masters, and a scatter of chats holding it all together.
+              A roster means multiple release calendars, multiple rollouts
+              in flight, and a scatter of chats holding it all together.
               Urganize gives every release the same system, and the founders
               help you set it up.
             </p>

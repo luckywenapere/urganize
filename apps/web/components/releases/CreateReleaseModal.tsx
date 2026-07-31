@@ -255,7 +255,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
       <button
         type="button"
         aria-label="Close create release modal"
-        className="absolute inset-0 cursor-default"
+        className="absolute inset-0"
         onClick={() => {
           if (!isSubmitting) {
             onClose();
