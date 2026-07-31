@@ -19,7 +19,7 @@ export function WorkspaceShotSection() {
         <div className="overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
           <Image
             src="/images/product/workspace-releases.png"
-            alt="The Urganize catalog: four releases across three artists, each with cover art, release date, and motion toward its 64-activity plan."
+            alt="The Urganize catalog: four releases across three artists, each with cover art, a release date, and a progress bar for its 64-task plan."
             width={1920}
             height={970}
             className="h-auto w-full"

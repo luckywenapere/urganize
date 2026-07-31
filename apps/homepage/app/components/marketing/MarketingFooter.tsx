@@ -49,7 +49,7 @@ const footerLinks = [
   { href: "/team", label: "Team" },
   { href: "/community", label: "Community" },
   { href: "/brand", label: "Brand" },
-  { href: "/changelog", label: "Changelog" },
+  { href: "/changelog", label: "Updates" },
   ...(ROADMAP_ENABLED ? [{ href: "/roadmap", label: "Roadmap" }] : []),
   { href: "/terms", label: "Terms" },
 ] as const;

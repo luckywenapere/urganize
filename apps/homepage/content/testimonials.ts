@@ -79,12 +79,12 @@ export const transformationPairs: readonly TransformationPair[] = [
     testimonialId: "antoine",
     kicker: "The plan",
     before:
-      "The plan lives in a pinned message, a spreadsheet someone made once, and your head. Every release starts from a blank page and whatever you remember from the last one.",
+      "The plan sits in a pinned message, a spreadsheet someone made once, and your head. Every new release starts from zero, plus whatever you remember from the last one.",
   },
   {
     testimonialId: "tamuno",
     kicker: "Status",
     before:
-      "Knowing where a release stands means scrolling back through weeks of chat, or asking someone to repeat what they already told you. Multiply that by every release you're running.",
+      "To find out where a release stands, you scroll back through weeks of chat. Or you ask someone to repeat what they already told you. Now do that for every release you run.",
   },
 ];

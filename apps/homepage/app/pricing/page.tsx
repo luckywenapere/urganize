@@ -5,7 +5,7 @@ import { PricingPageClient } from "./PricingPageClient";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing",
   description:
-    "No price table right now — we set up every team personally. Book a demo with the founders. Built for artist managers and small labels running more than one artist.",
+    "No price list yet. We set up every team personally, so book a demo with the founders. Built for artist managers and small labels running more than one artist.",
   path: "/pricing",
 });
 

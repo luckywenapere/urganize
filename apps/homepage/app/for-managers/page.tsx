@@ -11,7 +11,7 @@ import { TESTIMONIALS } from "@/content/testimonials";
 export const metadata: Metadata = buildPageMetadata({
   title: "Urganize for artist managers",
   description:
-    "Urganize is built for artist managers running more than one release at once: a rollout plan, owned tasks, a press kit ready to send, and status at a glance.",
+    "Urganize is built for artist managers running more than one release at once. A rollout plan, tasks with owners, a press kit, and status in one place.",
   path: "/for-managers",
 });
 
@@ -24,41 +24,41 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "You don't start from a blank page for artist number three.",
-    body: "Create a release and Urganize lays out a hand-crafted rollout: 64 tasks across 11 weeks, from locking the master to compiling first-week stats. Every artist gets the same starting plan, fully editable before you commit.",
+    body: "Create a release and Urganize lays out the whole rollout. 64 tasks across 11 weeks, from locking the master to pulling your first-week numbers. Every artist gets the same starting plan, and you can change anything before you save it.",
     points: [
-      "One template, tailored per release",
-      "Every task dated relative to that release's day",
-      "Edit, reorder, or delete anything before it's real",
+      "One template, shaped for each release",
+      "Every task dated around that release day",
+      "Edit, reorder, or delete anything before you save it",
     ],
   },
   {
     kicker: "Ownership",
     title: "Hand work off without babysitting it.",
-    body: "Every task has an owner, a due date, and a priority. Assign your PR, designer, or distributor directly, and dependencies keep the order honest: nothing starts before what it depends on is done.",
+    body: "Every task has an owner, a due date, and a priority. Assign your PR, designer, or distributor directly. Tasks wait for each other in the right order, so nothing starts before the step it needs is done.",
     points: [
-      "Assign freelancers and teammates per task",
+      "Assign anyone on your team to any task",
       "Blocked tasks show exactly what's blocking them",
-      "Unlocks the moment the blocker clears",
+      "A blocked task unlocks the moment the step before it is done",
     ],
   },
   {
     kicker: "Press kit",
     title: "One link, ready whenever press asks.",
-    body: "Generate a shareable press kit straight from the release: cover art, details, and photos, assembled automatically and always in sync. Send one link to press, curators, and bookers, whichever artist it's for.",
+    body: "Urganize builds a press kit from the release: cover art, details, and photos. It updates itself when the release changes. Send one link to press, curators, and bookers, for any artist you run.",
     points: [
-      "Assembled automatically from the release",
-      "Always in sync: no rebuilding it by hand",
-      "One link, revocable anytime",
+      "Built for you from the release",
+      "Always up to date. No rebuilding by hand",
+      "One link. Turn it off anytime",
     ],
   },
   {
     kicker: "Status",
-    title: "Answer \"where's that release\" without a WhatsApp scroll.",
-    body: "One workspace shows every release you run: progress, what's overdue, what's due this week, and which artist it belongs to. Click a release to scope down to just its work.",
+    title: "Answer \"where's that release?\" without scrolling WhatsApp.",
+    body: "One workspace shows every release you run: progress, what's overdue, what's due this week, and which artist it belongs to. Click a release to see just its work.",
     points: [
       "Every release and task on one screen",
-      "Overdue and due-today surfaced first",
-      "Scope to one release when that's all you need",
+      "Overdue and due-today shown first",
+      "See one release on its own when that's all you need",
     ],
   },
 ] as const;
@@ -88,10 +88,10 @@ export default function ForManagersPage() {
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              One artist and one release, a group chat and a Drive folder hold
-              up fine. Add a second release, a third artist, and a team
-              handing work back and forth, and coordinating it all becomes
-              the actual job. Urganize is built for that part.
+              One artist and one release? A group chat and a Drive folder hold
+              up fine. Add a second release, a third artist, and a team, and
+              keeping it all moving becomes the real job. Urganize is built
+              for that part.
             </p>
           </div>
         </SectionShell>
@@ -169,7 +169,7 @@ export default function ForManagersPage() {
             <div className="text-center">
               <h2 className={headlineClass}>Run every release with a system.</h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
-                Urganize is free to use right now — we set up every team
+                Urganize is free to use right now, and we set up every team
                 personally. See{" "}
                 <Link
                   href="/pricing"

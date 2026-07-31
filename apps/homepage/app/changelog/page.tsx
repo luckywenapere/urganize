@@ -5,9 +5,9 @@ import { changelog, CURRENT_VERSION } from "../../content/changelog";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Changelog",
+  title: "Updates",
   description:
-    "Every Urganize release, newest first — what shipped and when, version by version.",
+    "Every Urganize update, newest first. What changed and when, version by version.",
   path: "/changelog",
 });
 
@@ -27,10 +27,10 @@ export default function ChangelogPage() {
             </span>
           </div>
           <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
-            Changelog
+            Updates
           </h1>
           <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-            Every Urganize release, newest first.
+            Every Urganize update, newest first.
           </p>
 
           <div className="mt-12 space-y-px bg-[color:var(--marketing-border)]">

@@ -4,7 +4,7 @@ import { centeredHeadlineClass, mutedLeadClass } from "./shared";
 
 const fourTools = [
   { num: "01", name: "WhatsApp", note: "group chats, voice notes, files" },
-  { num: "02", name: "Google Drive", note: "stems, art, versioned by hope" },
+  { num: "02", name: "Google Drive", note: 'stems and art, named "final v3 ACTUAL final"' },
   { num: "03", name: "Asana / Notion", note: "half-built templates" },
   { num: "04", name: "Memory", note: "or nothing at all" },
 ] as const;
@@ -18,8 +18,8 @@ export function MirrorSection() {
       >
         <div className="mx-auto flex w-full flex-col items-center text-center">
           <h2 className={`mx-auto max-w-[52rem] ${centeredHeadlineClass}`}>
-            A roster means multiple release calendars, multiple sets of
-            masters, and a scatter of chats holding it all together.
+            A roster means many release calendars, many masters, and a pile
+            of chats holding it all together.
           </h2>
 
           <div className="mt-14 grid w-full max-w-[60rem] grid-cols-1 gap-px bg-[color:var(--marketing-border)] sm:grid-cols-2 lg:grid-cols-4">
