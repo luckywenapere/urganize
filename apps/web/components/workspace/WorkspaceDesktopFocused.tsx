@@ -19,6 +19,11 @@ type WorkspaceDesktopFocusedProps = {
   scopedRelease: Pick<Release, 'id' | 'title' | 'artistName'>;
   onSelect: (releaseId: string) => void;
   onClose: () => void;
+  /** True while the Chappi slide-in panel is open (URL-agnostic — the caller
+   * decides). Drops both rails to a single centered track so the 2/3-width
+   * area stays readable instead of squeezing three columns into less
+   * space. Rails return the moment the caller passes false again. */
+  hideRails?: boolean;
 };
 
 /**
@@ -44,6 +49,7 @@ export function WorkspaceDesktopFocused({
   scopedRelease,
   onSelect,
   onClose,
+  hideRails = false,
 }: WorkspaceDesktopFocusedProps) {
   // Motion tracker data — done/total across the scoped release's activities
   // (same `status === 'done'` rule WorkspaceView uses for the grid cards).
@@ -104,8 +110,16 @@ export function WorkspaceDesktopFocused({
       {/* grid-rows-[minmax(0,1fr)] pins the single row to the free space —
           without it the auto row grows with rail content (many releases →
           tall rails → the whole page scrolls again, defeating the lock). */}
-      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-6 overflow-hidden lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]">
-        <RailColumn cards={leftRail} onSelect={onSelect} ariaLabel="Other releases (left)" />
+      <div
+        className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-6 overflow-hidden ${
+          hideRails
+            ? 'grid-cols-[minmax(0,1fr)]'
+            : 'lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]'
+        }`}
+      >
+        {hideRails ? null : (
+          <RailColumn cards={leftRail} onSelect={onSelect} ariaLabel="Other releases (left)" />
+        )}
 
         {/* Center column — the activities list fills and SCROLLS the column
             (the focused card lives in the topbar). Clicking a row opens the
@@ -114,7 +128,9 @@ export function WorkspaceDesktopFocused({
           <TasksPanel tasks={scopedTasks} scopedRelease={scopedRelease} />
         </div>
 
-        <RailColumn cards={rightRail} onSelect={onSelect} ariaLabel="Other releases (right)" />
+        {hideRails ? null : (
+          <RailColumn cards={rightRail} onSelect={onSelect} ariaLabel="Other releases (right)" />
+        )}
       </div>
     </div>
   );

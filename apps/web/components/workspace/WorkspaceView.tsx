@@ -6,6 +6,7 @@ import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { useChappiStore } from '@/stores/useChappiStore';
 import { type Task } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
@@ -16,6 +17,8 @@ import { TasksPanel } from './TasksPanel';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
+import { useChatPanel } from './useChatPanel';
+import { ChappiSidePanel } from '@/components/chappi/ChappiSidePanel';
 
 const TASKS_PANEL_ID = 'workspace-tasks';
 
@@ -23,6 +26,10 @@ const TASKS_PANEL_ID = 'workspace-tasks';
 // "first win" reveal (URG-107) instead of navigating straight to the release.
 // Inlined at build time. Off in prod until validated.
 const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
+
+// Same flag AppTopbar/ChappiDock read — the slide-in panel is a Chappi
+// surface, so it mounts only when Chappi itself is reachable.
+const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 /**
  * Parse a createdAt ISO string to epoch ms. Empty/invalid values map to 0 so
@@ -40,6 +47,7 @@ export function WorkspaceView() {
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
   const tasks = useTaskStore((state) => state.tasks);
   const { scopedReleaseId, setScope } = useReleaseScope();
+  const { isChatOpen } = useChatPanel();
   // Task detail renders as a global pop-up mounted by TaskUIProvider
   // (2026-07-23) — this view no longer swaps its layout when a task opens.
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -54,6 +62,19 @@ export function WorkspaceView() {
     }
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
+
+  // Live-sync Chappi's scoped release to the catalog's open release WHILE
+  // the panel is open. The deps array IS the transition detector: opening
+  // the panel fires this immediately (including `null` = "All releases");
+  // changing/clearing the catalog selection while open fires it again; a
+  // manual pick inside ChappiScopePicker only touches the store (no dep
+  // here changes), so it holds until the next catalog transition. Runs
+  // below lg too if `?chat=1` lingers there — harmless, and consistent with
+  // the mobile "carry once at navigation" behavior in AppTopbar.
+  useEffect(() => {
+    if (!CHAPPI_ENABLED || !isChatOpen) return;
+    useChappiStore.getState().setScopedReleaseId(scopedReleaseId);
+  }, [isChatOpen, scopedReleaseId]);
 
   // ExecutionTask extends Task by intersection; assignable without cast.
   const taskList: Task[] = tasks;
@@ -196,124 +217,131 @@ export function WorkspaceView() {
       {/* Bottom padding is slimmer below sm — AppShell's <main> already
           carries pb-28 there for dock clearance, and the doubled-up 208px
           made even a one-release catalog scroll on phones. */}
-      <div
-        className={`pt-6 sm:px-6 ${isDesktopFocusedMode ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
-      >
-        {/* Screen-reader-only live region. Polite mode waits for the SR to be
-            idle, atomic="true" re-reads the whole message. Mirrors the visible
-            workspace state so SR users get the same context. */}
-        <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
-          {scopeAnnouncement}
-        </div>
-
-        {error ? (
-          <div className="mb-6 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>{error}</p>
+      <div className="lg:flex">
+        <div
+          className={`min-w-0 flex-1 pt-6 sm:px-6 ${isDesktopFocusedMode ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
+        >
+          {/* Screen-reader-only live region. Polite mode waits for the SR to be
+              idle, atomic="true" re-reads the whole message. Mirrors the visible
+              workspace state so SR users get the same context. */}
+          <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+            {scopeAnnouncement}
           </div>
-        ) : null}
 
-        {/* ====================================================================
-            MOBILE (< lg): drill-down. Level 1 shows the release list; Level 2
-            shows back header + TasksPanel for the scoped release (Files and
-            Calendar are now their own pages, linked from TasksPanel's header
-            — see URG-165). Behavior matches the pre-centered-focus
-            implementation — this block is intentionally unchanged.
-            ==================================================================== */}
-        <div className="lg:hidden">
-          {scopedReleaseId && scopedReleaseSlim ? (
-            <>
-              <div className="mb-4 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleMobileBack}
-                  aria-label="Back to releases"
-                  className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-                >
-                  <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                </button>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-                    {scopedReleaseSlim.artistName || 'Unassigned artist'}
-                  </p>
-                  <h2 className="truncate font-display text-lg font-semibold leading-tight text-content-primary">
-                    {scopedReleaseSlim.title}
-                  </h2>
+          {error ? (
+            <div className="mb-6 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{error}</p>
+            </div>
+          ) : null}
+
+          {/* ====================================================================
+              MOBILE (< lg): drill-down. Level 1 shows the release list; Level 2
+              shows back header + TasksPanel for the scoped release (Files and
+              Calendar are now their own pages, linked from TasksPanel's header
+              — see URG-165). Behavior matches the pre-centered-focus
+              implementation — this block is intentionally unchanged.
+              ==================================================================== */}
+          <div className="lg:hidden">
+            {scopedReleaseId && scopedReleaseSlim ? (
+              <>
+                <div className="mb-4 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleMobileBack}
+                    aria-label="Back to releases"
+                    className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+                  >
+                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+                      {scopedReleaseSlim.artistName || 'Unassigned artist'}
+                    </p>
+                    <h2 className="truncate font-display text-lg font-semibold leading-tight text-content-primary">
+                      {scopedReleaseSlim.title}
+                    </h2>
+                  </div>
                 </div>
-              </div>
-              {/* Motion tracker — same strip the desktop focused view carries
-                  in its top row, so mobile shows release progress too. */}
-              <div className="mb-4 flex items-center gap-3">
-                <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
-                  Motion
-                </span>
-                <div className="h-1 min-w-0 flex-1 rounded-full bg-bg-elevated" aria-hidden="true">
-                  <div
-                    className="h-full rounded-full bg-brand transition-[width] duration-300"
-                    style={{
-                      width: `${
-                        scopedTasks.length > 0
-                          ? Math.round(
-                              (scopedTasks.filter((t) => t.status === 'done').length /
-                                scopedTasks.length) *
-                                100
-                            )
-                          : 0
-                      }%`,
-                    }}
-                  />
+                {/* Motion tracker — same strip the desktop focused view carries
+                    in its top row, so mobile shows release progress too. */}
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+                    Motion
+                  </span>
+                  <div className="h-1 min-w-0 flex-1 rounded-full bg-bg-elevated" aria-hidden="true">
+                    <div
+                      className="h-full rounded-full bg-brand transition-[width] duration-300"
+                      style={{
+                        width: `${
+                          scopedTasks.length > 0
+                            ? Math.round(
+                                (scopedTasks.filter((t) => t.status === 'done').length /
+                                  scopedTasks.length) *
+                                  100
+                              )
+                            : 0
+                        }%`,
+                      }}
+                    />
+                  </div>
+                  <span className="shrink-0 font-mono text-[11px] font-semibold text-content-primary">
+                    {scopedTasks.filter((t) => t.status === 'done').length}/{scopedTasks.length}
+                  </span>
                 </div>
-                <span className="shrink-0 font-mono text-[11px] font-semibold text-content-primary">
-                  {scopedTasks.filter((t) => t.status === 'done').length}/{scopedTasks.length}
-                </span>
-              </div>
-              <TasksPanel
-                id={TASKS_PANEL_ID}
-                tasks={scopedTasks}
-                scopedRelease={scopedReleaseSlim}
+                <TasksPanel
+                  id={TASKS_PANEL_ID}
+                  tasks={scopedTasks}
+                  scopedRelease={scopedReleaseSlim}
+                />
+                {/* The per-release files surface lives inside TasksPanel as an
+                    inline collapsible segment at the top of the task area,
+                    toggled from the "Files" button in that panel's header.
+                    Both mobile and desktop reach it via the same control;
+                    consolidating to one surface ensures the two can't drift
+                    apart. */}
+              </>
+            ) : (
+              <ReleasesColumn
+                releases={releaseCards}
+                scopedReleaseId={scopedReleaseId}
+                onSelect={handleSelect}
+                onCreateRelease={() => setIsCreateModalOpen(true)}
               />
-              {/* The per-release files surface lives inside TasksPanel as an
-                  inline collapsible segment at the top of the task area,
-                  toggled from the "Files" button in that panel's header.
-                  Both mobile and desktop reach it via the same control;
-                  consolidating to one surface ensures the two can't drift
-                  apart. */}
-            </>
-          ) : (
-            <ReleasesColumn
-              releases={releaseCards}
-              scopedReleaseId={scopedReleaseId}
-              onSelect={handleSelect}
-              onCreateRelease={() => setIsCreateModalOpen(true)}
-            />
-          )}
+            )}
+          </div>
+
+          {/* ====================================================================
+              DESKTOP (≥ lg): centered focus. At rest the whole main area is a
+              release grid (Option A). On select, the non-selected cards split
+              into LEFT + RIGHT rails and the selected release sits centered
+              above its TasksPanel. This REPLACES the legacy two-pane (3fr/2fr)
+              desktop layout — the old grid wrapper has been removed entirely.
+              ==================================================================== */}
+          <div className="hidden lg:block">
+            {isDesktopFocusedMode && selectedCard && scopedReleaseSlim ? (
+              <WorkspaceDesktopFocused
+                leftRail={leftRail}
+                rightRail={rightRail}
+                scopedTasks={scopedTasks}
+                scopedRelease={scopedReleaseSlim}
+                onSelect={handleSelect}
+                onClose={handleClose}
+                hideRails={CHAPPI_ENABLED && isChatOpen}
+              />
+            ) : (
+              <WorkspaceDesktopGrid
+                releases={releaseCards}
+                onSelect={handleSelect}
+                onCreateRelease={() => setIsCreateModalOpen(true)}
+              />
+            )}
+          </div>
         </div>
 
-        {/* ====================================================================
-            DESKTOP (≥ lg): centered focus. At rest the whole main area is a
-            release grid (Option A). On select, the non-selected cards split
-            into LEFT + RIGHT rails and the selected release sits centered
-            above its TasksPanel. This REPLACES the legacy two-pane (3fr/2fr)
-            desktop layout — the old grid wrapper has been removed entirely.
-            ==================================================================== */}
-        <div className="hidden lg:block">
-          {isDesktopFocusedMode && selectedCard && scopedReleaseSlim ? (
-            <WorkspaceDesktopFocused
-              leftRail={leftRail}
-              rightRail={rightRail}
-              scopedTasks={scopedTasks}
-              scopedRelease={scopedReleaseSlim}
-              onSelect={handleSelect}
-              onClose={handleClose}
-            />
-          ) : (
-            <WorkspaceDesktopGrid
-              releases={releaseCards}
-              onSelect={handleSelect}
-              onCreateRelease={() => setIsCreateModalOpen(true)}
-            />
-          )}
-        </div>
+        {CHAPPI_ENABLED ? (
+          <ChappiSidePanel open={isChatOpen} onNewRelease={() => setIsCreateModalOpen(true)} />
+        ) : null}
       </div>
 
       <CreateReleaseModal
