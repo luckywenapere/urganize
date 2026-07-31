@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.34.1",
+    date: "July 31, 2026",
+    highlights: [
+      "Loading screens on the release and press kit pages now match what actually appears, so content no longer jumps around as the page finishes loading.",
+    ],
+  },
+  {
     version: "0.34.0",
     date: "July 30, 2026",
     highlights: [

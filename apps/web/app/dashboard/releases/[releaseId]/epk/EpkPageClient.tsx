@@ -70,10 +70,16 @@ export default function EpkPageClient() {
   if (authLoading || isInitialLoading) {
     return (
       <main className="bg-bg-base text-content-primary">
+        {/* Mirrors this page's real header exactly — back link, then artist
+            eyebrow, then title — which is the same shape FilesPageSkeleton
+            reserves, since both pages now share that header (URG-200). */}
         <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-10 sm:px-6">
-          <SkeletonBlock className="h-4 w-24" />
-          <SkeletonBlock className="mt-4 h-8 w-64" />
-          <SkeletonBlock className="mt-8 h-24 w-full" />
+          <SkeletonBlock className="h-3 w-24" />
+          <div className="mt-4 space-y-2">
+            <SkeletonBlock className="h-3 w-32" />
+            <SkeletonBlock className="h-8 w-2/3" />
+          </div>
+          <SkeletonBlock className="mt-6 h-24 w-full" />
         </div>
       </main>
     );
