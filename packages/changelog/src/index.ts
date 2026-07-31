@@ -20,6 +20,21 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.35.3",
+    date: "July 31, 2026",
+    highlights: [
+      "Activities: the Status and Assignee fields dropped their Beta tags — they're no longer experimental.",
+      "Attachments are temporarily hidden from activities while we rework file uploads. Nothing you'd already attached was touched or deleted, it's just hidden from the app for now.",
+    ],
+  },
+  {
+    version: "0.35.2",
+    date: "July 31, 2026",
+    highlights: [
+      "The Chappi mark now replaces your mouse pointer while you work in Urganize on a computer. Buttons and text fields still show their usual cursors, and phones and tablets are unaffected.",
+    ],
+  },
+  {
     version: "0.35.1",
     date: "July 31, 2026",
     highlights: [

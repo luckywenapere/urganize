@@ -13,10 +13,18 @@ import {
 
 const readString = (value: unknown): string => String(value || '').trim();
 
+// Feature flag (URG-203): see the twin gate in ../route.ts POST for context.
+const isTaskAttachmentsFeatureEnabled = (): boolean =>
+  process.env.NEXT_PUBLIC_FEATURE_TASK_ATTACHMENTS === 'true';
+
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string; attachmentId: string }> }
 ) {
+  if (!isTaskAttachmentsFeatureEnabled()) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
