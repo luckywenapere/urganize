@@ -39,6 +39,10 @@ export const TESTIMONIALS: Record<TestimonialId, Testimonial> = {
     name: "Antoine",
     role: "Artist Manager, Creative Business Academy alum",
   },
+  // Retired from every display surface 2026-07-31: the quote is entirely
+  // about file storage, which is flagged off in the product (URG-182).
+  // Kept in the registry (never delete a signed-off quote) so it's ready
+  // to re-mount if release-level file storage comes back.
   adenaiye: {
     id: "adenaiye",
     quote:
@@ -71,12 +75,6 @@ export interface TransformationPair {
 }
 
 export const transformationPairs: readonly TransformationPair[] = [
-  {
-    testimonialId: "adenaiye",
-    kicker: "Files",
-    before:
-      "Masters in Drive, artwork in the group chat, the contract in email. The night before delivery is an excavation across three apps and four folder-naming schemes.",
-  },
   {
     testimonialId: "antoine",
     kicker: "The plan",

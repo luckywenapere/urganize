@@ -17,14 +17,17 @@ import { TESTIMONIALS, type TestimonialId } from "@/content/testimonials";
 //                                      CTA lives)
 //   homepage_final_cta → tamuno      (strongest relief close)
 //   features_cta       → antoine     (plan-already-laid-out fits the page)
-//   why_urganize_cta   → adenaiye    (files-in-three-chats IS that page's
-//                                      thesis)
+//   why_urganize_cta   → tamuno      (status-at-a-glance is that page's
+//                                      remaining thesis; swapped off
+//                                      adenaiye 2026-07-31 when her
+//                                      files-in-three-chats quote was
+//                                      retired, see content/testimonials.ts)
 //   pricing            → zaddyfunds  (short + linkable on an otherwise
 //                                      all-numbers-free page)
-//   for_managers_cta   → (none)      the full Adenaiye quote already sits
-//                                      directly above that page's form —
-//                                      a second one would stack two
-//                                      testimonials on one CTA.
+//   for_managers_cta   → (none)      a full quote already sits directly
+//                                      above that page's form — a second
+//                                      one would stack two testimonials
+//                                      on one CTA.
 
 interface ProofLineProps {
   id: TestimonialId;

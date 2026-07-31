@@ -3,13 +3,16 @@ import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { centeredHeadlineClass } from "./shared";
 
-// Replaces the old TestimonialSection (2026-07-31): same four signed-off
-// quotes, restructured as a before→after so the proof does more work than
-// a decoration wall two-thirds down the page ever could. Moved to screen
+// Replaces the old TestimonialSection (2026-07-31): the signed-off quotes,
+// restructured as a before→after so the proof does more work than a
+// decoration wall two-thirds down the page ever could. Moved to screen
 // two, directly after the hero.
 //
 // The @zaddyfunds_ pull-quote that used to anchor this section now lives in
-// the hero as a ProofLine — it is NOT duplicated here.
+// the hero as a ProofLine — it is NOT duplicated here. Adenaiye's pairing
+// was retired the same day files went out of the marketing story (see the
+// retirement comment on `adenaiye` in content/testimonials.ts) — two rows
+// remain, not four.
 //
 // ATTRIBUTION SAFEGUARD (read before touching this file): each row's LEFT
 // cell is Urganize's own words about the pre-Urganize workflow (lifted
@@ -32,7 +35,7 @@ export function TransformationSection() {
             What changed
           </p>
           <h2 className={`mt-6 ${centeredHeadlineClass}`}>
-            Four managers moved their releases into one home. In their words.
+            They moved their releases into one home. In their words.
           </h2>
         </div>
 

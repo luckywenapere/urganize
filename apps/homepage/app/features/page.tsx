@@ -11,13 +11,15 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Features",
   description:
-    "What Urganize does: a hand-crafted rollout plan, tasks your freelance team owns, per-release file storage, and event milestones, all in one workspace.",
+    "What Urganize does: a hand-crafted rollout plan, tasks your freelance team owns, a shareable press kit for every release, and an assistant built into the workspace.",
   path: "/features",
 });
 
 // Every claim on this page must describe the product as it ships today.
 // The honesty rule from /pricing applies here: we don't advertise what
-// isn't built (no AI-guidance claims, no credits, no pre-save, no stages).
+// isn't built (no credits, no pre-save, no stages). The Assistant block
+// below describes Chappi's live deterministic commands only — no
+// conversational-AI framing until a capable model is actually wired.
 const features = [
   {
     kicker: "The plan",
@@ -47,13 +49,23 @@ const features = [
     ],
   },
   {
-    kicker: "Files",
-    title: "Every file where it belongs.",
-    body: "Masters, artwork, contracts, and split sheets, attached to the release they belong to, organized by category, with image previews. Stop excavating Google Drive the night before delivery.",
+    kicker: "Press kit",
+    title: "One link, ready to send.",
+    body: "Generate a shareable press kit straight from the release: cover art, release details, and photos, assembled automatically and always in sync with the release. Send one link to press, curators, and bookers. Revoke it anytime.",
     points: [
-      "Per-release storage with categories",
-      "Audio, video, documents, and artwork",
-      "Download links your whole team can use",
+      "Assembled automatically from the release",
+      "Always in sync: no rebuilding it by hand",
+      "One link, revocable anytime",
+    ],
+  },
+  {
+    kicker: "Assistant",
+    title: "Chappi runs the busywork.",
+    body: "Chappi is the assistant built into your workspace. Tell it what you need in plain language, create a release, add a task, mark something done, and it does it, no menus to hunt through.",
+    points: [
+      "Create releases and tasks by typing what you want",
+      "Built into the workspace, not a separate app",
+      "Getting more capable as we build on it",
     ],
   },
   {
@@ -79,6 +91,10 @@ const features = [
 ] as const;
 
 const nonFeatures = [
+  {
+    title: "File storage",
+    body: "Keep Drive for the raw files. Urganize is where the release itself lives: the plan, the owners, the status, the press kit.",
+  },
   {
     title: "Revenue tracking",
     body: "We don't track streams, splits, or royalties. That's what distributors are for.",

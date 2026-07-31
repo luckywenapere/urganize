@@ -199,7 +199,7 @@ export function AudioPlayer({
           aria-label={`Waveform for ${title}`}
           onClick={handleWaveformClick}
           className={clsx(
-            'flex cursor-pointer items-end gap-[2px] overflow-hidden rounded-[18px] border border-stroke-subtle bg-bg-base/70 px-2 py-3',
+            'flex items-end gap-[2px] overflow-hidden rounded-[18px] border border-stroke-subtle bg-bg-base/70 px-2 py-3',
             compact ? 'h-16' : 'h-24'
           )}
         >
@@ -233,7 +233,7 @@ export function AudioPlayer({
         value={Math.min(currentTime, Math.max(normalizedDuration, 1))}
         onChange={(event) => seekTo(Number(event.target.value))}
         aria-label={`Scrub ${title}`}
-        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-bg-overlay accent-brand"
+        className="h-2 w-full appearance-none rounded-full bg-bg-overlay accent-brand"
       />
 
       {error ? <p className="text-xs text-status-error">{error}</p> : null}

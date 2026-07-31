@@ -4,10 +4,10 @@ import { MarketingHeader } from "./components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 import {
   AskAISection,
+  CommunitySection,
   FinalCTASection,
   HeroSection,
   MirrorSection,
-  ReleaseRoomSection,
   TemplatePlanSection,
   ThreeFeaturesSection,
   TransformationSection,
@@ -47,7 +47,7 @@ export default function Home() {
           <MirrorSection />
           <AskAISection />
           <FinalCTASection />
-          <ReleaseRoomSection />
+          <CommunitySection />
         </main>
 
         <MarketingFooter />

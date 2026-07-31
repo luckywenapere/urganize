@@ -170,7 +170,7 @@ export function InterviewForm() {
                   aria-pressed={isSelected}
                   className={`rounded-xl border px-3 py-2.5 text-center text-xs font-medium transition-colors sm:text-sm ${
                     !slot.available
-                      ? "cursor-not-allowed border-[color:var(--marketing-border)] bg-[var(--marketing-surface)] text-[var(--marketing-text-subtle)] opacity-50 line-through"
+                      ? "border-[color:var(--marketing-border)] bg-[var(--marketing-surface)] text-[var(--marketing-text-subtle)] opacity-50 line-through"
                       : isSelected
                         ? "border-[color:var(--marketing-primary)] bg-[var(--marketing-primary)] text-[var(--marketing-primary-text)]"
                         : "border-[color:var(--marketing-border-strong)] bg-[var(--marketing-surface)] text-[var(--marketing-text)] hover:border-[color:var(--marketing-primary)]"

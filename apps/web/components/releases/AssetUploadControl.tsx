@@ -254,8 +254,9 @@ export function AssetUploadControl({ releaseId, onUploaded, onToast }: AssetUplo
 
         <div className="flex flex-wrap gap-2 sm:shrink-0">
           <label
-            className={`inline-flex h-10 cursor-pointer items-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover ${
-              isUploading ? 'cursor-not-allowed opacity-60' : ''
+            aria-disabled={isUploading || undefined}
+            className={`inline-flex h-10 items-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover ${
+              isUploading ? 'opacity-60' : ''
             }`}
           >
             <input
