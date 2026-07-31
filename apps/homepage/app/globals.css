@@ -311,16 +311,19 @@ html[data-marketing-theme="dark"] .marketing-wordmark {
    disabled controls keep not-allowed. Mirrors apps/web/app/globals.css's
    block; keep the two in sync if either changes.
 
-   URG-208: both PNGs have the enclosed interior of the mark filled with the
-   contrasting color (same fix as apps/web — see that file's comment for the
-   full rationale, including the reverted outline-box first attempt). */
+   URG-208: redrawn as a vector + exact Brand Bible colors, plus a filled
+   disc behind the spiral for legibility on either background — same fix
+   as apps/web, see that file's comment for the full rationale. Delivered
+   via image-set() at 1x/2x for crisp rendering on high-DPI displays. */
 @media (pointer: fine) {
   body {
-    cursor: url('/images/chappi-cursor-cream.png') 22 2, auto;
+    cursor: image-set(url('/images/chappi-cursor-cream.png') 1x, url('/images/chappi-cursor-cream@2x.png') 2x) 22 2,
+      url('/images/chappi-cursor-cream.png') 22 2, auto;
   }
 
   html[data-marketing-theme='light'] body {
-    cursor: url('/images/chappi-cursor-ink.png') 22 2, auto;
+    cursor: image-set(url('/images/chappi-cursor-ink.png') 1x, url('/images/chappi-cursor-ink@2x.png') 2x) 22 2,
+      url('/images/chappi-cursor-ink.png') 22 2, auto;
   }
 
   a,
