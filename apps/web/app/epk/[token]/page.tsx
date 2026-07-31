@@ -190,10 +190,12 @@ export default async function PublicEpkPage({ params }: PageProps) {
 
         {/* Urganize branding — the distribution loop. Every kit lands in
             front of music-industry people; the footer is the product's
-            signature on the artifact. */}
+            signature on the artifact. UTM params (2026-07-31) so the
+            marketing site's analytics can show this loop actually driving
+            traffic — no change to the destination, just attribution. */}
         <footer className="mt-14 border-t pt-6" style={{ borderColor: STROKE }}>
           <a
-            href="https://urganize.app"
+            href="https://urganize.app?utm_source=epk&utm_medium=press-kit"
             target="_blank"
             rel="noopener noreferrer"
             className="font-mono text-[11px] uppercase tracking-[0.18em]"

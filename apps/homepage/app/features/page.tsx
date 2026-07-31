@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { ProofLine } from "../components/landing/ProofLine";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
@@ -231,6 +232,7 @@ export default function FeaturesPage() {
               </h2>
               <div className="mt-10 flex w-full flex-col items-center gap-3">
                 <WaitlistForm source="features_cta" />
+                <ProofLine id="antoine" className="mt-2" />
               </div>
             </div>
           </SectionShell>

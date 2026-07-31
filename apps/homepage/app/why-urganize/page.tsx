@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ProofLine } from "../components/landing/ProofLine";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
@@ -146,6 +147,7 @@ export default function WhyUrganizePage() {
               <h2 className={headlineClass}>Give your releases a home.</h2>
               <div className="mt-10 flex w-full flex-col items-center gap-3">
                 <WaitlistForm source="why_urganize_cta" />
+                <ProofLine id="adenaiye" className="mt-2" />
               </div>
             </div>
           </SectionShell>

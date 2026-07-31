@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { RiArrowRightLine } from "react-icons/ri";
+import { ProofLine } from "../components/landing/ProofLine";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
@@ -153,6 +154,7 @@ export function PricingPageClient() {
             </motion.p>
             <div className="mt-8">
               <WaitlistForm source="pricing" />
+              <ProofLine id="zaddyfunds" className="mt-4" />
             </div>
           </div>
         </section>

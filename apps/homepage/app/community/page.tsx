@@ -2,12 +2,16 @@ import type { Metadata } from "next";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
+import {
+  RELEASE_ROOM_MEMBER_COUNT,
+  WHATSAPP_COMMUNITY_URL,
+} from "@/lib/community";
 
-// Same invite link as the in-app "The Release Room" entry in
+// The invite link + member count now live in lib/community.ts (2026-07-31)
+// so this page and the landing ReleaseRoomSection can't drift from each
+// other. Same link as the in-app "Community" entry in
 // apps/web/components/app/HelpMenu.tsx and the community.urganize.app host
-// redirect in next.config.ts — this page is now the front door for both.
-const WHATSAPP_COMMUNITY_URL =
-  "https://chat.whatsapp.com/DGUGyC2GK3d5v6KPGw5aft";
+// redirect in next.config.ts — this page is the front door for both.
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Community",
@@ -34,6 +38,11 @@ export default function CommunityPage() {
             releases. Trade notes, ask questions, and see how other teams
             handle the same chaos Urganize is built to fix.
           </p>
+          {RELEASE_ROOM_MEMBER_COUNT !== null ? (
+            <p className="mt-3 font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
+              {RELEASE_ROOM_MEMBER_COUNT} MEMBERS · WHATSAPP · FREE
+            </p>
+          ) : null}
 
           <div className="mt-10">
             <a
