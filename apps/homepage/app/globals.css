@@ -311,16 +311,16 @@ html[data-marketing-theme="dark"] .marketing-wordmark {
    disabled controls keep not-allowed. Mirrors apps/web/app/globals.css's
    block; keep the two in sync if either changes.
 
-   URG-208: both PNGs got a thin contrasting outline baked in (same fix as
-   apps/web — see that file's comment for the full rationale). Hotspot
-   shifted 22 2 → 24 4 for the outline's 2px canvas margin. */
+   URG-208: both PNGs have the enclosed interior of the mark filled with the
+   contrasting color (same fix as apps/web — see that file's comment for the
+   full rationale, including the reverted outline-box first attempt). */
 @media (pointer: fine) {
   body {
-    cursor: url('/images/chappi-cursor-cream.png') 24 4, auto;
+    cursor: url('/images/chappi-cursor-cream.png') 22 2, auto;
   }
 
   html[data-marketing-theme='light'] body {
-    cursor: url('/images/chappi-cursor-ink.png') 24 4, auto;
+    cursor: url('/images/chappi-cursor-ink.png') 22 2, auto;
   }
 
   a,

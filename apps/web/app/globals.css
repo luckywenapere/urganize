@@ -439,19 +439,19 @@ html[data-theme='dark'] body {
    placement between characters meaningfully harder). Both exceptions use
    real cursor keywords so they still win over `inherit` by specificity.
 
-   URG-208: both PNGs got a thin contrasting outline baked in (cream mark →
-   ink edge, ink mark → cream edge), like an OS cursor — the ink mark used
-   to disappear over dark buttons/images, and the cream mark had the same
-   problem in reverse. Canvas grew 44x44 → 48x48 for the outline's 2px
-   margin, so the hotspot shifted 22 2 → 24 4 (same relative position on
-   the triangle's top tip). */
+   URG-208: both PNGs have the enclosed interior of the mark filled with the
+   contrasting color (cream mark → ink fill, ink mark → cream fill; founder
+   call) — the ink mark used to disappear over dark buttons/images, and the
+   cream mark had the same problem in reverse. Interior fill only, on the
+   original 44x44 canvas — the first attempt (a dilated outline) shipped
+   briefly as a solid box behind the mark and was reverted the same day. */
 @media (pointer: fine) {
   body {
-    cursor: url('/images/chappi-cursor-cream.png') 24 4, auto;
+    cursor: url('/images/chappi-cursor-cream.png') 22 2, auto;
   }
 
   html[data-theme='light'] body {
-    cursor: url('/images/chappi-cursor-ink.png') 24 4, auto;
+    cursor: url('/images/chappi-cursor-ink.png') 22 2, auto;
   }
 
   a,
