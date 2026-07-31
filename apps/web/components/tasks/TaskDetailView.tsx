@@ -26,6 +26,13 @@ import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { isNativePlatform } from '@/lib/platform';
 import { openExternalUrl } from '@/lib/external-link';
 
+// Feature flag (URG-203): task attachments stay dark until
+// NEXT_PUBLIC_FEATURE_TASK_ATTACHMENTS is 'true' (URG-182 precedent — same
+// pattern as release-level file storage, a separate flag). Off by default;
+// existing task_attachments rows and task-attachments bucket objects are
+// untouched, this only hides the section and gates the API routes.
+const TASK_ATTACHMENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_ATTACHMENTS === 'true';
+
 // 2026-07-23 (founder calls): the Priority selector, the Tag row, and the
 // Activity feed were all removed from this view. Priority is gone as a
 // feature (no selector anywhere; rows no longer color by it); tags are gone
@@ -291,10 +298,7 @@ export function TaskDetailView({
 
           <div className="space-y-1.5">
             <label className={PROPERTY_ROW_CLASS}>
-              <span className={`${PROPERTY_LABEL_CLASS} flex items-center gap-1.5`}>
-                Status
-                <span className="rounded-full bg-brand/15 px-1 py-px text-[9px] font-bold uppercase tracking-wide text-brand">Beta</span>
-              </span>
+              <span className={PROPERTY_LABEL_CLASS}>Status</span>
               <select
                 value={task.status}
                 onChange={(event) => void onSavePatch({ status: event.target.value as TaskStatus })}
@@ -322,12 +326,7 @@ export function TaskDetailView({
             {/* The visible row label lives here; the combobox keeps its own
                 sr-only "Assignee" label for the input's accessible name. */}
             <div className={PROPERTY_ROW_CLASS}>
-              <span className={`${PROPERTY_LABEL_CLASS} flex items-center gap-1.5`}>
-                Assignee
-                <span className="rounded-full bg-brand/15 px-1 py-px text-[9px] font-bold uppercase tracking-wide text-brand">
-                  Beta
-                </span>
-              </span>
+              <span className={PROPERTY_LABEL_CLASS}>Assignee</span>
               <div className="md:max-w-[300px]">
                 <TaskMemberCombobox
                   density="compact"
@@ -378,78 +377,80 @@ export function TaskDetailView({
             />
           </label>
 
-          <section className="rounded-[24px] border border-stroke-default bg-bg-elevated/50 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-content-primary">
-                  Attachments
-                  <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-                    Beta
-                  </span>
-                </h3>
-                <p className="mt-1 text-xs text-content-secondary">Upload files for briefs, decks, or assets.</p>
+          {TASK_ATTACHMENTS_ENABLED ? (
+            <section className="rounded-[24px] border border-stroke-default bg-bg-elevated/50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-content-primary">
+                    Attachments
+                    <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+                      Beta
+                    </span>
+                  </h3>
+                  <p className="mt-1 text-xs text-content-secondary">Upload files for briefs, decks, or assets.</p>
+                </div>
+                <label className="inline-flex min-h-10 cursor-pointer items-center rounded-[16px] bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover">
+                  <input
+                    type="file"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) {
+                        void onUploadAttachment(file);
+                      }
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                  {isUploadingAttachment ? 'Uploading...' : 'Attach file'}
+                </label>
               </div>
-              <label className="inline-flex min-h-10 cursor-pointer items-center rounded-[16px] bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover">
-                <input
-                  type="file"
-                  className="sr-only"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) {
-                      void onUploadAttachment(file);
-                    }
-                    event.currentTarget.value = '';
-                  }}
-                />
-                {isUploadingAttachment ? 'Uploading...' : 'Attach file'}
-              </label>
-            </div>
 
-            <div className="mt-4 space-y-2">
-              {task.attachments.length === 0 ? (
-                isLoading ? (
-                  <SkeletonBlock className="h-10 w-full rounded-[18px]" />
+              <div className="mt-4 space-y-2">
+                {task.attachments.length === 0 ? (
+                  isLoading ? (
+                    <SkeletonBlock className="h-10 w-full rounded-[18px]" />
+                  ) : (
+                    <p className="text-sm text-content-secondary">No files yet.</p>
+                  )
                 ) : (
-                  <p className="text-sm text-content-secondary">No files yet.</p>
-                )
-              ) : (
-                task.attachments.map((attachment) => (
-                  <div
-                    key={attachment.id}
-                    className="flex items-center justify-between gap-3 rounded-[18px] border border-stroke-subtle bg-bg-surface px-3 py-3"
-                  >
-                    <a
-                      href={attachment.fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="min-w-0 flex-1 text-left"
-                      onClick={(event) => {
-                        // A remote-file target="_blank" anchor commonly opens
-                        // blank inside the Capacitor webview — hand it to the
-                        // system browser instead when running natively.
-                        if (isNativePlatform()) {
-                          event.preventDefault();
-                          void openExternalUrl(attachment.fileUrl);
-                        }
-                      }}
+                  task.attachments.map((attachment) => (
+                    <div
+                      key={attachment.id}
+                      className="flex items-center justify-between gap-3 rounded-[18px] border border-stroke-subtle bg-bg-surface px-3 py-3"
                     >
-                      <p className="truncate text-sm font-semibold text-content-primary">{attachment.fileName}</p>
-                      <p className="mt-1 text-xs text-content-secondary">
-                        {formatFileSize(attachment.fileSize)}
-                      </p>
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => void onDeleteAttachment(attachment.id)}
-                      className="rounded-full border border-stroke-default px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
+                      <a
+                        href={attachment.fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="min-w-0 flex-1 text-left"
+                        onClick={(event) => {
+                          // A remote-file target="_blank" anchor commonly opens
+                          // blank inside the Capacitor webview — hand it to the
+                          // system browser instead when running natively.
+                          if (isNativePlatform()) {
+                            event.preventDefault();
+                            void openExternalUrl(attachment.fileUrl);
+                          }
+                        }}
+                      >
+                        <p className="truncate text-sm font-semibold text-content-primary">{attachment.fileName}</p>
+                        <p className="mt-1 text-xs text-content-secondary">
+                          {formatFileSize(attachment.fileSize)}
+                        </p>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => void onDeleteAttachment(attachment.id)}
+                        className="rounded-full border border-stroke-default px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          ) : null}
 
           <div className="pt-2">
             <button
