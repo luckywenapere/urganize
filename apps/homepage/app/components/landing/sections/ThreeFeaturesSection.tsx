@@ -9,9 +9,9 @@ const featureColumns = [
     body: "Every step from master lock to release day, owned by a person with a due date. No more 'who's doing the art again?'",
   },
   {
-    kicker: "Assets",
-    title: "Every file, filed.",
-    body: "Masters, artwork, contracts, and split sheets, attached to the release they belong to. No more 'Final v3 ACTUAL final' buried in Drive.",
+    kicker: "Assistant",
+    title: "Tell Chappi what you need.",
+    body: "Chappi is the assistant built into your workspace. Type 'create a release' or 'mark the artwork done' and it happens, no menus. It gets smarter from here.",
   },
   {
     kicker: "Visibility",

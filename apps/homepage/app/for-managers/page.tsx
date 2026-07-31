@@ -11,7 +11,7 @@ import { TESTIMONIALS } from "@/content/testimonials";
 export const metadata: Metadata = buildPageMetadata({
   title: "Urganize for artist managers",
   description:
-    "Urganize is built for artist managers running more than one release at once: a rollout plan, owned tasks, files in one place, and status at a glance.",
+    "Urganize is built for artist managers running more than one release at once: a rollout plan, owned tasks, a press kit ready to send, and status at a glance.",
   path: "/for-managers",
 });
 
@@ -42,13 +42,13 @@ const valueBlocks = [
     ],
   },
   {
-    kicker: "Files",
-    title: "Stop digging through three artists' Drive folders.",
-    body: "Masters, artwork, contracts, and split sheets attach to the release they belong to, organized by category, with image previews. Whichever artist it is, the files are where the release is.",
+    kicker: "Press kit",
+    title: "One link, ready whenever press asks.",
+    body: "Generate a shareable press kit straight from the release: cover art, details, and photos, assembled automatically and always in sync. Send one link to press, curators, and bookers, whichever artist it's for.",
     points: [
-      "Per-release storage with categories",
-      "Audio, video, documents, and artwork",
-      "One link, not a folder tree to explain",
+      "Assembled automatically from the release",
+      "Always in sync: no rebuilding it by hand",
+      "One link, revocable anytime",
     ],
   },
   {
@@ -140,11 +140,13 @@ export default function ForManagersPage() {
           </ScrollReveal>
         ))}
 
-        {/* TESTIMONIAL — Adenaiye Miracle's quote, verbatim, signed off
-            2026-07-06. Never edit a quote after sign-off without
-            re-approval. Sourced from content/testimonials.ts (2026-07-31) —
-            the single canonical copy; the same words also appear as one of
-            the TransformationSection rows on the landing page. */}
+        {/* TESTIMONIAL — Antoine's quote, verbatim, signed off 2026-07-06.
+            Never edit a quote after sign-off without re-approval. Sourced
+            from content/testimonials.ts — the single canonical copy; the
+            same words also appear as one of the TransformationSection rows
+            on the landing page. Swapped off Adenaiye 2026-07-31 when her
+            quote (about file storage) was retired from display; Antoine's
+            plan-already-laid-out story fits a manager audience directly. */}
         <ScrollReveal>
           <SectionShell
             className="py-[80px] lg:py-[100px]"
@@ -152,10 +154,10 @@ export default function ForManagersPage() {
           >
             <div className="border-t border-[color:var(--marketing-border)] pt-14 text-center">
               <blockquote className="text-balance text-[1.4rem] font-medium leading-[1.5] tracking-[-0.02em] text-[var(--marketing-text)] sm:text-[1.7rem]">
-                &ldquo;{TESTIMONIALS.adenaiye.quote}&rdquo;
+                &ldquo;{TESTIMONIALS.antoine.quote}&rdquo;
               </blockquote>
               <p className="mono-label mt-6 text-[var(--marketing-text-subtle)]">
-                {TESTIMONIALS.adenaiye.name}, {TESTIMONIALS.adenaiye.role}
+                {TESTIMONIALS.antoine.name}, {TESTIMONIALS.antoine.role}
               </p>
             </div>
           </SectionShell>
