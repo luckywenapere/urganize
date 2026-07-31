@@ -6,6 +6,7 @@ import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
+import { TESTIMONIALS } from "@/content/testimonials";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Urganize for artist managers",
@@ -141,8 +142,9 @@ export default function ForManagersPage() {
 
         {/* TESTIMONIAL — Adenaiye Miracle's quote, verbatim, signed off
             2026-07-06. Never edit a quote after sign-off without
-            re-approval (see Sections.tsx's supportingQuotes for the same
-            rule and the full sign-off note). */}
+            re-approval. Sourced from content/testimonials.ts (2026-07-31) —
+            the single canonical copy; the same words also appear as one of
+            the TransformationSection rows on the landing page. */}
         <ScrollReveal>
           <SectionShell
             className="py-[80px] lg:py-[100px]"
@@ -150,13 +152,10 @@ export default function ForManagersPage() {
           >
             <div className="border-t border-[color:var(--marketing-border)] pt-14 text-center">
               <blockquote className="text-balance text-[1.4rem] font-medium leading-[1.5] tracking-[-0.02em] text-[var(--marketing-text)] sm:text-[1.7rem]">
-                &ldquo;The master, the artwork, the split sheet, they all live
-                on the release now instead of buried in three different
-                chats. When my artist needs a file, I know exactly where it
-                is.&rdquo;
+                &ldquo;{TESTIMONIALS.adenaiye.quote}&rdquo;
               </blockquote>
               <p className="mono-label mt-6 text-[var(--marketing-text-subtle)]">
-                Adenaiye Miracle, Artist Manager
+                {TESTIMONIALS.adenaiye.name}, {TESTIMONIALS.adenaiye.role}
               </p>
             </div>
           </SectionShell>
@@ -168,13 +167,13 @@ export default function ForManagersPage() {
             <div className="text-center">
               <h2 className={headlineClass}>Run every release with a system.</h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
-                Monthly or annual, one workspace, one price, plus a 28-day
-                free trial. See{" "}
+                Urganize is free to use right now — we set up every team
+                personally. See{" "}
                 <Link
                   href="/pricing"
                   className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"
                 >
-                  pricing
+                  how that works
                 </Link>
                 .
               </p>

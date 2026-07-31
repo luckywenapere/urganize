@@ -7,9 +7,10 @@ import {
   FinalCTASection,
   HeroSection,
   MirrorSection,
+  ReleaseRoomSection,
   TemplatePlanSection,
-  TestimonialSection,
   ThreeFeaturesSection,
+  TransformationSection,
   WorkspaceShotSection,
 } from "./components/landing/Sections";
 
@@ -31,14 +32,22 @@ export default function Home() {
         <MarketingHeader />
 
         <main>
+          {/* Reordered 2026-07-31: proof moved from two-thirds down the
+              page (screen ~5) to screen two, directly after the hero, so
+              the credibility check happens before the visitor has already
+              decided to leave. MirrorSection moved down to sit as the
+              cost-of-doing-nothing beat right before the second opinion +
+              close, rather than breaking up the real-screenshot →
+              real-template → mechanics argument in the middle. */}
           <HeroSection />
-          <MirrorSection />
+          <TransformationSection />
           <WorkspaceShotSection />
           <TemplatePlanSection />
           <ThreeFeaturesSection />
-          <TestimonialSection />
+          <MirrorSection />
           <AskAISection />
           <FinalCTASection />
+          <ReleaseRoomSection />
         </main>
 
         <MarketingFooter />
