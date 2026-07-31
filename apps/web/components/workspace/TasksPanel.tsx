@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, ChevronDown, Disc3, FolderOpen, Newspaper, Plus } from 'lucide-react';
+import { CalendarDays, ChevronDown, ClipboardList, Disc3, FolderOpen, Newspaper, Plus } from 'lucide-react';
 import {
   getTaskSectionLabel,
   groupTasksIntoSections,
@@ -29,6 +29,11 @@ const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 // from the release detail page's side menu — invisible from the workspace
 // users actually land on. Same flag that gates the EPK page and API routes.
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
+
+// Metadata hub entry point (URG-108): distribution fields + collaborator
+// credit capture, the third conscious v1 scope expansion (see CLAUDE.md).
+// Same shape as the Press kit link above.
+const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 
 // Overdue first (genuine slippage, most urgent), then Catch Up (start-here
 // for compressed-runway plans — calm, neutral framing), then standard
@@ -216,6 +221,20 @@ export function TasksPanel({ tasks, scopedRelease, id }: TasksPanelProps) {
               Press kit
               {/* Beta stamp, same tag as Calendar above — the press kit
                   generator shipped 2026-07-31 and is still early. */}
+              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+                Beta
+              </span>
+            </Link>
+          ) : null}
+          {METADATA_ENABLED && scopedRelease ? (
+            <Link
+              href={`/dashboard/releases/${scopedRelease.id}/metadata`}
+              className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+            >
+              <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
+              Metadata
+              {/* Beta stamp, same tag as Press kit above — this surface
+                  shipped 2026-07-31 and is still early. */}
               <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
                 Beta
               </span>
