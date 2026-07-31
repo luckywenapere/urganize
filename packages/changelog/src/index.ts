@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.36.1",
+    date: "July 31, 2026",
+    highlights: [
+      "Fixed two rough edges in the Chappi cursor: it no longer gets stuck on the regular pointer after you select some text, and it now stays visible when it passes over dark buttons or images instead of disappearing.",
+    ],
+  },
+  {
     version: "0.36.0",
     date: "July 31, 2026",
     highlights: [
