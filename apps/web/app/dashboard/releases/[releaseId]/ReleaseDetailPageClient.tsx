@@ -8,6 +8,7 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronLeft,
+  ClipboardList,
   Lock,
   Newspaper,
   Sparkles,
@@ -40,6 +41,9 @@ const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 // Content calendar + press kit: header links to the release's other scenes.
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
+// Metadata hub (URG-108): distribution fields + collaborator credit capture.
+// Third conscious v1 scope expansion — see CLAUDE.md.
+const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 
 // The AI modals are dynamic AND only rendered behind their flag (bottom of
 // the JSX): while a flag is off — as both are in production today — the
@@ -334,6 +338,18 @@ export default function ReleaseDetailPage() {
               >
                 <Newspaper className="h-3.5 w-3.5" />
                 Press kit
+                <span className="rounded-full bg-brand/15 px-1 py-px text-[9px] font-bold uppercase tracking-wide text-brand">
+                  Beta
+                </span>
+              </Link>
+            ) : null}
+            {METADATA_ENABLED ? (
+              <Link
+                href={`/dashboard/releases/${releaseId}/metadata`}
+                className="inline-flex h-9 items-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+              >
+                <ClipboardList className="h-3.5 w-3.5" />
+                Metadata
                 <span className="rounded-full bg-brand/15 px-1 py-px text-[9px] font-bold uppercase tracking-wide text-brand">
                   Beta
                 </span>

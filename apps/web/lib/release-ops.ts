@@ -64,6 +64,10 @@ export type ReleaseMetadataSnapshot = {
   labelName: string;
   language: string;
   explicit: boolean | null;
+  /** Copyright line, e.g. "© 2026 Some Label". Added for URG-108 (metadata hub). */
+  cLine: string;
+  /** Phonogram (sound-recording) line, e.g. "℗ 2026 Some Label". Added for URG-108. */
+  pLine: string;
   /**
    * @deprecated Legacy cover-art URL. As of Phase 3, `releases.artwork_asset_id`
    * (resolved to a signed URL) is the source of truth for cover art; UI cover

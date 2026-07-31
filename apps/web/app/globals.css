@@ -311,6 +311,24 @@ html[data-theme='light'] .cc-island {
   --epk-border: rgba(245, 240, 230, 0.12);
 }
 
+/* Public credit-submission island (URG-108). Same single-source-of-truth
+   pattern as .epk-island directly above, and deliberately duplicated rather
+   than shared: this is a distinct public surface (a form collaborators fill
+   in, not a kit they read) that happens to want the identical dark-locked
+   Bible screen-mode treatment. Ink ground, cream text, spring accent — every
+   collaborator sees the same branded form regardless of viewer theme state. */
+.credits-island {
+  color-scheme: dark;
+  --credits-ground: #0d120e;
+  --credits-surface: #181d19;
+  --credits-fill: #14643a;
+  --credits-accent: #7fd99a;
+  --credits-text: #f5f0e6;
+  --credits-text-muted: rgba(245, 240, 230, 0.64);
+  --credits-text-faint: rgba(245, 240, 230, 0.4);
+  --credits-border: rgba(245, 240, 230, 0.12);
+}
+
 html[data-theme='dark'] {
   --color-bg-base: 13 18 14;
   --color-bg-sidebar: 18 23 19;
