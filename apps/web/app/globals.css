@@ -439,19 +439,32 @@ html[data-theme='dark'] body {
    placement between characters meaningfully harder). Both exceptions use
    real cursor keywords so they still win over `inherit` by specificity.
 
-   URG-208: both PNGs have the enclosed interior of the mark filled with the
-   contrasting color (cream mark → ink fill, ink mark → cream fill; founder
-   call) — the ink mark used to disappear over dark buttons/images, and the
-   cream mark had the same problem in reverse. Interior fill only, on the
-   original 44x44 canvas — the first attempt (a dilated outline) shipped
-   briefly as a solid box behind the mark and was reverted the same day. */
+   URG-208: two follow-up fixes, then a redraw. (1) the ink mark disappeared
+   over dark buttons/images, and the cream mark had the same problem in
+   reverse — fixed with a filled disc behind the spiral (ink mark → cream
+   fill, cream mark → ink fill), not a halo around the whole mark. (2) no
+   source SVG for the mark exists anywhere in the repo (confirmed — only
+   the shipped 44x44 raster), so "make it crisp" meant redrawing it: the
+   triangle + spiral geometry was traced pixel-for-pixel from that raster
+   (open triangle, apex (21.5,2), base corners (2,41)/(41,41); spiral
+   centroid ~(21.5,27), ~2.6 turns) and rebuilt as SVG, then rendered at
+   44 and 88px. Colors are exact Brand Bible hex (ink #1A1611, cream
+   #F5F0E6) — the shipped "cream" raster actually contained pure #ffffff
+   pixels, which the bible's hard "never do" list forbids. image-set()
+   delivers the 88px asset to high-DPI displays at the SAME apparent size
+   (crisp on retina without the cursor rendering bigger); 88 stays safely
+   under the ~128px cap browsers silently ignore custom cursors past. The
+   spiral's exact curvature is a faithful-but-interpreted redraw, not a
+   pixel-exact trace — there's no vector source to trace from. */
 @media (pointer: fine) {
   body {
-    cursor: url('/images/chappi-cursor-cream.png') 22 2, auto;
+    cursor: image-set(url('/images/chappi-cursor-cream.png') 1x, url('/images/chappi-cursor-cream@2x.png') 2x) 22 2,
+      url('/images/chappi-cursor-cream.png') 22 2, auto;
   }
 
   html[data-theme='light'] body {
-    cursor: url('/images/chappi-cursor-ink.png') 22 2, auto;
+    cursor: image-set(url('/images/chappi-cursor-ink.png') 1x, url('/images/chappi-cursor-ink@2x.png') 2x) 22 2,
+      url('/images/chappi-cursor-ink.png') 22 2, auto;
   }
 
   a,
