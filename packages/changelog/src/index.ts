@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.35.1",
+    date: "July 31, 2026",
+    highlights: [
+      "Choosing \"I prefer to start from scratch\" during sign-up now does what it says: your first release starts with an empty activity list instead of the pre-built rollout plan.",
+    ],
+  },
+  {
     version: "0.35.0",
     date: "July 31, 2026",
     highlights: [

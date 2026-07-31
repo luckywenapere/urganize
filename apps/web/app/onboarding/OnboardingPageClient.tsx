@@ -28,8 +28,10 @@
 //   1. supabase.auth.signUp via useAuthStore.signup — reuses existing flow.
 //   2. POST /api/trial/start — grant 28-day trial so the next call passes the
 //      paywall (otherwise POST /api/releases 402s).
-//   3. POST /api/releases — same path the in-app modal uses; template tasks
-//      get instantiated via apps/web/lib/release-templates/instantiate.ts.
+//   3. POST /api/releases — same path the in-app modal uses. The step-4
+//      planning preference maps to the route's `plan` field: template tasks
+//      get instantiated via apps/web/lib/release-templates/instantiate.ts,
+//      unless the user chose start_from_scratch (→ plan: 'blank', URG-201).
 //   4. PATCH /api/user/onboarding { onboardingCompleted: true } — records that
 //      this account finished onboarding, plus the three answers that live on
 //      the profile rather than the release: planningPreference, whereStuck and
@@ -144,7 +146,7 @@ const PLANNING_PREFERENCE_OPTIONS: Array<{
   {
     value: 'start_from_scratch',
     label: ONBOARDING_PLANNING_PREFERENCE_LABELS.start_from_scratch,
-    helper: 'Skip the suggestions. Go straight to the full activity list and plan it yourself.',
+    helper: 'Skip the suggestions. Your release starts blank and you add every activity yourself.',
   },
 ];
 
@@ -484,7 +486,12 @@ export default function OnboardingPage() {
       throw new Error(trialPayload.error || 'Could not start your trial.');
     }
 
-    // 2. Create the real release. Template tasks instantiate server-side.
+    // 2. Create the real release. The step-4 planning preference decides the
+    // plan: 'template' instantiates the rollout plan server-side; 'blank'
+    // (start_from_scratch) creates an empty release the user builds up
+    // themself — the same `plan` contract CreateReleaseModal uses (URG-201:
+    // before this, the preference was recorded on the profile but the
+    // release was always created with the full template).
     setProgressMessage('Setting up your first release...');
     const releaseResponse = await fetch('/api/releases', {
       method: 'POST',
@@ -497,6 +504,7 @@ export default function OnboardingPage() {
         releaseDate: draft.releaseDate,
         releaseType: draft.releaseType,
         source: 'onboarding',
+        plan: draft.planningPreference === 'start_from_scratch' ? 'blank' : 'template',
       }),
     });
     const releasePayload = (await releaseResponse.json().catch(() => ({}))) as {
