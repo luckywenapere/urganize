@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Space_Grotesk, Fraunces, Space_Mono } from 'next/font/google';
 import { AppShell } from '@/components/app/AppShell';
+import { CursorRefresher } from '@/components/app/CursorRefresher';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import './globals.css';
 
@@ -141,6 +142,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="app-body bg-bg-base text-content-primary antialiased">
+        <CursorRefresher />
         <PostHogProvider>
           <AppShell>{children}</AppShell>
         </PostHogProvider>

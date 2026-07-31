@@ -9,6 +9,7 @@ import {
 import "./globals.css";
 import { Suspense } from "react";
 import FormbricksProvider from "./formbricks-provider";
+import CursorRefresher from "./components/CursorRefresher";
 import { Analytics } from "@vercel/analytics/next";
 
 const SITE_URL = "https://urganize.app";
@@ -217,6 +218,7 @@ export default function RootLayout({
             gtag('config', 'G-X4PX21EV8K');
           `}
         </Script>
+        <CursorRefresher />
         <Suspense>
           <FormbricksProvider />
         </Suspense>
