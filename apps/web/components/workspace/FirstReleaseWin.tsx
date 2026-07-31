@@ -211,8 +211,8 @@ export function FirstReleaseWin({ releaseId, onDone }: FirstReleaseWinProps) {
               Assign activities to your team
             </h2>
             <p className="mt-2 text-sm text-content-secondary">
-              Invite a teammate to “{release?.title || 'this release'}” so you can hand off activities —
-              or do it later from Settings.
+              Invite an artist, freelancer or team member to “{release?.title || 'this release'}” so you
+              can hand off activities — or do it later from Settings.
             </p>
 
             {invitedEmail ? (

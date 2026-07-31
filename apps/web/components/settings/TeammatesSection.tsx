@@ -326,7 +326,7 @@ export function TeammatesSection({
       ) : teammates.length === 0 ? (
         <p className="mt-4 text-sm text-content-secondary">
           {canManage
-            ? 'No teammates yet. Invite someone to get started.'
+            ? 'No teammates yet. Invite artists, freelancers and team members to get started.'
             : 'No teammates to show yet.'}
         </p>
       ) : (

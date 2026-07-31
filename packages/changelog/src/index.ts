@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.35.4",
+    date: "July 31, 2026",
+    highlights: [
+      "Invite prompts now say what they mean: \"Invite artists, freelancers and team members\" replaces the narrower \"Invite teammates\" everywhere it appears — Settings, the release page, Chappi's invite banner, and after your first release.",
+    ],
+  },
+  {
     version: "0.35.3",
     date: "July 31, 2026",
     highlights: [
