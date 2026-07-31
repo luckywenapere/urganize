@@ -30,9 +30,9 @@ export function HeroSection() {
           </h1>
 
           <p className="hero-fade-in hero-delay-2 mx-auto block w-full max-w-[44rem] text-balance text-center text-lg leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
-            One workspace for the whole release: a hand-crafted rollout plan,
-            tasks your freelance team actually owns, and every file where it
-            belongs.
+            One home for the whole release: a hand-crafted rollout plan,
+            tasks your freelance team actually owns, and a press kit ready to
+            send.
           </p>
         </div>
 
