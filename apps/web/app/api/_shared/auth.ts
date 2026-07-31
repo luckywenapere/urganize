@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { requireActiveAccount } from '@/app/api/_shared/paywall';
+import { getMcpConfig, verifyMcpAccessKey } from '@/lib/mcp/config';
 
 // Single source of truth for API route auth. This replaces the per-domain
 // copies that used to live in releases/_shared.ts, tasks-server.ts,
@@ -78,4 +79,71 @@ export async function requireAuthenticatedAdmin(request: NextRequest) {
     return { error: NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 }) };
   }
   return { user: auth.user, supabaseUrl: auth.supabaseUrl, adminClient };
+}
+
+// ── internal server-to-server actor (URG-183) ─────────────────────────────
+//
+// The MCP endpoint (app/api/mcp/route.ts) reuses Chappi's tool registry, and
+// four of those tools deliberately work by calling our own REST routes over
+// HTTP so template instantiation, assignee validation, and notifications are
+// never reimplemented (see the header of lib/chappi/tools.ts). Those routes
+// validate a Supabase JWT — which an MCP client, authenticating with a static
+// bearer key, does not have.
+//
+// So: a request whose bearer IS the MCP access key resolves to the single
+// account that key is bound to (MCP_USER_ID). No acting-user header exists on
+// purpose — the binding is env-side, so a leaked key can only ever act as that
+// one user, never as an arbitrary account. The internal actor still passes the
+// paywall gate, so MCP behaves exactly as that user does in the UI.
+//
+// Only the four proxied routes opt into this via the *OrInternal helpers below.
+// Every other route keeps calling the plain helpers and rejects the key with a
+// normal 401 (GoTrue won't validate it as a token).
+
+async function resolveInternalActor(request: NextRequest) {
+  const config = getMcpConfig();
+  if (!config) return null;
+
+  const authHeader = request.headers.get('authorization') || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!token || !verifyMcpAccessKey(token)) return null;
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!supabaseUrl) return null;
+  const adminClient = createAdminClient(supabaseUrl);
+  if (!adminClient) return null;
+
+  const { data, error } = await adminClient.auth.admin.getUserById(config.userId);
+  if (error || !data.user?.id) {
+    // Misconfiguration (MCP_USER_ID doesn't resolve). Fall through to normal
+    // auth, which 401s — better than granting access on a bad binding.
+    console.error('[mcp] MCP_USER_ID did not resolve to a user:', error?.message);
+    return null;
+  }
+
+  return { user: data.user, supabaseUrl, adminClient };
+}
+
+/** requireActiveAuthenticatedUser, plus the internal-actor path. Use ONLY on
+ * routes the MCP/Chappi tool layer calls internally. */
+export async function requireActiveAuthenticatedUserOrInternal(request: NextRequest) {
+  const internal = await resolveInternalActor(request);
+  if (internal) {
+    const block = await requireActiveAccount(internal.user.id, internal.user.email);
+    if (block) return { error: block };
+    return { user: internal.user, supabaseUrl: internal.supabaseUrl };
+  }
+  return requireActiveAuthenticatedUser(request);
+}
+
+/** requireAuthenticatedAdmin, plus the internal-actor path. Use ONLY on routes
+ * the MCP/Chappi tool layer calls internally. */
+export async function requireAuthenticatedAdminOrInternal(request: NextRequest) {
+  const internal = await resolveInternalActor(request);
+  if (internal) {
+    const block = await requireActiveAccount(internal.user.id, internal.user.email);
+    if (block) return { error: block };
+    return { user: internal.user, supabaseUrl: internal.supabaseUrl, adminClient: internal.adminClient };
+  }
+  return requireAuthenticatedAdmin(request);
 }

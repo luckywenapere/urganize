@@ -8,6 +8,7 @@ import {
   createAdminClient,
   ensureReleaseOpsSchema,
   requireAuthenticatedAdmin,
+  requireAuthenticatedAdminOrInternal,
   isOptionalTableMissingError,
   parseOptionalReleaseDate,
 } from './_shared';
@@ -264,7 +265,9 @@ export async function POST(request: NextRequest) {
   const posthogServer = createServerPostHogClient();
 
   try {
-    const auth = await requireAuthenticatedAdmin(request);
+    // *OrInternal: the Chappi/MCP tool layer creates releases by calling this
+    // route internally, so it also accepts the MCP internal actor (URG-183).
+    const auth = await requireAuthenticatedAdminOrInternal(request);
     if ('error' in auth) return auth.error;
 
     const { adminClient } = auth;

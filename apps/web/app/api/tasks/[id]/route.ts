@@ -11,6 +11,7 @@ import {
   isReadOnlyWorkspaceMember,
   loadTaskDetail,
   requireAuthenticatedAdmin,
+  requireAuthenticatedAdminOrInternal,
   isTaskSchemaMissingError,
   type TaskRow,
 } from '@/lib/tasks-server';
@@ -99,7 +100,9 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuthenticatedAdmin(request);
+  // *OrInternal: the Chappi/MCP tool layer updates tasks by calling this route
+  // internally, so it also accepts the MCP internal actor (URG-183).
+  const auth = await requireAuthenticatedAdminOrInternal(request);
   if ('error' in auth) return auth.error;
 
   const { adminClient } = auth;
