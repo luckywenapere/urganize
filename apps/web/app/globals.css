@@ -410,11 +410,11 @@ html[data-theme='dark'] body {
    light theme's cream ground. */
 @media (pointer: fine) {
   body {
-    cursor: url('/images/chappi-cursor-cream.png') 16 3, auto;
+    cursor: url('/images/chappi-cursor-cream.png') 22 3, auto;
   }
 
   html[data-theme='light'] body {
-    cursor: url('/images/chappi-cursor-ink.png') 16 3, auto;
+    cursor: url('/images/chappi-cursor-ink.png') 22 3, auto;
   }
 
   /* The mark inherits everywhere, so anything clickable needs pointer put
