@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ThemedProductShot } from "../ThemedProductShot";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { centeredHeadlineClass, mutedLeadClass } from "./shared";
@@ -62,12 +62,12 @@ export function TemplatePlanSection() {
         </p>
 
         <div className="mx-auto mt-14 max-w-[58rem] overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
-          <Image
-            src="/images/product/workspace-tasks.png"
+          <ThemedProductShot
+            light="/images/product/workspace-tasks.png"
+            dark="/images/product/workspace-tasks-dark.png"
             alt="A release open in Urganize: the progress bar, the full 64-task rollout plan with due dates on every row, and the rest of the roster one click away."
             width={1920}
             height={970}
-            className="h-auto w-full"
             sizes="(min-width: 1024px) 928px, 100vw"
           />
         </div>

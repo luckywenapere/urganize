@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { ProofLine } from "../components/landing/ProofLine";
+import { ThemedProductShot } from "../components/landing/ThemedProductShot";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
@@ -30,11 +30,14 @@ const features = [
       "Every task dated around your release day",
       "Edit, reorder, or delete anything. It's your plan",
     ],
-    // Real screenshot of the current release view (retaken 2026-07-25).
-    // Same house rule as the landing page: if the UI changes meaningfully,
-    // retake this — marketing imagery never lags the product.
+    // Real screenshot of the current release view (retaken 2026-07-25; dark
+    // capture added 2026-07-31 so the shot follows the theme toggle). Same
+    // house rule as the landing page: if the UI changes meaningfully,
+    // retake BOTH the light and dark version — marketing imagery never
+    // lags the product.
     image: {
       src: "/images/product/workspace-tasks.png",
+      darkSrc: "/images/product/workspace-tasks-dark.png",
       alt: "A release open in Urganize: the progress bar at 1 of 64, and the full 64-task rollout plan with owners and due dates on every row.",
     },
   },
@@ -164,12 +167,12 @@ export default function FeaturesPage() {
 
               {"image" in feature ? (
                 <div className="mx-auto mt-14 max-w-[64rem] overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
-                  <Image
-                    src={feature.image.src}
+                  <ThemedProductShot
+                    light={feature.image.src}
+                    dark={feature.image.darkSrc}
                     alt={feature.image.alt}
                     width={1920}
                     height={970}
-                    className="h-auto w-full"
                     sizes="(min-width: 1088px) 1024px, 100vw"
                   />
                 </div>

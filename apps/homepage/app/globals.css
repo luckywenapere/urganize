@@ -139,6 +139,21 @@ html[data-marketing-theme="dark"] .marketing-wordmark {
   filter: none;
 }
 
+/* Theme-aware product screenshots (ThemedProductShot component): exactly
+   one of the light/dark pair renders. Default (attribute not yet set,
+   e.g. a no-JS crawler) shows the light capture. */
+.theme-shot-dark {
+  display: none;
+}
+
+html[data-marketing-theme="dark"] .theme-shot-dark {
+  display: block;
+}
+
+html[data-marketing-theme="dark"] .theme-shot-light {
+  display: none;
+}
+
 @layer base {
   body {
     background: var(--marketing-bg);
