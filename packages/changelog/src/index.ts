@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.36.0",
+    date: "July 31, 2026",
+    highlights: [
+      "Chappi now slides in beside your releases instead of taking over the screen — open it from the catalog, keep working with your releases in view, and expand to full screen whenever you want more room.",
+    ],
+  },
+  {
     version: "0.35.6",
     date: "July 31, 2026",
     highlights: [

@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Minimize2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { useChappiStore } from '@/stores/useChappiStore';
 import { ChappiConversation } from '@/components/chappi/ChappiConversation';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { ChappiPageSkeleton } from '@/components/loading/ChappiPageSkeleton';
@@ -60,6 +62,25 @@ export default function ChappiPageClient() {
           short viewports usable; the empty state centers within the
           definite height. */}
       <div className="chappi-shell-height flex flex-col">
+        {/* Collapse — the mirror image of ChappiSidePanel's expand button.
+            Desktop-only (the split view it returns to doesn't exist below
+            lg). Restores `?release=` from Chappi's own scope so the panel
+            re-opens live-synced to whatever release the conversation was
+            pinned to, exactly as if the catalog had been scoped to it. */}
+        <div className="hidden shrink-0 justify-end lg:flex">
+          <button
+            type="button"
+            onClick={() => {
+              const scopedId = useChappiStore.getState().scopedReleaseId;
+              router.push(scopedId ? `/dashboard?chat=1&release=${scopedId}` : '/dashboard?chat=1');
+            }}
+            aria-label="Collapse into workspace"
+            title="Back to workspace"
+            className="motion-focus motion-press grid h-7 w-7 place-items-center text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          >
+            <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
         <div className="shrink-0">
           <InviteTeamBanner />
         </div>

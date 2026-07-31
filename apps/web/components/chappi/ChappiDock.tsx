@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Maximize2, MessageCircle, RotateCcw, X } from 'lucide-react';
 import { useChappiStore } from '@/stores/useChappiStore';
+import { useChatPanel } from '@/components/workspace/useChatPanel';
 import { ChappiBetaBadge } from './ChappiBetaBadge';
 import { ChappiConversation } from './ChappiConversation';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
@@ -52,6 +53,7 @@ type ChappiDockProps = {
 export function ChappiDock({ onNewRelease }: ChappiDockProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { isChatOpen, toggleChat, openChat } = useChatPanel();
   const messages = useChappiStore((state) => state.messages);
   const reset = useChappiStore((state) => state.reset);
   const [isOpen, setIsOpen] = useState(false);
@@ -71,10 +73,23 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
   // Ctrl/Cmd+J toggle. preventDefault matters: Ctrl+J opens the downloads
   // panel in several browsers. No typing-target guard needed — modified
   // combos are safe to intercept from inputs.
+  //
+  // On the catalog (/dashboard) at lg+, this dock is hidden (see the null
+  // check below) and the slide-in panel owns Chappi instead — so the
+  // shortcut routes to `toggleChat` there. This listener still runs even
+  // while the dock itself renders null, so the shortcut isn't lost.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'j') {
         event.preventDefault();
+        const onCatalogDesktop =
+          pathname === '/dashboard' &&
+          typeof window !== 'undefined' &&
+          !window.matchMedia('(max-width: 1023px)').matches;
+        if (onCatalogDesktop) {
+          toggleChat();
+          return;
+        }
         setIsOpen((current) => {
           const next = !current;
           writePersistedState(DOCK_OPEN_KEY, DOCK_OPEN_VERSION, next);
@@ -84,18 +99,34 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [pathname, toggleChat]);
 
   // The Chappi page IS the chat — a floating duplicate of the same
   // conversation there is redundant. Open state is preserved for when the
   // user navigates back to a workspace page.
   if (pathname === '/dashboard/chappi') return null;
 
+  // The slide-in panel owns Chappi on the catalog while it's open — hide
+  // the dock (pill + panel both) rather than show two chat surfaces on the
+  // same page. Below lg the panel doesn't exist, so this stays viewport-
+  // agnostic on purpose: `?chat=1` only ever gets set from a desktop click.
+  if (pathname === '/dashboard' && isChatOpen) return null;
+
   if (!isOpen) {
     return (
       <button
         type="button"
-        onClick={() => setOpenPersisted(true)}
+        onClick={() => {
+          const onCatalogDesktop =
+            pathname === '/dashboard' &&
+            typeof window !== 'undefined' &&
+            !window.matchMedia('(max-width: 1023px)').matches;
+          if (onCatalogDesktop) {
+            openChat();
+            return;
+          }
+          setOpenPersisted(true);
+        }}
         aria-label="Ask Chappi (beta)"
         className="group fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-full border border-stroke-default bg-bg-elevated py-2.5 pl-3.5 pr-4 shadow-2xl transition-all duration-150 hover:border-stroke-strong hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:bottom-6 md:right-6"
       >

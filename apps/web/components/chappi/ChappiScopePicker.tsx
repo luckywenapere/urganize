@@ -115,7 +115,7 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
         <div
           role="listbox"
           aria-label="Scope this conversation to a release"
-          className="absolute bottom-full left-0 z-50 mb-2 max-h-72 w-72 max-w-[calc(100vw-3rem)] overflow-y-auto overscroll-contain rounded-xl border border-stroke-default bg-bg-surface py-1 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
+          className="absolute bottom-full left-0 z-50 mb-2 max-h-72 w-64 max-w-[calc(100vw-3rem)] overflow-y-auto overscroll-contain rounded-xl border border-stroke-default bg-bg-surface py-1 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
         >
           <button
             type="button"
