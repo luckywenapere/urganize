@@ -12,10 +12,22 @@ import {
   loadTaskAttachments,
 } from '@/lib/tasks-server';
 
+// Feature flag (URG-203): task attachments stay dark until
+// NEXT_PUBLIC_FEATURE_TASK_ATTACHMENTS is 'true' (URG-182 precedent — same
+// pattern as release-level file storage, a separate flag). 404 when off so
+// direct API calls cannot reach it either. Existing rows/storage objects are
+// untouched — this only gates access.
+const isTaskAttachmentsFeatureEnabled = (): boolean =>
+  process.env.NEXT_PUBLIC_FEATURE_TASK_ATTACHMENTS === 'true';
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  if (!isTaskAttachmentsFeatureEnabled()) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   const auth = await requireAuthenticatedAdmin(request);
   if ('error' in auth) {
     return auth.error;
