@@ -38,7 +38,7 @@ export function YouTubeFacade() {
       type="button"
       onClick={() => setIsPlaying(true)}
       aria-label="Play: Urganize product walkthrough"
-      className="group absolute inset-0 h-full w-full cursor-pointer"
+      className="group absolute inset-0 h-full w-full"
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- external
           thumbnail from a domain not worth adding to next/image's remote

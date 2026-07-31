@@ -41,7 +41,7 @@ export function StatusUpdateModal({
       <button
         type="button"
         aria-label="Close status update modal"
-        className="fixed inset-0 cursor-default"
+        className="fixed inset-0"
         onClick={onClose}
       />
 

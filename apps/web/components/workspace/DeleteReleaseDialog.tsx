@@ -140,7 +140,7 @@ export function DeleteReleaseDialog({
       <button
         type="button"
         aria-label="Close delete release dialog"
-        className="absolute inset-0 cursor-default"
+        className="absolute inset-0"
         onClick={() => {
           if (!isDeleting) {
             onClose();

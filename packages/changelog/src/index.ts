@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.35.6",
+    date: "July 31, 2026",
+    highlights: [
+      "The Chappi cursor now stays put — it used to flip back to the regular pointer over buttons and links, and now it doesn't. Fixed a glitch where opening a pop-up (creating a release, deleting one, and a few others) would turn the whole dimmed screen into a hand cursor.",
+    ],
+  },
+  {
     version: "0.35.5",
     date: "July 31, 2026",
     highlights: [

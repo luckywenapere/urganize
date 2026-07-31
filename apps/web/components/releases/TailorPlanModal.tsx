@@ -163,7 +163,7 @@ export function TailorPlanModal({
       <button
         type="button"
         aria-label="Close tailor plan modal"
-        className="fixed inset-0 cursor-default"
+        className="fixed inset-0"
         onClick={() => {
           if (!isSubmitting) onClose();
         }}

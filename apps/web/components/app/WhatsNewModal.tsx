@@ -84,7 +84,7 @@ export function WhatsNewModal() {
       <button
         type="button"
         aria-label="Dismiss what's new"
-        className="absolute inset-0 cursor-default"
+        className="absolute inset-0"
         onClick={dismiss}
       />
       <div

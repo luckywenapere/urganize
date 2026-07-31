@@ -407,7 +407,19 @@ html[data-theme='dark'] body {
    pointer: fine rather than a width breakpoint so touch devices never get a
    cursor they can't move. Two assets because cursor: url() can't be
    filter-inverted the way .app-wordmark is — a cream mark disappears on the
-   light theme's cream ground. */
+   light theme's cream ground.
+
+   URG-207: the mark NEVER reverts to the native pointer on hover (founder
+   call) — buttons, links, and cards all show the mark, not the hand. Form
+   controls get `cursor: inherit` (specificity (0,0,1)) rather than the
+   removed `cursor: pointer` rule, purely to cancel the UA sheet's own
+   `cursor: default` on <button>/<select>/etc, which would otherwise beat
+   inheritance from body and flash the OS arrow mid-hover. Two exceptions,
+   both founder-confirmed: disabled controls keep `not-allowed` (the only
+   remaining signal that a control won't respond), and text-entry fields
+   keep the I-beam (the mark's hotspot is its top tip, which makes caret
+   placement between characters meaningfully harder). Both exceptions use
+   real cursor keywords so they still win over `inherit` by specificity. */
 @media (pointer: fine) {
   body {
     cursor: url('/images/chappi-cursor-cream.png') 22 2, auto;
@@ -417,24 +429,27 @@ html[data-theme='dark'] body {
     cursor: url('/images/chappi-cursor-ink.png') 22 2, auto;
   }
 
-  /* The mark inherits everywhere, so anything clickable needs pointer put
-     back. Form controls are listed explicitly: the UA sheet hard-sets
-     cursor: default on them, which beats inheritance and would otherwise
-     flash the OS arrow mid-hover. Links already get pointer from the UA. */
-  button:not(:disabled),
+  a,
+  button,
   summary,
-  select:not(:disabled),
-  label[for],
-  input[type='button']:not(:disabled),
-  input[type='submit']:not(:disabled),
-  input[type='reset']:not(:disabled),
-  input[type='checkbox']:not(:disabled),
-  input[type='radio']:not(:disabled),
-  input[type='file']:not(:disabled),
-  input[type='range']:not(:disabled),
-  input[type='color']:not(:disabled),
-  [role='button']:not([aria-disabled='true']) {
-    cursor: pointer;
+  select,
+  label,
+  input[type='button'],
+  input[type='submit'],
+  input[type='reset'],
+  input[type='checkbox'],
+  input[type='radio'],
+  input[type='file'],
+  input[type='range'],
+  input[type='color'],
+  [role='button'] {
+    cursor: inherit;
+  }
+
+  /* Disabled stays visibly dead — (0,1,0) beats the inherit rule above. */
+  :disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
   }
 
   /* Everything left over is a typed field (text, email, date, number, …). */
@@ -972,7 +987,7 @@ html[data-theme='dark'] .card {
 }
 
 .card-interactive {
-  cursor: pointer;
+  cursor: inherit; /* URG-207: never revert to the hand on hover */
 }
 
 .card-interactive:hover {
@@ -1045,7 +1060,7 @@ input:-webkit-autofill:focus {
   font-size: var(--text-sm);
   font-weight: 600;
   border-radius: 0;
-  cursor: pointer;
+  cursor: inherit; /* URG-207: never revert to the hand on hover */
   transition: all var(--motion-fast) var(--motion-out);
   border: none;
   outline: none;
@@ -1109,7 +1124,7 @@ html[data-theme='dark'] .btn-secondary:hover:not(:disabled) {
   background: transparent;
   color: var(--text-secondary);
   border: 1px solid transparent;
-  cursor: pointer;
+  cursor: inherit; /* URG-207: never revert to the hand on hover */
   transition: all var(--motion-fast) var(--motion-out);
 }
 

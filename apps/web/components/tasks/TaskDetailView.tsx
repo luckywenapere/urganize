@@ -389,7 +389,7 @@ export function TaskDetailView({
                   </h3>
                   <p className="mt-1 text-xs text-content-secondary">Upload files for briefs, decks, or assets.</p>
                 </div>
-                <label className="inline-flex min-h-10 cursor-pointer items-center rounded-[16px] bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover">
+                <label className="inline-flex min-h-10 items-center rounded-[16px] bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover">
                   <input
                     type="file"
                     className="sr-only"
