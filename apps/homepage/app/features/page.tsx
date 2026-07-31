@@ -90,29 +90,6 @@ const features = [
   },
 ] as const;
 
-const nonFeatures = [
-  {
-    title: "File storage",
-    body: "Keep Drive for the raw files. Urganize is where the release itself lives: the plan, the owners, the status, the press kit.",
-  },
-  {
-    title: "Revenue tracking",
-    body: "We don't track streams, splits, or royalties. That's what distributors are for.",
-  },
-  {
-    title: "Legal contracts",
-    body: "We don't generate or enforce contracts. Get a lawyer for that. We'll store the PDF.",
-  },
-  {
-    title: "Analytics dashboards",
-    body: "We don't show streaming numbers or social metrics. Check your platforms.",
-  },
-  {
-    title: "Distribution",
-    body: "We don't upload to Spotify or Apple Music. Use your preferred distributor. We'll make sure it happens on time.",
-  },
-] as const;
-
 const headlineClass =
   "text-balance text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[3.6rem]";
 
@@ -201,43 +178,6 @@ export default function FeaturesPage() {
             </SectionShell>
           </ScrollReveal>
         ))}
-
-        {/* WHAT IT DOESN'T DO */}
-        <ScrollReveal>
-          <SectionShell
-            className="py-[100px] lg:py-[120px]"
-            containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
-          >
-            <div className="mx-auto max-w-[52rem] text-center">
-              <p className="mono-label text-[var(--marketing-text-subtle)]">
-                On purpose
-              </p>
-              <h2 className={`mt-6 ${headlineClass}`}>
-                What Urganize doesn&apos;t do.
-              </h2>
-              <p className="mx-auto mt-6 max-w-[36rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
-                We&apos;re opinionated about what we build. If it doesn&apos;t
-                reduce operational chaos, it&apos;s out.
-              </p>
-            </div>
-
-            <div className="mx-auto mt-14 grid max-w-[60rem] grid-cols-1 gap-px bg-[color:var(--marketing-border)] sm:grid-cols-2">
-              {nonFeatures.map((item) => (
-                <div
-                  key={item.title}
-                  className="bg-[var(--marketing-bg)] px-6 py-7 text-left sm:px-7 sm:py-8"
-                >
-                  <p className="font-mono text-[0.95rem] font-semibold uppercase tracking-[0.06em] text-[var(--marketing-text)]">
-                    {item.title}
-                  </p>
-                  <p className="mt-3 text-[0.92rem] leading-7 text-[var(--marketing-text-muted)]">
-                    {item.body}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </SectionShell>
-        </ScrollReveal>
 
         {/* FINAL CTA */}
         <ScrollReveal>
