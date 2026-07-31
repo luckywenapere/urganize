@@ -11,7 +11,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Features",
   description:
-    "What Urganize does: a hand-crafted rollout plan, tasks your freelance team owns, a shareable press kit for every release, and an assistant built into the workspace.",
+    "What Urganize does: a rollout plan for every release, tasks your team owns, a press kit you can send as one link, and Chappi, the assistant in your workspace.",
   path: "/features",
 });
 
@@ -24,68 +24,68 @@ const features = [
   {
     kicker: "The plan",
     title: "A rollout plan, not a blank page.",
-    body: "Create a release and Urganize lays out a hand-crafted 11-week rollout: 64 tasks from locking the master to compiling first-week stats. Written with working managers, signed off by design partners, and fully editable before you commit.",
+    body: "Create a release and Urganize lays out the whole 11-week rollout. 64 tasks, from locking the master to pulling your first-week numbers. Real managers wrote it and tested it. Change anything before you save it.",
     points: [
-      "8 weeks pre-release, 3 weeks post-release",
-      "Every task dated relative to your release day",
-      "Edit, reorder, or delete anything: it's your plan",
+      "8 weeks before the drop, 3 weeks after",
+      "Every task dated around your release day",
+      "Edit, reorder, or delete anything. It's your plan",
     ],
     // Real screenshot of the current release view (retaken 2026-07-25).
     // Same house rule as the landing page: if the UI changes meaningfully,
     // retake this — marketing imagery never lags the product.
     image: {
       src: "/images/product/workspace-tasks.png",
-      alt: "A release open in Urganize: the motion bar tracking 1 of 64, and the 64-activity rollout plan with owners and due dates on every row.",
+      alt: "A release open in Urganize: the progress bar at 1 of 64, and the full 64-task rollout plan with owners and due dates on every row.",
     },
   },
   {
     kicker: "Tasks",
     title: "Owned, dated, and in order.",
-    body: "Every task has an owner, a due date, and a priority. Dependencies keep the order honest: artwork upload stays locked until the artwork is approved, and unlocks the moment it is.",
+    body: "Every task has an owner, a due date, and a priority. Tasks wait for each other in the right order: the artwork upload stays locked until the artwork is approved. The moment it is, it unlocks.",
     points: [
       "Assign your A&R, PR, designer, distributor",
       "Blocked tasks show exactly what's blocking them",
-      "Check things off from the release page or your queue",
+      "Check things off from the release page or your own list",
     ],
   },
   {
     kicker: "Press kit",
     title: "One link, ready to send.",
-    body: "Generate a shareable press kit straight from the release: cover art, release details, and photos, assembled automatically and always in sync with the release. Send one link to press, curators, and bookers. Revoke it anytime.",
+    body: "Urganize builds a press kit from your release: cover art, details, and photos. It updates itself when the release changes. Send one link to press, curators, and bookers. Turn the link off anytime.",
     points: [
-      "Assembled automatically from the release",
-      "Always in sync: no rebuilding it by hand",
-      "One link, revocable anytime",
+      "Built for you from the release",
+      "Always up to date. No rebuilding by hand",
+      "One link. Turn it off anytime",
     ],
   },
   {
     kicker: "Assistant",
-    title: "Chappi runs the busywork.",
-    body: "Chappi is the assistant built into your workspace. Tell it what you need in plain language, create a release, add a task, mark something done, and it does it, no menus to hunt through.",
+    title: "Chappi handles the small stuff.",
+    body: "Chappi is the assistant built into your workspace. Tell it what you need. Create a release. Add a task. Mark something done. Type it and it happens, with no menus to hunt through.",
     points: [
       "Create releases and tasks by typing what you want",
       "Built into the workspace, not a separate app",
-      "Getting more capable as we build on it",
+      "It keeps getting better",
     ],
   },
   {
     kicker: "Milestones",
     title: "The moments that matter, on the timeline.",
-    body: "Listening party, video shoot, release day: milestones sit inside the release plan as dated events, so the team sees the moments coming, not just the chores.",
+    body: "Listening party, video shoot, release day. Milestones sit inside the release plan as dated events, so the team sees the big moments coming, not just the chores.",
     points: [
-      "Event milestones render on the release timeline",
-      "Dated relative to the drop",
+      "Milestones show up on the release timeline",
+      "Dated around the drop",
       "Visible to everyone on the workspace",
     ],
   },
   {
     kicker: "Visibility",
     title: "Know where every release stands.",
-    body: "One workspace shows every release in flight: progress, what's overdue, what's due this week, and which release it belongs to. The status conversation stops being a meeting.",
+    body: "One workspace shows every release you have going: progress, what's overdue, what's due this week, and which release each task belongs to. You stop needing a meeting to know the status.",
     points: [
       "All releases and tasks on one screen",
-      "Click a release to scope down to its work",
-      "Overdue and due-today surfaced first",
+      "Click a release to see just its work",
+      "Overdue and due-today shown first",
     ],
   },
 ] as const;
@@ -115,9 +115,8 @@ export default function FeaturesPage() {
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              Urganize is how your music gets the release it deserves: where
-              the plan lives, where the work happens, where the team sees
-              status.
+              Urganize gives your music the release it deserves. The plan, the
+              work, and the status all live in one place.
             </p>
           </div>
         </SectionShell>

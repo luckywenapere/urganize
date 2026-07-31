@@ -6,7 +6,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Team",
   description:
-    "The team behind Urganize — artist managers, artists, and engineers making sure your music gets the release it deserves.",
+    "The team behind Urganize: artist managers, artists, and engineers making sure your music gets the release it deserves.",
   path: "/team",
 });
 
@@ -67,17 +67,17 @@ export default function TeamPage() {
             </p>
             <div className="mt-6 max-w-[42rem] space-y-5 leading-8 text-[var(--marketing-text-muted)]">
               <p>
-                Urganize started in December 2025, mid-chaos. Lucky was sorting
-                out tasks for a third artist&apos;s release — across chats,
-                notes, and memory — when it became obvious the problem
-                wasn&apos;t effort. His artists&apos; music wasn&apos;t getting
-                the releases it deserved, because nothing held the release
-                together.
+                Urganize started in December 2025, in the middle of the mess.
+                Lucky was sorting out tasks for a third artist&apos;s release
+                across chats, notes, and memory. That is when it became clear
+                the problem was not effort. His artists&apos; music was not
+                getting the releases it deserved, because nothing held the
+                release together.
               </p>
               <p>
-                Nine years in the industry as a videographer, director, and
-                editor meant he had seen that chaos from every side of a
-                rollout. So he built the system he needed — and now runs his
+                After nine years in the industry as a videographer, director,
+                and editor, he had seen that mess from every side of a
+                rollout. So he built the system he needed. Now he runs his
                 own artists&apos; releases on it.
               </p>
             </div>
@@ -126,8 +126,8 @@ export default function TeamPage() {
               Want to build this with us?
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
-              We&apos;re a small team working close to the problem. If
-              you&apos;re interested in joining, partnering, or investing,
+              We&apos;re a small team, and we live the problem we&apos;re
+              fixing. If you want to join us, partner with us, or invest,
               write to us.
             </p>
             <p className="mt-4">

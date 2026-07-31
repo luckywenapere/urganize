@@ -67,9 +67,9 @@ export function PricingPageClient() {
               transition={{ delay: 0.4 }}
               className="mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl"
             >
-              Urganize is how your music gets the release it deserves. Right
-              now we set up every team personally — you show us your roster,
-              we show you the product, and we take it from there.
+              Urganize gives your music the release it deserves. Right now we
+              set up every team personally. You show us your roster. We show
+              you the product. We take it from there.
             </motion.p>
 
             <motion.div
@@ -105,13 +105,13 @@ export function PricingPageClient() {
                 },
                 {
                   step: "02",
-                  title: "We walk it together",
+                  title: "We run one together",
                   body: "A short call where we run one of your actual releases through Urganize with you.",
                 },
                 {
                   step: "03",
                   title: "You start planning",
-                  body: "If it fits, we set your team up ourselves — releases, rollout plans, and tasks ready to go.",
+                  body: "If it fits, we set your team up ourselves. Releases, rollout plans, and tasks, ready to go.",
                 },
               ] as const
             ).map((item) => (
@@ -149,8 +149,8 @@ export function PricingPageClient() {
               {...fadeInUp}
               className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[var(--marketing-text-muted)]"
             >
-              Leave your email and we&apos;ll reach out when it makes sense for
-              your team.
+              Leave your email and we&apos;ll get in touch when the time is
+              right for your team.
             </motion.p>
             <div className="mt-8">
               <WaitlistForm source="pricing" />

@@ -23,14 +23,18 @@ export function CommunitySection() {
         containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10"
       >
         <div className="mx-auto max-w-[42rem] text-center">
+          {/* Headline rewritten in the readability sweep: "Sit in the room
+              where managers compare notes" was a leftover of the retired
+              "Release Room" name, and the room metaphor misled a literal
+              reader about what they were joining (it is a chat). */}
           <h2 className={centeredHeadlineClass}>
-            Sit in the room where managers compare notes.
+            See how other managers run their releases.
           </h2>
 
           <p className="mx-auto mt-6 max-w-[38rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
             A group chat for artist managers and small label teams running
-            releases. No pitch and no spam, just people comparing notes on
-            rollouts they are actually running.
+            releases. No pitch and no spam. Just managers comparing notes on
+            real rollouts.
           </p>
 
           <div className="mt-10 flex flex-col items-center gap-4">

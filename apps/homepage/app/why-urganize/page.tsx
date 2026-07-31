@@ -10,7 +10,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Why Urganize over WhatsApp and Google Drive",
   description:
-    "WhatsApp and Google Drive work for one artist and one release. Urganize is for when you're running several: a real rollout plan, owned tasks, a press kit ready to send, and status at a glance.",
+    "WhatsApp and Google Drive work for one artist and one release. Running more than one? Urganize gives you a real rollout plan, tasks with owners, a press kit, and status in one place.",
   path: "/why-urganize",
 });
 
@@ -22,26 +22,26 @@ const comparisons = [
   {
     kicker: "The plan",
     title: "A rollout, not a pinned message.",
-    them: "The plan lives in a pinned message, a spreadsheet someone made once, and your head. Every release starts from a blank page and whatever you remember from the last one.",
-    us: "Create a release and Urganize lays out a hand-crafted 11-week rollout: 64 tasks from locking the master to compiling first-week stats. Fully editable before you commit.",
+    them: "The plan sits in a pinned message, a spreadsheet someone made once, and your head. Every new release starts from zero, plus whatever you remember from the last one.",
+    us: "Create a release and Urganize lays out the whole 11-week rollout. 64 tasks, from locking the master to pulling your first-week numbers. Real managers wrote it, and you can change anything before you save it.",
   },
   {
     kicker: "Ownership",
     title: "Assigned, not announced.",
-    them: "Work gets assigned by message, so “did you see my text?” becomes the follow-up system. A scrolled-past message is a missed deadline nobody notices until it costs you.",
-    us: "Every task has an owner, a due date, and a priority. Dependencies keep the order honest: blocked tasks show exactly what's blocking them and unlock the moment it clears.",
+    them: "Work gets assigned in a chat message. “Did you see my text?” becomes the follow-up system. A message that gets scrolled past is a deadline nobody sees until it is missed.",
+    us: "Every task has an owner, a due date, and a priority. Tasks wait for each other in the right order: a blocked task shows you exactly what it is waiting on, and unlocks the moment that is done.",
   },
   {
     kicker: "Press kit",
     title: "Sent as one link, not rebuilt every time.",
-    them: "The press kit is a doc with dead links, rebuilt from scratch every time a curator or journalist asks for it.",
-    us: "Every release carries a shareable press kit: cover art, details, and photos assembled automatically, always current. One link, revocable anytime.",
+    them: "The press kit is a doc full of dead links. You rebuild it from scratch every time a curator or journalist asks.",
+    us: "Urganize builds a press kit from your release: cover art, details, and photos. It updates itself when the release changes. Send one link. Turn it off anytime.",
   },
   {
     kicker: "Status",
     title: "Seen at a glance, not asked again.",
-    them: "Knowing where a release stands means scrolling back through weeks of chat, or asking someone to repeat what they already told you. Multiply that by every release you're running.",
-    us: "One workspace shows every release in flight: progress, what's overdue, what's due this week. The status conversation stops being a meeting.",
+    them: "To find out where a release stands, you scroll back through weeks of chat. Or you ask someone to repeat what they already told you. Now do that for every release you run.",
+    us: "One workspace shows every release you have going: progress, what's overdue, what's due this week. You stop needing a meeting to know the status.",
   },
 ] as const;
 
@@ -71,9 +71,9 @@ export default function WhyUrganizePage() {
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
               For one artist and one release, a group chat and a Drive folder
-              genuinely work. Add a second release, a third artist, a team
-              handing work back and forth, and the system that got you here
-              starts costing you releases.
+              really do work. Add a second release, a third artist, and a
+              team passing work around. The system that got you here starts
+              to drop things.
             </p>
           </div>
         </SectionShell>
@@ -134,8 +134,8 @@ export default function WhyUrganizePage() {
                 you talk, and Drive is still where your raw files live.
                 Urganize doesn&apos;t replace either one. It&apos;s the one
                 place where the plan lives, the work happens, and the team
-                sees status, so the plan itself never has to live in a chat
-                thread again.
+                sees status. The plan never has to live in a chat thread
+                again.
               </p>
             </div>
           </SectionShell>

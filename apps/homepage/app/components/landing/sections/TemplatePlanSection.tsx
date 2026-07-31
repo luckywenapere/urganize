@@ -35,9 +35,9 @@ export function TemplatePlanSection() {
           </h2>
 
           <p className={`mx-auto mt-8 max-w-[40rem] ${mutedLeadClass}`}>
-            Create a release and Urganize lays out an 11-week rollout,
-            hand-crafted with working managers, owned task by task by your
-            team, and fully yours to edit.
+            Create a release and Urganize lays out the whole 11-week rollout.
+            Real managers wrote it. Your team owns every task, and you can
+            change anything.
           </p>
         </div>
 
@@ -58,13 +58,13 @@ export function TemplatePlanSection() {
         </div>
 
         <p className="mt-6 text-center font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-          + 56 MORE, GENERATED THE MOMENT YOU CREATE A RELEASE
+          + 56 MORE, CREATED THE MOMENT YOU START A RELEASE
         </p>
 
         <div className="mx-auto mt-14 max-w-[58rem] overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
           <Image
             src="/images/product/workspace-tasks.png"
-            alt="A single release open in Urganize: the motion bar, the 64-activity rollout plan with due dates on every row, and the rest of the roster one click away."
+            alt="A release open in Urganize: the progress bar, the full 64-task rollout plan with due dates on every row, and the rest of the roster one click away."
             width={1920}
             height={970}
             className="h-auto w-full"

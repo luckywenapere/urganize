@@ -37,7 +37,7 @@ export default function CommunityPage() {
           <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
             A group chat for artist managers and small labels running
             releases. Trade notes, ask questions, and see how other teams
-            handle the same chaos Urganize is built to fix.
+            handle the same mess Urganize fixes.
           </p>
 
           <div className="mt-10">
@@ -56,9 +56,9 @@ export default function CommunityPage() {
               Who it&apos;s for
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
-              Managers and small teams coordinating more than one
-              artist&apos;s releases. No pitch, no spam, just people running
-              rollouts comparing notes.
+              Managers and small teams running more than one
+              artist&apos;s releases. No pitch and no spam. Just managers
+              comparing notes on real rollouts.
             </p>
           </section>
         </div>

@@ -10,7 +10,7 @@ import { SALES_CONTACT_EMAIL } from "@urganize/pricing";
 export const metadata: Metadata = buildPageMetadata({
   title: "Urganize for labels",
   description:
-    "Urganize for labels and management companies running a roster: founder-led onboarding, templates tailored to your workflow, and every release in one system.",
+    "Urganize for labels and management companies running a roster. The founders set you up, templates match how your label works, and every release lives in one system.",
   path: "/for-labels",
 });
 
@@ -25,41 +25,41 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "Every artist's rollout, the same system.",
-    body: "Each release gets a hand-crafted rollout: 64 tasks across 11 weeks, from locking the master to compiling first-week stats. Run it the same way for every artist on the roster, tailored per release, fully editable before anyone commits.",
+    body: "Each release gets the full rollout: 64 tasks across 11 weeks, from locking the master to pulling your first-week numbers. Run it the same way for every artist on the roster, and change anything before you save it.",
     points: [
-      "One template, tailored per release",
-      "Every task dated relative to that release's day",
-      "Consistent across every artist you work with",
+      "One template, shaped for each release",
+      "Every task dated around that release day",
+      "The same for every artist you work with",
     ],
   },
   {
     kicker: "Ownership",
     title: "Assign across a bigger team without losing track.",
-    body: "Every task has an owner, a due date, and a priority. Dependencies keep the order honest across a roster's worth of moving parts: nothing starts before what it depends on is done.",
+    body: "Every task has an owner, a due date, and a priority. A roster has a lot of moving parts, so tasks wait for each other in the right order. Nothing starts before the step it needs is done.",
     points: [
-      "Assign teammates and freelancers per task",
+      "Assign anyone on your team to any task",
       "Blocked tasks show exactly what's blocking them",
-      "Unlocks the moment the blocker clears",
+      "A blocked task unlocks the moment the step before it is done",
     ],
   },
   {
     kicker: "Press kit",
     title: "One link per release, across the whole roster.",
-    body: "Generate a shareable press kit straight from any release: cover art, details, and photos, assembled automatically and always in sync. Send one link to press, curators, and bookers, same system for every artist.",
+    body: "Urganize builds a press kit from any release: cover art, details, and photos. It updates itself when the release changes. Send one link to press, curators, and bookers. It works the same for every artist.",
     points: [
-      "Assembled automatically from the release",
-      "Always in sync: no rebuilding it by hand",
+      "Built for you from the release",
+      "Always up to date. No rebuilding by hand",
       "The same system for every release on the roster",
     ],
   },
   {
     kicker: "Status",
     title: "See the whole roster's status without asking.",
-    body: "One workspace shows every release in flight: progress, what's overdue, what's due this week. The status update to your team stops being a meeting you have to hold.",
+    body: "One workspace shows every release you have going: progress, what's overdue, what's due this week. You stop needing a meeting just to share status.",
     points: [
       "Every release and task in one place",
-      "Overdue and due-today surfaced first",
-      "Scope down to one release when that's all you need",
+      "Overdue and due-today shown first",
+      "See one release on its own when that's all you need",
     ],
   },
 ] as const;
@@ -70,9 +70,9 @@ const valueBlocks = [
 // and this page owns persona framing; if the benefit list changes there,
 // update it here too.
 const labelBenefits = [
-  "Roster onboarding: we set up every artist's releases with you",
-  "Release templates tailored to how your label actually works",
-  "Hands-on onboarding for your whole team",
+  "Roster set-up: we set up every artist's releases with you",
+  "Release templates shaped to how your label actually works",
+  "Hands-on set-up for your whole team",
   "Priority support with a direct line to the founders",
 ] as const;
 
@@ -101,8 +101,8 @@ export default function ForLabelsPage() {
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              A roster means multiple release calendars, multiple rollouts
-              in flight, and a scatter of chats holding it all together.
+              A roster means many release calendars, many rollouts moving at
+              once, and a pile of chats holding it all together.
               Urganize gives every release the same system, and the founders
               help you set it up.
             </p>
@@ -170,8 +170,9 @@ export default function ForLabelsPage() {
                 What the Label plan actually gets you.
               </h2>
               <p className="mx-auto mt-6 max-w-[38rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
-                Same workspace as everyone else, one artist at a time, plus
-                the founders working with you directly across your roster.
+                You get the same workspace as everyone else, one artist at a
+                time. The founders also work with you directly across your
+                roster.
               </p>
             </div>
 
@@ -199,7 +200,7 @@ export default function ForLabelsPage() {
             <div className="text-center">
               <h2 className={headlineClass}>Set up your roster with the founders.</h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
-                A roster deal is scoped and quoted per label. Talk to us
+                We shape and price each roster deal with you. Talk to us
                 directly, or see{" "}
                 <Link
                   href="/pricing"

@@ -14,7 +14,7 @@ import { useState, type FormEvent } from "react";
 const ROLE_OPTIONS = [
   { value: "artist_manager", label: "Artist manager" },
   { value: "independent_artist", label: "Independent artist" },
-  { value: "label_manager_executive", label: "Label manager / executive" },
+  { value: "label_manager_executive", label: "Label manager" },
   { value: "a_and_r", label: "A&R" },
   { value: "music_producer", label: "Music producer" },
 ] as const;
@@ -35,8 +35,8 @@ const RELEASE_VOLUME_OPTIONS = [
 
 const PRIMARY_NEED_OPTIONS = [
   { value: "release_playbook", label: "Release planning" },
-  { value: "team_handoff", label: "Team handoffs" },
-  { value: "collaborator_credits", label: "Credits & collaborators" },
+  { value: "team_handoff", label: "Passing work to my team" },
+  { value: "collaborator_credits", label: "Credits" },
   { value: "all_of_it", label: "All of it" },
 ] as const;
 
@@ -107,7 +107,7 @@ export function WaitlistForm({ source }: { source: string }) {
       });
 
       if (response.status === 409) {
-        setDoneMessage("You're already on the list — we'll be in touch.");
+        setDoneMessage("You're already on the list. We'll be in touch.");
         setStep("done");
         return;
       }
@@ -117,7 +117,7 @@ export function WaitlistForm({ source }: { source: string }) {
         return;
       }
 
-      setDoneMessage("You're on the list — we'll reach out.");
+      setDoneMessage("You're on the list. We'll reach out soon.");
       setStep("done");
     } catch {
       setError("Something went wrong. Try again.");

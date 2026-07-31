@@ -8,7 +8,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Brand",
   description:
-    "How Urganize looks, sounds, and what it stands for — brand foundations, voice, visual identity, and downloadable logos and assets.",
+    "How Urganize looks, how it speaks, and what it stands for. Voice, colors, and logos you can download.",
   path: "/brand",
 });
 
@@ -43,7 +43,7 @@ const VOICE_PILLARS = [
 // for cross-surface accuracy). `swatch` is an inline style value because
 // Tailwind can't compile arbitrary runtime hex classes.
 const COLORS = [
-  { name: "Canvas", hex: "#f7f4ee", note: "Warm paper — the light background", border: true },
+  { name: "Canvas", hex: "#f7f4ee", note: "Warm paper, the light background", border: true },
   { name: "Ink", hex: "#171311", note: "Primary text", border: false },
   { name: "Accent green", hex: "#3f7e5c", note: "Marketing emphasis + links (light)", border: false },
   { name: "Accent green (dark)", hex: "#6ee99b", note: "Same accent on dark surfaces", border: false },
@@ -51,22 +51,22 @@ const COLORS = [
 ] as const;
 
 const FONTS = [
-  { name: "Cormorant Garamond", role: "Display & headings — the editorial serif" },
-  { name: "Instrument Sans", role: "Body & UI text" },
-  { name: "IBM Plex Mono", role: "Eyebrows & labels (the uppercase mono kicker)" },
+  { name: "Cormorant Garamond", role: "Headlines (the serif)" },
+  { name: "Instrument Sans", role: "Body text" },
+  { name: "IBM Plex Mono", role: "Small uppercase labels" },
 ] as const;
 
 const LOGO_DOWNLOADS = [
-  { label: "Wordmark (SVG)", href: "/brand/urganize-logo.svg", note: "Vector — preferred" },
+  { label: "Wordmark (SVG)", href: "/brand/urganize-logo.svg", note: "Vector, preferred" },
   { label: "Wordmark (PNG)", href: "/brand/urganize-wordmark.png", note: "1011×231" },
   { label: "“U” mark (PNG)", href: "/brand/urganize-mark.png", note: "Icon only" },
   {
-    label: "Square — dark on light (PNG)",
+    label: "Square, dark on light (PNG)",
     href: "/brand/urganize-square-black-on-white.png",
     note: "For light backgrounds",
   },
   {
-    label: "Square — light on dark (PNG)",
+    label: "Square, light on dark (PNG)",
     href: "/brand/urganize-square-white-on-black.png",
     note: "For dark backgrounds",
   },
@@ -74,14 +74,14 @@ const LOGO_DOWNLOADS = [
 ] as const;
 
 const OTHER_ASSETS = [
-  { label: "Share / OG image (PNG)", href: "/opengraph-image.png", note: "1200×630" },
+  { label: "Social share image (PNG)", href: "/opengraph-image.png", note: "1200×630" },
   {
-    label: "Product screenshot — releases",
+    label: "Product screenshot: releases",
     href: "/images/product/workspace-releases.png",
     note: "The live workspace",
   },
   {
-    label: "Product screenshot — tasks",
+    label: "Product screenshot: tasks",
     href: "/images/product/workspace-tasks.png",
     note: "The live workspace",
   },
@@ -106,37 +106,37 @@ export default function BrandPage() {
             Brand
           </h1>
           <p className={`mt-4 max-w-[38rem] ${bodyText}`}>
-            How Urganize looks, sounds, and what it stands for — plus the logos and assets to
-            represent us. Using anything here? Keep it verbatim and unaltered, and{" "}
+            How Urganize looks, how it speaks, and what it stands for, plus the logos and
+            images that represent us. Using anything here? Use it exactly as it is, and{" "}
             <a
               href="mailto:contact@urganize.app?subject=Urganize%20-%20Brand"
               className="text-[var(--marketing-text)] underline underline-offset-2"
             >
               ask us
             </a>{" "}
-            if you’re unsure.
+            if you’re not sure.
           </p>
 
           {/* 1 — Brand foundations */}
           <section id="foundations" className="mt-16">
-            <p className={sectionEyebrow}>01 — Foundations</p>
+            <p className={sectionEyebrow}>01 · Foundations</p>
             <h2 className={sectionTitle}>What Urganize stands for</h2>
 
             <div className="mt-6 space-y-6">
               <div>
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Mission</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  The music industry runs on chaos — tribal knowledge, scattered group chats,
-                  spreadsheets, and one overworked person holding every release together. Urganize
-                  is how your music gets the release it deserves: where the plan lives, where the
-                  work happens, where the team sees status.
+                  The music industry runs on chaos: knowledge stuck in people’s heads, scattered
+                  group chats, spreadsheets, and one overworked person holding every release
+                  together. Urganize gives your music the release it deserves. The plan, the work,
+                  and the status all live in one place.
                 </p>
               </div>
 
               <div>
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Positioning</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Operational infrastructure for music industry teams. How your music gets the release it deserves.
+                  The system music industry teams run their releases on. How your music gets the release it deserves.
                 </p>
               </div>
 
@@ -144,10 +144,9 @@ export default function BrandPage() {
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Who it’s for</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
                   Urganize is built for artist managers and small labels running more than one
-                  artist. If a roster means multiple release calendars, multiple rollouts in
-                  flight, and a scatter of chats holding it together, this is the system for that.
-                  Labels running a bigger roster get the premium Label tier, with the founders on
-                  call.
+                  artist. A roster means many release calendars, many rollouts moving at once, and
+                  a pile of chats holding it together. This is the system for that. Labels running
+                  a bigger roster get the Label plan, with the founders working alongside them.
                 </p>
               </div>
 
@@ -157,22 +156,23 @@ export default function BrandPage() {
                 </h3>
                 <ul className={`mt-1.5 list-disc space-y-1 pl-5 ${bodyText}`}>
                   <li>The release is the spine. Every feature serves a release.</li>
-                  <li>Opinionated by default — if it doesn’t reduce operational chaos, it’s out.</li>
+                  <li>We are opinionated on purpose: if it doesn’t cut the chaos, it’s out.</li>
                   <li>
-                    So we don’t do: revenue tracking, legal contracts, analytics dashboards, or
-                    distribution. We stay focused on the release.
+                    That’s why we don’t do revenue tracking, legal contracts, analytics dashboards,
+                    or distribution. We stay focused on the release.
                   </li>
                 </ul>
               </div>
 
               {/* Boilerplate — copy/paste block for media */}
               <div className="border border-[color:var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
-                <p className={sectionEyebrow}>Boilerplate — copy / paste</p>
+                <p className={sectionEyebrow}>Boilerplate · copy / paste</p>
                 <p className="mt-2 text-[var(--marketing-text)]">
-                  Urganize is how your music gets the release it deserves: a hand-crafted rollout
-                  plan, tasks with owners and due dates, and a shareable press kit for every
-                  release. Built for artist managers and small labels running more than one
-                  artist, with a Label tier for teams managing a bigger roster hands-on.
+                  Urganize gives your music the release it deserves: a rollout plan written by
+                  real managers, tasks with owners and due dates, and a press kit you can send as
+                  one link. It is built for artist managers and small labels running more than one
+                  artist. Labels running a bigger roster get the Label plan, with the founders
+                  working alongside them.
                 </p>
               </div>
 
@@ -191,11 +191,10 @@ export default function BrandPage() {
 
           {/* 2 — Voice & tone */}
           <section id="voice" className="mt-16">
-            <p className={sectionEyebrow}>02 — Voice &amp; tone</p>
+            <p className={sectionEyebrow}>02 · Voice &amp; tone</p>
             <h2 className={sectionTitle}>How Urganize speaks</h2>
             <p className={`mt-3 max-w-[38rem] ${bodyText}`}>
-              Four pillars, drawn from how the product already talks. Draft — refine as the voice
-              settles.
+              Four rules, drawn from how the product already talks.
             </p>
 
             <div className="mt-6 grid grid-cols-1 gap-px bg-[color:var(--marketing-border)] md:grid-cols-2">
@@ -226,8 +225,8 @@ export default function BrandPage() {
             <div className="mt-6 space-y-2 text-sm">
               <p className={bodyText}>
                 <span className="font-medium text-[var(--marketing-text)]">Tone tells:</span> active
-                voice, specific over abstract, the em dash earns its keep, emphasis set in the brand
-                green.
+                voice, specific over abstract, short sentences over long ones, emphasis set in the
+                brand green.
               </p>
               <p className={bodyText}>
                 <span className="font-medium text-[var(--marketing-text)]">
@@ -240,15 +239,15 @@ export default function BrandPage() {
 
           {/* 3 — Visual identity */}
           <section id="visual" className="mt-16">
-            <p className={sectionEyebrow}>03 — Visual identity</p>
+            <p className={sectionEyebrow}>03 · Visual identity</p>
             <h2 className={sectionTitle}>How Urganize looks</h2>
 
             {/* Logo */}
             <h3 className="mt-6 text-sm font-semibold text-[var(--marketing-text)]">Logo</h3>
             <p className={`mt-1.5 max-w-[38rem] text-sm ${bodyText}`}>
-              The wordmark is the primary mark; the “U” is the standalone icon. On light surfaces use
-              the dark lockup; on dark, the light one. Don’t recolor it, stretch it, add effects, or
-              box it in.
+              The wordmark is the main logo. The “U” is the icon on its own. Use the dark logo
+              on light backgrounds and the light logo on dark ones. Don’t recolor it, stretch it,
+              add effects, or box it in.
             </p>
             <div className="mt-4 grid grid-cols-1 gap-px bg-[color:var(--marketing-border)] sm:grid-cols-2">
               <div className="flex items-center justify-center bg-white px-6 py-12">
@@ -306,21 +305,21 @@ export default function BrandPage() {
               ))}
             </div>
             <p className={`mt-3 text-xs ${bodyText}`}>
-              The product app (app.urganize.app) uses its own system — IBM Plex Sans, Space Grotesk,
+              The product app (app.urganize.app) uses its own fonts: IBM Plex Sans, Space Grotesk,
               and JetBrains Mono.
             </p>
 
             {/* Motifs */}
             <h3 className="mt-10 text-sm font-semibold text-[var(--marketing-text)]">Motifs</h3>
             <p className={`mt-1.5 max-w-[38rem] text-sm ${bodyText}`}>
-              Monospace uppercase eyebrows. Hairline rules and grids. Golden-ratio spacing. A
-              warm-paper canvas with serif headlines, and emphasis set in green.
+              Small uppercase labels in the mono font. Thin lines and grids. A warm paper
+              background with serif headlines, and emphasis set in green.
             </p>
           </section>
 
           {/* 4 — Brand assets */}
           <section id="assets" className="mt-16">
-            <p className={sectionEyebrow}>04 — Assets</p>
+            <p className={sectionEyebrow}>04 · Assets</p>
             <h2 className={sectionTitle}>Download</h2>
 
             <h3 className="mt-6 text-sm font-semibold text-[var(--marketing-text)]">Logos</h3>
@@ -351,7 +350,7 @@ export default function BrandPage() {
 
             <h3 className="mt-8 text-sm font-semibold text-[var(--marketing-text)]">Media contact</h3>
             <p className={`mt-1.5 text-sm ${bodyText}`}>
-              Press inquiries:{" "}
+              Press questions:{" "}
               <a
                 href="mailto:contact@urganize.app?subject=Urganize%20-%20Press"
                 className="text-[var(--marketing-accent)] hover:opacity-80"

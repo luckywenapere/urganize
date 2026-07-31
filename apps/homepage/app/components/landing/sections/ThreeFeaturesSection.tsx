@@ -6,17 +6,17 @@ const featureColumns = [
   {
     kicker: "Workflow",
     title: "Release tasks, assigned.",
-    body: "Every step from master lock to release day, owned by a person with a due date. No more 'who's doing the art again?'",
+    body: "Every step from locking the master to release day has an owner and a due date. No more 'who's doing the art again?'",
   },
   {
     kicker: "Assistant",
     title: "Tell Chappi what you need.",
-    body: "Chappi is the assistant built into your workspace. Type 'create a release' or 'mark the artwork done' and it happens, no menus. It gets smarter from here.",
+    body: "Chappi is the assistant built into your workspace. Type 'create a release' or 'mark the artwork done' and it happens. No menus. And it keeps getting better.",
   },
   {
     kicker: "Visibility",
     title: "Status at a glance.",
-    body: "One workspace shows every release in flight: what's done, what's blocked, what's due this week. Spot what's slipping before it hurts the rollout.",
+    body: "One workspace shows every release you have going: what's done, what's blocked, what's due this week. Catch problems before they hurt the rollout.",
   },
 ] as const;
 

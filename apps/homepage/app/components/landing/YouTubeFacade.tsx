@@ -25,7 +25,7 @@ export function YouTubeFacade() {
       <iframe
         className="absolute inset-0 h-full w-full"
         src={`https://www.youtube.com/embed/${VIDEO_ID}?start=${START_SECONDS}&autoplay=1`}
-        title="Urganize product walkthrough"
+        title="Urganize product tour"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         referrerPolicy="strict-origin-when-cross-origin"
         allowFullScreen
@@ -37,7 +37,7 @@ export function YouTubeFacade() {
     <button
       type="button"
       onClick={() => setIsPlaying(true)}
-      aria-label="Play: Urganize product walkthrough"
+      aria-label="Play: Urganize product tour"
       className="group absolute inset-0 h-full w-full"
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- external
