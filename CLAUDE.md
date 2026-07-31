@@ -735,7 +735,18 @@ Founder request. Two independent changes, same PR.
 
 ---
 
-*Last updated: 2026-07-31 (URG-183 MCP read/write access, URG-203 task attachments flagged off + Beta tag cleanup).*
+## Chappi-first landing restored (2026-07-31, URG-205)
+
+The post-auth landing surface flipped twice, and the second flip was never recorded here — a doc-drift worth naming so the history reads straight:
+
+- **2026-07-15 (v0.13.1, commit `6c2768f`):** `HOME_PATH` in `apps/web/lib/home-path.ts` introduced, flag-conditional — `/dashboard/chappi` when `NEXT_PUBLIC_FEATURE_CHAPPI` is on, `/dashboard` when off. All 15 post-auth entry points across 8 files (login, OAuth callback, root `/`, onboarding completion, invite accept, paywall unlock, promo redemption, post-checkout) route through it.
+- **2026-07-23 (v0.17.0, commit `1bebfa4`):** flattened to an unconditional `'/dashboard'` — the releases view became the landing surface again. **This section was never updated to say so** — the Chappi subsection above kept describing the flag-conditional behavior as current for over a week while the code had moved on. If a future drift like this turns up, that's the kind of gap to flag per this file's own rule about surfacing conflicts rather than silently picking one.
+- **2026-07-31 (URG-205, founder decision):** reversed again — restored the flag-conditional form verbatim. Chappi is the front door once more when its flag is on. Also updated `apps/web/app/manifest.ts`'s PWA `start_url` to import `HOME_PATH` instead of hardcoding `/dashboard`, so an installed PWA's cold-launch destination can't drift from the in-app one.
+- **Production impact is gated on the flag, not this code change**: `NEXT_PUBLIC_FEATURE_CHAPPI` is off in production as of this writing (no `CHAPPI_MODEL` wired yet — see the Chappi subsection's Status line). Nothing changes for real users until the founder sets it to `true` in Vercel; with it off, this lands exactly where it already did.
+
+---
+
+*Last updated: 2026-07-31 (URG-205 Chappi-first landing restored, URG-183 MCP read/write access, URG-203 task attachments flagged off + Beta tag cleanup).*
 
 ---
 
