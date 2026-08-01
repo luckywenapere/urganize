@@ -30,15 +30,15 @@ const features = [
       "Every task dated around your release day",
       "Edit, reorder, or delete anything. It's your plan",
     ],
-    // Real screenshot of the current release view (retaken 2026-07-25; dark
-    // capture added 2026-07-31 so the shot follows the theme toggle). Same
+    // Real screenshot of the current release view (light and dark retaken
+    // together 2026-08-01, same release and scroll position in both). Same
     // house rule as the landing page: if the UI changes meaningfully,
     // retake BOTH the light and dark version — marketing imagery never
     // lags the product.
     image: {
       src: "/images/product/workspace-tasks.png",
       darkSrc: "/images/product/workspace-tasks-dark.png",
-      alt: "A release open in Urganize: the progress bar at 1 of 64, and the full 64-task rollout plan with owners and due dates on every row.",
+      alt: "A release open in Urganize: the progress bar at 1 of 64, the upcoming activities with owners and due dates on every row, and the Chappi assistant docked alongside them.",
     },
   },
   {
