@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ThemedProductShot } from "../ThemedProductShot";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { centeredHeadlineClass, mutedLeadClass } from "./shared";
@@ -61,13 +61,19 @@ export function TemplatePlanSection() {
           + 56 MORE, CREATED THE MOMENT YOU START A RELEASE
         </p>
 
+        {/* Real screenshot of a release built from the template above (light
+            and dark retaken together 2026-08-01, same release and scroll
+            position in both). It sits under the 64-task headline, so the
+            capture must show a template-built release: 1 of 64 with a due
+            date on every row, never a blank one. Retake BOTH themes if the
+            UI changes meaningfully. */}
         <div className="mx-auto mt-14 max-w-[58rem] overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
-          <Image
-            src="/images/product/workspace-tasks.png"
-            alt="A release open in Urganize: the progress bar, the full 64-task rollout plan with due dates on every row, and the rest of the roster one click away."
+          <ThemedProductShot
+            light="/images/product/workspace-tasks.png"
+            dark="/images/product/workspace-tasks-dark.png"
+            alt="A release open in Urganize: the progress bar at 1 of 64, the upcoming activities listed with a due date on every row, and the Chappi assistant docked alongside them."
             width={1920}
             height={970}
-            className="h-auto w-full"
             sizes="(min-width: 1024px) 928px, 100vw"
           />
         </div>

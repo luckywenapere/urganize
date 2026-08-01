@@ -81,8 +81,18 @@ const OTHER_ASSETS = [
     note: "The live workspace",
   },
   {
+    label: "Product screenshot: releases (dark)",
+    href: "/images/product/workspace-releases-dark.png",
+    note: "The live workspace",
+  },
+  {
     label: "Product screenshot: tasks",
     href: "/images/product/workspace-tasks.png",
+    note: "The live workspace",
+  },
+  {
+    label: "Product screenshot: tasks (dark)",
+    href: "/images/product/workspace-tasks-dark.png",
     note: "The live workspace",
   },
 ] as const;
