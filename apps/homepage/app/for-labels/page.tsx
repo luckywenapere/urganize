@@ -25,21 +25,21 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "Every artist's rollout, the same system.",
-    body: "Each release gets the full rollout: 64 tasks across 11 weeks, from locking the master to pulling your first-week numbers. Run it the same way for every artist on the roster, and change anything before you save it.",
+    body: "Each release gets the full rollout: 64 activities across 11 weeks, from locking the master to pulling your first-week numbers. Run it the same way for every artist on the roster, and change anything before you save it.",
     points: [
       "One template, shaped for each release",
-      "Every task dated around that release day",
+      "Every activity dated around that release day",
       "The same for every artist you work with",
     ],
   },
   {
     kicker: "Ownership",
     title: "Assign across a bigger team without losing track.",
-    body: "Every task has an owner, a due date, and a priority. A roster has a lot of moving parts, so tasks wait for each other in the right order. Nothing starts before the step it needs is done.",
+    body: "Every activity has an owner, a due date, and a priority. A roster has a lot of moving parts, so activities wait for each other in the right order. Nothing starts before the step it needs is done.",
     points: [
-      "Assign anyone on your team to any task",
-      "Blocked tasks show exactly what's blocking them",
-      "A blocked task unlocks the moment the step before it is done",
+      "Assign anyone on your team to any activity",
+      "Blocked activities show exactly what's blocking them",
+      "A blocked activity unlocks the moment the step before it is done",
     ],
   },
   {
@@ -57,7 +57,7 @@ const valueBlocks = [
     title: "See the whole roster's status without asking.",
     body: "One workspace shows every release you have going: progress, what's overdue, what's due this week. You stop needing a meeting just to share status.",
     points: [
-      "Every release and task in one place",
+      "Every release and activity in one place",
       "Overdue and due-today shown first",
       "See one release on its own when that's all you need",
     ],

@@ -111,7 +111,7 @@ export function PricingPageClient() {
                 {
                   step: "03",
                   title: "You start planning",
-                  body: "If it fits, we set your team up ourselves. Releases, rollout plans, and tasks, ready to go.",
+                  body: "If it fits, we set your team up ourselves. Releases, rollout plans, and activities, ready to go.",
                 },
               ] as const
             ).map((item) => (

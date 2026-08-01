@@ -9,6 +9,11 @@
 // Never edit a quote after sign-off without re-approval. Never truncate one
 // for a tighter layout — pick whichever quote is already short enough
 // instead (see ProofLine.tsx's mount table for that reasoning).
+//
+// RE-APPROVAL LOG: Antoine's quote reworded "task by task" -> "activity by
+// activity" on 2026-08-01, matching the product's tasks->activities rename;
+// founder confirmed Antoine's sign-off on the new wording. Every other
+// quote is unchanged from the 2026-07-06 sign-off.
 
 export type TestimonialId = "zaddyfunds" | "antoine" | "adenaiye" | "tamuno";
 
@@ -35,7 +40,7 @@ export const TESTIMONIALS: Record<TestimonialId, Testimonial> = {
   antoine: {
     id: "antoine",
     quote:
-      "I manage myself, so every dropped ball is mine. The first time I created a release, the whole rollout was already laid out, week by week, task by task. I stopped planning from memory.",
+      "I manage myself, so every dropped ball is mine. The first time I created a release, the whole rollout was already laid out, week by week, activity by activity. I stopped planning from memory.",
     name: "Antoine",
     role: "Artist Manager, Creative Business Academy alum",
   },

@@ -31,12 +31,12 @@ export function TemplatePlanSection() {
           </p>
 
           <h2 className={`mt-6 ${centeredHeadlineClass}`}>
-            Every release starts with a plan. Yours has 64 tasks.
+            Every release starts with a plan. Yours has 64 activities.
           </h2>
 
           <p className={`mx-auto mt-8 max-w-[40rem] ${mutedLeadClass}`}>
             Create a release and Urganize lays out the whole 11-week rollout.
-            Real managers wrote it. Your team owns every task, and you can
+            Real managers wrote it. Your team owns every activity, and you can
             change anything.
           </p>
         </div>
@@ -63,7 +63,7 @@ export function TemplatePlanSection() {
 
         {/* Real screenshot of a release built from the template above (light
             and dark retaken together 2026-08-01, same release and scroll
-            position in both). It sits under the 64-task headline, so the
+            position in both). It sits under the 64-activity headline, so the
             capture must show a template-built release: 1 of 64 with a due
             date on every row, never a blank one. Retake BOTH themes if the
             UI changes meaningfully. */}

@@ -11,7 +11,7 @@ import { TESTIMONIALS } from "@/content/testimonials";
 export const metadata: Metadata = buildPageMetadata({
   title: "Urganize for artist managers",
   description:
-    "Urganize is built for artist managers running more than one release at once. A rollout plan, tasks with owners, a press kit, and status in one place.",
+    "Urganize is built for artist managers running more than one release at once. A rollout plan, activities with owners, a press kit, and status in one place.",
   path: "/for-managers",
 });
 
@@ -24,21 +24,21 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "You don't start from a blank page for artist number three.",
-    body: "Create a release and Urganize lays out the whole rollout. 64 tasks across 11 weeks, from locking the master to pulling your first-week numbers. Every artist gets the same starting plan, and you can change anything before you save it.",
+    body: "Create a release and Urganize lays out the whole rollout. 64 activities across 11 weeks, from locking the master to pulling your first-week numbers. Every artist gets the same starting plan, and you can change anything before you save it.",
     points: [
       "One template, shaped for each release",
-      "Every task dated around that release day",
+      "Every activity dated around that release day",
       "Edit, reorder, or delete anything before you save it",
     ],
   },
   {
     kicker: "Ownership",
     title: "Hand work off without babysitting it.",
-    body: "Every task has an owner, a due date, and a priority. Assign your PR, designer, or distributor directly. Tasks wait for each other in the right order, so nothing starts before the step it needs is done.",
+    body: "Every activity has an owner, a due date, and a priority. Assign your PR, designer, or distributor directly. Activities wait for each other in the right order, so nothing starts before the step it needs is done.",
     points: [
-      "Assign anyone on your team to any task",
-      "Blocked tasks show exactly what's blocking them",
-      "A blocked task unlocks the moment the step before it is done",
+      "Assign anyone on your team to any activity",
+      "Blocked activities show exactly what's blocking them",
+      "A blocked activity unlocks the moment the step before it is done",
     ],
   },
   {
@@ -56,7 +56,7 @@ const valueBlocks = [
     title: "Answer \"where's that release?\" without scrolling WhatsApp.",
     body: "One workspace shows every release you run: progress, what's overdue, what's due this week, and which artist it belongs to. Click a release to see just its work.",
     points: [
-      "Every release and task on one screen",
+      "Every release and activity on one screen",
       "Overdue and due-today shown first",
       "See one release on its own when that's all you need",
     ],

@@ -15,14 +15,14 @@ export const metadata: Metadata = buildPageMetadata({
 const VOICE_PILLARS = [
   {
     title: "Plain-spoken, no jargon",
-    body: "We say “the plan, the tasks, and the press kit for your release,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
+    body: "We say “the plan, the activities, and the press kit for your release,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
     say: "One link, and the press kit is live.",
     avoid: "Holistic asset-lifecycle management.",
   },
   {
     title: "Concrete, never overclaiming",
     body: "We don’t advertise what isn’t built. Unshipped work is marked “coming soon,” and screenshots show the real app.",
-    say: "64 tasks, generated from a template.",
+    say: "64 activities, generated from a template.",
     avoid: "AI runs your whole release for you.",
   },
   {
@@ -86,12 +86,12 @@ const OTHER_ASSETS = [
     note: "The live workspace",
   },
   {
-    label: "Product screenshot: tasks",
+    label: "Product screenshot: activities",
     href: "/images/product/workspace-tasks.png",
     note: "The live workspace",
   },
   {
-    label: "Product screenshot: tasks (dark)",
+    label: "Product screenshot: activities (dark)",
     href: "/images/product/workspace-tasks-dark.png",
     note: "The live workspace",
   },
@@ -179,7 +179,7 @@ export default function BrandPage() {
                 <p className={sectionEyebrow}>Boilerplate · copy / paste</p>
                 <p className="mt-2 text-[var(--marketing-text)]">
                   Urganize gives your music the release it deserves: a rollout plan written by
-                  real managers, tasks with owners and due dates, and a press kit you can send as
+                  real managers, activities with owners and due dates, and a press kit you can send as
                   one link. It is built for artist managers and small labels running more than one
                   artist. Labels running a bigger roster get the Label plan, with the founders
                   working alongside them.
