@@ -5,7 +5,7 @@ import { wideContainerClass } from "./shared";
 const featureColumns = [
   {
     kicker: "Workflow",
-    title: "Release tasks, assigned.",
+    title: "Release activities, assigned.",
     body: "Every step from locking the master to release day has an owner and a due date. No more 'who's doing the art again?'",
   },
   {

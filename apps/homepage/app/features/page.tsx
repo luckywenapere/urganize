@@ -11,7 +11,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Features",
   description:
-    "What Urganize does: a rollout plan for every release, tasks your team owns, a press kit you can send as one link, and Chappi, the assistant in your workspace.",
+    "What Urganize does: a rollout plan for every release, activities your team owns, a press kit you can send as one link, and Chappi, the assistant in your workspace.",
   path: "/features",
 });
 
@@ -24,10 +24,10 @@ const features = [
   {
     kicker: "The plan",
     title: "A rollout plan, not a blank page.",
-    body: "Create a release and Urganize lays out the whole 11-week rollout. 64 tasks, from locking the master to pulling your first-week numbers. Real managers wrote it and tested it. Change anything before you save it.",
+    body: "Create a release and Urganize lays out the whole 11-week rollout. 64 activities, from locking the master to pulling your first-week numbers. Real managers wrote it and tested it. Change anything before you save it.",
     points: [
       "8 weeks before the drop, 3 weeks after",
-      "Every task dated around your release day",
+      "Every activity dated around your release day",
       "Edit, reorder, or delete anything. It's your plan",
     ],
     // Real screenshot of the current release view (light and dark retaken
@@ -42,12 +42,12 @@ const features = [
     },
   },
   {
-    kicker: "Tasks",
+    kicker: "Activities",
     title: "Owned, dated, and in order.",
-    body: "Every task has an owner, a due date, and a priority. Tasks wait for each other in the right order: the artwork upload stays locked until the artwork is approved. The moment it is, it unlocks.",
+    body: "Every activity has an owner, a due date, and a priority. Activities wait for each other in the right order: the artwork upload stays locked until the artwork is approved. The moment it is, it unlocks.",
     points: [
       "Assign your A&R, PR, designer, distributor",
-      "Blocked tasks show exactly what's blocking them",
+      "Blocked activities show exactly what's blocking them",
       "Check things off from the release page or your own list",
     ],
   },
@@ -64,9 +64,9 @@ const features = [
   {
     kicker: "Assistant",
     title: "Chappi handles the small stuff.",
-    body: "Chappi is the assistant built into your workspace. Tell it what you need. Create a release. Add a task. Mark something done. Type it and it happens, with no menus to hunt through.",
+    body: "Chappi is the assistant built into your workspace. Tell it what you need. Create a release. Add an activity. Mark something done. Type it and it happens, with no menus to hunt through.",
     points: [
-      "Create releases and tasks by typing what you want",
+      "Create releases and activities by typing what you want",
       "Built into the workspace, not a separate app",
       "It keeps getting better",
     ],
@@ -84,9 +84,9 @@ const features = [
   {
     kicker: "Visibility",
     title: "Know where every release stands.",
-    body: "One workspace shows every release you have going: progress, what's overdue, what's due this week, and which release each task belongs to. You stop needing a meeting to know the status.",
+    body: "One workspace shows every release you have going: progress, what's overdue, what's due this week, and which release each activity belongs to. You stop needing a meeting to know the status.",
     points: [
-      "All releases and tasks on one screen",
+      "All releases and activities on one screen",
       "Click a release to see just its work",
       "Overdue and due-today shown first",
     ],

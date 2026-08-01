@@ -10,7 +10,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Why Urganize over WhatsApp and Google Drive",
   description:
-    "WhatsApp and Google Drive work for one artist and one release. Running more than one? Urganize gives you a real rollout plan, tasks with owners, a press kit, and status in one place.",
+    "WhatsApp and Google Drive work for one artist and one release. Running more than one? Urganize gives you a real rollout plan, activities with owners, a press kit, and status in one place.",
   path: "/why-urganize",
 });
 
@@ -23,13 +23,13 @@ const comparisons = [
     kicker: "The plan",
     title: "A rollout, not a pinned message.",
     them: "The plan sits in a pinned message, a spreadsheet someone made once, and your head. Every new release starts from zero, plus whatever you remember from the last one.",
-    us: "Create a release and Urganize lays out the whole 11-week rollout. 64 tasks, from locking the master to pulling your first-week numbers. Real managers wrote it, and you can change anything before you save it.",
+    us: "Create a release and Urganize lays out the whole 11-week rollout. 64 activities, from locking the master to pulling your first-week numbers. Real managers wrote it, and you can change anything before you save it.",
   },
   {
     kicker: "Ownership",
     title: "Assigned, not announced.",
     them: "Work gets assigned in a chat message. “Did you see my text?” becomes the follow-up system. A message that gets scrolled past is a deadline nobody sees until it is missed.",
-    us: "Every task has an owner, a due date, and a priority. Tasks wait for each other in the right order: a blocked task shows you exactly what it is waiting on, and unlocks the moment that is done.",
+    us: "Every activity has an owner, a due date, and a priority. Activities wait for each other in the right order: a blocked activity shows you exactly what it is waiting on, and unlocks the moment that is done.",
   },
   {
     kicker: "Press kit",
