@@ -1,6 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
+import { useChappiStore } from '@/stores/useChappiStore';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownReleaseCount } from './known-counts';
 
@@ -19,10 +20,10 @@ const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDA
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 
-// Same param useChatPanel reads (`?chat=1`) and same flag AppTopbar/
-// ChappiDock read. Refreshing on `/dashboard?chat=1&release=X` should show
-// the split immediately, not have it pop in once real data resolves.
-const CHAT_PARAM = 'chat';
+// Same flag AppTopbar/ChappiDock read. The UrgAns side rail renders itself
+// beside AppShell's <main> (URG-210) — including while this skeleton shows —
+// so the skeleton no longer reserves a panel slot of its own; it only needs
+// the rail's open state to mirror the focused view's hideRails behavior.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 /**
@@ -51,13 +52,13 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 export function WorkspaceSkeleton() {
   const searchParams = useSearchParams();
   const isFocused = Boolean(searchParams.get(SCOPE_PARAM));
-  const isChatOpen = CHAPPI_ENABLED && Boolean(searchParams.get(CHAT_PARAM));
+  const isRailOpen = useChappiStore((state) => state.railOpen);
+  const isChatOpen = CHAPPI_ENABLED && isRailOpen;
   const knownCount = useKnownReleaseCount();
 
   return (
     <main className="bg-bg-base text-content-primary" aria-hidden="true">
-      <div className="lg:flex">
-        <div className="min-w-0 flex-1 pb-6 pt-6 sm:px-6 sm:pb-24">
+      <div className="min-w-0 pb-6 pt-6 sm:px-6 sm:pb-24">
           <section className="lg:hidden">
             {isFocused ? (
               <MobileFocusedSkeleton />
@@ -76,23 +77,6 @@ export function WorkspaceSkeleton() {
               />
             )}
           </section>
-        </div>
-
-        {isChatOpen ? (
-          <div
-            aria-hidden="true"
-            className="ml-6 hidden shrink-0 self-start rounded-2xl border border-stroke-default bg-bg-surface lg:block"
-            style={{
-              width: 'clamp(360px, 31vw, 460px)',
-              height: 'calc(100dvh - 7.75rem - 1px)',
-              minHeight: '24rem',
-              // Same offset math as ChappiSidePanel — reserving the exact
-              // slot so real content lands with zero layout shift.
-              position: 'sticky',
-              top: 'calc(5.25rem + 1px)',
-            }}
-          />
-        ) : null}
       </div>
     </main>
   );

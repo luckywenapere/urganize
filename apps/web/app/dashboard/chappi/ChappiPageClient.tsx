@@ -64,15 +64,20 @@ export default function ChappiPageClient() {
       <div className="chappi-shell-height flex flex-col">
         {/* Collapse — the mirror image of ChappiSidePanel's expand button.
             Desktop-only (the split view it returns to doesn't exist below
-            lg). Restores `?release=` from Chappi's own scope so the panel
-            re-opens live-synced to whatever release the conversation was
-            pinned to, exactly as if the catalog had been scoped to it. */}
+            lg). Opens the side rail explicitly (an intentional "give me the
+            split" action, so it overrides an earlier close) and restores
+            `?release=` from the assistant's own scope so the rail re-opens
+            live-synced to whatever release the conversation was pinned to,
+            exactly as if the catalog had been scoped to it. */}
         <div className="hidden shrink-0 justify-end lg:flex">
           <button
             type="button"
             onClick={() => {
-              const scopedId = useChappiStore.getState().scopedReleaseId;
-              router.push(scopedId ? `/dashboard?chat=1&release=${scopedId}` : '/dashboard?chat=1');
+              const { scopedReleaseId, setRailOpen } = useChappiStore.getState();
+              setRailOpen(true);
+              router.push(
+                scopedReleaseId ? `/dashboard?release=${scopedReleaseId}` : '/dashboard'
+              );
             }}
             aria-label="Collapse into workspace"
             title="Back to workspace"

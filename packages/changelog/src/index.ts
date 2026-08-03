@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.38.0",
+    date: "August 3, 2026",
+    highlights: [
+      "Chappi has a new name: UrgAns. Same assistant, same everything else.",
+      "UrgAns now travels with you. Sign in, and every page you visit keeps the assistant open in a panel on the side, carrying your conversation along. Close it and it stays out of your way; the UrgAns icon in the top bar brings it back whenever you want it.",
+    ],
+  },
+  {
     version: "0.37.2",
     date: "July 31, 2026",
     highlights: [

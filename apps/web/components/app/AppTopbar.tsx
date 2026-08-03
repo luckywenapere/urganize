@@ -8,7 +8,6 @@ import { Plus } from 'lucide-react';
 import { Logo } from '@urganize/ui';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
-import { useChatPanel } from '@/components/workspace/useChatPanel';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
@@ -141,8 +140,8 @@ function ContextTitle() {
 const ChappiLinkFallback = (
   <Link
     href="/dashboard/chappi"
-    aria-label="Chappi"
-    title="Chappi"
+    aria-label="UrgAns"
+    title="UrgAns"
     className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
   >
     <ChappiIcon className="h-[18px] w-[18px]" />
@@ -150,32 +149,30 @@ const ChappiLinkFallback = (
 );
 
 /**
- * The Chappi topbar icon. Everywhere except the catalog it's the original
- * plain navigation Link. ON the catalog (`/dashboard`) at lg+ it instead
- * toggles the Chappi slide-in panel (no navigation, no page transition);
- * below lg on the catalog it keeps navigating to the full page, carrying
- * the drilled-in release as Chappi's scope (module-scope store — safe to
- * set synchronously right before the push). Needs its own Suspense
- * boundary (useSearchParams via useChatPanel) — same reason ContextTitle
- * has one.
+ * The UrgAns topbar icon — the persistent open/close affordance for the
+ * side rail (URG-210). ON the assistant page it's a Link showing the active
+ * tint (the rail doesn't exist there; the page IS the chat). Everywhere
+ * else at lg+ it toggles the side rail (no navigation, no page transition);
+ * below lg it navigates to the full page instead — the rail doesn't exist
+ * on small viewports — carrying the drilled-in release as the assistant's
+ * scope when the catalog has one (module-scope store — safe to set
+ * synchronously right before the push). Needs its own Suspense boundary
+ * (useSearchParams) — same reason ContextTitle has one.
  */
 function ChappiTopbarAction() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { isChatOpen, toggleChat } = useChatPanel();
+  const isRailOpen = useChappiStore((state) => state.railOpen);
+  const setRailOpen = useChappiStore((state) => state.setRailOpen);
 
-  if (pathname !== '/dashboard') {
+  if (pathname === '/dashboard/chappi') {
     return (
       <Link
         href="/dashboard/chappi"
-        aria-label="Chappi"
-        title="Chappi"
-        className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
-          pathname === '/dashboard/chappi'
-            ? 'bg-brand/10 text-brand'
-            : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
-        }`}
+        aria-label="UrgAns"
+        title="UrgAns"
+        className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand transition-colors"
       >
         <ChappiIcon className="h-[18px] w-[18px]" />
       </Link>
@@ -188,28 +185,28 @@ function ChappiTopbarAction() {
     if (stacked) {
       // Only set the scope when a release is actually drilled in — a bare
       // navigate (no scope) must not clobber a scope the user already
-      // picked inside Chappi's own picker.
-      const releaseId = searchParams.get('release');
+      // picked inside the assistant's own picker.
+      const releaseId = pathname === '/dashboard' ? searchParams.get('release') : null;
       if (releaseId) {
         useChappiStore.getState().setScopedReleaseId(releaseId);
       }
       router.push('/dashboard/chappi');
       return;
     }
-    toggleChat();
+    setRailOpen(!isRailOpen);
   };
 
   return (
     <button
       type="button"
       onClick={handleClick}
-      aria-label="Chappi"
-      title="Chappi"
-      aria-pressed={isChatOpen}
+      aria-label="UrgAns"
+      title="UrgAns"
+      aria-pressed={isRailOpen}
       className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary ${
         // lg:-scoped so the tint can never light up below lg, where the
-        // panel doesn't exist and this button is a plain navigate instead.
-        isChatOpen ? 'lg:bg-brand/10 lg:text-brand lg:hover:bg-brand/10 lg:hover:text-brand' : ''
+        // rail doesn't exist and this button is a plain navigate instead.
+        isRailOpen ? 'lg:bg-brand/10 lg:text-brand lg:hover:bg-brand/10 lg:hover:text-brand' : ''
       }`}
     >
       <ChappiIcon className="h-[18px] w-[18px]" />
@@ -268,10 +265,10 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
         </button>
 
         {/* The app's two surfaces as a topbar pair: Workspace (releases +
-            tasks) and Chappi (the conversational landing). Each highlights
+            tasks) and UrgAns (the conversational landing). Each highlights
             when active via an exact pathname match. Only rendered once
-            Chappi exists as a surface — with the flag off, /dashboard is the
-            only surface and needs no switcher. Sits left of
+            the assistant exists as a surface — with the flag off, /dashboard
+            is the only surface and needs no switcher. Sits left of
             NotificationsBell, same slot pattern. */}
         {/* Nav icons follow the help "?"'s quiet voice (founder call,
             2026-07-23): no boxed borders at rest — tertiary ink that
