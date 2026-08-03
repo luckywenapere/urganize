@@ -17,8 +17,6 @@ import { TasksPanel } from './TasksPanel';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
-import { useChatPanel } from './useChatPanel';
-import { ChappiSidePanel } from '@/components/chappi/ChappiSidePanel';
 
 const TASKS_PANEL_ID = 'workspace-tasks';
 
@@ -27,8 +25,10 @@ const TASKS_PANEL_ID = 'workspace-tasks';
 // Inlined at build time. Off in prod until validated.
 const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
 
-// Same flag AppTopbar/ChappiDock read — the slide-in panel is a Chappi
-// surface, so it mounts only when Chappi itself is reachable.
+// Same flag AppTopbar/ChappiDock read. The UrgAns side rail itself is
+// mounted by AppShell now (URG-210 — it rides every chrome page, not just
+// the catalog); this view only needs the flag to gate its rail-aware
+// behaviors (hideRails + the scope live-sync below).
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 /**
@@ -47,7 +47,7 @@ export function WorkspaceView() {
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
   const tasks = useTaskStore((state) => state.tasks);
   const { scopedReleaseId, setScope } = useReleaseScope();
-  const { isChatOpen } = useChatPanel();
+  const isRailOpen = useChappiStore((state) => state.railOpen);
   // Task detail renders as a global pop-up mounted by TaskUIProvider
   // (2026-07-23) — this view no longer swaps its layout when a task opens.
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -63,18 +63,18 @@ export function WorkspaceView() {
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
 
-  // Live-sync Chappi's scoped release to the catalog's open release WHILE
-  // the panel is open. The deps array IS the transition detector: opening
-  // the panel fires this immediately (including `null` = "All releases");
-  // changing/clearing the catalog selection while open fires it again; a
-  // manual pick inside ChappiScopePicker only touches the store (no dep
-  // here changes), so it holds until the next catalog transition. Runs
-  // below lg too if `?chat=1` lingers there — harmless, and consistent with
-  // the mobile "carry once at navigation" behavior in AppTopbar.
+  // Live-sync the assistant's scoped release to the catalog's open release
+  // WHILE the rail is open. The deps array IS the transition detector:
+  // opening the rail fires this immediately (including `null` = "All
+  // releases"); changing/clearing the catalog selection while open fires it
+  // again; a manual pick inside ChappiScopePicker only touches the store
+  // (no dep here changes), so it holds until the next catalog transition.
+  // Runs below lg too if railOpen lingers there — harmless, and consistent
+  // with the mobile "carry once at navigation" behavior in AppTopbar.
   useEffect(() => {
-    if (!CHAPPI_ENABLED || !isChatOpen) return;
+    if (!CHAPPI_ENABLED || !isRailOpen) return;
     useChappiStore.getState().setScopedReleaseId(scopedReleaseId);
-  }, [isChatOpen, scopedReleaseId]);
+  }, [isRailOpen, scopedReleaseId]);
 
   // ExecutionTask extends Task by intersection; assignable without cast.
   const taskList: Task[] = tasks;
@@ -217,10 +217,12 @@ export function WorkspaceView() {
       {/* Bottom padding is slimmer below sm — AppShell's <main> already
           carries pb-28 there for dock clearance, and the doubled-up 208px
           made even a one-release catalog scroll on phones. */}
-      <div className="lg:flex">
-        <div
-          className={`min-w-0 flex-1 pt-6 sm:px-6 ${isDesktopFocusedMode ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
-        >
+      {/* The UrgAns side rail used to be this div's flex sibling; it now
+          rides beside AppShell's <main> instead (URG-210), so this is a
+          plain content wrapper again. */}
+      <div
+        className={`min-w-0 pt-6 sm:px-6 ${isDesktopFocusedMode ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
+      >
           {/* Screen-reader-only live region. Polite mode waits for the SR to be
               idle, atomic="true" re-reads the whole message. Mirrors the visible
               workspace state so SR users get the same context. */}
@@ -327,7 +329,7 @@ export function WorkspaceView() {
                 scopedRelease={scopedReleaseSlim}
                 onSelect={handleSelect}
                 onClose={handleClose}
-                hideRails={CHAPPI_ENABLED && isChatOpen}
+                hideRails={CHAPPI_ENABLED && isRailOpen}
               />
             ) : (
               <WorkspaceDesktopGrid
@@ -337,11 +339,6 @@ export function WorkspaceView() {
               />
             )}
           </div>
-        </div>
-
-        {CHAPPI_ENABLED ? (
-          <ChappiSidePanel open={isChatOpen} onNewRelease={() => setIsCreateModalOpen(true)} />
-        ) : null}
       </div>
 
       <CreateReleaseModal

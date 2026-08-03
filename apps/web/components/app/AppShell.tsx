@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
+import { RAIL_OPEN_KEY, RAIL_OPEN_VERSION, useChappiStore } from '@/stores/useChappiStore';
+import { readPersistedState } from '@/lib/persisted-state';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { AppTopbar } from '@/components/app/AppTopbar';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
@@ -29,6 +31,10 @@ const ChappiDock = dynamic(
   () => import('@/components/chappi/ChappiDock').then((m) => m.ChappiDock),
   { ssr: false }
 );
+const ChappiSidePanel = dynamic(
+  () => import('@/components/chappi/ChappiSidePanel').then((m) => m.ChappiSidePanel),
+  { ssr: false }
+);
 const CreateReleaseModal = dynamic(
   () => import('@/components/releases/CreateReleaseModal').then((m) => m.CreateReleaseModal),
   { ssr: false }
@@ -39,10 +45,19 @@ const WhatsNewModal = dynamic(
 );
 const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === 'true';
 
-// When Chappi is on, the floating dock takes the bottom-right corner and the
-// WhatsApp founder line moves into its footer; with the flag off, the
+// When the assistant flag is on, the UrgAns side rail rides beside <main> at
+// lg+ and the floating dock takes the bottom-right corner below lg; the
+// WhatsApp founder line moves into their footers. With the flag off, the
 // standalone SupportChat pill renders exactly as before.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
+// Once-per-session arming for the side rail: landing on the assistant page
+// (the post-auth front door when the flag is on — see lib/home-path.ts)
+// opens the rail on whatever page the user navigates to next. sessionStorage,
+// not localStorage, on purpose: a close should stick for the rest of the
+// SESSION, then a fresh session's landing re-arms. Survives reloads (same
+// tab keeps its sessionStorage), resets on a new tab/app launch.
+const RAIL_ARMED_KEY = 'urganize.chappi.rail-armed';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -109,6 +124,38 @@ export function AppShell({ children }: { children: ReactNode }) {
       void checkAuth();
     }
   }, [checkAuth, isAuthenticated, user]);
+
+  // Hydrate the side rail's persisted open state once per load — same
+  // SSR-safe pattern as ChappiDock (first paint closed, storage read in a
+  // mount effect). Runs before the arming effect below (declaration order),
+  // so a landing on the assistant page wins over a persisted "closed".
+  useEffect(() => {
+    if (!CHAPPI_ENABLED) return;
+    const persisted = readPersistedState(
+      RAIL_OPEN_KEY,
+      RAIL_OPEN_VERSION,
+      (value): value is boolean => typeof value === 'boolean'
+    );
+    if (persisted !== null) {
+      useChappiStore.getState().setRailOpen(persisted);
+    }
+  }, []);
+
+  // Arm the rail on the FIRST assistant-page visit of the session (that's
+  // the login landing when the flag is on): from then on, anywhere the user
+  // switches to has UrgAns on the side — until they close it, which sticks
+  // for the rest of the session. Later assistant-page visits don't re-arm.
+  useEffect(() => {
+    if (!CHAPPI_ENABLED || pathname !== '/dashboard/chappi') return;
+    try {
+      if (window.sessionStorage.getItem(RAIL_ARMED_KEY)) return;
+      window.sessionStorage.setItem(RAIL_ARMED_KEY, '1');
+    } catch {
+      // Restricted storage — skip arming rather than re-open on every visit.
+      return;
+    }
+    useChappiStore.getState().setRailOpen(true);
+  }, [pathname]);
 
   // Register the push service worker once per load. Registration alone never
   // prompts for permission — the prompt only fires when the user explicitly
@@ -181,13 +228,22 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="app-layout lazy-fade lazy-fade-in">
           <div className="mx-auto flex min-h-screen w-full max-w-[1440px] flex-col">
             <AppTopbar onNewRelease={openCreateRelease} userName={workspaceUserName} />
-            <main
-              className={`min-w-0 flex-1 px-4 pt-5 sm:px-5 md:px-6 lg:px-8 ${
-                isChappiRoute ? 'chappi-main-padding' : 'pb-28 md:pb-10'
-              }`}
-            >
-              {children}
-            </main>
+            {/* <main> + the UrgAns side rail share a flex row so the rail is
+                a layout-flow column (content narrows; nothing is covered) on
+                every chrome page. The rail renders nowhere on the assistant
+                page itself — that page IS the chat. */}
+            <div className="flex min-h-0 flex-1">
+              <main
+                className={`min-w-0 flex-1 px-4 pt-5 sm:px-5 md:px-6 lg:px-8 ${
+                  isChappiRoute ? 'chappi-main-padding' : 'pb-28 md:pb-10'
+                }`}
+              >
+                {children}
+              </main>
+              {CHAPPI_ENABLED && !isChappiRoute ? (
+                <ChappiSidePanel onNewRelease={openCreateRelease} />
+              ) : null}
+            </div>
           </div>
         </div>
       ) : (

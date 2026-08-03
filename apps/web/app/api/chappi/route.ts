@@ -90,26 +90,26 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ mode: 'agent', reply, clientActions } satisfies ChappiResponse);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Chappi failed.';
+    const message = error instanceof Error ? error.message : 'UrgAns failed.';
     const status = (error as { status?: number } | null)?.status;
     const isAbort =
       (error as { name?: string } | null)?.name === 'AbortError' || /abort|timeout/i.test(message);
 
     if (isAbort) {
       return NextResponse.json(
-        { mode: 'error', error: 'Chappi took too long. Try again.' } satisfies ChappiResponse,
+        { mode: 'error', error: 'UrgAns took too long. Try again.' } satisfies ChappiResponse,
         { status: 504 }
       );
     }
     if (status === 429 || /rate[- ]limit/i.test(message)) {
       return NextResponse.json(
-        { mode: 'error', error: 'Chappi is busy. Try again in a moment.' } satisfies ChappiResponse,
+        { mode: 'error', error: 'UrgAns is busy. Try again in a moment.' } satisfies ChappiResponse,
         { status: 503 }
       );
     }
     console.error('[chappi] agent run failed:', error);
     return NextResponse.json(
-      { mode: 'error', error: 'Chappi is unavailable right now.' } satisfies ChappiResponse,
+      { mode: 'error', error: 'UrgAns is unavailable right now.' } satisfies ChappiResponse,
       { status: 503 }
     );
   }

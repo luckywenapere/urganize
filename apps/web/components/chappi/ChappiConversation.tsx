@@ -296,8 +296,8 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           <input
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder="Ask Chappi or type a command…"
-            aria-label="Message Chappi"
+            placeholder="Ask UrgAns or type a command…"
+            aria-label="Message UrgAns"
             disabled={isThinking}
             className="min-w-0 flex-1 bg-transparent text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none disabled:opacity-60 sm:text-sm"
           />
@@ -342,11 +342,11 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           isPanel ? 'justify-end overflow-y-auto pb-2 pt-4' : 'justify-center'
         }`}
       >
-        {/* The dock's own header already says "Chappi"; the page shows the
+        {/* The dock's own header already says "UrgAns"; the page shows the
             eyebrow itself. */}
         {isPanel ? null : (
           <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
-            Chappi
+            UrgAns
             <ChappiBetaBadge />
           </p>
         )}

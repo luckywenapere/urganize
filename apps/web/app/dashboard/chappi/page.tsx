@@ -5,7 +5,7 @@ import ChappiPageClient from './ChappiPageClient';
 // root layout's '%s | Urganize' template — the page itself is a client
 // component and cannot export metadata.
 export const metadata: Metadata = {
-  title: 'Chappi',
+  title: 'UrgAns',
 };
 
 export default function ChappiPage() {
