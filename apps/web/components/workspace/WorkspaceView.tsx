@@ -446,12 +446,20 @@ export function WorkspaceView() {
                   </div>
                 </div>
                 {/* Motion tracker — same strip the desktop focused view carries
-                    in its top row, so mobile shows release progress too. */}
+                    in its top row, so mobile shows release progress too.
+                    Track uses stroke-strong (2026-08-04, founder contrast
+                    fix) — bg-bg-elevated was a materials/layering token, not
+                    a meter-track color, and read as nearly invisible against
+                    the surrounding background in both themes (byte-identical
+                    to bg-surface in light mode). stroke-strong is the theme-
+                    flipped foreground color at 10% opacity, so it scales its
+                    visibility with whatever it sits on instead of matching
+                    it. Bar bumped h-1 -> h-1.5 for perceptual presence. */}
                 <div className="mb-4 flex items-center gap-3">
                   <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
                     Motion
                   </span>
-                  <div className="h-1 min-w-0 flex-1 rounded-full bg-bg-elevated" aria-hidden="true">
+                  <div className="h-1.5 min-w-0 flex-1 rounded-full bg-stroke-strong" aria-hidden="true">
                     <div
                       className="h-full rounded-full bg-brand transition-[width] duration-300"
                       style={{

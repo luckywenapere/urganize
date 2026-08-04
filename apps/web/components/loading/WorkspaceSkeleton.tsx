@@ -122,7 +122,7 @@ function ReleaseCardSkeleton() {
         <SkeletonBlock className="h-2.5 w-20" />
         <SkeletonBlock className="h-4 w-3/4" />
         <SkeletonBlock className="h-2.5 w-24" />
-        <SkeletonBlock className="mt-1.5 h-1 w-full" />
+        <SkeletonBlock className="mt-1.5 h-1.5 w-full rounded-full" />
       </div>
     </div>
   );
@@ -175,10 +175,11 @@ function MobileFocusedSkeleton() {
           <SkeletonBlock className="h-5 w-40" />
         </div>
       </div>
-      {/* Motion tracker strip (label + bar + count), mirrors the real one. */}
+      {/* Motion tracker strip (label + bar + count), mirrors the real one
+          (h-1.5, matching the 2026-08-04 contrast fix). */}
       <div className="flex items-center gap-3">
         <SkeletonBlock className="h-2.5 w-14" />
-        <SkeletonBlock className="h-1 flex-1 rounded-full" />
+        <SkeletonBlock className="h-1.5 flex-1 rounded-full" />
         <SkeletonBlock className="h-2.5 w-8" />
       </div>
       <TasksPanelSkeleton />
@@ -209,11 +210,12 @@ function DesktopFocusedSkeleton({
   const rightCount = Math.min(3, Math.floor(nonSelected / 2));
   return (
     <div className="space-y-4">
-      {/* Compact back button + motion tracker strip. */}
+      {/* Compact back button + motion tracker strip (h-1.5, matching the
+          2026-08-04 contrast fix). */}
       <div className="flex items-center gap-4">
         <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
         <SkeletonBlock className="h-2.5 w-14" />
-        <SkeletonBlock className="h-1 flex-1 rounded-full" />
+        <SkeletonBlock className="h-1.5 flex-1 rounded-full" />
         <SkeletonBlock className="h-2.5 w-8" />
       </div>
 

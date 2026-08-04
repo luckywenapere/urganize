@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.38.5",
+    date: "August 4, 2026",
+    highlights: [
+      "The Motion progress bar on your releases was hard to see against the background — it now stands out clearly in both light and dark mode.",
+    ],
+  },
+  {
     version: "0.38.4",
     date: "August 4, 2026",
     highlights: [
