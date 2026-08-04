@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 're
 import { useRouter } from 'next/navigation';
 import { ExitIcon, GearIcon, ProfileIcon } from '@/components/app/BrandIcons';
 import { useAuthStore } from '@/lib/auth-store';
+import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 
 type WorkspaceMenuProps = {
   /** Display name shown in the menu's identity header. The trigger itself
@@ -36,6 +37,10 @@ type WorkspaceMenuProps = {
 export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
   const router = useRouter();
   const logout = useAuthStore((state) => state.logout);
+  // URG-214: the identity card (mounted app-wide) keeps this store hydrated
+  // with the real workspace name — falls back to the generic "Workspace"
+  // label when the card's flag is off or hasn't loaded yet.
+  const workspaceName = useWorkspaceIdentityStore((state) => state.name);
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -162,7 +167,9 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
               <p className="truncate text-sm font-medium text-content-primary">
                 {userName?.trim() || 'Urganize'}
               </p>
-              <p className="truncate text-[11px] text-content-tertiary">Workspace</p>
+              <p className="truncate text-[11px] text-content-tertiary">
+                {workspaceName.trim() || 'Workspace'}
+              </p>
             </div>
           </div>
 

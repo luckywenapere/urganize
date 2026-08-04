@@ -71,6 +71,32 @@ export async function getWorkspaceLogo(
 }
 
 /**
+ * Signed-URL payload for a workspace's logo, or null when none is set (or
+ * the pointer's object can't be signed — e.g. deleted out-of-band, which
+ * reads as "no logo" rather than erroring; the user can simply re-upload).
+ * Shared by /api/workspace/logo and /api/workspace/identity so the signing
+ * logic lives in exactly one place.
+ */
+export async function buildWorkspaceLogoPayload(
+  adminClient: SupabaseClient,
+  workspaceId: string
+): Promise<{ fileName: string | null; url: string } | null> {
+  const logo = await getWorkspaceLogo(adminClient, workspaceId);
+  if (!logo) {
+    return null;
+  }
+
+  const url = await generateSignedUrl(
+    adminClient,
+    RELEASE_ASSETS_BUCKET,
+    logo.storagePath,
+    ASSET_SIGNED_URL_TTL_SECONDS
+  );
+
+  return url ? { fileName: logo.fileName, url } : null;
+}
+
+/**
  * Signed URL for the logo of the workspace owned by `ownerUserId`, used as
  * the cover-art fallback for that user's releases (release lists are
  * owner-scoped, so the release owner's workspace is the right scope).

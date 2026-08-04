@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.40.0",
+    date: "August 5, 2026",
+    highlights: [
+      "A workspace card now sits alongside the dashboard, UrgAns, Settings, and your releases — your label or team logo, name, artist, teammate count, and active-release count, all in one place. Update your workspace name and logo from Settings; everywhere else, the card just reflects it.",
+    ],
+  },
+  {
     version: "0.39.1",
     date: "August 5, 2026",
     highlights: [

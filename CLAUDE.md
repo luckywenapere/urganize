@@ -803,7 +803,24 @@ Founder: *"make it so that each of the features, metadata, calendar and the rest
 
 ---
 
-*Last updated: 2026-08-05 (release scenes — Metadata / Calendar / Files / Press kit — render inline in the workspace's activity slot instead of as separate routes; the modal-overlay first attempt was rejected and removed).*
+## Workspace identity card (2026-08-05, URG-214)
+
+A LinkedIn-company-page-style card for the record label / manager, mounted once by `AppShell` as a persistent LEFT column — the mirror image of the UrgAns rail on the right. Founder request; **not** a scope expansion (it's chrome over data the release spine already holds, no new object).
+
+- **Flag:** `NEXT_PUBLIC_FEATURE_IDENTITY_PANEL`, default `false`, only meaningful when `NEXT_PUBLIC_FEATURE_WORKSPACE` is also on. Gates the column, the Settings sections, and both new API routes (404 when off). Registered in `turbo.json` + `.env.example`.
+- **The card** (`components/app/WorkspaceIdentityPanel.tsx`): 240px, `hidden lg:block`, sticky at the same `top-[calc(5.25rem+1px)]` the rail uses, `mr-8` mirroring the rail's inset. Shows workspace logo (initials fallback via `getInitials`), workspace name, artist name, and `N teammates · M active releases`. **Display-only** — the whole card is a link to `/settings`; nothing is editable here.
+- **Width budget (the real design work).** Three columns can't all fit on a 1024–1366px laptop, so: (1) the card hides below `lg`; (2) on any page where the UrgAns rail is OPEN, the card waits for `xl` — the interactive assistant beats a passive card (the card reads `useChappiStore.railOpen` itself, and treats `/dashboard/urgans` as no-contest since the rail doesn't render there); (3) `WorkspaceDesktopFocused`'s own release rails shift from `lg` to `xl` and drop their 260px xl tier when this flag is on, else the focused centre column would fall to ~187px. All CSS/props, no viewport JS. `WorkspaceSkeleton` mirrors rule 3; `SettingsPageSkeleton` reserves the two new section rows.
+- **Data — one aggregate endpoint.** `GET /api/workspace/identity` returns name + artist + logo + active-member count in a single round trip (the card is chrome on every cold load; the three pre-existing endpoints would each re-run auth + workspace resolution). Composes existing helpers only. **Active releases count is deliberately NOT server-side** — derived client-side from `useReleaseStore.releases` so it live-updates for free.
+- **`PATCH /api/workspace`** (new) renames the workspace: **owner-only** (403 otherwise), trimmed, 80-char cap. Note `workspaces.name` had NO editor anywhere before this — every name was the `createWorkspaceName` auto-default (`"<emailHandle>'s Workspace"`).
+- **Store:** `stores/useWorkspaceIdentityStore.ts` — recency-guarded `load()`, cache-first hydration (`urganize.cache.workspace-identity`, per-user). **The signed logo URL is never persisted** (TTL-bound; a stale URL would 403 on the next visit) — the card falls back to initials until the live fetch lands, and an `onError` on the `<img>` covers mid-session expiry.
+- **Settings gained two sections**, above Workspace artist: `WorkspaceIdentitySection` (new — the name editor) and `WorkspaceLogoSection` (**resurrected near-verbatim from `08ab5a5^`**, where its UI was removed 2026-07-23 while its four API routes stayed dormant — those routes needed no changes). Both read/write the store, so a rename or logo swap updates the card and the topbar `WorkspaceMenu` subtitle live, no reload. That subtitle previously rendered the literal string "Workspace"; it now shows the real name with that string as fallback.
+- **Extracted** `buildWorkspaceLogoPayload` from `api/workspace/logo/route.ts` into `lib/workspace-logo.ts` so both logo consumers share one signing path.
+- **Gotcha worth remembering:** the two new routes initially copied `/api/workspace/artist`'s `isTaskSchemaMissingError` / `buildTaskSchemaResponse` error handling — that's the deprecated schema-missing-fallback pattern, and `lib/schema-fallback-guard.test.ts` failed the build for it. Correct: copy `/api/workspace/logo`'s plain error handling instead. The artist route is a grandfathered baseline entry, not a template.
+- Verified: `pnpm test` (124 green), `pnpm lint` (0 errors), `pnpm build`, plus browser checks at 1100/1280px confirming both collapse rules and no horizontal scroll.
+
+---
+
+*Last updated: 2026-08-05 (URG-214 workspace identity card — persistent left-column label/manager card + Settings name & logo editors; also corrected this file's stale changelog path to `packages/changelog/src/index.ts`).*
 
 ---
 
@@ -829,8 +846,8 @@ Founder: *"make it so that each of the features, metadata, calendar and the rest
 
 The earlier decision (2026-07-10) NOT to version was an early-stage call and has been **reversed**. The product now has a tracked, incrementing version.
 
-- **Single source of truth:** `apps/homepage/content/changelog.ts`. The **top entry's `version`** is the current product version, exported as `CURRENT_VERSION` (derived from `changelog[0].version`, so it can't drift). There is no separate VERSION file — the ledger is the record.
-- **All `package.json` versions mirror it.** Root + every workspace (`apps/*`, `packages/*`) carry the same number. They are bumped together with the ledger, never independently.
+- **Single source of truth:** `packages/changelog/src/index.ts` (the `@urganize/changelog` workspace package — corrected 2026-08-04; this section previously named `apps/homepage/content/changelog.ts`, which is now only a re-export shim of the package, so edits must go to the package). The **top entry's `version`** is the current product version, exported as `CURRENT_VERSION` (derived from `changelog[0].version`, so it can't drift). There is no separate VERSION file — the ledger is the record.
+- **All `package.json` versions mirror it.** Root + every workspace (`apps/*` — including `apps/mobile` — and `packages/*`; 10 files as of 2026-08-04) carry the same number. They are bumped together with the ledger, never independently.
 - **App-only scope (founder decision, 2026-07-18):** the changelog and the version track the product app (`apps/web`) ONLY. Marketing-site (`apps/homepage`) changes, however visible on the site (homepage copy, pricing display, OG/share images, brand/team/press/roadmap pages), never earn a ledger entry or a version bump. Pricing display updates count as marketing under this rule. Applied retroactively on 2026-07-18: marketing entries were purged from the ledger and the version recalculated (0.14.7 dropped to 0.14.3). Removed numbers stay retired, survivors keep their historical numbers, and gaps in the sequence are expected.
 - **Current version:** whatever the ledger's top entry says, always read it from there. Do not restate the number in this file: an earlier revision hardcoded `0.10.0` here and drifted. Versions before v0.10.0 in the ledger are reconstructed milestones; strict per-release semver applies from v0.10.0 forward.
 - **Bump rules (pre-1.0 semver):** patch (`0.10.x`) = fixes/polish; minor (`0.x.0`) = new user-facing feature(s). **`v1.0.0` is reserved for AI activation** — the moment Chappi + the rollout planner + the status generator are switched on for users.
@@ -840,7 +857,7 @@ The earlier decision (2026-07-10) NOT to version was an early-stage call and has
 
 When shipping a **user-facing app change** (a new feature, visible behavior change, or bug fix in `apps/web` that a user of the product would notice):
 
-1. Add a release entry at the **top** of `changelog` in `apps/homepage/content/changelog.ts`: `{ version, date, highlights }`. Bump `version` per the rules above; `date` is a display string (e.g. `"July 13, 2026"`); `highlights` are plain-English, benefit-framed, no jargon/file names — match the existing voice. Batch same-day changes into one entry rather than minting a version per commit.
+1. Add a release entry at the **top** of `changelog` in `packages/changelog/src/index.ts`: `{ version, date, highlights }`. Bump `version` per the rules above; `date` is a display string (e.g. `"July 13, 2026"`); `highlights` are plain-English, benefit-framed, no jargon/file names — match the existing voice. Batch same-day changes into one entry rather than minting a version per commit.
 2. Set every `package.json` `version` (root + all workspaces) to the new number.
 3. That's the whole ceremony — no git tag, no separate CHANGELOG.md. Production still deploys continuously from `main`; the ledger renders publicly at `/changelog` with a "current version" badge.
 

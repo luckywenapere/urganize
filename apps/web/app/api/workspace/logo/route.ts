@@ -5,12 +5,9 @@ import {
   loadWorkspaceAccessContext,
   requireAuthenticatedAdmin,
 } from '@/lib/tasks-server';
+import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-helpers';
 import {
-  ASSET_SIGNED_URL_TTL_SECONDS,
-  RELEASE_ASSETS_BUCKET,
-  generateSignedUrl,
-} from '@/lib/asset-helpers';
-import {
+  buildWorkspaceLogoPayload,
   getWorkspaceLogo,
   workspaceLogoPathPrefix,
 } from '@/lib/workspace-logo';
@@ -26,27 +23,6 @@ type LogoRecordBody = {
   storage_path?: unknown;
   file_name?: unknown;
 };
-
-async function buildLogoPayload(
-  adminClient: SupabaseClient,
-  workspaceId: string
-): Promise<{ fileName: string | null; url: string } | null> {
-  const logo = await getWorkspaceLogo(adminClient, workspaceId);
-  if (!logo) {
-    return null;
-  }
-
-  const url = await generateSignedUrl(
-    adminClient,
-    RELEASE_ASSETS_BUCKET,
-    logo.storagePath,
-    ASSET_SIGNED_URL_TTL_SECONDS
-  );
-
-  // A pointer whose object can't be signed (e.g. deleted out-of-band) reads
-  // as "no logo" rather than erroring — the user can simply re-upload.
-  return url ? { fileName: logo.fileName, url } : null;
-}
 
 function removeStorageObject(adminClient: SupabaseClient, storagePath: string) {
   // Best-effort: an orphaned object wastes quota but breaks nothing.
@@ -81,7 +57,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
     }
 
-    const logo = await buildLogoPayload(adminClient, access.primaryWorkspaceId);
+    const logo = await buildWorkspaceLogoPayload(adminClient, access.primaryWorkspaceId);
 
     return NextResponse.json({ workspaceId: access.primaryWorkspaceId, logo });
   } catch (error) {
@@ -185,7 +161,7 @@ export async function PUT(request: NextRequest) {
       await removeStorageObject(adminClient, previousLogo.storagePath);
     }
 
-    const logo = await buildLogoPayload(adminClient, workspaceId);
+    const logo = await buildWorkspaceLogoPayload(adminClient, workspaceId);
     return NextResponse.json({ workspaceId, logo });
   } catch (error) {
     return NextResponse.json(

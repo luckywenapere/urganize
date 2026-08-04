@@ -35,6 +35,10 @@ const ChappiSidePanel = dynamic(
   () => import('@/components/chappi/ChappiSidePanel').then((m) => m.ChappiSidePanel),
   { ssr: false }
 );
+const WorkspaceIdentityPanel = dynamic(
+  () => import('@/components/app/WorkspaceIdentityPanel').then((m) => m.WorkspaceIdentityPanel),
+  { ssr: false }
+);
 const CreateReleaseModal = dynamic(
   () => import('@/components/releases/CreateReleaseModal').then((m) => m.CreateReleaseModal),
   { ssr: false }
@@ -55,6 +59,13 @@ const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTIC
 // WhatsApp founder line moves into their footers. With the flag off, the
 // standalone SupportChat pill renders exactly as before.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
+// The workspace identity card (URG-214) — a persistent left column, mirroring
+// the UrgAns rail's right column. Only meaningful once workspaces exist, so
+// it's gated on both its own flag and NEXT_PUBLIC_FEATURE_WORKSPACE.
+const IDENTITY_PANEL_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' &&
+  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
 // Once-per-session arming for the side rail: landing on the assistant page
 // (the post-auth front door when the flag is on — see lib/home-path.ts)
@@ -238,6 +249,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 every chrome page. The rail renders nowhere on the assistant
                 page itself — that page IS the chat. */}
             <div className="flex min-h-0 flex-1">
+              {IDENTITY_PANEL_ENABLED ? <WorkspaceIdentityPanel /> : null}
               <main
                 className={`min-w-0 flex-1 px-4 pt-5 sm:px-5 md:px-6 lg:px-8 ${
                   isChappiRoute ? 'chappi-main-padding' : 'pb-28 md:pb-10'

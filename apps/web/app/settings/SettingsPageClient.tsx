@@ -7,12 +7,19 @@ import { readPreviousLocation } from '@/lib/nav-history';
 import { useAuthStore } from '@/lib/auth-store';
 import { getRolePermissions } from '@/lib/role-permissions';
 import { errorMessage } from '@/lib/errors';
+import { ASSET_MIME_ALLOWLIST, ASSET_SIZE_LIMITS, formatFileSize } from '@/lib/asset-constants';
+import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import type { WorkspaceMember } from '@/types/auth';
 import { SettingsPageSkeleton } from '@/components/loading/SettingsPageSkeleton';
 import { getAccessToken } from '@/components/settings/getAccessToken';
 import { ProfileSection } from '@/components/settings/ProfileSection';
 import { AppearanceSection } from '@/components/settings/AppearanceSection';
 import { SecuritySection } from '@/components/settings/SecuritySection';
+import { WorkspaceIdentitySection } from '@/components/settings/WorkspaceIdentitySection';
+import {
+  WorkspaceLogoSection,
+  type WorkspaceLogo,
+} from '@/components/settings/WorkspaceLogoSection';
 import {
   WorkspaceArtistSection,
   type WorkspaceArtist,
@@ -38,6 +45,14 @@ import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 // unique on (workspace_id, slug)) already permits multiple rows per
 // workspace.
 const WORKSPACE_FEATURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
+
+// URG-214: the workspace identity card's editors. Only meaningful once
+// workspaces exist, same gate as the card itself and its API routes.
+const IDENTITY_PANEL_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' && WORKSPACE_FEATURE_ENABLED;
+
+const LOGO_MIME_ALLOWLIST = ASSET_MIME_ALLOWLIST.cover_art;
+const LOGO_SIZE_LIMIT = ASSET_SIZE_LIMITS.cover_art;
 
 type WorkspaceArtistResponse = {
   workspaceId?: string;
@@ -100,6 +115,29 @@ export default function SettingsPage() {
   const [isSavingWorkspaceArtist, setIsSavingWorkspaceArtist] = useState(false);
   const [workspaceArtistMessage, setWorkspaceArtistMessage] = useState('');
   const [workspaceArtistError, setWorkspaceArtistError] = useState('');
+
+  // Workspace identity (name + logo) is sourced from the SAME global store
+  // the always-mounted identity card reads (useWorkspaceIdentityStore) —
+  // not a separate fetch here. The card (mounted app-wide by AppShell,
+  // including on this page) already calls load(); this effect below also
+  // calls it defensively so Settings doesn't depend on mount order between
+  // sibling components. The store's own recency guard makes the second call
+  // a no-op when the card already primed it.
+  const identityName = useWorkspaceIdentityStore((state) => state.name);
+  const identityLogo = useWorkspaceIdentityStore((state) => state.logo);
+  const identityHydrated = useWorkspaceIdentityStore((state) => state.hydrated);
+  const loadIdentity = useWorkspaceIdentityStore((state) => state.load);
+  const setIdentityName = useWorkspaceIdentityStore((state) => state.setName);
+  const setIdentityLogo = useWorkspaceIdentityStore((state) => state.setLogo);
+
+  const [workspaceNameInput, setWorkspaceNameInput] = useState('');
+  const [isSavingWorkspaceName, setIsSavingWorkspaceName] = useState(false);
+  const [workspaceNameMessage, setWorkspaceNameMessage] = useState('');
+  const [workspaceNameError, setWorkspaceNameError] = useState('');
+
+  const [isSavingWorkspaceLogo, setIsSavingWorkspaceLogo] = useState(false);
+  const [workspaceLogoMessage, setWorkspaceLogoMessage] = useState('');
+  const [workspaceLogoError, setWorkspaceLogoError] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
@@ -222,6 +260,161 @@ export default function SettingsPage() {
     };
   }, [userId, accessToken]);
 
+  useEffect(() => {
+    if (!userId || !IDENTITY_PANEL_ENABLED) return;
+    void loadIdentity();
+  }, [userId, loadIdentity]);
+
+  // Mirrors the artist input's pattern (no dirty-check against in-progress
+  // typing) — the store only refreshes on a fresh load, which per the
+  // recency guard won't refire mid-edit for a normal Settings visit.
+  useEffect(() => {
+    if (identityHydrated) setWorkspaceNameInput(identityName);
+  }, [identityHydrated, identityName]);
+
+  const handleSaveWorkspaceName = async () => {
+    setWorkspaceNameError('');
+    setWorkspaceNameMessage('');
+    const trimmed = workspaceNameInput.trim();
+    if (!trimmed) {
+      setWorkspaceNameError('Workspace name cannot be empty.');
+      return;
+    }
+    if (trimmed === identityName) {
+      setWorkspaceNameMessage('No changes.');
+      return;
+    }
+
+    setIsSavingWorkspaceName(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch('/api/workspace', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { name?: string; error?: string };
+      if (!response.ok || typeof payload.name !== 'string') {
+        throw new Error(payload.error || 'Could not rename workspace.');
+      }
+      setIdentityName(payload.name);
+      setWorkspaceNameInput(payload.name);
+      setWorkspaceNameMessage('Workspace renamed.');
+    } catch (err) {
+      setWorkspaceNameError(errorMessage(err, 'Could not rename workspace.'));
+    } finally {
+      setIsSavingWorkspaceName(false);
+    }
+  };
+
+  // Same three-step flow as release asset uploads (AssetUploadControl):
+  // signed upload URL → PUT bytes directly to storage → record the pointer.
+  const handleUploadWorkspaceLogo = async (file: File) => {
+    setWorkspaceLogoError('');
+    setWorkspaceLogoMessage('');
+
+    const mimeType = file.type || 'application/octet-stream';
+    if (!LOGO_MIME_ALLOWLIST.includes(mimeType)) {
+      setWorkspaceLogoError('Logo must be a JPEG, PNG, or WebP image.');
+      return;
+    }
+    if (file.size > LOGO_SIZE_LIMIT) {
+      setWorkspaceLogoError(`Logo must be ${formatFileSize(LOGO_SIZE_LIMIT)} or smaller.`);
+      return;
+    }
+
+    setIsSavingWorkspaceLogo(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+
+      const uploadUrlResponse = await fetch('/api/workspace/logo/upload-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          file_name: file.name,
+          mime_type: mimeType,
+          file_size: file.size,
+        }),
+      });
+      const uploadUrlPayload = (await uploadUrlResponse.json().catch(() => ({}))) as {
+        upload_url?: string;
+        storage_path?: string;
+        error?: string;
+      };
+      if (!uploadUrlResponse.ok || !uploadUrlPayload.upload_url || !uploadUrlPayload.storage_path) {
+        throw new Error(uploadUrlPayload.error || 'Could not create upload URL.');
+      }
+
+      const storageResponse = await fetch(uploadUrlPayload.upload_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': mimeType },
+        body: file,
+      });
+      if (!storageResponse.ok) {
+        throw new Error(`Storage upload failed (${storageResponse.status}).`);
+      }
+
+      const recordResponse = await fetch('/api/workspace/logo', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          storage_path: uploadUrlPayload.storage_path,
+          file_name: file.name,
+        }),
+      });
+      const recordPayload = (await recordResponse.json().catch(() => ({}))) as {
+        logo?: WorkspaceLogo | null;
+        error?: string;
+      };
+      if (!recordResponse.ok || !recordPayload.logo) {
+        throw new Error(recordPayload.error || 'Could not save logo.');
+      }
+
+      setIdentityLogo(recordPayload.logo);
+      setWorkspaceLogoMessage('Logo saved. Releases without cover art now show it automatically.');
+    } catch (err) {
+      setWorkspaceLogoError(errorMessage(err, 'Could not upload logo.'));
+    } finally {
+      setIsSavingWorkspaceLogo(false);
+    }
+  };
+
+  const handleRemoveWorkspaceLogo = async () => {
+    if (!identityLogo) return;
+    setWorkspaceLogoError('');
+    setWorkspaceLogoMessage('');
+    setIsSavingWorkspaceLogo(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch('/api/workspace/logo', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not remove logo.');
+      }
+      setIdentityLogo(null);
+      setWorkspaceLogoMessage('Logo removed. Releases without cover art show the neutral placeholder again.');
+    } catch (err) {
+      setWorkspaceLogoError(errorMessage(err, 'Could not remove logo.'));
+    } finally {
+      setIsSavingWorkspaceLogo(false);
+    }
+  };
+
   const handleSaveWorkspaceArtist = async () => {
     if (!user || !workspaceArtist) return;
     setWorkspaceArtistError('');
@@ -328,6 +521,31 @@ export default function SettingsPage() {
               sits at the bottom where rarely-used, high-consequence actions
               belong. */}
           <div className="divide-y divide-stroke-subtle">
+          {IDENTITY_PANEL_ENABLED && (
+            <>
+              <WorkspaceIdentitySection
+                input={workspaceNameInput}
+                onInputChange={setWorkspaceNameInput}
+                isLoading={!identityHydrated}
+                isSaving={isSavingWorkspaceName}
+                message={workspaceNameMessage}
+                error={workspaceNameError}
+                onSave={() => void handleSaveWorkspaceName()}
+              />
+              <WorkspaceLogoSection
+                logo={identityLogo}
+                isLoading={!identityHydrated}
+                isSaving={isSavingWorkspaceLogo}
+                message={workspaceLogoMessage}
+                error={workspaceLogoError}
+                mimeAllowlist={LOGO_MIME_ALLOWLIST}
+                sizeLimit={LOGO_SIZE_LIMIT}
+                onUpload={(file) => void handleUploadWorkspaceLogo(file)}
+                onRemove={() => void handleRemoveWorkspaceLogo()}
+              />
+            </>
+          )}
+
           {WORKSPACE_FEATURE_ENABLED && (
             <WorkspaceArtistSection
               artist={workspaceArtist}

@@ -8,6 +8,17 @@ import { WorkspaceReleaseCard } from './WorkspaceReleaseCard';
 import { TasksPanel } from './TasksPanel';
 import type { ReleaseCardData } from './ReleasesColumn';
 
+// URG-214: when the workspace identity card is on, it occupies a 240px
+// column (plus its own 32px gap) at lg+, same tier this grid's rails start
+// at. Left unchanged, the identity panel + a 260px xl rail + this center
+// column would squeeze badly on 1024-1366px laptops. So with the flag on,
+// both rails wait for xl (where the identity panel's own rule already hides
+// it in favor of the UrgAns rail — the two never compete) and skip the
+// 260px xl bump, holding steady at 220px instead.
+const IDENTITY_PANEL_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' &&
+  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
+
 type WorkspaceDesktopFocusedProps = {
   /** Non-selected releases routed to the left rail. Split rule lives in
    * WorkspaceView (ceiling on left, stable by grid order). */
@@ -132,11 +143,24 @@ export function WorkspaceDesktopFocused({
         className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-6 overflow-hidden ${
           hideRails
             ? 'grid-cols-[minmax(0,1fr)]'
-            : 'lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]'
+            : IDENTITY_PANEL_ENABLED
+              // Base (this component's floor is already lg — see the
+              // `hidden lg:block` wrapper in WorkspaceView) is a single
+              // column until xl, where the identity panel has already
+              // ceded the width back (its own rule hides it once the
+              // UrgAns rail opens, and it's not present at all past that
+              // point competing with these rails).
+              ? 'grid-cols-[minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_220px]'
+              : 'lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]'
         }`}
       >
         {hideRails ? null : (
-          <RailColumn cards={leftRail} onSelect={onSelect} ariaLabel="Other releases (left)" />
+          <RailColumn
+            cards={leftRail}
+            onSelect={onSelect}
+            ariaLabel="Other releases (left)"
+            hiddenBelowXl={IDENTITY_PANEL_ENABLED}
+          />
         )}
 
         {/* Center column — the activities list fills and SCROLLS the column
@@ -153,7 +177,12 @@ export function WorkspaceDesktopFocused({
         </div>
 
         {hideRails ? null : (
-          <RailColumn cards={rightRail} onSelect={onSelect} ariaLabel="Other releases (right)" />
+          <RailColumn
+            cards={rightRail}
+            onSelect={onSelect}
+            ariaLabel="Other releases (right)"
+            hiddenBelowXl={IDENTITY_PANEL_ENABLED}
+          />
         )}
       </div>
     </div>
@@ -164,20 +193,28 @@ type RailColumnProps = {
   cards: ReleaseCardData[];
   onSelect: (releaseId: string) => void;
   ariaLabel: string;
+  /** URG-214: with the identity panel on, the grid template itself doesn't
+   * open a rail column until xl (see the parent's className above) — but
+   * the grid still auto-places whatever DOM children exist. Below xl this
+   * hides the rail visually so it doesn't consume the single-column track
+   * meant for the center content. */
+  hiddenBelowXl?: boolean;
 };
 
-function RailColumn({ cards, onSelect, ariaLabel }: RailColumnProps) {
+function RailColumn({ cards, onSelect, ariaLabel, hiddenBelowXl = false }: RailColumnProps) {
+  const visibilityClass = hiddenBelowXl ? 'hidden xl:block' : '';
+
   if (cards.length === 0) {
     // An empty rail still occupies its column track so the centered card
     // sits in the middle, not flush against the viewport edge. The track
     // is given a non-zero min-height of 0 — letting CSS Grid collapse it
     // would re-center the focused card and break visual symmetry.
-    return <div aria-hidden="true" />;
+    return <div aria-hidden="true" className={visibilityClass} />;
   }
   return (
     <aside
       aria-label={ariaLabel}
-      className="min-h-0 min-w-0 space-y-3 overflow-y-auto overscroll-contain pb-4"
+      className={`min-h-0 min-w-0 space-y-3 overflow-y-auto overscroll-contain pb-4 ${visibilityClass}`}
     >
       {cards.map(({ release, tasksDone, tasksTotal, coverArtUrl }) => (
         <WorkspaceReleaseCard
