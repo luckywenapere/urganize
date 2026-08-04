@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.38.1",
+    date: "August 4, 2026",
+    highlights: [
+      "The Workspace button in the top bar now closes the catalog when you're already looking at it, taking you back to UrgAns. Before, clicking it there didn't do anything.",
+    ],
+  },
+  {
     version: "0.38.0",
     date: "August 3, 2026",
     highlights: [
