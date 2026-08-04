@@ -64,7 +64,7 @@ When a feature request lands that's on this "out of scope" list — even if it's
 
 These are the principles that govern v1 build decisions. When in doubt, return to these.
 
-1. **The release is the spine.** Every feature serves a release. If you find yourself building something that doesn't tie back to a specific release, stop and ask whether it belongs in v1. The release detail page is where the product converges — Dashboard, Releases list, and Tasks are navigational surfaces; the work happens on the release detail page. New features attach to the release, not to standalone surfaces.
+1. **The release is the spine.** Every feature serves a release. If you find yourself building something that doesn't tie back to a specific release, stop and ask whether it belongs in v1. **The workspace's scoped release view (`/dashboard?release=<id>`) is where the product converges** — the standalone release detail page (`/dashboard/releases/[releaseId]`) that used to hold this role was removed 2026-08-04 (founder call) and its content (Activities, Motion progress, Tailor plan, Generate status update, the one-time getting-started guide) absorbed into the workspace. The workspace is the single navigational + working surface; new features attach to the release (via a scoped-header pill, same as Metadata/Calendar/Files/Press kit), not to standalone surfaces.
 
 2. **Templates carry domain knowledge; AI is a removable polish layer.** Hand-crafted release templates are the product's IP. AI adjusts them and writes prose around them. If AI failed tomorrow, the product would still work — users pick a template, get a plan, edit it, run their release. Build it so AI is *removable* without the product dying. (Exception under active build: **Chappi**, the conversational front door — see AI integration. It's a conscious expansion of the AI surface, but still honors this principle's spirit: Chappi degrades to a deterministic command bar + action chips when no model is configured.)
 
@@ -751,7 +751,19 @@ The post-auth landing surface flipped twice, and the second flip was never recor
 
 ---
 
-*Last updated: 2026-08-04 (URG-212 assistant URLs renamed to /dashboard/urgans + /api/urgans, remaining marketing-site "Chappi" copy cleared, stale production-flag claim corrected).*
+## Release detail page removed; workspace scoped view is the one activity surface (2026-08-04)
+
+Founder question that triggered this: why did an "Overview" pill exist in the workspace header ("i didnt request for that")? Investigation found no separate Overview page — the pill (added by URG-199's navigation walk, agent-initiated scope, not a founder ask) linked to the release detail page (`/dashboard/releases/[releaseId]`), which largely duplicated the workspace's scoped view (activities list, Motion progress). **Founder decision: remove the release detail page entirely and fold its unique functions into the workspace's scoped activities view (`/dashboard?release=<id>`).** This consciously supersedes the old Principle 1 wording — see the updated principle above.
+
+- **Removed:** `ReleaseDetailPageClient.tsx`, `components/loading/ReleaseDetailSkeleton.tsx`, `components/releases/ReleaseInfoSection.tsx` (a read-only summary of fields the Metadata page already edits), `components/releases/ContentCalendarSection.tsx` (an inline duplicate of the Calendar page). `app/dashboard/releases/[releaseId]/page.tsx` is now a thin redirect (307, forwarding `?new=1`) to `/dashboard?release=<id>` — a safety net for old bookmarks/shares/notifications, not a real page. Sibling scene pages (`calendar/ epk/ files/ metadata/`) are untouched and still live at `/dashboard/releases/[releaseId]/<scene>`; their flag-off bounces and "Back to release" links now point straight at the workspace instead of through the dead detail page.
+- **Absorbed into `WorkspaceView`/`TasksPanel`:** the Tailor plan and Generate status update buttons (+ their modals, both still flag-gated and off in prod), the one-time `NewReleaseGuide` (now triggered by `?release=<id>&new=1` together, consumed once then stripped), and the per-release document title. `TasksPanel` gained an `extraActions` slot so it stays presentational while `WorkspaceView` owns the AI state/modals.
+- **Overview pill deleted.** The workspace header's scene-link pills are now, in order: New activity (action button) → **Metadata** (moved to first position among the links, founder call) → Calendar → Files → Press kit → the two AI action pills when their flags are on. `WorkspaceSkeleton`'s placeholder pill widths were updated to match (it had also been silently missing a Metadata placeholder before this).
+- **Every other in-app linker** (Chappi's `create_release`/`navigate` tools, the MCP-shared tool registry, `ChappiConversation`'s cross-page opens, `ChappiPageClient`'s post-create nav, the legacy `/release/[id]` short link, and a latent dead link in `/api/releases/[releaseId]`'s `suggestedAction.href` that pointed at a route that never existed) now points at `/dashboard?release=<id>` directly.
+- Verified: `pnpm build` + `pnpm lint` (0 errors) + the full `pnpm test` suite (124 tests) green.
+
+---
+
+*Last updated: 2026-08-04 (release detail page removed — workspace scoped view is now the release convergence surface; Overview pill deleted; Metadata pill moved first).*
 
 ---
 

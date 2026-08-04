@@ -35,10 +35,11 @@ export default function MetadataPageClient() {
   const [toast, setToast] = useState<ToastState | null>(null);
 
   useEffect(() => {
-    // Flag-off bounce back to the release page, and the auth guard, combined
-    // into one effect (the epk/files/calendar page precedent).
+    // Flag-off bounce back to the workspace scoped to this release, and the
+    // auth guard, combined into one effect (the epk/files/calendar page
+    // precedent).
     if (!METADATA_ENABLED) {
-      router.replace(`/dashboard/releases/${releaseId}`);
+      router.replace(`/dashboard?release=${releaseId}`);
       return;
     }
     if (authLoading) return;

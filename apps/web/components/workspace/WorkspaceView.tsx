@@ -1,14 +1,19 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import { AlertCircle, ArrowLeft, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { type Task } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
+import { supabase } from '@/lib/supabase/client';
+import { type ReleaseContext } from '@/lib/release-tailoring';
+import { Toast } from '@/components/shared/Toast';
+import { NewReleaseGuide } from '@/components/releases/NewReleaseGuide';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
@@ -31,6 +36,30 @@ const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
 // behaviors (hideRails + the scope live-sync below).
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
+// Ported from the removed release detail page (2026-08-04, founder call):
+// both AI features stay hidden until the gateway is wired to a capable
+// model. NEXT_PUBLIC_ prefix so the value is inlined at build time; the API
+// routes guard the same flags server-side.
+const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
+const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
+
+// Dynamic + flag-gated, same rationale as the removed page: while a flag is
+// off — as both are in production today — the modal's chunk is never
+// requested at all.
+const TailorPlanModal = dynamic(
+  () => import('@/components/releases/TailorPlanModal').then((m) => m.TailorPlanModal),
+  { ssr: false }
+);
+const StatusUpdateModal = dynamic(
+  () => import('@/components/releases/StatusUpdateModal').then((m) => m.StatusUpdateModal),
+  { ssr: false }
+);
+
+type ToastState = {
+  message: string;
+  tone: 'success' | 'error' | 'warning';
+};
+
 /**
  * Parse a createdAt ISO string to epoch ms. Empty/invalid values map to 0 so
  * those releases sort to the bottom deterministically rather than producing
@@ -43,6 +72,7 @@ function toCreatedMs(value: string): number {
 
 export function WorkspaceView() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, isLoading: authLoading } = useAuthStore();
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
   const tasks = useTaskStore((state) => state.tasks);
@@ -54,6 +84,28 @@ export function WorkspaceView() {
   // Set to the new release's id when a first-release "win" reveal should show.
   const [winReleaseId, setWinReleaseId] = useState<string | null>(null);
 
+  // AI actions + toast, ported verbatim from the removed release detail page
+  // (2026-08-04) — this is now the only surface a scoped release renders on.
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [isTailorOpen, setIsTailorOpen] = useState(false);
+  const [savedContext, setSavedContext] = useState<ReleaseContext | null>(null);
+  const [hasTailoring, setHasTailoring] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isGeneratingStatus, setIsGeneratingStatus] = useState(false);
+  const [statusUpdate, setStatusUpdate] = useState('');
+  // One-time getting-started guide (NewReleaseGuide), triggered by ?new=1
+  // alongside ?release= from the create flows. Read into state once, then
+  // both params are stripped via router.replace so a refresh never
+  // re-triggers it — the guide's own visibility is controlled purely by
+  // this boolean from then on (dismiss just flips it false, no URL churn).
+  const [showNewReleaseGuide, setShowNewReleaseGuide] = useState(false);
+  useEffect(() => {
+    if (searchParams.get('new') !== '1' || !scopedReleaseId) return;
+    setShowNewReleaseGuide(true);
+    router.replace(`/dashboard?release=${scopedReleaseId}`, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per mount to consume the param; router/searchParams identity churn shouldn't re-fire this.
+  }, []);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -62,6 +114,84 @@ export function WorkspaceView() {
     }
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
+
+  const generateStatus = async () => {
+    if (!scopedReleaseId) return;
+    setIsStatusOpen(true);
+    setIsGeneratingStatus(true);
+    setStatusUpdate('');
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const res = await fetch(`/api/releases/${scopedReleaseId}/generate-status`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const payload = (await res.json().catch(() => ({}))) as {
+        status_update?: string;
+        error?: string;
+      };
+      if (!res.ok || !payload.status_update) {
+        throw new Error(payload.error || 'Could not generate status update.');
+      }
+      setStatusUpdate(payload.status_update);
+    } catch (err) {
+      setIsStatusOpen(false);
+      setToast({
+        tone: 'error',
+        message: err instanceof Error ? err.message : 'Could not generate status update.',
+      });
+    } finally {
+      setIsGeneratingStatus(false);
+    }
+  };
+
+  // Load any prior tailoring so the button label and modal pre-fill reflect
+  // it, whenever the scoped release changes.
+  useEffect(() => {
+    setSavedContext(null);
+    setHasTailoring(false);
+    if (!TAILOR_PLAN_ENABLED || authLoading || !user || !scopedReleaseId) return;
+    let cancelled = false;
+    const loadTailoring = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        const res = await fetch(`/api/releases/${scopedReleaseId}/tailor-plan`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        if (!res.ok) return;
+        const data = (await res.json().catch(() => ({}))) as {
+          context?: ReleaseContext | null;
+          has_tailoring?: boolean;
+        };
+        if (cancelled) return;
+        setSavedContext(data.context ?? null);
+        setHasTailoring(Boolean(data.has_tailoring));
+      } catch {
+        // Non-blocking: the button just defaults to "Tailor plan".
+      }
+    };
+    void loadTailoring();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, scopedReleaseId, user]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const dismissAfterMs = toast.tone === 'warning' ? 6000 : 2600;
+    const timeout = window.setTimeout(() => setToast(null), dismissAfterMs);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
 
   // Live-sync the assistant's scoped release to the catalog's open release
   // WHILE the rail is open. The deps array IS the transition detector:
@@ -113,6 +243,17 @@ export function WorkspaceView() {
     return { id: found.id, title: found.title, artistName: found.artistName };
   }, [scopedReleaseId, releases]);
 
+  // Differentiate browser tabs when a release is scoped, ported from the
+  // removed release detail page — falls back to the default dashboard
+  // title the moment the scope clears or the release isn't found.
+  useEffect(() => {
+    if (scopedReleaseSlim?.title) {
+      document.title = `${scopedReleaseSlim.title} | Urganize`;
+      return;
+    }
+    document.title = 'Dashboard | Urganize';
+  }, [scopedReleaseSlim?.title]);
+
   const scopedTasks = useMemo<Task[]>(() => {
     if (!scopedReleaseId) return taskList;
     return taskList.filter((task) => task.releaseId === scopedReleaseId);
@@ -147,6 +288,39 @@ export function WorkspaceView() {
   // (and clear the param so back-button doesn't trap the user). Mobile
   // path uses `scopedReleaseSlim` directly for the same reason.
   const isDesktopFocusedMode = Boolean(scopedReleaseId && selectedCard);
+
+  // The two AI action pills, ported from the removed release detail page —
+  // only meaningful (and only rendered) when a release is scoped, so both
+  // TasksPanel mounts get this via `extraActions` only in that case.
+  const taskPanelExtraActions = scopedReleaseId ? (
+    <>
+      {TAILOR_PLAN_ENABLED ? (
+        <button
+          type="button"
+          onClick={() => setIsTailorOpen(true)}
+          className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+        >
+          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+          {hasTailoring ? 'Re-tailor plan' : 'Tailor plan'}
+        </button>
+      ) : null}
+      {STATUS_UPDATE_ENABLED ? (
+        <button
+          type="button"
+          onClick={() => void generateStatus()}
+          disabled={isGeneratingStatus}
+          className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:opacity-60"
+        >
+          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+          {isGeneratingStatus ? 'Generating…' : 'Generate status update'}
+        </button>
+      ) : null}
+    </>
+  ) : null;
+
+  const newReleaseGuideBanner = showNewReleaseGuide ? (
+    <NewReleaseGuide onDismiss={() => setShowNewReleaseGuide(false)} />
+  ) : null;
 
   const handleSelect = (releaseId: string) => {
     const nextScope = scopedReleaseId === releaseId ? null : releaseId;
@@ -237,6 +411,12 @@ export function WorkspaceView() {
             </div>
           ) : null}
 
+          {toast ? (
+            <div className="mb-6">
+              <Toast message={toast.message} tone={toast.tone} />
+            </div>
+          ) : null}
+
           {/* ====================================================================
               MOBILE (< lg): drill-down. Level 1 shows the release list; Level 2
               shows back header + TasksPanel for the scoped release (Files and
@@ -291,10 +471,12 @@ export function WorkspaceView() {
                     {scopedTasks.filter((t) => t.status === 'done').length}/{scopedTasks.length}
                   </span>
                 </div>
+                {newReleaseGuideBanner}
                 <TasksPanel
                   id={TASKS_PANEL_ID}
                   tasks={scopedTasks}
                   scopedRelease={scopedReleaseSlim}
+                  extraActions={taskPanelExtraActions}
                 />
                 {/* The per-release files surface lives inside TasksPanel as an
                     inline collapsible segment at the top of the task area,
@@ -330,6 +512,8 @@ export function WorkspaceView() {
                 onSelect={handleSelect}
                 onClose={handleClose}
                 hideRails={CHAPPI_ENABLED && isRailOpen}
+                banner={newReleaseGuideBanner}
+                panelExtraActions={taskPanelExtraActions}
               />
             ) : (
               <WorkspaceDesktopGrid
@@ -358,11 +542,13 @@ export function WorkspaceView() {
           } else {
             // ?new=1 triggers the one-time dismissible getting-started guide
             // (NewReleaseGuide) — only for TEMPLATE creations; its copy
-            // describes the rollout plan a blank release doesn't have.
+            // describes the rollout plan a blank release doesn't have. Lands
+            // on the workspace scoped to the new release (2026-08-04 — the
+            // release detail page was removed; this IS the activity view now).
             router.push(
               plan === 'template'
-                ? `/dashboard/releases/${releaseId}?new=1`
-                : `/dashboard/releases/${releaseId}`
+                ? `/dashboard?release=${releaseId}&new=1`
+                : `/dashboard?release=${releaseId}`
             );
           }
         }}
@@ -374,8 +560,36 @@ export function WorkspaceView() {
           onDone={() => {
             const target = winReleaseId;
             setWinReleaseId(null);
-            router.push(`/dashboard/releases/${target}`);
+            router.push(`/dashboard?release=${target}`);
           }}
+        />
+      ) : null}
+
+      {TAILOR_PLAN_ENABLED && scopedReleaseId ? (
+        <TailorPlanModal
+          open={isTailorOpen}
+          releaseId={scopedReleaseId}
+          initialContext={savedContext}
+          onClose={() => setIsTailorOpen(false)}
+          onTailored={(result, context) => {
+            setHasTailoring(true);
+            setSavedContext(context);
+            setToast({
+              tone: 'success',
+              message: `Plan tailored: ${result.tasks_removed} removed, ${result.tasks_modified} updated`,
+            });
+            void loadCommandCenter({ force: true });
+          }}
+        />
+      ) : null}
+
+      {STATUS_UPDATE_ENABLED ? (
+        <StatusUpdateModal
+          open={isStatusOpen}
+          isGenerating={isGeneratingStatus}
+          statusUpdate={statusUpdate}
+          onClose={() => setIsStatusOpen(false)}
+          onRegenerate={() => void generateStatus()}
         />
       ) : null}
     </main>

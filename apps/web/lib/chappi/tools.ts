@@ -228,7 +228,7 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
       if (!res.ok) return fail(String(res.body.error || 'Could not create the release.'));
       const releaseId = String(res.body.releaseId || '');
       const clientAction: ChappiClientAction = releaseId
-        ? { type: 'navigate', href: `/dashboard/releases/${releaseId}` }
+        ? { type: 'navigate', href: `/dashboard?release=${releaseId}` }
         : { type: 'refresh' };
       return {
         ok: true,
@@ -404,7 +404,7 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
       if (target === 'settings') href = '/settings';
       else if (target === 'release') {
         if (!releaseId) return fail('releaseId is required to open a release.');
-        href = `/dashboard/releases/${releaseId}`;
+        href = `/dashboard?release=${releaseId}`;
       }
       return { ok: true, summary: 'Navigating…', clientAction: { type: 'navigate', href } };
     },

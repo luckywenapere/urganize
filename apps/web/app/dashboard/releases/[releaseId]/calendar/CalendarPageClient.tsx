@@ -87,11 +87,11 @@ export default function CalendarPageClient() {
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
-  // Flag-off bounce back to the release page, and the auth guard, combined
-  // into one effect (the ChappiPageClient precedent).
+  // Flag-off bounce back to the workspace scoped to this release, and the
+  // auth guard, combined into one effect (the ChappiPageClient precedent).
   useEffect(() => {
     if (!CONTENT_CALENDAR_ENABLED) {
-      router.replace(`/dashboard/releases/${releaseId}`);
+      router.replace(`/dashboard?release=${releaseId}`);
       return;
     }
     if (authLoading) return;

@@ -191,9 +191,9 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           todaysDirective?.releaseId ??
           (releases.length === 1 ? releases[0]?.id : null);
         if (target) {
-          router.push(`/dashboard/releases/${target}`);
+          router.push(`/dashboard?release=${target}`);
           appendAssistantReply(
-            'Taking you to the release — use "Generate status update" on its page.'
+            'Taking you to the release — use "Generate status update" there.'
           );
         } else {
           appendAssistantReply(

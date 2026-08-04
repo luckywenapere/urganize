@@ -33,15 +33,15 @@ type AppTopbarProps = {
 // for it — the workspace IS the page, and a "Home / Workspace" label was
 // just redundant. The min-w-0 flex-1 wrapper below stays empty there, which
 // keeps the right-side controls flush right without any layout shift.
-// Other routes keep their titles. The detail route under
-// /dashboard/releases/[releaseId] still uses the Releases startsWith match
-// (the list /dashboard/releases 308-redirects to /dashboard and never
-// reaches this code).
+// Other routes keep their titles. `/dashboard/releases/[releaseId]` itself
+// is now a redirect-only route (2026-08-04 — the release detail page was
+// removed, its content absorbed into the workspace's scoped view) so it
+// never mounts and never reaches this code; its sibling scene pages
+// (calendar/epk/files/metadata) still live under this prefix and still
+// want no static title, hence the startsWith match staying below.
 const routeTitles = [
   { match: (pathname: string) => pathname === '/dashboard', title: '', eyebrow: '' },
   { match: (pathname: string) => pathname === '/dashboard/urgans', title: '', eyebrow: '' },
-  // Release detail's identity renders live (artist + title) via
-  // ContextTitle below — no static fallback text.
   { match: (pathname: string) => pathname.startsWith('/dashboard/releases'), title: '', eyebrow: '' },
   // Settings carries no topbar title either (founder call, 2026-07-23) —
   // the page's own section kickers say where you are.
@@ -58,25 +58,19 @@ function getRouteTitle(pathname: string | null) {
  * art + release title + date — so the open release owns that full space
  * between the logo and the nav (founder calls, 2026-07-23; replaces the
  * scope pill that sat inside the tasks panel AND the release page's own
- * mid-page header). Two contexts trigger it: the workspace with ?release=
- * and /dashboard/releases/[id]. Own component under Suspense because
- * useSearchParams needs a boundary when it renders from layout-level chrome.
+ * mid-page header). Triggered by the workspace's `?release=` scope — the
+ * only surface a release renders on since the release detail page was
+ * removed (2026-08-04; it used to also match its own root path directly,
+ * via a regex retired along with that page). Own component under Suspense
+ * because useSearchParams needs a boundary when it renders from
+ * layout-level chrome.
  */
-const RELEASE_DETAIL_PATH = /^\/dashboard\/releases\/([^/]+)$/;
-
 function ContextTitle() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const releases = useReleaseStore((state) => state.releases);
 
-  let releaseId: string | null = null;
-
-  if (pathname === '/dashboard') {
-    releaseId = searchParams.get('release');
-  } else {
-    const detailMatch = (pathname || '').match(RELEASE_DETAIL_PATH);
-    if (detailMatch) releaseId = detailMatch[1];
-  }
+  const releaseId = pathname === '/dashboard' ? searchParams.get('release') : null;
   if (!releaseId) return null;
 
   const release = releases.find((r) => r.id === releaseId);
