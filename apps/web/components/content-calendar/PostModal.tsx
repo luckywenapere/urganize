@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { AlertCircle, Loader2, X } from 'lucide-react';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { supabase } from '@/lib/supabase/client';
+import { calendarFontVariables } from './calendar-fonts';
 import {
   CONTENT_POST_FORMAT_OPTIONS,
   CONTENT_POST_PILLAR_OPTIONS,
@@ -245,17 +246,20 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
   };
 
   const modal = (
-    // `cc-island` on the portal root (added 2026-08-04). This component
-    // portals to document.body, and CSS custom properties inherit down the DOM
-    // tree — not the React tree — so every one of its var(--cc-*) reads
-    // resolved to nothing once portaled outside the calendar's island wrapper.
-    // Declaring the island here makes the modal self-sufficient wherever it
-    // mounts, which it has to be now that the calendar is an overlay window
-    // rather than a page. (The --font-cc-* variables have the same escape
-    // problem and are NOT fixed by this — they come from next/font on the
-    // scene root; see the note in CalendarScene.)
+    // `cc-island` + calendarFontVariables on the portal root (2026-08-04,
+    // the second fixed here). This component portals to document.body, and
+    // both CSS custom properties AND next/font's `.variable` class only take
+    // effect where they're literally applied in the DOM tree — not the React
+    // tree — so every var(--cc-*) AND var(--font-cc-*) read resolved to
+    // nothing once portaled outside the calendar scene's wrapper. cc-island
+    // declares its own --cc-* values directly, so adding the class here is
+    // self-sufficient. The font variables aren't declared anywhere — they're
+    // produced by the next/font/google calls in calendar-fonts.ts — but that
+    // module is a singleton (one font load, shared), so applying its exported
+    // className here doesn't load the fonts twice; it just marks this DOM
+    // subtree as one more place the same already-loaded faces apply.
     <div
-      className="cc-island fixed inset-x-0 top-0 z-[220] flex h-[100dvh] items-center justify-center bg-black/72 px-4 py-4 backdrop-blur-sm sm:py-8"
+      className={`cc-island fixed inset-x-0 top-0 z-[220] flex h-[100dvh] items-center justify-center bg-black/72 px-4 py-4 backdrop-blur-sm sm:py-8 ${calendarFontVariables}`}
       role="presentation"
     >
       <button
