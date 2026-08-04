@@ -21,6 +21,15 @@ model User {
   referralCode    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @default(now()) @updatedAt
+
+  // Waitlist operations (added 2026-08-04): manual outreach tracking for the
+  // founder's admin/waitlist dashboard. contactStatus is a simple pipeline —
+  // new | contacted | responded | converted | not_interested — driven by the
+  // "Mark contacted" button and a status picker, not by any automated flow.
+  contactCount    Int      @default(0)
+  lastContactedAt DateTime?
+  contactStatus   String   @default("new")
+  adminNotes      String?
 }
 
 // Artist interview booking. One row per booked slot; slotDate is a bare

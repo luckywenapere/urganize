@@ -6,6 +6,12 @@
 // login (verifyAdmin on the API) instead of the homepage's shared-secret
 // cookie, and rendered on apps/web's theme tokens. The GET doubles as the
 // admin gate — non-admins bounce to /dashboard.
+//
+// 2026-08-04: added waitlist operations (founder request) — a one-tap
+// "Mark contacted" counter + timestamp, an outcome status pipeline, inline
+// notes, and filter chips by contact state. Row edits PATCH the same route
+// and splice the returned row back into local state, so a click never
+// forces a full-table refetch.
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
@@ -14,6 +20,8 @@ import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 
 type Tally = { label: string | null; count: string };
+
+type ContactStatus = 'new' | 'contacted' | 'responded' | 'converted' | 'not_interested';
 
 type WaitlistRow = {
   id: number;
@@ -26,13 +34,28 @@ type WaitlistRow = {
   primaryNeed: string | null;
   source: string | null;
   createdAt: string;
+  contactCount: number;
+  lastContactedAt: string | null;
+  contactStatus: ContactStatus;
+  adminNotes: string | null;
 };
 
 type WaitlistResponse = {
   stats: { total: string; latest: string | null };
   roleCounts: Tally[];
+  statusCounts: Tally[];
+  contactCounts: { notContacted: string; contactedOnce: string; contactedTwicePlus: string };
   rows: WaitlistRow[];
 };
+
+type FilterValue =
+  | 'all'
+  | 'not_contacted'
+  | 'contacted_once'
+  | 'contacted_twice_plus'
+  | 'responded'
+  | 'converted'
+  | 'not_interested';
 
 // Label maps carried over verbatim from the homepage page.
 const roleLabels: Record<string, string> = {
@@ -64,6 +87,14 @@ const primaryNeedLabels: Record<string, string> = {
   all_of_it: 'All of it',
 };
 
+const contactStatusLabels: Record<ContactStatus, string> = {
+  new: 'New',
+  contacted: 'Contacted',
+  responded: 'Responded',
+  converted: 'Converted',
+  not_interested: 'Not interested',
+};
+
 const labelFor = (value: string | null, labels: Record<string, string>): string =>
   value ? labels[value] ?? value : 'Not answered';
 
@@ -78,12 +109,31 @@ function formatDate(value: string | null): string {
   }
 }
 
+function formatShortDate(value: string | null): string {
+  if (!value) return '';
+  try {
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(value));
+  } catch {
+    return '';
+  }
+}
+
 async function getAccessToken(): Promise<string> {
   const {
     data: { session },
   } = await supabase.auth.getSession();
   return session?.access_token || '';
 }
+
+const FILTER_OPTIONS: { value: FilterValue; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'not_contacted', label: 'Not contacted' },
+  { value: 'contacted_once', label: 'Contacted 1x' },
+  { value: 'contacted_twice_plus', label: 'Contacted 2x+' },
+  { value: 'responded', label: 'Responded' },
+  { value: 'converted', label: 'Converted' },
+  { value: 'not_interested', label: 'Not interested' },
+];
 
 export default function WaitlistAdminPageClient() {
   const router = useRouter();
@@ -94,15 +144,23 @@ export default function WaitlistAdminPageClient() {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [filter, setFilter] = useState<FilterValue>('all');
+  const [busyRowId, setBusyRowId] = useState<number | null>(null);
+  const [editingNotesId, setEditingNotesId] = useState<number | null>(null);
+  const [notesDraft, setNotesDraft] = useState('');
 
   const loadWaitlist = useCallback(
-    async (q: string, opts?: { asGate?: boolean }) => {
+    async (q: string, f: FilterValue, opts?: { asGate?: boolean }) => {
       try {
         const token = await getAccessToken();
-        const response = await fetch(
-          `/api/admin/waitlist${q ? `?q=${encodeURIComponent(q)}` : ''}`,
-          { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
-        );
+        const params = new URLSearchParams();
+        if (q) params.set('q', q);
+        if (f !== 'all') params.set('filter', f);
+        const qs = params.toString();
+        const response = await fetch(`/api/admin/waitlist${qs ? `?${qs}` : ''}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
         if (!response.ok) {
           if (opts?.asGate && (response.status === 401 || response.status === 403)) {
             router.replace('/dashboard');
@@ -135,14 +193,65 @@ export default function WaitlistAdminPageClient() {
       router.replace('/auth');
       return;
     }
-    void loadWaitlist('', { asGate: true });
-  }, [authLoading, loadWaitlist, router, user]);
+    void loadWaitlist('', 'all', { asGate: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, router, user]);
 
   const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSearching(true);
-    await loadWaitlist(query.trim());
+    await loadWaitlist(query.trim(), filter);
     setIsSearching(false);
+  };
+
+  const handleFilterClick = async (value: FilterValue) => {
+    setFilter(value);
+    setIsSearching(true);
+    await loadWaitlist(query.trim(), value);
+    setIsSearching(false);
+  };
+
+  const patchRow = useCallback(
+    async (id: number, body: Record<string, unknown>) => {
+      setBusyRowId(id);
+      try {
+        const token = await getAccessToken();
+        const response = await fetch('/api/admin/waitlist', {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ id, ...body }),
+        });
+        const payload = (await response.json().catch(() => ({}))) as
+          | { row?: WaitlistRow; error?: string };
+        if (!response.ok || !payload.row) {
+          setError(payload.error || 'Could not save that change.');
+          return;
+        }
+        setError('');
+        setData((prev) =>
+          prev
+            ? { ...prev, rows: prev.rows.map((r) => (r.id === id ? (payload.row as WaitlistRow) : r)) }
+            : prev
+        );
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not save that change.');
+      } finally {
+        setBusyRowId(null);
+      }
+    },
+    []
+  );
+
+  const handleMarkContacted = (id: number) => patchRow(id, { action: 'contact' });
+  const handleStatusChange = (id: number, status: ContactStatus) =>
+    patchRow(id, { action: 'set_status', status });
+  const handleSaveNotes = async (id: number) => {
+    await patchRow(id, { action: 'set_notes', notes: notesDraft });
+    setEditingNotesId(null);
+    setNotesDraft('');
   };
 
   if (authLoading || !user || !checked) {
@@ -156,6 +265,20 @@ export default function WaitlistAdminPageClient() {
   const stats = data?.stats ?? { total: '0', latest: null };
   const roleCounts = data?.roleCounts ?? [];
   const rows = data?.rows ?? [];
+  const contactCounts = data?.contactCounts ?? {
+    notContacted: '0',
+    contactedOnce: '0',
+    contactedTwicePlus: '0',
+  };
+  const statusCountsByLabel = new Map((data?.statusCounts ?? []).map((s) => [s.label, s.count]));
+
+  const countFor = (value: FilterValue): string | null => {
+    if (value === 'all') return null;
+    if (value === 'not_contacted') return contactCounts.notContacted;
+    if (value === 'contacted_once') return contactCounts.contactedOnce;
+    if (value === 'contacted_twice_plus') return contactCounts.contactedTwicePlus;
+    return statusCountsByLabel.get(value) ?? '0';
+  };
 
   return (
     <div>
@@ -165,7 +288,7 @@ export default function WaitlistAdminPageClient() {
       <h1 className="mt-2 font-display text-3xl font-semibold">Waitlist</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
         Marketing-site waitlist signups, straight from the Neon database. Showing
-        the 200 most recent{query.trim() ? ' matches' : ''}.
+        the 200 most recent{query.trim() || filter !== 'all' ? ' matches' : ''}.
       </p>
 
       {error ? (
@@ -208,6 +331,33 @@ export default function WaitlistAdminPageClient() {
         </div>
       ) : null}
 
+      <div className="mt-6">
+        <p className="text-sm font-medium text-content-primary">Contact state</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {FILTER_OPTIONS.map((opt) => {
+            const count = countFor(opt.value);
+            const isActive = filter === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => void handleFilterClick(opt.value)}
+                className={`motion-focus inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+                  isActive
+                    ? 'border-brand bg-brand/8 text-content-primary'
+                    : 'border-stroke-default bg-bg-elevated text-content-secondary hover:border-stroke-strong hover:text-content-primary'
+                }`}
+              >
+                {opt.label}
+                {count !== null ? (
+                  <span className="font-mono font-semibold text-content-primary">{count}</span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <form onSubmit={handleSearch} className="mt-6 flex max-w-md gap-2">
         <input
           value={query}
@@ -230,7 +380,7 @@ export default function WaitlistAdminPageClient() {
       </form>
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-stroke-default">
-        <table className="w-full min-w-[900px] text-left text-sm">
+        <table className="w-full min-w-[1280px] text-left text-sm">
           <thead className="bg-bg-elevated font-mono text-[11px] uppercase tracking-[0.12em] text-content-tertiary">
             <tr>
               <th className="px-4 py-3 font-bold">Signed up</th>
@@ -242,39 +392,127 @@ export default function WaitlistAdminPageClient() {
               <th className="px-4 py-3 font-bold">Releases/yr</th>
               <th className="px-4 py-3 font-bold">Primary need</th>
               <th className="px-4 py-3 font-bold">Source</th>
+              <th className="px-4 py-3 font-bold">Contacted</th>
+              <th className="px-4 py-3 font-bold">Status</th>
+              <th className="px-4 py-3 font-bold">Notes</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stroke-subtle bg-bg-surface">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-content-tertiary">
-                  {query.trim() ? 'No matches.' : 'No signups yet.'}
+                <td colSpan={12} className="px-4 py-8 text-center text-content-tertiary">
+                  {query.trim() || filter !== 'all' ? 'No matches.' : 'No signups yet.'}
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
-                <tr key={row.id}>
-                  <td className="whitespace-nowrap px-4 py-3 text-content-tertiary">
-                    {formatDate(row.createdAt)}
-                  </td>
-                  <td className="px-4 py-3 text-content-primary">{row.name || '—'}</td>
-                  <td className="px-4 py-3 text-content-secondary">{row.email}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-content-secondary">{row.phone || '—'}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-content-secondary">
-                    {labelFor(row.role, roleLabels)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-content-secondary">
-                    {labelFor(row.teamSize, teamSizeLabels)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-content-secondary">
-                    {labelFor(row.releaseVolume, releaseVolumeLabels)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-content-secondary">
-                    {labelFor(row.primaryNeed, primaryNeedLabels)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-content-tertiary">{row.source || '—'}</td>
-                </tr>
-              ))
+              rows.map((row) => {
+                const isBusy = busyRowId === row.id;
+                const isEditingNotes = editingNotesId === row.id;
+                return (
+                  <tr key={row.id}>
+                    <td className="whitespace-nowrap px-4 py-3 text-content-tertiary">
+                      {formatDate(row.createdAt)}
+                    </td>
+                    <td className="px-4 py-3 text-content-primary">{row.name || '—'}</td>
+                    <td className="px-4 py-3 text-content-secondary">{row.email}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-content-secondary">{row.phone || '—'}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-content-secondary">
+                      {labelFor(row.role, roleLabels)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-content-secondary">
+                      {labelFor(row.teamSize, teamSizeLabels)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-content-secondary">
+                      {labelFor(row.releaseVolume, releaseVolumeLabels)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-content-secondary">
+                      {labelFor(row.primaryNeed, primaryNeedLabels)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-content-tertiary">{row.source || '—'}</td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-content-secondary">
+                          {row.contactCount > 0
+                            ? `${row.contactCount}x${
+                                row.lastContactedAt ? ` · ${formatShortDate(row.lastContactedAt)}` : ''
+                              }`
+                            : '—'}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => void handleMarkContacted(row.id)}
+                          className="motion-focus inline-flex items-center gap-1 rounded-full border border-stroke-default bg-bg-elevated px-2.5 py-1 text-xs font-medium text-content-secondary hover:border-stroke-strong hover:text-content-primary disabled:opacity-60"
+                        >
+                          {isBusy ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> : null}
+                          Mark contacted
+                        </button>
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <select
+                        value={row.contactStatus}
+                        disabled={isBusy}
+                        onChange={(event) =>
+                          void handleStatusChange(row.id, event.target.value as ContactStatus)
+                        }
+                        className="motion-focus h-8 rounded-md border border-stroke-default bg-bg-elevated px-2 text-xs text-content-primary hover:border-stroke-strong focus:border-brand disabled:opacity-60"
+                      >
+                        {Object.entries(contactStatusLabels).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="min-w-[220px] px-4 py-3">
+                      {isEditingNotes ? (
+                        <div className="flex flex-col gap-2">
+                          <textarea
+                            value={notesDraft}
+                            onChange={(event) => setNotesDraft(event.target.value)}
+                            rows={2}
+                            className="motion-focus w-full min-w-[200px] rounded-md border border-stroke-default bg-bg-elevated px-2 py-1 text-xs text-content-primary focus:border-brand"
+                            autoFocus
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() => void handleSaveNotes(row.id)}
+                              className="motion-focus rounded-md border border-brand bg-brand/8 px-2 py-1 text-xs font-medium text-content-primary disabled:opacity-60"
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingNotesId(null);
+                                setNotesDraft('');
+                              }}
+                              className="motion-focus rounded-md border border-stroke-default px-2 py-1 text-xs font-medium text-content-secondary hover:text-content-primary"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingNotesId(row.id);
+                            setNotesDraft(row.adminNotes ?? '');
+                          }}
+                          title={row.adminNotes ?? undefined}
+                          className="motion-focus block max-w-[220px] truncate text-left text-xs text-content-secondary hover:text-content-primary"
+                        >
+                          {row.adminNotes || 'Add note'}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
