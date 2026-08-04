@@ -7,7 +7,7 @@ import { AlertCircle, ChevronLeft } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { formatArtistName } from '@/lib/release-execution';
-import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import { ReleaseSceneHeaderSkeleton, ShareLinkCardSkeleton } from '@/components/loading/ReleaseSectionSkeletons';
 import { Toast } from '@/components/shared/Toast';
 import { EpkSection } from '@/components/releases/EpkSection';
 
@@ -70,16 +70,9 @@ export default function EpkPageClient() {
   if (authLoading || isInitialLoading) {
     return (
       <main className="bg-bg-base text-content-primary">
-        {/* Mirrors this page's real header exactly — back link, then artist
-            eyebrow, then title — which is the same shape FilesPageSkeleton
-            reserves, since both pages now share that header (URG-200). */}
         <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-10 sm:px-6">
-          <SkeletonBlock className="h-3 w-24" />
-          <div className="mt-4 space-y-2">
-            <SkeletonBlock className="h-3 w-32" />
-            <SkeletonBlock className="h-8 w-2/3" />
-          </div>
-          <SkeletonBlock className="mt-6 h-24 w-full" />
+          <ReleaseSceneHeaderSkeleton />
+          <ShareLinkCardSkeleton />
         </div>
       </main>
     );

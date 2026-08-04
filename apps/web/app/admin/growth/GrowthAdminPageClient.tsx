@@ -9,9 +9,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
+import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 
 type Week = { weekLabel: string; totalUsers: number };
 type GrowthResponse = { total: number; weeks: Week[] };
@@ -72,9 +72,12 @@ export default function GrowthAdminPageClient() {
 
   if (authLoading || !user || !checked) {
     return (
-      <div className="grid min-h-[50vh] place-items-center text-content-tertiary">
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-      </div>
+      <AdminPageSkeleton
+        titleWidth="w-28"
+        statCards={{ count: 2, gridClassName: 'grid-cols-1 sm:grid-cols-2' }}
+        chart
+        table={{ columns: 3, rows: 8 }}
+      />
     );
   }
 

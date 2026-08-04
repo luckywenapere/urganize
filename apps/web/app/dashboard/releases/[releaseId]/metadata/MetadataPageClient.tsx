@@ -7,6 +7,7 @@ import { AlertCircle, ChevronLeft } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { formatArtistName } from '@/lib/release-execution';
+import { MetadataFieldsSkeleton, ReleaseSceneHeaderSkeleton } from '@/components/loading/ReleaseSectionSkeletons';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { Toast } from '@/components/shared/Toast';
 import { MetadataSection } from '@/components/releases/MetadataSection';
@@ -69,16 +70,13 @@ export default function MetadataPageClient() {
   if (authLoading || isInitialLoading) {
     return (
       <main className="bg-bg-base text-content-primary">
-        {/* Mirrors this page's real header exactly — back link, then artist
-            eyebrow, then title — the same shape the press kit/files skeletons
-            reserve, since every release scene shares this header. */}
         <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-10 sm:px-6">
-          <SkeletonBlock className="h-3 w-24" />
-          <div className="mt-4 space-y-2">
-            <SkeletonBlock className="h-3 w-32" />
-            <SkeletonBlock className="h-8 w-2/3" />
+          <ReleaseSceneHeaderSkeleton />
+          <div className="mt-8" aria-hidden="true">
+            <SkeletonBlock className="h-2.5 w-32" />
+            <SkeletonBlock className="mt-1.5 h-3.5 w-80 max-w-full" />
+            <MetadataFieldsSkeleton />
           </div>
-          <SkeletonBlock className="mt-6 h-24 w-full" />
         </div>
       </main>
     );

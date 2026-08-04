@@ -12,6 +12,7 @@ import { Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { SignalIcon } from '@/components/app/BrandIcons';
 import { supabase } from '@/lib/supabase/client';
+import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 
 type Reach = { configured: boolean; devices: number; users: number };
 
@@ -113,11 +114,7 @@ export default function BroadcastPageClient() {
   };
 
   if (authLoading || !user || !checked) {
-    return (
-      <div className="grid min-h-[50vh] place-items-center text-content-tertiary">
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-      </div>
-    );
+    return <AdminPageSkeleton titleWidth="w-72" descriptionLines={2} formFields={3} />;
   }
 
   // The page frame (outer <main>, padding, the AdminNav side menu) moved to

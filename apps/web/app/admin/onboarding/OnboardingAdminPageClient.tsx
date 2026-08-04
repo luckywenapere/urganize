@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { Download, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
+import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 
 type Tally = { label: string; count: number };
 
@@ -179,9 +180,13 @@ export default function OnboardingAdminPageClient() {
 
   if (authLoading || !user || !checked || !data) {
     return (
-      <div className="grid min-h-[50vh] place-items-center text-content-tertiary">
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-      </div>
+      <AdminPageSkeleton
+        titleWidth="w-56"
+        descriptionLines={2}
+        statCards={{ count: 3, gridClassName: 'grid-cols-1 sm:grid-cols-3' }}
+        tallyRows={[4, 5, 4, 6, 4]}
+        table={{ columns: 8, rows: 6 }}
+      />
     );
   }
 

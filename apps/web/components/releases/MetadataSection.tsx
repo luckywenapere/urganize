@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, ClipboardList, Copy, ExternalLink, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
-import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import { MetadataFieldsSkeleton, ShareLinkCardSkeleton } from '@/components/loading/ReleaseSectionSkeletons';
 import type { ReleaseMetadataSnapshot } from '@/lib/release-ops';
 import {
   RELEASE_CREDIT_ROLE_LABELS,
@@ -330,9 +330,7 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
         </p>
 
         {isLoadingMetadata ? (
-          <div className="mt-4 space-y-2">
-            <SkeletonBlock className="h-24 w-full" />
-          </div>
+          <MetadataFieldsSkeleton />
         ) : metadataError ? (
           <div className="mt-4 flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-status-error">{metadataError}</p>
@@ -411,9 +409,7 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
         </p>
 
         {isLoadingLink ? (
-          <div className="mt-4">
-            <SkeletonBlock className="h-12 w-full" />
-          </div>
+          <ShareLinkCardSkeleton />
         ) : linkError ? (
           <div className="mt-4 flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-status-error">{linkError}</p>

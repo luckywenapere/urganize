@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { Download, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
+import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 
 type PricingResponse = {
   id: string;
@@ -146,9 +147,12 @@ export default function PricingValidationPageClient() {
 
   if (authLoading || !user || !checked || !data) {
     return (
-      <div className="grid min-h-[50vh] place-items-center text-content-tertiary">
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-      </div>
+      <AdminPageSkeleton
+        titleWidth="w-48"
+        statCards={{ count: 4, gridClassName: 'grid-cols-2 sm:grid-cols-4' }}
+        tallyRows={[3]}
+        table={{ columns: 7, rows: 6 }}
+      />
     );
   }
 

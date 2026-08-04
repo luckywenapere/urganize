@@ -22,6 +22,34 @@ type CalendarPageSkeletonProps = {
 const GRID_CELL_COUNT = 5 * 7;
 const AGENDA_ROW_COUNT = 6;
 
+/**
+ * The month-grid + agenda-list placeholder, split out (2026-08-04) so it can
+ * be reused for the POSTS loading state too — previously CalendarPageClient
+ * fell back to a plain "Loading posts…" string once the page shell/tabs had
+ * already resolved (switching calendars, or the calendar tab's own fetch),
+ * with no shape reservation at all. Same desktop-grid / mobile-agenda split
+ * as the real `MonthGrid`/`AgendaList` pair.
+ */
+export function CalendarGridSkeleton() {
+  return (
+    <div className="mt-4" aria-hidden="true">
+      {/* Desktop: 5-week grid of empty pulsing cells. */}
+      <div className="hidden grid-cols-7 gap-px border border-[var(--cc-border)] lg:grid">
+        {Array.from({ length: GRID_CELL_COUNT }).map((_, index) => (
+          <SkeletonBlock key={index} className="min-h-[72px] rounded-none" />
+        ))}
+      </div>
+
+      {/* Mobile: agenda rows. */}
+      <div className="space-y-2 lg:hidden">
+        {Array.from({ length: AGENDA_ROW_COUNT }).map((_, index) => (
+          <SkeletonBlock key={index} className="h-14 w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function CalendarPageSkeleton({ className = '' }: CalendarPageSkeletonProps) {
   return (
     <main
@@ -40,19 +68,7 @@ export function CalendarPageSkeleton({ className = '' }: CalendarPageSkeletonPro
           <SkeletonBlock className="h-8 w-8" />
         </div>
 
-        {/* Desktop: 5-week grid of empty pulsing cells. */}
-        <div className="mt-6 hidden grid-cols-7 gap-px border border-[var(--cc-border)] lg:grid">
-          {Array.from({ length: GRID_CELL_COUNT }).map((_, index) => (
-            <SkeletonBlock key={index} className="min-h-[72px] rounded-none" />
-          ))}
-        </div>
-
-        {/* Mobile: agenda rows. */}
-        <div className="mt-6 space-y-2 lg:hidden">
-          {Array.from({ length: AGENDA_ROW_COUNT }).map((_, index) => (
-            <SkeletonBlock key={index} className="h-14 w-full" />
-          ))}
-        </div>
+        <CalendarGridSkeleton />
       </div>
     </main>
   );

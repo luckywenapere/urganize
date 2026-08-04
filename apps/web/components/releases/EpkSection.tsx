@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Check, Copy, ExternalLink, Loader2, Newspaper } from 'lucide-react';
 import type { ReleaseEpk } from '@/types/epk';
 import { supabase } from '@/lib/supabase/client';
-import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import { ShareLinkCardSkeleton } from '@/components/loading/ReleaseSectionSkeletons';
 
 // The EPK share-link manager (URG-196). Self-contained (the
 // ContentCalendarSection pattern): takes releaseId, fetches its own data,
@@ -155,9 +155,7 @@ export function EpkSection({ releaseId, onToast }: EpkSectionProps) {
   const body = (
     <>
       {isLoading ? (
-        <div className="mt-4">
-          <SkeletonBlock className="h-12 w-full" />
-        </div>
+        <ShareLinkCardSkeleton />
       ) : loadError ? (
         <div className="mt-4 flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-status-error">Couldn&rsquo;t load the press kit.</p>

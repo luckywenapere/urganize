@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.38.4",
+    date: "August 4, 2026",
+    highlights: [
+      "Loading states got a lot less bare across the app — admin pages, the press kit and metadata pages, the content calendar, and public press-kit/credit links now show a proper preview of what's coming instead of a plain spinner or blank screen.",
+    ],
+  },
+  {
     version: "0.38.3",
     date: "August 4, 2026",
     highlights: [

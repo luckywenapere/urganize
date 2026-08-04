@@ -19,7 +19,7 @@ import {
 } from '@/types/content-calendar';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { Toast } from '@/components/shared/Toast';
-import { CalendarPageSkeleton } from '@/components/content-calendar/CalendarPageSkeleton';
+import { CalendarGridSkeleton, CalendarPageSkeleton } from '@/components/content-calendar/CalendarPageSkeleton';
 import { CalendarTabs } from '@/components/content-calendar/CalendarTabs';
 import { CalendarOverflowMenu } from '@/components/content-calendar/CalendarOverflowMenu';
 import { MonthGrid } from '@/components/content-calendar/MonthGrid';
@@ -625,7 +625,7 @@ export default function CalendarPageClient() {
               />
 
               {isLoadingPosts && posts.length === 0 && !postsError ? (
-                <p className="mt-4 text-center text-sm text-[var(--cc-text-muted)]">Loading posts…</p>
+                <CalendarGridSkeleton />
               ) : postsError && posts.length === 0 ? (
                 <div className="mt-4 flex flex-col items-start gap-3 border border-[var(--cc-border)] bg-[var(--cc-text)]/5 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-[var(--cc-text)]">Couldn&rsquo;t load posts.</p>

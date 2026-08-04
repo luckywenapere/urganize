@@ -14,14 +14,24 @@ import { SkeletonBlock } from './SkeletonBlock';
  * conversation store is ephemeral (a reload always starts empty), so the
  * empty state is effectively the only shape a fresh load resolves to.
  *
+ * Reserves the collapse-button row too (desktop only, `hidden lg:flex` —
+ * matching the real page's row exactly): unlike the invite banner below,
+ * that row is unconditional at lg+, so its absence would leave the
+ * centered empty state sitting slightly lower than where the real content
+ * settles once ChappiConversation's own centered empty state mounts under
+ * it.
+ *
  * Deliberately NOT reserved: the invite-teammates banner — it's
  * manager-gated and dismissal-persisted, so the skeleton can't know whether
  * it will render; a banner popping in beats one vanishing.
  */
 export function ChappiPageSkeleton() {
   return (
-    <div className="chappi-shell-height" aria-hidden="true">
-      <div className="flex h-full min-h-0 flex-col items-center justify-center px-2">
+    <div className="chappi-shell-height flex flex-col" aria-hidden="true">
+      <div className="hidden h-7 shrink-0 justify-end lg:flex">
+        <SkeletonBlock className="h-7 w-7" />
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-2">
         {/* Eyebrow row: "CHAPPI" + the Beta badge pill. */}
         <div className="flex items-center gap-2">
           <SkeletonBlock className="h-2.5 w-14" />
