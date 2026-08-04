@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.38.2",
+    date: "August 4, 2026",
+    highlights: [
+      "UrgAns has its own address now: the assistant's page moved to a URL that matches its name. Old links and shortcuts still get you there.",
+    ],
+  },
+  {
     version: "0.38.1",
     date: "August 4, 2026",
     highlights: [

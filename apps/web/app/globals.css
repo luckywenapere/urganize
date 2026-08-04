@@ -1453,7 +1453,7 @@ body:focus-within .keyboard-hint,
 
 /* The Chappi page's <main> bottom padding, replacing AppShell's default
    pb-28 there. pb-28 exists to clear the floating ChappiDock launcher, but
-   ChappiDock renders null on /dashboard/chappi (the page IS the chat) — so
+   ChappiDock renders null on /dashboard/urgans (the page IS the chat) — so
    on mobile the 7rem gap just floats the message box mid-screen instead of
    docking it to the bottom. A thin safe-area-aware gap replaces it. Desktop
    keeps the same md:pb-10 AppShell already used. */

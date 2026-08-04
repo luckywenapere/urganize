@@ -33,7 +33,7 @@ type ChappiSidePanelProps = {
  * previously scoped to the catalog only, driven by a `?chat=1` URL param —
  * a param can't survive navigation, so open state moved to the store).
  * Shares the SAME global `useChappiStore` conversation as the dock and the
- * full `/dashboard/chappi` page — closing this panel does NOT lose the
+ * full `/dashboard/urgans` page — closing this panel does NOT lose the
  * conversation (module-scope store, proven by the dock's existing
  * expand-to-page behavior).
  *
@@ -114,7 +114,7 @@ export function ChappiSidePanel({ onNewRelease }: ChappiSidePanelProps) {
                 // is a pure navigation — the transcript follows. railOpen is
                 // left true on purpose: the rail renders nowhere on the
                 // assistant page, and navigating back restores the split.
-                router.push('/dashboard/chappi');
+                router.push('/dashboard/urgans');
               }}
               aria-label="Open UrgAns full page"
               title="Open full page"

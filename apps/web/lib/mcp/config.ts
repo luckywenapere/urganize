@@ -8,7 +8,7 @@
 // stay safe without an acting-user header — see the URG-183 note in CLAUDE.md.
 //
 // Presence of BOTH vars is the feature switch: unset → the route 404s (dark,
-// mirroring the flag-off 404 in app/api/chappi/route.ts). There is no
+// mirroring the flag-off 404 in app/api/urgans/route.ts). There is no
 // NEXT_PUBLIC_FEATURE_MCP because nothing about this ships to the client
 // bundle, and a separate flag would only create a half-configured state.
 

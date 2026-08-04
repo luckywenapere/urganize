@@ -10,8 +10,8 @@ const featureColumns = [
   },
   {
     kicker: "Assistant",
-    title: "Tell Chappi what you need.",
-    body: "Chappi is the assistant built into your workspace. Type 'create a release' or 'mark the artwork done' and it happens. No menus. And it keeps getting better.",
+    title: "Tell UrgAns what you need.",
+    body: "UrgAns is the assistant built into your workspace. Type 'create a release' or 'mark the artwork done' and it happens. No menus. And it keeps getting better.",
   },
   {
     kicker: "Visibility",

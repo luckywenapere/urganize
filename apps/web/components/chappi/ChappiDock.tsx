@@ -38,7 +38,7 @@ type ChappiDockProps = {
  * occupied — that link now lives in this panel's footer). Open: a fixed
  * panel hosting ChappiConversation in its compact `panel` variant.
  *
- * The conversation is the SAME global useChappiStore the /dashboard/chappi
+ * The conversation is the SAME global useChappiStore the /dashboard/urgans
  * page and the side rail read — expand mid-conversation and the full page
  * picks up the transcript. On that page the dock renders nothing (the page
  * IS the chat).
@@ -107,7 +107,7 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
   // The assistant page IS the chat — a floating duplicate of the same
   // conversation there is redundant. Open state is preserved for when the
   // user navigates back to a workspace page.
-  if (pathname === '/dashboard/chappi') return null;
+  if (pathname === '/dashboard/urgans') return null;
 
   if (!isOpen) {
     return (
@@ -156,7 +156,7 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
               // The page and the panel share one conversation, so expanding
               // is a pure navigation — the transcript follows.
               setOpenPersisted(false);
-              router.push('/dashboard/chappi');
+              router.push('/dashboard/urgans');
             }}
             aria-label="Open UrgAns full page"
             title="Open full page"
