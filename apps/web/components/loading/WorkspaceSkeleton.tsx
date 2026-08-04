@@ -13,9 +13,12 @@ import { useKnownReleaseCount } from './known-counts';
 const SCOPE_PARAM = 'release';
 
 // Same build-time flags TasksPanel reads for its scoped-header pills. The
-// skeleton renders one placeholder pill per REAL pill (URG-199) so the row
-// doesn't change width when content swaps in: New activity + Overview are
-// always present; Calendar / Files / Press kit appear per flag.
+// skeleton renders one placeholder pill per REAL pill so the row doesn't
+// change width when content swaps in: New activity is always present;
+// Metadata / Calendar / Files / Press kit appear per flag, in that order
+// (2026-08-04 — the release detail page and its "Overview" pill were
+// removed; Metadata moved to the front of the row).
+const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
@@ -25,6 +28,13 @@ const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 // so the skeleton no longer reserves a panel slot of its own; it only needs
 // the rail's open state to mirror the focused view's hideRails behavior.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
+// The two AI actions the removed release detail page used to carry (Tailor
+// plan / Generate status update) now render as extra pills at the end of
+// this same header row (WorkspaceView), so the skeleton reserves their
+// width too when their flags are on.
+const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
+const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
 
 /**
  * Workspace loading state, rendered inline by `WorkspaceView` (and the
@@ -119,16 +129,19 @@ function ReleaseCardSkeleton() {
 }
 
 /** Tasks header row + one dim block for the list. Pill count mirrors the
- * real scoped header exactly: New activity + Overview always, then one per
- * enabled flag (Calendar / Files / Press kit) — see TasksPanel. Widths
- * approximate each label so the row's footprint matches. */
+ * real scoped header exactly: New activity always, then one per enabled
+ * flag in order (Metadata / Calendar / Files / Press kit — see TasksPanel),
+ * then the two AI action pills WorkspaceView appends. Widths approximate
+ * each label so the row's footprint matches. */
 function TasksPanelSkeleton() {
   const pillWidths = [
     'w-28', // New activity
-    'w-24', // Overview
+    ...(METADATA_ENABLED ? ['w-28'] : []), // Metadata + Beta tag
     ...(CONTENT_CALENDAR_ENABLED ? ['w-28'] : []), // Calendar + Beta tag
     ...(FILES_ENABLED ? ['w-16'] : []), // Files
     ...(EPK_ENABLED ? ['w-24'] : []), // Press kit
+    ...(TAILOR_PLAN_ENABLED ? ['w-28'] : []), // Tailor plan
+    ...(STATUS_UPDATE_ENABLED ? ['w-40'] : []), // Generate status update
   ];
   return (
     <div className="min-w-0 space-y-3">

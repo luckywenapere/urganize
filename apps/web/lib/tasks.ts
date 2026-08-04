@@ -2,8 +2,9 @@ import type { ReleaseOption } from '@/lib/release-helpers';
 
 /**
  * Audit findings before building collaborative tasks:
- * 1. Releases are the app's center of gravity. `/dashboard/releases/[releaseId]` is the active release workspace, with
- *    Tracks, Playbook, Metadata, Pre-Save, credits, and retention hooks all hanging off a release id.
+ * 1. Releases are the app's center of gravity. The workspace's scoped view (`/dashboard?release=<id>`) is the active
+ *    release workspace (2026-08-04 — absorbed the former `/dashboard/releases/[releaseId]` detail page), with
+ *    Metadata, the content calendar, files, press kit, and credits all hanging off a release id.
  * 2. Team structure already exists in two places: owner-led `organizations` + `organization_members` for workspace-ish
  *    settings, and release-specific `release_collaborators` for credits collection. Neither currently powers assignment.
  * 3. There is no in-app notification center yet. The only notification surface today is local preference toggles in

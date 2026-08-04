@@ -105,10 +105,12 @@ export default function ChappiPageClient() {
           } else {
             // Same one-time getting-started guide as the workspace's create
             // flow — template creations only (see WorkspaceView's onCreated).
+            // Lands on the workspace scoped to the new release (2026-08-04 —
+            // the release detail page was removed).
             router.push(
               plan === 'template'
-                ? `/dashboard/releases/${releaseId}?new=1`
-                : `/dashboard/releases/${releaseId}`
+                ? `/dashboard?release=${releaseId}&new=1`
+                : `/dashboard?release=${releaseId}`
             );
           }
         }}
@@ -120,7 +122,7 @@ export default function ChappiPageClient() {
           onDone={() => {
             const target = winReleaseId;
             setWinReleaseId(null);
-            router.push(`/dashboard/releases/${target}`);
+            router.push(`/dashboard?release=${target}`);
           }}
         />
       ) : null}

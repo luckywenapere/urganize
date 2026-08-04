@@ -119,7 +119,7 @@ async function loadReleaseRetentionSummary(
         title: 'Add your first task to stay on track',
         description: 'Tasks give the release a real plan instead of leaving important work floating in your head.',
         ctaLabel: 'Open tasks',
-        href: `/dashboard/releases/${releaseId}/tasks`,
+        href: `/dashboard?release=${releaseId}`,
       },
     };
   }

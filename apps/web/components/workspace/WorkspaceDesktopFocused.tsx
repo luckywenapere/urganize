@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/lib/tasks';
@@ -24,6 +25,13 @@ type WorkspaceDesktopFocusedProps = {
    * area stays readable instead of squeezing three columns into less
    * space. Rails return the moment the caller passes false again. */
   hideRails?: boolean;
+  /** Rendered above the TasksPanel inside the scrolling center column — the
+   * one-time NewReleaseGuide after a template creation (2026-08-04, ported
+   * from the removed release detail page). */
+  banner?: ReactNode;
+  /** Forwarded verbatim to TasksPanel's `extraActions` — the flag-gated AI
+   * action pills (Tailor plan / Generate status update). */
+  panelExtraActions?: ReactNode;
 };
 
 /**
@@ -50,6 +58,8 @@ export function WorkspaceDesktopFocused({
   onSelect,
   onClose,
   hideRails = false,
+  banner,
+  panelExtraActions,
 }: WorkspaceDesktopFocusedProps) {
   // Motion tracker data — done/total across the scoped release's activities
   // (same `status === 'done'` rule WorkspaceView uses for the grid cards).
@@ -125,7 +135,8 @@ export function WorkspaceDesktopFocused({
             (the focused card lives in the topbar). Clicking a row opens the
             global activity pop-up. */}
         <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain pb-4 pr-1">
-          <TasksPanel tasks={scopedTasks} scopedRelease={scopedRelease} />
+          {banner}
+          <TasksPanel tasks={scopedTasks} scopedRelease={scopedRelease} extraActions={panelExtraActions} />
         </div>
 
         {hideRails ? null : (

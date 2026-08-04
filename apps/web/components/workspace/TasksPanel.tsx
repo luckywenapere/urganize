@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { CalendarDays, ChevronDown, ClipboardList, Disc3, FolderOpen, Newspaper, Plus } from 'lucide-react';
+import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, Newspaper, Plus } from 'lucide-react';
 import {
   getTaskSectionLabel,
   groupTasksIntoSections,
@@ -84,9 +84,15 @@ type TasksPanelProps = {
   /** Optional DOM id, used by the parent to smooth-scroll into view when the
    * layout is stacked (below lg) and a release card is tapped. */
   id?: string;
+  /** Extra pills appended to the header row after the nav links — the
+   * flag-gated AI actions (Tailor plan / Generate status update) that used
+   * to live only on the now-removed release detail page (2026-08-04). Kept
+   * as a slot rather than owned here so this component stays presentational;
+   * WorkspaceView owns the modals/state. */
+  extraActions?: ReactNode;
 };
 
-export function TasksPanel({ tasks, scopedRelease, id }: TasksPanelProps) {
+export function TasksPanel({ tasks, scopedRelease, id, extraActions }: TasksPanelProps) {
   // openTask opens the global task detail pop-up mounted by TaskUIProvider —
   // this panel stays where it is underneath the modal.
   const { openTask, openQuickCreate } = useTaskUI();
@@ -163,24 +169,23 @@ export function TasksPanel({ tasks, scopedRelease, id }: TasksPanelProps) {
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
             New activity
           </button>
-          {/* Overview link (URG-199): the release detail page — the surface
-              hosting the side menu and every scene — previously had NO entry
-              point from the workspace at all: Calendar/Files/Press kit each
-              got a pill here while the page they hang off didn't. Not
-              flag-gated; the detail page always exists. */}
-          {scopedRelease ? (
+          {/* Metadata link (URG-108), FIRST among the scene links (founder
+              call, 2026-08-04) — distribution fields + collaborator credits
+              are the surface the founder reaches for most, now that the
+              release detail page is gone and this header is the single
+              navigation row for every release scene. */}
+          {METADATA_ENABLED && scopedRelease ? (
             <Link
-              href={`/dashboard/releases/${scopedRelease.id}`}
+              href={`/dashboard/releases/${scopedRelease.id}/metadata`}
               className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
             >
-              <Disc3 className="h-3.5 w-3.5" aria-hidden="true" />
-              Overview
+              <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
+              Metadata
+              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+                Beta
+              </span>
             </Link>
           ) : null}
-          {/* Files link: its own page (URG-165), not a segment nested under
-              the task list — files are a peer of tasks, not a child of them.
-              Only renders when a release is scoped (assets is release-scoped,
-              see /api/releases/{id}/assets). */}
           {/* Calendar link: the primary navigation into the release's content
               calendar (URG-157). A nav Link, not a toggle — the calendar is a
               full page (month grid needs width the panel doesn't have). Only
@@ -192,14 +197,16 @@ export function TasksPanel({ tasks, scopedRelease, id }: TasksPanelProps) {
             >
               <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
               Calendar
-              {/* Beta stamp (2026-07-23): the content calendar ships as Beta —
-                  same tag on the calendar page's header and the release detail
-                  entry link. */}
+              {/* Beta stamp (2026-07-23): the content calendar ships as Beta. */}
               <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
                 Beta
               </span>
             </Link>
           ) : null}
+          {/* Files link: its own page (URG-165), not a segment nested under
+              the task list — files are a peer of tasks, not a child of them.
+              Only renders when a release is scoped (assets is release-scoped,
+              see /api/releases/{id}/assets). */}
           {FILES_ENABLED && scopedRelease ? (
             <Link
               href={`/dashboard/releases/${scopedRelease.id}/files`}
@@ -211,7 +218,7 @@ export function TasksPanel({ tasks, scopedRelease, id }: TasksPanelProps) {
           ) : null}
           {/* Press kit link (URG-198): same shape as Calendar/Files above —
               the workspace is where users land, so every release surface
-              gets its entry point here, not only on the detail page. */}
+              gets its entry point here. */}
           {EPK_ENABLED && scopedRelease ? (
             <Link
               href={`/dashboard/releases/${scopedRelease.id}/epk`}
@@ -226,20 +233,7 @@ export function TasksPanel({ tasks, scopedRelease, id }: TasksPanelProps) {
               </span>
             </Link>
           ) : null}
-          {METADATA_ENABLED && scopedRelease ? (
-            <Link
-              href={`/dashboard/releases/${scopedRelease.id}/metadata`}
-              className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
-            >
-              <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
-              Metadata
-              {/* Beta stamp, same tag as Press kit above — this surface
-                  shipped 2026-07-31 and is still early. */}
-              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-                Beta
-              </span>
-            </Link>
-          ) : null}
+          {extraActions}
         </div>
       </div>
 
