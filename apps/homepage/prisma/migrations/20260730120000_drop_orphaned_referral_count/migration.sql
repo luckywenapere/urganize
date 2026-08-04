@@ -22,12 +22,13 @@
 -- view is dropped and recreated explicitly without that one column, so the
 -- resulting definition is recorded in version control rather than left implicit.
 --
--- NOT APPLIED — PROPOSAL ONLY, AND STILL PENDING ONE CHECK. Confirm every
--- referralCount value is 0 before running this:
---     SELECT "referralCount", count(*) FROM "User" GROUP BY 1 ORDER BY 1;
--- If any row has referralCount >= 1, someone was maintaining the column by hand,
--- `qualified_partners` is a real metric, and this migration MUST NOT be applied —
--- adopt the column into schema.prisma instead.
+-- APPLIED to production Neon on 2026-07-30 (confirmed via production query
+-- that every referralCount value was 0, then run out-of-band via the Neon SQL
+-- console, transaction-wrapped, no errors — this repo has no automated
+-- migration deploy). This file is the historical record of that fix; the
+-- statements below are also safe to re-run (DROP COLUMN IF EXISTS, and the
+-- view is dropped/recreated identically), so a stale environment that never
+-- got the manual fix will simply catch up rather than error.
 
 BEGIN;
 
