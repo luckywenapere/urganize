@@ -780,7 +780,27 @@ Follow-up to the release-detail-page removal above — the founder asked for eve
 
 ---
 
-*Last updated: 2026-08-04 (sitewide loading-state pass — admin pages, EPK/Metadata, content calendar, /locked, and the public epk/credits links all got accurate skeletons; a real /locked trial-eligibility display bug fixed along the way).*
+---
+
+## Release scenes became overlay windows (2026-08-04, v0.39.0)
+
+Founder: *"make it so that each of the features, metadata, calendar and the rest open in a window just like the activity lists open, not a whole separate page, where the top menu vanishes and the load is so strenuous."* The four release scenes are no longer routes — they open in place over the workspace.
+
+- **Three problems this fixed.** (1) `AppTopbar`'s `ContextTitle` only renders release identity on `/dashboard` with `?release=`, so navigating to a scene route made the topbar context vanish — the literal complaint. (2) Each scene was its own route segment, so the first open per session paid a chunk fetch + mount + a PAGE-level skeleton *on top of* each section's own internal skeleton — two skeletons in sequence per click. (3) It replaced the workspace instead of overlaying it, unlike the activity pop-up.
+- **New pieces:** `components/workspace/useSceneOverlay.ts` (URL-driven, `?scene=<name>`), `components/shared/SceneOverlayShell.tsx` (generic scrim/panel/scroll-lock chrome cloned from `TaskDetailModal`), `components/releases/ReleaseSceneOverlay.tsx` (host, mounted by `AppShell`, resolves the release and renders per scene), `components/content-calendar/CalendarScene.tsx` + `calendar-fonts.ts`.
+- **Per-scene sizing (founder call).** Metadata/Files/Press kit use `sm` (`sm:max-w-2xl`, matching the activity pop-up). Calendar uses a new `lg` variant (`sm:max-w-[1280px]`, minimal inset, **no inner horizontal padding**). ⚠️ `MonthGrid`/`AgendaList` swap on Tailwind's **viewport-gated** `lg:` (1024px), not container width — so overlay chrome that steals horizontal width squeezes the 7-column grid at 1024–1300px and the show/hide toggle cannot compensate. Do not give the `lg` variant a roomier "floating card" margin.
+- **URL-synced, unlike the activity pop-up** (which touches no URL). Deliberate: the calendar's `calendar`/`month` params are documented as deep-linkable "by humans and Chappi alike, per the spec." Scheme: `/dashboard?release=<id>&scene=<name>[&calendar=<id>&month=<yyyy-mm>]`. `activeScene` is **derived** from `searchParams`, never mirrored into a boolean — so Back/Forward/refresh/typed-URL/redirect-landing all resolve through one read.
+- **History model (founder call):** open-from-closed `push`es (so Back closes the window, matching the old `<Link>` pills); scene→scene switches `replace` (Back never walks back through switches); close `replace`s and **never** `router.back()` — a redirect stub can make a scene URL the first history entry, and `back()` would eject the user from the app.
+- **Calendar memory (founder call):** `calendar`/`month` survive close, so reopening the same release resumes its tab + month. They're cleared whenever the scoped release actually changes — at **both** choke points (`openScene` and `useReleaseScope.setScope`), since a release can change either way and residue would otherwise trip the calendar's "that calendar no longer exists" warning as a false positive.
+- **Four `page.tsx` routes are now 307 redirect stubs** into `/dashboard?release=…&scene=…`, same precedent as the release-detail stub. The calendar's stub **forwards `calendar`/`month`** so existing pinned deep links don't degrade.
+- **Escape asymmetry, and why it exists.** The shell owns Escape (`ownsEscape`, default true, with an `isTypingTarget` guard — Metadata has 8 text inputs). **Calendar passes `ownsEscape={false}` and owns it itself**, guarded on its `PostModal` being open: `PostModal` registers its own unguarded `window` Escape listener, and two listeners on the same target both fire for one keypress regardless of propagation, so a shell-owned handler would close the whole window out from under an open post modal.
+- **Bug found and fixed en route:** `PostModal` portals to `document.body`, and CSS custom properties inherit down the **DOM** tree, not the React tree — so all 27 of its `var(--cc-*)` reads had been resolving to nothing ever since it was written, because `.cc-island` was only on the calendar page's `<main>`. It now declares `cc-island` on its own portal root. (Its `--font-cc-*` reads have the same escape problem and are **not** fixed — those come from `next/font` on the scene root, and fixing them properly means loading those faces app-wide. Flagged, not done.)
+- **Also:** `lib/analytics/client.ts` gained `captureFeatureDiscoveryByName` (the route-matcher entry for `/metadata` could never fire again, so the host reports discovery explicitly); toasts route to the app-wide `ToastProvider` instead of three per-page inline `Toast`s; deleted `MetadataPageClient`/`EpkPageClient`/`FilesPageClient`/`CalendarPageClient`/`FilesPageSkeleton`, and renamed `CalendarPageSkeleton.tsx` → `CalendarGridSkeleton.tsx` after its page-level export died.
+- Verified: `pnpm build` + `pnpm lint` (0 errors, 41 warnings = unchanged baseline) + `pnpm test` (124 tests) green.
+
+---
+
+*Last updated: 2026-08-04 (release scenes — Metadata / Calendar / Files / Press kit — became in-workspace overlay windows instead of separate routes; v0.39.0).*
 
 ---
 

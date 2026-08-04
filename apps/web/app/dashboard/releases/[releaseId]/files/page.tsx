@@ -1,13 +1,13 @@
-import type { Metadata } from 'next';
-import FilesPageClient from './FilesPageClient';
+import { redirect } from 'next/navigation';
 
-// Thin server wrapper, same pattern as the release detail and calendar
-// pages: the real page is a client component (Zustand + browser fetches)
-// and can't export metadata itself.
-export const metadata: Metadata = {
-  title: 'Files',
-};
-
-export default function FilesPage() {
-  return <FilesPageClient />;
+// The files surface stopped being its own page (2026-08-04) — it now opens as
+// an overlay window over the workspace via `?scene=files`. See the metadata
+// stub next door for the full rationale; this route only forwards deep links.
+export default async function FilesRedirectPage({
+  params,
+}: {
+  params: Promise<{ releaseId: string }>;
+}) {
+  const { releaseId } = await params;
+  redirect(`/dashboard?release=${releaseId}&scene=files`);
 }

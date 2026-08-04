@@ -245,8 +245,17 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
   };
 
   const modal = (
+    // `cc-island` on the portal root (added 2026-08-04). This component
+    // portals to document.body, and CSS custom properties inherit down the DOM
+    // tree — not the React tree — so every one of its var(--cc-*) reads
+    // resolved to nothing once portaled outside the calendar's island wrapper.
+    // Declaring the island here makes the modal self-sufficient wherever it
+    // mounts, which it has to be now that the calendar is an overlay window
+    // rather than a page. (The --font-cc-* variables have the same escape
+    // problem and are NOT fixed by this — they come from next/font on the
+    // scene root; see the note in CalendarScene.)
     <div
-      className="fixed inset-x-0 top-0 z-[220] flex h-[100dvh] items-center justify-center bg-black/72 px-4 py-4 backdrop-blur-sm sm:py-8"
+      className="cc-island fixed inset-x-0 top-0 z-[220] flex h-[100dvh] items-center justify-center bg-black/72 px-4 py-4 backdrop-blur-sm sm:py-8"
       role="presentation"
     >
       <button

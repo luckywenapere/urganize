@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.39.0",
+    date: "August 4, 2026",
+    highlights: [
+      "Metadata, Calendar, Files, and Press kit now open in a window right on top of your workspace instead of loading a whole separate page. Your release stays visible in the top bar, they open instantly, and closing one puts you straight back where you were. The calendar gets a wider window so its month grid still has room.",
+    ],
+  },
+  {
     version: "0.38.5",
     date: "August 4, 2026",
     highlights: [

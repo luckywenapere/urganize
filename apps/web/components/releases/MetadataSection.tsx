@@ -13,9 +13,11 @@ import {
 
 // The metadata hub (URG-108). Self-contained (the EpkSection pattern): takes
 // releaseId, fetches its own data, renders its own loading/empty/error
-// states. Hosted by the dedicated /dashboard/releases/[releaseId]/metadata
-// page. Three sections: editable release-level distribution fields, the
-// collaborator credits share link, and the submissions collected through it.
+// states. Hosted by ReleaseSceneOverlay as an overlay window over the
+// workspace (2026-08-04 — it had its own /dashboard/releases/[releaseId]/metadata
+// page until then; that route is a redirect stub now). Three sections: editable
+// release-level distribution fields, the collaborator credits share link, and
+// the submissions collected through it.
 //
 // NEXT_PUBLIC_ prefix so the value is inlined at build time for this client
 // component. The API routes guard the same flag server-side (404 when off).

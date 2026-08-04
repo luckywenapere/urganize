@@ -1,12 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Fraunces, Space_Mono } from 'next/font/google';
-import { AlertCircle, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
-import { useAuthStore } from '@/lib/auth-store';
-import { useReleaseStore } from '@/stores/useReleaseStore';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { formatArtistName } from '@/lib/release-execution';
 import { supabase } from '@/lib/supabase/client';
 import { getClientTodayIso, getPlatformLabel, resolveMonth } from '@/lib/content-calendar';
@@ -17,34 +13,51 @@ import {
   type ContentPostStatus,
   type SocialPlatform,
 } from '@/types/content-calendar';
+import type { Release } from '@/types/releases';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
-import { Toast } from '@/components/shared/Toast';
-import { CalendarGridSkeleton, CalendarPageSkeleton } from '@/components/content-calendar/CalendarPageSkeleton';
+import { isTypingTarget } from '@/lib/tasks';
+import { CalendarGridSkeleton } from '@/components/content-calendar/CalendarGridSkeleton';
+import { calendarFontVariables } from '@/components/content-calendar/calendar-fonts';
 import { CalendarTabs } from '@/components/content-calendar/CalendarTabs';
 import { CalendarOverflowMenu } from '@/components/content-calendar/CalendarOverflowMenu';
 import { MonthGrid } from '@/components/content-calendar/MonthGrid';
 import { AgendaList } from '@/components/content-calendar/AgendaList';
 import { PostModal } from '@/components/content-calendar/PostModal';
 
-// Same NEXT_PUBLIC_ inlining convention as every other flag in the app; the
-// API routes 404 on the same flag server-side.
-const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
-
-// Route-scoped fonts, loaded ONCE here (not duplicated into
-// CalendarPageSkeleton) so the font files aren't fetched twice. Fraunces for
-// the release title (a large display moment); Space Mono for metadata (day
-// numbers, month label, status stamps), both per the Urganize Brand Bible
-// (URG 001). next/font/google calls must stay at module scope.
-const fraunces = Fraunces({ subsets: ['latin'], weight: '500', variable: '--font-cc-display' });
-const spaceMono = Space_Mono({ subsets: ['latin'], weight: ['400', '700'], variable: '--font-cc-mono' });
-
-// The brand island's colors live in globals.css as the `cc-island` class
-// (dark = Bible screen mode, light = Bible paper mode, keyed off the app's
-// data-theme; founder decision 2026-07-20 reversing the earlier dark-locked
-// call). Components consume the --cc-* vars via Tailwind arbitrary values,
-// so the future app-wide Bible restyle stays a variable remap.
-
-type ToastState = { message: string; tone: 'success' | 'error' | 'warning' };
+/**
+ * The release content calendar, as the body of an overlay window over the
+ * workspace. Ported from the retired `CalendarPageClient` (2026-08-04, founder
+ * call: the release scenes should open in place "just like the activity lists
+ * open, not a whole separate page").
+ *
+ * WHAT CHANGED IN THE PORT, and why each mattered:
+ * 1. `releaseId` came from `useParams()`. Mounted on /dashboard there is no
+ *    `[releaseId]` segment, so that returned undefined and every fetch would
+ *    have silently become `/api/releases/undefined/...`. It is a prop now.
+ * 2. Five router writes hardcoded `/dashboard/releases/${releaseId}/calendar`.
+ *    They use `usePathname()` now, so they write back to wherever this is
+ *    actually mounted.
+ * 3. TWO of those five (`handleCalendarCreated`, `handleEmptyCreate`) built
+ *    their query string from scratch rather than merging `searchParams` — as a
+ *    page that only dropped `month`, but on /dashboard it would also have
+ *    dropped `release=` and `scene=`, throwing the user out of the window's own
+ *    URL state the moment they created a calendar. Both merge now, like the
+ *    other three already did.
+ * 4. Escape is owned here, not by SceneOverlayShell (which is passed
+ *    `ownsEscape={false}`) — because PostModal has its own unguarded
+ *    window-level Escape listener, and two listeners on the same target both
+ *    fire for one keypress, which would close this whole window out from under
+ *    an open post modal.
+ * 5. The page-level skeleton, "release not found" branch, auth/flag redirects,
+ *    and document.title are all gone: ReleaseSceneOverlay resolves the release
+ *    and owns those states before this ever mounts.
+ * 6. Toasts route to the app-wide ToastProvider instead of a local inline
+ *    Toast, which inside a scrolling dialog panel could scroll out of view.
+ * 7. `<main className="cc-island min-h-screen ...">` became a plain div: the
+ *    shell's panel carries `cc-island` and the ground/text colors now (so the
+ *    window frame IS the brand island — no seam between neutral chrome and ink
+ *    content), and this root only carries the font variables.
+ */
 
 async function getAccessToken(): Promise<string> {
   const {
@@ -69,44 +82,18 @@ function isIsoDateString(value: unknown): value is string {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
-export default function CalendarPageClient() {
-  const { releaseId } = useParams<{ releaseId: string }>();
+type CalendarSceneProps = {
+  release: Pick<Release, 'id' | 'title' | 'artistName' | 'releaseDate'>;
+  onClose: () => void;
+  onToast: (message: string, tone: 'success' | 'error' | 'warning') => void;
+};
+
+export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps) {
+  const releaseId = release.id;
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { user, isLoading: authLoading } = useAuthStore();
-  const { releases, isInitialLoading, error: releaseError, loadCommandCenter } = useReleaseStore();
-
-  const [toast, setToast] = useState<ToastState | null>(null);
-  const showToast = useCallback((message: string, tone: ToastState['tone']) => {
-    setToast({ message, tone });
-  }, []);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timeout = window.setTimeout(() => setToast(null), toast.tone === 'warning' ? 6000 : 2600);
-    return () => window.clearTimeout(timeout);
-  }, [toast]);
-
-  // Flag-off bounce back to the workspace scoped to this release, and the
-  // auth guard, combined into one effect (the ChappiPageClient precedent).
-  useEffect(() => {
-    if (!CONTENT_CALENDAR_ENABLED) {
-      router.replace(`/dashboard?release=${releaseId}`);
-      return;
-    }
-    if (authLoading) return;
-    if (!user) {
-      router.replace('/auth');
-      return;
-    }
-    void loadCommandCenter();
-  }, [authLoading, loadCommandCenter, releaseId, router, user]);
-
-  const release = releases.find((r) => r.id === releaseId);
-
-  useEffect(() => {
-    document.title = release?.title ? `${release.title} | Content calendar | Urganize` : 'Content calendar | Urganize';
-  }, [release?.title]);
+  const showToast = onToast;
 
   // --- Calendars list: self-contained fetch, the AssetSection precedent ---
   const [calendars, setCalendars] = useState<ContentCalendar[]>([]);
@@ -139,10 +126,12 @@ export default function CalendarPageClient() {
     }
   }, [releaseId]);
 
+  // No auth gate needed here (unlike the old page): this only mounts once
+  // ReleaseSceneOverlay has resolved a release from the store, which already
+  // implies an authenticated, loaded session.
   useEffect(() => {
-    if (!CONTENT_CALENDAR_ENABLED || authLoading || !user) return;
     void loadCalendars();
-  }, [authLoading, loadCalendars, user]);
+  }, [loadCalendars]);
 
   // --- Active calendar resolution ---
   const calendarParam = searchParams.get('calendar');
@@ -173,9 +162,9 @@ export default function CalendarPageClient() {
     (calendarId: string) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set('calendar', calendarId);
-      router.replace(`/dashboard/releases/${releaseId}/calendar?${params.toString()}`, { scroll: false });
+      router.replace(`${pathname ?? ''}?${params.toString()}`, { scroll: false });
     },
-    [releaseId, router, searchParams]
+    [pathname, router, searchParams]
   );
 
   const handleCalendarCreated = useCallback(
@@ -183,9 +172,13 @@ export default function CalendarPageClient() {
       setCalendars((current) => [...current, calendar]);
       // Journey continuity: land straight on the new calendar's empty state
       // instead of leaving the user on whatever they were viewing before.
-      router.push(`/dashboard/releases/${releaseId}/calendar?calendar=${calendar.id}`);
+      // MERGES the existing params — building this fresh would drop `release=`
+      // and `scene=` and close the window (see the port notes at the top).
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('calendar', calendar.id);
+      router.push(`${pathname ?? ''}?${params.toString()}`);
     },
-    [releaseId, router]
+    [pathname, router, searchParams]
   );
 
   const handleCalendarRenamed = useCallback((calendar: ContentCalendar) => {
@@ -210,32 +203,31 @@ export default function CalendarPageClient() {
         params.delete('calendar');
       }
       const query = params.toString();
-      router.replace(`/dashboard/releases/${releaseId}/calendar${query ? `?${query}` : ''}`, { scroll: false });
+      router.replace(`${pathname ?? ''}${query ? `?${query}` : ''}`, { scroll: false });
     },
-    [activeCalendarId, calendars, releaseId, router, searchParams]
+    [activeCalendarId, calendars, pathname, router, searchParams]
   );
 
   // --- Month resolution + URL sync ---
   const monthParam = searchParams.get('month');
-  const month = resolveMonth(monthParam, release?.releaseDate ?? null, getClientTodayIso());
+  const month = resolveMonth(monthParam, release.releaseDate ?? null, getClientTodayIso());
 
   const setMonthParam = useCallback(
     (nextMonth: string) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set('month', nextMonth);
-      router.replace(`/dashboard/releases/${releaseId}/calendar?${params.toString()}`, { scroll: false });
+      router.replace(`${pathname ?? ''}?${params.toString()}`, { scroll: false });
     },
-    [releaseId, router, searchParams]
+    [pathname, router, searchParams]
   );
 
   // Keeps the resolved month addressable in the URL even when the visitor
   // arrived with no ?month= (or an invalid one): deep-linkable by humans
   // and Chappi alike, per the spec. No-ops once the param already matches.
   useEffect(() => {
-    if (isInitialLoading || !release) return;
     if (monthParam === month) return;
     setMonthParam(month);
-  }, [isInitialLoading, release, month, monthParam, setMonthParam]);
+  }, [month, monthParam, setMonthParam]);
 
   // --- Posts: self-contained fetch, scoped to the active calendar + month ---
   const [posts, setPosts] = useState<ContentPost[]>([]);
@@ -274,16 +266,15 @@ export default function CalendarPageClient() {
   }, [activeCalendarId, month, releaseId]);
 
   useEffect(() => {
-    if (!CONTENT_CALENDAR_ENABLED || authLoading || !user) return;
     void loadPosts();
-  }, [authLoading, loadPosts, user]);
+  }, [loadPosts]);
 
   // --- Release-date-moved notice ---
   // Keyed by the ACTIVE CALENDAR's id (per the spec), so it's a per-calendar
   // "welcome back" rather than a per-release one.
   const [releaseDateNotice, setReleaseDateNotice] = useState(false);
   useEffect(() => {
-    if (!activeCalendarId || !release?.releaseDate) {
+    if (!activeCalendarId || !release.releaseDate) {
       setReleaseDateNotice(false);
       return;
     }
@@ -291,7 +282,7 @@ export default function CalendarPageClient() {
     const seen = readPersistedState<string>(key, 1, isIsoDateString);
     setReleaseDateNotice(Boolean(seen && seen !== release.releaseDate));
     writePersistedState(key, 1, release.releaseDate);
-  }, [activeCalendarId, release?.releaseDate]);
+  }, [activeCalendarId, release.releaseDate]);
 
   // --- Post modal ---
   const [postModalState, setPostModalState] = useState<{
@@ -309,6 +300,22 @@ export default function CalendarPageClient() {
   const closePostModal = useCallback(() => {
     setPostModalState((current) => ({ ...current, open: false }));
   }, []);
+
+  // Escape is owned HERE, not by SceneOverlayShell (which gets
+  // ownsEscape={false}) — PostModal registers its own unguarded window-level
+  // Escape listener, and two listeners on the same target both fire for one
+  // keypress regardless of propagation. Without this guard, Escape over an open
+  // post modal would close the post modal AND this whole window at once.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (postModalState.open) return;
+      if (isTypingTarget(event.target)) return;
+      onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose, postModalState.open]);
 
   const handlePostSaved = useCallback(
     (post: ContentPost, mode: 'created' | 'updated') => {
@@ -392,7 +399,11 @@ export default function CalendarPageClient() {
         setEmptyCreateError(data.error || 'Could not create calendar.');
         return;
       }
-      router.push(`/dashboard/releases/${releaseId}/calendar?calendar=${data.calendar.id}`);
+      // Same merge-not-rebuild fix as handleCalendarCreated above.
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('calendar', data.calendar.id);
+      setCalendars((current) => [...current, data.calendar!]);
+      router.push(`${pathname ?? ''}?${params.toString()}`);
     } catch (err) {
       setEmptyCreateError(err instanceof Error ? err.message : 'Could not create calendar.');
     } finally {
@@ -400,63 +411,29 @@ export default function CalendarPageClient() {
     }
   };
 
-  if (!CONTENT_CALENDAR_ENABLED) return null;
-
-  // ONE skeleton, rendered here (no route-segment Suspense fallback for this
-  // part), same rationale as ReleaseDetailSkeleton: SSR serializes it,
-  // hydration reconciles the same JSX, no remount.
-  if (authLoading || isInitialLoading) {
-    return <CalendarPageSkeleton className={`${fraunces.variable} ${spaceMono.variable}`} />;
-  }
-
-  if (!release) {
-    return (
-      <main className="bg-bg-base text-content-primary">
-        <div className="mx-auto max-w-[1000px] px-4 pb-24 pt-10 sm:px-6">
-          <div className="flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <div>
-              <p className="font-semibold">Release not found.</p>
-              <p className="mt-1 text-status-error/80">{releaseError || 'This release may have been deleted.'}</p>
-            </div>
-          </div>
-          <Link
-            href="/dashboard"
-            className="mt-4 inline-flex border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-semibold text-content-primary hover:bg-bg-hover"
-          >
-            Back to dashboard
-          </Link>
-        </div>
-      </main>
-    );
-  }
-
   const today = getClientTodayIso();
   const showReleaseMonthButton = Boolean(release.releaseDate) && release.releaseDate!.slice(0, 7) !== month;
 
   return (
-    <main
-      className={`cc-island min-h-screen bg-[var(--cc-ground)] text-[var(--cc-text)] ${fraunces.variable} ${spaceMono.variable}`}
-    >
-      <div className="mx-auto max-w-[1200px] px-4 pb-24 pt-10 sm:px-6">
-        {toast ? (
-          <div className="mb-4">
-            <Toast message={toast.message} tone={toast.tone} />
-          </div>
-        ) : null}
-
+    <div className={calendarFontVariables}>
+      {/* Width math lives entirely here — the same mx-auto max-w-[1200px] this
+          had as a page — because SceneOverlayShell's 'lg' variant deliberately
+          adds no inner padding of its own. MonthGrid/AgendaList swap on
+          Tailwind's viewport-gated lg: breakpoint, so any chrome that ate
+          horizontal width would squeeze the grid with no CSS fallback. */}
+      <div className="mx-auto max-w-[1200px] px-4 pb-8 pt-6 sm:px-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            {/* Back goes to the WORKSPACE scoped to this release, not the
-                release detail page: the workspace is the surface users live
-                in and the calendar's primary entry point (founder feedback,
-                2026-07-20). The detail page keeps its own header link here. */}
-            <Link
-              href={`/dashboard?release=${releaseId}`}
+            {/* Was a "Back to release" Link when this was a page. Inside a
+                window there is nowhere to navigate back TO — the workspace is
+                already rendered behind it — so this closes instead. */}
+            <button
+              type="button"
+              onClick={onClose}
               className="inline-flex items-center gap-1 text-xs text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
             >
               <ChevronLeft className="h-3.5 w-3.5" /> Back to release
-            </Link>
+            </button>
             <p className="mt-2 font-[family-name:var(--font-cc-mono)] text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cc-accent)]">
               {formatArtistName(release.artistName)} / SINGLE
             </p>
@@ -465,7 +442,7 @@ export default function CalendarPageClient() {
                 {release.title}
               </h1>
               {/* The content calendar ships as Beta (founder call, 2026-07-23)
-                  — same stamp on the workspace's Calendar link. Mono type to
+                  — same stamp on the workspace's Calendar pill. Mono type to
                   match the island's metadata voice. */}
               <span className="shrink-0 border border-[var(--cc-accent)] px-1.5 py-0.5 font-[family-name:var(--font-cc-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--cc-accent)]">
                 Beta
@@ -676,6 +653,6 @@ export default function CalendarPageClient() {
           onDeleted={handlePostDeleted}
         />
       ) : null}
-    </main>
+    </div>
   );
 }
