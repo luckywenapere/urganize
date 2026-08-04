@@ -15,7 +15,6 @@ import {
 } from '@/types/content-calendar';
 import type { Release } from '@/types/releases';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
-import { isTypingTarget } from '@/lib/tasks';
 import { CalendarGridSkeleton } from '@/components/content-calendar/CalendarGridSkeleton';
 import { calendarFontVariables } from '@/components/content-calendar/calendar-fonts';
 import { CalendarTabs } from '@/components/content-calendar/CalendarTabs';
@@ -43,20 +42,19 @@ import { PostModal } from '@/components/content-calendar/PostModal';
  *    dropped `release=` and `scene=`, throwing the user out of the window's own
  *    URL state the moment they created a calendar. Both merge now, like the
  *    other three already did.
- * 4. Escape is owned here, not by SceneOverlayShell (which is passed
- *    `ownsEscape={false}`) — because PostModal has its own unguarded
- *    window-level Escape listener, and two listeners on the same target both
- *    fire for one keypress, which would close this whole window out from under
- *    an open post modal.
+ * 4. No Escape-to-close — this is inline layout content, not a modal, so
+ *    PostModal keeps Escape to itself. See the note at that effect's old site.
  * 5. The page-level skeleton, "release not found" branch, auth/flag redirects,
- *    and document.title are all gone: ReleaseSceneOverlay resolves the release
- *    and owns those states before this ever mounts.
- * 6. Toasts route to the app-wide ToastProvider instead of a local inline
- *    Toast, which inside a scrolling dialog panel could scroll out of view.
+ *    and document.title are all gone: ReleaseScenePanel / WorkspaceView resolve
+ *    the release and own those states before this ever mounts.
+ * 6. Toasts route out through an `onToast` prop (WorkspaceView's toast) instead
+ *    of a local inline Toast of its own.
  * 7. `<main className="cc-island min-h-screen ...">` became a plain div: the
- *    shell's panel carries `cc-island` and the ground/text colors now (so the
- *    window frame IS the brand island — no seam between neutral chrome and ink
- *    content), and this root only carries the font variables.
+ *    wrapper in ReleaseScenePanel carries `cc-island` and the ground/text
+ *    colours now, and this root only carries the font variables.
+ *
+ * It sits in the workspace's activity slot, and WorkspaceView hides the release
+ * rails while it's open so the month grid has the width it was designed for.
  */
 
 async function getAccessToken(): Promise<string> {
@@ -301,21 +299,14 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
     setPostModalState((current) => ({ ...current, open: false }));
   }, []);
 
-  // Escape is owned HERE, not by SceneOverlayShell (which gets
-  // ownsEscape={false}) — PostModal registers its own unguarded window-level
-  // Escape listener, and two listeners on the same target both fire for one
-  // keypress regardless of propagation. Without this guard, Escape over an open
-  // post modal would close the post modal AND this whole window at once.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      if (postModalState.open) return;
-      if (isTypingTarget(event.target)) return;
-      onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose, postModalState.open]);
+  // NO Escape-to-close here, deliberately. This is inline layout content, not
+  // a modal — same precedent as the UrgAns rail, which CLAUDE.md records as
+  // having no Escape on purpose ("modals own Escape"). It also means PostModal
+  // keeps Escape entirely to itself: when this was briefly a modal overlay, a
+  // scene-level listener and PostModal's own both fired on one keypress (two
+  // listeners on the same target fire regardless of propagation), so the whole
+  // window closed out from under an open post editor. Inline, that whole class
+  // of conflict disappears rather than needing a guard.
 
   const handlePostSaved = useCallback(
     (post: ContentPost, mode: 'created' | 'updated') => {
@@ -417,22 +408,21 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
   return (
     <div className={calendarFontVariables}>
       {/* Width math lives entirely here — the same mx-auto max-w-[1200px] this
-          had as a page — because SceneOverlayShell's 'lg' variant deliberately
-          adds no inner padding of its own. MonthGrid/AgendaList swap on
-          Tailwind's viewport-gated lg: breakpoint, so any chrome that ate
-          horizontal width would squeeze the grid with no CSS fallback. */}
+          had as a page. MonthGrid/AgendaList swap on Tailwind's viewport-gated
+          lg: breakpoint, so nothing around this should add horizontal padding
+          that eats into the grid's room; WorkspaceView hides the release rails
+          while this is open for the same reason. */}
       <div className="mx-auto max-w-[1200px] px-4 pb-8 pt-6 sm:px-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            {/* Was a "Back to release" Link when this was a page. Inside a
-                window there is nowhere to navigate back TO — the workspace is
-                already rendered behind it — so this closes instead. */}
+            {/* Was a "Back to release" Link when this was a page. It closes the
+                scene now, returning this slot to the activity list. */}
             <button
               type="button"
               onClick={onClose}
               className="inline-flex items-center gap-1 text-xs text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
             >
-              <ChevronLeft className="h-3.5 w-3.5" /> Back to release
+              <ChevronLeft className="h-3.5 w-3.5" /> Activities
             </button>
             <p className="mt-2 font-[family-name:var(--font-cc-mono)] text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cc-accent)]">
               {formatArtistName(release.artistName)} / SINGLE

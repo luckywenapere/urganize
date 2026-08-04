@@ -19,6 +19,8 @@ import { FirstReleaseWin } from './FirstReleaseWin';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { TasksPanel } from './TasksPanel';
+import { useSceneOverlay } from './useSceneOverlay';
+import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
@@ -77,6 +79,12 @@ export function WorkspaceView() {
   const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
   const tasks = useTaskStore((state) => state.tasks);
   const { scopedReleaseId, setScope } = useReleaseScope();
+  // Which release scene (if any) the URL has open. It renders INLINE in the
+  // activity slot rather than as an overlay (founder call, 2026-08-05: "like
+  // the way UrgAns is on the side but in the place where activity lists
+  // appear"), so this view has to know about it to build the panel body and to
+  // give the calendar its width.
+  const { activeScene, closeScene } = useSceneOverlay();
   const isRailOpen = useChappiStore((state) => state.railOpen);
   // Task detail renders as a global pop-up mounted by TaskUIProvider
   // (2026-07-23) — this view no longer swaps its layout when a task opens.
@@ -236,11 +244,22 @@ export function WorkspaceView() {
     });
   }, [releases, taskList]);
 
-  const scopedReleaseSlim = useMemo<Pick<Release, 'id' | 'title' | 'artistName'> | null>(() => {
+  // `releaseDate` is here for the content calendar scene (it resolves the
+  // default month from the release date); the panels that only need
+  // id/title/artistName accept this wider shape structurally.
+  const scopedReleaseSlim = useMemo<Pick<
+    Release,
+    'id' | 'title' | 'artistName' | 'releaseDate'
+  > | null>(() => {
     if (!scopedReleaseId) return null;
     const found = releases.find((r) => r.id === scopedReleaseId);
     if (!found) return null;
-    return { id: found.id, title: found.title, artistName: found.artistName };
+    return {
+      id: found.id,
+      title: found.title,
+      artistName: found.artistName,
+      releaseDate: found.releaseDate,
+    };
   }, [scopedReleaseId, releases]);
 
   // Differentiate browser tabs when a release is scoped, ported from the
@@ -288,6 +307,26 @@ export function WorkspaceView() {
   // (and clear the param so back-button doesn't trap the user). Mobile
   // path uses `scopedReleaseSlim` directly for the same reason.
   const isDesktopFocusedMode = Boolean(scopedReleaseId && selectedCard);
+
+  // The open release scene's body, handed to TasksPanel so it replaces the
+  // activity buckets in place while the pill row above stays put. Null unless
+  // the URL names a scene AND the release resolved — same guard the panels use.
+  const scenePanel =
+    activeScene && scopedReleaseSlim ? (
+      <ReleaseScenePanel
+        scene={activeScene}
+        release={scopedReleaseSlim}
+        onClose={closeScene}
+        onToast={(message, tone) => setToast({ message, tone })}
+      />
+    ) : undefined;
+
+  // The content calendar's month grid is built for ~1200px and swaps to its
+  // agenda list on a VIEWPORT-gated breakpoint, so it needs the release rails
+  // out of the way to have room — the same treatment the UrgAns rail already
+  // triggers. The other three scenes fit the normal centre column, so they
+  // leave the rails alone (founder call).
+  const hideRailsForLayout = (CHAPPI_ENABLED && isRailOpen) || activeScene === 'calendar';
 
   // The two AI action pills, ported from the removed release detail page —
   // only meaningful (and only rendered) when a release is scoped, so both
@@ -485,6 +524,7 @@ export function WorkspaceView() {
                   tasks={scopedTasks}
                   scopedRelease={scopedReleaseSlim}
                   extraActions={taskPanelExtraActions}
+                  sceneContent={scenePanel}
                 />
                 {/* The per-release files surface lives inside TasksPanel as an
                     inline collapsible segment at the top of the task area,
@@ -519,9 +559,10 @@ export function WorkspaceView() {
                 scopedRelease={scopedReleaseSlim}
                 onSelect={handleSelect}
                 onClose={handleClose}
-                hideRails={CHAPPI_ENABLED && isRailOpen}
+                hideRails={hideRailsForLayout}
                 banner={newReleaseGuideBanner}
                 panelExtraActions={taskPanelExtraActions}
+                panelSceneContent={scenePanel}
               />
             ) : (
               <WorkspaceDesktopGrid

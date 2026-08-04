@@ -13,7 +13,7 @@ import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { TaskRow } from '@/components/tasks/TaskRow';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
-import { useSceneOverlay } from './useSceneOverlay';
+import { useSceneOverlay, type SceneName } from './useSceneOverlay';
 
 // Content calendar entry point (URG-157): the workspace is the surface users
 // actually land on after login, so the scoped-release header carries the
@@ -90,17 +90,45 @@ type TasksPanelProps = {
    * as a slot rather than owned here so this component stays presentational;
    * WorkspaceView owns the modals/state. */
   extraActions?: ReactNode;
+  /**
+   * When set, replaces the activity buckets with this content while keeping the
+   * header row of pills above it (2026-08-05, founder call). That row is the
+   * scene switcher, so it has to survive the swap — the pills are the
+   * navigation, the body is what they drive.
+   *
+   * WorkspaceView builds this (a ReleaseScenePanel) from the `?scene=` param.
+   */
+  sceneContent?: ReactNode;
 };
 
-export function TasksPanel({ tasks, scopedRelease, id, extraActions }: TasksPanelProps) {
+export function TasksPanel({ tasks, scopedRelease, id, extraActions, sceneContent }: TasksPanelProps) {
   // openTask opens the global task detail pop-up mounted by TaskUIProvider —
   // this panel stays where it is underneath the modal.
   const { openTask, openQuickCreate } = useTaskUI();
 
-  // The scene pills below open Metadata / Files / Press kit as overlay windows
-  // over this workspace (2026-08-04) rather than navigating to a separate page.
-  // ReleaseSceneOverlay (mounted by AppShell) renders whatever the URL names.
-  const { openScene } = useSceneOverlay();
+  // The pills below swap this panel's body between the activity buckets and a
+  // release scene (Metadata / Calendar / Files / Press kit), in place — they
+  // were nav links to separate pages until 2026-08-04, then briefly modal
+  // overlays, and are now an inline swap per the founder's correction. Clicking
+  // the pill of the scene that's already open closes it, back to activities.
+  const { activeScene, openScene, closeScene } = useSceneOverlay();
+
+  /** Pill classes, lit when that scene is the open one. */
+  const pillClass = (scene: SceneName) =>
+    `motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors ${
+      activeScene === scene
+        ? 'border-brand bg-brand/10 text-content-primary'
+        : 'border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover'
+    }`;
+
+  /** Open the scene, or close it if it's the one already showing. */
+  const toggleScene = (scene: SceneName, releaseId: string) => {
+    if (activeScene === scene) {
+      closeScene();
+      return;
+    }
+    openScene(scene, releaseId);
+  };
 
   // The ?priority= / ?status= filter dropdowns were removed entirely
   // (founder call, 2026-07-23) — the bucket structure IS the filter now.
@@ -182,8 +210,9 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions }: TasksPane
           {METADATA_ENABLED && scopedRelease ? (
             <button
               type="button"
-              onClick={() => openScene('metadata', scopedRelease.id)}
-              className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+              onClick={() => toggleScene('metadata', scopedRelease.id)}
+              aria-pressed={activeScene === 'metadata'}
+              className={pillClass('metadata')}
             >
               <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
               Metadata
@@ -201,8 +230,9 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions }: TasksPane
           {CONTENT_CALENDAR_ENABLED && scopedRelease ? (
             <button
               type="button"
-              onClick={() => openScene('calendar', scopedRelease.id)}
-              className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+              onClick={() => toggleScene('calendar', scopedRelease.id)}
+              aria-pressed={activeScene === 'calendar'}
+              className={pillClass('calendar')}
             >
               <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
               Calendar
@@ -219,8 +249,9 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions }: TasksPane
           {FILES_ENABLED && scopedRelease ? (
             <button
               type="button"
-              onClick={() => openScene('files', scopedRelease.id)}
-              className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+              onClick={() => toggleScene('files', scopedRelease.id)}
+              aria-pressed={activeScene === 'files'}
+              className={pillClass('files')}
             >
               <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
               Files
@@ -232,8 +263,9 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions }: TasksPane
           {EPK_ENABLED && scopedRelease ? (
             <button
               type="button"
-              onClick={() => openScene('epk', scopedRelease.id)}
-              className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+              onClick={() => toggleScene('epk', scopedRelease.id)}
+              aria-pressed={activeScene === 'epk'}
+              className={pillClass('epk')}
             >
               <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
               Press kit
@@ -248,6 +280,12 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions }: TasksPane
         </div>
       </div>
 
+      {/* Body swap: a release scene takes this slot when one is open, otherwise
+          the activity buckets do. The header row above stays put either way, so
+          the scene switcher never disappears (founder call, 2026-08-05). */}
+      {sceneContent ? (
+        sceneContent
+      ) : (
       <div className="space-y-3">
         {/* Every bucket empty: the buckets below have all suppressed
             themselves, so leave one quiet line instead of a blank panel. */}
@@ -326,6 +364,7 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions }: TasksPane
           );
         })}
       </div>
+      )}
     </aside>
   );
 }

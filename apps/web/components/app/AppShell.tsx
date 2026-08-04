@@ -43,16 +43,11 @@ const WhatsNewModal = dynamic(
   () => import('@/components/app/WhatsNewModal').then((m) => m.WhatsNewModal),
   { ssr: false }
 );
-// The release scenes (Metadata / Calendar / Files / Press kit) as overlay
-// windows over the workspace instead of separate routes (2026-08-04). Dynamic
-// + ssr:false for the same reason as CreateReleaseModal above: it carries a
-// lot of code (three release sections plus the content calendar) that no first
-// paint needs, and the chunk resolves right after hydration — long before a
-// user can scope a release and click a scene pill, so opens still feel instant.
-const ReleaseSceneOverlay = dynamic(
-  () => import('@/components/releases/ReleaseSceneOverlay').then((m) => m.ReleaseSceneOverlay),
-  { ssr: false }
-);
+// NOTE: the release scenes (Metadata / Calendar / Files / Press kit) are NOT
+// mounted here. They were briefly overlay windows mounted app-wide from this
+// file (2026-08-04), but the founder corrected that to an inline panel that
+// renders in the workspace's activity slot instead — so WorkspaceView owns
+// them now (see ReleaseScenePanel), and nothing app-level is involved.
 const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === 'true';
 
 // When the assistant flag is on, the UrgAns side rail rides beside <main> at
@@ -274,11 +269,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           void useReleaseStore.getState().loadCommandCenter();
         }}
       />
-      {/* Release scenes as overlay windows (2026-08-04). Gated on the same
-          chrome condition as the topbar: the scenes belong to the workspace,
-          and this keeps a stray ?scene= on a public standalone route from
-          rendering anything. It self-hides unless the URL names a scene. */}
-      {showWorkspaceChrome ? <ReleaseSceneOverlay /> : null}
       {/* "What's new" (founder request, 2026-07-23): announces changelog
           entries this device hasn't seen yet, once per release, on signed-in
           app surfaces only. */}
