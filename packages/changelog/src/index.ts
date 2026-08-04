@@ -20,10 +20,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.39.1",
+    date: "August 5, 2026",
+    highlights: [
+      "Metadata, Calendar, Files, and Press kit now open right where your activity list sits, instead of floating on top of the workspace. The buttons above stay put so you can switch between them, the open one stays lit, and clicking it again brings your activities back. The calendar tucks your other releases aside while it's open so its month grid has room.",
+    ],
+  },
+  {
     version: "0.39.0",
     date: "August 4, 2026",
     highlights: [
-      "Metadata, Calendar, Files, and Press kit now open in a window right on top of your workspace instead of loading a whole separate page. Your release stays visible in the top bar, they open instantly, and closing one puts you straight back where you were. The calendar gets a wider window so its month grid still has room.",
+      "Metadata, Calendar, Files, and Press kit no longer load a whole separate page. Your release stays visible in the top bar and they open instantly.",
     ],
   },
   {

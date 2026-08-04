@@ -32,6 +32,10 @@ type WorkspaceDesktopFocusedProps = {
   /** Forwarded verbatim to TasksPanel's `extraActions` — the flag-gated AI
    * action pills (Tailor plan / Generate status update). */
   panelExtraActions?: ReactNode;
+  /** Forwarded verbatim to TasksPanel's `sceneContent` — a release scene
+   * (Metadata / Calendar / Files / Press kit) that replaces the activity
+   * buckets in this centre column while it's open (2026-08-05). */
+  panelSceneContent?: ReactNode;
 };
 
 /**
@@ -60,6 +64,7 @@ export function WorkspaceDesktopFocused({
   hideRails = false,
   banner,
   panelExtraActions,
+  panelSceneContent,
 }: WorkspaceDesktopFocusedProps) {
   // Motion tracker data — done/total across the scoped release's activities
   // (same `status === 'done'` rule WorkspaceView uses for the grid cards).
@@ -139,7 +144,12 @@ export function WorkspaceDesktopFocused({
             global activity pop-up. */}
         <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain pb-4 pr-1">
           {banner}
-          <TasksPanel tasks={scopedTasks} scopedRelease={scopedRelease} extraActions={panelExtraActions} />
+          <TasksPanel
+            tasks={scopedTasks}
+            scopedRelease={scopedRelease}
+            extraActions={panelExtraActions}
+            sceneContent={panelSceneContent}
+          />
         </div>
 
         {hideRails ? null : (
