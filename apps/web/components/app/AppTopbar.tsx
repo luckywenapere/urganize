@@ -134,6 +134,20 @@ function ContextTitle() {
   );
 }
 
+// Plain, pathname-agnostic fallback for CatalogTopbarAction's Suspense
+// boundary — same reasoning as ChappiLinkFallback below: a slow/unresolved
+// useSearchParams read should never block the icon from painting.
+const CatalogLinkFallback = (
+  <Link
+    href="/dashboard"
+    aria-label="Workspace"
+    title="Workspace"
+    className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+  >
+    <CatalogIcon className="h-[18px] w-[18px]" />
+  </Link>
+);
+
 // Plain, pathname-agnostic fallback for the Suspense boundary below —
 // mirrors the ORIGINAL always-navigate Link exactly, so a slow/unresolved
 // useSearchParams read never blocks the icon from painting.
@@ -147,6 +161,54 @@ const ChappiLinkFallback = (
     <ChappiIcon className="h-[18px] w-[18px]" />
   </Link>
 );
+
+/**
+ * The Catalog/Workspace topbar icon — mirrors ChappiTopbarAction below so
+ * the pair are symmetric toggles (URG-211; the catalog icon was a dead
+ * click when already at rest on /dashboard, since its href resolved to the
+ * current URL). With a release drilled in it stays a plain Link (a real
+ * navigation that clears `?release=`, unchanged from before); only fully
+ * at rest does it become a button whose click "closes" the catalog by
+ * pushing to the UrgAns page — the inverse of how ChappiTopbarAction
+ * opens the catalog. Needs its own Suspense boundary (useSearchParams) —
+ * same reason ChappiTopbarAction and ContextTitle have one.
+ */
+function CatalogTopbarAction() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const isAtRest = pathname === '/dashboard' && !searchParams.get('release');
+
+  if (isAtRest) {
+    return (
+      <button
+        type="button"
+        onClick={() => router.push('/dashboard/chappi')}
+        aria-label="Workspace"
+        title="Workspace"
+        aria-pressed
+        className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand transition-colors"
+      >
+        <CatalogIcon className="h-[18px] w-[18px]" />
+      </button>
+    );
+  }
+
+  return (
+    <Link
+      href="/dashboard"
+      aria-label="Workspace"
+      title="Workspace"
+      className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
+        pathname === '/dashboard'
+          ? 'bg-brand/10 text-brand'
+          : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
+      }`}
+    >
+      <CatalogIcon className="h-[18px] w-[18px]" />
+    </Link>
+  );
+}
 
 /**
  * The UrgAns topbar icon — the persistent open/close affordance for the
@@ -266,10 +328,12 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
 
         {/* The app's two surfaces as a topbar pair: Workspace (releases +
             tasks) and UrgAns (the conversational landing). Each highlights
-            when active via an exact pathname match. Only rendered once
-            the assistant exists as a surface — with the flag off, /dashboard
-            is the only surface and needs no switcher. Sits left of
-            NotificationsBell, same slot pattern. */}
+            when active via an exact pathname match, and each is a real
+            toggle (URG-211): clicking either one while it's already the
+            surface you're on closes it by switching to the other. Only
+            rendered once the assistant exists as a surface — with the flag
+            off, /dashboard is the only surface and needs no switcher. Sits
+            left of NotificationsBell, same slot pattern. */}
         {/* Nav icons follow the help "?"'s quiet voice (founder call,
             2026-07-23): no boxed borders at rest — tertiary ink that
             brightens on hover, a soft round hover fill, and brand ink only
@@ -277,18 +341,9 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             control up here. */}
         {CHAPPI_ENABLED ? (
           <>
-            <Link
-              href="/dashboard"
-              aria-label="Workspace"
-              title="Workspace"
-              className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
-                pathname === '/dashboard'
-                  ? 'bg-brand/10 text-brand'
-                  : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
-              }`}
-            >
-              <CatalogIcon className="h-[18px] w-[18px]" />
-            </Link>
+            <Suspense fallback={CatalogLinkFallback}>
+              <CatalogTopbarAction />
+            </Suspense>
             <Suspense fallback={ChappiLinkFallback}>
               <ChappiTopbarAction />
             </Suspense>
