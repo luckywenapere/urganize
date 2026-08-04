@@ -8,6 +8,11 @@ import { useKnownReleaseCount, useKnownTeammateCount } from './known-counts';
 const WORKSPACE_FEATURE_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
+// URG-214: the "Workspace identity" section (name + logo) only renders when
+// both flags are on, same gate as the identity card itself.
+const IDENTITY_PANEL_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' && WORKSPACE_FEATURE_ENABLED;
+
 type SettingsPageSkeletonProps = {
   /** Best-effort role hints derived from whatever `user` the auth store has
    * on hand right now — usually already correct. Zustand's `persist`
@@ -63,11 +68,15 @@ export function SettingsPageSkeleton({
           {/* Flat single-column sections divided by hairlines — mirrors the
               redesigned page (2026-07-23): each slot is a dim kicker line +
               content block, no card boxes. Gating matches the real page's
-              conditionals; order (artist first — we serve the artist):
-              Workspace artist -> Artist profile -> Profile -> Appearance ->
-              Teammates -> Releases -> Security -> Session -> Delete. */}
+              conditionals; order (identity leads when present, artist right
+              after — we serve the artist): Workspace identity -> Workspace
+              logo -> Workspace artist -> Artist profile -> Profile ->
+              Appearance -> Teammates -> Releases -> Security -> Session ->
+              Delete. */}
           <div className="divide-y divide-stroke-subtle">
             {[
+              { key: 'workspace-identity', height: 'h-24', show: IDENTITY_PANEL_ENABLED },
+              { key: 'workspace-logo', height: 'h-24', show: IDENTITY_PANEL_ENABLED },
               { key: 'workspace-artist', height: 'h-28', show: WORKSPACE_FEATURE_ENABLED },
               { key: 'artist-profile', height: 'h-28', show: isArtistAccount },
               { key: 'profile', height: 'h-40', show: true },

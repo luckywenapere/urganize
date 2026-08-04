@@ -29,6 +29,13 @@ const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 // the rail's open state to mirror the focused view's hideRails behavior.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
+// Mirrors WorkspaceDesktopFocused's own IDENTITY_PANEL_ENABLED const — the
+// focused rails there wait for xl (and drop the 260px xl bump) once the
+// identity card is on, so this skeleton's grid must reserve that same shape.
+const IDENTITY_PANEL_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' &&
+  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
+
 // The two AI actions the removed release detail page used to carry (Tailor
 // plan / Generate status update) now render as extra pills at the end of
 // this same header row (WorkspaceView), so the skeleton reserves their
@@ -223,11 +230,13 @@ function DesktopFocusedSkeleton({
         className={`grid items-start gap-6 ${
           hideRails
             ? 'grid-cols-[minmax(0,1fr)]'
-            : 'lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]'
+            : IDENTITY_PANEL_ENABLED
+              ? 'grid-cols-[minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_220px]'
+              : 'lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]'
         }`}
       >
         {hideRails ? null : (
-          <div className="min-w-0 space-y-3">
+          <div className={`min-w-0 space-y-3 ${IDENTITY_PANEL_ENABLED ? 'hidden xl:block' : ''}`}>
             {Array.from({ length: leftCount }).map((_, index) => (
               <ReleaseCardSkeleton key={`rail-left-${index}`} />
             ))}
@@ -241,7 +250,7 @@ function DesktopFocusedSkeleton({
         </div>
 
         {hideRails ? null : (
-          <div className="min-w-0 space-y-3">
+          <div className={`min-w-0 space-y-3 ${IDENTITY_PANEL_ENABLED ? 'hidden xl:block' : ''}`}>
             {Array.from({ length: rightCount }).map((_, index) => (
               <ReleaseCardSkeleton key={`rail-right-${index}`} />
             ))}
