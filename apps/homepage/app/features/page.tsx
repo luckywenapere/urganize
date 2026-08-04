@@ -11,14 +11,14 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Features",
   description:
-    "What Urganize does: a rollout plan for every release, activities your team owns, a press kit you can send as one link, and Chappi, the assistant in your workspace.",
+    "What Urganize does: a rollout plan for every release, activities your team owns, a press kit you can send as one link, and UrgAns, the assistant in your workspace.",
   path: "/features",
 });
 
 // Every claim on this page must describe the product as it ships today.
 // The honesty rule from /pricing applies here: we don't advertise what
 // isn't built (no credits, no pre-save, no stages). The Assistant block
-// below describes Chappi's live deterministic commands only — no
+// below describes UrgAns's live deterministic commands only — no
 // conversational-AI framing until a capable model is actually wired.
 const features = [
   {
@@ -38,7 +38,7 @@ const features = [
     image: {
       src: "/images/product/workspace-tasks.png",
       darkSrc: "/images/product/workspace-tasks-dark.png",
-      alt: "A release open in Urganize: the progress bar at 1 of 64, the upcoming activities with owners and due dates on every row, and the Chappi assistant docked alongside them.",
+      alt: "A release open in Urganize: the progress bar at 1 of 64, the upcoming activities with owners and due dates on every row, and the UrgAns assistant docked alongside them.",
     },
   },
   {
@@ -63,8 +63,8 @@ const features = [
   },
   {
     kicker: "Assistant",
-    title: "Chappi handles the small stuff.",
-    body: "Chappi is the assistant built into your workspace. Tell it what you need. Create a release. Add an activity. Mark something done. Type it and it happens, with no menus to hunt through.",
+    title: "UrgAns handles the small stuff.",
+    body: "UrgAns is the assistant built into your workspace. Tell it what you need. Create a release. Add an activity. Mark something done. Type it and it happens, with no menus to hunt through.",
     points: [
       "Create releases and activities by typing what you want",
       "Built into the workspace, not a separate app",

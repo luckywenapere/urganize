@@ -35,7 +35,7 @@ type ChappiConversationProps = {
   onNewRelease: () => void;
   /**
    * Layout variant.
-   * - 'page' (default): the full /dashboard/chappi surface — centered
+   * - 'page' (default): the full /dashboard/urgans surface — centered
    *   PostHog-style empty state, header row with greeting + New conversation.
    * - 'panel': the floating ChappiDock — compact top-aligned empty state and
    *   NO internal header (the dock's own header owns title/reset/expand/
@@ -87,7 +87,7 @@ function nextMessageId(role: 'u' | 'a'): string {
 
 /**
  * Chappi's full conversation surface — lives on its own page
- * (`/dashboard/chappi`), separate from the release/task workspace, so a long
+ * (`/dashboard/urgans`), separate from the release/task workspace, so a long
  * conversation never pushes releases/tasks down the page.
  *
  * Two states, switched on `messages.length`:
@@ -99,7 +99,7 @@ function nextMessageId(role: 'u' | 'a'): string {
  *
  * Chips run deterministic app actions instantly (no round-trip) and are
  * recorded as a turn either way. Free-text goes to the agent backend
- * (/api/chappi) with the FULL conversation history; when the model isn't
+ * (/api/urgans) with the FULL conversation history; when the model isn't
  * configured — or the call fails — it falls back to the local keyword
  * intent-router, so the page always does something useful.
  */
@@ -236,7 +236,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         runDeterministic(prompt);
         return;
       }
-      const response = await fetch('/api/chappi', {
+      const response = await fetch('/api/urgans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -270,7 +270,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
 
   // Appends the user turn immediately (so it appears without waiting on the
   // round-trip), then sends the FULL prior history + this turn to the agent
-  // — /api/chappi already accepts and expects multi-turn `messages`.
+  // — /api/urgans already accepts and expects multi-turn `messages`.
   const sendUserTurn = (text: string) => {
     const userMessage: ChappiMessage = { id: nextMessageId('u'), role: 'user', content: text };
     const historyForApi = [...messages, userMessage];

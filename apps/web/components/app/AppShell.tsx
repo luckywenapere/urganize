@@ -86,7 +86,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // the pb-28 every other dashboard page carries to clear the dock's corner
   // launcher just floats the message box mid-screen here. See the
   // .chappi-main-padding rule in globals.css.
-  const isChappiRoute = pathname === '/dashboard/chappi';
+  const isChappiRoute = pathname === '/dashboard/urgans';
   const isPreSavePublicRoute = pathname?.startsWith('/p/');
   const isOnboardingRoute = pathname?.startsWith('/onboarding');
   const isInviteRoute = pathname?.startsWith('/invite');
@@ -146,7 +146,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // switches to has UrgAns on the side — until they close it, which sticks
   // for the rest of the session. Later assistant-page visits don't re-arm.
   useEffect(() => {
-    if (!CHAPPI_ENABLED || pathname !== '/dashboard/chappi') return;
+    if (!CHAPPI_ENABLED || pathname !== '/dashboard/urgans') return;
     try {
       if (window.sessionStorage.getItem(RAIL_ARMED_KEY)) return;
       window.sessionStorage.setItem(RAIL_ARMED_KEY, '1');

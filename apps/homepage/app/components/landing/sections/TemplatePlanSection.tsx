@@ -71,7 +71,7 @@ export function TemplatePlanSection() {
           <ThemedProductShot
             light="/images/product/workspace-tasks.png"
             dark="/images/product/workspace-tasks-dark.png"
-            alt="A release open in Urganize: the progress bar at 1 of 64, the upcoming activities listed with a due date on every row, and the Chappi assistant docked alongside them."
+            alt="A release open in Urganize: the progress bar at 1 of 64, the upcoming activities listed with a due date on every row, and the UrgAns assistant docked alongside them."
             width={1920}
             height={970}
             sizes="(min-width: 1024px) 928px, 100vw"

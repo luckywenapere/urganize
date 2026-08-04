@@ -97,7 +97,7 @@ export type ChappiReleaseScope = {
   title: string;
 };
 
-/** Request body the client POSTs to /api/chappi. */
+/** Request body the client POSTs to /api/urgans. */
 export type ChappiRequestBody = {
   messages: ChappiMessage[];
   releaseScope?: ChappiReleaseScope | null;

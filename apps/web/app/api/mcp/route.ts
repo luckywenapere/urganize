@@ -4,7 +4,7 @@
 // Founder-only by construction: a caller must present MCP_ACCESS_KEY, and that
 // key is bound to exactly one account (MCP_USER_ID). Unconfigured → 404, so the
 // endpoint is dark until both env vars are set (the same pattern the flag-gated
-// routes use — see app/api/chappi/route.ts).
+// routes use — see app/api/urgans/route.ts).
 //
 // Stateless on purpose: no Mcp-Session-Id is ever emitted (issuing one would
 // commit us to session semantics), GET is 405 (we open no server-initiated

@@ -39,7 +39,7 @@ type AppTopbarProps = {
 // reaches this code).
 const routeTitles = [
   { match: (pathname: string) => pathname === '/dashboard', title: '', eyebrow: '' },
-  { match: (pathname: string) => pathname === '/dashboard/chappi', title: '', eyebrow: '' },
+  { match: (pathname: string) => pathname === '/dashboard/urgans', title: '', eyebrow: '' },
   // Release detail's identity renders live (artist + title) via
   // ContextTitle below — no static fallback text.
   { match: (pathname: string) => pathname.startsWith('/dashboard/releases'), title: '', eyebrow: '' },
@@ -153,7 +153,7 @@ const CatalogLinkFallback = (
 // useSearchParams read never blocks the icon from painting.
 const ChappiLinkFallback = (
   <Link
-    href="/dashboard/chappi"
+    href="/dashboard/urgans"
     aria-label="UrgAns"
     title="UrgAns"
     className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
@@ -183,7 +183,7 @@ function CatalogTopbarAction() {
     return (
       <button
         type="button"
-        onClick={() => router.push('/dashboard/chappi')}
+        onClick={() => router.push('/dashboard/urgans')}
         aria-label="Workspace"
         title="Workspace"
         aria-pressed
@@ -228,10 +228,10 @@ function ChappiTopbarAction() {
   const isRailOpen = useChappiStore((state) => state.railOpen);
   const setRailOpen = useChappiStore((state) => state.setRailOpen);
 
-  if (pathname === '/dashboard/chappi') {
+  if (pathname === '/dashboard/urgans') {
     return (
       <Link
-        href="/dashboard/chappi"
+        href="/dashboard/urgans"
         aria-label="UrgAns"
         title="UrgAns"
         className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand transition-colors"
@@ -252,7 +252,7 @@ function ChappiTopbarAction() {
       if (releaseId) {
         useChappiStore.getState().setScopedReleaseId(releaseId);
       }
-      router.push('/dashboard/chappi');
+      router.push('/dashboard/urgans');
       return;
     }
     setRailOpen(!isRailOpen);
