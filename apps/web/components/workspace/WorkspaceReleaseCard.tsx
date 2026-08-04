@@ -117,9 +117,13 @@ export function WorkspaceReleaseCard({
             {tasksDone} of {tasksTotal} done
           </span>
         </div>
-        <div className="h-1 w-full bg-bg-elevated" aria-hidden="true">
+        {/* Track uses stroke-strong + rounded-full, not the plain-rectangle
+            bg-bg-elevated this card had (2026-08-04, founder contrast fix) —
+            see WorkspaceView.tsx's mobile Motion tracker for the full
+            rationale; standardized to match the other two Motion bars. */}
+        <div className="h-1.5 w-full rounded-full bg-stroke-strong" aria-hidden="true">
           <div
-            className="h-full bg-brand transition-[width] duration-300"
+            className="h-full rounded-full bg-brand transition-[width] duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>

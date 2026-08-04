@@ -1,23 +1,27 @@
-import type { Metadata } from 'next';
-import { Suspense } from 'react';
-import CalendarPageClient from './CalendarPageClient';
+import { redirect } from 'next/navigation';
 
-// Thin server wrapper, same pattern as the release detail page: the real
-// page is a client component (Zustand + browser fetches + useSearchParams)
-// and can't export metadata itself. The root layout's '%s | Urganize'
-// template turns this into "Content calendar | Urganize" in the browser tab.
-export const metadata: Metadata = {
-  title: 'Content calendar',
-};
+// The content calendar stopped being its own page (2026-08-04) — it now opens
+// as a wide overlay window over the workspace via `?scene=calendar`. See the
+// metadata stub next door for the full rationale.
+//
+// Unlike the other three stubs, this one FORWARDS `calendar` and `month`. Those
+// params are documented as deep-linkable "by humans and Chappi alike, per the
+// spec", so an existing bookmark or share that pins a specific tab and month
+// has to keep landing on exactly that view — dropping them would be a real
+// regression, not just a cosmetic one.
+export default async function ContentCalendarRedirectPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ releaseId: string }>;
+  searchParams: Promise<{ calendar?: string; month?: string }>;
+}) {
+  const { releaseId } = await params;
+  const { calendar, month } = await searchParams;
 
-export default function ContentCalendarPage() {
-  // CalendarPageClient reads ?calendar= and &month= via useSearchParams,
-  // which requires a Suspense boundary under the App Router (the redeem
-  // page precedent). The client component owns its own loading UI once
-  // mounted (CalendarPageSkeleton), so the fallback here stays null.
-  return (
-    <Suspense fallback={null}>
-      <CalendarPageClient />
-    </Suspense>
-  );
+  const forwarded = new URLSearchParams({ release: releaseId, scene: 'calendar' });
+  if (calendar) forwarded.set('calendar', calendar);
+  if (month) forwarded.set('month', month);
+
+  redirect(`/dashboard?${forwarded.toString()}`);
 }

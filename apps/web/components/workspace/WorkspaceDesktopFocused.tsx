@@ -96,7 +96,10 @@ export function WorkspaceDesktopFocused({
           <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
             Motion
           </span>
-          <div className="h-1 min-w-0 flex-1 rounded-full bg-bg-elevated" aria-hidden="true">
+          {/* Track uses stroke-strong, not bg-bg-elevated (2026-08-04, founder
+              contrast fix) — see WorkspaceView.tsx's mobile Motion tracker for
+              the full rationale; same bar, same fix. */}
+          <div className="h-1.5 min-w-0 flex-1 rounded-full bg-stroke-strong" aria-hidden="true">
             <div
               className="h-full rounded-full bg-brand transition-[width] duration-300"
               style={{ width: `${motionProgress}%` }}

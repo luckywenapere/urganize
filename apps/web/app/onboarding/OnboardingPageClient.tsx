@@ -1010,7 +1010,12 @@ export default function OnboardingPage() {
                     aria-valuenow={aiMoment.progressPercent}
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    className="h-1 w-full overflow-hidden bg-bg-elevated"
+                    // stroke-strong, not bg-bg-elevated (2026-08-04, founder
+                    // contrast fix) — same bug as the workspace Motion bars:
+                    // bg-bg-elevated is a materials/layering token, not a
+                    // meter-track color, and reads as nearly invisible
+                    // against the surrounding background in both themes.
+                    className="h-1.5 w-full overflow-hidden bg-stroke-strong"
                   >
                     <div
                       className="h-full bg-brand transition-[width] duration-slow ease-standard"

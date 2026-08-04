@@ -20,6 +20,27 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.39.0",
+    date: "August 4, 2026",
+    highlights: [
+      "Metadata, Calendar, Files, and Press kit now open in a window right on top of your workspace instead of loading a whole separate page. Your release stays visible in the top bar, they open instantly, and closing one puts you straight back where you were. The calendar gets a wider window so its month grid still has room.",
+    ],
+  },
+  {
+    version: "0.38.5",
+    date: "August 4, 2026",
+    highlights: [
+      "The Motion progress bar on your releases was hard to see against the background — it now stands out clearly in both light and dark mode.",
+    ],
+  },
+  {
+    version: "0.38.4",
+    date: "August 4, 2026",
+    highlights: [
+      "Loading states got a lot less bare across the app — admin pages, the press kit and metadata pages, the content calendar, and public press-kit/credit links now show a proper preview of what's coming instead of a plain spinner or blank screen.",
+    ],
+  },
+  {
     version: "0.38.3",
     date: "August 4, 2026",
     highlights: [

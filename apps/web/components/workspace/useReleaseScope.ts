@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { clearSceneScopedParams } from './useSceneOverlay';
 
 /**
  * URL param that scopes the task list to a single release.
@@ -50,6 +51,17 @@ export function useReleaseScope(): ReleaseScope {
   const setScope = useCallback(
     (releaseId: string | null, options?: SetScopeOptions) => {
       const params = new URLSearchParams(searchParams.toString());
+
+      // Changing which release is scoped invalidates any scene-internal params
+      // left over from the previous one (the content calendar's tab + month —
+      // see SCENE_SCOPED_PARAMS). Without this, release A's calendar id can
+      // survive into release B and trip B's "that calendar no longer exists"
+      // warning as a false positive. Only clears on an actual change, so
+      // re-scoping to the same release still resumes its calendar view.
+      if (params.get(SCOPE_PARAM) !== releaseId) {
+        clearSceneScopedParams(params);
+      }
+
       if (releaseId) {
         params.set(SCOPE_PARAM, releaseId);
       } else {

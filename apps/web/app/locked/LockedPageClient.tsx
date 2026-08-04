@@ -357,7 +357,15 @@ export default function LockedPage() {
               )}
 
               <div className="flex flex-col gap-3">
-                {trialUsed ? (
+                {isLoadingSnapshot ? (
+                  // Neither the "Start trial" button nor "Trial already used"
+                  // is known true yet — showing either one prematurely would
+                  // misrepresent this account's real trial-eligibility state
+                  // (a returning user who already used their trial would
+                  // briefly see an inviting "Start 28-day free trial" label).
+                  // A neutral checking-state placeholder instead.
+                  <div className="skeleton-shimmer h-11 w-full rounded-md" aria-hidden="true" />
+                ) : trialUsed ? (
                   <div className="flex items-center gap-2 text-sm text-content-secondary px-3 py-2 rounded-md bg-bg-elevated">
                     <CheckCircle2 className="size-4 text-content-tertiary" />
                     <span>Trial already used</span>
@@ -366,7 +374,7 @@ export default function LockedPage() {
                   <Button
                     variant="secondary"
                     className="w-full"
-                    disabled={isStartingTrial || isLoadingSnapshot}
+                    disabled={isStartingTrial}
                     onClick={handleStartTrial}
                   >
                     {isStartingTrial ? 'Starting trial…' : 'Start 28-day free trial'}

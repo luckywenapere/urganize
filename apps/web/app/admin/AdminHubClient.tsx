@@ -11,7 +11,6 @@ import {
   BadgeDollarSign,
   ChevronRight,
   ClipboardList,
-  Loader2,
   Mic,
   Radio,
   TrendingUp,
@@ -19,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
+import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 
 const SECTIONS: Array<{
   href: string;
@@ -106,11 +106,7 @@ export default function AdminHubClient() {
   }, [authLoading, router, user]);
 
   if (authLoading || !user || !checked) {
-    return (
-      <div className="grid min-h-[50vh] place-items-center text-content-tertiary">
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-      </div>
-    );
+    return <AdminPageSkeleton titleWidth="w-64" descriptionLines={2} hubGrid />;
   }
 
   return (

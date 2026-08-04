@@ -2,6 +2,7 @@ export {
   captureAnalyticsEvent,
   captureAnalyticsPageView,
   captureFeatureDiscovery,
+  captureFeatureDiscoveryByName,
   clearOnboardingTrackingState,
   clearTrackedEvents,
   getOnboardingElapsedSeconds,

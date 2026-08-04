@@ -9,7 +9,8 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { TASK_DONE_STATUS } from '@/lib/execution-types';
 import { formatArtistName } from '@/lib/release-execution';
-import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
+import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import { useKnownReleaseCount } from '@/components/loading/known-counts';
 import { WorkspaceView } from '@/components/workspace/WorkspaceView';
 
 // Feature flag — when 'true', /dashboard renders the consolidated workspace
@@ -33,6 +34,56 @@ export default function DashboardPage() {
   return <LegacyDashboard />;
 }
 
+// LegacyDashboard's own loading shape (2026-08-04) — it used to reuse
+// `WorkspaceSkeleton` (built for the two-pane workspace's very different
+// layout: release grid + a scoped tasks panel with its own pill row), which
+// never matched this page's actual shape (greeting → release-card grid →
+// due-soon list). Effectively dead in production today (`WORKSPACE_ENABLED`
+// is a build-time constant, and the flag has been on since the 2026-06-01
+// deploy — see CLAUDE.md), but it's kept as the documented one-line revert
+// path, so its skeleton should still be accurate if that revert is ever used.
+function LegacyDashboardSkeleton() {
+  const knownCount = useKnownReleaseCount();
+  return (
+    <main className="bg-bg-base text-content-primary" aria-hidden="true">
+      <div className="mx-auto max-w-[1200px] px-4 pb-24 pt-10 sm:px-6">
+        <div className="space-y-2">
+          <SkeletonBlock className="h-7 w-56" />
+          <SkeletonBlock className="h-3.5 w-40" />
+        </div>
+
+        <div className="mt-8">
+          <SkeletonBlock className="h-2.5 w-16" />
+          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: knownCount }).map((_, index) => (
+              <div key={`legacy-card-${index}`} className="border border-stroke-default bg-bg-surface p-5">
+                <SkeletonBlock className="h-2.5 w-20" />
+                <SkeletonBlock className="mt-2 h-5 w-3/4" />
+                <SkeletonBlock className="mt-3 h-3 w-40" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <SkeletonBlock className="h-2.5 w-16" />
+          <div className="mt-3 space-y-1">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={`legacy-task-${index}`}
+                className="flex items-center justify-between border border-stroke-default bg-bg-surface px-4 py-3"
+              >
+                <SkeletonBlock className="h-3 w-48" />
+                <SkeletonBlock className="h-3 w-16" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 function LegacyDashboard() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
@@ -52,7 +103,7 @@ function LegacyDashboard() {
   // serializes this into HTML; hydration is a no-op reconciliation — no
   // shimmer restart, no blank gap.
   if (authLoading || isInitialLoading) {
-    return <WorkspaceSkeleton />;
+    return <LegacyDashboardSkeleton />;
   }
 
   const greeting = user?.name ? `Welcome back, ${user.name.split(' ')[0]}` : 'Welcome back';

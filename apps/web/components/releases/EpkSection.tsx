@@ -4,14 +4,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { Check, Copy, ExternalLink, Loader2, Newspaper } from 'lucide-react';
 import type { ReleaseEpk } from '@/types/epk';
 import { supabase } from '@/lib/supabase/client';
-import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import { ShareLinkCardSkeleton } from '@/components/loading/ReleaseSectionSkeletons';
 
-// The EPK share-link manager (URG-196). Self-contained (the
-// ContentCalendarSection pattern): takes releaseId, fetches its own data,
-// renders its own loading/empty/error states. Hosted by the dedicated
-// /dashboard/releases/[releaseId]/epk page, reached through the release
-// side menu. The kit itself is the public /epk/[token] page — this surface
-// only creates, copies, and revokes the share link.
+// The EPK share-link manager (URG-196). Self-contained: takes releaseId,
+// fetches its own data, renders its own loading/empty/error states. Hosted by
+// ReleaseSceneOverlay as an overlay window over the workspace (2026-08-04 — it
+// had its own /dashboard/releases/[releaseId]/epk page until then; that route is
+// a redirect stub now). The kit itself is the public /epk/[token] page — this
+// surface only creates, copies, and revokes the share link.
 //
 // NEXT_PUBLIC_ prefix so the value is inlined at build time for this client
 // component. The API routes guard the same flag server-side (404 when off).
@@ -155,9 +155,7 @@ export function EpkSection({ releaseId, onToast }: EpkSectionProps) {
   const body = (
     <>
       {isLoading ? (
-        <div className="mt-4">
-          <SkeletonBlock className="h-12 w-full" />
-        </div>
+        <ShareLinkCardSkeleton />
       ) : loadError ? (
         <div className="mt-4 flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-status-error">Couldn&rsquo;t load the press kit.</p>

@@ -26,7 +26,11 @@ let hasWarnedMissingBrowserConfig = false;
 const featureRouteMatchers: Array<{ pattern: RegExp; feature: string }> = [
   { pattern: /^\/dashboard\/releases\/new$/, feature: 'release_creation' },
   { pattern: /^\/dashboard\/releases\/[^/]+\/playbook$/, feature: 'playbook' },
-  { pattern: /^\/dashboard\/releases\/[^/]+\/metadata$/, feature: 'release_metadata' },
+  // The /metadata entry was removed 2026-08-04: that route is now a redirect
+  // stub (the metadata hub opens as an overlay window on /dashboard), so the
+  // browser's pathname can never equal it again. Discovery for that feature is
+  // reported explicitly via captureFeatureDiscoveryByName from
+  // ReleaseSceneOverlay instead.
   { pattern: /^\/dashboard\/releases\/[^/]+$/, feature: 'release_workspace' },
   { pattern: /^\/dashboard$/, feature: 'dashboard' },
   { pattern: /^\/settings$/, feature: 'settings' },
@@ -164,16 +168,11 @@ export function captureAnalyticsPageView(input: {
   );
 }
 
-export function captureFeatureDiscovery(pathname: string) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  const feature = resolveFeatureFromPath(pathname);
-  if (!feature) {
-    return;
-  }
-
+/** Fire `feature_discovered` at most once per browser for a given feature.
+ * Extracted from captureFeatureDiscovery (2026-08-04) so features that are no
+ * longer reachable by a route change can report discovery explicitly — see
+ * captureFeatureDiscoveryByName below. */
+function fireFeatureDiscoveryOnce(feature: string) {
   try {
     const discoveredFeatures = safeParseJson<string[]>(
       window.localStorage.getItem(ANALYTICS_FEATURES_STORAGE_KEY),
@@ -196,6 +195,34 @@ export function captureFeatureDiscovery(pathname: string) {
   } catch {
     // Analytics must never break the app.
   }
+}
+
+export function captureFeatureDiscovery(pathname: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const feature = resolveFeatureFromPath(pathname);
+  if (!feature) {
+    return;
+  }
+
+  fireFeatureDiscoveryOnce(feature);
+}
+
+/**
+ * Report feature discovery by name rather than by route. Needed since
+ * 2026-08-04, when the release scenes (Metadata / Calendar / Files / Press kit)
+ * stopped being routes and became overlay windows on /dashboard — the
+ * route-matcher path below can never fire for them again, because there is no
+ * longer a navigation to match.
+ */
+export function captureFeatureDiscoveryByName(feature: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  fireFeatureDiscoveryOnce(feature);
 }
 
 export function identifyAnalyticsUser(user: AnalyticsIdentity | null | undefined) {

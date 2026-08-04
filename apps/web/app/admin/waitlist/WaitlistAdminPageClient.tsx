@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Search } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
+import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 
 type Tally = { label: string | null; count: string };
 
@@ -256,9 +257,12 @@ export default function WaitlistAdminPageClient() {
 
   if (authLoading || !user || !checked) {
     return (
-      <div className="grid min-h-[50vh] place-items-center text-content-tertiary">
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-      </div>
+      <AdminPageSkeleton
+        titleWidth="w-32"
+        statCards={{ count: 2, gridClassName: 'grid-cols-1 sm:grid-cols-2' }}
+        tallyRows={[5, FILTER_OPTIONS.length]}
+        table={{ columns: 12, rows: 6 }}
+      />
     );
   }
 

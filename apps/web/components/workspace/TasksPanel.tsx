@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import Link from 'next/link';
 import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, Newspaper, Plus } from 'lucide-react';
 import {
   getTaskSectionLabel,
@@ -14,6 +13,7 @@ import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { TaskRow } from '@/components/tasks/TaskRow';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { useSceneOverlay } from './useSceneOverlay';
 
 // Content calendar entry point (URG-157): the workspace is the surface users
 // actually land on after login, so the scoped-release header carries the
@@ -97,6 +97,11 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions }: TasksPane
   // this panel stays where it is underneath the modal.
   const { openTask, openQuickCreate } = useTaskUI();
 
+  // The scene pills below open Metadata / Files / Press kit as overlay windows
+  // over this workspace (2026-08-04) rather than navigating to a separate page.
+  // ReleaseSceneOverlay (mounted by AppShell) renders whatever the URL names.
+  const { openScene } = useSceneOverlay();
+
   // The ?priority= / ?status= filter dropdowns were removed entirely
   // (founder call, 2026-07-23) — the bucket structure IS the filter now.
   // Restore from git history if per-panel filtering ever returns.
@@ -175,8 +180,9 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions }: TasksPane
               release detail page is gone and this header is the single
               navigation row for every release scene. */}
           {METADATA_ENABLED && scopedRelease ? (
-            <Link
-              href={`/dashboard/releases/${scopedRelease.id}/metadata`}
+            <button
+              type="button"
+              onClick={() => openScene('metadata', scopedRelease.id)}
               className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
             >
               <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
@@ -184,15 +190,18 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions }: TasksPane
               <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
                 Beta
               </span>
-            </Link>
+            </button>
           ) : null}
-          {/* Calendar link: the primary navigation into the release's content
-              calendar (URG-157). A nav Link, not a toggle — the calendar is a
-              full page (month grid needs width the panel doesn't have). Only
-              renders when a release is scoped, same gate as Files. */}
+          {/* Calendar (URG-157). Opens as a WIDE overlay window rather than the
+              small one the other scenes get — its month grid needs ~1200px, and
+              at narrower widths it already falls back to its own agenda list.
+              (Until 2026-08-04 this was a nav Link to a full page, on the
+              reasoning that the panel couldn't give the grid enough width; the
+              window can.) */}
           {CONTENT_CALENDAR_ENABLED && scopedRelease ? (
-            <Link
-              href={`/dashboard/releases/${scopedRelease.id}/calendar`}
+            <button
+              type="button"
+              onClick={() => openScene('calendar', scopedRelease.id)}
               className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
             >
               <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
@@ -201,27 +210,29 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions }: TasksPane
               <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
                 Beta
               </span>
-            </Link>
+            </button>
           ) : null}
           {/* Files link: its own page (URG-165), not a segment nested under
               the task list — files are a peer of tasks, not a child of them.
               Only renders when a release is scoped (assets is release-scoped,
               see /api/releases/{id}/assets). */}
           {FILES_ENABLED && scopedRelease ? (
-            <Link
-              href={`/dashboard/releases/${scopedRelease.id}/files`}
+            <button
+              type="button"
+              onClick={() => openScene('files', scopedRelease.id)}
               className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
             >
               <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
               Files
-            </Link>
+            </button>
           ) : null}
           {/* Press kit link (URG-198): same shape as Calendar/Files above —
               the workspace is where users land, so every release surface
               gets its entry point here. */}
           {EPK_ENABLED && scopedRelease ? (
-            <Link
-              href={`/dashboard/releases/${scopedRelease.id}/epk`}
+            <button
+              type="button"
+              onClick={() => openScene('epk', scopedRelease.id)}
               className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
             >
               <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
@@ -231,7 +242,7 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions }: TasksPane
               <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
                 Beta
               </span>
-            </Link>
+            </button>
           ) : null}
           {extraActions}
         </div>
