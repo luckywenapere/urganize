@@ -139,10 +139,13 @@ export function WorkspaceDesktopFocused({
           <RailColumn cards={leftRail} onSelect={onSelect} ariaLabel="Other releases (left)" />
         )}
 
-        {/* Center column — the activities list fills and SCROLLS the column
-            (the focused card lives in the topbar). Clicking a row opens the
-            global activity pop-up. */}
-        <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain pb-4 pr-1">
+        {/* Center column — a plain flex-column frame now (2026-08-05):
+            TasksPanel owns its own scroll internally (a sticky pill row +
+            a scrollable body), so this just stacks the one-time banner above
+            it and lets TasksPanel's `flex-1` stretch to fill the remaining
+            grid-track height. Clicking an activity row opens the global
+            activity pop-up. */}
+        <div className="flex min-h-0 min-w-0 flex-col">
           {banner}
           <TasksPanel
             tasks={scopedTasks}
