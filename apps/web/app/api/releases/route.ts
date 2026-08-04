@@ -193,7 +193,7 @@ function isValidHttpUrl(value: string): boolean {
 }
 
 function normalizeReleaseCreatedSource(value: unknown): ReleaseCreatedSource {
-  if (value === 'onboarding' || value === 'empty_state') {
+  if (value === 'onboarding' || value === 'empty_state' || value === 'chappi') {
     return value;
   }
 

@@ -60,6 +60,7 @@ Suggested cohorts:
 
 - releases created from `source = onboarding`
 - releases created from `source = empty_state`
+- releases created from `source = chappi` (UrgAns, the in-app assistant)
 
 ## Verification Checklist
 

@@ -12,7 +12,7 @@ import type { Profile } from '@/lib/supabase/client';
 
 type EmptyAnalyticsProperties = Record<string, never>;
 
-export type ReleaseCreatedSource = 'onboarding' | 'dashboard' | 'empty_state';
+export type ReleaseCreatedSource = 'onboarding' | 'dashboard' | 'empty_state' | 'chappi';
 export type TaskCreatedSource = 'quick_create' | 'inline' | 'detail_panel' | 'onboarding';
 
 export interface AnalyticsEventPropertiesMap {
