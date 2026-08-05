@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, Newspaper, Plus } from 'lucide-react';
+import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Newspaper, Plus } from 'lucide-react';
 import {
   getTaskSectionLabel,
   groupTasksIntoSections,
@@ -121,6 +121,11 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions, sceneConten
         : 'border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover'
     }`;
 
+  // Shared with the New activity / Activities toggle below — same neutral
+  // (never-lit) treatment regardless of which of the two states it's in.
+  const neutralPillClass =
+    'motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover';
+
   /** Open the scene, or close it if it's the one already showing. */
   const toggleScene = (scene: SceneName, releaseId: string) => {
     if (activeScene === scene) {
@@ -176,32 +181,52 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions, sceneConten
     // desktop two-pane grid (where the grid item carries min-w-0) AND as a
     // full-screen mobile drill-down. min-w-0 on the aside itself means the
     // panel's "shrink to fit container" contract holds regardless of how
-    // the surrounding layout was wired.
-    <aside id={id} className="min-w-0 space-y-3 scroll-mt-20">
-      {/* No "Tasks" eyebrow on the left (founder call, 2026-07-23 — the
-          list is activities now and the scope pill already names the song);
-          the header row keeps only the action cluster, right-aligned. */}
-      <div className="flex flex-wrap items-center justify-end gap-2">
+    // the surrounding layout was wired. `flex-1` only takes effect on desktop,
+    // where this is a direct grid child that stretches to fill its row track
+    // (see WorkspaceDesktopFocused) — on mobile, where it's an ordinary block
+    // child in normal page flow, `flex: 1 1 0%` on a non-flex-item is inert.
+    <aside id={id} className="flex min-h-0 min-w-0 flex-1 flex-col scroll-mt-20">
+      {/* Sticky header (2026-08-05, founder call): pulled out of the
+          scrolling body below so two things stop happening at once. (1) The
+          native scrollbar for the body no longer runs past this row — before,
+          both lived in one overflow-y-auto box, so the scrollbar's own width
+          reflowed this right-aligned row every time it appeared/disappeared
+          (a bucket opening, a scene swapping in). (2) The row now stays
+          visible the whole time instead of scrolling away with the list —
+          on desktop it already never scrolled (this sits outside the local
+          scroll box entirely); on mobile, where the page itself scrolls,
+          `sticky` keeps it docked just below the topbar (`top-16` = the
+          topbar's `min-h-16`; AppTopbar is `sticky top-0` in the same
+          document scroll, so this docks flush beneath it). `bg-bg-base`
+          matches the page background so scrolled content doesn't show
+          through as it passes underneath. */}
+      <div className="sticky top-16 z-10 flex shrink-0 flex-wrap items-center justify-end gap-2 bg-bg-base pb-3 pt-1">
         <div className="flex items-center gap-2">
-          {/* New-task affordance: opens the global Quick Create modal with the
-              currently-scoped release pre-selected (or empty when nothing is
-              scoped, leaving the picker for the user). Source = 'inline' to
-              tag analytics with the panel-of-origin. Renders on both desktop
-              and mobile — the workspace is the primary task-creation surface
-              now that the legacy /dashboard/tasks page is gone. */}
-          <button
-            type="button"
-            onClick={() =>
-              openQuickCreate({
-                releaseId: scopedRelease?.id || undefined,
-                source: 'inline',
-              })
-            }
-            className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-            New activity
-          </button>
+          {/* Toggles with the scene body below: "New activity" opens Quick
+              Create while the activity list is showing; once a scene (Metadata
+              / Calendar / Files / Press kit) has taken this slot, the SAME
+              button position becomes "Activities" so there's always a way
+              back without hunting for the scene's own pill again. */}
+          {activeScene ? (
+            <button type="button" onClick={closeScene} className={neutralPillClass}>
+              <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
+              Activities
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                openQuickCreate({
+                  releaseId: scopedRelease?.id || undefined,
+                  source: 'inline',
+                })
+              }
+              className={neutralPillClass}
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              New activity
+            </button>
+          )}
           {/* Metadata link (URG-108), FIRST among the scene links (founder
               call, 2026-08-04) — distribution fields + collaborator credits
               are the surface the founder reaches for most, now that the
@@ -280,9 +305,17 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions, sceneConten
         </div>
       </div>
 
-      {/* Body swap: a release scene takes this slot when one is open, otherwise
-          the activity buckets do. The header row above stays put either way, so
+      {/* Scrollable body — the ONLY thing that scrolls now, so its native
+          scrollbar (the `pr-1` inset below) is confined to this box and never
+          runs past the sticky header above. On desktop this box gets a real
+          bounded height from the ancestor chain (WorkspaceDesktopFocused's
+          viewport-locked column) and genuinely scrolls internally; on mobile
+          there's no such bound, so `overflow-y-auto` here never actually
+          triggers — the page scrolls instead, which is what mobile always
+          did. A release scene takes this slot when one is open, otherwise the
+          activity buckets do; the header row above stays put either way, so
           the scene switcher never disappears (founder call, 2026-08-05). */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4 pr-1">
       {sceneContent ? (
         sceneContent
       ) : (
@@ -365,6 +398,7 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions, sceneConten
         })}
       </div>
       )}
+      </div>
     </aside>
   );
 }
