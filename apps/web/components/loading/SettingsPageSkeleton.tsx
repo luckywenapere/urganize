@@ -68,13 +68,16 @@ export function SettingsPageSkeleton({
           {/* Flat single-column sections divided by hairlines — mirrors the
               redesigned page (2026-07-23): each slot is a dim kicker line +
               content block, no card boxes. Gating matches the real page's
-              conditionals; order (identity leads when present, artist right
-              after — we serve the artist): Workspace identity -> Workspace
-              logo -> Workspace artist -> Artist profile -> Profile ->
-              Appearance -> Teammates -> Releases -> Security -> Session ->
+              conditionals; order — overridden 2026-08-05 (founder call,
+              Teammates now leads): Teammates -> Workspace identity ->
+              Workspace logo -> Workspace artist -> Artist profile ->
+              Profile -> Appearance -> Releases -> Security -> Session ->
               Delete. */}
           <div className="divide-y divide-stroke-subtle">
             {[
+              // Teammates renders for EVERY account since v0.26.0 (read-only
+              // for non-managers) — count-aware rows, special-cased below.
+              { key: 'teammates', height: 'h-32', show: true },
               { key: 'workspace-identity', height: 'h-24', show: IDENTITY_PANEL_ENABLED },
               { key: 'workspace-logo', height: 'h-24', show: IDENTITY_PANEL_ENABLED },
               { key: 'workspace-artist', height: 'h-28', show: WORKSPACE_FEATURE_ENABLED },
@@ -83,9 +86,6 @@ export function SettingsPageSkeleton({
               // Appearance + Notifications share one two-column row on the
               // real page — special-cased in the render below.
               { key: 'appearance-notifications', height: 'h-24', show: true },
-              // Teammates renders for EVERY account since v0.26.0 (read-only
-              // for non-managers) — count-aware rows, special-cased below.
-              { key: 'teammates', height: 'h-32', show: true },
               // Count-aware release rows, special-cased below.
               { key: 'releases', height: 'h-32', show: true },
               { key: 'security', height: 'h-40', show: true },
