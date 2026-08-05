@@ -38,9 +38,12 @@ export function WorkspaceLogoSection({
   return (
     <section className={panelClass}>
       <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Workspace logo</h2>
+      {/* Trimmed 2026-08-05 for the two-column row (shares one line with
+          Workspace identity now): the heading already says "Workspace logo",
+          so this drops the redundant lead-in and the "new and existing...
+          until you upload" elaboration, keeping just the core behavior. */}
       <p className="mb-4 text-sm text-content-secondary">
-        Your record label or team logo. Releases without cover art — new and
-        existing — display it automatically until you upload their artwork.
+        Shown on releases with no cover art of their own.
       </p>
       {isLoading ? (
         <div className="flex items-center gap-4">

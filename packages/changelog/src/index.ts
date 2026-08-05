@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.40.4",
+    date: "August 5, 2026",
+    highlights: [
+      "Workspace identity and Workspace logo now share one row in Settings instead of stacking full-width — a tidier fit since they're really one pairing (both feed your workspace card).",
+    ],
+  },
+  {
     version: "0.40.3",
     date: "August 5, 2026",
     highlights: [

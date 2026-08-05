@@ -541,8 +541,12 @@ export default function SettingsPage() {
             onRefetch={() => void loadTeammates()}
           />
 
+          {/* Workspace identity + logo share one row (founder call,
+              2026-08-05): a natural pair — both just feed the workspace card
+              shown across the app — same two-column-from-sm pattern as
+              Appearance + Notifications below. */}
           {IDENTITY_PANEL_ENABLED && (
-            <>
+            <div className="grid gap-x-10 divide-y divide-stroke-subtle sm:grid-cols-2 sm:divide-y-0">
               <WorkspaceIdentitySection
                 input={workspaceNameInput}
                 onInputChange={setWorkspaceNameInput}
@@ -563,7 +567,7 @@ export default function SettingsPage() {
                 onUpload={(file) => void handleUploadWorkspaceLogo(file)}
                 onRemove={() => void handleRemoveWorkspaceLogo()}
               />
-            </>
+            </div>
           )}
 
           {WORKSPACE_FEATURE_ENABLED && (
