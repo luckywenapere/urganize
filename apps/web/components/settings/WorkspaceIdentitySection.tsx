@@ -33,8 +33,12 @@ export function WorkspaceIdentitySection({
   return (
     <section className={panelClass}>
       <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Workspace identity</h2>
+      {/* Trimmed 2026-08-05 for the two-column row (shares one line with
+          Workspace logo now): the heading already says "Workspace identity"
+          and the input label right below says "Workspace name", so the old
+          "Your label or team name," lead-in was redundant. */}
       <p className="mb-4 text-sm text-content-secondary">
-        Your label or team name, shown on the workspace card across the app.
+        Shown on the workspace card across the app.
       </p>
       {isLoading ? (
         <div className="space-y-2">

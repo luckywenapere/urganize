@@ -69,17 +69,18 @@ export function SettingsPageSkeleton({
               redesigned page (2026-07-23): each slot is a dim kicker line +
               content block, no card boxes. Gating matches the real page's
               conditionals; order — overridden 2026-08-05 (founder call,
-              Teammates now leads): Teammates -> Workspace identity ->
-              Workspace logo -> Workspace artist -> Artist profile ->
-              Profile -> Appearance -> Releases -> Security -> Session ->
-              Delete. */}
+              Teammates now leads): Teammates -> Workspace identity/logo
+              (paired row) -> Workspace artist -> Artist profile -> Profile
+              -> Appearance -> Releases -> Security -> Session -> Delete. */}
           <div className="divide-y divide-stroke-subtle">
             {[
               // Teammates renders for EVERY account since v0.26.0 (read-only
               // for non-managers) — count-aware rows, special-cased below.
               { key: 'teammates', height: 'h-32', show: true },
-              { key: 'workspace-identity', height: 'h-24', show: IDENTITY_PANEL_ENABLED },
-              { key: 'workspace-logo', height: 'h-24', show: IDENTITY_PANEL_ENABLED },
+              // Workspace identity + logo share one two-column row on the
+              // real page (2026-08-05) — special-cased in the render below,
+              // same shape as appearance-notifications.
+              { key: 'workspace-identity-logo', height: 'h-24', show: IDENTITY_PANEL_ENABLED },
               { key: 'workspace-artist', height: 'h-28', show: WORKSPACE_FEATURE_ENABLED },
               { key: 'artist-profile', height: 'h-28', show: isArtistAccount },
               { key: 'profile', height: 'h-40', show: true },
@@ -94,7 +95,8 @@ export function SettingsPageSkeleton({
             ]
               .filter((section) => section.show)
               .map((section) =>
-                section.key === 'appearance-notifications' ? (
+                section.key === 'appearance-notifications' ||
+                section.key === 'workspace-identity-logo' ? (
                   <div key={section.key} className="grid gap-x-10 py-9 sm:grid-cols-2">
                     <div>
                       <SkeletonBlock className="mb-5 h-3 w-28" />
