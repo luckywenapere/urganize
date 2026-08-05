@@ -317,17 +317,30 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions, sceneConten
         </div>
       </div>
 
-      {/* Scrollable body — the ONLY thing that scrolls now, so its native
-          scrollbar (the `pr-1` inset below) is confined to this box and never
-          runs past the sticky header above. On desktop this box gets a real
-          bounded height from the ancestor chain (WorkspaceDesktopFocused's
-          viewport-locked column) and genuinely scrolls internally; on mobile
-          there's no such bound, so `overflow-y-auto` here never actually
-          triggers — the page scrolls instead, which is what mobile always
-          did. A release scene takes this slot when one is open, otherwise the
+      {/* Scrollable body — desktop-only internal scroll box (`lg:` prefix).
+          On desktop this box gets a real bounded height from the ancestor
+          chain (WorkspaceDesktopFocused's viewport-locked column), so it's
+          the ONLY thing that scrolls there and its native scrollbar (the
+          `pr-1` inset, also `lg:`-only) is confined to this box and never
+          runs past the static header above.
+
+          On mobile it must stay a plain block, NOT a scroll container.
+          `overflow-y-auto` makes a div a scroll target for touch purposes
+          even with no height bound to actually fill, and pairing that with
+          `overscroll-contain` blocks the swipe from ever chaining up to the
+          page — a swipe starting on a task row died right there instead of
+          scrolling. (An earlier version of this comment claimed
+          `overflow-y-auto` "never actually triggers" on mobile; it does
+          trigger scroll-container status, just not an internal scrollbar,
+          and that was enough to trap the gesture — this was the reported
+          bug.) Below `lg` this is unclassed flow content, so touches on
+          task rows scroll the page natively, same as anywhere else on the
+          page.
+
+          A release scene takes this slot when one is open, otherwise the
           activity buckets do; the header row above stays put either way, so
           the scene switcher never disappears (founder call, 2026-08-05). */}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4 pr-1">
+      <div className="min-h-0 flex-1 pb-4 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
       {sceneContent ? (
         sceneContent
       ) : (
