@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.40.2",
+    date: "August 5, 2026",
+    highlights: [
+      "Teammates now leads Settings — it's the first thing you see instead of being buried below your workspace details.",
+    ],
+  },
+  {
     version: "0.40.1",
     date: "August 5, 2026",
     highlights: [
