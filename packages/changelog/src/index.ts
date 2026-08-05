@@ -20,10 +20,21 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.40.6",
+    date: "August 5, 2026",
+    highlights: [
+      "Your releases now really do fit 4 across when UrgAns is closed and your screen has the room — the cards were a touch too wide to ever manage it, so they're slightly slimmer at their widest.",
+    ],
+  },
+  {
+    // v0.40.5's highlight originally also claimed the 4-across grid. It
+    // didn't ship working (the cards were 32px too wide for the available
+    // space — see URG-225), so the claim was trimmed to what that release
+    // actually delivered rather than left standing as a false entry.
     version: "0.40.5",
     date: "August 5, 2026",
     highlights: [
-      "Your release cards now line up with the workspace card and UrgAns panel instead of sitting lower than both, and the grid can spread out to 4 across when UrgAns is closed and your screen has the room.",
+      "Your release cards now line up with the workspace card and UrgAns panel instead of sitting lower than both.",
     ],
   },
   {
