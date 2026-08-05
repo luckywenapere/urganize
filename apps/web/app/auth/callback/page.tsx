@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { LoadingScreen } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { HOME_PATH } from '@/lib/home-path';
@@ -149,16 +149,5 @@ export default function AuthCallbackPage() {
     handleCallback();
   }, [router, checkAuth]);
 
-  return (
-    <main
-      className="flex min-h-screen items-center justify-center bg-bg-base px-4 text-content-primary"
-      role="status"
-      aria-live="polite"
-    >
-      <div className="flex flex-col items-center gap-3 text-center">
-        <Loader2 className="h-5 w-5 animate-spin text-content-tertiary" aria-hidden="true" />
-        <p className="text-sm text-content-secondary">Finishing sign-in</p>
-      </div>
-    </main>
-  );
+  return <LoadingScreen title="Finishing sign-in" />;
 }

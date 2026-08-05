@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
+import { LoadingMark } from '@urganize/ui';
 
 /**
  * Root-segment Suspense fallback (mounted by `app/loading.tsx`). Catches any
@@ -9,7 +9,8 @@ import { Loader2 } from 'lucide-react';
  * instead; this is a neutral fallback only.
  *
  * Frame-reservation doesn't apply at this level — the eventual content shape
- * is unknown — so the render is a small centered spinner. Spinner respects
+ * is unknown — so the render is the small centered brand mark (2026-08-05:
+ * replaces the generic spinner, matching `LoadingScreen`). It respects
  * `prefers-reduced-motion` via the global animation-duration clamp in
  * `globals.css`.
  */
@@ -20,7 +21,7 @@ export function RootShellSkeleton() {
       role="status"
       aria-live="polite"
     >
-      <Loader2 className="h-5 w-5 animate-spin text-content-tertiary" aria-hidden="true" />
+      <LoadingMark />
       <span className="sr-only">Loading</span>
     </main>
   );
