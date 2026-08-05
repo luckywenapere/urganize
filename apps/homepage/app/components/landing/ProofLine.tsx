@@ -21,7 +21,13 @@ import { TESTIMONIALS, type TestimonialId } from "@/content/testimonials";
 //                                      remaining thesis; swapped off
 //                                      adenaiye 2026-07-31 when her
 //                                      files-in-three-chats quote was
-//                                      retired, see content/testimonials.ts)
+//                                      retired, see content/testimonials.ts.
+//                                      Her new 2026-08-05 review appears on
+//                                      the site via TransformationSection's
+//                                      "team" row and the /for-managers
+//                                      featured testimonial — not as a
+//                                      ProofLine mount, so this row's choice
+//                                      stands.)
 //   pricing            → zaddyfunds  (short + linkable on an otherwise
 //                                      all-numbers-free page)
 //   for_managers_cta   → (none)      a full quote already sits directly
