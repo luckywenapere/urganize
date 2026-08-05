@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.40.1",
+    date: "August 5, 2026",
+    highlights: [
+      "Fixed the release grid showing only one narrow column when both the workspace card and UrgAns were open on screen — it now uses the available space and shows two.",
+    ],
+  },
+  {
     version: "0.40.0",
     date: "August 5, 2026",
     highlights: [

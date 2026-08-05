@@ -49,16 +49,20 @@ export function WorkspaceDesktopGrid({
           }
         />
       ) : (
-        // Auto-fit columns capped at 280px, centered as a row (founder call,
-        // 2026-07-23): with `repeat(auto-fit, minmax(...))` the browser fits
-        // as many ~280px columns as the container allows — 3 at lg width,
-        // 4 at xl, same as the old explicit lg:grid-cols-3 xl:grid-cols-4 —
-        // but `justify-center` centers the row when there are FEWER
-        // releases than fit, instead of the previous grid leaving them
-        // left-anchored with dead space to the right. A full row (4 at xl)
-        // fills edge to edge exactly as before; centering only kicks in
-        // below that count.
-        <div className="grid justify-center gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,280px))]">
+        // Auto-fit columns capped at 260px, centered as a row (founder call,
+        // 2026-07-23; cap tightened 260<-280 on 2026-08-05, URG-214 follow-up):
+        // with `repeat(auto-fit, minmax(...))` the browser fits as many
+        // ~260px columns as the container allows, and `justify-center`
+        // centers the row when there are FEWER releases than fit, instead of
+        // leaving them left-anchored with dead space to the right.
+        // `auto-fit`'s track count is computed from the MAX bound, not the
+        // min — so with the workspace identity panel + the open UrgAns rail
+        // both on screen (the common case once both ship), the center column
+        // narrows to ~555px, and the old 280px cap meant 2*280+gap (576px)
+        // didn't fit, collapsing to a single column even though there was
+        // clearly room for two. 260px clears that squeeze (2*260+gap = 536px)
+        // while keeping the same look everywhere else.
+        <div className="grid justify-center gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,260px))]">
           {releases.map(({ release, tasksDone, tasksTotal, coverArtUrl }) => (
             <WorkspaceReleaseCard
               key={release.id}

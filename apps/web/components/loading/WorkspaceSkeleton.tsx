@@ -90,7 +90,7 @@ export function WorkspaceSkeleton() {
             ) : (
               <ReleaseGridSkeleton
                 count={knownCount}
-                columns="justify-center [grid-template-columns:repeat(auto-fit,minmax(240px,280px))]"
+                columns="justify-center [grid-template-columns:repeat(auto-fit,minmax(220px,260px))]"
               />
             )}
           </section>
