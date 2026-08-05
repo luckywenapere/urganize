@@ -3,6 +3,7 @@ import { ProofLine } from "../components/landing/ProofLine";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
+import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
@@ -18,6 +19,16 @@ export const metadata: Metadata = buildPageMetadata({
 // product as it ships today, and every WhatsApp/Drive line describes the
 // workflow managers actually run before switching. No invented numbers, no
 // imaginary features, no trash-talking tools people rely on.
+//
+// 2026-08-05: founder reported readers stop reading at the second block
+// ("Assigned, not announced."). The page had no CTA until the very bottom
+// (five screens down) and repeated the same boxed them/us diff four times
+// in a row — readers extract the pattern after block one and have no
+// reason to keep scrolling, and no visual proof anywhere that the product
+// is real. Fixed by: a CTA in the hero, a real screenshot right after the
+// first (strongest) comparison, and folding the remaining three into one
+// compact section in a different format. "The plan" below is the only
+// full-size comparison left; keep it that way, it is the strongest claim.
 const comparisons = [
   {
     kicker: "The plan",
@@ -25,23 +36,28 @@ const comparisons = [
     them: "The plan sits in a pinned message, a spreadsheet someone made once, and your head. Every new release starts from zero, plus whatever you remember from the last one.",
     us: "Create a release and Urganize lays out the whole 11-week rollout. 64 activities, from locking the master to pulling your first-week numbers. Real managers wrote it, and you can change anything before you save it.",
   },
+] as const;
+
+// Folded from three full-size blocks into one compact section (see the
+// note above). Each row is a single sentence per side joined by an arrow
+// instead of a boxed grid, deliberately a different shape from the "The
+// plan" comparison above and from the homepage's TransformationSection, so
+// a visitor arriving from either doesn't see the same format a third time.
+const compactComparisons = [
   {
     kicker: "Ownership",
-    title: "Assigned, not announced.",
-    them: "Work gets assigned in a chat message. “Did you see my text?” becomes the follow-up system. A message that gets scrolled past is a deadline nobody sees until it is missed.",
-    us: "Every activity has an owner, a due date, and a priority. Activities wait for each other in the right order: a blocked activity shows you exactly what it is waiting on, and unlocks the moment that is done.",
+    them: "Work gets assigned in a chat message that gets scrolled past.",
+    us: "Every activity has an owner and a due date, and unlocks the moment what it's waiting on is done.",
   },
   {
     kicker: "Press kit",
-    title: "Sent as one link, not rebuilt every time.",
-    them: "The press kit is a doc full of dead links. You rebuild it from scratch every time a curator or journalist asks.",
-    us: "Urganize builds a press kit from your release: cover art, details, and photos. It updates itself when the release changes. Send one link. Turn it off anytime.",
+    them: "The press kit is a doc full of dead links you rebuild from scratch every time someone asks.",
+    us: "Urganize builds one from your release, keeps it current, and you can turn it off anytime.",
   },
   {
     kicker: "Status",
-    title: "Seen at a glance, not asked again.",
-    them: "To find out where a release stands, you scroll back through weeks of chat. Or you ask someone to repeat what they already told you. Now do that for every release you run.",
-    us: "One workspace shows every release you have going: progress, what's overdue, what's due this week. You stop needing a meeting to know the status.",
+    them: "Finding out where a release stands means scrolling weeks of chat, for every release you run.",
+    us: "One workspace shows progress, what's overdue, and what's due this week, for everything you have going.",
   },
 ] as const;
 
@@ -75,6 +91,14 @@ export default function WhyUrganizePage() {
               team passing work around. The system that got you here starts
               to drop things.
             </p>
+            {/* CTA moved into the hero (2026-08-05): the page previously had
+                no ask until the very bottom, five screens down, so anyone
+                who stopped reading early never saw one. No ProofLine here
+                on purpose, per the ProofLine mount table's "keep the first
+                touch light" rule; tamuno stays on the final CTA below. */}
+            <div className="mt-8 flex w-full flex-col items-center gap-3">
+              <WaitlistForm source="why_urganize_hero" />
+            </div>
           </div>
         </SectionShell>
 
@@ -116,10 +140,52 @@ export default function WhyUrganizePage() {
           </ScrollReveal>
         ))}
 
+        {/* PRODUCT PROOF — reuses the homepage's own screenshot section
+            verbatim (2026-08-05) so this page shows the workspace the
+            comparison above is describing, instead of asking the reader to
+            take four screens of prose on faith. */}
+        <WorkspaceShotSection />
+
+        {/* THE REST OF THE COMPARISON, COMPACTED (2026-08-05) — was three
+            more full-size boxed blocks (Ownership, Press kit, Status);
+            folded into one section, one sentence per side, joined by an
+            arrow instead of a grid. See the comparisons array comment. */}
+        <ScrollReveal>
+          <SectionShell
+            className="py-[60px] lg:py-[80px]"
+            containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
+          >
+            <div className="mx-auto max-w-[64rem] border-t border-[color:var(--marketing-border)] pt-14">
+              <p className="mono-label text-[var(--marketing-accent)]">
+                Everything else
+              </p>
+              <h2 className={`mt-5 max-w-[40rem] ${headlineClass}`}>
+                Ownership, your press kit, and status change too.
+              </h2>
+
+              <div className="mt-10 divide-y divide-[color:var(--marketing-border)]">
+                {compactComparisons.map((item) => (
+                  <div key={item.kicker} className="py-6">
+                    <p className="mono-label text-[var(--marketing-text-subtle)]">
+                      {item.kicker}
+                    </p>
+                    <p className="mt-3 max-w-[52rem] text-[0.95rem] leading-7 text-[var(--marketing-text-muted)]">
+                      {item.them}{" "}
+                      <span className="text-[var(--marketing-text)]">
+                        → {item.us}
+                      </span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </SectionShell>
+        </ScrollReveal>
+
         {/* HONESTY BLOCK */}
         <ScrollReveal>
           <SectionShell
-            className="py-[100px] lg:py-[120px]"
+            className="py-[80px] lg:py-[100px]"
             containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
           >
             <div className="mx-auto max-w-[52rem] text-center">
