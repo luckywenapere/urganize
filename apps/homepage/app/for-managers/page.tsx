@@ -189,13 +189,14 @@ export default function ForManagersPage() {
           </SectionShell>
         </ScrollReveal>
 
-        {/* TESTIMONIAL — Antoine's quote, verbatim, signed off 2026-07-06.
-            Never edit a quote after sign-off without re-approval. Sourced
-            from content/testimonials.ts — the single canonical copy; the
-            same words also appear as one of the TransformationSection rows
-            on the landing page. Swapped off Adenaiye 2026-07-31 when her
-            quote (about file storage) was retired from display; Antoine's
-            plan-already-laid-out story fits a manager audience directly. */}
+        {/* TESTIMONIAL — Adenaiye's quote, verbatim, signed off 2026-08-05
+            (URG-220). Never edit a quote after sign-off without
+            re-approval. Sourced from content/testimonials.ts — the single
+            canonical copy. Swapped in 2026-08-05: her new review's chaos/
+            multiple-releases-and-artists-and-team sentence is this page's
+            exact audience. Antoine (the prior quote here) still carries the
+            landing TransformationSection's "plan" row and the /features CTA
+            ProofLine, so his voice isn't lost from the site. */}
         <ScrollReveal>
           <SectionShell
             className="py-[80px] lg:py-[100px]"
@@ -203,10 +204,10 @@ export default function ForManagersPage() {
           >
             <div className="border-t border-[color:var(--marketing-border)] pt-14 text-center">
               <blockquote className="text-balance text-[1.4rem] font-medium leading-[1.5] tracking-[-0.02em] text-[var(--marketing-text)] sm:text-[1.7rem]">
-                &ldquo;{TESTIMONIALS.antoine.quote}&rdquo;
+                &ldquo;{TESTIMONIALS.adenaiye.quote}&rdquo;
               </blockquote>
               <p className="mono-label mt-6 text-[var(--marketing-text-subtle)]">
-                {TESTIMONIALS.antoine.name}, {TESTIMONIALS.antoine.role}
+                {TESTIMONIALS.adenaiye.name}, {TESTIMONIALS.adenaiye.role}
               </p>
             </div>
           </SectionShell>

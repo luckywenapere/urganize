@@ -9,10 +9,11 @@ import { centeredHeadlineClass } from "./shared";
 // two, directly after the hero.
 //
 // The @zaddyfunds_ pull-quote that used to anchor this section now lives in
-// the hero as a ProofLine — it is NOT duplicated here. Adenaiye's pairing
-// was retired the same day files went out of the marketing story (see the
-// retirement comment on `adenaiye` in content/testimonials.ts) — two rows
-// remain, not four.
+// the hero as a ProofLine — it is NOT duplicated here. Adenaiye's original
+// pairing was retired 2026-07-31 the same day files went out of the
+// marketing story; she returned 2026-08-05 (URG-220) with a new review, so
+// this section now has three rows: plan (Antoine) -> team (Adenaiye) ->
+// status (Tamuno). See content/testimonials.ts for the sign-off log.
 //
 // ATTRIBUTION SAFEGUARD (read before touching this file): each row's LEFT
 // cell is Urganize's own words about the pre-Urganize workflow (lifted
@@ -70,7 +71,7 @@ export function TransformationSection() {
                     </p>
                     <blockquote>
                       <p className="mt-4 text-[0.95rem] leading-7 text-[var(--marketing-text)]">
-                        &ldquo;{testimonial.quote}&rdquo;
+                        &ldquo;{pair.quoteOverride ?? testimonial.quote}&rdquo;
                       </p>
                     </blockquote>
                     <figcaption className="mt-6 font-mono text-[0.74rem] tracking-[0.18em] text-[var(--marketing-text-subtle)]">
