@@ -199,8 +199,20 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions, sceneConten
           topbar's `min-h-16`; AppTopbar is `sticky top-0` in the same
           document scroll, so this docks flush beneath it). `bg-bg-base`
           matches the page background so scrolled content doesn't show
-          through as it passes underneath. */}
-      <div className="sticky top-16 z-10 flex shrink-0 flex-wrap items-center justify-end gap-2 bg-bg-base pb-3 pt-1">
+          through as it passes underneath.
+
+          `lg:static` (2026-08-05 bug fix): sticky is for MOBILE ONLY. On
+          desktop this panel lives inside WorkspaceDesktopFocused, whose grid
+          is `overflow-hidden` — and overflow:hidden makes that grid the
+          nearest scrollport for sticky purposes. This row sits at the very
+          top of that box in flow, so `sticky top-16` pushed it 64px DOWN
+          into the scrolling body (tasks slid behind the pills, an empty band
+          where the row belonged). At lg+ the row never needs sticky anyway —
+          it's outside the scroll box, always visible by construction — so it
+          goes back to static flow there. The lg boundary is exact: the only
+          two mounts are WorkspaceView's mobile branch (`lg:hidden`) and
+          WorkspaceDesktopFocused (inside `hidden lg:block`). */}
+      <div className="sticky top-16 z-10 flex shrink-0 flex-wrap items-center justify-end gap-2 bg-bg-base pb-3 pt-1 lg:static">
         <div className="flex items-center gap-2">
           {/* Toggles with the scene body below: "New activity" opens Quick
               Create while the activity list is showing; once a scene (Metadata
