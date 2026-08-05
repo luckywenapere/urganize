@@ -17,6 +17,7 @@ import { NewReleaseGuide } from '@/components/releases/NewReleaseGuide';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
+import { useFirstReleaseRequired } from '@/components/releases/useFirstReleaseRequired';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { TasksPanel } from './TasksPanel';
 import { useSceneOverlay } from './useSceneOverlay';
@@ -122,6 +123,18 @@ export function WorkspaceView() {
     }
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
+
+  // URG-217: a user with zero releases can't do anything here, so the create
+  // modal opens itself and (in the modal) loses its exits until they create
+  // one. Only fires once the store has CONFIRMED zero releases — the predicate
+  // fails open while loading and on load errors, so a network blip can't wall
+  // anyone off. Deleting your last release re-triggers this by design.
+  const firstReleaseRequired = useFirstReleaseRequired();
+  useEffect(() => {
+    if (firstReleaseRequired) {
+      setIsCreateModalOpen(true);
+    }
+  }, [firstReleaseRequired]);
 
   const generateStatus = async () => {
     if (!scopedReleaseId) return;

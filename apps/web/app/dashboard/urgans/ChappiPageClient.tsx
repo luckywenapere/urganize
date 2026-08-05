@@ -10,6 +10,7 @@ import { ChappiConversation } from '@/components/chappi/ChappiConversation';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { ChappiPageSkeleton } from '@/components/loading/ChappiPageSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
+import { useFirstReleaseRequired } from '@/components/releases/useFirstReleaseRequired';
 import { FirstReleaseWin } from '@/components/workspace/FirstReleaseWin';
 
 // Same flag AppTopbar reads for the nav icon — if a direct link is followed
@@ -40,6 +41,17 @@ export default function ChappiPageClient() {
     }
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
+
+  // URG-217 — same forced first-release flow as the workspace. This page is
+  // the post-login landing surface when the UrgAns flag is on (HOME_PATH), so
+  // it needs the auto-open too or a zero-release user lands somewhere the lock
+  // never fires. See WorkspaceView for the fail-open rationale.
+  const firstReleaseRequired = useFirstReleaseRequired();
+  useEffect(() => {
+    if (firstReleaseRequired) {
+      setIsCreateModalOpen(true);
+    }
+  }, [firstReleaseRequired]);
 
   if (!CHAPPI_ENABLED) return null;
 
