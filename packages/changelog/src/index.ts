@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.40.5",
+    date: "August 5, 2026",
+    highlights: [
+      "Your release cards now line up with the workspace card and UrgAns panel instead of sitting lower than both, and the grid can spread out to 4 across when UrgAns is closed and your screen has the room.",
+    ],
+  },
+  {
     version: "0.40.4",
     date: "August 5, 2026",
     highlights: [

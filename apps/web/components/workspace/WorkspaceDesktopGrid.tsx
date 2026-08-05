@@ -62,7 +62,18 @@ export function WorkspaceDesktopGrid({
         // didn't fit, collapsing to a single column even though there was
         // clearly room for two. 260px clears that squeeze (2*260+gap = 536px)
         // while keeping the same look everywhere else.
-        <div className="grid justify-center gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,260px))]">
+        //
+        // max-w-[1088px] mx-auto (2026-08-05, URG-224): with the UrgAns rail
+        // CLOSED, the freed-up width let auto-fit top out around 4 columns
+        // today only by coincidence — AppShell's max-w-[1440px] page cap left
+        // just enough room (a few px of slack) for 4*260px cards to fit, easy
+        // to silently break with any future width tweak elsewhere. 1088px is
+        // exactly 4 cards at the max 260px width plus 3 gap-4 (16px) gaps, so
+        // auto-fit can never mathematically produce a 5th column regardless
+        // of viewport or future layout changes; it still fluidly packs 1-4
+        // cards at 220-260px each depending on how much of that budget is
+        // actually available, same as before.
+        <div className="mx-auto grid max-w-[1088px] justify-center gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,260px))]">
           {releases.map(({ release, tasksDone, tasksTotal, coverArtUrl }) => (
             <WorkspaceReleaseCard
               key={release.id}

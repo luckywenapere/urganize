@@ -433,8 +433,16 @@ export function WorkspaceView() {
       {/* The UrgAns side rail used to be this div's flex sibling; it now
           rides beside AppShell's <main> instead (URG-210), so this is a
           plain content wrapper again. */}
+      {/* lg:pt-0 lg:-mt-5 (2026-08-05, URG-224): at lg+, WorkspaceIdentityPanel
+          and ChappiSidePanel are flex siblings of AppShell's <main> with NO
+          top padding of their own, so their content sits flush with the top
+          bar. This wrapper's own pt-6 PLUS <main>'s shared pt-5 pushed the
+          release grid 44px lower than those two panels. Cancel both at lg+ so
+          the grid lines up with them; below lg neither panel renders, so the
+          normal pt-6 inset stays. Do NOT touch AppShell's <main> padding
+          directly — Settings and every other chrome page share it. */}
       <div
-        className={`min-w-0 pt-6 sm:px-6 ${isDesktopFocusedMode ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
+        className={`min-w-0 pt-6 sm:px-6 lg:pt-0 lg:-mt-5 ${isDesktopFocusedMode ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
       >
           {/* Screen-reader-only live region. Polite mode waits for the SR to be
               idle, atomic="true" re-reads the whole message. Mirrors the visible
