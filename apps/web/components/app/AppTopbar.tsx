@@ -289,26 +289,36 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           <Logo size="sm" priority className="opacity-90" />
         </Link>
 
-        {/* Spacer takes flex-1 so the right-side controls stay flush right.
-            Eyebrow + title are conditional so empty routeTitle entries
-            (e.g. /dashboard) don't reserve vertical space. */}
-        <div className="min-w-0 flex-1">
-          {/* On the scoped workspace, the open release's activities own this
-              space; static route titles fill it elsewhere. Both are empty on
-              the at-rest /dashboard, keeping the controls flush right. */}
-          <Suspense fallback={null}>
-            <ContextTitle />
-          </Suspense>
-          {routeTitle.eyebrow ? (
-            <p className="hidden text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary sm:block">
-              {routeTitle.eyebrow}
-            </p>
-          ) : null}
-          {routeTitle.title ? (
-            <h1 className="truncate font-display text-lg font-semibold leading-6 text-content-primary sm:text-xl">
-              {routeTitle.title}
-            </h1>
-          ) : null}
+        {/* Spacer takes flex-1 so the right-side controls stay flush right;
+            its content is centered within that leftover width (founder
+            call, 2026-08-06) so the scoped release's identity reads as the
+            bar's focal point instead of hugging the logo. Centering here —
+            rather than against the bar's raw midpoint — is overlap-safe: the
+            slot's width is already bounded by two fixed-width neighbors (the
+            logo, the action cluster), so its content can never be pushed
+            into either one, whatever their relative widths are. Eyebrow +
+            title are conditional so empty routeTitle entries (e.g.
+            /dashboard) don't reserve vertical space. */}
+        <div className="flex min-w-0 flex-1 items-center justify-center">
+          <div className="min-w-0">
+            {/* On the scoped workspace, the open release's activities own
+                this space; static route titles fill it elsewhere. Both are
+                empty on the at-rest /dashboard, keeping the controls flush
+                right. */}
+            <Suspense fallback={null}>
+              <ContextTitle />
+            </Suspense>
+            {routeTitle.eyebrow ? (
+              <p className="hidden text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary sm:block">
+                {routeTitle.eyebrow}
+              </p>
+            ) : null}
+            {routeTitle.title ? (
+              <h1 className="truncate font-display text-lg font-semibold leading-6 text-content-primary sm:text-xl">
+                {routeTitle.title}
+              </h1>
+            ) : null}
+          </div>
         </div>
 
         <button
