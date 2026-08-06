@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.41.1",
+    date: "August 6, 2026",
+    highlights: [
+      "A release with no date now makes it clear you can add activities right away — the date card offers it directly, and an empty activity list has its own \"Add your first activity\" button. Setting a date was never required to add your own work; it just looked that way.",
+      "Fixed activities being filed against the wrong release when two releases shared a name — likelier now that \"Untitled release\" is the default. Typing a name that matches more than one release no longer guesses; pick the one you meant from the list.",
+    ],
+  },
+  {
     version: "0.41.0",
     date: "August 6, 2026",
     highlights: [

@@ -711,6 +711,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
           setQuickAssigneeQuery(toAssigneeQuery(member));
         }}
         onDueDateChange={setQuickDueDate}
+        pendingReleaseId={quickCreateDefaults.releaseId || null}
         onSubmit={createQuickTask}
       />
 

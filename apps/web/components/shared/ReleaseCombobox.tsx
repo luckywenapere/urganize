@@ -69,14 +69,25 @@ export function ReleaseCombobox({
     return releases.filter((release) => normalizeValue(release.title).includes(normalizedQuery));
   }, [normalizedQuery, queryEqualsSelection, releases]);
 
-  const exactMatch = useMemo(
-    () =>
-      releases.find((release) => normalizeValue(release.title) === normalizedQuery) || null,
+  // ALL releases whose title matches the typed text, not the first one
+  // (URG-233). Release titles are not unique, and since the title became
+  // optional at creation every unnamed release shares the same default, so
+  // "first by title" silently resolved to an arbitrary one of them.
+  const titleMatches = useMemo(
+    () => releases.filter((release) => normalizeValue(release.title) === normalizedQuery),
     [normalizedQuery, releases]
   );
 
+  // Only safe to auto-commit on blur when the typed text identifies exactly
+  // one release. Two candidates means we genuinely don't know which was
+  // meant, so the user picks a row instead (see commitTypedValue).
+  const exactMatch = titleMatches.length === 1 ? titleMatches[0] : null;
+
   const createValue = query.trim();
-  const showCreateOption = Boolean(allowCreate && createValue && !exactMatch);
+  // Suppressed whenever ANY release already carries this title — keyed off
+  // the full match list, not `exactMatch`, so an ambiguous title doesn't
+  // start offering to create yet another release with the same name.
+  const showCreateOption = Boolean(allowCreate && createValue && titleMatches.length === 0);
   const items = useMemo<ComboboxItem[]>(
     () => [
       ...filteredReleases.map((release) => ({ kind: 'release', release }) satisfies ComboboxItem),
@@ -117,6 +128,16 @@ export function ReleaseCombobox({
       onSelectRelease(exactMatch);
       setIsOpen(false);
       return exactMatch;
+    }
+
+    // Ambiguous: several releases share this exact title (URG-233). Leave the
+    // current selection alone and take no action — guessing here would file
+    // the activity against the wrong release with no visible sign of it. The
+    // dropdown lists every candidate, so the user resolves it by clicking.
+    if (titleMatches.length > 1) {
+      setIsOpen(false);
+      setActiveIndex(-1);
+      return null;
     }
 
     if (!allowCreate) {

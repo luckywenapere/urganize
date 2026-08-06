@@ -19,6 +19,7 @@ import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
+import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { TasksPanel } from './TasksPanel';
 import { useSceneOverlay } from './useSceneOverlay';
 import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
@@ -86,6 +87,10 @@ export function WorkspaceView() {
   // appear"), so this view has to know about it to build the panel body and to
   // give the calendar its width.
   const { activeScene, closeScene } = useSceneOverlay();
+  // Same global quick-create TasksPanel's header pill opens — the date card's
+  // "add an activity yourself" action routes here so both entry points land
+  // in one modal (URG-233).
+  const { openQuickCreate } = useTaskUI();
   const isRailOpen = useChappiStore((state) => state.railOpen);
   // Task detail renders as a global pop-up mounted by TaskUIProvider
   // (2026-07-23) — this view no longer swaps its layout when a task opens.
@@ -371,8 +376,18 @@ export function WorkspaceView() {
         releaseTitle={scopedReleaseSlim.title}
         templatePending={scopedReleaseSlim.templatePending}
         onSaved={(message) => setToast({ message, tone: 'success' })}
+        onAddActivity={() =>
+          openQuickCreate({ releaseId: scopedReleaseSlim.id, source: 'inline' })
+        }
       />
     ) : null;
+
+  // Only the plan-waiting card explains the empty list and offers a way to
+  // act on it; the compact date row does neither, so a view under it still
+  // needs TasksPanel's own empty state (URG-233).
+  const bannerReplacesEmptyState = Boolean(
+    setReleaseDateBanner && scopedReleaseSlim?.templatePending
+  );
 
   // Suppressed while the release has no date: this guide opens with "Your
   // release is set up" and describes a rollout that, for a dateless
@@ -569,6 +584,7 @@ export function WorkspaceView() {
                   extraActions={taskPanelExtraActions}
                   sceneContent={scenePanel}
                   activitiesBanner={setReleaseDateBanner}
+                  bannerReplacesEmptyState={bannerReplacesEmptyState}
                 />
                 {/* The per-release files surface lives inside TasksPanel as an
                     inline collapsible segment at the top of the task area,
@@ -608,6 +624,7 @@ export function WorkspaceView() {
                 panelExtraActions={taskPanelExtraActions}
                 panelSceneContent={scenePanel}
                 panelActivitiesBanner={setReleaseDateBanner}
+                panelBannerReplacesEmptyState={bannerReplacesEmptyState}
               />
             ) : (
               <WorkspaceDesktopGrid
