@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
-import { getInitials } from '@/lib/tasks';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 
 // Statuses that count as "still being worked" for the card's stat line.
@@ -104,8 +104,21 @@ export function WorkspaceIdentityPanel() {
                 onError={() => setLogoFailed(true)}
               />
             ) : (
-              <div className="grid h-14 w-14 place-items-center rounded-xl border border-stroke-subtle bg-bg-elevated font-display text-lg text-content-secondary">
-                {getInitials(name || 'Urganize')}
+              // Default when the workspace has no logo of its own (founder
+              // call, 2026-08-06): the Urganize mark, not the workspace's
+              // initials. Same asset + `app-wordmark` light-theme invert the
+              // loading screen and topbar wordmark use, so the three brand
+              // surfaces can't drift. Decorative — the workspace name renders
+              // directly below it, so alt="" + aria-hidden.
+              <div className="grid h-14 w-14 place-items-center rounded-xl border border-stroke-subtle bg-bg-elevated">
+                <Image
+                  src="/images/urganize-mark.png"
+                  alt=""
+                  aria-hidden="true"
+                  width={32}
+                  height={32}
+                  className="app-wordmark h-8 w-8 object-contain"
+                />
               </div>
             )}
 
