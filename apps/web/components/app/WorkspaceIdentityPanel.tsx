@@ -211,7 +211,12 @@ export function WorkspaceIdentityPanel() {
           })}
 
           {/* Admin is visibility-gated on the identity payload's isAdmin; every
-            /admin route still runs its own verifyAdmin server-side. */}
+            /admin route still runs its own verifyAdmin server-side.
+            Deliberately NOT skeleton-reserved above (URG-232): isAdmin only
+            resolves post-hydration, so a placeholder row would flash for
+            every non-admin viewer just to save an admin one pop-in — the
+            same "pop-in beats vanishing" tradeoff ChappiPageSkeleton's doc
+            comment makes for the invite-teammates banner. */}
           {isAdmin ? (
             <Link
               href="/admin"
