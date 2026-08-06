@@ -81,12 +81,13 @@ export function WorkspaceSkeleton() {
 
   return (
     <main className="bg-bg-base text-content-primary" aria-hidden="true">
-      {/* lg:pt-0 (2026-08-05, URG-224 + URG-226) and the focused-only
-          lg:pb-0 both mirror WorkspaceView's own wrapper exactly — see that
-          file's comment for why only ITS pt-6 (not <main>'s shared pt-5)
-          needs to drop at lg+. */}
+      {/* lg:pt-0 (URG-224 + URG-226), lg:px-0 (URG-231) and the focused-only
+          lg:pb-0 all mirror WorkspaceView's own wrapper exactly — see that
+          file's comments for why only ITS pt-6/px-6 (not <main>'s shared
+          pt-5/px-8) drop at lg+. This class string must stay byte-identical
+          to WorkspaceView's or the skeleton shifts when data resolves. */}
       <div
-        className={`min-w-0 pt-6 sm:px-6 lg:pt-0 ${isFocused ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
+        className={`min-w-0 pt-6 sm:px-6 lg:px-0 lg:pt-0 ${isFocused ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
       >
           <section className="lg:hidden">
             {isFocused ? (
