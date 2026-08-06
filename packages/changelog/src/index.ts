@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.41.2",
+    date: "August 6, 2026",
+    highlights: [
+      "A new activity now shows up in your list the moment you create it, instead of only after a refresh.",
+    ],
+  },
+  {
     version: "0.41.1",
     date: "August 6, 2026",
     highlights: [

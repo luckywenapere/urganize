@@ -10,6 +10,8 @@ import {
   isReadOnlyWorkspaceMember,
   loadWorkspaceAccessContext,
   ensureWorkspaceAccess,
+  loadTaskDetail,
+  type TaskRow,
 } from '@/lib/tasks-server';
 import { TaskService } from '@/lib/services/task-service';
 
@@ -129,7 +131,21 @@ export async function POST(request: NextRequest) {
       return buildReadOnlyResponse();
     }
 
-    const task = await taskService.createTask(auth.user.id, workspaceId, body);
+    const createdRow = await taskService.createTask(auth.user.id, workspaceId, body);
+
+    // Map the row before returning (URG-234). `createTask` resolves to the raw
+    // inserted row — snake_case `release_id`, `workspace_id`, `due_date` — but
+    // every read path in the app returns the camelCase `Task` shape, and the
+    // client appends this response straight into `useTaskStore`. A snake_case
+    // object in that list has no `releaseId`, so it failed every
+    // `task.releaseId === scopedReleaseId` filter and the activity stayed
+    // invisible until a reload re-fetched it properly mapped.
+    //
+    // `loadTaskDetail` is the same mapper the sibling PATCH route already runs
+    // over its updated row, so create and update now return identical shapes.
+    const task = createdRow
+      ? await loadTaskDetail(adminClient, createdRow as TaskRow, auth.user.id)
+      : null;
 
     return NextResponse.json({ task });
   } catch (error) {
