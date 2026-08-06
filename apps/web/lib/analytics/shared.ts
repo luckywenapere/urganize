@@ -36,7 +36,15 @@ export interface AnalyticsEventPropertiesMap {
   };
   release_created: { release_id: string; source: ReleaseCreatedSource };
   release_opened: { release_id: string };
-  release_date_set: { release_id: string };
+  /** `deferred` marks a date filled in AFTER creation, from the activities
+   * view's SetReleaseDateCard, rather than in the create modal (URG-230).
+   * `activities_created` is non-zero when that save also built a rollout
+   * plan that had been waiting on the date. Both absent on the create path. */
+  release_date_set: {
+    release_id: string;
+    deferred?: boolean;
+    activities_created?: number;
+  };
   release_deleted: { release_id: string };
   playbook_step_completed: {
     release_id: string;

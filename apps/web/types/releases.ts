@@ -20,6 +20,18 @@ export const RELEASE_STATUS_OPTIONS = [
 
 export type ReleaseStatus = (typeof RELEASE_STATUS_OPTIONS)[number];
 
+/**
+ * Applied server-side when a release is created without a title (URG-230 —
+ * the title became optional). This exact string was already the read-time
+ * fallback in lib/services/release-service.ts for rows with an empty title,
+ * so naming it here centralizes one value rather than introducing a second.
+ *
+ * The UI compares against it to decide whether to offer a rename in
+ * SetReleaseDateCard: a release still carrying the default has never been
+ * named, and there is no other rename affordance anywhere in the app.
+ */
+export const DEFAULT_RELEASE_TITLE = 'Untitled release';
+
 export interface Release {
   id: string;
   ownerUserId: string;
@@ -38,6 +50,12 @@ export interface Release {
   state: ReleasePipelineState;
   releaseDate: string | null;
   description: string | null;
+  /** True when this release was created with the Rollout plan but no release
+   * date, so its activities have not been generated yet (URG-230). Template
+   * offsets are relative to release day, so the plan waits for a date rather
+   * than materializing undated. Cleared the moment a date is set via
+   * POST /api/releases/[releaseId]/schedule. */
+  templatePending: boolean;
   readinessScore: number;
   metadata: Record<string, unknown>;
   createdAt: string;

@@ -99,9 +99,27 @@ type TasksPanelProps = {
    * WorkspaceView builds this (a ReleaseScenePanel) from the `?scene=` param.
    */
   sceneContent?: ReactNode;
+  /**
+   * Rendered at the top of the ACTIVITIES list only — above the buckets,
+   * below the header pills (2026-08-06, URG-230: the SetReleaseDateCard for a
+   * release with no date yet).
+   *
+   * Deliberately inside the activities branch rather than above the body: a
+   * scene (Metadata / Calendar / Files / Press kit) is its own task, and a
+   * date prompt hanging over it is noise. It reappears when the user comes
+   * back to the activity list.
+   */
+  activitiesBanner?: ReactNode;
 };
 
-export function TasksPanel({ tasks, scopedRelease, id, extraActions, sceneContent }: TasksPanelProps) {
+export function TasksPanel({
+  tasks,
+  scopedRelease,
+  id,
+  extraActions,
+  sceneContent,
+  activitiesBanner,
+}: TasksPanelProps) {
   // openTask opens the global task detail pop-up mounted by TaskUIProvider —
   // this panel stays where it is underneath the modal.
   const { openTask, openQuickCreate } = useTaskUI();
@@ -345,9 +363,14 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions, sceneConten
         sceneContent
       ) : (
       <div className="space-y-3">
+        {activitiesBanner}
         {/* Every bucket empty: the buckets below have all suppressed
-            themselves, so leave one quiet line instead of a blank panel. */}
-        {sectionOrder.every((sectionKey) => sections[sectionKey].length === 0) ? (
+            themselves, so leave one quiet line instead of a blank panel.
+            Suppressed when a banner is up (URG-230) — the SetReleaseDateCard
+            already says why the list is empty and what to do about it, in
+            more useful words than this line has. */}
+        {!activitiesBanner &&
+        sectionOrder.every((sectionKey) => sections[sectionKey].length === 0) ? (
           <p className="px-1 py-4 text-xs text-content-tertiary">
             {scopedRelease ? 'No activities for this release yet.' : 'No activities yet.'}
           </p>

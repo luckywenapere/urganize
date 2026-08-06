@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase/client';
 import { type ReleaseContext } from '@/lib/release-tailoring';
 import { Toast } from '@/components/shared/Toast';
 import { NewReleaseGuide } from '@/components/releases/NewReleaseGuide';
+import { SetReleaseDateCard } from '@/components/releases/SetReleaseDateCard';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
@@ -245,11 +246,13 @@ export function WorkspaceView() {
   }, [releases, taskList]);
 
   // `releaseDate` is here for the content calendar scene (it resolves the
-  // default month from the release date); the panels that only need
-  // id/title/artistName accept this wider shape structurally.
+  // default month from the release date) and for SetReleaseDateCard's
+  // show/hide condition; `templatePending` picks that card's variant
+  // (URG-230). The panels that only need id/title/artistName accept this
+  // wider shape structurally.
   const scopedReleaseSlim = useMemo<Pick<
     Release,
-    'id' | 'title' | 'artistName' | 'releaseDate'
+    'id' | 'title' | 'artistName' | 'releaseDate' | 'templatePending'
   > | null>(() => {
     if (!scopedReleaseId) return null;
     const found = releases.find((r) => r.id === scopedReleaseId);
@@ -259,6 +262,7 @@ export function WorkspaceView() {
       title: found.title,
       artistName: found.artistName,
       releaseDate: found.releaseDate,
+      templatePending: found.templatePending,
     };
   }, [scopedReleaseId, releases]);
 
@@ -357,9 +361,28 @@ export function WorkspaceView() {
     </>
   ) : null;
 
-  const newReleaseGuideBanner = showNewReleaseGuide ? (
-    <NewReleaseGuide onDismiss={() => setShowNewReleaseGuide(false)} />
-  ) : null;
+  // Any scoped release without a date gets the card at the top of its
+  // activity list (URG-230). It reports its own success through the existing
+  // workspace toast and unmounts on its own once the store reports a date.
+  const setReleaseDateBanner =
+    scopedReleaseSlim && !scopedReleaseSlim.releaseDate ? (
+      <SetReleaseDateCard
+        releaseId={scopedReleaseSlim.id}
+        releaseTitle={scopedReleaseSlim.title}
+        templatePending={scopedReleaseSlim.templatePending}
+        onSaved={(message) => setToast({ message, tone: 'success' })}
+      />
+    ) : null;
+
+  // Suppressed while the release has no date: this guide opens with "Your
+  // release is set up" and describes a rollout that, for a dateless
+  // template release, has not been built yet (URG-230). The date card above
+  // is the honest version of the same moment, and stacking both would put
+  // two banners over one empty list.
+  const newReleaseGuideBanner =
+    showNewReleaseGuide && !setReleaseDateBanner ? (
+      <NewReleaseGuide onDismiss={() => setShowNewReleaseGuide(false)} />
+    ) : null;
 
   const handleSelect = (releaseId: string) => {
     const nextScope = scopedReleaseId === releaseId ? null : releaseId;
@@ -545,6 +568,7 @@ export function WorkspaceView() {
                   scopedRelease={scopedReleaseSlim}
                   extraActions={taskPanelExtraActions}
                   sceneContent={scenePanel}
+                  activitiesBanner={setReleaseDateBanner}
                 />
                 {/* The per-release files surface lives inside TasksPanel as an
                     inline collapsible segment at the top of the task area,
@@ -583,6 +607,7 @@ export function WorkspaceView() {
                 banner={newReleaseGuideBanner}
                 panelExtraActions={taskPanelExtraActions}
                 panelSceneContent={scenePanel}
+                panelActivitiesBanner={setReleaseDateBanner}
               />
             ) : (
               <WorkspaceDesktopGrid
