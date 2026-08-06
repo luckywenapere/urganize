@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.40.8",
+    date: "August 6, 2026",
+    highlights: [
+      "Your workspace card now shows the Urganize mark until you upload your own logo, instead of your workspace initials.",
+    ],
+  },
+  {
     version: "0.40.7",
     date: "August 6, 2026",
     highlights: [
