@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.40.11",
+    date: "August 6, 2026",
+    highlights: [
+      "The page now sits evenly on the screen — the workspace card used to hang 32px further left than everything above it, so the left and right edges never quite matched.",
+    ],
+  },
+  {
     version: "0.40.10",
     date: "August 6, 2026",
     highlights: [

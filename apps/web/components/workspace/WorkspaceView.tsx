@@ -447,8 +447,14 @@ export function WorkspaceView() {
           touch AppShell's <main> padding directly — Settings and every other
           chrome page share it, and the panels' sticky offset is derived from
           it. */}
+      {/* lg:px-0 (2026-08-06, URG-231): below lg this wrapper's sm:px-6 is the
+          workspace's own gutter, but at lg+ it stacked on <main>'s lg:px-8 and
+          indented the workspace 24px further than every other page — and cost
+          the release grid 48px of width it needed to reach 4 columns. Dropping
+          it at lg+ lines the grid area up with the same content edge the topbar
+          uses. Keep WorkspaceSkeleton's wrapper identical (URG-228). */}
       <div
-        className={`min-w-0 pt-6 sm:px-6 lg:pt-0 ${isDesktopFocusedMode ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
+        className={`min-w-0 pt-6 sm:px-6 lg:px-0 lg:pt-0 ${isDesktopFocusedMode ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
       >
           {/* Screen-reader-only live region. Polite mode waits for the SR to be
               idle, atomic="true" re-reads the whole message. Mirrors the visible
