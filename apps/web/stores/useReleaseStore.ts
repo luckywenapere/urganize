@@ -197,7 +197,7 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       }),
     });
 
-    const payload = (await response.json().catch(() => ({}))) as { releaseId?: string; release?: { title?: string; artistId?: string; artistName?: string; releaseDate?: string | null }; error?: string };
+    const payload = (await response.json().catch(() => ({}))) as { releaseId?: string; templatePending?: boolean; release?: { title?: string; artistId?: string; artistName?: string; releaseDate?: string | null }; error?: string };
     if (!response.ok || !payload.releaseId) {
       set({ error: payload.error || 'Could not create release.' });
       return null;
@@ -210,6 +210,10 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       artistName: payload.release?.artistName || 'New Artist',
       releaseDate: payload.release?.releaseDate || null,
       description: null,
+      // Echoed from the create response (URG-230) so the optimistic row
+      // agrees with the server about whether a rollout plan is still waiting
+      // on a date — the activities view picks its card variant from this.
+      templatePending: payload.templatePending === true,
       status: 'draft',
       state: 'idea',
       readinessScore: 0,

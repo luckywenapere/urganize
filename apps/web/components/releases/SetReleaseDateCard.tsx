@@ -1,0 +1,243 @@
+'use client';
+
+import { useMemo, useState, type FormEvent } from 'react';
+import { CalendarPlus, Loader2 } from 'lucide-react';
+import { Button } from '@urganize/ui';
+import { supabase } from '@/lib/supabase/client';
+import { useReleaseStore } from '@/stores/useReleaseStore';
+import {
+  getTemplate,
+  getTemplateLeadTimeDays,
+  getTemplateSpanDays,
+} from '@/lib/release-templates/loader';
+import { DEFAULT_RELEASE_TITLE } from '@/types/releases';
+
+const TEMPLATE = getTemplate('single');
+const ACTIVITY_COUNT = TEMPLATE.tasks.length;
+const SPAN_WEEKS = Math.round(getTemplateSpanDays(TEMPLATE) / 7);
+const LEAD_WEEKS = Math.round(getTemplateLeadTimeDays(TEMPLATE) / 7);
+
+function formatYmdLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+async function getAccessToken(): Promise<string> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token || '';
+}
+
+type SetReleaseDateCardProps = {
+  releaseId: string;
+  releaseTitle: string;
+  /** True when this release was created with the Rollout plan but has no date,
+   * so its activities have not been generated yet. Drives the card's weight:
+   * plan-waiting gets the full explainer, everything else gets one compact
+   * row. */
+  templatePending: boolean;
+  onSaved: (message: string) => void;
+};
+
+/**
+ * Sits at the top of the activities view for any release without a release
+ * date (URG-230 — the date became optional at creation).
+ *
+ * Two weights, because the stakes differ:
+ *   - `templatePending`: this release owes its whole rollout plan. The
+ *     activities list below is empty, so this card IS the screen — it gets
+ *     the headline, the explanation of what a date unlocks, and (when the
+ *     release is still unnamed) a name field, since this is the only rename
+ *     affordance in the app.
+ *   - otherwise: the release already has activities, or the user chose a
+ *     Blank release. A date is still useful (the calendar, the press kit,
+ *     due-date math) but nothing is blocked, so it stays a single quiet row
+ *     that doesn't shout over the list beneath it.
+ *
+ * Deliberately not dismissible. It isn't a nag — in the pending case it's the
+ * only route to the plan, and dismissing it would strand the release with no
+ * way back. It disappears on its own the moment a date exists.
+ */
+export function SetReleaseDateCard({
+  releaseId,
+  releaseTitle,
+  templatePending,
+  onSaved,
+}: SetReleaseDateCardProps) {
+  const [releaseDate, setReleaseDate] = useState('');
+  const [title, setTitle] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  // Anchored once per mount so the `min` attribute can't shift mid-interaction.
+  const todayYmd = useMemo(() => formatYmdLocal(new Date()), []);
+
+  // Offer the rename only while the release still carries the server-applied
+  // default — someone who named it already doesn't need the field, and
+  // showing it would read as "we lost your title".
+  const isUnnamed = releaseTitle === DEFAULT_RELEASE_TITLE;
+  const showNameField = templatePending && isUnnamed;
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!releaseDate || isSaving) return;
+
+    setIsSaving(true);
+    setError('');
+
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) throw new Error('Session expired. Please sign in again.');
+
+      const response = await fetch(`/api/releases/${releaseId}/schedule`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          releaseDate,
+          title: showNameField ? title.trim() || undefined : undefined,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      // 207: the date saved but the plan build failed. Surface the server's
+      // message in place rather than throwing — the date IS saved, so a bare
+      // failure would misrepresent what happened.
+      if (!response.ok && response.status !== 207) {
+        throw new Error(payload?.error || 'Could not save the release date.');
+      }
+      if (response.status === 207) {
+        setError(payload?.error || 'Your release date was saved, but the plan could not be built.');
+        void useReleaseStore.getState().loadCommandCenter({ force: true });
+        return;
+      }
+
+      const created = Number(payload?.activitiesCreated || 0);
+      onSaved(
+        created > 0
+          ? `Release date set. ${created} activities scheduled.`
+          : 'Release date set.'
+      );
+
+      // The card unmounts once the store reports a release date, so no local
+      // reset is needed — but the refresh is what makes that happen.
+      await useReleaseStore.getState().loadCommandCenter({ force: true });
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Could not save the release date.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const dateInput = (
+    <input
+      type="date"
+      required
+      min={todayYmd}
+      value={releaseDate}
+      onChange={(event) => setReleaseDate(event.target.value)}
+      disabled={isSaving}
+      aria-label="Release date"
+      className="input h-10 rounded-lg border-stroke-default bg-bg-elevated sm:w-[11.5rem]"
+    />
+  );
+
+  // ---- Compact variant: activities already exist, nothing is blocked. ----
+  if (!templatePending) {
+    return (
+      <form
+        onSubmit={handleSubmit}
+        className="mb-4 rounded-xl border border-stroke-default bg-bg-surface p-3"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <CalendarPlus
+              className="h-4 w-4 shrink-0 text-content-tertiary"
+              aria-hidden="true"
+            />
+            <p className="min-w-0 text-sm text-content-secondary">
+              <span className="font-medium text-content-primary">No release date yet.</span>{' '}
+              Add one when it&apos;s confirmed.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {dateInput}
+            <Button type="submit" size="sm" disabled={!releaseDate || isSaving} isLoading={isSaving}>
+              Save
+            </Button>
+          </div>
+        </div>
+        {error ? <p className="mt-2 text-xs text-status-error">{error}</p> : null}
+      </form>
+    );
+  }
+
+  // ---- Plan-waiting variant: this card is the whole screen. ----
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="mb-6 rounded-xl border border-brand/30 bg-brand/5 p-5 sm:p-6"
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand/10 text-brand"
+          aria-hidden="true"
+        >
+          <CalendarPlus className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-display text-base font-semibold text-content-primary">
+            Set your release date
+          </h3>
+          <p className="mt-1.5 text-sm leading-6 text-content-secondary">
+            Your rollout plan is ready to build — {ACTIVITY_COUNT} activities across ~
+            {SPAN_WEEKS} weeks, starting {LEAD_WEEKS} weeks before release day. Every one of
+            them is dated from your release date, so pick it and the whole plan appears.
+          </p>
+        </div>
+      </div>
+
+      {/* Inputs sit below the explainer, indented to the text column so the
+          eye runs headline → reason → action in one straight line rather
+          than jumping back out to the icon gutter. */}
+      <div className="mt-4 sm:pl-12">
+        {showNameField ? (
+          <label className="mb-3 block">
+            <span className="mb-1.5 flex items-baseline gap-2 text-xs font-medium text-content-primary">
+              Release name
+              <span className="font-normal text-content-tertiary">Optional</span>
+            </span>
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              disabled={isSaving}
+              maxLength={140}
+              placeholder={DEFAULT_RELEASE_TITLE}
+              className="input h-10 rounded-lg border-stroke-default bg-bg-elevated sm:max-w-[22rem]"
+            />
+          </label>
+        ) : null}
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {dateInput}
+          <Button
+            type="submit"
+            disabled={!releaseDate || isSaving}
+            isLoading={isSaving}
+            leftIcon={isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+          >
+            Build my plan
+          </Button>
+        </div>
+
+        {error ? <p className="mt-2.5 text-xs text-status-error">{error}</p> : null}
+      </div>
+    </form>
+  );
+}

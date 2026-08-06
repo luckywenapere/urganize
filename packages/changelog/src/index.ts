@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.41.0",
+    date: "August 6, 2026",
+    highlights: [
+      "Creating a release no longer asks for anything up front. Skip the name and we'll call it \"Untitled release\"; skip the date and add it whenever it's confirmed — both are marked optional.",
+      "If you created a release without a date, its activities view now carries a card to set one. For a release started from the rollout plan, that card is what builds your plan: pick the date and all 64 activities appear, scheduled around it.",
+    ],
+  },
+  {
     version: "0.40.12",
     date: "August 6, 2026",
     highlights: [

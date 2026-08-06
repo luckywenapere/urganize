@@ -9,6 +9,7 @@ import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { getTemplate, getTemplateLeadTimeDays } from '@/lib/release-templates/loader';
+import { DEFAULT_RELEASE_TITLE } from '@/types/releases';
 
 // The modal currently only creates 'single' releases (CreateReleaseBody on the
 // API also defaults releaseType to 'single'). When the modal grows a type
@@ -60,9 +61,14 @@ async function getAccessToken(): Promise<string> {
   return session?.access_token || '';
 }
 
+// Both fields are optional as of URG-230 (founder call): creating a release
+// should have zero required fields. An empty date is valid and simply means
+// "not decided yet" — the activities view then carries a card to set it, and
+// for a Rollout-plan release that card is what builds the plan. Only a
+// malformed date is an error.
 function validateReleaseDate(value: string): string {
   if (!value) {
-    return 'Release date is required.';
+    return '';
   }
 
   const parsed = new Date(`${value}T00:00:00`);
@@ -136,10 +142,11 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     return lockBodyScroll();
   }, [open]);
 
-  const canSubmit = useMemo(
-    () => title.trim().length > 0 && releaseDate.length > 0 && !isSubmitting,
-    [isSubmitting, releaseDate, title]
-  );
+  // Nothing to require (URG-230) — an untitled, undated release is valid and
+  // the server fills in a default name. The plan choice is already made by
+  // this point (the form is hidden until it is), so submission is only
+  // gated on not already being in flight.
+  const canSubmit = useMemo(() => !isSubmitting, [isSubmitting]);
 
   // Anchor "today" once per modal mount so the `min` attribute stays stable
   // for the duration of the dialog. (The lead-time explainer moved to the
@@ -173,9 +180,9 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
   const validateForm = () => {
     const nextErrors: FieldErrors = {};
 
-    if (!title.trim()) {
-      nextErrors.title = 'Release title is required.';
-    } else if (title.trim().length > 140) {
+    // An empty title is fine (URG-230) — the server names it. Length is
+    // still enforced because the column is capped at 140.
+    if (title.trim().length > 140) {
       nextErrors.title = 'Release title must be 140 characters or fewer.';
     }
 
@@ -210,7 +217,9 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          title: title.trim(),
+          // Both may be empty — the route defaults the title and treats a
+          // missing date as "not decided yet" (URG-230).
+          title: title.trim() || undefined,
           releaseDate: releaseDate || undefined,
           source: 'dashboard',
           plan: plan || 'template',
@@ -326,7 +335,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                 <span className="text-sm leading-6 text-content-secondary">
                   Start with the proven release plan — every activity from first
                   prep to release day, scheduled around your date and ready to
-                  edit.
+                  edit. No date yet? It waits for one.
                 </span>
               </button>
 
@@ -353,42 +362,68 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
               (small phones). Header + footer stay pinned via `shrink-0` so the
               submit button is always reachable without scrolling the page. */}
           <div className={plan ? 'flex-1 space-y-4 overflow-y-auto p-4 sm:p-5' : 'hidden'}>
+              {/* Both fields optional (URG-230). "Optional" sits in the label
+                  itself rather than as placeholder text, so it survives the
+                  field being filled in and is read out by screen readers with
+                  the label. */}
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-content-primary">Release title</span>
+                <span className="mb-2 flex items-baseline gap-2 text-sm font-medium text-content-primary">
+                  Release title
+                  <span className="text-xs font-normal text-content-tertiary">Optional</span>
+                </span>
                 <input
                   ref={titleInputRef}
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                   className="input rounded-lg border-stroke-default bg-bg-elevated"
-                  placeholder="Midnight Drive"
+                  placeholder={DEFAULT_RELEASE_TITLE}
                   maxLength={140}
                   aria-invalid={Boolean(errors.title)}
                 />
-                {errors.title ? <p className="mt-2 text-xs text-status-error">{errors.title}</p> : null}
+                {errors.title ? (
+                  <p className="mt-2 text-xs text-status-error">{errors.title}</p>
+                ) : (
+                  <p className="mt-2 text-xs leading-5 text-content-secondary">
+                    Skip it and we&apos;ll call it &ldquo;{DEFAULT_RELEASE_TITLE}&rdquo;. You can
+                    name it later.
+                  </p>
+                )}
               </label>
 
               <label className="block">
-                <span className="mb-2 flex items-center gap-2 text-sm font-medium text-content-primary">
-                  <CalendarDays className="h-4 w-4 text-content-tertiary" />
+                <span className="mb-2 flex items-baseline gap-2 text-sm font-medium text-content-primary">
+                  <CalendarDays
+                    className="h-4 w-4 self-center text-content-tertiary"
+                    aria-hidden="true"
+                  />
                   Release date
+                  <span className="text-xs font-normal text-content-tertiary">Optional</span>
                 </span>
                 <input
                   type="date"
-                  required
                   min={todayYmd}
                   value={releaseDate}
                   onChange={(event) => setReleaseDate(event.target.value)}
                   className="input rounded-lg border-stroke-default bg-bg-elevated"
                   aria-invalid={Boolean(errors.releaseDate)}
-                  aria-required="true"
                 />
-                {errors.releaseDate ? <p className="mt-2 text-xs text-status-error">{errors.releaseDate}</p> : null}
-                {!errors.releaseDate && compressedNote && plan === 'template' ? (
+                {errors.releaseDate ? (
+                  <p className="mt-2 text-xs text-status-error">{errors.releaseDate}</p>
+                ) : compressedNote && plan === 'template' ? (
                   <p className="mt-2 text-xs leading-5 text-content-secondary">
                     Heads up — a {compressedNote.displayDate} release compresses the first ~
                     {compressedNote.compressedWeeks}{' '}
                     {compressedNote.compressedWeeks === 1 ? 'week' : 'weeks'} of prep. Those
                     early tasks will show as &ldquo;Catch up&rdquo; so you can prioritize them.
+                  </p>
+                ) : !releaseDate ? (
+                  // States the actual consequence of skipping, which differs
+                  // by plan: a rollout plan is dated off release day, so it
+                  // genuinely cannot be built yet.
+                  <p className="mt-2 text-xs leading-5 text-content-secondary">
+                    {plan === 'template'
+                      ? "Don't have one yet? Skip it — your rollout plan gets built the moment you set a date."
+                      : "Don't have one yet? Skip it and add it whenever it's confirmed."}
                   </p>
                 ) : null}
               </label>

@@ -1,8 +1,9 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { normalizePipelineState } from '@/lib/release-execution';
-import type { ReleaseStatus } from '@/types/releases';
+import { DEFAULT_RELEASE_TITLE, type ReleaseStatus } from '@/types/releases';
 import { loadCoverArtUrlMap, type ReleaseCoverInput } from '@/lib/cover-art';
 import { loadWorkspaceLogoFallbackUrl } from '@/lib/workspace-logo';
+import { readTemplatePending } from '@/lib/release-template-pending';
 
 export class ReleaseService {
   constructor(private adminClient: SupabaseClient) {}
@@ -65,11 +66,12 @@ export class ReleaseService {
         // Lets the client tell "mine" from "shared with me" — deletion (and
         // other owner-only affordances) hide on releases the user doesn't own.
         ownerUserId: String(row.owner_user_id || ''),
-        title: String(row.title || 'Untitled release'),
+        title: String(row.title || DEFAULT_RELEASE_TITLE),
         artistId: String(row.artist_id || ''),
         artistName: String(row.artist_name || 'Unknown artist'),
         releaseDate: row.release_date ? String(row.release_date) : null,
         description: row.description ? String(row.description) : null,
+        templatePending: readTemplatePending(row.metadata as Record<string, unknown> | null),
         status: String(row.status || 'draft') as ReleaseStatus,
         state: normalizePipelineState(row.state),
         readinessScore: Number(row.readiness_score || 0),
