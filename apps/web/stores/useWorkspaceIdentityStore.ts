@@ -20,6 +20,10 @@ type WorkspaceIdentityStore = {
   artist: WorkspaceIdentityArtist | null;
   memberCount: number;
   logo: WorkspaceIdentityLogo | null;
+  /** Gates the Admin link in the identity card's nav. Visibility only —
+   * every /admin route re-checks server-side via `verifyAdmin`. Deliberately
+   * NOT cached (below): a stale `true` would render a link that 403s. */
+  isAdmin: boolean;
   hydrated: boolean;
   load: (options?: { force?: boolean }) => Promise<void>;
   setName: (name: string) => void;
@@ -59,6 +63,7 @@ export const useWorkspaceIdentityStore = create<WorkspaceIdentityStore>((set, ge
   artist: null,
   memberCount: 0,
   logo: null,
+  isAdmin: false,
   hydrated: false,
   load: async (options) => {
     if (!options?.force) {
@@ -108,6 +113,7 @@ export const useWorkspaceIdentityStore = create<WorkspaceIdentityStore>((set, ge
         artist?: WorkspaceIdentityArtist | null;
         logo?: WorkspaceIdentityLogo | null;
         memberCount?: number;
+        isAdmin?: boolean;
       } | null;
       if (!payload) return;
 
@@ -125,7 +131,14 @@ export const useWorkspaceIdentityStore = create<WorkspaceIdentityStore>((set, ge
       }
 
       identityLoadedAt = Date.now();
-      set({ name, artist, memberCount, logo: payload.logo ?? null, hydrated: true });
+      set({
+        name,
+        artist,
+        memberCount,
+        logo: payload.logo ?? null,
+        isAdmin: payload.isAdmin === true,
+        hydrated: true,
+      });
     })();
 
     identityInFlight = run;
