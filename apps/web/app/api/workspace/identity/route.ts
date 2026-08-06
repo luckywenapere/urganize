@@ -6,6 +6,7 @@ import {
 } from '@/lib/tasks-server';
 import { getWorkspaceArtist } from '@/lib/artists-server';
 import { buildWorkspaceLogoPayload } from '@/lib/workspace-logo';
+import { parseAdminEmails } from '@/app/api/admin/_shared';
 
 // Aggregate read for the workspace identity card (URG-214): name, artist,
 // logo, and active-teammate count in one round trip, since the card mounts
@@ -46,6 +47,18 @@ export async function GET(request: NextRequest) {
 
     const memberCount = members.filter((member) => member.status === 'active').length;
 
+    // Whether to show the Admin link in the identity card's nav (URG-228).
+    // Folded into this response rather than given its own request: the card
+    // is chrome on every page, and /api/admin/me would add a round trip per
+    // load for a link almost nobody sees. `parseAdminEmails` is a pure env
+    // read and `auth.user` is already resolved, so this costs nothing extra.
+    // It gates VISIBILITY only — every /admin page and route still runs its
+    // own `verifyAdmin`, so a forged client can't reach admin data.
+    const adminEmails = parseAdminEmails();
+    const isAdmin = Boolean(
+      auth.user.email && adminEmails.includes(auth.user.email.trim().toLowerCase())
+    );
+
     return NextResponse.json({
       workspaceId,
       name: access.primaryWorkspace.name,
@@ -58,6 +71,7 @@ export async function GET(request: NextRequest) {
         : null,
       logo,
       memberCount,
+      isAdmin,
     });
   } catch (error) {
     return NextResponse.json(

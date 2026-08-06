@@ -20,10 +20,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "0.40.9",
+    version: "0.40.10",
     date: "August 6, 2026",
     highlights: [
       "The workspace loading screen now matches what actually loads in — release cards, the activity list, and the focused release layout no longer shift or resize once your data arrives.",
+    ],
+  },
+  {
+    version: "0.40.9",
+    date: "August 6, 2026",
+    highlights: [
+      "The workspace card now runs the full height of the screen and carries links to your Catalog, UrgAns, and Settings, so getting around no longer means reaching for the top bar.",
     ],
   },
   {
