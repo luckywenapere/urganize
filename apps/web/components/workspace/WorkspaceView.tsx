@@ -433,16 +433,22 @@ export function WorkspaceView() {
       {/* The UrgAns side rail used to be this div's flex sibling; it now
           rides beside AppShell's <main> instead (URG-210), so this is a
           plain content wrapper again. */}
-      {/* lg:pt-0 lg:-mt-5 (2026-08-05, URG-224): at lg+, WorkspaceIdentityPanel
-          and ChappiSidePanel are flex siblings of AppShell's <main> with NO
-          top padding of their own, so their content sits flush with the top
-          bar. This wrapper's own pt-6 PLUS <main>'s shared pt-5 pushed the
-          release grid 44px lower than those two panels. Cancel both at lg+ so
-          the grid lines up with them; below lg neither panel renders, so the
-          normal pt-6 inset stays. Do NOT touch AppShell's <main> padding
-          directly — Settings and every other chrome page share it. */}
+      {/* lg:pt-0 (2026-08-05, URG-224 + URG-226): at lg+, this wrapper's own
+          pt-6 stacked on top of <main>'s shared pt-5, pushing the release grid
+          44px below WorkspaceIdentityPanel and ChappiSidePanel. Both of those
+          are flex siblings of <main> pinned at `sticky top-[calc(5.25rem+1px)]`
+          = 85px, which is exactly the topbar (65px) PLUS main's pt-5 (20px) —
+          i.e. they align to main's PADDED content top, not to the topbar. So
+          only this wrapper's own pt-6 should go; main's pt-5 must stay.
+          URG-224 also carried `lg:-mt-5`, which cancelled that pt-5 too and
+          overshot the cards 20px ABOVE the panels (measured on production:
+          cards at 65px vs panels at 85px). Removing it lands all three on 85px.
+          Below lg neither panel renders, so the normal pt-6 inset stays. Do NOT
+          touch AppShell's <main> padding directly — Settings and every other
+          chrome page share it, and the panels' sticky offset is derived from
+          it. */}
       <div
-        className={`min-w-0 pt-6 sm:px-6 lg:pt-0 lg:-mt-5 ${isDesktopFocusedMode ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
+        className={`min-w-0 pt-6 sm:px-6 lg:pt-0 ${isDesktopFocusedMode ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
       >
           {/* Screen-reader-only live region. Polite mode waits for the SR to be
               idle, atomic="true" re-reads the whole message. Mirrors the visible

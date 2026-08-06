@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.40.7",
+    date: "August 6, 2026",
+    highlights: [
+      "Your release cards now line up exactly with the workspace card and UrgAns panel — the last fix nudged them slightly too high.",
+    ],
+  },
+  {
     version: "0.40.6",
     date: "August 5, 2026",
     highlights: [
