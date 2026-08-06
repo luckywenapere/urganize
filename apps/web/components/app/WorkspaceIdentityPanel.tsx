@@ -11,7 +11,7 @@ import { useChappiStore } from "@/stores/useChappiStore";
 import { CatalogIcon, ChappiIcon, GearIcon } from "@/components/app/BrandIcons";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 
-// The card's nav (URG-228). Same three global surfaces the topbar exposes,
+// The card's nav (URG-229). Same three global surfaces the topbar exposes,
 // using the SAME hand-drawn marks (BrandIcons) so the two entry points read
 // as one system. Active matching mirrors AppTopbar's: exact for /dashboard so
 // a scoped release (?release=) still counts as the catalog, prefix for the
@@ -80,8 +80,8 @@ export function WorkspaceIdentityPanel() {
   const railIsCompeting = CHAPPI_ENABLED && !isChappiRoute && railOpen;
 
   // A signed logo URL can expire while the tab stays open (see
-  // ASSET_SIGNED_URL_TTL_SECONDS); onError below falls back to initials
-  // rather than a broken image, and this flag resets whenever the store
+  // ASSET_SIGNED_URL_TTL_SECONDS); onError below falls back to the Urganize
+  // mark rather than a broken image, and this flag resets whenever the store
   // hands us a new URL (a fresh fetch or a Settings upload).
   const [logoFailed, setLogoFailed] = useState(false);
   useEffect(() => {
@@ -111,7 +111,15 @@ export function WorkspaceIdentityPanel() {
       // 5.25rem top offset; 100dvh minus that minus main's md:pb-10 (2.5rem)
       // = 7.75rem total. Founder call (2026-08-06): the card runs to the base
       // of the viewport like the UrgAns rail rather than hugging its content.
-      className={`hidden w-[240px] shrink-0 self-start sticky top-[calc(5.25rem+1px)] mr-8 h-[calc(100dvh-7.75rem-1px)] min-h-[24rem] ${
+      //
+      // ml-8 (URG-231) is the LEFT-edge mirror of the rail's mr-8: the topbar's
+      // inner container carries lg:px-8, so app content sits 32px inside the
+      // 1440px page container (logo at x=152, rightmost control ending at
+      // x=1528, which is exactly where the rail's mr-8 puts its right edge).
+      // Without ml-8 this card started flush at the container edge — 32px left
+      // of the logo directly above it, making the page's left and right gaps
+      // asymmetric (120 vs 152, measured). Keep both margins in step.
+      className={`hidden w-[240px] shrink-0 self-start sticky top-[calc(5.25rem+1px)] ml-8 mr-8 h-[calc(100dvh-7.75rem-1px)] min-h-[24rem] ${
         railIsCompeting ? "xl:block" : "lg:block"
       }`}
     >
@@ -181,7 +189,7 @@ export function WorkspaceIdentityPanel() {
           )}
         </Link>
 
-        {/* Nav (URG-228). Sibling of the identity Link, never nested inside it —
+        {/* Nav (URG-229). Sibling of the identity Link, never nested inside it —
           an <a> can't contain other <a>s. Deliberately duplicates the topbar's
           Catalog/UrgAns icons (founder call): they stay because they're the
           only way to reach those surfaces below lg, where this card is hidden.

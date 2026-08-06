@@ -20,10 +20,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "0.40.11",
+    version: "0.40.12",
     date: "August 6, 2026",
     highlights: [
       "The UrgAns loading screen no longer holds space for text that isn't there, so the assistant's greeting no longer shifts up once it's ready.",
+    ],
+  },
+  {
+    version: "0.40.11",
+    date: "August 6, 2026",
+    highlights: [
+      "The page now sits evenly on the screen — the workspace card used to hang 32px further left than everything above it, so the left and right edges never quite matched.",
     ],
   },
   {

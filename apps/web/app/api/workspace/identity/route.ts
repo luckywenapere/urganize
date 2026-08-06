@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 
     const memberCount = members.filter((member) => member.status === 'active').length;
 
-    // Whether to show the Admin link in the identity card's nav (URG-228).
+    // Whether to show the Admin link in the identity card's nav (URG-229).
     // Folded into this response rather than given its own request: the card
     // is chrome on every page, and /api/admin/me would add a round trip per
     // load for a link almost nobody sees. `parseAdminEmails` is a pure env
