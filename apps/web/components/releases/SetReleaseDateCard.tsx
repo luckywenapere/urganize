@@ -40,6 +40,10 @@ type SetReleaseDateCardProps = {
    * row. */
   templatePending: boolean;
   onSaved: (message: string) => void;
+  /** Opens the activity quick-create for this release. Only used by the
+   * plan-waiting variant, where the card fills an empty view and would
+   * otherwise read as a prerequisite (URG-233). */
+  onAddActivity: () => void;
 };
 
 /**
@@ -51,7 +55,10 @@ type SetReleaseDateCardProps = {
  *     activities list below is empty, so this card IS the screen — it gets
  *     the headline, the explanation of what a date unlocks, and (when the
  *     release is still unnamed) a name field, since this is the only rename
- *     affordance in the app.
+ *     affordance in the app. It also carries an explicit "add one yourself"
+ *     action (URG-233): setting a date was never a prerequisite for creating
+ *     activities, but a full-width brand-tinted card whose only button is
+ *     "Build my plan" reads exactly like one.
  *   - otherwise: the release already has activities, or the user chose a
  *     Blank release. A date is still useful (the calendar, the press kit,
  *     due-date math) but nothing is blocked, so it stays a single quiet row
@@ -66,6 +73,7 @@ export function SetReleaseDateCard({
   releaseTitle,
   templatePending,
   onSaved,
+  onAddActivity,
 }: SetReleaseDateCardProps) {
   const [releaseDate, setReleaseDate] = useState('');
   const [title, setTitle] = useState('');
@@ -237,6 +245,27 @@ export function SetReleaseDateCard({
         </div>
 
         {error ? <p className="mt-2.5 text-xs text-status-error">{error}</p> : null}
+
+        {/* The escape hatch (URG-233). A hairline separates it from the
+            primary action so it reads as "or, instead" rather than a second
+            competing CTA, and it stays inside the same indented text column
+            so the eye keeps running down one line: what this is -> the fast
+            path -> the alternative. Plain text button, not a filled one —
+            it must not compete with "Build my plan", which is still the
+            recommended route. */}
+        <div className="mt-5 border-t border-brand/20 pt-4">
+          <p className="text-xs leading-6 text-content-secondary">
+            Don&apos;t need the full plan yet?{' '}
+            <button
+              type="button"
+              onClick={onAddActivity}
+              className="motion-focus rounded font-medium text-content-primary underline decoration-content-tertiary underline-offset-4 transition-colors hover:decoration-content-primary"
+            >
+              Add an activity yourself
+            </button>{' '}
+            — you don&apos;t need a release date for that.
+          </p>
+        </div>
       </div>
     </form>
   );

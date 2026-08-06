@@ -30,6 +30,14 @@ type TaskQuickCreateModalProps = {
   onAssigneeQueryChange: (value: string) => void;
   onSelectAssignee: (member: WorkspaceMember | null) => void;
   onDueDateChange: (value: string) => void;
+  /**
+   * Release this create was opened against, before the releases list has
+   * loaded and resolved it into `selectedRelease` (URG-233). Submitting
+   * already accepts it as a fallback, so gating the button on
+   * `selectedRelease` alone left it disabled for the length of the fetch on
+   * the most common path — opening quick-create from a scoped release.
+   */
+  pendingReleaseId?: string | null;
   onSubmit: () => Promise<void>;
 };
 
@@ -53,6 +61,7 @@ export function TaskQuickCreateModal({
   onAssigneeQueryChange,
   onSelectAssignee,
   onDueDateChange,
+  pendingReleaseId = null,
   onSubmit,
 }: TaskQuickCreateModalProps) {
   const titleInputRef = useRef<HTMLInputElement | null>(null);
@@ -135,7 +144,7 @@ export function TaskQuickCreateModal({
     return null;
   }
 
-  const canSubmit = Boolean(title.trim() && selectedRelease);
+  const canSubmit = Boolean(title.trim() && (selectedRelease || pendingReleaseId));
 
   return (
     <div

@@ -110,6 +110,16 @@ type TasksPanelProps = {
    * back to the activity list.
    */
   activitiesBanner?: ReactNode;
+  /**
+   * Set when `activitiesBanner` already explains the empty list AND offers a
+   * way to act on it — the plan-waiting SetReleaseDateCard does both, so the
+   * generic empty state below would just repeat it (URG-233).
+   *
+   * NOT inferred from `activitiesBanner` being present: the compact date row
+   * explains nothing about the activity list, so an empty view under it still
+   * needs its own empty state. Inferring would leave that case blank.
+   */
+  bannerReplacesEmptyState?: boolean;
 };
 
 export function TasksPanel({
@@ -119,6 +129,7 @@ export function TasksPanel({
   extraActions,
   sceneContent,
   activitiesBanner,
+  bannerReplacesEmptyState = false,
 }: TasksPanelProps) {
   // openTask opens the global task detail pop-up mounted by TaskUIProvider —
   // this panel stays where it is underneath the modal.
@@ -365,15 +376,28 @@ export function TasksPanel({
       <div className="space-y-3">
         {activitiesBanner}
         {/* Every bucket empty: the buckets below have all suppressed
-            themselves, so leave one quiet line instead of a blank panel.
-            Suppressed when a banner is up (URG-230) — the SetReleaseDateCard
-            already says why the list is empty and what to do about it, in
-            more useful words than this line has. */}
-        {!activitiesBanner &&
+            themselves, so this stands in for the whole list.
+            Actionable rather than a muted line (URG-233) — an empty panel
+            whose only affordance is a small pill in the header row reads as
+            "nothing to do here" instead of "start here". Skipped when the
+            banner already covers both jobs. */}
+        {!bannerReplacesEmptyState &&
         sectionOrder.every((sectionKey) => sections[sectionKey].length === 0) ? (
-          <p className="px-1 py-4 text-xs text-content-tertiary">
-            {scopedRelease ? 'No activities for this release yet.' : 'No activities yet.'}
-          </p>
+          <div className="px-1 py-6 text-center">
+            <p className="text-sm text-content-secondary">
+              {scopedRelease ? 'No activities for this release yet.' : 'No activities yet.'}
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                openQuickCreate({ releaseId: scopedRelease?.id || undefined, source: 'inline' })
+              }
+              className="motion-focus motion-press mt-3 inline-flex h-9 items-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-3.5 text-sm font-medium text-content-primary transition-colors hover:border-stroke-strong hover:bg-bg-hover"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              Add your first activity
+            </button>
+          </div>
         ) : null}
         {sectionOrder.map((sectionKey) => {
           const sectionTasks = sections[sectionKey];

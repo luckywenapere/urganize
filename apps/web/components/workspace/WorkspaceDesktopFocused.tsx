@@ -51,6 +51,9 @@ type WorkspaceDesktopFocusedProps = {
    * SetReleaseDateCard, shown at the top of the activity list when the
    * scoped release has no release date (2026-08-06, URG-230). */
   panelActivitiesBanner?: ReactNode;
+  /** Forwarded verbatim to TasksPanel's `bannerReplacesEmptyState`
+   * (2026-08-06, URG-233). */
+  panelBannerReplacesEmptyState?: boolean;
 };
 
 /**
@@ -81,6 +84,7 @@ export function WorkspaceDesktopFocused({
   panelExtraActions,
   panelSceneContent,
   panelActivitiesBanner,
+  panelBannerReplacesEmptyState,
 }: WorkspaceDesktopFocusedProps) {
   // Motion tracker data — done/total across the scoped release's activities
   // (same `status === 'done'` rule WorkspaceView uses for the grid cards).
@@ -182,6 +186,7 @@ export function WorkspaceDesktopFocused({
             extraActions={panelExtraActions}
             sceneContent={panelSceneContent}
             activitiesBanner={panelActivitiesBanner}
+            bannerReplacesEmptyState={panelBannerReplacesEmptyState}
           />
         </div>
 
