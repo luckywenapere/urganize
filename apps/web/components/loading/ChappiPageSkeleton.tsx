@@ -8,11 +8,15 @@ import { SkeletonBlock } from './SkeletonBlock';
  * as `WorkspaceSkeleton` — no route-segment `loading.tsx` file).
  *
  * Mirrors the CURRENT Chappi home: the PostHog-style vertically centered
- * empty state (eyebrow → greeting → subline → input bar → quick-action
- * chips) inside the SAME definite-height wrapper ChappiPageClient uses, so
- * the resolved page lands exactly where the skeleton stood. The
- * conversation store is ephemeral (a reload always starts empty), so the
- * empty state is effectively the only shape a fresh load resolves to.
+ * empty state (eyebrow → greeting → input bar → quick-action chips) inside
+ * the SAME definite-height wrapper ChappiPageClient uses, so the resolved
+ * page lands exactly where the skeleton stood. The conversation store is
+ * ephemeral (a reload always starts empty), so the empty state is
+ * effectively the only shape a fresh load resolves to. Re-synced 2026-08-06
+ * (URG-232): the real component's subline was removed at some point after
+ * this file was last touched (#214) and the skeleton kept reserving a
+ * phantom two-line block for it, pushing the input down and causing a jump
+ * on resolve — deleted here to match.
  *
  * Reserves the collapse-button row too (desktop only, `hidden lg:flex` —
  * matching the real page's row exactly): unlike the invite banner below,
@@ -23,7 +27,8 @@ import { SkeletonBlock } from './SkeletonBlock';
  *
  * Deliberately NOT reserved: the invite-teammates banner — it's
  * manager-gated and dismissal-persisted, so the skeleton can't know whether
- * it will render; a banner popping in beats one vanishing.
+ * it will render; a banner popping in beats one vanishing. (Same tradeoff
+ * WorkspaceIdentityPanel's own inline skeleton makes for its Admin nav row.)
  */
 export function ChappiPageSkeleton() {
   return (
@@ -32,17 +37,12 @@ export function ChappiPageSkeleton() {
         <SkeletonBlock className="h-7 w-7" />
       </div>
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-2">
-        {/* Eyebrow row: "CHAPPI" + the Beta badge pill. */}
+        {/* Eyebrow row: "UrgAns" + the Beta badge pill. */}
         <div className="flex items-center gap-2">
           <SkeletonBlock className="h-2.5 w-14" />
           <SkeletonBlock className="h-4 w-9" />
         </div>
         <SkeletonBlock className="mt-3 h-8 w-64 sm:w-80" />
-        {/* Subline now wraps to two lines at most widths (longer copy). */}
-        <div className="mt-2 flex flex-col items-center gap-2">
-          <SkeletonBlock className="h-3.5 w-72 sm:w-[30rem]" />
-          <SkeletonBlock className="h-3.5 w-48 sm:w-64" />
-        </div>
 
         {/* Input bar — same width cap as the real form (max-w-2xl). */}
         <div className="mt-6 h-11 w-full max-w-2xl border border-stroke-default bg-bg-surface" />
