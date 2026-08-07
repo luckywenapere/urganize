@@ -1,14 +1,47 @@
 apply plugin: 'com.android.application'
 
+// Release signing credentials live OUTSIDE the repo, in an untracked
+// keystore.properties (see docs/mobile/android-signing.md and the .gitignore
+// entry two directories up). Absent that file — CI, a fresh clone, anyone
+// else's machine — the release signingConfig is simply not wired and debug
+// builds carry on unaffected, so a missing keystore degrades to "can't sign"
+// rather than "can't build".
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+def hasReleaseSigning = keystoreProperties.containsKey('storeFile')
+
+// versionName mirrors the workspace/ledger version automatically — this repo
+// has a documented history of hand-maintained numbers drifting, so it reads
+// apps/mobile/package.json rather than duplicating the string here.
+def packageJson = new groovy.json.JsonSlurper().parseText(file('../../package.json').text)
+
 android {
     namespace "com.urganize.app"
     compileSdk rootProject.ext.compileSdkVersion
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     defaultConfig {
         applicationId "com.urganize.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
+        // Google Play REQUIRES this to strictly increase on every upload and
+        // never reuses a number, even after a rejected/deleted build. It is
+        // deliberately NOT derived from the semver version: a monotonic
+        // counter can't be reconstructed from 0.41.2 without ambiguity.
+        // Bump it by one for every build you upload to any track.
         versionCode 1
-        versionName "1.0"
+        versionName packageJson.version
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -18,6 +51,9 @@ android {
     }
     buildTypes {
         release {
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
