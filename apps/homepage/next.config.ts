@@ -1,6 +1,21 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        // The Android app is served as a plain static file (see /download).
+        // Without an explicit type, Next serves it as application/octet-stream,
+        // which some Android browsers won't hand to the package installer —
+        // the download appears to work and then nothing opens it.
+        source: "/downloads/urganize.apk",
+        headers: [
+          { key: "Content-Type", value: "application/vnd.android.package-archive" },
+          { key: "Content-Disposition", value: 'attachment; filename="urganize.apk"' },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       {
