@@ -108,7 +108,7 @@ export default function AuthCallbackPage() {
         }
 
         try {
-          await checkAuth();
+          await checkAuth({ force: true });
         } catch (error) {
           if (!isAbortError(error)) {
             throw error;

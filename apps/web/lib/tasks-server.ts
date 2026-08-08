@@ -698,13 +698,16 @@ export async function ensureOwnedWorkspace(
   return workspace;
 }
 
+/** Claims any email-invited membership rows for this user. Returns whether it
+ * actually activated anything — callers that resolved access concurrently use
+ * that to decide if they need to re-resolve (see loadWorkspaceAccessContext). */
 export async function activatePendingWorkspaceInvitesForUser(
   adminClient: SupabaseClient,
   user: DatabaseUser
-) {
+): Promise<boolean> {
   const email = normalizeEmail(user.email);
   if (!email) {
-    return;
+    return false;
   }
 
   const existingRowsResult = await adminClient
@@ -714,12 +717,12 @@ export async function activatePendingWorkspaceInvitesForUser(
     .neq('status', 'removed');
 
   if (existingRowsResult.error || !Array.isArray(existingRowsResult.data)) {
-    return;
+    return false;
   }
 
   const pendingRows = existingRowsResult.data.filter((row) => !readString(row.user_id));
   if (!pendingRows.length) {
-    return;
+    return false;
   }
 
   await Promise.all(
@@ -735,6 +738,8 @@ export async function activatePendingWorkspaceInvitesForUser(
         .eq('id', row.id)
     )
   );
+
+  return true;
 }
 
 // Pure-read half of access resolution: membership rows, their workspaces,
@@ -912,17 +917,24 @@ export async function loadWorkspaceAccessContext(
   // steady state. It used to run ensureOwnedWorkspace unconditionally — an
   // owner-membership UPSERT (a real write, stamping updated_at) plus a
   // 4-query organization-member sync on every GET. Now:
-  //   1. Invite activation stays first (one indexed read when the user has
-  //      no pending email-invites) so an invited user sees their workspace
-  //      on first load, not after their first write.
+  //   1. Invite activation runs ALONGSIDE the resolve, not before it. On the
+  //      steady state (no pending email-invites) it's one indexed read whose
+  //      latency now hides behind the resolve instead of adding to it; when
+  //      it does activate rows, we re-resolve so an invited user still sees
+  //      their workspace on this same request rather than the next one.
   //   2. Resolve the context with reads only.
   //   3. Provision-on-miss: only a user whose OWN workspace + owner
   //      membership isn't intact (first-ever load, or a corrupted/missing
   //      owner row — the cases the old unconditional upsert was silently
   //      self-healing) pays the write path, then the context is re-resolved.
-  await activatePendingWorkspaceInvitesForUser(adminClient, user);
+  const [activatedInvites, initialResolved] = await Promise.all([
+    activatePendingWorkspaceInvitesForUser(adminClient, user),
+    resolveWorkspaceAccessContext(adminClient, user),
+  ]);
 
-  let resolved = await resolveWorkspaceAccessContext(adminClient, user);
+  let resolved = activatedInvites
+    ? await resolveWorkspaceAccessContext(adminClient, user)
+    : initialResolved;
 
   if (!resolved.hasProvisionedOwnWorkspace) {
     try {

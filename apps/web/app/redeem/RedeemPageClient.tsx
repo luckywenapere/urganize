@@ -83,7 +83,7 @@ export default function RedeemPageClient() {
       }
 
       // Refresh auth/access state, then send them into the product.
-      await checkAuth();
+      await checkAuth({ force: true });
       setSuccess({ freeDays: payload.freeDays ?? 0, label: payload.label ?? null });
       // Brief success beat, then into the workspace.
       setTimeout(() => router.replace(HOME_PATH), 1400);

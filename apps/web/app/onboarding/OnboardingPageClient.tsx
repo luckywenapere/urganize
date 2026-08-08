@@ -457,7 +457,7 @@ export default function OnboardingPage() {
       }).catch(() => undefined);
       persisted = Boolean(response?.ok);
     }
-    await checkAuth();
+    await checkAuth({ force: true });
     // Only drop the draft once the server has the answers. If the PATCH
     // failed, leaving sessionStorage intact is strictly better than wiping
     // it — the answers survive for a retry instead of being destroyed, which
@@ -656,7 +656,7 @@ export default function OnboardingPage() {
           // get created.
           console.warn('[onboarding] Could not write chosen role:', updateError.message);
         }
-        await checkAuth();
+        await checkAuth({ force: true });
 
         await runPostSignupHandoff(accessToken);
       } catch (handoffError) {

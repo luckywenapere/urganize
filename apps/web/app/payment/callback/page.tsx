@@ -62,7 +62,7 @@ function PaymentCallbackContent() {
         if (res.ok && payload.status === 'success') {
           setStatus('success');
           setResult(payload);
-          await checkAuth();
+          await checkAuth({ force: true });
           return;
         }
 

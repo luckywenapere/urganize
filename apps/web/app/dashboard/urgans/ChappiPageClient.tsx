@@ -28,6 +28,14 @@ export default function ChappiPageClient() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [winReleaseId, setWinReleaseId] = useState<string | null>(null);
 
+  // Fire immediately rather than behind authLoading — see the same pattern in
+  // WorkspaceView: the store reads its own token from getSession() (local), so
+  // waiting on the auth store's GoTrue round trip only delays real data.
+  useEffect(() => {
+    if (!CHAPPI_ENABLED) return;
+    void loadCommandCenter();
+  }, [loadCommandCenter]);
+
   useEffect(() => {
     if (!CHAPPI_ENABLED) {
       router.replace('/dashboard');
@@ -38,6 +46,7 @@ export default function ChappiPageClient() {
       router.replace('/auth');
       return;
     }
+    // Backstop if the session wasn't readable at mount (no-op otherwise).
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
 
