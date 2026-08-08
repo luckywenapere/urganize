@@ -17,7 +17,6 @@ import { NewReleaseGuide } from '@/components/releases/NewReleaseGuide';
 import { SetReleaseDateCard } from '@/components/releases/SetReleaseDateCard';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
-import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { TasksPanel } from './TasksPanel';
@@ -47,6 +46,15 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 // routes guard the same flags server-side.
 const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
 const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
+
+// Dynamic for the same reason AppShell already loads it that way — a static
+// import here defeated that, dragging the ~460-line modal into the /dashboard
+// entry chunk that every user downloads before first paint, for a surface
+// most sessions never open.
+const CreateReleaseModal = dynamic(
+  () => import('@/components/releases/CreateReleaseModal').then((m) => m.CreateReleaseModal),
+  { ssr: false }
+);
 
 // Dynamic + flag-gated, same rationale as the removed page: while a flag is
 // off — as both are in production today — the modal's chunk is never
