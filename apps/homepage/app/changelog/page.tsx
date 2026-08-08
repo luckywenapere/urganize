@@ -9,6 +9,10 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "Every Urganize update, newest first. What changed and when, version by version.",
   path: "/changelog",
+  // Kept out of search so the homepage's sitelinks stay commercial
+  // (Features / Pricing / For managers / For labels). The page stays public
+  // and footer-linked — it just never competes as a search result.
+  noIndex: true,
 });
 
 export default function ChangelogPage() {

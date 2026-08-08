@@ -10,6 +10,11 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "The terms that govern your use of Urganize: accounts, subscriptions, your content, and our responsibilities.",
   path: "/terms",
+  // Kept out of search so the homepage's sitelinks stay commercial
+  // (Features / Pricing / For managers / For labels). Noindex hides the page
+  // from RESULTS only — it stays public, footer-linked, and reachable, which
+  // is what any "terms must be accessible" obligation actually requires.
+  noIndex: true,
 });
 
 // Real date discipline: moves only when the terms text changes.
