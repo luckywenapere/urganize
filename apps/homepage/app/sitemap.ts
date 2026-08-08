@@ -47,11 +47,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "yearly",
       priority: 0.3,
     },
-    {
-      url: `${SITE_URL}/privacy`,
-      changeFrequency: "yearly",
-      priority: 0.2,
-    },
+    // /privacy is deliberately absent: it emits `noindex` (see lib/seo.ts) so
+    // it stops outranking the homepage for "urganize". Listing a noindexed
+    // URL here would ask crawlers to index the very page that tells them not
+    // to. It stays crawlable via robots.txt and the footer link — that's what
+    // lets crawlers read the noindex and drop it from the results.
     {
       url: `${SITE_URL}/terms`,
       changeFrequency: "yearly",

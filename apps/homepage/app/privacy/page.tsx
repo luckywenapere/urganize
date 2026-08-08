@@ -5,11 +5,15 @@ import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 
+// noIndex: this page was outranking the homepage for the query "urganize" —
+// a legal document, not the pitch, was the first thing a searcher saw. It
+// stays public, linked, and reachable; it just never competes as a result.
 export const metadata: Metadata = buildPageMetadata({
   title: "Privacy Policy",
   description:
     "What Urganize collects, why, who processes it, and the choices you have.",
   path: "/privacy",
+  noIndex: true,
 });
 
 // Keep this date REAL. It only moves when the policy text actually changes —
