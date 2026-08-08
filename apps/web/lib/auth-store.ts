@@ -79,6 +79,17 @@ const ensureActiveAccessOrRedirect = async (
 };
 
 let authCheckInFlight: Promise<void> | null = null;
+// Recency guard, same shape as the stores' (useReleaseStore,
+// useWorkspaceIdentityStore). checkAuth fires from AppShell's mount effect AND
+// from onAuthStateChange's INITIAL_SESSION and SIGNED_IN handlers, so a single
+// page load used to run the getUser → getSession → profile chain up to three
+// times over. Once verified, re-verifying seconds later buys nothing.
+let authCheckedAt = 0;
+const AUTH_FRESH_MS = 30_000;
+/** Called on logout / SIGNED_OUT so the next check is never short-circuited. */
+const invalidateAuthRecency = () => {
+  authCheckedAt = 0;
+};
 const shouldEnforceScheduledDeletion = process.env.NODE_ENV === 'production';
 const LAST_AUTH_EMAIL_KEY = 'urganize.last_auth_email';
 
@@ -238,7 +249,10 @@ interface AuthState {
   updateRole: (role: Profile['role']) => Promise<void>;
   setNeedsOnboarding: (needsOnboarding: boolean) => void;
   logout: () => Promise<void>;
-  checkAuth: () => Promise<void>;
+  /** `force: true` skips the 30s recency guard — pass it after anything that
+   * changes the account's server-side state (onboarding, payment, promo
+   * redemption, OAuth callback) so the refetch actually happens. */
+  checkAuth: (options?: { force?: boolean }) => Promise<void>;
   clearError: () => void;
 }
 
@@ -254,9 +268,19 @@ export const useAuthStore = create<AuthState>()(
       clearError: () => set({ error: null }),
       setNeedsOnboarding: (needsOnboarding: boolean) => set({ needsOnboarding }),
 
-      checkAuth: async () => {
+      checkAuth: async (options?: { force?: boolean }) => {
         if (authCheckInFlight) {
           return authCheckInFlight;
+        }
+        if (!options?.force) {
+          const state = get();
+          if (
+            state.isAuthenticated &&
+            state.user &&
+            Date.now() - authCheckedAt < AUTH_FRESH_MS
+          ) {
+            return;
+          }
         }
 
         authCheckInFlight = (async () => {
@@ -269,10 +293,14 @@ export const useAuthStore = create<AuthState>()(
               set({ isLoading: true });
             }
             
-            // getUser() is more reliable as it forces a check against the server
-            const { data: { user }, error: userError } = await supabase.auth.getUser();
-            const { data: { session } } = await supabase.auth.getSession();
-            
+            // getUser() is more reliable as it forces a check against the
+            // server; getSession() is a local read. Independent, so run them
+            // together rather than paying getUser's round trip first.
+            const [
+              { data: { user }, error: userError },
+              { data: { session } },
+            ] = await Promise.all([supabase.auth.getUser(), supabase.auth.getSession()]);
+
             if (userError) {
               // If getUser fails, we are definitely not authenticated
               set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, error: null });
@@ -306,6 +334,7 @@ export const useAuthStore = create<AuthState>()(
                   needsOnboarding,
                   error: null
                 });
+                authCheckedAt = Date.now();
 
                 // Side-effect: if the user landed in the app without active
                 // access (no paid sub, no live trial), bounce them to /locked.
@@ -637,6 +666,7 @@ export const useAuthStore = create<AuthState>()(
           if (error) throw error;
 
           clearLastAuthEmail();
+          invalidateAuthRecency();
 
           set({
             user: null,
@@ -673,6 +703,7 @@ if (typeof window !== 'undefined') {
       // must always resolve the loading gate or the '/' redirect never fires.
       if (!session) {
         // No Supabase session: any persisted isAuthenticated is stale.
+        invalidateAuthRecency();
         useAuthStore.setState({
           user: null,
           isAuthenticated: false,
@@ -691,6 +722,7 @@ if (typeof window !== 'undefined') {
       }
       void useAuthStore.getState().checkAuth();
     } else if (event === 'SIGNED_OUT') {
+      invalidateAuthRecency();
       useAuthStore.setState({
         user: null,
         isAuthenticated: false,
@@ -699,7 +731,9 @@ if (typeof window !== 'undefined') {
         error: null,
       });
     } else if (event === 'SIGNED_IN') {
-      useAuthStore.getState().checkAuth();
+      // Always a real verification: a sign-in switches identity, and
+      // checkAuth is what runs the access/paywall side-effect.
+      useAuthStore.getState().checkAuth({ force: true });
     } else if (event === 'TOKEN_REFRESHED') {
       useAuthStore.setState((state) => ({
         isAuthenticated: state.isAuthenticated,

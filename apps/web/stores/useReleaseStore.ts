@@ -132,7 +132,12 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       }
 
       if (!accessToken) {
-        set({ isInitialLoading: false, isRefreshing: false, error: 'Session expired. Please sign in again.' });
+        // Silent: this now runs on mount WITHOUT waiting for the auth store
+        // (so the request races the GoTrue chain instead of queuing behind
+        // it), which means "no session yet" is a normal state here, not an
+        // error. The page's own auth effect owns the /auth redirect — showing
+        // "Session expired" would just flash a wrong message on the way out.
+        set({ isRefreshing: false });
         return null;
       }
 

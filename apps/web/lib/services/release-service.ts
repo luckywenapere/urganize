@@ -56,8 +56,13 @@ export class ReleaseService {
       artwork_asset_id:
         typeof row.artwork_asset_id === 'string' ? row.artwork_asset_id : null,
     }));
-    const coverByReleaseId = await loadCoverArtUrlMap(this.adminClient, coverInput);
-    const workspaceLogoUrl = await loadWorkspaceLogoFallbackUrl(this.adminClient, userId);
+    // Independent lookups — run together. Serially they cost two round trips
+    // on every dashboard load, which is the kind of latency that stacks up
+    // badly on a slow mobile link.
+    const [coverByReleaseId, workspaceLogoUrl] = await Promise.all([
+      loadCoverArtUrlMap(this.adminClient, coverInput),
+      loadWorkspaceLogoFallbackUrl(this.adminClient, userId),
+    ]);
 
     return rows.map((row) => {
       const id = String(row.id || '');

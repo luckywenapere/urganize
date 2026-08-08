@@ -120,12 +120,25 @@ export function WorkspaceView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per mount to consume the param; router/searchParams identity churn shouldn't re-fire this.
   }, []);
 
+  // Fire the dashboard fetch IMMEDIATELY, without waiting on the auth store.
+  // loadCommandCenter reads its own bearer token from supabase.auth.getSession()
+  // (a local storage read), so it doesn't need the auth store's server-verified
+  // profile — gating it behind authLoading serialized it after the GoTrue
+  // getUser round trip for no benefit. With no session it returns silently and
+  // the effect below redirects.
+  useEffect(() => {
+    void loadCommandCenter();
+  }, [loadCommandCenter]);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
       router.replace('/auth');
       return;
     }
+    // Backstop for the early call above: if the session wasn't readable yet at
+    // mount, this re-runs it once auth resolves. Cheap — the store's in-flight
+    // and recency guards collapse it to a no-op in the normal case.
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
 
