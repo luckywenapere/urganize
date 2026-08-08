@@ -22,6 +22,7 @@ import { CalendarOverflowMenu } from '@/components/content-calendar/CalendarOver
 import { MonthGrid } from '@/components/content-calendar/MonthGrid';
 import { AgendaList } from '@/components/content-calendar/AgendaList';
 import { PostModal } from '@/components/content-calendar/PostModal';
+import { useSceneDataStore } from '@/stores/useSceneDataStore';
 
 /**
  * The release content calendar, as the body of an overlay window over the
@@ -94,35 +95,34 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
   const showToast = onToast;
 
   // --- Calendars list: self-contained fetch, the AssetSection precedent ---
-  const [calendars, setCalendars] = useState<ContentCalendar[]>([]);
-  const [isLoadingCalendars, setIsLoadingCalendars] = useState(true);
+  const loadScene = useSceneDataStore((state) => state.loadScene);
+  const setScene = useSceneDataStore((state) => state.setScene);
+
+  // Cache-first seed. Unlike the other three scenes this one keeps local state
+  // as its source of truth — six mutation paths (create / rename / delete /
+  // post-count bumps) already maintain it, and routing all of them through the
+  // store would be a rewrite for no gain. Instead: seed synchronously from the
+  // cache so a re-open paints the tab strip with no spinner, and sync back on
+  // every change (effect below) so the cache never goes stale behind us.
+  const cachedCalendars = useMemo(
+    () => useSceneDataStore.getState().getScene(releaseId, 'calendar')?.calendars ?? null,
+    [releaseId]
+  );
+  const [calendars, setCalendars] = useState<ContentCalendar[]>(cachedCalendars ?? []);
+  const [isLoadingCalendars, setIsLoadingCalendars] = useState(cachedCalendars === null);
   const [calendarsError, setCalendarsError] = useState('');
 
   const loadCalendars = useCallback(async () => {
-    setIsLoadingCalendars(true);
     setCalendarsError('');
     try {
-      const token = await getAccessToken();
-      if (!token) {
-        setCalendarsError('Session expired. Please sign in again.');
-        return;
-      }
-      const res = await fetch(`/api/releases/${releaseId}/content-calendars`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: 'no-store',
-      });
-      const data = (await res.json().catch(() => ({}))) as { calendars?: ContentCalendar[]; error?: string };
-      if (!res.ok) {
-        setCalendarsError(data.error || 'Could not load calendars.');
-        return;
-      }
-      setCalendars(Array.isArray(data.calendars) ? data.calendars : []);
+      const payload = await loadScene(releaseId, 'calendar');
+      if (payload) setCalendars(payload.calendars);
     } catch (err) {
       setCalendarsError(err instanceof Error ? err.message : 'Could not load calendars.');
     } finally {
       setIsLoadingCalendars(false);
     }
-  }, [releaseId]);
+  }, [loadScene, releaseId]);
 
   // No auth gate needed here (unlike the old page): this only mounts once
   // ReleaseSceneOverlay has resolved a release from the store, which already
@@ -130,6 +130,13 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
   useEffect(() => {
     void loadCalendars();
   }, [loadCalendars]);
+
+  // Write-through: one place instead of six, since every mutation path already
+  // funnels through this state.
+  useEffect(() => {
+    if (isLoadingCalendars) return;
+    setScene(releaseId, 'calendar', { calendars });
+  }, [calendars, isLoadingCalendars, releaseId, setScene]);
 
   // --- Active calendar resolution ---
   const calendarParam = searchParams.get('calendar');

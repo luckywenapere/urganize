@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { type AssetCategory, categoryLabel } from '@/lib/asset-constants';
-import { supabase } from '@/lib/supabase/client';
 import { AssetUploadControl } from './AssetUploadControl';
 import { AssetCategoryGroup } from './AssetCategoryGroup';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import { useSceneData } from './useSceneData';
+import { useSceneDataStore } from '@/stores/useSceneDataStore';
 
 export type Asset = {
   id: string;
@@ -40,55 +41,23 @@ const DISPLAY_CATEGORY_ORDER: AssetCategory[] = [
   'other',
 ];
 
-async function getAccessToken(): Promise<string> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session?.access_token || '';
-}
-
 export function AssetSection({ releaseId, onToast }: AssetSectionProps) {
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  // Distinguishes "the release has no files" from "the load failed" — a
-  // failed fetch used to render the same 'No files attached yet' empty
-  // state, telling the user their uploads were gone with only a transient
-  // toast to say otherwise.
-  const [loadError, setLoadError] = useState('');
-
-  const loadAssets = useCallback(async () => {
-    setIsLoading(true);
-    setLoadError('');
-    try {
-      const token = await getAccessToken();
-      if (!token) {
-        setLoadError('Session expired. Please sign in again.');
-        onToast('Session expired. Please sign in again.', 'error');
-        return;
-      }
-      const res = await fetch(`/api/releases/${releaseId}/assets`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: 'no-store',
-      });
-      const data = (await res.json().catch(() => ({}))) as { assets?: Asset[]; error?: string };
-      if (!res.ok) {
-        setLoadError(data.error || 'Could not load files.');
-        onToast(data.error || 'Could not load files.', 'error');
-        return;
-      }
-      setAssets(Array.isArray(data.assets) ? data.assets : []);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Could not load files.';
-      setLoadError(message);
-      onToast(message, 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [onToast, releaseId]);
-
-  useEffect(() => {
-    void loadAssets();
-  }, [loadAssets]);
+  // Cache-first, but MEMORY-ONLY for this scene: the payload carries 1h signed
+  // Storage URLs, so it is never persisted to localStorage and is refused for
+  // painting past 45 minutes (see lib/scene-cache.ts). Within a session,
+  // re-opening Files is instant; across sessions it always re-signs.
+  const {
+    data,
+    isLoading,
+    // Distinguishes "the release has no files" from "the load failed" — a
+    // failed fetch used to render the same 'No files attached yet' empty
+    // state, telling the user their uploads were gone with only a transient
+    // toast to say otherwise.
+    error: loadError,
+    reload: loadAssets,
+  } = useSceneData(releaseId, 'files');
+  const setScene = useSceneDataStore((state) => state.setScene);
+  const assets = useMemo(() => data?.assets ?? [], [data]);
 
   const handleUploaded = useCallback(
     (asset?: Asset) => {
@@ -96,26 +65,22 @@ export function AssetSection({ releaseId, onToast }: AssetSectionProps) {
       // included) — add it locally like handleDeleted filters, instead of
       // re-fetching the whole list after every single upload. Prepended
       // because the list GET orders newest-first, so the row sits where a
-      // reload would put it. A successful mutation also proves the earlier
-      // load failure (if any) is over. The no-asset fallback keeps edge
-      // cases correct.
+      // reload would put it. The no-asset fallback keeps edge cases correct.
       if (asset) {
-        setLoadError('');
-        setAssets((current) => [asset, ...current]);
+        setScene(releaseId, 'files', { assets: [asset, ...assets] });
         return;
       }
       void loadAssets();
     },
-    [loadAssets]
+    [assets, loadAssets, releaseId, setScene]
   );
 
-  const handleDeleted = useCallback((assetId: string) => {
-    // Clearing loadError here too: without it, deleting the last file after
-    // a long-past failed load would re-surface the stale "couldn't load"
-    // banner over what is genuinely just an empty list now.
-    setLoadError('');
-    setAssets((current) => current.filter((a) => a.id !== assetId));
-  }, []);
+  const handleDeleted = useCallback(
+    (assetId: string) => {
+      setScene(releaseId, 'files', { assets: assets.filter((a) => a.id !== assetId) });
+    },
+    [assets, releaseId, setScene]
+  );
 
   const assetsByCategory = useMemo(() => {
     const grouped = {} as Record<AssetCategory, Asset[]>;

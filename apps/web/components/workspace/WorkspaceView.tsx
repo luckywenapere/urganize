@@ -22,6 +22,7 @@ import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { TasksPanel } from './TasksPanel';
 import { useSceneOverlay } from './useSceneOverlay';
+import { useScenePrefetch } from './useScenePrefetch';
 import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
@@ -87,6 +88,10 @@ export function WorkspaceView() {
   // appear"), so this view has to know about it to build the panel body and to
   // give the calendar its width.
   const { activeScene, closeScene } = useSceneOverlay();
+  // Warm the scoped release's four scenes during idle time, so the pills in
+  // TasksPanel's header open instantly instead of each costing a round trip.
+  // Skipped entirely on Data Saver / 2g — see useScenePrefetch.
+  useScenePrefetch(scopedReleaseId, !isInitialLoading);
   // Same global quick-create TasksPanel's header pill opens — the date card's
   // "add an activity yourself" action routes here so both entry points land
   // in one modal (URG-233).
