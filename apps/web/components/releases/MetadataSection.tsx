@@ -18,11 +18,9 @@ import {
   GENRE_PREDICTION_ACCEPT_ATTR,
   validateGenrePredictionUpload,
 } from '@/lib/genre-prediction';
-import {
-  RELEASE_CREDIT_ROLE_LABELS,
-  type ReleaseCreditLink,
-  type ReleaseCreditSubmission,
-} from '@/types/credits';
+import { RELEASE_CREDIT_ROLE_LABELS } from '@/types/credits';
+import { useSceneData } from './useSceneData';
+import { useSceneDataStore, type MetadataScenePayload } from '@/stores/useSceneDataStore';
 
 // The metadata hub (URG-108). Self-contained (the EpkSection pattern): takes
 // releaseId, fetches its own data, renders its own loading/empty/error
@@ -101,94 +99,65 @@ type MetadataSectionProps = {
 };
 
 export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
+  // One cached scene covers both endpoints this section reads (metadata +
+  // credits), fetched in parallel by the store. Cache-first, so re-opening
+  // Metadata — or opening it after the workspace's idle prefetch has warmed
+  // it — paints immediately with no skeleton.
+  const {
+    data,
+    isLoading,
+    error: loadError,
+    reload: reloadScene,
+  } = useSceneData(releaseId, 'metadata', { enabled: METADATA_ENABLED });
+  const setScene = useSceneDataStore((state) => state.setScene);
+
+  const link = data?.link ?? null;
+  const submissions = useMemo(() => data?.submissions ?? [], [data]);
+
   // --- Release-level fields -------------------------------------------------
   const [form, setForm] = useState<MetadataFormState>(EMPTY_FORM);
-  const [isLoadingMetadata, setIsLoadingMetadata] = useState(true);
-  const [metadataError, setMetadataError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isPredictingGenre, setIsPredictingGenre] = useState(false);
   const genreFileInputRef = useRef<HTMLInputElement>(null);
+  // The form is seeded FROM the cached/fetched snapshot, so a background
+  // revalidate landing mid-edit would otherwise silently overwrite whatever
+  // the user is typing. Once they touch a field, the server copy stops being
+  // allowed to reseed until the next successful save.
+  const isFormDirtyRef = useRef(false);
+  const editForm = useCallback((update: (current: MetadataFormState) => MetadataFormState) => {
+    isFormDirtyRef.current = true;
+    setForm(update);
+  }, []);
+
+  useEffect(() => {
+    if (isFormDirtyRef.current || !data) return;
+    setForm(toFormState(data.metadata));
+  }, [data]);
 
   // --- Credits share link ----------------------------------------------------
-  const [link, setLink] = useState<ReleaseCreditLink | null>(null);
-  const [isLoadingLink, setIsLoadingLink] = useState(true);
-  const [linkError, setLinkError] = useState('');
   const [isMutatingLink, setIsMutatingLink] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // --- Submissions -------------------------------------------------------------
-  const [submissions, setSubmissions] = useState<ReleaseCreditSubmission[]>([]);
   const [deletingId, setDeletingId] = useState('');
 
   const shareUrl = link
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/credits/${link.shareToken}`
     : '';
 
-  const loadMetadata = useCallback(async () => {
-    setIsLoadingMetadata(true);
-    setMetadataError('');
-    try {
-      const token = await getAccessToken();
-      if (!token) {
-        setMetadataError('Session expired. Please sign in again.');
-        return;
-      }
-      const res = await fetch(`/api/releases/${releaseId}/metadata`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: 'no-store',
+  /** Write-through helper: mutations return the authoritative row, so the
+   * cache is patched directly instead of costing another round trip. */
+  const patchScene = useCallback(
+    (patch: Partial<MetadataScenePayload>) => {
+      setScene(releaseId, 'metadata', {
+        metadata: data?.metadata ?? null,
+        link: data?.link ?? null,
+        submissions: data?.submissions ?? [],
+        ...patch,
       });
-      const data = (await res.json().catch(() => ({}))) as {
-        metadata?: ReleaseMetadataSnapshot | null;
-        error?: string;
-      };
-      if (!res.ok) {
-        setMetadataError(data.error || 'Could not load release metadata.');
-        return;
-      }
-      setForm(toFormState(data.metadata ?? null));
-    } catch (err) {
-      setMetadataError(err instanceof Error ? err.message : 'Could not load release metadata.');
-    } finally {
-      setIsLoadingMetadata(false);
-    }
-  }, [releaseId]);
-
-  const loadCredits = useCallback(async () => {
-    setIsLoadingLink(true);
-    setLinkError('');
-    try {
-      const token = await getAccessToken();
-      if (!token) {
-        setLinkError('Session expired. Please sign in again.');
-        return;
-      }
-      const res = await fetch(`/api/releases/${releaseId}/credits`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: 'no-store',
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        link?: ReleaseCreditLink | null;
-        submissions?: ReleaseCreditSubmission[];
-        error?: string;
-      };
-      if (!res.ok) {
-        setLinkError(data.error || 'Could not load the credits link.');
-        return;
-      }
-      setLink(data.link ?? null);
-      setSubmissions(Array.isArray(data.submissions) ? data.submissions : []);
-    } catch (err) {
-      setLinkError(err instanceof Error ? err.message : 'Could not load the credits link.');
-    } finally {
-      setIsLoadingLink(false);
-    }
-  }, [releaseId]);
-
-  useEffect(() => {
-    if (!METADATA_ENABLED) return;
-    void loadMetadata();
-    void loadCredits();
-  }, [loadMetadata, loadCredits]);
+    },
+    [data, releaseId, setScene]
+  );
 
   useEffect(() => {
     if (!copied) return;
@@ -218,7 +187,10 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
         onToast?.(data.error || 'Could not save metadata.', 'error');
         return;
       }
-      setForm(toFormState(data.metadata ?? null));
+      const saved = data.metadata ?? null;
+      isFormDirtyRef.current = false;
+      setForm(toFormState(saved));
+      patchScene({ metadata: saved });
       onToast?.('Metadata saved.', 'success');
     } catch (err) {
       onToast?.(err instanceof Error ? err.message : 'Could not save metadata.', 'error');
@@ -270,7 +242,7 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
       // filling the field is all that's needed. Nothing persists until the
       // user saves, and the audio itself is never stored.
       const genre = data.genre;
-      setForm((f) => ({ ...f, genre }));
+      editForm((f) => ({ ...f, genre }));
       const confidenceSuffix =
         typeof data.confidence === 'number'
           ? ` (${Math.round(data.confidence * 100)}% confidence)`
@@ -296,12 +268,12 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = (await res.json().catch(() => ({}))) as { link?: ReleaseCreditLink; error?: string };
+      const data = (await res.json().catch(() => ({}))) as { link?: MetadataScenePayload['link']; error?: string };
       if (!res.ok || !data.link?.shareToken) {
         onToast?.(data.error || 'Could not create the credits link.', 'error');
         return;
       }
-      setLink(data.link);
+      patchScene({ link: data.link });
       onToast?.('Credits link is live.', 'success');
     } catch (err) {
       onToast?.(err instanceof Error ? err.message : 'Could not create the credits link.', 'error');
@@ -329,12 +301,12 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = (await res.json().catch(() => ({}))) as { link?: ReleaseCreditLink; error?: string };
+      const data = (await res.json().catch(() => ({}))) as { link?: MetadataScenePayload['link']; error?: string };
       if (!res.ok || !data.link?.shareToken) {
         onToast?.(data.error || 'Could not regenerate the credits link.', 'error');
         return;
       }
-      setLink(data.link);
+      patchScene({ link: data.link });
       onToast?.('Credits link regenerated. The old link no longer works.', 'success');
     } catch (err) {
       onToast?.(err instanceof Error ? err.message : 'Could not regenerate the credits link.', 'error');
@@ -377,7 +349,7 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
         onToast?.(data.error || 'Could not remove the submission.', 'error');
         return;
       }
-      setSubmissions((current) => current.filter((item) => item.id !== submissionId));
+      patchScene({ submissions: submissions.filter((item) => item.id !== submissionId) });
       onToast?.('Submission removed.', 'success');
     } catch (err) {
       onToast?.(err instanceof Error ? err.message : 'Could not remove the submission.', 'error');
@@ -410,14 +382,14 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
           The distribution metadata a DSP or aggregator asks for when this release ships.
         </p>
 
-        {isLoadingMetadata ? (
+        {isLoading ? (
           <MetadataFieldsSkeleton />
-        ) : metadataError ? (
+        ) : loadError ? (
           <div className="mt-4 flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-status-error">{metadataError}</p>
+            <p className="text-sm text-status-error">{loadError}</p>
             <button
               type="button"
-              onClick={() => void loadMetadata()}
+              onClick={() => void reloadScene()}
               className="inline-flex h-9 shrink-0 items-center self-start border border-stroke-default bg-bg-elevated px-4 text-sm font-semibold text-content-primary hover:bg-bg-hover sm:self-auto"
             >
               Retry
@@ -425,12 +397,12 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
           </div>
         ) : (
           <div className="mt-4 grid grid-cols-1 gap-3 border border-stroke-default bg-bg-surface p-4 sm:grid-cols-2">
-            <Field label="ISRC" value={form.isrc} onChange={(v) => setForm((f) => ({ ...f, isrc: v }))} />
-            <Field label="UPC" value={form.upc} onChange={(v) => setForm((f) => ({ ...f, upc: v }))} />
+            <Field label="ISRC" value={form.isrc} onChange={(v) => editForm((f) => ({ ...f, isrc: v }))} />
+            <Field label="UPC" value={form.upc} onChange={(v) => editForm((f) => ({ ...f, upc: v }))} />
             <Field
               label="Genre"
               value={form.genre}
-              onChange={(v) => setForm((f) => ({ ...f, genre: v }))}
+              onChange={(v) => editForm((f) => ({ ...f, genre: v }))}
               labelAction={
                 GENRE_PREDICTION_ENABLED ? (
                   <>
@@ -466,35 +438,35 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
             <Field
               label="Subgenre"
               value={form.subgenre}
-              onChange={(v) => setForm((f) => ({ ...f, subgenre: v }))}
+              onChange={(v) => editForm((f) => ({ ...f, subgenre: v }))}
             />
             <Field
               label="Language"
               value={form.language}
-              onChange={(v) => setForm((f) => ({ ...f, language: v }))}
+              onChange={(v) => editForm((f) => ({ ...f, language: v }))}
             />
             <Field
               label="Label name"
               value={form.labelName}
-              onChange={(v) => setForm((f) => ({ ...f, labelName: v }))}
+              onChange={(v) => editForm((f) => ({ ...f, labelName: v }))}
             />
             <Field
               label="℗ line (recording)"
               placeholder="℗ 2026 Some Label"
               value={form.pLine}
-              onChange={(v) => setForm((f) => ({ ...f, pLine: v }))}
+              onChange={(v) => editForm((f) => ({ ...f, pLine: v }))}
             />
             <Field
               label="© line (composition/artwork)"
               placeholder="© 2026 Some Label"
               value={form.cLine}
-              onChange={(v) => setForm((f) => ({ ...f, cLine: v }))}
+              onChange={(v) => editForm((f) => ({ ...f, cLine: v }))}
             />
             <label className="flex items-center gap-2 text-sm text-content-secondary sm:col-span-2">
               <input
                 type="checkbox"
                 checked={form.explicit}
-                onChange={(event) => setForm((f) => ({ ...f, explicit: event.target.checked }))}
+                onChange={(event) => editForm((f) => ({ ...f, explicit: event.target.checked }))}
                 className="h-4 w-4 accent-brand"
               />
               This release contains explicit content
@@ -524,14 +496,14 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
           publishing details land below as they submit.
         </p>
 
-        {isLoadingLink ? (
+        {isLoading ? (
           <ShareLinkCardSkeleton />
-        ) : linkError ? (
+        ) : loadError ? (
           <div className="mt-4 flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-status-error">{linkError}</p>
+            <p className="text-sm text-status-error">{loadError}</p>
             <button
               type="button"
-              onClick={() => void loadCredits()}
+              onClick={() => void reloadScene()}
               className="inline-flex h-9 shrink-0 items-center self-start border border-stroke-default bg-bg-elevated px-4 text-sm font-semibold text-content-primary hover:bg-bg-hover sm:self-auto"
             >
               Retry
@@ -736,7 +708,7 @@ function SubmissionCard({
   isDeleting,
   onDelete,
 }: {
-  submission: ReleaseCreditSubmission;
+  submission: MetadataScenePayload['submissions'][number];
   isDeleting: boolean;
   onDelete: () => void;
 }) {

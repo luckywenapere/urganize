@@ -34,9 +34,11 @@ const SCENE_PARAM = 'scene';
  * that are otherwise independent; if this ever drifts, useReleaseScope wins. */
 const RELEASE_PARAM = 'release';
 
-export type SceneName = 'metadata' | 'files' | 'epk' | 'calendar';
-
-const SCENE_NAMES: readonly SceneName[] = ['metadata', 'files', 'epk', 'calendar'];
+// Canonical in lib/scene-cache.ts — the URL layer here and the data layer
+// (stores/useSceneDataStore.ts) both key off the same four names, so they
+// share one definition rather than two lists that can drift.
+export { SCENE_NAMES, type SceneName } from '@/lib/scene-cache';
+import { SCENE_NAMES, type SceneName } from '@/lib/scene-cache';
 
 /**
  * Params owned by a scene's own internal state rather than by the overlay

@@ -7,6 +7,7 @@ import { errorMessage } from "@/lib/errors";
 import { installAccessRedirect } from './access-redirect';
 import { isAllowlistedEmail } from './paywall-allowlist';
 import { isNativePlatform } from './platform';
+import { resetSceneData } from '@/stores/useSceneDataStore';
 
 // Custom URL scheme registered in the native shell's Info.plist /
 // AndroidManifest.xml (apps/mobile) — see docs/mobile/auth-setup.md. Google
@@ -723,6 +724,10 @@ if (typeof window !== 'undefined') {
       void useAuthStore.getState().checkAuth();
     } else if (event === 'SIGNED_OUT') {
       invalidateAuthRecency();
+      // Cached release-scene data is per-account. Clearing it here (memory AND
+      // disk) is what stops account B, signing in on the same device, from
+      // seeing a frame of account A's metadata or files.
+      resetSceneData();
       useAuthStore.setState({
         user: null,
         isAuthenticated: false,

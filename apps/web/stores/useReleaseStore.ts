@@ -6,6 +6,7 @@ import type { CommandCenterData, ExecutionRelease, ExecutionTask } from '@/lib/e
 import { useActivityStore } from '@/stores/useActivityStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { useSceneDataStore } from '@/stores/useSceneDataStore';
 
 type ReleaseStore = {
   releases: ExecutionRelease[];
@@ -238,6 +239,10 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
     return release;
   },
   removeReleaseLocal: (releaseId) => {
+    // Its cached scenes (metadata / files / press kit / calendar) go with it —
+    // otherwise a re-created release reusing the id, or just a stale disk
+    // entry, could paint a deleted release's data.
+    useSceneDataStore.getState().invalidate(releaseId);
     const taskStore = useTaskStore.getState();
     taskStore.setTasks(taskStore.tasks.filter((task) => task.releaseId !== releaseId));
     set((current) => ({
