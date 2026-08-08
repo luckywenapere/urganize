@@ -17,11 +17,13 @@ type WorkspaceReleaseCardProps = {
    * - 'tile' (default): stacked card — full-width square cover banner above
    *   the meta block. Right for grids and rails where the card is ~180–280px
    *   wide and the square stays a modest thumbnail.
-   * - 'focused': compact horizontal header — fixed-size square art beside the
-   *   meta. Used for the centered focus card in WorkspaceDesktopFocused,
-   *   whose column spans most of the viewport; a full-width square there
-   *   ballooned into a huge empty banner (the art scales with card width),
-   *   so the focused card pins the art to a thumbnail instead.
+   * - 'focused': horizontal row — fixed-size square art beside the meta.
+   *   Right wherever the card is WIDE, because pinning the art to a
+   *   thumbnail stops it scaling with the card and ballooning into a huge
+   *   empty banner. Two callers: the centered focus card in
+   *   WorkspaceDesktopFocused (its column spans most of the viewport), and
+   *   the whole mobile catalog in ReleasesColumn (2026-08-07 — rows replaced
+   *   capped tiles there; see that file for the full rationale).
    */
   variant?: 'tile' | 'focused';
 };
@@ -102,7 +104,12 @@ export function WorkspaceReleaseCard({
         ) : null}
       </div>
 
-      <h3 className="mt-2 line-clamp-2 font-display text-base font-semibold leading-snug text-content-primary sm:text-lg">
+      {/* One size at every breakpoint (2026-08-07). This used to be
+          `text-base sm:text-lg`, which gave the SMALLEST title to the
+          NARROWEST screen — backwards. The phone row is now the widest text
+          column a title ever gets; `line-clamp-2` handles the desktop grid's
+          220-280px tracks. */}
+      <h3 className="mt-2 line-clamp-2 font-display text-lg font-semibold leading-snug text-content-primary">
         {release.title}
       </h3>
 
@@ -131,10 +138,16 @@ export function WorkspaceReleaseCard({
     </>
   );
 
-  const frameClass = `group motion-focus block w-full overflow-hidden rounded-xl border bg-bg-surface text-left transition-colors ${
+  // `motion-lift` is the utility globals.css reserves for cards/surfaces
+  // (a 1px hover rise) — declared there but unused until now. `motion-press`
+  // is deliberately NOT used: that same block documents it as buttons and
+  // small controls only. Touch gets `active:bg-bg-hover` instead, which is
+  // the press cue that reads correctly on a full-width row where a scale
+  // transform would look like the whole list flinching.
+  const frameClass = `group motion-focus motion-lift block w-full overflow-hidden rounded-xl border bg-bg-surface text-left transition-colors ${
     selected
       ? 'border-brand bg-brand/8'
-      : 'border-stroke-default hover:border-stroke-strong hover:bg-bg-hover'
+      : 'border-stroke-default hover:border-stroke-strong hover:bg-bg-hover active:bg-bg-hover'
   }`;
 
   if (variant === 'focused') {
@@ -187,7 +200,11 @@ export function WorkspaceReleaseCard({
             width={720}
             height={720}
             className="h-full w-full object-cover transition-transform duration-slow ease-out group-hover:scale-[1.02]"
-            sizes="(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw"
+            // Tiles only render in the desktop grid now (auto-fit 220-280px
+            // tracks) — mobile switched to the `focused` row in 2026-08-07.
+            // The old value claimed 100vw below 768px and over-fetched on
+            // every phone.
+            sizes="280px"
           />
         ) : (
           <DefaultCoverArt markClassName="w-14 sm:w-16" />

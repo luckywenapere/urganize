@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.41.3",
+    date: "August 7, 2026",
+    highlights: [
+      "Your catalog on a phone now uses the full width of the screen. Releases are wide rows — cover art beside the title, date and progress — so you see four or five at a glance instead of two floating cards with empty space either side. Release titles are bigger everywhere too.",
+    ],
+  },
+  {
     version: "0.41.2",
     date: "August 6, 2026",
     highlights: [

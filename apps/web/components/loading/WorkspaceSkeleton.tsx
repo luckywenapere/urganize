@@ -93,11 +93,7 @@ export function WorkspaceSkeleton() {
             {isFocused ? (
               <MobileFocusedSkeleton />
             ) : (
-              <ReleaseGridSkeleton
-                count={Math.min(knownCount, 6)}
-                columns="sm:grid-cols-2"
-                showMobileCreateButton
-              />
+              <ReleaseRowListSkeleton count={Math.min(knownCount, 6)} />
             )}
           </section>
 
@@ -124,31 +120,50 @@ export function WorkspaceSkeleton() {
  * the SAME centered auto-fit template as WorkspaceDesktopGrid with 4 slots
  * (the typical roster size) so the resolved cards land where the skeleton
  * stood instead of collapsing from a fuller placeholder grid. */
-function ReleaseGridSkeleton({
-  count,
-  columns,
-  showMobileCreateButton = false,
-}: {
-  count: number;
-  columns: string;
-  /** Reserves ReleasesColumn's `sm:hidden` full-width "New release" button
-   * above the grid — mobile-at-rest only; the desktop grid's create action
-   * lives in the topbar, not inline. */
-  showMobileCreateButton?: boolean;
-}) {
-  // max-sm: cards center at the golden-section width, matching
-  // ReleasesColumn's phone layout (61.8vw cap, not edge to edge).
+function ReleaseGridSkeleton({ count, columns }: { count: number; columns: string }) {
   return (
     <div className="space-y-3 lg:space-y-4">
-      {showMobileCreateButton ? (
-        <SkeletonBlock className="mx-auto h-11 w-full max-w-[61.8vw] rounded-full sm:hidden" />
-      ) : null}
-      <div className={`grid gap-3 max-sm:justify-items-center lg:gap-4 ${columns}`}>
+      <div className={`grid gap-3 lg:gap-4 ${columns}`}>
         {Array.from({ length: count }).map((_, index) => (
-          <div key={`release-card-${index}`} className="w-full max-w-[61.8vw] sm:max-w-none">
-            <ReleaseCardSkeleton />
-          </div>
+          <ReleaseCardSkeleton key={`release-card-${index}`} />
         ))}
+      </div>
+    </div>
+  );
+}
+
+/** At-rest MOBILE surface (2026-08-07): the full-width "New release" button
+ * ReleasesColumn shows below sm, then a stack of horizontal row slots. Mirrors
+ * that file's `space-y-3` list of `focused`-variant cards — fixed square
+ * thumbnail (w-28, sm:w-36) beside the meta column — so nothing resizes when
+ * the real cards resolve. */
+function ReleaseRowListSkeleton({ count }: { count: number }) {
+  return (
+    <div className="space-y-3">
+      <SkeletonBlock className="h-11 w-full rounded-full sm:hidden" />
+      {Array.from({ length: count }).map((_, index) => (
+        <ReleaseRowSkeleton key={`release-row-${index}`} />
+      ))}
+    </div>
+  );
+}
+
+/** Focused-variant row slot: the art block is `aspect-square` on a fixed
+ * width, which is what sets the row's height — same as the real card, where
+ * the meta column is `self-stretch` beside it. */
+function ReleaseRowSkeleton() {
+  return (
+    <div className="flex items-stretch overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
+      <div className="aspect-square w-28 shrink-0 border-r border-stroke-subtle bg-bg-elevated sm:w-36" />
+      <div className="min-w-0 flex-1 space-y-2.5 px-4 py-4">
+        <SkeletonBlock className="h-2.5 w-20" />
+        <SkeletonBlock className="h-4 w-3/4" />
+        <SkeletonBlock className="h-2.5 w-24" />
+        <div className="mt-1.5 flex items-center justify-between">
+          <SkeletonBlock className="h-2.5 w-12" />
+          <SkeletonBlock className="h-2.5 w-20" />
+        </div>
+        <SkeletonBlock className="h-1.5 w-full rounded-full" />
       </div>
     </div>
   );
