@@ -1,10 +1,23 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, ClipboardList, Copy, ExternalLink, Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  Check,
+  ClipboardList,
+  Copy,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { MetadataFieldsSkeleton, ShareLinkCardSkeleton } from '@/components/loading/ReleaseSectionSkeletons';
 import type { ReleaseMetadataSnapshot } from '@/lib/release-ops';
+import {
+  GENRE_PREDICTION_ACCEPT_ATTR,
+  validateGenrePredictionUpload,
+} from '@/lib/genre-prediction';
 import {
   RELEASE_CREDIT_ROLE_LABELS,
   type ReleaseCreditLink,
@@ -22,6 +35,14 @@ import {
 // NEXT_PUBLIC_ prefix so the value is inlined at build time for this client
 // component. The API routes guard the same flag server-side (404 when off).
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
+
+// Genre prediction from audio: the Genre field gains a "Predict from audio"
+// action that proxies a local audio file to an external classifier model and
+// prefills the field. Dark until NEXT_PUBLIC_FEATURE_GENRE_PREDICTION is
+// 'true'; the predict-genre route guards the same flag server-side (404 when
+// off). Only reachable when METADATA_ENABLED is on too, since this section
+// renders nothing otherwise.
+const GENRE_PREDICTION_ENABLED = process.env.NEXT_PUBLIC_FEATURE_GENRE_PREDICTION === 'true';
 
 async function getAccessToken(): Promise<string> {
   const {
@@ -85,6 +106,8 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(true);
   const [metadataError, setMetadataError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isPredictingGenre, setIsPredictingGenre] = useState(false);
+  const genreFileInputRef = useRef<HTMLInputElement>(null);
 
   // --- Credits share link ----------------------------------------------------
   const [link, setLink] = useState<ReleaseCreditLink | null>(null);
@@ -201,6 +224,62 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
       onToast?.(err instanceof Error ? err.message : 'Could not save metadata.', 'error');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePredictGenre = async (file: File) => {
+    if (isPredictingGenre) return;
+
+    // Same validation the route runs, so an oversized or non-audio pick fails
+    // instantly instead of spending an upload.
+    const validation = validateGenrePredictionUpload({
+      fileName: file.name,
+      mimeType: file.type,
+      fileSize: file.size,
+    });
+    if (!validation.ok) {
+      onToast?.(validation.error, 'error');
+      return;
+    }
+
+    setIsPredictingGenre(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        onToast?.('Session expired. Please sign in again.', 'error');
+        return;
+      }
+      const body = new FormData();
+      body.append('file', file, file.name);
+      // No Content-Type header — the browser sets the multipart boundary.
+      const res = await fetch(`/api/releases/${releaseId}/metadata/predict-genre`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        genre?: string;
+        confidence?: number | null;
+        error?: string;
+      };
+      if (!res.ok || !data.genre) {
+        onToast?.(data.error || 'Could not predict a genre from that file.', 'error');
+        return;
+      }
+      // The form has no dirty tracking — "Save details" is always enabled — so
+      // filling the field is all that's needed. Nothing persists until the
+      // user saves, and the audio itself is never stored.
+      const genre = data.genre;
+      setForm((f) => ({ ...f, genre }));
+      const confidenceSuffix =
+        typeof data.confidence === 'number'
+          ? ` (${Math.round(data.confidence * 100)}% confidence)`
+          : '';
+      onToast?.(`Predicted genre: ${genre}${confidenceSuffix} — review and save.`, 'success');
+    } catch (err) {
+      onToast?.(err instanceof Error ? err.message : 'Could not predict a genre.', 'error');
+    } finally {
+      setIsPredictingGenre(false);
     }
   };
 
@@ -348,7 +427,42 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
           <div className="mt-4 grid grid-cols-1 gap-3 border border-stroke-default bg-bg-surface p-4 sm:grid-cols-2">
             <Field label="ISRC" value={form.isrc} onChange={(v) => setForm((f) => ({ ...f, isrc: v }))} />
             <Field label="UPC" value={form.upc} onChange={(v) => setForm((f) => ({ ...f, upc: v }))} />
-            <Field label="Genre" value={form.genre} onChange={(v) => setForm((f) => ({ ...f, genre: v }))} />
+            <Field
+              label="Genre"
+              value={form.genre}
+              onChange={(v) => setForm((f) => ({ ...f, genre: v }))}
+              labelAction={
+                GENRE_PREDICTION_ENABLED ? (
+                  <>
+                    <input
+                      ref={genreFileInputRef}
+                      type="file"
+                      accept={GENRE_PREDICTION_ACCEPT_ATTR}
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        // Reset so picking the same file again still fires.
+                        event.target.value = '';
+                        if (file) void handlePredictGenre(file);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => genreFileInputRef.current?.click()}
+                      disabled={isPredictingGenre || isSaving}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-60"
+                    >
+                      {isPredictingGenre ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3 w-3" />
+                      )}
+                      {isPredictingGenre ? 'Predicting…' : 'Predict from audio'}
+                    </button>
+                  </>
+                ) : undefined
+              }
+            />
             <Field
               label="Subgenre"
               value={form.subgenre}
@@ -572,22 +686,47 @@ function Field({
   value,
   onChange,
   placeholder,
+  labelAction,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  labelAction?: React.ReactNode;
 }) {
+  const inputId = useId();
+  const input = (
+    <input
+      id={labelAction ? inputId : undefined}
+      type="text"
+      value={value}
+      placeholder={placeholder}
+      onChange={(event) => onChange(event.target.value)}
+      className="mt-1 w-full border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+    />
+  );
+
+  // With a label action, the wrapper becomes a div and the label text an
+  // explicit <label htmlFor> — a button must not nest inside a <label>, or
+  // clicking it would also activate the labelled input.
+  if (labelAction) {
+    return (
+      <div className="block text-sm">
+        <div className="flex items-center justify-between gap-2">
+          <label htmlFor={inputId} className="text-xs text-content-tertiary">
+            {label}
+          </label>
+          {labelAction}
+        </div>
+        {input}
+      </div>
+    );
+  }
+
   return (
     <label className="block text-sm">
       <span className="text-xs text-content-tertiary">{label}</span>
-      <input
-        type="text"
-        value={value}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1 w-full border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
-      />
+      {input}
     </label>
   );
 }

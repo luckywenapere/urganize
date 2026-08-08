@@ -36,7 +36,7 @@ export function ReleasesColumn({
       <button
         type="button"
         onClick={onCreateRelease}
-        className="motion-focus motion-press mx-auto flex h-11 w-full max-w-[61.8vw] items-center justify-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:hidden"
+        className="motion-focus motion-press flex h-11 w-full items-center justify-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:hidden"
       >
         <Plus className="h-4 w-4" />
         New release
@@ -58,31 +58,36 @@ export function ReleasesColumn({
           }
         />
       ) : (
-        // Card grid: 2-up below lg (stacked layout — phones / tablets),
-        // 3-up at lg+ (inside the 2-pane workspace, the Releases column is
-        // ~566px at 1280 viewport — 3-up gives ~180px cards with the square
-        // cover art shrinking proportionally, instead of the 2-up ~277px
-        // banners that wasted vertical space).
+        // Full-width horizontal ROWS — square art thumbnail beside the meta
+        // (the `focused` card variant), one per line at every width this
+        // component renders at (it only ever mounts inside WorkspaceView's
+        // `lg:hidden` branch).
         //
-        // Below sm (phones) the cards used to run edge to edge, so the
-        // square cover art ballooned into a full-screen banner (founder
-        // call, 2026-07-23). Each card is now centered and capped at the
-        // GOLDEN SECTION of the viewport width (100vw/φ ≈ 61.8vw) — with
-        // the square art plus the meta block, the card itself lands almost
-        // exactly on a 1:1.618 golden rectangle, and a one-release catalog
-        // fits a phone screen without scrolling.
-        <div className="grid gap-3 max-sm:justify-items-center sm:grid-cols-2 lg:grid-cols-3">
+        // Supersedes the golden-section treatment (founder call, 2026-08-07).
+        // History, so this isn't re-litigated: cards originally ran edge to
+        // edge as tiles, and the square cover art ballooned into a
+        // full-screen banner (founder call, 2026-07-23); the fix capped each
+        // tile at 100vw/φ ≈ 61.8vw and centered it. That killed the balloon
+        // but left ~38% of a 390px screen empty with only ~1.9 releases
+        // visible per screen — filling neither axis.
+        //
+        // Rows fix both at once: the art is bounded by the row's fixed
+        // thumbnail width (w-28/sm:w-36) rather than the viewport, so it
+        // physically cannot balloon, while the meta column absorbs the full
+        // width. ~4-5 releases per screen. It's also the same card the
+        // desktop focused view uses, so phone and desktop speak one language.
+        <div className="space-y-3">
           {releases.map(({ release, tasksDone, tasksTotal, coverArtUrl }) => (
-            <div key={release.id} className="w-full max-w-[61.8vw] sm:max-w-none">
-              <WorkspaceReleaseCard
-                release={release}
-                tasksDone={tasksDone}
-                tasksTotal={tasksTotal}
-                selected={scopedReleaseId === release.id}
-                onSelect={onSelect}
-                coverArtUrl={coverArtUrl}
-              />
-            </div>
+            <WorkspaceReleaseCard
+              key={release.id}
+              release={release}
+              tasksDone={tasksDone}
+              tasksTotal={tasksTotal}
+              selected={scopedReleaseId === release.id}
+              onSelect={onSelect}
+              coverArtUrl={coverArtUrl}
+              variant="focused"
+            />
           ))}
         </div>
       )}
