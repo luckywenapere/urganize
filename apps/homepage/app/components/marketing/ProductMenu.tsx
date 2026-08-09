@@ -4,14 +4,22 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { FaChevronDown } from "react-icons/fa6";
 
-// Order is deliberate and load-bearing, not cosmetic: these are the four
-// pages we want Google to surface as sitelinks, in this order (founder call,
-// 2026-08-06). Link order is one of the few sitelink signals we control —
+// Order is deliberate and load-bearing, not cosmetic: this is the order we
+// want Google to surface as sitelinks (founder calls, 2026-08-06 and
+// 2026-08-09). Link order is one of the few sitelink signals we control —
 // Google picks and ranks sitelinks itself, so this biases the choice rather
 // than dictating it. Why Urganize and Privacy trail deliberately; Privacy is
 // additionally noindexed (see lib/seo.ts) so it can never be a candidate,
 // while its link stays here so crawlers can still reach it and READ that tag.
+//
+// Log in / Sign up point at pages on THIS domain, not straight at
+// app.urganize.app, and that's the whole point: sitelinks under the
+// urganize.app result can only be urganize.app pages — a subdomain is a
+// separate site as far as that block is concerned. Those two pages then hand
+// off to the app (see lib/app-urls.ts).
 const productLinks = [
+  { href: "/login", label: "Log in" },
+  { href: "/signup", label: "Sign up" },
   { href: "/features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
   { href: "/for-managers", label: "For managers" },
