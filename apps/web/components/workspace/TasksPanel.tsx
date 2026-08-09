@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Newspaper, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Newspaper, NotebookPen, Plus } from 'lucide-react';
 import {
   getTaskSectionLabel,
   groupTasksIntoSections,
@@ -34,6 +35,9 @@ const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 // credit capture, the third conscious v1 scope expansion (see CLAUDE.md).
 // Same shape as the Press kit link above.
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
+
+// Notes entry point: same flag AppTopbar and the identity panel read.
+const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 
 // Overdue first (genuine slippage, most urgent), then Catch Up (start-here
 // for compressed-runway plans — calm, neutral framing), then standard
@@ -341,6 +345,22 @@ export function TasksPanel({
                 Beta
               </span>
             </button>
+          ) : null}
+          {/* Notes for this release. Deliberately a plain LINK, not a scene
+              toggle like its neighbours: notes are a global surface that
+              happens to filter by release, not a per-release panel body — so
+              this navigates to the notes page pre-filtered rather than
+              swapping this panel's contents. (Not a regression of the
+              2026-08-05 "scenes render inline, not as pages" call: that call
+              was about the four release scenes, which stay inline.) */}
+          {NOTES_ENABLED && scopedRelease ? (
+            <Link
+              href={`/dashboard/notes?release=${scopedRelease.id}`}
+              className={neutralPillClass}
+            >
+              <NotebookPen className="h-3.5 w-3.5" aria-hidden="true" />
+              Notes
+            </Link>
           ) : null}
           {extraActions}
         </div>

@@ -8,7 +8,7 @@ import { ShieldCheck } from "lucide-react";
 import { useWorkspaceIdentityStore } from "@/stores/useWorkspaceIdentityStore";
 import { useReleaseStore } from "@/stores/useReleaseStore";
 import { useChappiStore } from "@/stores/useChappiStore";
-import { CatalogIcon, ChappiIcon, GearIcon } from "@/components/app/BrandIcons";
+import { CatalogIcon, ChappiIcon, GearIcon, NotesIcon } from "@/components/app/BrandIcons";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 
 // The card's nav (URG-229). Same three global surfaces the topbar exposes,
@@ -16,7 +16,18 @@ import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 // as one system. Active matching mirrors AppTopbar's: exact for /dashboard so
 // a scoped release (?release=) still counts as the catalog, prefix for the
 // others. Admin is appended separately below — it's visibility-gated.
-const NAV_ITEMS = [
+type NavItem = {
+  href: string;
+  label: string;
+  Icon: (props: { className?: string }) => React.ReactElement;
+  isActive: (pathname: string) => boolean;
+};
+
+// Same flag AppTopbar reads for its Notes icon — the two entry points appear
+// and disappear together.
+const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === "true";
+
+const NAV_ITEMS: readonly NavItem[] = [
   {
     href: "/dashboard",
     label: "Catalog",
@@ -29,13 +40,25 @@ const NAV_ITEMS = [
     Icon: ChappiIcon,
     isActive: (pathname: string) => pathname === "/dashboard/urgans",
   },
+  // Exact match, like its neighbours: usePathname excludes the query string,
+  // so a ?release= / ?note= deep link still lights this up.
+  ...(NOTES_ENABLED
+    ? [
+        {
+          href: "/dashboard/notes",
+          label: "Notes",
+          Icon: NotesIcon,
+          isActive: (pathname: string) => pathname === "/dashboard/notes",
+        },
+      ]
+    : []),
   {
     href: "/settings",
     label: "Settings",
     Icon: GearIcon,
     isActive: (pathname: string) => pathname.startsWith("/settings"),
   },
-] as const;
+];
 
 // Statuses that count as "still being worked" for the card's stat line.
 // Mirrors the URG-214 Linear issue's proposed definition — a release stops

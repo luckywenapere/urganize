@@ -11,12 +11,18 @@ import { useChappiStore } from '@/stores/useChappiStore';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
-import { CatalogIcon, ChappiIcon } from '@/components/app/BrandIcons';
+import { CatalogIcon, ChappiIcon, NotesIcon } from '@/components/app/BrandIcons';
 
 // Same flag ChappiPageClient reads. Inlined at build time (NEXT_PUBLIC_
 // prefix) so the icon only appears once Chappi's own dedicated page is
 // reachable.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
+// Same flag NotesPageClient and the /api/notes routes read. Deliberately
+// gated on its own, OUTSIDE the Chappi pair below: notes have nothing to do
+// with the assistant, and burying them in that fragment would hide them
+// whenever the assistant is switched off.
+const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 
 type AppTopbarProps = {
   /** Opens the release creation modal. Lifted to AppShell so this universal
@@ -276,7 +282,14 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
 
   return (
     <header className="sticky top-0 z-30 border-b border-stroke-subtle bg-bg-base/88 backdrop-blur-xl">
-      <div className="flex min-h-16 items-center gap-3 px-4 sm:px-5 md:px-6 lg:px-8">
+      {/* Tighter gap/padding below sm only. With Notes added, the phone-width
+          bar carries logo + 3 nav icons + bell + account = 80 + 5x40 + gaps.
+          At gap-3/px-4 that totals 352px against 343px of usable width at
+          375px — a real overflow. gap-2/px-3 buys it back (328 vs 351) and
+          still clears 360px; every value is restored from sm up, where the
+          bar has ample slack. The 40px hit targets are the app-wide touch
+          standard and are NOT what gives here. */}
+      <div className="flex min-h-16 items-center gap-2 px-3 sm:gap-3 sm:px-5 md:px-6 lg:px-8">
         {/* Stage 2: the logo now lives in the topbar (the sidebar that
             previously hosted it is gone). Links back to /dashboard so the
             top-left "click the logo" affordance still gets users home from
@@ -352,6 +365,27 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
               <ChappiTopbarAction />
             </Suspense>
           </>
+        ) : null}
+
+        {/* Notes — a plain destination, deliberately NOT part of the
+            Catalog/UrgAns toggle pair above. Those two are mutual toggles
+            because they're a binary (you're in one or the other); a third
+            surface breaks that metaphor, so this is an ordinary link that
+            lights up on its own route. Reads no search params, so unlike its
+            neighbours it needs no Suspense boundary. */}
+        {NOTES_ENABLED ? (
+          <Link
+            href="/dashboard/notes"
+            aria-label="Notes"
+            title="Notes"
+            className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
+              pathname === '/dashboard/notes'
+                ? 'bg-brand/10 text-brand'
+                : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
+            }`}
+          >
+            <NotesIcon className="h-[18px] w-[18px]" />
+          </Link>
         ) : null}
 
         {/* Phase 1 notifications surface — gated internally on
