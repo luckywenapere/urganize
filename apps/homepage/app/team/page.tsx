@@ -8,6 +8,10 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "The team behind Urganize: artist managers, artists, and engineers making sure your music gets the release it deserves.",
   path: "/team",
+  // Kept out of search so the homepage's sitelinks stay commercial
+  // (Features / Pricing / For managers / For labels). The page stays public
+  // and footer-linked — it just never competes as a search result.
+  noIndex: true,
 });
 
 // Bios are founder-approved facts. Never edit a bio without re-approval —
