@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.42.0",
+    date: "August 9, 2026",
+    highlights: [
+      "Added Notes — a private place to jot things down the moment they come up, mid-call or mid-DM, with no setup and nothing to fill in first. Link a note to a release whenever it's relevant, or leave it as-is; either way it saves as you type.",
+    ],
+  },
+  {
     version: "0.41.4",
     date: "August 8, 2026",
     highlights: [
