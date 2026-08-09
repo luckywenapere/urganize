@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
 import { RAIL_OPEN_KEY, RAIL_OPEN_VERSION, useChappiStore } from '@/stores/useChappiStore';
@@ -15,6 +15,12 @@ import { ToastProvider } from '@/components/shared/ToastProvider';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
 import { registerPushServiceWorker } from '@/lib/push';
+import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
+
+/** The only routes a signed-in user navigates between. Deliberately short —
+ * every entry costs a speculative request, and prefetching pages nobody opens
+ * is exactly the kind of waste this work is trying to remove. */
+const PREFETCHED_ROUTES = ['/dashboard', '/dashboard/urgans', '/settings'];
 
 // None of these are needed for first paint — the onboarding wizard, the
 // create-release modal, and the floating support widgets used to be
@@ -81,6 +87,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isAuthLoading = useAuthStore((state) => state.isLoading);
   const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
+  const router = useRouter();
   // Lifted here so the universal topbar "New release" button opens the same
   // creation modal the page-level buttons use, from any dashboard page,
   // without navigating away.
@@ -172,6 +179,26 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
     useChappiStore.getState().setRailOpen(true);
   }, [pathname]);
+
+  // Warm the route chunks for the app's three real destinations while the
+  // browser is idle. These pages are thin server wrappers over big client
+  // components, so what a prefetch actually buys is the JS chunk landing in
+  // cache before the click — on a slow link that's the whole difference
+  // between an instant switch and a skeleton. Once per mount, and skipped on
+  // Data Saver / 2g (see lib/connection.ts). Prefetch is a no-op in dev.
+  useEffect(() => {
+    if (!isAuthenticated || isAuthLoading) return;
+    if (!shouldBackgroundPrefetch()) return;
+    return runWhenIdle(() => {
+      for (const route of PREFETCHED_ROUTES) {
+        try {
+          router.prefetch(route);
+        } catch {
+          // Prefetch is best-effort; a failure must never break navigation.
+        }
+      }
+    });
+  }, [isAuthLoading, isAuthenticated, router]);
 
   // Register the push service worker once per load. Registration alone never
   // prompts for permission — the prompt only fires when the user explicitly

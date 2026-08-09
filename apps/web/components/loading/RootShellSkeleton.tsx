@@ -5,8 +5,8 @@ import { LoadingMark } from '@urganize/ui';
 /**
  * Root-segment Suspense fallback (mounted by `app/loading.tsx`). Catches any
  * route that doesn't ship its own `loading.tsx`. Routes that DO ship one
- * (workspace, settings, release detail, auth) render their tailored skeletons
- * instead; this is a neutral fallback only.
+ * (dashboard, settings, admin, auth, and the public token pages) render their
+ * tailored skeletons instead; this is a neutral fallback only.
  *
  * Frame-reservation doesn't apply at this level — the eventual content shape
  * is unknown — so the render is the small centered brand mark (2026-08-05:

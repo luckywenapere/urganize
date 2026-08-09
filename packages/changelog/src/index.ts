@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.41.4",
+    date: "August 8, 2026",
+    highlights: [
+      "The app is faster to open, especially on a slow or busy connection. Your releases and activities now start loading the moment the page does, instead of waiting on a sign-in check first, and the server fetches them all at once rather than one after another.",
+      "Metadata, Files, Press kit and Content calendar now open instantly. Once you pick a release, they quietly load in the background while you read your activities, and re-opening one you've already seen doesn't reload at all.",
+      "Switching between your workspace, UrgAns and Settings is quicker, and each shows one clean loading state instead of flashing through two.",
+      "None of this runs when your phone is on Data Saver or a 2G connection, so it never spends your data without earning it.",
+    ],
+  },
+  {
     version: "0.41.3",
     date: "August 7, 2026",
     highlights: [
