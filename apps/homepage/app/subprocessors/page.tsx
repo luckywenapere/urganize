@@ -9,6 +9,11 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "The third-party services Urganize uses to operate, and what data each one processes.",
   path: "/subprocessors",
+  // Same class as Privacy and Terms, so it gets the same treatment: kept out
+  // of search so the homepage's sitelinks stay commercial. Noindex hides the
+  // page from RESULTS only — it stays public and linked from the privacy
+  // policy, which is what a GDPR subprocessor disclosure actually requires.
+  noIndex: true,
 });
 
 // Keep this date real — it moves only when the list changes.

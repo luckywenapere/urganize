@@ -43,16 +43,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.3,
     },
     // Deliberately absent, and it must stay that way: /privacy, /team,
-    // /community, /brand, /changelog and /terms all emit `noindex` (see
-    // lib/seo.ts) so the homepage's sitelinks stay commercial. Listing a
-    // noindexed URL here would ask crawlers to index the very page that tells
-    // them not to. They stay crawlable via robots.txt and their footer links —
-    // that access is exactly what lets a crawler read the noindex and drop
-    // them from results. Adding any of them back here re-opens the problem.
-    {
-      url: `${SITE_URL}/subprocessors`,
-      changeFrequency: "yearly",
-      priority: 0.2,
-    },
+    // /community, /brand, /changelog, /terms and /subprocessors all emit
+    // `noindex` (see lib/seo.ts) so the homepage's sitelinks stay commercial.
+    // Listing a noindexed URL here would ask crawlers to index the very page
+    // that tells them not to. They stay crawlable via robots.txt and their
+    // footer links — that access is exactly what lets a crawler read the
+    // noindex and drop them from results. Adding any of them back here
+    // re-opens the problem. What's left below is the full indexable surface.
   ];
 }
