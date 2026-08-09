@@ -37,10 +37,19 @@ const statusLabel: Record<string, string> = {
   archived: 'Archived',
 };
 
-function formatReleaseDate(value: string | null): string {
-  if (!value) return 'Date not set';
+/**
+ * Returns null — not a placeholder string — when a release has no date, so
+ * the caller can drop the line entirely (founder call, 2026-08-09). A date
+ * is optional since v0.41.0, so "Date not set" was printed on every release
+ * created without one: a permanent label restating an absence the card
+ * already communicates by having nothing there. Setting a date is prompted
+ * where it can actually be acted on (SetReleaseDateCard, in the activity
+ * list), not nagged from a card that can't edit it.
+ */
+function formatReleaseDate(value: string | null): string | null {
+  if (!value) return null;
   const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return 'Date not set';
+  if (Number.isNaN(parsed.getTime())) return null;
   return new Intl.DateTimeFormat('en', {
     month: 'short',
     day: 'numeric',
@@ -82,6 +91,7 @@ export function WorkspaceReleaseCard({
 }: WorkspaceReleaseCardProps) {
   const progress = tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0;
   const normalizedStatus = statusLabel[release.status] || release.status.replace(/_/g, ' ');
+  const releaseDateLabel = formatReleaseDate(release.releaseDate);
 
   // Shared meta block — identical content in both layouts; only the frame
   // around it changes.
@@ -113,9 +123,9 @@ export function WorkspaceReleaseCard({
         {release.title}
       </h3>
 
-      <p className="mt-2 text-xs text-content-secondary">
-        {formatReleaseDate(release.releaseDate)}
-      </p>
+      {releaseDateLabel ? (
+        <p className="mt-2 text-xs text-content-secondary">{releaseDateLabel}</p>
+      ) : null}
 
       <div className="mt-3">
         <div className="mb-1.5 flex items-center justify-between text-[11px]">

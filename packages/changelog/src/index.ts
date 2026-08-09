@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.42.1",
+    date: "August 9, 2026",
+    highlights: [
+      "A release with no date set no longer shows a date line at all. It used to read \"Date not set\" on every card, which said nothing you couldn't already see — the prompt to add one still sits in the release's activity list, where you can actually set it.",
+    ],
+  },
+  {
     version: "0.42.0",
     date: "August 9, 2026",
     highlights: [

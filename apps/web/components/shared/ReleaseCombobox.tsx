@@ -387,11 +387,16 @@ export function ReleaseCombobox({
                       </p>
                     </div>
 
-                    <div className="shrink-0 text-right">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-content-tertiary">
-                        {formatReleaseDate(item.release.releaseDate)}
-                      </p>
-                    </div>
+                    {/* Dateless releases render no date column at all rather
+                        than a placeholder — formatReleaseDate returns null
+                        for them (2026-08-09). */}
+                    {formatReleaseDate(item.release.releaseDate) ? (
+                      <div className="shrink-0 text-right">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-content-tertiary">
+                          {formatReleaseDate(item.release.releaseDate)}
+                        </p>
+                      </div>
+                    ) : null}
                   </button>
                 );
               })
