@@ -1485,6 +1485,22 @@ body:focus-within .keyboard-hint,
   }
 }
 
+/* The notes page's two-pane column height at lg+, where the list and the
+   editor scroll independently and the PAGE itself never scrolls. Below lg the
+   page flows normally (single pane at a time, document scroll) — an internal
+   scroll box there would trap touch gestures, the same reason TasksPanel keeps
+   its scroll box lg:-prefixed. Chrome being subtracted matches
+   .chappi-shell-height's desktop term, since Notes uses AppShell's default
+   <main> padding: topbar min-h-16 + 1px border (4rem) + main pt-5 (1.25rem) +
+   main md:pb-10 (2.5rem). Shared by NotesPageClient and NotesPageSkeleton —
+   keep both in sync (see CLAUDE.md's loading-skeleton rule). */
+@media (min-width: 1024px) {
+  .notes-shell-height {
+    height: calc(100dvh - 7.75rem - 1px);
+    min-height: 24rem;
+  }
+}
+
 .mobile-safe-bottom-offset {
   bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
 }
