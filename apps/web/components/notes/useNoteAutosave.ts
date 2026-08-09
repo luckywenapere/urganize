@@ -24,6 +24,13 @@ export type NoteAutosave = {
   flush: () => void;
   /** True while a save is in flight — the virgin-note reaper consults this. */
   isSaving: () => boolean;
+  /**
+   * The draft as of right now, readable without waiting for a re-render.
+   * The reaper needs this: it runs synchronously on a note switch, before the
+   * effect that flushes the outgoing note, so the store can still show an
+   * empty body for a note the user has actually typed into.
+   */
+  getDraft: () => string;
 };
 
 /**
@@ -150,6 +157,8 @@ export function useNoteAutosave({
 
   const isSaving = useCallback(() => inFlightRef.current, []);
 
+  const getDraft = useCallback(() => draftRef.current, []);
+
   // Selection change: flush whatever the outgoing note still owes, then reseed
   // for the incoming one. Runs before the new note's first keystroke, so no
   // edit can be attributed to the wrong id.
@@ -188,5 +197,5 @@ export function useNoteAutosave({
     []
   );
 
-  return { draft, saveState, setDraft, flush, isSaving };
+  return { draft, saveState, setDraft, flush, isSaving, getDraft };
 }

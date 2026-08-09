@@ -89,6 +89,11 @@ export default function NotesPageClient() {
     (noteId: string | null) => {
       if (!noteId || !sessionCreatedIds.current.has(noteId)) return;
       if (autosave.isSaving()) return;
+      // The draft is checked as well as the stored body: this runs
+      // synchronously on a note switch, BEFORE the effect that flushes the
+      // outgoing note, so the store can still read empty for a note that has
+      // real text waiting to be saved.
+      if (autosave.getDraft().trim() !== '') return;
       const note = useNotesStore.getState().notes.find((item) => item.id === noteId);
       if (!note || note.body.trim() !== '') return;
       sessionCreatedIds.current.delete(noteId);

@@ -171,15 +171,17 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     return note;
   },
   update: async (noteId, patch) => {
-    const { accessToken, userId } = await getSession();
-    if (!accessToken) return;
-
     const previous = get().notes;
     const target = previous.find((note) => note.id === noteId);
     if (!target) return;
 
     // Optimistic merge (never a replace): a pin toggle in flight must not
     // clobber body text the autosave is separately persisting, and vice versa.
+    //
+    // This runs BEFORE the first await on purpose. getSession() is async, and
+    // anything that inspects the store in between — notably the virgin-note
+    // reaper on unmount — would otherwise see the pre-edit body and conclude
+    // the note was never typed into.
     const optimistic = sortNotes(
       previous.map((note) =>
         note.id === noteId
@@ -194,6 +196,9 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       )
     );
     set({ notes: optimistic });
+
+    const { accessToken, userId } = await getSession();
+    if (!accessToken) return;
 
     try {
       const response = await fetch(`/api/notes/${noteId}`, {
