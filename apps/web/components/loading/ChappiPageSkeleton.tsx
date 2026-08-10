@@ -2,6 +2,12 @@
 
 import { SkeletonBlock } from './SkeletonBlock';
 
+// Mirrors ChappiPageClient's own flag read — keep both in sync (CLAUDE.md's
+// loading-skeleton rule). The mobile nav bar's WhatsApp footer row is a flex
+// child of the SAME shrink-to-fit column this skeleton already renders as
+// aria-hidden filler; it doesn't change this skeleton's own shape.
+const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
+
 /**
  * Chappi page loading state, rendered inline by `ChappiPageClient` while
  * auth/the command-center fetch are in flight (same inline-swap rationale
@@ -32,7 +38,10 @@ import { SkeletonBlock } from './SkeletonBlock';
  */
 export function ChappiPageSkeleton() {
   return (
-    <div className="chappi-shell-height flex flex-col" aria-hidden="true">
+    <div
+      className={`${MOBILE_NAV_ENABLED ? 'chappi-shell-height-nav' : 'chappi-shell-height'} flex flex-col`}
+      aria-hidden="true"
+    >
       <div className="hidden h-7 shrink-0 justify-end lg:flex">
         <SkeletonBlock className="h-7 w-7" />
       </div>
