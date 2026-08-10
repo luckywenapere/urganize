@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, Loader2, Pin, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, Loader2, Pin, Sparkles, Trash2 } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/relative-time';
 import { NoteReleasePicker } from './NoteReleasePicker';
 import type { NoteSaveState } from './useNoteAutosave';
@@ -19,6 +19,9 @@ type NoteEditorProps = {
   onSetRelease: (releaseId: string | null) => void;
   onTogglePin: () => void;
   onRequestDelete: () => void;
+  /** Turn this note into a release plan. Absent hides the action — the notes
+   * page decides, because it knows whether the linked release already has one. */
+  onMakePlan?: () => void;
   onBack: () => void;
   /** True only for a note that was just created — focus once, then never steal. */
   autoFocus: boolean;
@@ -38,6 +41,7 @@ export function NoteEditor({
   onRetry,
   onSetRelease,
   onTogglePin,
+  onMakePlan,
   onRequestDelete,
   onBack,
   autoFocus,
@@ -123,6 +127,19 @@ export function NoteEditor({
           linkedReleaseId={note.releaseId}
           onSelect={onSetRelease}
         />
+
+        {onMakePlan ? (
+          <button
+            type="button"
+            onClick={onMakePlan}
+            title="Turn this note into a release plan"
+            className="motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:border-brand/50 hover:bg-bg-hover"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+            <span className="hidden sm:inline">Make a plan</span>
+            <span className="sm:hidden">Plan</span>
+          </button>
+        ) : null}
 
         <div className="min-w-0 flex-1" />
 

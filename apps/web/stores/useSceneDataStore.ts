@@ -14,6 +14,7 @@ import {
   withinPersistBudget,
   type SceneCacheEntry,
   type SceneCachePayload,
+  type CacheableSceneName,
   type SceneName,
 } from '@/lib/scene-cache';
 import { shouldBackgroundPrefetch } from '@/lib/connection';
@@ -70,15 +71,15 @@ type SceneDataStore = {
   entries: Record<string, SceneStateEntry>;
   /** Cached payload for a scene, or null when nothing renderable is held.
    * Reads memory first, then falls back to (and adopts) the persisted copy. */
-  getScene: <S extends SceneName>(releaseId: string, scene: S) => ScenePayloadMap[S] | null;
-  loadScene: <S extends SceneName>(
+  getScene: <S extends CacheableSceneName>(releaseId: string, scene: S) => ScenePayloadMap[S] | null;
+  loadScene: <S extends CacheableSceneName>(
     releaseId: string,
     scene: S,
     options?: { force?: boolean; prefetch?: boolean }
   ) => Promise<ScenePayloadMap[S] | null>;
   /** Write-through after a mutation, so the next open reflects the change
    * without a round trip. */
-  setScene: <S extends SceneName>(
+  setScene: <S extends CacheableSceneName>(
     releaseId: string,
     scene: S,
     data: ScenePayloadMap[S]
@@ -196,7 +197,7 @@ async function readJson(response: Response): Promise<Record<string, unknown>> {
   return data;
 }
 
-const FETCHERS: Record<SceneName, SceneFetcher> = {
+const FETCHERS: Record<CacheableSceneName, SceneFetcher> = {
   // Two independent endpoints — the section used to fire them as two separate
   // mount effects, so they raced rather than being deliberately parallel; this
   // makes the pairing explicit and lets the scene resolve in one round trip.
@@ -258,7 +259,7 @@ const FETCHERS: Record<SceneName, SceneFetcher> = {
 export const useSceneDataStore = create<SceneDataStore>((set, get) => ({
   entries: {},
 
-  getScene: <S extends SceneName>(releaseId: string, scene: S) => {
+  getScene: <S extends CacheableSceneName>(releaseId: string, scene: S) => {
     if (!releaseId) return null;
     const key = sceneEntryKey(releaseId, scene);
     const now = Date.now();
@@ -277,7 +278,7 @@ export const useSceneDataStore = create<SceneDataStore>((set, get) => ({
     return entry.data as ScenePayloadMap[S];
   },
 
-  loadScene: async <S extends SceneName>(
+  loadScene: async <S extends CacheableSceneName>(
     releaseId: string,
     scene: S,
     options?: { force?: boolean; prefetch?: boolean }
@@ -366,7 +367,7 @@ export const useSceneDataStore = create<SceneDataStore>((set, get) => ({
     }
   },
 
-  setScene: <S extends SceneName>(releaseId: string, scene: S, data: ScenePayloadMap[S]) => {
+  setScene: <S extends CacheableSceneName>(releaseId: string, scene: S, data: ScenePayloadMap[S]) => {
     if (!releaseId) return;
     const key = sceneEntryKey(releaseId, scene);
     const savedAt = Date.now();

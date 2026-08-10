@@ -6,6 +6,7 @@ import {
   SCENE_NAMES,
   SCENE_PERSIST_MAX_BYTES,
   SCENE_PREFETCH_ORDER,
+  isCacheableScene,
   isSceneCachePayload,
   isSceneFresh,
   isSceneRenderable,
@@ -57,9 +58,21 @@ describe('persist policy', () => {
     }
   });
 
-  it('prefetches every scene exactly once', () => {
-    expect([...SCENE_PREFETCH_ORDER].sort()).toEqual([...SCENE_NAMES].sort());
+  it('prefetches every cacheable scene exactly once', () => {
+    // Every scene the cache layer can fetch is warmed, and none twice. The
+    // plan scene is deliberately not one of them: it is an editable document
+    // rather than a snapshot, so it owns its own reads and writes.
+    const cacheable = [...SCENE_NAMES].filter(isCacheableScene);
+    expect([...SCENE_PREFETCH_ORDER].sort()).toEqual([...cacheable].sort());
     expect(new Set(SCENE_PREFETCH_ORDER).size).toBe(SCENE_PREFETCH_ORDER.length);
+  });
+
+  it('keeps the plan scene out of the cache entirely', () => {
+    // Both halves matter: not prefetched, and not persisted. A cached copy of a
+    // plan somebody is editing could overwrite newer text with older.
+    expect(isCacheableScene('plan')).toBe(false);
+    expect(shouldPersistScene('plan')).toBe(false);
+    expect((SCENE_PREFETCH_ORDER as readonly string[]).includes('plan')).toBe(false);
   });
 });
 

@@ -50,6 +50,15 @@ const CreateReleaseModal = dynamic(
   () => import('@/components/releases/CreateReleaseModal').then((m) => m.CreateReleaseModal),
   { ssr: false }
 );
+// Mounted once for the whole app so the workspace empty-state card, a note,
+// and an UrgAns chip all open the same instance — the three live in different
+// ownership islands, and threading a callback to each would touch a file per
+// entry point. Dynamic + flag-gated, so while the planner is off its chunk is
+// never requested.
+const PlannerIntakeModal = dynamic(
+  () => import('@/components/planner/PlannerIntakeModal').then((m) => m.PlannerIntakeModal),
+  { ssr: false }
+);
 const WhatsNewModal = dynamic(
   () => import('@/components/app/WhatsNewModal').then((m) => m.WhatsNewModal),
   { ssr: false }
@@ -66,6 +75,11 @@ const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTIC
 // WhatsApp founder line moves into their footers. With the flag off, the
 // standalone SupportChat pill renders exactly as before.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
+// The UrgAns planner's intake modal is mounted app-wide (see the dynamic import
+// above), so a note or an assistant chip can open it without the notes page or
+// the assistant page owning a copy.
+const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
 // The workspace identity card (URG-214) — a persistent left column, mirroring
 // the UrgAns rail's right column. Only meaningful once workspaces exist, so
@@ -338,6 +352,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           void useReleaseStore.getState().loadCommandCenter();
         }}
       />
+      {PLANNER_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
+        <PlannerIntakeModal />
+      ) : null}
       {/* "What's new" (founder request, 2026-07-23): announces changelog
           entries this device hasn't seen yet, once per release, on signed-in
           app surfaces only. */}

@@ -5,6 +5,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useNotesStore } from '@/stores/useNotesStore';
+import { useTaskStore } from '@/stores/useTaskStore';
+import { usePlannerStore } from '@/stores/usePlannerStore';
 import { NotesList } from '@/components/notes/NotesList';
 import { NoteEditor, NoteEditorEmpty } from '@/components/notes/NoteEditor';
 import { NoteDeleteDialog } from '@/components/notes/NoteDeleteDialog';
@@ -18,6 +20,13 @@ import { deriveNoteTitle } from '@/lib/notes';
 // server-side gate; the flag is inlined at build time).
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 
+// "Turn this note into a release plan" needs the planner as well as notes.
+const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
+
+/** Free text the intake carries over is capped, so cap it here too rather than
+ * shipping a whole notebook page into a prompt. */
+const NOTE_PREFILL_MAX = 2000;
+
 export default function NotesPageClient() {
   const router = useRouter();
   const pathname = usePathname();
@@ -25,6 +34,8 @@ export default function NotesPageClient() {
   const { user, isLoading: authLoading } = useAuthStore();
   const { releases, loadCommandCenter } = useReleaseStore();
   const { notes, isInitialLoading, load, create, update, remove } = useNotesStore();
+  const tasks = useTaskStore((state) => state.tasks);
+  const openIntake = usePlannerStore((state) => state.openIntake);
 
   const { selectedNoteId, selectNote } = useNoteSelection();
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
@@ -115,6 +126,36 @@ export default function NotesPageClient() {
     },
     [reapIfVirgin, selectNote, selectedNoteId]
   );
+
+  /**
+   * Turn this note into a release plan.
+   *
+   * Offered when the note has no release, or when its release has no activities
+   * yet. Hidden once the linked release has a plan: the action would have
+   * nothing to do, and a disabled mystery pill in an already-tight header row
+   * on a phone is worse than no pill.
+   *
+   * The LIVE draft body is what travels, not the stored note, so whatever the
+   * manager was still typing rides along.
+   */
+  const planFromNote = useMemo(() => {
+    if (!PLANNER_ENABLED || !selectedNote) return undefined;
+
+    const linkedReleaseId = selectedNote.releaseId;
+    if (linkedReleaseId) {
+      const hasActivities = tasks.some((task) => task.releaseId === linkedReleaseId);
+      if (hasActivities) return undefined;
+    }
+
+    return () => {
+      openIntake({
+        source: 'note',
+        releaseId: linkedReleaseId || undefined,
+        noteId: selectedNote.id,
+        prefill: { extraNotes: autosave.draft.slice(0, NOTE_PREFILL_MAX) },
+      });
+    };
+  }, [selectedNote, tasks, openIntake, autosave.draft]);
 
   const handleBack = useCallback(() => {
     const outgoing = selectedNoteId;
@@ -265,6 +306,7 @@ export default function NotesPageClient() {
               onSetRelease={(releaseId) => void update(selectedNote.id, { releaseId })}
               onTogglePin={() => void update(selectedNote.id, { pinned: !selectedNote.pinned })}
               onRequestDelete={() => setIsDeleteOpen(true)}
+              onMakePlan={planFromNote}
               onBack={handleBack}
               autoFocus={pendingFocusId === selectedNote.id}
               onAutoFocusConsumed={() => setPendingFocusId(null)}

@@ -5,10 +5,38 @@
 
 import type { ChappiChip, ChappiIntent, ChappiReply } from './types';
 
+// With the planner on, the three planning chips take the place of the bare
+// "New release" chip: planning IS how a release starts, and two doors that both
+// mint releases makes neither of them the main one.
+const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
+
+const PLANNER_CHIPS: ChappiChip[] = [
+  {
+    id: 'plan-single-6w',
+    label: 'Plan a single dropping in 6 weeks',
+    intent: 'plan_release',
+    plannerPreset: { releaseType: 'single', weeksOut: 6 },
+  },
+  {
+    id: 'plan-ep',
+    label: 'Plan an EP rollout',
+    intent: 'plan_release',
+    plannerPreset: { releaseType: 'ep' },
+  },
+  {
+    id: 'plan-small-budget',
+    label: 'Plan a release with a small budget',
+    intent: 'plan_release',
+    plannerPreset: { budget: 'under_100k' },
+  },
+];
+
 /** The quick-action chips shown under the prompt. Each maps to an existing
- * app action wired up in ChappiHero. */
+ * app action wired up in ChappiConversation. */
 export const CHAPPI_CHIPS: ChappiChip[] = [
-  { id: 'new-release', label: 'New release', intent: 'new_release' },
+  ...(PLANNER_ENABLED
+    ? PLANNER_CHIPS
+    : [{ id: 'new-release', label: 'New release', intent: 'new_release' as const }]),
   { id: 'add-task', label: 'Add activity', intent: 'add_task' },
   { id: 'todays-focus', label: "Today's focus", intent: 'todays_focus' },
   { id: 'generate-status', label: 'Generate status', intent: 'generate_status' },
@@ -26,8 +54,13 @@ export function resolveIntent(raw: string): ChappiIntent {
   if (has('task', 'to-do', 'todo', 'checklist item')) {
     return { kind: 'add_task' };
   }
+  // Before the 'release' branch, and only when the planner exists: "plan my
+  // release" contains both words, and planning is the more specific verb.
+  if (PLANNER_ENABLED && has('plan', 'rollout', 'roll out', 'campaign')) {
+    return { kind: 'plan_release' };
+  }
   if (has('release', 'single', 'album', ' ep', 'drop', 'song', 'track', 'project')) {
-    return { kind: 'new_release' };
+    return { kind: PLANNER_ENABLED ? 'plan_release' : 'new_release' };
   }
   if (has('status', 'update', 'report', 'recap', 'summary')) {
     return { kind: 'generate_status' };
@@ -46,7 +79,7 @@ export function buildHelpReply(): ChappiReply {
   return {
     text: "I can help you run your releases. I'm still learning to chat — for now, try one of these:",
     suggestions: [
-      'Create a new release',
+      PLANNER_ENABLED ? 'Plan a release' : 'Create a new release',
       'Add an activity',
       'What should I focus on today?',
       'Generate a status update',

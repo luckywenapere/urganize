@@ -20,7 +20,7 @@ const RELEASES_TABLE = 'releases';
 // Cold start (Python runtime + model load) plus inference can run well past a
 // warm request. One attempt, no retry: re-uploading a multi-MB body on retry
 // doubles the worst case for little gain. maxDuration 60 is the Hobby-plan
-// ceiling (the tailor-plan precedent), so the 30s upstream budget plus
+// ceiling (the plan route precedent), so the 30s upstream budget plus
 // auth/DB pre-work fits inside it with slack. Re-do this math before adding
 // retries.
 const PREDICTION_TIMEOUT_MS = 30_000;
@@ -29,7 +29,7 @@ export const maxDuration = 60;
 // Feature flag — the surface stays dark until
 // NEXT_PUBLIC_FEATURE_GENRE_PREDICTION is 'true'. When off this handler 404s,
 // so a direct API call can't reach the model through us either (the
-// tailor-plan/EPK precedent). Only meaningful alongside
+// plan/EPK precedent). Only meaningful alongside
 // NEXT_PUBLIC_FEATURE_METADATA, since the control lives on the Metadata scene.
 const isGenrePredictionEnabled = (): boolean =>
   process.env.NEXT_PUBLIC_FEATURE_GENRE_PREDICTION === 'true';

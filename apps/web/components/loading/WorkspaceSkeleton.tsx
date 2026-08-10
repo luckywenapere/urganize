@@ -37,11 +37,9 @@ const IDENTITY_PANEL_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' &&
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
-// The two AI actions the removed release detail page used to carry (Tailor
-// plan / Generate status update) now render as extra pills at the end of
-// this same header row (WorkspaceView), so the skeleton reserves their
-// width too when their flags are on.
-const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
+// The AI action the removed release detail page used to carry (Generate status
+// update) now renders as an extra pill at the end of this same header row
+// (WorkspaceView), so the skeleton reserves its width too when the flag is on.
 const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
 
 // The release recap pill (WorkspaceView) is deliberately NOT reserved here,
@@ -215,8 +213,12 @@ function TasksPanelSkeleton() {
     ...(FILES_ENABLED ? ['w-16'] : []), // Files
     ...(EPK_ENABLED ? ['w-24'] : []), // Press kit
     ...(PITCHING_ENABLED ? ['w-24'] : []), // Pitch + Beta tag
-    ...(TAILOR_PLAN_ENABLED ? ['w-28'] : []), // Tailor plan
     ...(STATUS_UPDATE_ENABLED ? ['w-40'] : []), // Generate status update
+    // The Plan pill is deliberately NOT reserved. Whether it renders depends on
+    // the release's activity count and whether a draft exists — data this
+    // skeleton is showing precisely because it does not have it yet. Guessing
+    // would make the row jump for every release that has a plan already, which
+    // is most of them. Same trade the recap pill documents above.
   ];
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">

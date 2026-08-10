@@ -11,7 +11,6 @@ import { useChappiStore } from '@/stores/useChappiStore';
 import { type Task } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
 import { supabase } from '@/lib/supabase/client';
-import { type ReleaseContext } from '@/lib/release-tailoring';
 import { Toast } from '@/components/shared/Toast';
 import { NewReleaseGuide } from '@/components/releases/NewReleaseGuide';
 import { SetReleaseDateCard } from '@/components/releases/SetReleaseDateCard';
@@ -26,6 +25,8 @@ import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
+import { usePlannerStore } from '@/stores/usePlannerStore';
+import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
 
 const TASKS_PANEL_ID = 'workspace-tasks';
 
@@ -41,16 +42,21 @@ const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 // Ported from the removed release detail page (2026-08-04, founder call):
-// both AI features stay hidden until the gateway is wired to a capable
-// model. NEXT_PUBLIC_ prefix so the value is inlined at build time; the API
-// routes guard the same flags server-side.
-const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
+// stays hidden until the gateway is wired to a capable model. NEXT_PUBLIC_
+// prefix so the value is inlined at build time; the API route guards the same
+// flag server-side.
 const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
 
 // The shareable end-of-release card. Unlike the two AI actions above, this pill
 // is also gated on the release actually being finished, so it appears at the
 // moment there is something to celebrate rather than sitting there all campaign.
 const RELEASE_RECAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_RECAP === 'true';
+
+// The UrgAns planner. When on, a release with no activities shows the planner
+// card as its whole empty state, and the Plan pill joins the scene switcher
+// until a plan is approved. Supersedes the immediate-apply tailor-plan feature,
+// which mutated real task rows the moment the model answered.
+const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
 // Dynamic for the same reason AppShell already loads it that way — a static
 // import here defeated that, dragging the ~460-line modal into the /dashboard
@@ -64,10 +70,6 @@ const CreateReleaseModal = dynamic(
 // Dynamic + flag-gated, same rationale as the removed page: while a flag is
 // off — as both are in production today — the modal's chunk is never
 // requested at all.
-const TailorPlanModal = dynamic(
-  () => import('@/components/releases/TailorPlanModal').then((m) => m.TailorPlanModal),
-  { ssr: false }
-);
 const StatusUpdateModal = dynamic(
   () => import('@/components/releases/StatusUpdateModal').then((m) => m.StatusUpdateModal),
   { ssr: false }
@@ -104,7 +106,7 @@ export function WorkspaceView() {
   // the way UrgAns is on the side but in the place where activity lists
   // appear"), so this view has to know about it to build the panel body and to
   // give the calendar its width.
-  const { activeScene, closeScene } = useSceneOverlay();
+  const { activeScene, openScene, closeScene } = useSceneOverlay();
   // Warm the scoped release's four scenes during idle time, so the pills in
   // TasksPanel's header open instantly instead of each costing a round trip.
   // Skipped entirely on Data Saver / 2g — see useScenePrefetch.
@@ -114,6 +116,13 @@ export function WorkspaceView() {
   // in one modal (URG-233).
   const { openQuickCreate } = useTaskUI();
   const isRailOpen = useChappiStore((state) => state.railOpen);
+  // The intake modal is mounted once by AppShell; this opens it.
+  const openIntake = usePlannerStore((state) => state.openIntake);
+  // True between firing the generate call and it returning, so the card and the
+  // scene can both say UrgAns is working rather than showing an empty plan.
+  const isPlanGenerating = usePlannerStore((state) =>
+    scopedReleaseId ? state.generatingReleaseIds.includes(scopedReleaseId) : false
+  );
   // Task detail renders as a global pop-up mounted by TaskUIProvider
   // (2026-07-23) — this view no longer swaps its layout when a task opens.
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -123,9 +132,10 @@ export function WorkspaceView() {
   // AI actions + toast, ported verbatim from the removed release detail page
   // (2026-08-04) — this is now the only surface a scoped release renders on.
   const [toast, setToast] = useState<ToastState | null>(null);
-  const [isTailorOpen, setIsTailorOpen] = useState(false);
-  const [savedContext, setSavedContext] = useState<ReleaseContext | null>(null);
-  const [hasTailoring, setHasTailoring] = useState(false);
+  // Does the scoped release already have a draft plan waiting? One scoped
+  // fetch, the same shape the tailor-plan context load had, because both the
+  // planner card's wording and the Plan pill's visibility depend on it.
+  const [hasPlanDraft, setHasPlanDraft] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isRecapOpen, setIsRecapOpen] = useState(false);
   const [isGeneratingStatus, setIsGeneratingStatus] = useState(false);
@@ -200,41 +210,43 @@ export function WorkspaceView() {
     }
   };
 
-  // Load any prior tailoring so the button label and modal pre-fill reflect
-  // it, whenever the scoped release changes.
+  // Does the scoped release have a draft plan waiting? Asked whenever the
+  // scope changes, and again when a generate call finishes, so the card stops
+  // saying "let's plan this" the moment there is something to review.
+  //
+  // A single scoped fetch rather than a field on the command-center payload:
+  // only the open release can show the card or the pill, so there is nothing to
+  // gain from carrying the answer for every release in the catalog.
   useEffect(() => {
-    setSavedContext(null);
-    setHasTailoring(false);
-    if (!TAILOR_PLAN_ENABLED || authLoading || !user || !scopedReleaseId) return;
+    setHasPlanDraft(false);
+    if (!PLANNER_ENABLED || authLoading || !user || !scopedReleaseId) return;
     let cancelled = false;
-    const loadTailoring = async () => {
+    const loadPlanDraft = async () => {
       try {
         const {
           data: { session },
         } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) return;
-        const res = await fetch(`/api/releases/${scopedReleaseId}/tailor-plan`, {
+        const res = await fetch(`/api/releases/${scopedReleaseId}/plan`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: 'no-store',
         });
         if (!res.ok) return;
         const data = (await res.json().catch(() => ({}))) as {
-          context?: ReleaseContext | null;
-          has_tailoring?: boolean;
+          draft?: { status?: string } | null;
         };
         if (cancelled) return;
-        setSavedContext(data.context ?? null);
-        setHasTailoring(Boolean(data.has_tailoring));
+        setHasPlanDraft(data.draft?.status === 'draft');
       } catch {
-        // Non-blocking: the button just defaults to "Tailor plan".
+        // Non-blocking: the card just offers to start a plan.
       }
     };
-    void loadTailoring();
+    void loadPlanDraft();
     return () => {
       cancelled = true;
     };
-  }, [authLoading, scopedReleaseId, user]);
+  }, [authLoading, scopedReleaseId, user, isPlanGenerating]);
 
   useEffect(() => {
     if (!toast) return;
@@ -354,6 +366,12 @@ export function WorkspaceView() {
   // path uses `scopedReleaseSlim` directly for the same reason.
   const isDesktopFocusedMode = Boolean(scopedReleaseId && selectedCard);
 
+  /** Open the intake for the scoped release. */
+  const openPlanIntake = () => {
+    if (!scopedReleaseId) return;
+    openIntake({ source: 'empty_state', releaseId: scopedReleaseId });
+  };
+
   // The open release scene's body, handed to TasksPanel so it replaces the
   // activity buckets in place while the pill row above stays put. Null unless
   // the URL names a scene AND the release resolved — same guard the panels use.
@@ -364,6 +382,13 @@ export function WorkspaceView() {
         release={scopedReleaseSlim}
         onClose={closeScene}
         onToast={(message, tone) => setToast({ message, tone })}
+        existingTaskCount={scopedTasks.length}
+        onPlanApproved={() => {
+          setHasPlanDraft(false);
+          closeScene();
+          void loadCommandCenter({ force: true });
+        }}
+        onStartPlanIntake={() => openPlanIntake()}
       />
     ) : undefined;
 
@@ -402,16 +427,6 @@ export function WorkspaceView() {
   // TasksPanel mounts get this via `extraActions` only in that case.
   const taskPanelExtraActions = scopedReleaseId ? (
     <>
-      {TAILOR_PLAN_ENABLED ? (
-        <button
-          type="button"
-          onClick={() => setIsTailorOpen(true)}
-          className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
-        >
-          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          {hasTailoring ? 'Re-tailor plan' : 'Tailor plan'}
-        </button>
-      ) : null}
       {STATUS_UPDATE_ENABLED ? (
         <button
           type="button"
@@ -436,11 +451,38 @@ export function WorkspaceView() {
     </>
   ) : null;
 
+  // The Plan pill only exists while there is something to open: no activities
+  // yet, or a draft already waiting. Once a plan is approved it disappears,
+  // because from then on the activity list IS the plan.
+  const showPlanPill = Boolean(
+    PLANNER_ENABLED && scopedReleaseId && (scopedTasks.length === 0 || hasPlanDraft)
+  );
+
+  // With the planner on, a scoped release with no activities shows the planner
+  // card as its ENTIRE body — no empty list under it, nothing above it. That is
+  // what makes the main door impossible to miss.
+  //
+  // It also supersedes the plan-waiting date card for this case: that card asks
+  // for a date so the template can be instantiated, and under the planner the
+  // date is question three of the intake instead.
+  const planBanner =
+    PLANNER_ENABLED && scopedReleaseSlim && scopedTasks.length === 0 ? (
+      <PlanReleaseCard
+        hasDraft={hasPlanDraft}
+        isGenerating={isPlanGenerating}
+        onPlan={() => openPlanIntake()}
+        onReview={() => openScene('plan', scopedReleaseSlim.id)}
+        onAddActivity={() =>
+          openQuickCreate({ releaseId: scopedReleaseSlim.id, source: 'inline' })
+        }
+      />
+    ) : null;
+
   // Any scoped release without a date gets the card at the top of its
   // activity list (URG-230). It reports its own success through the existing
   // workspace toast and unmounts on its own once the store reports a date.
   const setReleaseDateBanner =
-    scopedReleaseSlim && !scopedReleaseSlim.releaseDate ? (
+    !planBanner && scopedReleaseSlim && !scopedReleaseSlim.releaseDate ? (
       <SetReleaseDateCard
         releaseId={scopedReleaseSlim.id}
         releaseTitle={scopedReleaseSlim.title}
@@ -452,11 +494,12 @@ export function WorkspaceView() {
       />
     ) : null;
 
-  // Only the plan-waiting card explains the empty list and offers a way to
-  // act on it; the compact date row does neither, so a view under it still
-  // needs TasksPanel's own empty state (URG-233).
+  // Only a card that explains the empty list AND offers a way to act on it
+  // replaces the generic empty state; the compact date row does neither, so a
+  // view under it still needs TasksPanel's own (URG-233). The planner card does
+  // both, always.
   const bannerReplacesEmptyState = Boolean(
-    setReleaseDateBanner && scopedReleaseSlim?.templatePending
+    planBanner || (setReleaseDateBanner && scopedReleaseSlim?.templatePending)
   );
 
   // Suppressed while the release has no date: this guide opens with "Your
@@ -465,7 +508,7 @@ export function WorkspaceView() {
   // is the honest version of the same moment, and stacking both would put
   // two banners over one empty list.
   const newReleaseGuideBanner =
-    showNewReleaseGuide && !setReleaseDateBanner ? (
+    showNewReleaseGuide && !setReleaseDateBanner && !planBanner ? (
       <NewReleaseGuide onDismiss={() => setShowNewReleaseGuide(false)} />
     ) : null;
 
@@ -653,8 +696,9 @@ export function WorkspaceView() {
                   scopedRelease={scopedReleaseSlim}
                   extraActions={taskPanelExtraActions}
                   sceneContent={scenePanel}
-                  activitiesBanner={setReleaseDateBanner}
+                  activitiesBanner={planBanner ?? setReleaseDateBanner}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
+                  showPlanPill={showPlanPill}
                 />
                 {/* The per-release files surface lives inside TasksPanel as an
                     inline collapsible segment at the top of the task area,
@@ -693,8 +737,9 @@ export function WorkspaceView() {
                 banner={newReleaseGuideBanner}
                 panelExtraActions={taskPanelExtraActions}
                 panelSceneContent={scenePanel}
-                panelActivitiesBanner={setReleaseDateBanner}
+                panelActivitiesBanner={planBanner ?? setReleaseDateBanner}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
+                panelShowPlanPill={showPlanPill}
               />
             ) : (
               <WorkspaceDesktopGrid
@@ -709,7 +754,7 @@ export function WorkspaceView() {
       <CreateReleaseModal
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onCreated={(releaseId, plan) => {
+        onCreated={(releaseId, plan, result) => {
           setIsCreateModalOpen(false);
           // CreateReleaseModal already force-resyncs the store on success;
           // this non-forced call piggybacks on that in-flight load (or the
@@ -718,8 +763,18 @@ export function WorkspaceView() {
           // First release ever (releases still empty at this point, since the
           // forced resync above hasn't landed) → stage the "first win" reveal
           // instead of navigating. The reveal handles navigation on dismiss.
-          if (FIRST_WIN_ENABLED && releases.length === 0) {
+          // With the planner on, a rollout-plan release is created with no
+          // activities, so the "first win" reveal would celebrate an empty
+          // list. The planner card is the honest version of that moment.
+          const plannerPending = result?.plannerPending === true;
+
+          if (FIRST_WIN_ENABLED && releases.length === 0 && !plannerPending) {
             setWinReleaseId(releaseId);
+          } else if (plannerPending) {
+            // Straight into the intake: planning is the whole point of having
+            // chosen a rollout plan, and the release has nothing else in it.
+            router.push(`/dashboard?release=${releaseId}`);
+            openIntake({ source: 'empty_state', releaseId });
           } else {
             // ?new=1 triggers the one-time dismissible getting-started guide
             // (NewReleaseGuide) — only for TEMPLATE creations; its copy
@@ -742,24 +797,6 @@ export function WorkspaceView() {
             const target = winReleaseId;
             setWinReleaseId(null);
             router.push(`/dashboard?release=${target}`);
-          }}
-        />
-      ) : null}
-
-      {TAILOR_PLAN_ENABLED && scopedReleaseId ? (
-        <TailorPlanModal
-          open={isTailorOpen}
-          releaseId={scopedReleaseId}
-          initialContext={savedContext}
-          onClose={() => setIsTailorOpen(false)}
-          onTailored={(result, context) => {
-            setHasTailoring(true);
-            setSavedContext(context);
-            setToast({
-              tone: 'success',
-              message: `Plan tailored: ${result.tasks_removed} removed, ${result.tasks_modified} updated`,
-            });
-            void loadCommandCenter({ force: true });
           }}
         />
       ) : null}

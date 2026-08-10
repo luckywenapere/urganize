@@ -22,7 +22,7 @@ export const RELEASE_EPKS_TABLE = 'release_epks';
 // Feature flag: the whole EPK surface stays dark until
 // NEXT_PUBLIC_FEATURE_EPK is 'true'. Every handler checks this first and
 // 404s when off, so direct API calls cannot reach the feature either (the
-// tailor-plan route precedent). The public /epk/[token] page checks the same
+// plan route precedent). The public /epk/[token] page checks the same
 // flag and notFound()s.
 export const isEpkFeatureEnabled = (): boolean =>
   process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';

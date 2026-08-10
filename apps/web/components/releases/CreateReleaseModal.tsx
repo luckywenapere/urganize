@@ -17,6 +17,11 @@ import { DEFAULT_RELEASE_TITLE } from '@/types/releases';
 const ACTIVE_TEMPLATE = getTemplate('single');
 const LEAD_TIME_DAYS = getTemplateLeadTimeDays(ACTIVE_TEMPLATE);
 
+// With the planner on, choosing a rollout plan here does not create activities:
+// it creates the release, and the manager plans it with UrgAns next. Only the
+// wording changes, so the flag is read for copy alone.
+const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
+
 function formatYmdLocal(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -37,8 +42,16 @@ type CreateReleaseModalProps = {
   onClose: () => void;
   /** `plan` tells the caller HOW the release was created — template
    * creations get the post-create rollout guide (?new=1); blank ones don't
-   * (its copy describes the plan that doesn't exist). */
-  onCreated: (releaseId: string, plan: ReleasePlanChoice) => void;
+   * (its copy describes the plan that doesn't exist).
+   *
+   * `plannerPending` is what the server actually did: with the planner on, a
+   * template creation makes no activities at all and the manager plans it
+   * with UrgAns, so the guide would be describing a plan nobody has yet. */
+  onCreated: (
+    releaseId: string,
+    plan: ReleasePlanChoice,
+    result?: { plannerPending: boolean }
+  ) => void;
 };
 
 type CreateReleaseResponse = {
@@ -48,6 +61,8 @@ type CreateReleaseResponse = {
     id?: string;
   };
   redirectTo?: string;
+  /** True when the release was created ready to be planned with UrgAns. */
+  plannerPending?: boolean;
   error?: string;
 };
 
@@ -244,7 +259,9 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
       // follow-up non-forced loadCommandCenter() calls piggyback on this
       // in-flight load instead of firing a duplicate fetch.
       void useReleaseStore.getState().loadCommandCenter({ force: true });
-      onCreated(releaseId, plan || 'template');
+      onCreated(releaseId, plan || 'template', {
+        plannerPending: payload.plannerPending === true,
+      });
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Could not create release.');
     } finally {
@@ -333,9 +350,9 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                   </span>
                 </span>
                 <span className="text-sm leading-6 text-content-secondary">
-                  Start with the proven release plan — every activity from first
-                  prep to release day, scheduled around your date and ready to
-                  edit. No date yet? It waits for one.
+                  {PLANNER_ENABLED
+                    ? 'Plan it with UrgAns. A few questions, then a draft rollout you can edit before anything is scheduled.'
+                    : 'Start with the proven release plan — every activity from first prep to release day, scheduled around your date and ready to edit. No date yet? It waits for one.'}
                 </span>
               </button>
 
@@ -422,7 +439,9 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                   // genuinely cannot be built yet.
                   <p className="mt-2 text-xs leading-5 text-content-secondary">
                     {plan === 'template'
-                      ? "Don't have one yet? Skip it — your rollout plan gets built the moment you set a date."
+                      ? PLANNER_ENABLED
+                        ? "Don't have one yet? Skip it. UrgAns can suggest a date while you plan."
+                        : "Don't have one yet? Skip it — your rollout plan gets built the moment you set a date."
                       : "Don't have one yet? Skip it and add it whenever it's confirmed."}
                   </p>
                 ) : null}

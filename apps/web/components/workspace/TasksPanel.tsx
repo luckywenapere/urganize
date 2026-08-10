@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Newspaper, NotebookPen, Plus, Radio } from 'lucide-react';
+import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Newspaper, NotebookPen, Plus, Radio, Sparkles } from 'lucide-react';
 import {
   getTaskSectionLabel,
   groupTasksIntoSections,
@@ -128,6 +128,12 @@ type TasksPanelProps = {
    * needs its own empty state. Inferring would leave that case blank.
    */
   bannerReplacesEmptyState?: boolean;
+  /**
+   * Show the Plan pill. Owned by WorkspaceView because the answer depends on
+   * whether a draft exists, which only it knows — this component stays
+   * presentational.
+   */
+  showPlanPill?: boolean;
 };
 
 export function TasksPanel({
@@ -138,6 +144,7 @@ export function TasksPanel({
   sceneContent,
   activitiesBanner,
   bannerReplacesEmptyState = false,
+  showPlanPill = false,
 }: TasksPanelProps) {
   // openTask opens the global task detail pop-up mounted by TaskUIProvider —
   // this panel stays where it is underneath the modal.
@@ -276,6 +283,23 @@ export function TasksPanel({
               New activity
             </button>
           )}
+          {/* Plan pill, first while it exists. A release with no activities
+              has exactly one job, and this is it; once a plan is approved the
+              pill disappears, because from then on the activity list IS the
+              plan. Only shown while there is something to open (no activities
+              yet, or a draft already waiting) so it never becomes permanent
+              chrome. */}
+          {showPlanPill && scopedRelease ? (
+            <button
+              type="button"
+              onClick={() => toggleScene('plan', scopedRelease.id)}
+              aria-pressed={activeScene === 'plan'}
+              className={pillClass('plan')}
+            >
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              Plan
+            </button>
+          ) : null}
           {/* Metadata link (URG-108), FIRST among the scene links (founder
               call, 2026-08-04) — distribution fields + collaborator credits
               are the surface the founder reaches for most, now that the

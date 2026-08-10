@@ -6,7 +6,7 @@ import { buildChappiSystemPrompt } from '@/lib/chappi/system-prompt';
 import { runChappiAgent } from '@/lib/chappi/runner';
 import type { ChappiMessage, ChappiReleaseScope, ChappiResponse } from '@/lib/chappi/types';
 
-// Same budget rationale as the tailor-plan route: the agent's tool rounds +
+// Same budget rationale as the plan routes: the agent's tool rounds +
 // model latency must fit inside Vercel's function ceiling, so the loop is
 // capped (MAX_ROUNDS in runner.ts) to land a handled response before 60s.
 export const maxDuration = 60;
@@ -15,7 +15,7 @@ export const maxDuration = 60;
 const MAX_MESSAGES = 20;
 
 // Feature flag — when off, POST 404s so a direct API call can't invoke the
-// model either (mirrors tailor-plan / generate-status).
+// model either (mirrors the plan routes / generate-status).
 function parseMessages(raw: unknown): ChappiMessage[] {
   if (!raw || typeof raw !== 'object') return [];
   const list = (raw as { messages?: unknown }).messages;

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useSceneDataStore, type ScenePayloadMap } from '@/stores/useSceneDataStore';
-import type { SceneName } from '@/lib/scene-cache';
+import type { CacheableSceneName } from '@/lib/scene-cache';
 
 /**
  * Read one release scene's data through the cache.
@@ -17,7 +17,7 @@ import type { SceneName } from '@/lib/scene-cache';
  * that's `isRefreshing`. Sections should gate their skeleton on isLoading only,
  * or a warm open would still flash one.
  */
-export function useSceneData<S extends SceneName>(
+export function useSceneData<S extends CacheableSceneName>(
   releaseId: string,
   scene: S,
   options?: { enabled?: boolean }

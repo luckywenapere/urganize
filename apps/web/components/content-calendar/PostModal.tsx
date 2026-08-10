@@ -20,7 +20,7 @@ import { getStatusLabel } from './StatusMark';
 /**
  * Create/edit modal for a single post (URG-157, Phase A). Same
  * portal + backdrop + Escape + body-scroll-lock pattern as CreateReleaseModal
- * / TailorPlanModal, styled inside the brand island (var(--cc-*) only, no
+ * / CreateReleaseModal, styled inside the brand island (var(--cc-*) only, no
  * raw colors here, including for the error/destructive states: severity is
  * conveyed by icon + wording ("quiet destructive"), not a new hue, since the
  * island's palette has no red to spend without breaking the "only cc-vars"
@@ -106,7 +106,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
   }, []);
 
   // Pre-fill whenever the modal opens, for both create and edit; mirrors
-  // TailorPlanModal's "reset on open" convention.
+  // The house "reset on open" convention for modals.
   useEffect(() => {
     if (!open) return;
     setError('');

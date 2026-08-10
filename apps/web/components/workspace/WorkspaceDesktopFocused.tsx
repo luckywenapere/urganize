@@ -54,6 +54,8 @@ type WorkspaceDesktopFocusedProps = {
   /** Forwarded verbatim to TasksPanel's `bannerReplacesEmptyState`
    * (2026-08-06, URG-233). */
   panelBannerReplacesEmptyState?: boolean;
+  /** Forwarded to TasksPanel: show the Plan pill in the scene switcher. */
+  panelShowPlanPill?: boolean;
 };
 
 /**
@@ -85,6 +87,7 @@ export function WorkspaceDesktopFocused({
   panelSceneContent,
   panelActivitiesBanner,
   panelBannerReplacesEmptyState,
+  panelShowPlanPill,
 }: WorkspaceDesktopFocusedProps) {
   // Motion tracker data — done/total across the scoped release's activities
   // (same `status === 'done'` rule WorkspaceView uses for the grid cards).
@@ -187,6 +190,7 @@ export function WorkspaceDesktopFocused({
             sceneContent={panelSceneContent}
             activitiesBanner={panelActivitiesBanner}
             bannerReplacesEmptyState={panelBannerReplacesEmptyState}
+            showPlanPill={panelShowPlanPill}
           />
         </div>
 

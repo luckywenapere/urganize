@@ -30,7 +30,7 @@ export const NOTES_LIST_LIMIT = 200;
 // Feature flag: the whole notes surface stays dark until
 // NEXT_PUBLIC_FEATURE_NOTES is 'true'. Every handler checks this first and
 // 404s when off, so direct API calls cannot reach the feature either (the
-// EPK / tailor-plan route precedent). The page checks the same flag and
+// EPK / plan route precedent). The page checks the same flag and
 // bounces to /dashboard.
 export const isNotesFeatureEnabled = (): boolean =>
   process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';

@@ -9,6 +9,7 @@ import {
   ListPlus,
   Loader2,
   RotateCcw,
+  Sparkles,
   Target,
   type LucideIcon,
 } from 'lucide-react';
@@ -17,6 +18,8 @@ import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
+import { useTaskStore } from '@/stores/useTaskStore';
+import { usePlannerStore } from '@/stores/usePlannerStore';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { supabase } from '@/lib/supabase/client';
 import { CHAPPI_CHIPS, buildHelpReply, resolveIntent } from '@/lib/chappi/intent-router';
@@ -48,6 +51,7 @@ type ChappiConversationProps = {
 // nodes). Keyed by chip intent so the two can't drift.
 const CHIP_ICONS: Record<ChappiChipIntent, LucideIcon> = {
   new_release: Disc3,
+  plan_release: Sparkles,
   add_task: ListPlus,
   todays_focus: Target,
   generate_status: FileText,
@@ -57,10 +61,17 @@ const CHIP_ICONS: Record<ChappiChipIntent, LucideIcon> = {
 // this page exists to preserve, kept compact per the PostHog-style landing.
 const CHIP_DESCRIPTIONS: Record<ChappiChipIntent, string> = {
   new_release: 'Start a new release with a rollout plan',
+  plan_release: 'Answer a few questions and get a draft rollout plan',
   add_task: 'Create an activity for one of your releases',
   todays_focus: "See what needs your attention right now",
   generate_status: 'Draft a status update for a release',
 };
+
+/** A date `weeks` from today, as YYYY-MM-DD. Module scope for the same reason
+ * nextMessageId is: the clock must not be read during render. */
+function ymdWeeksFromNow(weeks: number): string {
+  return new Date(Date.now() + weeks * 7 * 86_400_000).toISOString().slice(0, 10);
+}
 
 function greetingPrefix(now: Date): string {
   const hour = now.getHours();
@@ -110,6 +121,10 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const todaysDirective = useReleaseStore((state) => state.todaysDirective);
   const releases = useReleaseStore((state) => state.releases);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
+  const tasks = useTaskStore((state) => state.tasks);
+  // The planner intake is mounted app-wide by AppShell, so a chip can open it
+  // from here as well as from the dock, with no modal of its own.
+  const openIntake = usePlannerStore((state) => state.openIntake);
   const {
     input,
     setInput,
@@ -156,6 +171,35 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         onNewRelease();
         appendAssistantReply("Let's set up a new release — the form is open.");
         return;
+      case 'plan_release': {
+        const preset = intent.plannerPreset;
+        // Only hand the planner an existing release when it has nothing in it
+        // yet. A release with activities already has a plan, so planning it
+        // again would be refused server-side.
+        const scopedHasTasks = scopedRelease
+          ? tasks.some((task) => task.releaseId === scopedRelease.id)
+          : false;
+        const target = scopedRelease && !scopedHasTasks ? scopedRelease.id : undefined;
+
+        openIntake({
+          source: 'chip',
+          releaseId: target,
+          prefill: {
+            releaseType: preset?.releaseType,
+            // Resolved at click time, not module load: a chip is a constant and
+            // a baked-in date would go stale.
+            releaseDate:
+              typeof preset?.weeksOut === 'number'
+                ? ymdWeeksFromNow(preset.weeksOut)
+                : undefined,
+            budget: preset?.budget,
+          },
+        });
+        appendAssistantReply(
+          "Let's plan it. Seven quick questions, then I'll draft your rollout."
+        );
+        return;
+      }
       case 'add_task':
         // 'quick_create' is the canonical source; TaskCreateSource has no
         // 'chappi' member and adding one is out of scope. The scoped release
@@ -212,7 +256,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
 
   const handleChipClick = (chip: ChappiChip) => {
     appendMessage({ id: nextMessageId('u'), role: 'user', content: chip.label });
-    handleIntent({ kind: chip.intent });
+    handleIntent({ kind: chip.intent, plannerPreset: chip.plannerPreset });
   };
 
   // Client-side actions the agent asks us to perform.

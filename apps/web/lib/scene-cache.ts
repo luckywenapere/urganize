@@ -11,7 +11,7 @@
 
 /** The release scenes. Canonical here (not in the URL hook) because both
  * the URL layer and the data layer need the list, and lib is the shared floor. */
-export type SceneName = 'metadata' | 'files' | 'epk' | 'calendar' | 'pitch';
+export type SceneName = 'metadata' | 'files' | 'epk' | 'calendar' | 'pitch' | 'plan';
 
 export const SCENE_NAMES: readonly SceneName[] = [
   'metadata',
@@ -19,11 +19,17 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'epk',
   'calendar',
   'pitch',
+  'plan',
 ];
 
 /** Prefetch order: most-likely-opened first, so a user who taps a pill mid-
- * prefetch is most likely to find their scene already warm. */
-export const SCENE_PREFETCH_ORDER: readonly SceneName[] = [
+ * prefetch is most likely to find their scene already warm.
+ *
+ * 'plan' is deliberately absent. It is the one scene that EDITS its payload
+ * under an autosave queue, so a cached copy is a corruption risk rather than a
+ * speedup, and it only exists for releases with no plan yet — prefetching it
+ * would 404 on almost every release. It fetches its own draft directly. */
+export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
   'metadata',
   'files',
   'epk',
@@ -57,6 +63,20 @@ export const SCENE_HARD_EXPIRY_MS: Partial<Record<SceneName, number>> = {
 };
 
 /**
+ * The scenes whose payload the cache layer knows how to fetch and store.
+ *
+ * 'plan' is a scene in every other sense — it has a pill, a URL and a panel —
+ * but it owns its own reads and writes (see usePlanDraft) because it is an
+ * editable document rather than a snapshot. Keeping it out of this type means
+ * the store cannot be given a meaningless fetcher for it, and the compiler
+ * enforces that rather than a comment.
+ */
+export type CacheableSceneName = Exclude<SceneName, 'plan'>;
+
+export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName =>
+  scene !== 'plan';
+
+/**
  * Which scenes may touch localStorage.
  *
  * `files` is false for the same signed-URL reason as above, one step stronger:
@@ -71,6 +91,10 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   // Plain JSON: pitch rows carry a song link the pitcher typed, not a signed
   // one, so nothing here expires on disk.
   pitch: true,
+  // The plan draft is a document being edited, not a read. Painting a cached
+  // copy under live edits could overwrite newer text with older, so it never
+  // goes to disk or memory — see SCENE_PREFETCH_ORDER.
+  plan: false,
 };
 
 /** How many releases' scenes to keep on disk. A manager works a couple of
