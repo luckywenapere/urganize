@@ -51,6 +51,9 @@ export type Profile = {
     | null;
   onboarding_release_id?: string | null;
   onboarding_task_id?: string | null;
+  /** "Ask me after tasks" — gates the post-completion outcome sheet.
+   * Default true; undefined (pre-migration rows) counts as on. */
+  ask_after_tasks?: boolean;
   created_at: string;
   updated_at: string;
   is_subscribed?: boolean; 

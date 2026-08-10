@@ -891,6 +891,26 @@ h1, h2, h3, h4 {
   }
 }
 
+/* Slide-up entrance for the post-completion check-in sheet. A named keyframe
+   rather than utility classes: tailwindcss-animate is not installed, so only
+   the hand-rolled .animate-in rule above resolves. The panel carries an
+   inline transform for swipe-to-dismiss, and an animation outranks inline
+   style while it runs, so the two compose without fighting. */
+.task-outcome-sheet {
+  animation: task-outcome-sheet-enter 220ms var(--motion-out);
+}
+
+@keyframes task-outcome-sheet-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Workspace centered-focus mode reflow. Fires on the wrapper that mounts
    when scope flips (grid → focused or focused → grid). The conditional
    render naturally remounts the wrapper, so each mode change replays the

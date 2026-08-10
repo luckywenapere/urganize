@@ -11,6 +11,9 @@ import {
 } from '@/lib/execution-types';
 import { getTaskCompletionBlocker } from '@/lib/release-execution';
 import { type TaskPriority } from '@/lib/tasks';
+// Read at completion time via getState() — no subscription, no render
+// coupling. The auth store does not import this one, so there is no cycle.
+import { useAuthStore } from '@/lib/auth-store';
 
 type TaskCreateInput = {
   title: string;
@@ -36,6 +39,23 @@ export type CompletionToastState = {
   tick: number;
 };
 
+/**
+ * The post-completion check-in prompt ("Done. How did it go?"), rendered by
+ * TaskOutcomeSheet. Written in the SAME synchronous set() that flips the task
+ * to done, so the sheet appears on that frame and never waits on the
+ * completion PATCH. `tick` remounts the sheet when the same task is completed
+ * twice, so no state leaks between prompts.
+ *
+ * Deliberately has no auto-dismiss timer, unlike the undo toast: the user is
+ * being asked a question and may be typing.
+ */
+export type OutcomePromptState = {
+  taskId: string;
+  releaseId: string;
+  title: string;
+  tick: number;
+};
+
 type TaskStore = {
   tasks: ExecutionTask[];
   selectedTaskId: string | null;
@@ -49,6 +69,8 @@ type TaskStore = {
   pendingCompletionIds: Record<string, true>;
   /** Latest completion eligible for an Undo toast. Null when no toast active. */
   completionToast: CompletionToastState | null;
+  /** Open post-completion check-in, or null. See OutcomePromptState. */
+  outcomePrompt: OutcomePromptState | null;
   setTasks: (tasks: ExecutionTask[]) => void;
   selectTask: (taskId: string | null) => void;
   createTask: (input: TaskCreateInput) => Promise<ExecutionTask | null>;
@@ -61,6 +83,8 @@ type TaskStore = {
    */
   undoCompletion: (taskId: string) => Promise<void>;
   dismissCompletionToast: (taskId?: string) => void;
+  /** Closes the check-in sheet. Records nothing and never touches the task. */
+  dismissOutcomePrompt: () => void;
   tasksForRelease: (releaseId: string) => ExecutionTask[];
 };
 
@@ -87,6 +111,9 @@ const inFlightCompletionPatches = new Map<string, Promise<unknown>>();
 const PENDING_BEAT_MS = 1500;
 const TOAST_DURATION_MS = 5000;
 let completionToastTick = 0;
+let outcomePromptTick = 0;
+
+const TASK_OUTCOMES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_OUTCOMES === 'true';
 
 const getAccessToken = async () => {
   const {
@@ -101,6 +128,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   error: '',
   pendingCompletionIds: {},
   completionToast: null,
+  outcomePrompt: null,
   setTasks: (tasks) => set({ tasks, error: '' }),
   selectTask: (taskId) => set({ selectedTaskId: taskId }),
   tasksForRelease: (releaseId) => get().tasks.filter((task) => task.releaseId === releaseId),
@@ -248,12 +276,17 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         delete nextPending[taskId];
         const nextToast =
           state.completionToast?.taskId === taskId ? null : state.completionToast;
+        // Unticking closes any open check-in: the completion it was asking
+        // about no longer stands.
+        const nextOutcomePrompt =
+          state.outcomePrompt?.taskId === taskId ? null : state.outcomePrompt;
         return {
           tasks: state.tasks.map((candidate) =>
             candidate.id === taskId ? optimisticReopened : candidate
           ),
           pendingCompletionIds: nextPending,
           completionToast: nextToast,
+          outcomePrompt: nextOutcomePrompt,
           error: '',
         };
       });
@@ -356,6 +389,15 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     }, PENDING_BEAT_MS);
     pendingBeatTimers.set(taskId, beatTimer);
 
+    // The post-completion check-in replaces the undo toast rather than
+    // stacking on it: both are bottom surfaces, and "Undo?" alongside "how
+    // did it go?" reads as two contradictory asks. Undo stays available by
+    // unticking the checkbox, which routes to the reopen branch above.
+    const shouldPromptOutcome =
+      TASK_OUTCOMES_ENABLED &&
+      Boolean(optimisticDone.releaseId) &&
+      useAuthStore.getState().user?.ask_after_tasks !== false;
+
     // Mirror the same single-active-timer rule for the toast — the toast
     // lifetime (TOAST_DURATION_MS) is independent of the in-place beat so
     // a mis-tick is recoverable after the row has moved to Done.
@@ -363,28 +405,45 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     if (existingToastTimer) {
       clearTimeout(existingToastTimer);
     }
-    const toastTimer = setTimeout(() => {
+    if (!shouldPromptOutcome) {
+      const toastTimer = setTimeout(() => {
+        completionToastTimers.delete(taskId);
+        set((state) => {
+          if (state.completionToast?.taskId !== taskId) return state;
+          return { completionToast: null };
+        });
+      }, TOAST_DURATION_MS);
+      completionToastTimers.set(taskId, toastTimer);
+    } else {
       completionToastTimers.delete(taskId);
-      set((state) => {
-        if (state.completionToast?.taskId !== taskId) return state;
-        return { completionToast: null };
-      });
-    }, TOAST_DURATION_MS);
-    completionToastTimers.set(taskId, toastTimer);
+    }
 
-    completionToastTick += 1;
-    const toastSnapshot: CompletionToastState = {
-      taskId,
-      title: optimisticDone.title,
-      tick: completionToastTick,
-    };
+    let toastSnapshot: CompletionToastState | null = null;
+    let outcomeSnapshot: OutcomePromptState | null = null;
+    if (shouldPromptOutcome) {
+      outcomePromptTick += 1;
+      outcomeSnapshot = {
+        taskId,
+        releaseId: optimisticDone.releaseId as string,
+        title: optimisticDone.title,
+        tick: outcomePromptTick,
+      };
+    } else {
+      completionToastTick += 1;
+      toastSnapshot = {
+        taskId,
+        title: optimisticDone.title,
+        tick: completionToastTick,
+      };
+    }
 
     set((state) => ({
       tasks: state.tasks.map((candidate) =>
         candidate.id === taskId ? optimisticDone : candidate
       ),
       pendingCompletionIds: { ...state.pendingCompletionIds, [taskId]: true },
-      completionToast: toastSnapshot,
+      completionToast: toastSnapshot ?? state.completionToast,
+      outcomePrompt: outcomeSnapshot ?? state.outcomePrompt,
       error: '',
     }));
 
@@ -409,6 +468,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           pendingCompletionIds: nextPending,
           completionToast:
             state.completionToast?.taskId === taskId ? null : state.completionToast,
+          // The server never accepted the completion, so close the check-in
+          // even mid-typing: there is nothing to review.
+          outcomePrompt:
+            state.outcomePrompt?.taskId === taskId ? null : state.outcomePrompt,
           error: message,
         };
       });
@@ -581,5 +644,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       }
       return { completionToast: null };
     });
+  },
+  dismissOutcomePrompt: () => {
+    set((state) => (state.outcomePrompt ? { outcomePrompt: null } : state));
   },
 }));
