@@ -38,8 +38,6 @@ export const CHAPPI_CHIPS: ChappiChip[] = [
     ? PLANNER_CHIPS
     : [{ id: 'new-release', label: 'New release', intent: 'new_release' as const }]),
   { id: 'add-task', label: 'Add activity', intent: 'add_task' },
-  { id: 'todays-focus', label: "Today's focus", intent: 'todays_focus' },
-  { id: 'generate-status', label: 'Generate status', intent: 'generate_status' },
 ];
 
 /**

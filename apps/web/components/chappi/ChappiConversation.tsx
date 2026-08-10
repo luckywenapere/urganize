@@ -4,13 +4,14 @@ import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'rea
 import { useRouter } from 'next/navigation';
 import {
   ArrowUp,
+  ClipboardList,
   Disc3,
-  FileText,
-  ListPlus,
+  Layers,
   Loader2,
+  PiggyBank,
   RotateCcw,
+  Rocket,
   Sparkles,
-  Target,
   type LucideIcon,
 } from 'lucide-react';
 import { ChappiBetaBadge } from '@/components/chappi/ChappiBetaBadge';
@@ -25,7 +26,6 @@ import { supabase } from '@/lib/supabase/client';
 import { CHAPPI_CHIPS, buildHelpReply, resolveIntent } from '@/lib/chappi/intent-router';
 import type {
   ChappiChip,
-  ChappiChipIntent,
   ChappiClientAction,
   ChappiIntent,
   ChappiMessage,
@@ -48,23 +48,26 @@ type ChappiConversationProps = {
 };
 
 // Icons live here, not in the client-safe intent-router lib (icons are React
-// nodes). Keyed by chip intent so the two can't drift.
-const CHIP_ICONS: Record<ChappiChipIntent, LucideIcon> = {
-  new_release: Disc3,
-  plan_release: Sparkles,
-  add_task: ListPlus,
-  todays_focus: Target,
-  generate_status: FileText,
+// nodes). Keyed by chip id (not intent) so the three plan_release chips can
+// each get their own distinct glyph instead of sharing one. Sparkles is the
+// fallback for any chip id without an entry.
+const DEFAULT_CHIP_ICON: LucideIcon = Sparkles;
+const CHIP_ICONS: Record<string, LucideIcon> = {
+  'new-release': Disc3,
+  'plan-single-6w': Rocket,
+  'plan-ep': Layers,
+  'plan-small-budget': PiggyBank,
+  'add-task': ClipboardList,
 };
 
 // Hover tooltip (title attr) for each quick-action button — the "clicks"
 // this page exists to preserve, kept compact per the PostHog-style landing.
-const CHIP_DESCRIPTIONS: Record<ChappiChipIntent, string> = {
-  new_release: 'Start a new release with a rollout plan',
-  plan_release: 'Answer a few questions and get a draft rollout plan',
-  add_task: 'Create an activity for one of your releases',
-  todays_focus: "See what needs your attention right now",
-  generate_status: 'Draft a status update for a release',
+const CHIP_DESCRIPTIONS: Record<string, string> = {
+  'new-release': 'Start a new release with a rollout plan',
+  'plan-single-6w': 'Answer a few questions and get a draft rollout plan',
+  'plan-ep': 'Answer a few questions and get a draft rollout plan',
+  'plan-small-budget': 'Answer a few questions and get a draft rollout plan',
+  'add-task': 'Create an activity for one of your releases',
 };
 
 /** A date `weeks` from today, as YYYY-MM-DD. Module scope for the same reason
@@ -103,8 +106,8 @@ function nextMessageId(role: 'u' | 'a'): string {
  *
  * Two states, switched on `messages.length`:
  *  - Empty: PostHog-home-style landing — centered greeting, the input
- *    mid-screen, and the 4 quick-action buttons (the "clicks" — New release,
- *    Add task, Today's focus, Generate status) directly BELOW the box.
+ *    mid-screen, and the quick-action buttons (the "clicks" — New release
+ *    or the three planner chips, plus Add activity) directly BELOW the box.
  *  - Active: a scrolling transcript of every turn, chip-triggered or typed,
  *    with the input pinned at the bottom.
  *
@@ -405,13 +408,13 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
 
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           {CHAPPI_CHIPS.map((chip) => {
-            const Icon = CHIP_ICONS[chip.intent];
+            const Icon = CHIP_ICONS[chip.id] ?? DEFAULT_CHIP_ICON;
             return (
               <button
                 key={chip.id}
                 type="button"
                 onClick={() => handleChipClick(chip)}
-                title={CHIP_DESCRIPTIONS[chip.intent]}
+                title={CHIP_DESCRIPTIONS[chip.id]}
                 className="motion-focus motion-press inline-flex items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
               >
                 <Icon className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
