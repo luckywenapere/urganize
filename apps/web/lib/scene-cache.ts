@@ -9,11 +9,17 @@
 // On a high-latency mobile link that reads as "the app is slow", which it
 // isn't; it's just doing the same round trip again.
 
-/** The four release scenes. Canonical here (not in the URL hook) because both
+/** The release scenes. Canonical here (not in the URL hook) because both
  * the URL layer and the data layer need the list, and lib is the shared floor. */
-export type SceneName = 'metadata' | 'files' | 'epk' | 'calendar';
+export type SceneName = 'metadata' | 'files' | 'epk' | 'calendar' | 'pitch';
 
-export const SCENE_NAMES: readonly SceneName[] = ['metadata', 'files', 'epk', 'calendar'];
+export const SCENE_NAMES: readonly SceneName[] = [
+  'metadata',
+  'files',
+  'epk',
+  'calendar',
+  'pitch',
+];
 
 /** Prefetch order: most-likely-opened first, so a user who taps a pill mid-
  * prefetch is most likely to find their scene already warm. */
@@ -22,6 +28,7 @@ export const SCENE_PREFETCH_ORDER: readonly SceneName[] = [
   'files',
   'epk',
   'calendar',
+  'pitch',
 ];
 
 /** Within this window a cached scene is served with NO network call at all.
@@ -61,6 +68,9 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   files: false,
   epk: true,
   calendar: true,
+  // Plain JSON: pitch rows carry a song link the pitcher typed, not a signed
+  // one, so nothing here expires on disk.
+  pitch: true,
 };
 
 /** How many releases' scenes to keep on disk. A manager works a couple of

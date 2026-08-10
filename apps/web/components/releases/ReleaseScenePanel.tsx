@@ -9,6 +9,7 @@ import { MetadataSection } from '@/components/releases/MetadataSection';
 import { EpkSection } from '@/components/releases/EpkSection';
 import { AssetSection } from '@/components/releases/AssetSection';
 import { CalendarScene } from '@/components/content-calendar/CalendarScene';
+import { PitchScene } from '@/components/pitching/PitchScene';
 import { calendarFontVariables } from '@/components/content-calendar/calendar-fonts';
 
 /**
@@ -42,6 +43,7 @@ const SCENE_LABELS: Record<SceneName, string> = {
   files: 'Files',
   epk: 'Press kit',
   calendar: 'Content calendar',
+  pitch: 'Playlist pitches',
 };
 
 type ReleaseScenePanelProps = {
@@ -120,6 +122,7 @@ export function ReleaseScenePanel({ scene, release, onClose, onToast }: ReleaseS
       {scene === 'metadata' ? <MetadataSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'files' ? <AssetSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'epk' ? <EpkSection releaseId={release.id} onToast={onToast} /> : null}
+      {scene === 'pitch' ? <PitchScene release={release} onToast={onToast} /> : null}
     </section>
   );
 }
