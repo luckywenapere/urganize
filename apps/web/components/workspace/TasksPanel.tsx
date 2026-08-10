@@ -43,6 +43,22 @@ const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 // /api/pitching routes and the /api/curator routes.
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 
+/**
+ * The scene-pill row's neutral (never-lit) pill treatment — hoisted to
+ * module scope and exported as the one source of truth. WorkspaceView's
+ * `extraActions` pills (Status update / Release recap) used to hand-roll a
+ * byte-for-byte copy of this string; that copy had already drifted (missing
+ * `shrink-0 whitespace-nowrap`) by the time this row grew to 9 pills on
+ * mobile, which is how "Get your release recap" ended up wrapping across
+ * three lines inside a fixed 32px pill (2026-08-10 bug fix). `shrink-0
+ * whitespace-nowrap` matter here specifically because this row becomes a
+ * horizontal scroller below `lg` (see the container below) — a flex child
+ * without them compresses and wraps its own label instead of just
+ * scrolling off-screen.
+ */
+export const taskPanelPillClass =
+  'motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover';
+
 // Overdue first (genuine slippage, most urgent), then Catch Up (start-here
 // for compressed-runway plans — calm, neutral framing), then standard
 // time-based buckets. Catch Up is empty on long-running releases where every
@@ -157,9 +173,16 @@ export function TasksPanel({
   // the pill of the scene that's already open closes it, back to activities.
   const { activeScene, openScene, closeScene } = useSceneOverlay();
 
-  /** Pill classes, lit when that scene is the open one. */
+  /**
+   * Pill classes, lit when that scene is the open one. `shrink-0
+   * whitespace-nowrap` (2026-08-10 bug fix): this row becomes a horizontal
+   * scroller below lg (see the container below), and without these a flex
+   * child is free to compress and wrap its own label instead of just
+   * scrolling off-screen — which is exactly how "Get your release recap"
+   * used to spill across three lines inside a fixed 32px pill.
+   */
   const pillClass = (scene: SceneName) =>
-    `motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors ${
+    `motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors ${
       activeScene === scene
         ? 'border-brand bg-brand/10 text-content-primary'
         : 'border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover'
@@ -167,8 +190,10 @@ export function TasksPanel({
 
   // Shared with the New activity / Activities toggle below — same neutral
   // (never-lit) treatment regardless of which of the two states it's in.
-  const neutralPillClass =
-    'motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover';
+  // Hoisted to module scope as the exported `taskPanelPillClass` (above the
+  // component) so WorkspaceView's extraActions pills use the real thing
+  // instead of a hand-rolled copy.
+  const neutralPillClass = taskPanelPillClass;
 
   /** Open the scene, or close it if it's the one already showing. */
   const toggleScene = (scene: SceneName, releaseId: string) => {
@@ -255,9 +280,32 @@ export function TasksPanel({
           it's outside the scroll box, always visible by construction — so it
           goes back to static flow there. The lg boundary is exact: the only
           two mounts are WorkspaceView's mobile branch (`lg:hidden`) and
-          WorkspaceDesktopFocused (inside `hidden lg:block`). */}
-      <div className="sticky top-16 z-10 flex shrink-0 flex-wrap items-center justify-end gap-2 bg-bg-base pb-3 pt-1 lg:static">
-        <div className="flex items-center gap-2">
+          WorkspaceDesktopFocused (inside `hidden lg:block`).
+
+          Row shape below `lg` (2026-08-10 bug fix): the outer div used to be
+          `flex-wrap justify-end` around a SINGLE non-wrapping inner child, so
+          the outer `flex-wrap` was dead weight — with up to 9 pills the inner
+          row simply overflowed, and `justify-end` pushed the overflow off the
+          LEFT edge, where `body { overflow-x: hidden }` (globals.css) cropped
+          it silently instead of letting it scroll (the "lendar" pill in the
+          founder's screenshot was "Calendar" cropped this way). The inner div
+          is now the horizontal scroller itself — the standard mobile chip-row
+          pattern (PostHog's tabs, Linear's filters): one left-anchored line,
+          nothing wraps or shrinks (see `shrink-0 whitespace-nowrap` on every
+          pill class), hidden scrollbar, first pill fully visible at rest, and
+          a later pill peeking at the edge as the scroll affordance. At `lg+`
+          this reverts to the original static, right-aligned, wrapping row —
+          desktop never had either bug (see the width-budget note two scenes
+          up), so it must render exactly as before. */}
+      <div className="sticky top-16 z-10 flex shrink-0 items-center bg-bg-base pb-3 pt-1 lg:static lg:justify-end">
+        {/* -mx/px bleed matches <main>'s own gutter at each breakpoint
+            (AppShell.tsx: px-4 sm:px-5 md:px-6, lg:px-8) so the row's first
+            pill sits flush with the page content at rest, but the negative
+            margin still lets the LAST pill scroll flush to the true screen
+            edge rather than stopping short at the content gutter — the same
+            edge-bleed trick PostHog/Material chip rows use. Dead at lg+
+            (`lg:m-0 lg:w-auto lg:p-0`), where the row was never a scroller. */}
+        <div className="no-scrollbar flex w-full items-center gap-2 overflow-x-auto -mx-4 px-4 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:m-0 lg:w-auto lg:flex-wrap lg:justify-end lg:overflow-visible lg:p-0">
           {/* Toggles with the scene body below: "New activity" opens Quick
               Create while the activity list is showing; once a scene (Metadata
               / Calendar / Files / Press kit) has taken this slot, the SAME

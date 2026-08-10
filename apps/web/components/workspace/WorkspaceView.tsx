@@ -18,7 +18,7 @@ import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
-import { TasksPanel } from './TasksPanel';
+import { TasksPanel, taskPanelPillClass } from './TasksPanel';
 import { useSceneOverlay } from './useSceneOverlay';
 import { useScenePrefetch } from './useScenePrefetch';
 import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
@@ -425,6 +425,16 @@ export function WorkspaceView() {
   // The two AI action pills, ported from the removed release detail page —
   // only meaningful (and only rendered) when a release is scoped, so both
   // TasksPanel mounts get this via `extraActions` only in that case.
+  //
+  // Both now use `taskPanelPillClass` (TasksPanel's own neutral-pill class,
+  // exported) instead of a hand-rolled copy: the copy had already drifted
+  // (missing `shrink-0 whitespace-nowrap`) by the time this row grew to 9
+  // pills on mobile, which combined with the two longest labels here to
+  // wrap "Get your release recap" across three lines inside a fixed 32px
+  // pill (2026-08-10 bug fix). Labels also shortened to match how a chip
+  // row is supposed to read — one or two words, not a sentence; the icon
+  // already carries the rest of the meaning (Sparkles = AI action,
+  // PartyPopper = celebration).
   const taskPanelExtraActions = scopedReleaseId ? (
     <>
       {STATUS_UPDATE_ENABLED ? (
@@ -432,20 +442,16 @@ export function WorkspaceView() {
           type="button"
           onClick={() => void generateStatus()}
           disabled={isGeneratingStatus}
-          className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:opacity-60"
+          className={`${taskPanelPillClass} disabled:opacity-60`}
         >
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          {isGeneratingStatus ? 'Generating…' : 'Generate status update'}
+          {isGeneratingStatus ? 'Generating…' : 'Status update'}
         </button>
       ) : null}
       {RELEASE_RECAP_ENABLED && isRecapEligible ? (
-        <button
-          type="button"
-          onClick={() => setIsRecapOpen(true)}
-          className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
-        >
+        <button type="button" onClick={() => setIsRecapOpen(true)} className={taskPanelPillClass}>
           <PartyPopper className="h-3.5 w-3.5" aria-hidden="true" />
-          Get your release recap
+          Release recap
         </button>
       ) : null}
     </>

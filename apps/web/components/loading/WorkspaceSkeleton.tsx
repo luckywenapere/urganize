@@ -23,6 +23,11 @@ const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDA
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
+// Notes' scoped-release link (TasksPanel, after Pitch) — added 2026-08-10;
+// this reservation was missing even though the real pill has rendered
+// behind the flag since Notes shipped, an existing skeleton/real mismatch
+// found while fixing the mobile pill-row overflow bug.
+const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 
 // Same flag AppTopbar/ChappiDock read. The UrgAns side rail renders itself
 // beside AppShell's <main> (URG-210) — including while this skeleton shows —
@@ -202,9 +207,15 @@ function ReleaseCardSkeleton() {
  * "flex-1 is inert without a flex parent" property the real component
  * documents. Pill count mirrors the real header exactly: New activity
  * always, then one per enabled flag in order (Metadata / Calendar / Files /
- * Press kit / Pitch — see TasksPanel), then the two AI action pills WorkspaceView
- * appends. Widths approximate each label so the row's footprint matches.
- * No left label (2026-08-05, #218 — the real row is `justify-end` only). */
+ * Press kit / Pitch / Notes — see TasksPanel), then the two AI action pills
+ * WorkspaceView appends. Widths approximate each label so the row's
+ * footprint matches ("Status update", shortened 2026-08-10 to fit a chip
+ * row — see WorkspaceView).
+ * No left label (2026-08-05, #218 — the real row is `justify-end` only).
+ * Container/wrapper classes below are kept byte-for-byte in sync with
+ * TasksPanel.tsx's real row (2026-08-10 bug fix: this file's inner wrapper
+ * had already drifted to `flex-wrap` when the real one had none — the
+ * loading-skeleton-sync rule this file otherwise follows). */
 function TasksPanelSkeleton() {
   const pillWidths = [
     'w-28', // New activity
@@ -213,7 +224,8 @@ function TasksPanelSkeleton() {
     ...(FILES_ENABLED ? ['w-16'] : []), // Files
     ...(EPK_ENABLED ? ['w-24'] : []), // Press kit
     ...(PITCHING_ENABLED ? ['w-24'] : []), // Pitch + Beta tag
-    ...(STATUS_UPDATE_ENABLED ? ['w-40'] : []), // Generate status update
+    ...(NOTES_ENABLED ? ['w-20'] : []), // Notes
+    ...(STATUS_UPDATE_ENABLED ? ['w-28'] : []), // Status update
     // The Plan pill is deliberately NOT reserved. Whether it renders depends on
     // the release's activity count and whether a draft exists — data this
     // skeleton is showing precisely because it does not have it yet. Guessing
@@ -224,9 +236,12 @@ function TasksPanelSkeleton() {
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {/* Sticky on mobile only (`lg:static`), same as the real row — see
           TasksPanel.tsx's header comment for why sticky must not apply
-          inside the desktop locked column. */}
-      <div className="sticky top-16 z-10 flex shrink-0 flex-wrap items-center justify-end gap-2 bg-bg-base pb-3 pt-1 lg:static">
-        <div className="flex flex-wrap items-center gap-2">
+          inside the desktop locked column. Below `lg` the real row scrolls
+          horizontally rather than wrapping (2026-08-10); the skeleton copies
+          that shape too so its footprint matches at every width, even though
+          a placeholder row never actually needs to be dragged. */}
+      <div className="sticky top-16 z-10 flex shrink-0 items-center bg-bg-base pb-3 pt-1 lg:static lg:justify-end">
+        <div className="no-scrollbar flex w-full items-center gap-2 overflow-x-auto -mx-4 px-4 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:m-0 lg:w-auto lg:flex-wrap lg:justify-end lg:overflow-visible lg:p-0">
           {pillWidths.map((width, index) => (
             <SkeletonBlock key={`pill-${index}`} className={`h-8 ${width} rounded-full`} />
           ))}

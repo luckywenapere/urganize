@@ -562,6 +562,20 @@ h1, h2, h3, h4 {
   background: var(--border-strong);
 }
 
+/* Hides the scrollbar on an inner scroll region while leaving the scroll
+   itself intact — for chip/pill rows that scroll horizontally by design
+   (e.g. the workspace's scoped-release pill row below `lg`, TasksPanel.tsx,
+   2026-08-10). Without this the themed ::-webkit-scrollbar rule above would
+   render a visible bar under the pills; that's correct for a real content
+   scroll box, wrong for a one-line chip strip. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 @keyframes enter-staggered {
   from {
     opacity: 0;
