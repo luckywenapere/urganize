@@ -1,0 +1,146 @@
+import { NextRequest, NextResponse } from 'next/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { requireAuthenticatedAdmin } from '@/app/api/_shared/auth';
+import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
+import { isPitchPlatform } from '@/lib/pitching';
+import type { BrowsablePlaylist, SentPitch } from '@/types/pitching';
+
+// Shared helpers for the team side of playlist pitching.
+//
+// No schema-missing fallback here on purpose: environments are assumed migrated
+// (CLAUDE.md "Patterns being deprecated in v1"); a missing table surfaces as a
+// normal 500. This module also never imports app/api/releases/_shared.ts, whose
+// module carries the deprecated helpers the guard test freezes.
+
+export {
+  createAdminClient,
+  requireAuthenticatedAdmin,
+  requireActiveAuthenticatedUser,
+} from '@/app/api/_shared/auth';
+
+export const PITCHES_TABLE = 'playlist_pitches';
+export const CURATOR_PLAYLISTS_TABLE = 'curator_playlists';
+export const CURATOR_PROFILES_TABLE = 'curator_profiles';
+
+/** What the team sees about its own pitches. */
+export const SENT_PITCH_COLUMNS =
+  'id,playlist_id,playlist_name,curator_user_id,song_title,song_url,song_platform,note,status,curator_reply,pitcher_name,created_at,updated_at';
+
+export const BROWSE_LIST_LIMIT = 200;
+export const SENT_PITCH_LIST_LIMIT = 200;
+
+export const isPitchingFeatureEnabled = (): boolean =>
+  process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
+
+export const flagOffResponse = () => NextResponse.json({ error: 'Not found.' }, { status: 404 });
+
+/**
+ * Auth for the team side. requireAuthenticatedAdmin already rejects curator
+ * accounts (see blockCuratorAccount in app/api/_shared/auth.ts), so a playlist
+ * owner cannot reach the browse or send routes at all.
+ */
+export async function requireTeamUser(request: NextRequest) {
+  return requireAuthenticatedAdmin(request);
+}
+
+/**
+ * Can this user see this release? Owner, or a member of a workspace whose owner
+ * owns it — the same releaseOwnerIds model the releases list uses, so pitching
+ * inherits whole-team visibility rather than inventing its own rule.
+ *
+ * 404 (never 403) when the release is missing or invisible: the caller should
+ * not learn that a release they cannot see exists.
+ */
+export async function ensureReleaseVisible(
+  adminClient: SupabaseClient,
+  releaseId: string,
+  user: { id: string; email?: string | null }
+): Promise<{ error: NextResponse } | { ownerUserId: string; artistName: string; title: string }> {
+  const { data: release, error } = await adminClient
+    .from('releases')
+    .select('id,owner_user_id,artist_name,title')
+    .eq('id', releaseId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      error: NextResponse.json(
+        { error: error.message || 'Could not load release.' },
+        { status: 500 }
+      ),
+    };
+  }
+  if (!release) {
+    return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
+  }
+
+  const ownerUserId = String(release.owner_user_id || '');
+  if (ownerUserId !== user.id) {
+    const access = await loadWorkspaceAccessContext(adminClient, user as never);
+    if (!access.releaseOwnerIds.includes(ownerUserId)) {
+      return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
+    }
+  }
+
+  return {
+    ownerUserId,
+    artistName: String(release.artist_name || ''),
+    title: String(release.title || ''),
+  };
+}
+
+export const toBrowsablePlaylist = (
+  row: Record<string, unknown>,
+  curatorName: string
+): BrowsablePlaylist => ({
+  id: String(row.id || ''),
+  name: typeof row.name === 'string' ? row.name : '',
+  curatorName,
+  platform: isPitchPlatform(row.platform) ? row.platform : 'other',
+  genres: Array.isArray(row.genres) ? row.genres.map((tag) => String(tag)) : [],
+  followerCount: typeof row.follower_count === 'number' ? row.follower_count : null,
+  url: typeof row.url === 'string' ? row.url : '',
+});
+
+export const toSentPitch = (row: Record<string, unknown>, curatorName: string): SentPitch => ({
+  id: String(row.id || ''),
+  playlistId: row.playlist_id ? String(row.playlist_id) : null,
+  playlistName: typeof row.playlist_name === 'string' ? row.playlist_name : '',
+  curatorName,
+  songTitle: typeof row.song_title === 'string' ? row.song_title : '',
+  songUrl: typeof row.song_url === 'string' ? row.song_url : '',
+  songPlatform: isPitchPlatform(row.song_platform) ? row.song_platform : null,
+  note: typeof row.note === 'string' ? row.note : '',
+  status:
+    row.status === 'listened' || row.status === 'added' || row.status === 'passed'
+      ? row.status
+      : 'new',
+  reply: typeof row.curator_reply === 'string' && row.curator_reply ? row.curator_reply : null,
+  pitcherName: typeof row.pitcher_name === 'string' ? row.pitcher_name : '',
+  createdAt: String(row.created_at || ''),
+  updatedAt: String(row.updated_at || ''),
+});
+
+/**
+ * Curator display names for a set of user ids.
+ *
+ * A separate query rather than a PostREST embed: curator_profiles and the tables
+ * pointing at it both reference auth.users, and there is no FK between them for
+ * the embed syntax to traverse.
+ */
+export async function loadCuratorNames(
+  adminClient: SupabaseClient,
+  curatorUserIds: string[]
+): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  const ids = Array.from(new Set(curatorUserIds.filter(Boolean)));
+  if (!ids.length) return names;
+  const { data } = await adminClient
+    .from(CURATOR_PROFILES_TABLE)
+    .select('user_id,display_name')
+    .in('user_id', ids);
+  for (const row of (data || []) as Array<Record<string, unknown>>) {
+    names.set(String(row.user_id || ''), String(row.display_name || ''));
+  }
+  return names;
+}
