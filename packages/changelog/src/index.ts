@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.44.0",
+    date: "August 10, 2026",
+    highlights: [
+      "Finished a release? You can now get a recap card for it: a poster built from your own numbers, the activities you completed, the days of work behind it and the size of your team. It appears on a release once its date has passed or every activity is done.",
+      "Two sizes come out of it, one shaped for stories and one for feeds. Before it builds you can add your first week streams plus one thing you are proud of. Both are optional, so skipping them still gives you a card that looks right.",
+      "Share it straight from your phone or download it on the web. Rebuild it whenever the numbers change.",
+    ],
+  },
+  {
     version: "0.43.0",
     date: "August 10, 2026",
     highlights: [
