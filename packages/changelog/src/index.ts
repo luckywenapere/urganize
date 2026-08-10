@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.44.2",
+    date: "August 10, 2026",
+    highlights: [
+      "Metadata is no longer marked Beta. Distribution fields and collaborator credits have been in real use long enough to stand on their own.",
+    ],
+  },
+  {
     version: "0.44.1",
     date: "August 10, 2026",
     highlights: [

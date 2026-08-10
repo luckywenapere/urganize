@@ -362,9 +362,6 @@ export function TasksPanel({
             >
               <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
               Metadata
-              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-                Beta
-              </span>
             </button>
           ) : null}
           {/* Calendar (URG-157). Opens as a WIDE overlay window rather than the
