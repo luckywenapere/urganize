@@ -11,6 +11,13 @@ const supabaseHostname = supabaseUrl ? new URL(supabaseUrl).hostname : null;
 
 const nextConfig = {
   transpilePackages: ['@urganize/ui'],
+  // The recap card renderer reads static font binaries off disk at request
+  // time (satori cannot use next/font). Output tracing only follows imports, so
+  // a bare fs.readFile would leave the .ttf files out of the deployed lambda
+  // and every generate would fail with ENOENT. Declare them explicitly.
+  outputFileTracingIncludes: {
+    '/api/releases/[releaseId]/recap': ['./assets/fonts/*.ttf'],
+  },
   images: {
     remotePatterns: supabaseHostname
       ? [

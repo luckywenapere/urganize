@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { AlertCircle, ArrowLeft, Sparkles } from 'lucide-react';
+import { AlertCircle, ArrowLeft, PartyPopper, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -47,6 +47,11 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
 const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
 
+// The shareable end-of-release card. Unlike the two AI actions above, this pill
+// is also gated on the release actually being finished, so it appears at the
+// moment there is something to celebrate rather than sitting there all campaign.
+const RELEASE_RECAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_RECAP === 'true';
+
 // Dynamic for the same reason AppShell already loads it that way — a static
 // import here defeated that, dragging the ~460-line modal into the /dashboard
 // entry chunk that every user downloads before first paint, for a surface
@@ -65,6 +70,10 @@ const TailorPlanModal = dynamic(
 );
 const StatusUpdateModal = dynamic(
   () => import('@/components/releases/StatusUpdateModal').then((m) => m.StatusUpdateModal),
+  { ssr: false }
+);
+const RecapModal = dynamic(
+  () => import('@/components/releases/RecapModal').then((m) => m.RecapModal),
   { ssr: false }
 );
 
@@ -118,6 +127,7 @@ export function WorkspaceView() {
   const [savedContext, setSavedContext] = useState<ReleaseContext | null>(null);
   const [hasTailoring, setHasTailoring] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isRecapOpen, setIsRecapOpen] = useState(false);
   const [isGeneratingStatus, setIsGeneratingStatus] = useState(false);
   const [statusUpdate, setStatusUpdate] = useState('');
   // One-time getting-started guide (NewReleaseGuide), triggered by ?new=1
@@ -283,7 +293,7 @@ export function WorkspaceView() {
   // wider shape structurally.
   const scopedReleaseSlim = useMemo<Pick<
     Release,
-    'id' | 'title' | 'artistName' | 'releaseDate' | 'templatePending'
+    'id' | 'title' | 'artistName' | 'releaseDate' | 'templatePending' | 'status'
   > | null>(() => {
     if (!scopedReleaseId) return null;
     const found = releases.find((r) => r.id === scopedReleaseId);
@@ -294,6 +304,7 @@ export function WorkspaceView() {
       artistName: found.artistName,
       releaseDate: found.releaseDate,
       templatePending: found.templatePending,
+      status: found.status,
     };
   }, [scopedReleaseId, releases]);
 
@@ -363,6 +374,29 @@ export function WorkspaceView() {
   // leave the rails alone (founder call).
   const hideRailsForLayout = (CHAPPI_ENABLED && isRailOpen) || activeScene === 'calendar';
 
+  // A recap is only worth offering once the release has actually happened.
+  // Mirrors the server predicate in the recap route's _shared.ts exactly, so
+  // the pill and the API can never disagree about what "finished" means.
+  // Release day itself counts: the share moment is the launch, not the day
+  // after. The all-tasks-done clause is what makes "complete" real today, since
+  // nothing in the product writes the released status, and it is the only route
+  // to a recap for a release whose date was never set.
+  const isRecapEligible = useMemo(() => {
+    if (!scopedReleaseSlim) return false;
+    if (scopedReleaseSlim.status === 'released' || scopedReleaseSlim.status === 'archived') {
+      return true;
+    }
+    if (scopedReleaseSlim.releaseDate) {
+      const releaseDay = new Date(`${scopedReleaseSlim.releaseDate}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (Number.isFinite(releaseDay.getTime()) && releaseDay.getTime() <= today.getTime()) {
+        return true;
+      }
+    }
+    return scopedTasks.length > 0 && scopedTasks.every((task) => task.status === 'done');
+  }, [scopedReleaseSlim, scopedTasks]);
+
   // The two AI action pills, ported from the removed release detail page —
   // only meaningful (and only rendered) when a release is scoped, so both
   // TasksPanel mounts get this via `extraActions` only in that case.
@@ -387,6 +421,16 @@ export function WorkspaceView() {
         >
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
           {isGeneratingStatus ? 'Generating…' : 'Generate status update'}
+        </button>
+      ) : null}
+      {RELEASE_RECAP_ENABLED && isRecapEligible ? (
+        <button
+          type="button"
+          onClick={() => setIsRecapOpen(true)}
+          className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+        >
+          <PartyPopper className="h-3.5 w-3.5" aria-hidden="true" />
+          Get your release recap
         </button>
       ) : null}
     </>
@@ -727,6 +771,17 @@ export function WorkspaceView() {
           statusUpdate={statusUpdate}
           onClose={() => setIsStatusOpen(false)}
           onRegenerate={() => void generateStatus()}
+        />
+      ) : null}
+
+      {/* Mounted only while open, so each open refetches and never shows a
+          signed preview URL that expired since last time. */}
+      {RELEASE_RECAP_ENABLED && isRecapOpen && scopedReleaseSlim ? (
+        <RecapModal
+          releaseId={scopedReleaseSlim.id}
+          releaseTitle={scopedReleaseSlim.title}
+          onClose={() => setIsRecapOpen(false)}
+          onToast={(message, tone) => setToast({ message, tone })}
         />
       ) : null}
     </main>

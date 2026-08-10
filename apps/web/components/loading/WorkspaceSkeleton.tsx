@@ -44,6 +44,12 @@ const IDENTITY_PANEL_ENABLED =
 const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
 const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
 
+// The release recap pill (WorkspaceView) is deliberately NOT reserved here,
+// unlike the two AI pills above. It only appears once a release is finished,
+// which depends on release and task data this skeleton renders BEFORE it has.
+// Reserving it unconditionally would shrink the row for every unfinished
+// release, so the jump is taken on the rarer finished case instead.
+
 /**
  * Workspace loading state, rendered inline by `WorkspaceView` (and the
  * legacy dashboard) while auth/the first command-center fetch are in
