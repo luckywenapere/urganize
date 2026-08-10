@@ -22,13 +22,19 @@ import { useAuthStore } from '@/lib/auth-store';
 import { CURATOR_HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
+import type { CuratorInviteState } from '@/types/pitching';
 
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 
 // Survives the Google round trip. Read and cleared on mount.
 const RESUME_STORAGE_KEY = 'urganize.curator.join_code';
 
-type InviteState = 'valid' | 'used' | 'revoked' | 'expired';
+// The API (resolveCuratorInviteState in lib/curator-invites.ts) reports a good
+// invite as 'active', not 'valid'. This used to redeclare its own local
+// 'valid' state, which the server never sends, so every fresh invite fell
+// through to the generic "no longer works" message below regardless of its
+// real state. Fixed by using the type the server actually returns.
+type InviteState = CuratorInviteState;
 
 type LoadState =
   | { kind: 'loading' }
@@ -116,7 +122,15 @@ export function CuratorJoinPageClient() {
           });
           return;
         }
-        setLoadState({ kind: 'ready', state: payload.status || 'valid' });
+        if (!payload.status) {
+          // The server always sends `status` on a 200 (resolveCuratorInviteState
+          // never returns nothing). A response without one is a broken
+          // response, not a good invite — fail closed instead of assuming the
+          // link works, which is what the old `|| 'valid'` fallback did.
+          setLoadState({ kind: 'invalid', message: 'We could not check this link.' });
+          return;
+        }
+        setLoadState({ kind: 'ready', state: payload.status });
       } catch (loadError) {
         if (cancelled) return;
         setLoadState({
@@ -174,7 +188,7 @@ export function CuratorJoinPageClient() {
 
   // 3. Post-Google resume.
   useEffect(() => {
-    if (loadState.kind !== 'ready' || loadState.state !== 'valid') return;
+    if (loadState.kind !== 'ready' || loadState.state !== 'active') return;
     if (authLoading || !isAuthenticated) return;
     if (resumeStartedRef.current) return;
 
@@ -256,7 +270,7 @@ export function CuratorJoinPageClient() {
 
   if (!PITCHING_ENABLED) return null;
 
-  const isUsable = loadState.kind === 'ready' && loadState.state === 'valid';
+  const isUsable = loadState.kind === 'ready' && loadState.state === 'active';
   const busy = isSubmitting || isGoogleRedirecting;
 
   return (
