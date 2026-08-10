@@ -16,6 +16,12 @@ import { openExternalUrl } from '@/lib/external-link';
 // front door, human fallback one tap deeper).
 const WHATSAPP_URL = 'https://wa.me/2347067367057';
 
+// When on, MobileNavBar's UrgAns tab replaces this dock's whole reason to
+// exist below lg (the dock has no lg+ UI to begin with — the side rail owns
+// that range). The founder link moves to a footer row on the assistant page
+// itself; see ChappiPageClient.tsx.
+const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
+
 // Open-state persistence — same SSR-safe pattern as TasksPanel's bucket
 // state: initialize closed (stable first paint), hydrate in a mount effect.
 const DOCK_OPEN_KEY = 'urganize.chappi.dock-open';
@@ -93,6 +99,13 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
           setRailOpen(!railOpen);
           return;
         }
+        if (MOBILE_NAV_ENABLED) {
+          // The dock's own panel doesn't render below lg when the bar is on
+          // (see the early return above) — go straight to the full page
+          // instead of toggling UI that no longer exists.
+          router.push('/dashboard/urgans');
+          return;
+        }
         setIsOpen((current) => {
           const next = !current;
           writePersistedState(DOCK_OPEN_KEY, DOCK_OPEN_VERSION, next);
@@ -102,12 +115,18 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [router]);
 
   // The assistant page IS the chat — a floating duplicate of the same
   // conversation there is redundant. Open state is preserved for when the
   // user navigates back to a workspace page.
   if (pathname === '/dashboard/urgans') return null;
+
+  // MobileNavBar's UrgAns tab is the below-lg entry point now; the dock never
+  // had an lg+ UI, so it has nothing left to render. Persisted open state is
+  // simply ignored (not migrated) — flip the flag off and it resumes exactly
+  // as it was.
+  if (MOBILE_NAV_ENABLED) return null;
 
   if (!isOpen) {
     return (

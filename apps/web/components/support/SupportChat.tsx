@@ -7,6 +7,11 @@ import { openExternalUrl } from '@/lib/external-link';
 // Direct line to the founder. Number lives here only — change it in one place.
 const WHATSAPP_URL = 'https://wa.me/2347067367057';
 
+// Only matters in the CHAPPI-off + MOBILE_NAV-on combination: this pill has
+// no lg:hidden of its own (it's the flag-off Chappi fallback and mounts at
+// every viewport), so it needs raising above the bar the same as the toasts.
+const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
+
 const LABELS = ['Chat with the founder', 'Report a bug', 'Contact support'] as const;
 
 const ROTATE_INTERVAL_MS = 3500;
@@ -64,7 +69,9 @@ export function SupportChat() {
           void openExternalUrl(WHATSAPP_URL);
         }
       }}
-      className="group fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-none border border-stroke-default bg-bg-elevated py-2.5 pl-3.5 pr-4 shadow-2xl transition-all duration-150 hover:border-stroke-strong hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:bottom-6 md:right-6"
+      className={`group fixed right-5 z-50 flex items-center gap-2.5 rounded-none border border-stroke-default bg-bg-elevated py-2.5 pl-3.5 pr-4 shadow-2xl transition-all duration-150 hover:border-stroke-strong hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:right-6 ${
+        MOBILE_NAV_ENABLED ? 'mobile-nav-raise lg:bottom-6' : 'bottom-5 md:bottom-6'
+      }`}
     >
       <span className="text-brand">
         <WhatsAppIcon />
