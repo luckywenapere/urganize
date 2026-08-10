@@ -226,10 +226,7 @@ export function computeDaysOfWork(
  * Anything that would render as zero, or a team of one, is dropped rather than
  * shown, so the card never carries a stat that deflates the moment.
  */
-export function selectRecapStats(
-  raw: RecapRawStats,
-  inputs: { firstWeekStreams: number | null }
-): RecapStatLine[] {
+export function selectRecapStats(raw: RecapRawStats): RecapStatLine[] {
   const lines: RecapStatLine[] = [];
 
   if (raw.tasksCompleted >= 1) {
@@ -262,15 +259,6 @@ export function selectRecapStats(
       key: 'teamSize',
       value: formatRecapNumber(raw.teamSize),
       label: RECAP_STAT_LABELS.teamSize,
-    });
-  }
-
-  const streams = inputs.firstWeekStreams;
-  if (streams !== null && streams >= 1) {
-    lines.push({
-      key: 'firstWeekStreams',
-      value: formatRecapNumber(streams),
-      label: RECAP_STAT_LABELS.firstWeekStreams,
     });
   }
 

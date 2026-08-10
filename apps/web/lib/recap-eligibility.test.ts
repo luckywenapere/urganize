@@ -42,42 +42,20 @@ describe('isRecapEligible', () => {
 });
 
 describe('parseRecapInputs', () => {
-  it('accepts an empty body, since both fields are optional', () => {
-    expect(parseRecapInputs({})).toEqual({ inputs: { firstWeekStreams: null, highlight: null } });
-  });
-
-  it('accepts a numeric stream count', () => {
-    expect(parseRecapInputs({ firstWeekStreams: 12400 })).toEqual({
-      inputs: { firstWeekStreams: 12400, highlight: null },
-    });
-  });
-
-  it('accepts a numeric stream count sent as a string', () => {
-    expect(parseRecapInputs({ firstWeekStreams: ' 12400 ' })).toEqual({
-      inputs: { firstWeekStreams: 12400, highlight: null },
-    });
+  it('accepts an empty body, since the highlight is optional', () => {
+    expect(parseRecapInputs({})).toEqual({ inputs: { highlight: null } });
   });
 
   it('treats an empty string as not provided', () => {
-    expect(parseRecapInputs({ firstWeekStreams: '', highlight: '' })).toEqual({
-      inputs: { firstWeekStreams: null, highlight: null },
+    expect(parseRecapInputs({ highlight: '' })).toEqual({
+      inputs: { highlight: null },
     });
-  });
-
-  it('rejects negative, fractional and non-numeric stream counts', () => {
-    expect(parseRecapInputs({ firstWeekStreams: -5 })).toHaveProperty('error');
-    expect(parseRecapInputs({ firstWeekStreams: 1.5 })).toHaveProperty('error');
-    expect(parseRecapInputs({ firstWeekStreams: 'lots' })).toHaveProperty('error');
-  });
-
-  it('rejects an absurdly large stream count', () => {
-    expect(parseRecapInputs({ firstWeekStreams: 9_000_000_000_000 })).toHaveProperty('error');
   });
 
   it('sanitizes the highlight before storing it', () => {
     const result = parseRecapInputs({ highlight: 'Sold out the show — twice' });
     expect(result).toEqual({
-      inputs: { firstWeekStreams: null, highlight: 'Sold out the show, twice' },
+      inputs: { highlight: 'Sold out the show, twice' },
     });
   });
 

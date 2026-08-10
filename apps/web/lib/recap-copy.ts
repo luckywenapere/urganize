@@ -97,7 +97,6 @@ export const RECAP_STAT_LABELS = {
   daysOfWorkSingular: 'day of work',
   daysOfWorkPlural: 'days of work',
   teamSize: 'people on the team',
-  firstWeekStreams: 'first week streams',
   pitchesSent: 'playlist pitches sent',
   pitchAdds: 'playlist adds',
 } as const;

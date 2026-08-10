@@ -8,7 +8,6 @@ import type { ReleaseRecap } from '@/types/recap';
 // single definition both sides are written against.
 export {
   RECAP_HIGHLIGHT_MAX_CHARS,
-  RECAP_MAX_STREAMS,
   isRecapEligible,
   parseRecapInputs,
 } from '@/lib/recap-eligibility';
@@ -32,7 +31,7 @@ export {
 export const RELEASE_RECAPS_TABLE = 'release_recaps';
 
 export const RECAP_COLUMNS =
-  'id,release_id,first_week_streams,highlight,story_image_path,square_image_path,generated_at,created_at,updated_at';
+  'id,release_id,highlight,story_image_path,square_image_path,generated_at,created_at,updated_at';
 
 // Feature flag: the whole recap surface stays dark until
 // NEXT_PUBLIC_FEATURE_RELEASE_RECAP is 'true'. Every handler checks this first
@@ -56,10 +55,6 @@ export const toReleaseRecap = (
 ): ReleaseRecap => ({
   id: String(row.id || ''),
   releaseId: String(row.release_id || ''),
-  firstWeekStreams:
-    row.first_week_streams === null || row.first_week_streams === undefined
-      ? null
-      : Number(row.first_week_streams),
   highlight: row.highlight === null || row.highlight === undefined ? null : String(row.highlight),
   generatedAt: row.generated_at ? String(row.generated_at) : null,
   storyImageUrl: urls.storyImageUrl,

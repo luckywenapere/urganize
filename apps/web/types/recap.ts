@@ -6,8 +6,6 @@ export type ReleaseRecap = {
   id: string;
   releaseId: string;
   /** User-entered, optional. Null when they skipped the field. */
-  firstWeekStreams: number | null;
-  /** User-entered, optional. Null when they skipped the field. */
   highlight: string | null;
   generatedAt: string | null;
   /** Signed URLs, minted per request. Never persist these (they expire). */
@@ -18,6 +16,5 @@ export type ReleaseRecap = {
 };
 
 export type RecapInputs = {
-  firstWeekStreams: number | null;
   highlight: string | null;
 };

@@ -153,7 +153,7 @@ export async function POST(
   try {
     body = await request.json();
   } catch {
-    // An empty body is valid: both inputs are optional.
+    // An empty body is valid: the highlight is optional.
     body = {};
   }
 
@@ -183,7 +183,7 @@ export async function POST(
       );
     }
 
-    stats = selectRecapStats(raw, { firstWeekStreams: parsed.inputs.firstWeekStreams });
+    stats = selectRecapStats(raw);
   } catch (error) {
     console.error('[recap] could not gather stats', error);
     return NextResponse.json({ error: 'Could not read this release. Try again.' }, { status: 500 });
@@ -230,7 +230,6 @@ export async function POST(
   }
 
   const rowValues = {
-    first_week_streams: parsed.inputs.firstWeekStreams,
     highlight: parsed.inputs.highlight,
     story_image_path: uploadedPaths.story,
     square_image_path: uploadedPaths.square,

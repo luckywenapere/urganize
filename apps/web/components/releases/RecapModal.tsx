@@ -14,8 +14,8 @@ import type { ReleaseRecap } from '@/types/recap';
 // surface): same z tier, same scrim, no portal and no Escape handler, since the
 // app's modal tier owns that convention.
 //
-// Four steps rather than one screen, because the two optional inputs have to
-// come BEFORE the render: the numbers are baked into the PNG.
+// Four steps rather than one screen, because the optional input has to come
+// BEFORE the render: it is baked into the PNG.
 
 const HIGHLIGHT_MAX_CHARS = 140;
 
@@ -53,7 +53,6 @@ function fileNameFor(title: string, size: PreviewSize): string {
 export function RecapModal({ releaseId, releaseTitle, onClose, onToast }: RecapModalProps) {
   const [step, setStep] = useState<Step>('loading');
   const [recap, setRecap] = useState<ReleaseRecap | null>(null);
-  const [streamsInput, setStreamsInput] = useState('');
   const [highlightInput, setHighlightInput] = useState('');
   const [previewSize, setPreviewSize] = useState<PreviewSize>('story');
   const [isSharing, setIsSharing] = useState(false);
@@ -74,7 +73,6 @@ export function RecapModal({ releaseId, releaseTitle, onClose, onToast }: RecapM
 
       if (existing?.storyImageUrl) {
         setRecap(existing);
-        setStreamsInput(existing.firstWeekStreams === null ? '' : String(existing.firstWeekStreams));
         setHighlightInput(existing.highlight ?? '');
         setStep('preview');
         return;
@@ -99,7 +97,6 @@ export function RecapModal({ releaseId, releaseTitle, onClose, onToast }: RecapM
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          firstWeekStreams: streamsInput.trim() === '' ? null : streamsInput.trim(),
           highlight: highlightInput.trim() === '' ? null : highlightInput.trim(),
         }),
       });
@@ -199,26 +196,8 @@ export function RecapModal({ releaseId, releaseTitle, onClose, onToast }: RecapM
             {step === 'form' ? (
               <div className="flex flex-col gap-4">
                 <p className="text-sm leading-6 text-content-secondary">
-                  Two optional extras. Leave them blank if you like, the card works without them.
+                  One optional extra. Leave it blank if you like, the card works without it.
                 </p>
-
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-                    First week streams
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={streamsInput}
-                    onChange={(event) => setStreamsInput(event.target.value)}
-                    placeholder="12400"
-                    className="h-11 border border-stroke-default bg-bg-elevated/50 px-3 text-sm text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-brand"
-                  />
-                  <span className="text-xs text-content-tertiary">
-                    We have no streaming connection, so this is the number you read off your
-                    distributor.
-                  </span>
-                </label>
 
                 <label className="flex flex-col gap-1.5">
                   <span className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">

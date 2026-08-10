@@ -17,93 +17,67 @@ const baseRaw: RecapRawStats = {
   allTasksDone: false,
 };
 
-const noInputs = { firstWeekStreams: null };
-
 describe('selectRecapStats', () => {
   it('returns nothing for a release with no achievements', () => {
-    expect(selectRecapStats(baseRaw, noInputs)).toEqual([]);
+    expect(selectRecapStats(baseRaw)).toEqual([]);
   });
 
   it('omits a zero task count rather than printing it', () => {
-    const lines = selectRecapStats({ ...baseRaw, tasksCompleted: 0, daysOfWork: 12 }, noInputs);
+    const lines = selectRecapStats({ ...baseRaw, tasksCompleted: 0, daysOfWork: 12 });
     expect(lines.map((line) => line.key)).toEqual(['daysOfWork']);
   });
 
   it('suppresses a team of one', () => {
-    const lines = selectRecapStats({ ...baseRaw, teamSize: 1 }, noInputs);
+    const lines = selectRecapStats({ ...baseRaw, teamSize: 1 });
     expect(lines).toEqual([]);
   });
 
   it('includes a team of two or more', () => {
-    const lines = selectRecapStats({ ...baseRaw, teamSize: 4 }, noInputs);
+    const lines = selectRecapStats({ ...baseRaw, teamSize: 4 });
     expect(lines).toHaveLength(1);
     expect(lines[0].value).toBe('4');
     expect(lines[0].label).toBe('people on the team');
   });
 
   it('pluralizes task and day labels', () => {
-    const single = selectRecapStats({ ...baseRaw, tasksCompleted: 1, daysOfWork: 1 }, noInputs);
+    const single = selectRecapStats({ ...baseRaw, tasksCompleted: 1, daysOfWork: 1 });
     expect(single.map((line) => line.label)).toEqual(['task completed', 'day of work']);
 
-    const many = selectRecapStats({ ...baseRaw, tasksCompleted: 2, daysOfWork: 9 }, noInputs);
+    const many = selectRecapStats({ ...baseRaw, tasksCompleted: 2, daysOfWork: 9 });
     expect(many.map((line) => line.label)).toEqual(['tasks completed', 'days of work']);
   });
 
-  it('omits streams when the user left the field blank or entered zero', () => {
-    expect(selectRecapStats(baseRaw, { firstWeekStreams: null })).toEqual([]);
-    expect(selectRecapStats(baseRaw, { firstWeekStreams: 0 })).toEqual([]);
-  });
-
-  it('includes streams when entered, formatted with separators', () => {
-    const lines = selectRecapStats(baseRaw, { firstWeekStreams: 12400 });
-    expect(lines).toHaveLength(1);
-    expect(lines[0].value).toBe('12,400');
-    expect(lines[0].label).toBe('first week streams');
-  });
-
   it('omits pitch stats entirely when the table is absent', () => {
-    const lines = selectRecapStats(
-      { ...baseRaw, tasksCompleted: 5, pitchesSent: null, pitchAdds: null },
-      noInputs
-    );
+    const lines = selectRecapStats({ ...baseRaw, tasksCompleted: 5, pitchesSent: null, pitchAdds: null });
     expect(lines.map((line) => line.key)).toEqual(['tasksCompleted']);
   });
 
   it('omits pitch stats when the table exists but is empty', () => {
-    const lines = selectRecapStats(
-      { ...baseRaw, tasksCompleted: 5, pitchesSent: 0, pitchAdds: 0 },
-      noInputs
-    );
+    const lines = selectRecapStats({ ...baseRaw, tasksCompleted: 5, pitchesSent: 0, pitchAdds: 0 });
     expect(lines.map((line) => line.key)).toEqual(['tasksCompleted']);
   });
 
   it('includes pitch stats when the table has data', () => {
-    const lines = selectRecapStats(
-      { ...baseRaw, pitchesSent: 18, pitchAdds: 3 },
-      noInputs
-    );
+    const lines = selectRecapStats({ ...baseRaw, pitchesSent: 18, pitchAdds: 3 });
     expect(lines.map((line) => line.key)).toEqual(['pitchesSent', 'pitchAdds']);
   });
 
   it('keeps the priority order and caps at five lines', () => {
-    const lines = selectRecapStats(
-      {
-        ...baseRaw,
-        tasksCompleted: 64,
-        daysOfWork: 77,
-        teamSize: 3,
-        pitchesSent: 18,
-        pitchAdds: 3,
-      },
-      { firstWeekStreams: 12400 }
-    );
+    const lines = selectRecapStats({
+      ...baseRaw,
+      tasksCompleted: 64,
+      daysOfWork: 77,
+      teamSize: 3,
+      pitchesSent: 18,
+      pitchAdds: 3,
+    });
     expect(lines).toHaveLength(5);
     expect(lines.map((line) => line.key)).toEqual([
       'tasksCompleted',
       'daysOfWork',
       'teamSize',
-      'firstWeekStreams',
       'pitchesSent',
+      'pitchAdds',
     ]);
   });
 });

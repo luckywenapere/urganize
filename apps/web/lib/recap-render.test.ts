@@ -24,7 +24,7 @@ const sampleStats = [
   { key: 'tasksCompleted', value: '64', label: 'tasks completed' },
   { key: 'daysOfWork', value: '77', label: 'days of work' },
   { key: 'teamSize', value: '3', label: 'people on the team' },
-  { key: 'firstWeekStreams', value: '12,400', label: 'first week streams' },
+  { key: 'pitchesSent', value: '18', label: 'playlist pitches sent' },
 ];
 
 async function renderPng(size: RecapCardSize, overrides: Partial<Parameters<typeof renderRecapCard>[0]> = {}) {
