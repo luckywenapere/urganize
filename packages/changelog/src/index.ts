@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.43.0",
+    date: "August 10, 2026",
+    highlights: [
+      "Mark a task done and UrgAns now asks how it went. Three taps to answer — Went well, Went okay, or Didn't go to plan — plus a line about what happened if you feel like it. The task completes the instant you tick it, so answering is never something you wait on, and skipping costs one tap with no follow-up.",
+      "What you say is kept with the task, so the story of a release builds itself as you work instead of being reconstructed later from memory.",
+      "If you'd rather not be asked, turn off \"Ask me after tasks\" in Settings and the question stops for good.",
+    ],
+  },
+  {
     version: "0.42.1",
     date: "August 9, 2026",
     highlights: [

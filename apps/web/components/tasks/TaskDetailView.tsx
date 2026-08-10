@@ -22,6 +22,7 @@ import {
   type TaskStatus,
   type WorkspaceMember,
 } from '@/lib/tasks';
+import { TASK_OUTCOME_LABELS } from '@/lib/task-outcomes';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { isNativePlatform } from '@/lib/platform';
 import { openExternalUrl } from '@/lib/external-link';
@@ -32,6 +33,10 @@ import { openExternalUrl } from '@/lib/external-link';
 // existing task_attachments rows and task-attachments bucket objects are
 // untouched, this only hides the section and gates the API routes.
 const TASK_ATTACHMENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_ATTACHMENTS === 'true';
+
+// Post-completion check-in. Off by default; when off this view simply never
+// renders the Outcome section (the read path returns null too).
+const TASK_OUTCOMES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_OUTCOMES === 'true';
 
 // 2026-07-23 (founder calls): the Priority selector, the Tag row, and the
 // Activity feed were all removed from this view. Priority is gone as a
@@ -376,6 +381,28 @@ export function TaskDetailView({
               placeholder="Add notes, context, links, or markdown-style bullets."
             />
           </label>
+
+          {/* How the last completion went, captured by the check-in sheet.
+              Read-only and kept even after a reopen: it is the record of
+              that completion, not a live property of the task. */}
+          {TASK_OUTCOMES_ENABLED && task.outcome ? (
+            <section className="rounded-[24px] border border-stroke-default bg-bg-elevated/50 p-4">
+              <h3 className="text-sm font-semibold text-content-primary">Outcome</h3>
+              <p className="mt-2 text-sm font-semibold text-content-primary">
+                {TASK_OUTCOME_LABELS[task.outcome.outcome]}
+              </p>
+              <p className="mt-1 text-sm text-content-secondary">{task.outcome.summary}</p>
+              {task.outcome.note ? (
+                <p className="mt-3 whitespace-pre-wrap text-sm text-content-secondary">{task.outcome.note}</p>
+              ) : null}
+              {task.outcome.aiFollowupQuestion && task.outcome.aiFollowupAnswer ? (
+                <div className="mt-3 border-t border-stroke-subtle pt-3">
+                  <p className="text-sm font-medium text-content-primary">{task.outcome.aiFollowupQuestion}</p>
+                  <p className="mt-1 text-sm text-content-secondary">{task.outcome.aiFollowupAnswer}</p>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
 
           {TASK_ATTACHMENTS_ENABLED ? (
             <section className="rounded-[24px] border border-stroke-default bg-bg-elevated/50 p-4">

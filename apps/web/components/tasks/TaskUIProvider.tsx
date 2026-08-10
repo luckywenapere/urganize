@@ -14,6 +14,7 @@ import { usePathname } from 'next/navigation';
 import { TaskDetailView, type TaskDetailPatchInput } from '@/components/tasks/TaskDetailView';
 import { type DependencyTaskSummary } from '@/components/tasks/TaskDependenciesSection';
 import { TaskQuickCreateModal } from '@/components/tasks/TaskQuickCreateModal';
+import { TaskOutcomeSheet } from '@/components/tasks/TaskOutcomeSheet';
 import { UndoCompletionToast } from '@/components/tasks/UndoCompletionToast';
 import { type ReleaseOption } from '@/lib/release-helpers';
 import { isTypingTarget, type TaskCreateSource, type TaskDetail, type WorkspaceMember } from '@/lib/tasks';
@@ -340,6 +341,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
           comments: [],
           attachments: [],
           activity: [],
+          outcome: null,
         } as TaskDetail);
       } else {
         setTask(null);
@@ -726,6 +728,12 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
           renders the affordance wherever TaskUIProvider is mounted (currently
           AppShell, which covers every authenticated dashboard surface). */}
       <UndoCompletionToast />
+
+      {/* Post-completion check-in ("Done. How did it go?"). Rendered after the
+          detail pop-up so a completion triggered from inside that pop-up
+          stacks the sheet above it — both live on the z-[170] modal tier. The
+          store decides whether this or the undo toast fires; never both. */}
+      <TaskOutcomeSheet />
       </TaskDetailRenderContext.Provider>
     </TaskUIContext.Provider>
   );
