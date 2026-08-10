@@ -38,6 +38,10 @@ const ChappiDock = dynamic(
   () => import('@/components/chappi/ChappiDock').then((m) => m.ChappiDock),
   { ssr: false }
 );
+const MobileNavBar = dynamic(
+  () => import('@/components/app/MobileNavBar').then((m) => m.MobileNavBar),
+  { ssr: false }
+);
 const ChappiSidePanel = dynamic(
   () => import('@/components/chappi/ChappiSidePanel').then((m) => m.ChappiSidePanel),
   { ssr: false }
@@ -75,6 +79,13 @@ const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTIC
 // WhatsApp founder line moves into their footers. With the flag off, the
 // standalone SupportChat pill renders exactly as before.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
+// Bottom tab bar, below lg only — see MobileNavBar.tsx. Moves the topbar's
+// nav icons + create CTA down to where a thumb reaches on a phone, and
+// stands in for the ChappiDock launcher on that same range (ChappiDock
+// retires itself when this is on; AppShell's dock mount line below is
+// unchanged).
+const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
 
 // The UrgAns planner's intake modal is mounted app-wide (see the dynamic import
 // above), so a note or an assistant chip can open it without the notes page or
@@ -168,6 +179,18 @@ export function AppShell({ children }: { children: ReactNode }) {
     !isCuratorAccount;
 
   const workspaceUserName = user?.name || user?.artist_name || user?.email || '';
+
+  // The dock's corner launcher is what pb-28 clears; with MOBILE_NAV_ENABLED
+  // the dock retires below lg and the bar itself needs clearing instead — see
+  // .mobile-nav-clearance / .chappi-main-padding-nav in globals.css. Kept as
+  // a precomputed value so the <main> className below stays a one-token swap.
+  const mainPaddingClass = isChappiRoute
+    ? MOBILE_NAV_ENABLED
+      ? 'chappi-main-padding-nav'
+      : 'chappi-main-padding'
+    : MOBILE_NAV_ENABLED
+      ? 'mobile-nav-clearance'
+      : 'pb-28 md:pb-10';
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
@@ -321,11 +344,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 page itself — that page IS the chat. */}
             <div className="flex min-h-0 flex-1">
               {IDENTITY_PANEL_ENABLED ? <WorkspaceIdentityPanel /> : null}
-              <main
-                className={`min-w-0 flex-1 px-4 pt-5 sm:px-5 md:px-6 lg:px-8 ${
-                  isChappiRoute ? 'chappi-main-padding' : 'pb-28 md:pb-10'
-                }`}
-              >
+              <main className={`min-w-0 flex-1 px-4 pt-5 sm:px-5 md:px-6 lg:px-8 ${mainPaddingClass}`}>
                 {children}
               </main>
               {CHAPPI_ENABLED && !isChappiRoute ? (
@@ -340,6 +359,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* HelpMenu moved into AppTopbar's right cluster (2026-07-23). */}
       {showHelpMenu ? (
         CHAPPI_ENABLED ? <ChappiDock onNewRelease={openCreateRelease} /> : <SupportChat />
+      ) : null}
+      {MOBILE_NAV_ENABLED && showWorkspaceChrome && !requiresArtistNameGate ? (
+        <MobileNavBar onNewRelease={openCreateRelease} />
       ) : null}
       <CreateReleaseModal
         open={isCreateReleaseOpen}

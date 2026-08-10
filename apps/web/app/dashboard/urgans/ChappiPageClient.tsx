@@ -11,6 +11,8 @@ import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { ChappiPageSkeleton } from '@/components/loading/ChappiPageSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { FirstReleaseWin } from '@/components/workspace/FirstReleaseWin';
+import { isNativePlatform } from '@/lib/platform';
+import { openExternalUrl } from '@/lib/external-link';
 
 // Same flag AppTopbar reads for the nav icon — if a direct link is followed
 // while the flag is off, bounce to the workspace instead of 404ing (the
@@ -20,6 +22,15 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 // Same flag WorkspaceView reads for the "first win" reveal — Chappi's
 // "New release" card can plausibly create a user's very first release too.
 const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
+
+// When on, MobileNavBar carries this page's below-lg navigation, so the
+// column has one row of chrome subtracted less: see
+// .chappi-shell-height-nav in globals.css (kept in sync with
+// ChappiPageSkeleton). The WhatsApp founder link the floating dock's panel
+// used to carry gets a footer row below lg instead — the dock retires on
+// this route entirely once the flag is on.
+const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
+const WHATSAPP_URL = 'https://wa.me/2347067367057';
 
 export default function ChappiPageClient() {
   const router = useRouter();
@@ -70,7 +81,7 @@ export default function ChappiPageClient() {
           overflowed the calc and re-introduced page scroll. Floor keeps
           short viewports usable; the empty state centers within the
           definite height. */}
-      <div className="chappi-shell-height flex flex-col">
+      <div className={`${MOBILE_NAV_ENABLED ? 'chappi-shell-height-nav' : 'chappi-shell-height'} flex flex-col`}>
         {/* Collapse — the mirror image of ChappiSidePanel's expand button.
             Desktop-only (the split view it returns to doesn't exist below
             lg). Opens the side rail explicitly (an intentional "give me the
@@ -101,6 +112,30 @@ export default function ChappiPageClient() {
         <div className="min-h-0 flex-1">
           <ChappiConversation onNewRelease={() => setIsCreateModalOpen(true)} />
         </div>
+        {/* Human fallback, moved down from the ChappiDock panel the mobile bar
+            replaces — same URL, same accessible name. A flex child of the
+            locked column, so it costs no extra calc term (unlike the dock's
+            panel footer, this doesn't sit inside a fixed-height box that
+            would need to shrink to fit it — the column already reserves this
+            row via .chappi-shell-height-nav). Desktop keeps the rail's own
+            footer link; this row only exists below lg. */}
+        {MOBILE_NAV_ENABLED ? (
+          <a
+            href={WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Chat with the founder — report a bug or contact support"
+            onClick={(event) => {
+              if (isNativePlatform()) {
+                event.preventDefault();
+                void openExternalUrl(WHATSAPP_URL);
+              }
+            }}
+            className="flex shrink-0 items-center justify-center gap-1.5 border-t border-stroke-subtle px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary lg:hidden"
+          >
+            Chat with the founder
+          </a>
+        ) : null}
       </div>
 
       <CreateReleaseModal

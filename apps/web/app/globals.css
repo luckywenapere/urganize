@@ -1525,6 +1525,66 @@ body:focus-within .keyboard-hint,
   bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
 }
 
+/* ── Mobile bottom nav (NEXT_PUBLIC_FEATURE_MOBILE_NAV) ──────────────────
+   A fixed h-16 tab bar below lg replaces the topbar's nav icons + create CTA
+   and retires the ChappiDock launcher on that same range. Every value below
+   hard-codes the bar's 4rem row height — change MobileNavBar.tsx's height
+   and all of these in lockstep. The bar's own breakpoint is lg (1024px),
+   which is why these use that boundary rather than the md (768px) one
+   .chappi-main-padding/.chappi-shell-height use above — the bar persists
+   through the tablet range those two already treat as "desktop". */
+.mobile-nav-bar {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* AppShell <main> clearance when the bar is on: bar (4rem) + breathing room
+   + safe area, below lg; same md:pb-10-equivalent above it. */
+.mobile-nav-clearance {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 1024px) {
+  .mobile-nav-clearance {
+    padding-bottom: 2.5rem;
+  }
+}
+
+/* .chappi-main-padding's flag-on twin: same 1rem + safe-area gap the chat
+   composer already clears the dock corner by, plus the bar's own 4rem. */
+.chappi-main-padding-nav {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem + 4rem);
+}
+
+@media (min-width: 1024px) {
+  .chappi-main-padding-nav {
+    padding-bottom: 2.5rem;
+  }
+}
+
+/* .chappi-shell-height's flag-on twin — shared by ChappiPageClient and
+   ChappiPageSkeleton, keep both in sync. Chrome being subtracted below lg:
+   topbar min-h-16 + 1px border (4rem) + main pt-5 (1.25rem) +
+   chappi-main-padding-nav (1rem + 4rem + safe-area) = 10.25rem. */
+.chappi-shell-height-nav {
+  height: calc(100dvh - 10.25rem - env(safe-area-inset-bottom, 0px) - 1px);
+  min-height: 24rem;
+}
+
+@media (min-width: 1024px) {
+  .chappi-shell-height-nav {
+    height: calc(100dvh - 7.75rem - 1px);
+  }
+}
+
+/* Lifts a fixed bottom-anchored surface (toasts, the flag-off-Chappi
+   SupportChat pill) above the bar. Pair with an lg:bottom-* utility for the
+   value to restore once the bar disappears. */
+@media (max-width: 1023px) {
+  .mobile-nav-raise {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @media (max-width: 768px) {
   :root {
     --text-base: 15px;

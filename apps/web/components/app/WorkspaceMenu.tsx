@@ -10,6 +10,10 @@ type WorkspaceMenuProps = {
   /** Display name shown in the menu's identity header. The trigger itself
    * renders the ProfileIcon (person shape), not initials. */
   userName?: string;
+  /** Merged onto the root wrapper. AppTopbar uses this to hide the trigger
+   * below lg when MobileNavBar's "You" tab already covers Settings/sign-out
+   * there. */
+  className?: string;
 };
 
 /**
@@ -34,7 +38,7 @@ type WorkspaceMenuProps = {
  *     handle this — it closes the menu via the outside-click handler)
  *   - Outside click closes
  */
-export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
+export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
   const router = useRouter();
   const logout = useAuthStore((state) => state.logout);
   // URG-214: the identity card (mounted app-wide) keeps this store hydrated
@@ -127,7 +131,7 @@ export function WorkspaceMenu({ userName }: WorkspaceMenuProps) {
   };
 
   return (
-    <div className="relative">
+    <div className={`relative ${className ?? ''}`}>
       <button
         ref={triggerRef}
         type="button"
