@@ -1,0 +1,264 @@
+import { NextRequest, NextResponse } from 'next/server';
+import {
+  CURATOR_INVITES_TABLE,
+  CURATOR_PROFILES_TABLE,
+  createAdminClient,
+  flagOffResponse,
+  getAuthenticatedUser,
+  isPitchingFeatureEnabled,
+} from '../../_shared';
+import { looksLikeCuratorInviteCode, resolveCuratorInviteState } from '@/lib/curator-invites';
+import { MAX_CURATOR_DISPLAY_NAME_LENGTH } from '@/lib/pitching';
+
+// Turning an invite link into a curator account.
+//
+// GET is public and says only how the link stands. POST does the work and is
+// where the two rules that matter live:
+//
+//   1. SINGLE USE. The invite is consumed by a conditional update
+//      (where used_at is null and revoked_at is null), so two people opening
+//      the same link at the same time cannot both become curators. The row is
+//      the lock; there is no read-then-write window.
+//
+//   2. NO TEAM ACCOUNT CONVERSION. An account that owns releases or belongs to
+//      a team is refused. Flipping such an account to 'curator' would strand
+//      its releases behind a role that cannot see them, which is worse than
+//      making the person use a second address.
+
+const INVITE_COLUMNS = 'id,code,expires_at,revoked_at,used_at';
+
+/** How the link stands. Nothing else leaks, so this is safe to call unauthenticated. */
+export async function GET(
+  _request: NextRequest,
+  context: { params: Promise<{ code: string }> }
+) {
+  if (!isPitchingFeatureEnabled()) return flagOffResponse();
+
+  const { code } = await context.params;
+  if (!code || !looksLikeCuratorInviteCode(code)) {
+    return NextResponse.json({ error: 'Invite not found.' }, { status: 404 });
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const adminClient = supabaseUrl ? createAdminClient(supabaseUrl) : null;
+  if (!adminClient) {
+    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
+  }
+
+  const { data: invite, error } = await adminClient
+    .from(CURATOR_INVITES_TABLE)
+    .select(INVITE_COLUMNS)
+    .eq('code', code)
+    .maybeSingle();
+
+  if (error) {
+    // This endpoint is public and its message is rendered to an invited
+    // stranger, so the database's own wording never goes out — it lands in the
+    // server log instead. (An unapplied migration surfaces here first.)
+    console.error('[curator-join] invite lookup failed:', error.message);
+    return NextResponse.json({ error: 'Could not check this link right now.' }, { status: 500 });
+  }
+  if (!invite) {
+    return NextResponse.json({ error: 'Invite not found.' }, { status: 404 });
+  }
+
+  return NextResponse.json({ status: resolveCuratorInviteState(invite) });
+}
+
+/** Consumes the invite for the signed-in account and makes it a curator. */
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ code: string }> }
+) {
+  if (!isPitchingFeatureEnabled()) return flagOffResponse();
+
+  const auth = await getAuthenticatedUser(request);
+  if ('error' in auth) return auth.error;
+
+  const { code } = await context.params;
+  if (!code || !looksLikeCuratorInviteCode(code)) {
+    return NextResponse.json({ error: 'Invite not found.' }, { status: 404 });
+  }
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = (await request.json()) as Record<string, unknown>;
+  } catch {
+    payload = {};
+  }
+
+  const adminClient = createAdminClient(auth.supabaseUrl);
+  if (!adminClient) {
+    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
+  }
+
+  const userId = auth.user.id;
+
+  // Already a curator? Then this is a resumed flow (a reload, or an OAuth
+  // round trip that landed twice). Report success and let the client move on.
+  const { data: existingProfile } = await adminClient
+    .from(CURATOR_PROFILES_TABLE)
+    .select('user_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (existingProfile?.user_id) {
+    return NextResponse.json({ ok: true, alreadyCurator: true });
+  }
+
+  // Refuse to convert a team account. Checked before the invite is consumed so
+  // a refused attempt does not burn the link.
+  const teamCheck = await hasTeamFootprint(adminClient, userId);
+  if ('error' in teamCheck) return teamCheck.error;
+  if (teamCheck.hasFootprint) {
+    return NextResponse.json(
+      {
+        error:
+          'This account already runs releases. Sign out then use the link with a different email address.',
+      },
+      { status: 409 }
+    );
+  }
+
+  const { data: invite, error: inviteError } = await adminClient
+    .from(CURATOR_INVITES_TABLE)
+    .select(INVITE_COLUMNS)
+    .eq('code', code)
+    .maybeSingle();
+
+  if (inviteError) {
+    console.error('[curator-join] invite lookup failed:', inviteError.message);
+    return NextResponse.json({ error: 'Could not check this link right now.' }, { status: 500 });
+  }
+  if (!invite) {
+    return NextResponse.json({ error: 'Invite not found.' }, { status: 404 });
+  }
+
+  const state = resolveCuratorInviteState(invite);
+  if (state !== 'active') {
+    return NextResponse.json({ error: inviteStateMessage(state), status: state }, { status: 409 });
+  }
+
+  // Consume it. The where-clause is the lock: a second request racing this one
+  // updates zero rows and is told the link is used.
+  const { data: consumed, error: consumeError } = await adminClient
+    .from(CURATOR_INVITES_TABLE)
+    .update({ used_by: userId, used_at: new Date().toISOString() })
+    .eq('id', invite.id)
+    .is('used_at', null)
+    .is('revoked_at', null)
+    .select('id')
+    .maybeSingle();
+
+  if (consumeError) {
+    console.error('[curator-join] invite consume failed:', consumeError.message);
+    return NextResponse.json({ error: 'Could not use this link right now.' }, { status: 500 });
+  }
+  if (!consumed?.id) {
+    return NextResponse.json(
+      { error: inviteStateMessage('used'), status: 'used' },
+      { status: 409 }
+    );
+  }
+
+  const displayName = resolveDisplayName(payload.displayName, auth.user);
+
+  // The profiles row is written unconditionally, NOT with ignoreDuplicates: the
+  // OAuth callback may have just created a fallback row with role
+  // 'artist-manager', and that row has to become 'curator' or the account
+  // lands on the team dashboard instead of the curator surface.
+  const { error: profileError } = await adminClient.from('profiles').upsert(
+    {
+      id: userId,
+      name: displayName,
+      role: 'curator',
+      ...(auth.user.email ? { email: auth.user.email } : {}),
+    },
+    { onConflict: 'id' }
+  );
+
+  if (profileError) {
+    // The invite is already consumed at this point. Releasing it would open a
+    // race, so leave it used and let the admin mint another: a burnt code is
+    // cheaper than a link two people can claim.
+    console.error('[curator-join] profile upsert failed after consuming invite:', profileError.message);
+    return NextResponse.json(
+      { error: 'Could not finish setting up your account. Ask for a new link.' },
+      { status: 500 }
+    );
+  }
+
+  const { error: curatorProfileError } = await adminClient.from(CURATOR_PROFILES_TABLE).insert({
+    user_id: userId,
+    display_name: displayName,
+    invite_id: invite.id,
+  });
+
+  if (curatorProfileError) {
+    console.error('[curator-join] curator profile insert failed:', curatorProfileError.message);
+    return NextResponse.json(
+      { error: 'Could not finish setting up your account. Ask for a new link.' },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true }, { status: 201 });
+}
+
+function inviteStateMessage(state: string): string {
+  if (state === 'used') return 'This link has already been used. Ask for a new one.';
+  if (state === 'revoked') return 'This link was turned off. Ask for a new one.';
+  if (state === 'expired') return 'This link has expired. Ask for a new one.';
+  return 'This link no longer works. Ask for a new one.';
+}
+
+function resolveDisplayName(value: unknown, user: { email?: string | null; user_metadata?: Record<string, unknown> }): string {
+  const fromPayload = typeof value === 'string' ? value.trim() : '';
+  if (fromPayload) return fromPayload.slice(0, MAX_CURATOR_DISPLAY_NAME_LENGTH);
+  const fromMetadata = user.user_metadata?.full_name;
+  if (typeof fromMetadata === 'string' && fromMetadata.trim()) {
+    return fromMetadata.trim().slice(0, MAX_CURATOR_DISPLAY_NAME_LENGTH);
+  }
+  const handle = String(user.email || '').split('@')[0];
+  return (handle || 'Playlist owner').slice(0, MAX_CURATOR_DISPLAY_NAME_LENGTH);
+}
+
+/**
+ * Does this account already look like a team account? Either check is enough:
+ * owning a release, or holding a workspace membership that was not removed.
+ */
+async function hasTeamFootprint(
+  adminClient: NonNullable<ReturnType<typeof createAdminClient>>,
+  userId: string
+): Promise<{ error: NextResponse } | { hasFootprint: boolean }> {
+  const { count: releaseCount, error: releaseError } = await adminClient
+    .from('releases')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_user_id', userId);
+
+  if (releaseError) {
+    return {
+      error: NextResponse.json(
+        { error: releaseError.message || 'Could not check your account.' },
+        { status: 500 }
+      ),
+    };
+  }
+  if ((releaseCount || 0) > 0) return { hasFootprint: true };
+
+  const { count: memberCount, error: memberError } = await adminClient
+    .from('workspace_members')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .neq('status', 'removed');
+
+  if (memberError) {
+    return {
+      error: NextResponse.json(
+        { error: memberError.message || 'Could not check your account.' },
+        { status: 500 }
+      ),
+    };
+  }
+
+  return { hasFootprint: (memberCount || 0) > 0 };
+}

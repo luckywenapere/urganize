@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Newspaper, NotebookPen, Plus } from 'lucide-react';
+import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Newspaper, NotebookPen, Plus, Radio } from 'lucide-react';
 import {
   getTaskSectionLabel,
   groupTasksIntoSections,
@@ -38,6 +38,10 @@ const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 
 // Notes entry point: same flag AppTopbar and the identity panel read.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
+
+// Playlist pitching entry point: same flag gates the curator surface, the
+// /api/pitching routes and the /api/curator routes.
+const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 
 // Overdue first (genuine slippage, most urgent), then Catch Up (start-here
 // for compressed-runway plans — calm, neutral framing), then standard
@@ -341,6 +345,22 @@ export function TasksPanel({
               Press kit
               {/* Beta stamp, same tag as Calendar above — the press kit
                   generator shipped 2026-07-31 and is still early. */}
+              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+                Beta
+              </span>
+            </button>
+          ) : null}
+          {/* Playlist pitching: browse curator playlists and send this
+              release's song, with each curator's answer shown beside it. */}
+          {PITCHING_ENABLED && scopedRelease ? (
+            <button
+              type="button"
+              onClick={() => toggleScene('pitch', scopedRelease.id)}
+              aria-pressed={activeScene === 'pitch'}
+              className={pillClass('pitch')}
+            >
+              <Radio className="h-3.5 w-3.5" aria-hidden="true" />
+              Pitch
               <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
                 Beta
               </span>

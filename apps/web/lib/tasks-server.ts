@@ -635,10 +635,26 @@ async function syncOrganizationMembersIntoWorkspace(
     .upsert(inviteRows, { onConflict: 'workspace_id,email' });
 }
 
+/** Thrown when a curator account reaches a team-provisioning path. */
+export class CuratorAccountError extends Error {
+  constructor() {
+    super('Playlist owner accounts cannot create releases.');
+    this.name = 'CuratorAccountError';
+  }
+}
+
 export async function ensureOwnedWorkspace(
   adminClient: SupabaseClient,
   owner: DatabaseUser
 ): Promise<WorkspaceRow> {
+  // A curator must never get a team of their own. loadWorkspaceAccessContext
+  // bails before it reaches here, but this function is also called directly by
+  // the release-creation and workspace-logo routes, so the guard belongs at the
+  // provisioning step itself rather than at each caller.
+  if ((await loadAccountRole(adminClient, owner.id)) === 'curator') {
+    throw new CuratorAccountError();
+  }
+
   const workspaceResult = await adminClient
     .from(WORKSPACES_TABLE)
     .select('id,owner_id,name,created_at,updated_at')
@@ -911,6 +927,46 @@ async function resolveWorkspaceAccessContext(
   };
 }
 
+/**
+ * A context that grants nothing. Returned for a curator account (the
+ * playlist-pitching user type): a curator belongs to no team and owns no
+ * release, so every workspace-aware read resolves to an empty set rather than
+ * to their own auto-provisioned team.
+ *
+ * releaseOwnerIds is deliberately EMPTY, not [user.id]: callers pass it
+ * straight into `.in('owner_user_id', ...)`, and an empty list is the
+ * fail-closed answer.
+ */
+const EMPTY_WORKSPACE_ACCESS_CONTEXT: WorkspaceAccessContext = {
+  memberships: [],
+  workspaceIds: [],
+  membershipIds: [],
+  primaryWorkspaceId: null,
+  primaryWorkspace: null,
+  releaseOwnerIds: [],
+  artistScopeByOwnerId: {},
+  artistScopeByWorkspaceId: {},
+};
+
+/** Reads profiles.role. Never throws: an unreadable profile is treated as a
+ * normal account, which is the pre-existing behavior. */
+async function loadAccountRole(
+  adminClient: SupabaseClient,
+  userId: string
+): Promise<string> {
+  try {
+    const { data, error } = await adminClient
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+    if (error) return '';
+    return String(data?.role || '');
+  } catch {
+    return '';
+  }
+}
+
 export async function loadWorkspaceAccessContext(
   adminClient: SupabaseClient,
   user: DatabaseUser
@@ -929,10 +985,21 @@ export async function loadWorkspaceAccessContext(
   //      membership isn't intact (first-ever load, or a corrupted/missing
   //      owner row — the cases the old unconditional upsert was silently
   //      self-healing) pays the write path, then the context is re-resolved.
-  const [activatedInvites, initialResolved] = await Promise.all([
+  //   0. A curator gets an empty context and, crucially, never reaches the
+  //      provision-on-miss step below. Without this bail, the first
+  //      workspace-aware request a curator made would silently hand them a
+  //      team of their own, which the whole account type is defined against.
+  //      The role read rides in the same Promise.all so its latency hides
+  //      behind the resolve on the steady state.
+  const [activatedInvites, initialResolved, accountRole] = await Promise.all([
     activatePendingWorkspaceInvitesForUser(adminClient, user),
     resolveWorkspaceAccessContext(adminClient, user),
+    loadAccountRole(adminClient, user.id),
   ]);
+
+  if (accountRole === 'curator') {
+    return EMPTY_WORKSPACE_ACCESS_CONTEXT;
+  }
 
   let resolved = activatedInvites
     ? await resolveWorkspaceAccessContext(adminClient, user)
@@ -1867,6 +1934,13 @@ export function buildInviteUrl(token: string): string {
  * /invite/accept flow. */
 export function buildJoinUrl(code: string): string {
   return `${resolveAppBaseUrl()}/join/${encodeURIComponent(code)}`;
+}
+
+/** Curator invite links: /curator/join/<code>. Kept here so every invite URL
+ * in the product resolves its base the same way, including the canonical-domain
+ * fallback that stops a link pointing at an SSO-walled deployment host. */
+export function buildCuratorJoinUrl(code: string): string {
+  return `${resolveAppBaseUrl()}/curator/join/${encodeURIComponent(code)}`;
 }
 
 export function buildWorkspaceMembersResponse(

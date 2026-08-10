@@ -21,6 +21,7 @@ import type { ReleaseMetadataSnapshot } from '@/lib/release-ops';
 import type { ReleaseCreditLink, ReleaseCreditSubmission } from '@/types/credits';
 import type { ReleaseEpk } from '@/types/epk';
 import type { ContentCalendar } from '@/types/content-calendar';
+import type { SentPitch } from '@/types/pitching';
 import type { Asset } from '@/components/releases/AssetSection';
 
 /**
@@ -49,12 +50,14 @@ export type MetadataScenePayload = {
 export type FilesScenePayload = { assets: Asset[] };
 export type EpkScenePayload = { epk: ReleaseEpk | null };
 export type CalendarScenePayload = { calendars: ContentCalendar[] };
+export type PitchScenePayload = { pitches: SentPitch[] };
 
 export type ScenePayloadMap = {
   metadata: MetadataScenePayload;
   files: FilesScenePayload;
   epk: EpkScenePayload;
   calendar: CalendarScenePayload;
+  pitch: PitchScenePayload;
 };
 
 type SceneStateEntry = {
@@ -235,6 +238,20 @@ const FETCHERS: Record<SceneName, SceneFetcher> = {
     return {
       calendars: Array.isArray(data.calendars) ? (data.calendars as ContentCalendar[]) : [],
     } satisfies CalendarScenePayload;
+  },
+  // Only the pitches already sent for this release. The playlist inventory is
+  // global, so the composer fetches it on demand rather than caching it per
+  // release.
+  pitch: async (releaseId, token, prefetch) => {
+    const data = await readJson(
+      await fetch(
+        `/api/pitching/pitches?releaseId=${encodeURIComponent(releaseId)}`,
+        requestInit(token, prefetch)
+      )
+    );
+    return {
+      pitches: Array.isArray(data.pitches) ? (data.pitches as SentPitch[]) : [],
+    } satisfies PitchScenePayload;
   },
 };
 

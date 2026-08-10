@@ -50,9 +50,51 @@ export async function getAuthenticatedUser(request: NextRequest) {
 export async function requireActiveAuthenticatedUser(request: NextRequest) {
   const auth = await getAuthenticatedUser(request);
   if ('error' in auth) return auth;
+  const curatorBlock = await blockCuratorAccount(auth.user.id, auth.supabaseUrl);
+  if (curatorBlock) return { error: curatorBlock };
   const block = await requireActiveAccount(auth.user.id, auth.user.email);
   if (block) return { error: block };
   return auth;
+}
+
+/**
+ * Team-route containment for curator accounts (the playlist-pitching user
+ * type). A curator is not a member of any team and must never read releases,
+ * tasks, files or team data, so the boundary lives HERE — in the one gate every
+ * protected team route already passes through — rather than as a check each
+ * route has to remember. Curator routes use requireCuratorUser
+ * (app/api/curator/_shared.ts) and never reach this.
+ *
+ * Row-level security already stops a curator reading those tables directly, but
+ * these routes run with the service-role client, which bypasses RLS. This is
+ * the check that makes that safe.
+ *
+ * Costs one primary-key read on profiles per protected request. Fails OPEN for
+ * the curator test specifically: an unreadable profile is treated as a normal
+ * account, exactly as it was before this existed. Access itself is still gated
+ * by requireActiveAccount below.
+ */
+async function blockCuratorAccount(
+  userId: string,
+  supabaseUrl: string
+): Promise<NextResponse | null> {
+  const adminClient = createAdminClient(supabaseUrl);
+  if (!adminClient) return null;
+  try {
+    const { data, error } = await adminClient
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+    if (error) return null;
+    if (String(data?.role || '') !== 'curator') return null;
+  } catch {
+    return null;
+  }
+  return NextResponse.json(
+    { error: 'This account is for playlist owners.', redirect: '/curator' },
+    { status: 403 }
+  );
 }
 
 // Service-role client for privileged server operations. Only use when

@@ -16,6 +16,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
 import { registerPushServiceWorker } from '@/lib/push';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
+import { CURATOR_HOME_PATH } from '@/lib/home-path';
 
 /** The only routes a signed-in user navigates between. Deliberately short —
  * every entry costs a speculative request, and prefetching pages nobody opens
@@ -114,6 +115,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isOnboardingRoute = pathname?.startsWith('/onboarding');
   const isInviteRoute = pathname?.startsWith('/invite');
   const isSettingsRoute = pathname === '/settings';
+  // The curator surface carries its own frame (CuratorShell) and shows none of
+  // the team chrome: no topbar, no identity card, no UrgAns rail, no dock.
+  const isCuratorRoute = pathname?.startsWith('/curator');
   const isPublicStandaloneRoute =
     pathname === '/' ||
     pathname?.startsWith('/credits/') ||
@@ -121,15 +125,19 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname?.startsWith('/epk/') ||
     isPreSavePublicRoute ||
     isOnboardingRoute ||
-    isInviteRoute;
+    isInviteRoute ||
+    isCuratorRoute;
   const hasCompletedOnboarding = user?.onboarding_completed === true;
   // Stage 2: the sidebar is gone, so the only chrome that varies between
   // "authenticated" and "still loading" is whether the WorkspaceMenu
   // monogram has the user's initial yet — and that gracefully falls back
   // to "U" when userName is empty. We collapse the two previous branches
   // (showWorkspaceSidebar / showWorkspaceSidebarSkeleton) into one.
+  const isCuratorAccount = user?.role === 'curator';
   const showWorkspaceChrome =
-    (isAuthenticated || isAuthLoading) && (isDashboardRoute || isSettingsRoute);
+    (isAuthenticated || isAuthLoading) &&
+    (isDashboardRoute || isSettingsRoute) &&
+    !isCuratorAccount;
   const requiresArtistNameGate =
     isAuthenticated &&
     !isAuthLoading &&
@@ -138,7 +146,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     user?.role === 'artist' &&
     !String(user?.artist_name || '').trim();
   const showHelpMenu =
-    isAuthenticated && !isAuthLoading && !isAuthRoute && !isPublicStandaloneRoute && !requiresArtistNameGate;
+    isAuthenticated &&
+    !isAuthLoading &&
+    !isAuthRoute &&
+    !isPublicStandaloneRoute &&
+    !requiresArtistNameGate &&
+    !isCuratorAccount;
 
   const workspaceUserName = user?.name || user?.artist_name || user?.email || '';
 
@@ -147,6 +160,18 @@ export function AppShell({ children }: { children: ReactNode }) {
       void checkAuth();
     }
   }, [checkAuth, isAuthenticated, user]);
+
+  // A curator has no team, so every dashboard and settings route is a dead end
+  // for them: the APIs behind those pages return 403 and the pages would render
+  // permanent empty states. Send them to their own surface instead. Handled
+  // here rather than per page so a stale link, a back button or an installed
+  // PWA's start_url all resolve the same way.
+  useEffect(() => {
+    if (isAuthLoading || !isCuratorAccount) return;
+    if (isDashboardRoute || isSettingsRoute) {
+      router.replace(CURATOR_HOME_PATH);
+    }
+  }, [isAuthLoading, isCuratorAccount, isDashboardRoute, isSettingsRoute, router]);
 
   // Hydrate the side rail's persisted open state once per load — same
   // SSR-safe pattern as ChappiDock (first paint closed, storage read in a
@@ -188,6 +213,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Data Saver / 2g (see lib/connection.ts). Prefetch is a no-op in dev.
   useEffect(() => {
     if (!isAuthenticated || isAuthLoading) return;
+    // Nothing in PREFETCHED_ROUTES is reachable by a curator.
+    if (isCuratorAccount) return;
     if (!shouldBackgroundPrefetch()) return;
     return runWhenIdle(() => {
       for (const route of PREFETCHED_ROUTES) {
@@ -198,7 +225,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         }
       }
     });
-  }, [isAuthLoading, isAuthenticated, router]);
+  }, [isAuthLoading, isAuthenticated, isCuratorAccount, router]);
 
   // Register the push service worker once per load. Registration alone never
   // prompts for permission — the prompt only fires when the user explicitly
@@ -216,6 +243,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   // from re-pinging.
   useEffect(() => {
     if (!isAuthenticated || isAuthLoading || !user) return;
+    // The drip's copy and deep links are all about releases and tasks, so it
+    // has nothing to say to a curator.
+    if (isCuratorAccount) return;
     try {
       if (window.sessionStorage.getItem('urganize.engagement.pinged')) return;
       window.sessionStorage.setItem('urganize.engagement.pinged', '1');
@@ -238,7 +268,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         // Best-effort — never let engagement plumbing affect the app.
       }
     })();
-  }, [isAuthenticated, isAuthLoading, user]);
+  }, [isAuthenticated, isAuthLoading, isCuratorAccount, user]);
 
   return (
     // ToastProvider wraps TaskUIProvider so any surface inside the app shell
