@@ -208,7 +208,7 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
     name: 'create_release',
     kind: 'mutate',
     description:
-      "Create a new release. Auto-generates the rollout task plan from the template. Call this AT MOST ONCE per user request — it is not idempotent.",
+      "Create a new release. Depending on the environment this either generates the rollout task plan from the template straight away, or leaves the release ready to be planned. Call this AT MOST ONCE per user request — it is not idempotent.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -230,9 +230,15 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
       const clientAction: ChappiClientAction = releaseId
         ? { type: 'navigate', href: `/dashboard?release=${releaseId}` }
         : { type: 'refresh' };
+      // Branch on what the API actually did, not on the flag: with the
+      // planner on, the release is created with no tasks and the manager
+      // plans it, so promising a generated plan here would be a lie.
+      const plannerPending = res.body.plannerPending === true;
       return {
         ok: true,
-        summary: `Created "${title}" and generated its rollout tasks.`,
+        summary: plannerPending
+          ? `Created "${title}". Open it to plan the rollout with UrgAns.`
+          : `Created "${title}" and generated its rollout tasks.`,
         data: { releaseId },
         clientAction,
       };

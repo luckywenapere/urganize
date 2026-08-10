@@ -41,7 +41,9 @@ import type {
   TaskSortKey,
   TaskCreateSource,
   TaskRequirementType,
-  TaskGroup
+  TaskGroup,
+  TaskOutcome,
+  TaskOutcomeRating
 } from '@/types/tasks';
 import { TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS } from '@/types/tasks';
 import type { 
@@ -75,9 +77,11 @@ export type {
   TaskComment, 
   TaskActivityEntry, 
   TaskContextLink, 
-  Task, 
-  TaskDetail, 
-  TaskNotification 
+  Task,
+  TaskDetail,
+  TaskNotification,
+  TaskOutcome,
+  TaskOutcomeRating
 };
 
 export const NOTIFICATION_TYPE_OPTIONS = [
