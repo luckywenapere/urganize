@@ -247,6 +247,7 @@ interface AuthState {
   signup: (email: string, password: string, name: string, role: string, artistName?: string) => Promise<void>;
   updateArtistName: (artistName: string) => Promise<void>;
   updateProfileName: (name: string) => Promise<void>;
+  updateAskAfterTasks: (enabled: boolean) => Promise<void>;
   updateRole: (role: Profile['role']) => Promise<void>;
   setNeedsOnboarding: (needsOnboarding: boolean) => void;
   logout: () => Promise<void>;
@@ -650,6 +651,27 @@ export const useAuthStore = create<AuthState>()(
         const { data: updatedProfile, error } = await supabase
           .from('profiles')
           .update({ name: normalized, updated_at: new Date().toISOString() })
+          .eq('id', currentUser.id)
+          .select('*')
+          .single();
+
+        if (error) {
+          throw new Error(handleSupabaseError(error));
+        }
+
+        set({ user: updatedProfile, error: null });
+      },
+
+      // "Ask me after tasks": whether completing a task opens the UrgAns
+      // check-in sheet. Same direct-update shape as updateProfileName, and
+      // for the same reason it stays off the shared isLoading flag.
+      updateAskAfterTasks: async (enabled: boolean) => {
+        const currentUser = get().user;
+        if (!currentUser) throw new Error('User not found');
+
+        const { data: updatedProfile, error } = await supabase
+          .from('profiles')
+          .update({ ask_after_tasks: enabled, updated_at: new Date().toISOString() })
           .eq('id', currentUser.id)
           .select('*')
           .single();

@@ -30,6 +30,7 @@ import {
   type WorkspaceMembersResponse,
 } from '@/lib/tasks';
 import { sendPushToUsers, type PushPayload } from '@/lib/push-server';
+import { mapTaskOutcomeRow, type TaskOutcome } from '@/lib/task-outcomes';
 
 export const WORKSPACES_TABLE = 'workspaces';
 export const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
@@ -38,6 +39,7 @@ export const TASKS_TABLE = 'tasks';
 export const TASK_COMMENTS_TABLE = 'task_comments';
 export const TASK_ATTACHMENTS_TABLE = 'task_attachments';
 export const TASK_ACTIVITY_TABLE = 'task_activity';
+export const TASK_OUTCOMES_TABLE = 'task_outcomes';
 export const NOTIFICATIONS_TABLE = 'notifications';
 export const ORGANIZATIONS_TABLE = 'organizations';
 export const ORGANIZATION_MEMBERS_TABLE = 'organization_members';
@@ -1526,16 +1528,40 @@ export async function loadTaskActivity(
   });
 }
 
+/**
+ * The task's outcome ("Done. How did it go?"), or null when the feature is
+ * off, the task has never been completed through the sheet, or the read
+ * fails. Read errors degrade to null on purpose: an outcome is decoration on
+ * the task detail view, and an unmigrated environment must not take the whole
+ * task read down with it.
+ */
+export async function loadTaskOutcome(
+  adminClient: SupabaseClient,
+  taskId: string
+): Promise<TaskOutcome | null> {
+  if (process.env.NEXT_PUBLIC_FEATURE_TASK_OUTCOMES !== 'true') return null;
+
+  const result = await adminClient
+    .from(TASK_OUTCOMES_TABLE)
+    .select('*')
+    .eq('task_id', taskId)
+    .maybeSingle();
+
+  if (result.error) return null;
+  return mapTaskOutcomeRow(result.data as Record<string, unknown> | null);
+}
+
 export async function loadTaskDetail(
   adminClient: SupabaseClient,
   taskRow: TaskRow,
   currentUserId: string
 ): Promise<TaskDetail> {
-  const [tasks, comments, attachments, activity] = await Promise.all([
+  const [tasks, comments, attachments, activity, outcome] = await Promise.all([
     loadTasks(adminClient, [taskRow], currentUserId),
     loadTaskComments(adminClient, taskRow.id, currentUserId),
     loadTaskAttachments(adminClient, taskRow.id),
     loadTaskActivity(adminClient, taskRow.id),
+    loadTaskOutcome(adminClient, taskRow.id),
   ]);
 
   const task = tasks[0];
@@ -1544,6 +1570,7 @@ export async function loadTaskDetail(
     comments,
     attachments,
     activity,
+    outcome,
   };
 }
 

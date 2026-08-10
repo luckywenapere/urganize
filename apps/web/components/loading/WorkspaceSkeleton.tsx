@@ -22,8 +22,6 @@ const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
-const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
-const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 
 // Same flag AppTopbar/ChappiDock read. The UrgAns side rail renders itself
 // beside AppShell's <main> (URG-210) — including while this skeleton shows —
@@ -205,8 +203,8 @@ function ReleaseCardSkeleton() {
  * "flex-1 is inert without a flex parent" property the real component
  * documents. Pill count mirrors the real header exactly: New activity
  * always, then one per enabled flag in order (Metadata / Calendar / Files /
- * Press kit / Pitch / Notes — see TasksPanel), then the two AI action pills
- * WorkspaceView appends. Widths approximate each label so the row's footprint matches.
+ * Press kit — see TasksPanel), then the two AI action pills WorkspaceView
+ * appends. Widths approximate each label so the row's footprint matches.
  * No left label (2026-08-05, #218 — the real row is `justify-end` only). */
 function TasksPanelSkeleton() {
   const pillWidths = [
@@ -215,8 +213,6 @@ function TasksPanelSkeleton() {
     ...(CONTENT_CALENDAR_ENABLED ? ['w-28'] : []), // Calendar + Beta tag
     ...(FILES_ENABLED ? ['w-16'] : []), // Files
     ...(EPK_ENABLED ? ['w-24'] : []), // Press kit
-    ...(PITCHING_ENABLED ? ['w-24'] : []), // Pitch + Beta tag
-    ...(NOTES_ENABLED ? ['w-20'] : []), // Notes
     ...(TAILOR_PLAN_ENABLED ? ['w-28'] : []), // Tailor plan
     ...(STATUS_UPDATE_ENABLED ? ['w-40'] : []), // Generate status update
   ];
