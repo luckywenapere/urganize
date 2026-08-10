@@ -6,7 +6,6 @@ export default function AuthLoading() {
       variant="form"
       eyebrow="Authentication"
       title="Opening your account"
-      description="Checking your session and loading sign-in."
     />
   );
 }
