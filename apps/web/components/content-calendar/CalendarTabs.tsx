@@ -13,7 +13,7 @@ import {
   SiX,
   SiYoutube,
 } from 'react-icons/si';
-import { supabase } from '@/lib/supabase/client';
+import { getAccessToken } from './get-access-token';
 import { getPlatformLabel } from '@/lib/content-calendar';
 import { SOCIAL_PLATFORM_OPTIONS, type ContentCalendar, type SocialPlatform } from '@/types/content-calendar';
 
@@ -27,9 +27,9 @@ import { SOCIAL_PLATFORM_OPTIONS, type ContentCalendar, type SocialPlatform } fr
  * panel, and this one triggers an action instead.
  */
 
-// Monochrome platform glyphs via currentColor, never brand colors; mirrors
-// the map in ContentCalendarSection. Duplicated rather than shared because a
-// single extra consumer doesn't justify a new module yet.
+// Monochrome platform glyphs via currentColor, never brand colors. (This map
+// used to mirror one in ContentCalendarSection; that component was deleted
+// with the release detail page, 2026-08-04, so this is the only copy now.)
 const PLATFORM_ICONS: Record<Exclude<SocialPlatform, 'other'>, IconType> = {
   tiktok: SiTiktok,
   instagram: SiInstagram,
@@ -49,13 +49,6 @@ function PlatformIcon({ platform, className }: { platform: SocialPlatform; class
   return <Icon className={className} aria-hidden="true" />;
 }
 
-async function getAccessToken(): Promise<string> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session?.access_token || '';
-}
-
 type CalendarTabsProps = {
   releaseId: string;
   calendars: ContentCalendar[];
@@ -72,7 +65,17 @@ export function CalendarTabs({ releaseId, calendars, activeCalendarId, onSelect,
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState('');
 
+  // Keep the active tab visible in the strip's own horizontal scroller — but
+  // NOT on the first render: scrollIntoView with block:'nearest' can scroll
+  // the DOCUMENT too, and on mobile the tab strip sits well below the
+  // workspace chrome, so running it on mount yanked the page down every time
+  // the calendar scene opened (2026-08-10 fix).
+  const hasMountedRef = useRef(false);
   useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
     if (!activeCalendarId) return;
     tabRefs.current.get(activeCalendarId)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [activeCalendarId]);

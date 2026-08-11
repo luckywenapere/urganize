@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useMemo, useRef, useState, useEffect } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
 import {
   buildMonthGrid,
@@ -16,16 +16,23 @@ import { PostChip } from './PostChip';
 import { StatusMark } from './StatusMark';
 
 /**
- * Desktop month grid for the content calendar (URG-157, Phase A). Hidden
- * below `lg` (AgendaList takes over there). 8-column CSS grid (a fixed-width
- * mono week-label gutter + 7 day columns) so the label column never jitters
- * whether a given week's label is suppressed or not.
+ * Wide-column month grid for the content calendar (URG-157, Phase A). Shown
+ * when the scene's column is wide enough (`cc-month-view` — a container-width
+ * gate since 2026-08-10, replacing the viewport `lg:` one that let an open
+ * side panel squeeze the grid; AgendaList takes over below it). 8-column CSS
+ * grid (a fixed-width mono week-label gutter + 7 day columns) so the label
+ * column never jitters whether a given week's label is suppressed or not.
  *
  * Keyboard: roving tabindex across every day cell, arrows move by day/week,
- * Enter opens create (empty day) or the day list (occupied day). Empty days
- * are real <button>s (nothing else lives inside them); occupied days are
+ * Enter/Space opens create (empty day) or the day list (occupied day). Empty
+ * days are real <button>s (nothing else lives inside them); occupied days are
  * plain <div>s containing sibling chip buttons, because a cell with chips
  * can't itself be a <button> without illegally nesting interactive content.
+ *
+ * ARIA: role="grid" requires role="row" children, so the header cells and
+ * each week are wrapped in `display: contents` row divs (the Tailwind
+ * `contents` class) — layout stays a flat CSS grid, the accessibility tree
+ * gets the grid > row > columnheader/gridcell shape screen readers need.
  */
 
 const WEEKDAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -88,6 +95,7 @@ function DayCell({
       <button
         type="button"
         ref={setRef}
+        role="gridcell"
         tabIndex={isFocused ? 0 : -1}
         onFocus={() => setFocusedDate(day.date)}
         onClick={() => onCreatePost(day.date)}
@@ -120,7 +128,18 @@ function DayCell({
       tabIndex={isFocused ? 0 : -1}
       onFocus={() => setFocusedDate(day.date)}
       onClick={() => onOpenDayList(day.date)}
-      aria-label={`${dayPosts.length} post${dayPosts.length === 1 ? '' : 's'} on ${monthDayLabel}`}
+      onKeyDown={(event) => {
+        // The empty-day cell is a real <button> with native Enter/Space
+        // activation; this div needs its own so the two cell types share one
+        // interaction contract. stopPropagation keeps the grid-level Enter
+        // handler from double-firing.
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          event.stopPropagation();
+          onOpenDayList(day.date);
+        }
+      }}
+      aria-label={`${dayPosts.length} post${dayPosts.length === 1 ? '' : 's'} on ${monthDayLabel} — press Enter to view`}
       className={`flex min-h-[72px] flex-col gap-1 border-b border-r p-1.5 text-left transition-colors hover:bg-[var(--cc-text)]/[0.03] ${borderClass} ${
         isReleaseDay ? 'border-[var(--cc-accent)]' : ''
       }`}
@@ -143,7 +162,7 @@ function DayCell({
               onOpenDayList(day.date);
             }}
             aria-label={`${overflowCount} more post${overflowCount === 1 ? '' : 's'} on ${monthDayLabel}`}
-            className="text-left font-[family-name:var(--font-cc-mono)] text-[10px] text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
+            className="-mx-1 px-1 py-1 text-left font-[family-name:var(--font-cc-mono)] text-[10px] text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
           >
             +{overflowCount}
           </button>
@@ -188,6 +207,7 @@ export function MonthGrid({ month, releaseDate, posts, today, onCreatePost, onOp
   }
 
   const [dayListDate, setDayListDate] = useState<string | null>(null);
+  const dayListCloseRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!dayListDate) return;
@@ -201,6 +221,18 @@ export function MonthGrid({ month, releaseDate, posts, today, onCreatePost, onOp
   useEffect(() => {
     if (!dayListDate) return;
     return lockBodyScroll();
+  }, [dayListDate]);
+
+  // Minimal dialog focus contract: focus moves in on open and returns to the
+  // opener (the focused grid cell) on close. Not a full trap — same baseline
+  // treatment PostModal gets.
+  useEffect(() => {
+    if (!dayListDate) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dayListCloseRef.current?.focus();
+    return () => {
+      opener?.focus();
+    };
   }, [dayListDate]);
 
   const handleGridKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -236,28 +268,40 @@ export function MonthGrid({ month, releaseDate, posts, today, onCreatePost, onOp
   const dayListPosts = dayListDate ? byDay.get(dayListDate) ?? [] : [];
 
   return (
-    <div className="hidden lg:block">
+    <div className="cc-month-view">
       <div
         role="grid"
         aria-label="Post calendar grid"
         onKeyDown={handleGridKeyDown}
         className="grid grid-cols-[56px_repeat(7,1fr)] border-l border-t border-[var(--cc-border)]"
       >
-        <div aria-hidden="true" className="border-b border-r border-[var(--cc-border)]" />
-        {WEEKDAY_LABELS.map((label) => (
-          <div
-            key={label}
-            className="border-b border-r border-[var(--cc-border)] px-2 py-2 text-center font-[family-name:var(--font-cc-mono)] text-[10px] font-bold tracking-wide text-[var(--cc-text-faint)]"
-          >
-            {label}
+        {/* `contents` rows: layout-invisible (children stay direct grid
+            items), but the accessibility tree gets the row structure
+            role="grid" requires. */}
+        <div role="row" className="contents">
+          <div role="columnheader" className="border-b border-r border-[var(--cc-border)]">
+            <span className="sr-only">Week</span>
           </div>
-        ))}
+          {WEEKDAY_LABELS.map((label) => (
+            <div
+              key={label}
+              role="columnheader"
+              className="border-b border-r border-[var(--cc-border)] px-2 py-2 text-center font-[family-name:var(--font-cc-mono)] text-[10px] font-bold tracking-wide text-[var(--cc-text-faint)]"
+            >
+              {label}
+            </div>
+          ))}
+        </div>
 
         {grid.weeks.map((week) => {
           const label = getWeekLabel(week.weekStart, releaseDate);
           return (
-            <Fragment key={week.weekStart}>
-              <div className="flex items-start justify-end border-b border-r border-[var(--cc-border)] px-1.5 py-1.5 font-[family-name:var(--font-cc-mono)] text-[9px] font-bold uppercase tracking-wide text-[var(--cc-text-faint)]">
+            <div role="row" className="contents" key={week.weekStart}>
+              <div
+                role="rowheader"
+                aria-label={label ?? `Week of ${formatMonthDay(week.weekStart)}`}
+                className="flex items-start justify-end border-b border-r border-[var(--cc-border)] px-1.5 py-1.5 font-[family-name:var(--font-cc-mono)] text-[9px] font-bold uppercase tracking-wide text-[var(--cc-text-faint)]"
+              >
                 {label ?? ''}
               </div>
               {week.days.map((day) => (
@@ -277,13 +321,13 @@ export function MonthGrid({ month, releaseDate, posts, today, onCreatePost, onOp
                   onOpenDayList={setDayListDate}
                 />
               ))}
-            </Fragment>
+            </div>
           );
         })}
       </div>
 
       {posts.length === 0 ? (
-        <p className="mt-4 text-center text-sm text-[var(--cc-text-muted)]">Tap a day to plan your first post.</p>
+        <p className="mt-4 text-center text-sm text-[var(--cc-text-muted)]">Pick a day to plan your first post.</p>
       ) : null}
 
       {dayListDate ? (
@@ -294,6 +338,7 @@ export function MonthGrid({ month, releaseDate, posts, today, onCreatePost, onOp
           <button
             type="button"
             aria-label="Close day list"
+            tabIndex={-1}
             className="absolute inset-0"
             onClick={() => setDayListDate(null)}
           />
@@ -312,9 +357,10 @@ export function MonthGrid({ month, releaseDate, posts, today, onCreatePost, onOp
               </h2>
               <button
                 type="button"
+                ref={dayListCloseRef}
                 onClick={() => setDayListDate(null)}
                 aria-label="Close"
-                className="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
+                className="-m-2 flex h-9 w-9 items-center justify-center text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
               >
                 <X className="h-4 w-4" />
               </button>

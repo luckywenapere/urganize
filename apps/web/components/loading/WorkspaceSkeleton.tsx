@@ -86,7 +86,12 @@ export function WorkspaceSkeleton() {
   const searchParams = useSearchParams();
   const isFocused = Boolean(searchParams.get(SCOPE_PARAM));
   const isRailOpen = useChappiStore((state) => state.railOpen);
-  const isChatOpen = CHAPPI_ENABLED && isRailOpen;
+  // Mirrors WorkspaceView's hideRailsForLayout exactly: rails also hide while
+  // the calendar scene is open, and a refresh on a `?scene=calendar` URL used
+  // to paint 3-column rails here that vanished the moment data resolved.
+  const isCalendarScene =
+    CONTENT_CALENDAR_ENABLED && searchParams.get('scene') === 'calendar';
+  const hideRails = (CHAPPI_ENABLED && isRailOpen) || isCalendarScene;
   const knownCount = useKnownReleaseCount();
 
   return (
@@ -109,7 +114,7 @@ export function WorkspaceSkeleton() {
 
           <section className="hidden lg:block">
             {isFocused ? (
-              <DesktopFocusedSkeleton knownCount={knownCount} hideRails={isChatOpen} />
+              <DesktopFocusedSkeleton knownCount={knownCount} hideRails={hideRails} />
             ) : (
               // Matches WorkspaceDesktopGrid's current template exactly
               // (240px max track + the 1008px structural cap — see that

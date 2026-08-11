@@ -38,9 +38,9 @@ export function EpkSection({ releaseId, onToast }: EpkSectionProps) {
   const {
     data,
     isLoading,
-    // Distinguishes "no kit yet" from "the load failed", the same split
-    // ContentCalendarSection draws so a fetch failure never masquerades as the
-    // warm empty invitation.
+    // Distinguishes "no kit yet" from "the load failed", the same split the
+    // calendar scene draws so a fetch failure never masquerades as the warm
+    // empty invitation.
     error: loadError,
     reload: loadEpk,
   } = useSceneData(releaseId, 'epk', { enabled: EPK_ENABLED });

@@ -21,6 +21,7 @@ import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { TasksPanel, taskPanelPillClass } from './TasksPanel';
 import { useSceneOverlay } from './useSceneOverlay';
 import { useScenePrefetch } from './useScenePrefetch';
+import { useIsDesktopViewport } from './useIsDesktopViewport';
 import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
@@ -57,6 +58,12 @@ const RELEASE_RECAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_RECAP === 
 // until a plan is approved. Supersedes the immediate-apply tailor-plan feature,
 // which mutated real task rows the moment the model answered.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
+
+// Same flag TasksPanel reads for its Calendar pill. The scene URL param has to
+// be gated on it too: with the flag off, a stale `?scene=calendar` bookmark
+// used to render the calendar island shell around a permanently failing fetch
+// (its API routes 404 when off) instead of the normal activity list.
+const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 
 // Dynamic for the same reason AppShell already loads it that way — a static
 // import here defeated that, dragging the ~460-line modal into the /dashboard
@@ -106,7 +113,14 @@ export function WorkspaceView() {
   // the way UrgAns is on the side but in the place where activity lists
   // appear"), so this view has to know about it to build the panel body and to
   // give the calendar its width.
-  const { activeScene, openScene, closeScene } = useSceneOverlay();
+  const { activeScene: urlScene, openScene, closeScene } = useSceneOverlay();
+  // Flag-gate the calendar scene at the one place the URL is resolved: with
+  // the flag off the param is treated as no-scene, matching the pill (which
+  // never renders) and the API routes (which 404).
+  const activeScene = urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED ? null : urlScene;
+  // Which of the two always-in-the-DOM layout branches (mobile drill-down /
+  // desktop focused) should receive side-effectful children — see the hook.
+  const isDesktopViewport = useIsDesktopViewport();
   // Warm the scoped release's four scenes during idle time, so the pills in
   // TasksPanel's header open instantly instead of each costing a round trip.
   // Skipped entirely on Data Saver / 2g — see useScenePrefetch.
@@ -375,6 +389,9 @@ export function WorkspaceView() {
   // The open release scene's body, handed to TasksPanel so it replaces the
   // activity buckets in place while the pill row above stays put. Null unless
   // the URL names a scene AND the release resolved — same guard the panels use.
+  // Handed to ONE branch only (isDesktopViewport below): both layout branches
+  // are always in the DOM, and giving this node to both mounted every scene
+  // twice — the calendar double-fetched everything on every open.
   const scenePanel =
     activeScene && scopedReleaseSlim ? (
       <ReleaseScenePanel
@@ -392,11 +409,14 @@ export function WorkspaceView() {
       />
     ) : undefined;
 
-  // The content calendar's month grid is built for ~1200px and swaps to its
-  // agenda list on a VIEWPORT-gated breakpoint, so it needs the release rails
-  // out of the way to have room — the same treatment the UrgAns rail already
-  // triggers. The other three scenes fit the normal centre column, so they
-  // leave the rails alone (founder call).
+  // The content calendar's month grid is built for ~1200px, so it gets the
+  // release rails out of the way — the same treatment the UrgAns rail already
+  // triggers. The grid↔agenda swap itself is container-width-based now
+  // (cc-month-view/cc-agenda-view in globals.css), so a still-narrow column
+  // (identity panel or rail open) degrades to the agenda instead of squeezing
+  // the grid; hiding the rails here is what makes the grid the COMMON case at
+  // lg+ rather than the lucky one. The other scenes fit the normal centre
+  // column, so they leave the rails alone (founder call).
   const hideRailsForLayout = (CHAPPI_ENABLED && isRailOpen) || activeScene === 'calendar';
 
   // A recap is only worth offering once the release has actually happened.
@@ -670,38 +690,44 @@ export function WorkspaceView() {
                     to bg-surface in light mode). stroke-strong is the theme-
                     flipped foreground color at 10% opacity, so it scales its
                     visibility with whatever it sits on instead of matching
-                    it. Bar bumped h-1 -> h-1.5 for perceptual presence. */}
-                <div className="mb-4 flex items-center gap-3">
-                  <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
-                    Motion
-                  </span>
-                  <div className="h-1.5 min-w-0 flex-1 rounded-full bg-stroke-strong" aria-hidden="true">
-                    <div
-                      className="h-full rounded-full bg-brand transition-[width] duration-300"
-                      style={{
-                        width: `${
-                          scopedTasks.length > 0
-                            ? Math.round(
-                                (scopedTasks.filter((t) => t.status === 'done').length /
-                                  scopedTasks.length) *
-                                  100
-                              )
-                            : 0
-                        }%`,
-                      }}
-                    />
+                    it. Bar bumped h-1 -> h-1.5 for perceptual presence.
+                    Hidden while a scene is open (2026-08-10): it describes
+                    the ACTIVITY list, not the scene body that replaced it,
+                    and on a phone it was one of ~250px of stacked chrome
+                    between the topbar and the scene's own content. */}
+                {activeScene ? null : (
+                  <div className="mb-4 flex items-center gap-3">
+                    <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+                      Motion
+                    </span>
+                    <div className="h-1.5 min-w-0 flex-1 rounded-full bg-stroke-strong" aria-hidden="true">
+                      <div
+                        className="h-full rounded-full bg-brand transition-[width] duration-300"
+                        style={{
+                          width: `${
+                            scopedTasks.length > 0
+                              ? Math.round(
+                                  (scopedTasks.filter((t) => t.status === 'done').length /
+                                    scopedTasks.length) *
+                                    100
+                                )
+                              : 0
+                          }%`,
+                        }}
+                      />
+                    </div>
+                    <span className="shrink-0 font-mono text-[11px] font-semibold text-content-primary">
+                      {scopedTasks.filter((t) => t.status === 'done').length}/{scopedTasks.length}
+                    </span>
                   </div>
-                  <span className="shrink-0 font-mono text-[11px] font-semibold text-content-primary">
-                    {scopedTasks.filter((t) => t.status === 'done').length}/{scopedTasks.length}
-                  </span>
-                </div>
+                )}
                 {newReleaseGuideBanner}
                 <TasksPanel
                   id={TASKS_PANEL_ID}
                   tasks={scopedTasks}
                   scopedRelease={scopedReleaseSlim}
                   extraActions={taskPanelExtraActions}
-                  sceneContent={scenePanel}
+                  sceneContent={isDesktopViewport ? undefined : scenePanel}
                   activitiesBanner={planBanner ?? setReleaseDateBanner}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
                   showPlanPill={showPlanPill}
@@ -742,7 +768,7 @@ export function WorkspaceView() {
                 hideRails={hideRailsForLayout}
                 banner={newReleaseGuideBanner}
                 panelExtraActions={taskPanelExtraActions}
-                panelSceneContent={scenePanel}
+                panelSceneContent={isDesktopViewport ? scenePanel : undefined}
                 panelActivitiesBanner={planBanner ?? setReleaseDateBanner}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
                 panelShowPlanPill={showPlanPill}

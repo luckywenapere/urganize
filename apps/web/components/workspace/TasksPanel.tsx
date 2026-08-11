@@ -171,7 +171,11 @@ export function TasksPanel({
   // were nav links to separate pages until 2026-08-04, then briefly modal
   // overlays, and are now an inline swap per the founder's correction. Clicking
   // the pill of the scene that's already open closes it, back to activities.
-  const { activeScene, openScene, closeScene } = useSceneOverlay();
+  const { activeScene: urlScene, openScene, closeScene } = useSceneOverlay();
+  // Mirror WorkspaceView's flag gate: with the calendar flag off, a stale
+  // `?scene=calendar` URL must not flip the leading pill to "Activities" for a
+  // scene that isn't rendering (WorkspaceView passes no sceneContent then).
+  const activeScene = urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED ? null : urlScene;
 
   /**
    * Pill classes, lit when that scene is the open one. `shrink-0

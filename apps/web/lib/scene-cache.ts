@@ -22,18 +22,26 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'plan',
 ];
 
+// Inlined at build time, same read every UI gate uses. The prefetch list must
+// respect it: with the flag off the calendar API routes 404, so prefetching
+// the scene burned one guaranteed-404 request per scoped release.
+const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
+
 /** Prefetch order: most-likely-opened first, so a user who taps a pill mid-
  * prefetch is most likely to find their scene already warm.
  *
  * 'plan' is deliberately absent. It is the one scene that EDITS its payload
  * under an autosave queue, so a cached copy is a corruption risk rather than a
  * speedup, and it only exists for releases with no plan yet — prefetching it
- * would 404 on almost every release. It fetches its own draft directly. */
+ * would 404 on almost every release. It fetches its own draft directly.
+ *
+ * 'calendar' is present only when its feature flag is on, for the same
+ * would-always-404 reason. */
 export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
   'metadata',
   'files',
   'epk',
-  'calendar',
+  ...(CONTENT_CALENDAR_ENABLED ? (['calendar'] as const) : []),
   'pitch',
 ];
 

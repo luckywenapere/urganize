@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.44.2",
+    date: "August 10, 2026",
+    highlights: [
+      "The content calendar got a proper tune-up on phones. An empty month now gives you a Plan a post button instead of telling you to tap a day that isn't there, there's an Add a post button under the list for any other day, and the small controls — marking a post as posted, opening a post, closing things — are all easier to hit.",
+      "It behaves better on desktop too: with the UrgAns panel open the calendar now switches to its list view instead of cramming seven skinny columns into the space that's left, and switching between calendars or months shows a loading state instead of briefly showing the wrong posts.",
+      "A handful of small wrongs put right: deleting a calendar no longer flashes a confusing warning over its own confirmation, the back button no longer replays your calendar setup steps, error messages lost their database jargon, and the post form no longer shows a disabled \"coming soon\" row.",
+    ],
+  },
+  {
     version: "0.44.1",
     date: "August 10, 2026",
     highlights: [

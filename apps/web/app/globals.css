@@ -292,6 +292,44 @@ html[data-theme='light'] .cc-island {
   --cc-chip-accent: #7fd99a;
 }
 
+/* Content-calendar view swap (2026-08-10). The month grid and the agenda list
+   used to swap on Tailwind's viewport-gated `lg:` — but the workspace's side
+   panels (the UrgAns rail, the identity card) are AppShell flex siblings that
+   shrink the centre column WITHOUT shrinking the viewport, so at 1280px with
+   both open the 7-column grid rendered ~54px day cells while `lg:` stayed
+   satisfied. These classes swap on the CONTAINER's width instead: the scene
+   root declares itself an inline-size container, and the grid only shows when
+   the column it actually lives in has room (~720px). Browsers without
+   container-query support (none evergreen) fall back to the old viewport gate
+   via @supports. */
+.cc-scene-container {
+  container-type: inline-size;
+}
+.cc-month-view {
+  display: none;
+}
+.cc-agenda-view {
+  display: block;
+}
+@container (min-width: 45rem) {
+  .cc-month-view {
+    display: block;
+  }
+  .cc-agenda-view {
+    display: none;
+  }
+}
+@supports not (container-type: inline-size) {
+  @media (min-width: 1024px) {
+    .cc-month-view {
+      display: block;
+    }
+    .cc-agenda-view {
+      display: none;
+    }
+  }
+}
+
 /* Public EPK island (URG-196). Same single-source-of-truth pattern as
    .cc-island above, but deliberately DARK-LOCKED — no light override: a
    press kit is a branded artifact sent outside the product, so every

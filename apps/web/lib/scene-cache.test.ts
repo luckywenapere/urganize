@@ -61,8 +61,13 @@ describe('persist policy', () => {
   it('prefetches every cacheable scene exactly once', () => {
     // Every scene the cache layer can fetch is warmed, and none twice. The
     // plan scene is deliberately not one of them: it is an editable document
-    // rather than a snapshot, so it owns its own reads and writes.
-    const cacheable = [...SCENE_NAMES].filter(isCacheableScene);
+    // rather than a snapshot, so it owns its own reads and writes. The
+    // calendar joins the list only when its flag is on — with it off, its API
+    // routes 404, so prefetching would burn a guaranteed-404 per release.
+    const contentCalendarEnabled = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
+    const cacheable = [...SCENE_NAMES]
+      .filter(isCacheableScene)
+      .filter((scene) => scene !== 'calendar' || contentCalendarEnabled);
     expect([...SCENE_PREFETCH_ORDER].sort()).toEqual([...cacheable].sort());
     expect(new Set(SCENE_PREFETCH_ORDER).size).toBe(SCENE_PREFETCH_ORDER.length);
   });
