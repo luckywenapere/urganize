@@ -224,7 +224,7 @@ function ReleaseCardSkeleton() {
 function TasksPanelSkeleton() {
   const pillWidths = [
     'w-28', // New activity
-    ...(METADATA_ENABLED ? ['w-28'] : []), // Metadata + Beta tag
+    ...(METADATA_ENABLED ? ['w-24'] : []), // Metadata (Beta tag dropped 2026-08-10)
     ...(CONTENT_CALENDAR_ENABLED ? ['w-28'] : []), // Calendar + Beta tag
     ...(FILES_ENABLED ? ['w-16'] : []), // Files
     ...(EPK_ENABLED ? ['w-24'] : []), // Press kit
