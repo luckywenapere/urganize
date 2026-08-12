@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "776089505317",
+    "project_id": "urganize-2b082",
+    "storage_bucket": "urganize-2b082.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:776089505317:android:e143bc33b176867e38f9cc",
+        "android_client_info": {
+          "package_name": "com.urganize.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBXMRwCD64whAIVTf2J7SonWlzebo1fiHI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
