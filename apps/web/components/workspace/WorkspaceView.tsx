@@ -168,6 +168,28 @@ export function WorkspaceView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per mount to consume the param; router/searchParams identity churn shouldn't re-fire this.
   }, []);
 
+  // A catalog of one is not a catalog (founder call, 2026-08-12). With a
+  // single release there is nothing to choose between, so the grid/list is a
+  // dead click between the user and the only work they have — the same
+  // reasoning that made zero releases open the create screen outright
+  // (v0.45.0). At exactly one release the workspace scopes to it on arrival
+  // and drops every "back to releases" affordance, so activities ARE the
+  // dashboard.
+  //
+  // Deliberately not applied at 2+: the moment there is a choice to make, the
+  // catalog is how you make it.
+  const isSingleRelease = releases.length === 1;
+  useEffect(() => {
+    // Wait for the first load: `releases` is empty until it lands, and acting
+    // on that would look like zero releases rather than one.
+    if (isInitialLoading || !isSingleRelease || scopedReleaseId) return;
+    // `replace`, the hook's default — an auto-scope the user never asked for
+    // must not become a history entry they have to press Back through, and
+    // Back from here should leave the workspace, not restore a catalog this
+    // release count has no route to.
+    setScope(releases[0].id);
+  }, [isInitialLoading, isSingleRelease, scopedReleaseId, releases, setScope]);
+
   // Fire the dashboard fetch IMMEDIATELY, without waiting on the auth store.
   // loadCommandCenter reads its own bearer token from supabase.auth.getSession()
   // (a local storage read), so it doesn't need the auth store's server-verified
@@ -593,7 +615,12 @@ export function WorkspaceView() {
   // no blank gap between route fallback and content. The skeleton stays
   // visible until both auth resolves AND the first command-center fetch
   // completes.
-  if (authLoading || isInitialLoading) {
+  // The third condition holds the skeleton for the one frame between the first
+  // load resolving and the auto-scope effect committing. Effects run after
+  // paint, so without it a single-release workspace flashes the one-card
+  // catalog on the way to its activities — the exact view this is meant to
+  // never show. Staying on the skeleton reads as "still settling" instead.
+  if (authLoading || isInitialLoading || (isSingleRelease && !scopedReleaseId)) {
     return <WorkspaceSkeleton />;
   }
 
@@ -677,14 +704,19 @@ export function WorkspaceView() {
             {scopedReleaseId && scopedReleaseSlim ? (
               <>
                 <div className="mb-4 flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleMobileBack}
-                    aria-label="Back to releases"
-                    className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-                  >
-                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                  </button>
+                  {/* No way back to a catalog that has nothing to choose from
+                      — see isSingleRelease. Returns the moment a second
+                      release exists. */}
+                  {isSingleRelease ? null : (
+                    <button
+                      type="button"
+                      onClick={handleMobileBack}
+                      aria-label="Back to releases"
+                      className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+                    >
+                      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
                       {scopedReleaseSlim.artistName || 'Unassigned artist'}
@@ -777,7 +809,7 @@ export function WorkspaceView() {
                 scopedTasks={scopedTasks}
                 scopedRelease={scopedReleaseSlim}
                 onSelect={handleSelect}
-                onClose={handleClose}
+                onClose={isSingleRelease ? undefined : handleClose}
                 hideRails={hideRailsForLayout}
                 banner={newReleaseGuideBanner}
                 panelExtraActions={taskPanelExtraActions}

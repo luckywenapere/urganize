@@ -30,7 +30,12 @@ type WorkspaceDesktopFocusedProps = {
   /** Slim release shape for the panels' pill/scope copy. */
   scopedRelease: Pick<Release, 'id' | 'title' | 'artistName'>;
   onSelect: (releaseId: string) => void;
-  onClose: () => void;
+  /** Omitted when there is no catalog worth returning to — a workspace with a
+   * single release scopes to it automatically (see isSingleRelease in
+   * WorkspaceView), so the back control would lead to a one-card grid the
+   * user cannot stay on. Undefined hides the control entirely rather than
+   * rendering a dead one. */
+  onClose?: () => void;
   /** True while the Chappi slide-in panel is open (URL-agnostic — the caller
    * decides). Drops both rails to a single centered track so the 2/3-width
    * area stays readable instead of squeezing three columns into less
@@ -110,15 +115,17 @@ export function WorkspaceDesktopFocused({
           release cards' Motion strip. Deleting a release is Settings-only
           (URG-163) — no delete affordance lives here. */}
       <div className="flex shrink-0 items-center gap-4">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Back to all releases"
-          title="Back to all releases"
-          className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        </button>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Back to all releases"
+            title="Back to all releases"
+            className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          </button>
+        ) : null}
 
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary">

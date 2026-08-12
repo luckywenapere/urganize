@@ -88,7 +88,6 @@ const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 
  */
 export function WorkspaceSkeleton() {
   const searchParams = useSearchParams();
-  const isFocused = Boolean(searchParams.get(SCOPE_PARAM));
   const isRailOpen = useChappiStore((state) => state.railOpen);
   // Mirrors WorkspaceView's hideRailsForLayout exactly: rails also hide while
   // the calendar scene is open, and a refresh on a `?scene=calendar` URL used
@@ -97,6 +96,14 @@ export function WorkspaceSkeleton() {
     CONTENT_CALENDAR_ENABLED && searchParams.get('scene') === 'calendar';
   const hideRails = (CHAPPI_ENABLED && isRailOpen) || isCalendarScene;
   const knownCount = useKnownReleaseCount();
+  // `?release=` is the normal signal, but a single-release workspace scopes
+  // itself in an effect, so the URL is still bare while WorkspaceView holds
+  // this skeleton up waiting for that (see its loading gate). Reading the
+  // last-known count keeps the skeleton on the focused shape through that
+  // gap instead of flashing a catalog it is about to replace. Hydrates in an
+  // effect, so SSR renders the catalog shape and the swap lands with the
+  // count — same tradeoff every other count-aware skeleton here makes.
+  const isFocused = Boolean(searchParams.get(SCOPE_PARAM)) || knownCount === 1;
 
   return (
     <main className="bg-bg-base text-content-primary" aria-hidden="true">

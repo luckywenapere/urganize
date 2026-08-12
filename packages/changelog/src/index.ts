@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.49.0",
+    date: "August 12, 2026",
+    highlights: [
+      "With one release, Urganize opens straight into its activities. A catalog of one was a screen with a single card on it and one thing to click, standing between you and the only work you had. It comes back the moment you start a second release, which is the point at which there is actually a choice to make.",
+    ],
+  },
+  {
     version: "0.48.2",
     date: "August 12, 2026",
     highlights: [
