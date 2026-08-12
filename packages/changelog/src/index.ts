@@ -20,10 +20,186 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "0.41.0",
-    date: "August 5, 2026",
+    version: "0.45.0",
+    date: "August 12, 2026",
     highlights: [
       "First release, no detours: if you haven't created a release yet, the New release screen now opens on its own and stays open until you make one — there's nothing else to do on an empty dashboard anyway. Signing out is still always available.",
+    ],
+  },
+  {
+    version: "0.44.3",
+    date: "August 12, 2026",
+    highlights: [
+      "The content calendar got a proper tune-up on phones. An empty month now gives you a Plan a post button instead of telling you to tap a day that isn't there, there's an Add a post button under the list for any other day, and the small controls — marking a post as posted, opening a post, closing things — are all easier to hit.",
+      "It behaves better on desktop too: with the UrgAns panel open the calendar now switches to its list view instead of cramming seven skinny columns into the space that's left, and switching between calendars or months shows a loading state instead of briefly showing the wrong posts.",
+      "A handful of small wrongs put right: deleting a calendar no longer flashes a confusing warning over its own confirmation, the back button no longer replays your calendar setup steps, error messages lost their database jargon, and the post form no longer shows a disabled \"coming soon\" row.",
+    ],
+  },
+  {
+    version: "0.44.2",
+    date: "August 10, 2026",
+    highlights: [
+      "Metadata is no longer marked Beta. Distribution fields and collaborator credits have been in real use long enough to stand on their own.",
+    ],
+  },
+  {
+    version: "0.44.1",
+    date: "August 10, 2026",
+    highlights: [
+      "Fixed the row of buttons above your release's activities (Metadata, Calendar, Notes, and the rest) on phones — it used to crop the first one off the edge of the screen and could wrap a button's own label across it. It now scrolls as one line, so every button is there and reads correctly.",
+    ],
+  },
+  {
+    version: "0.44.0",
+    date: "August 10, 2026",
+    highlights: [
+      "Finished a release? You can now get a recap card for it: a poster built from your own numbers, the activities you completed, the days of work behind it and the size of your team. It appears on a release once its date has passed or every activity is done.",
+      "Two sizes come out of it, one shaped for stories and one for feeds. Before it builds you can add one thing you are proud of. It's optional, so skipping it still gives you a card that looks right.",
+      "Share it straight from your phone or download it on the web. Rebuild it whenever the numbers change.",
+    ],
+  },
+  {
+    version: "0.43.0",
+    date: "August 10, 2026",
+    highlights: [
+      "Mark a task done and UrgAns now asks how it went. Three taps to answer — Went well, Went okay, or Didn't go to plan — plus a line about what happened if you feel like it. The task completes the instant you tick it, so answering is never something you wait on, and skipping costs one tap with no follow-up.",
+      "What you say is kept with the task, so the story of a release builds itself as you work instead of being reconstructed later from memory.",
+      "If you'd rather not be asked, turn off \"Ask me after tasks\" in Settings and the question stops for good.",
+    ],
+  },
+  {
+    version: "0.42.1",
+    date: "August 9, 2026",
+    highlights: [
+      "A release with no date set no longer shows a date line at all. It used to read \"Date not set\" on every card, which said nothing you couldn't already see — the prompt to add one still sits in the release's activity list, where you can actually set it.",
+    ],
+  },
+  {
+    version: "0.42.0",
+    date: "August 9, 2026",
+    highlights: [
+      "Added Notes — a private place to jot things down the moment they come up, mid-call or mid-DM, with no setup and nothing to fill in first. Link a note to a release whenever it's relevant, or leave it as-is; either way it saves as you type.",
+    ],
+  },
+  {
+    version: "0.41.4",
+    date: "August 8, 2026",
+    highlights: [
+      "The app is faster to open, especially on a slow or busy connection. Your releases and activities now start loading the moment the page does, instead of waiting on a sign-in check first, and the server fetches them all at once rather than one after another.",
+      "Metadata, Files, Press kit and Content calendar now open instantly. Once you pick a release, they quietly load in the background while you read your activities, and re-opening one you've already seen doesn't reload at all.",
+      "Switching between your workspace, UrgAns and Settings is quicker, and each shows one clean loading state instead of flashing through two.",
+      "None of this runs when your phone is on Data Saver or a 2G connection, so it never spends your data without earning it.",
+    ],
+  },
+  {
+    version: "0.41.3",
+    date: "August 7, 2026",
+    highlights: [
+      "Your catalog on a phone now uses the full width of the screen. Releases are wide rows — cover art beside the title, date and progress — so you see four or five at a glance instead of two floating cards with empty space either side. Release titles are bigger everywhere too.",
+    ],
+  },
+  {
+    version: "0.41.2",
+    date: "August 6, 2026",
+    highlights: [
+      "A new activity now shows up in your list the moment you create it, instead of only after a refresh.",
+    ],
+  },
+  {
+    version: "0.41.1",
+    date: "August 6, 2026",
+    highlights: [
+      "A release with no date now makes it clear you can add activities right away — the date card offers it directly, and an empty activity list has its own \"Add your first activity\" button. Setting a date was never required to add your own work; it just looked that way.",
+      "Fixed activities being filed against the wrong release when two releases shared a name — likelier now that \"Untitled release\" is the default. Typing a name that matches more than one release no longer guesses; pick the one you meant from the list.",
+    ],
+  },
+  {
+    version: "0.41.0",
+    date: "August 6, 2026",
+    highlights: [
+      "Creating a release no longer asks for anything up front. Skip the name and we'll call it \"Untitled release\"; skip the date and add it whenever it's confirmed — both are marked optional.",
+      "If you created a release without a date, its activities view now carries a card to set one. For a release started from the rollout plan, that card is what builds your plan: pick the date and all 64 activities appear, scheduled around it.",
+    ],
+  },
+  {
+    version: "0.40.12",
+    date: "August 6, 2026",
+    highlights: [
+      "The UrgAns loading screen no longer holds space for text that isn't there, so the assistant's greeting no longer shifts up once it's ready.",
+    ],
+  },
+  {
+    version: "0.40.11",
+    date: "August 6, 2026",
+    highlights: [
+      "The page now sits evenly on the screen — the workspace card used to hang 32px further left than everything above it, so the left and right edges never quite matched.",
+    ],
+  },
+  {
+    version: "0.40.10",
+    date: "August 6, 2026",
+    highlights: [
+      "The workspace loading screen now matches what actually loads in — release cards, the activity list, and the focused release layout no longer shift or resize once your data arrives.",
+    ],
+  },
+  {
+    version: "0.40.9",
+    date: "August 6, 2026",
+    highlights: [
+      "The workspace card now runs the full height of the screen and carries links to your Catalog, UrgAns, and Settings, so getting around no longer means reaching for the top bar.",
+    ],
+  },
+  {
+    version: "0.40.8",
+    date: "August 6, 2026",
+    highlights: [
+      "Your workspace card now shows the Urganize mark until you upload your own logo, instead of your workspace initials.",
+    ],
+  },
+  {
+    version: "0.40.7",
+    date: "August 6, 2026",
+    highlights: [
+      "Your release cards now line up exactly with the workspace card and UrgAns panel — the last fix nudged them slightly too high.",
+    ],
+  },
+  {
+    version: "0.40.6",
+    date: "August 5, 2026",
+    highlights: [
+      "Your releases now really do fit 4 across when UrgAns is closed and your screen has the room — the cards were a touch too wide to ever manage it, so they're slightly slimmer at their widest.",
+    ],
+  },
+  {
+    // v0.40.5's highlight originally also claimed the 4-across grid. It
+    // didn't ship working (the cards were 32px too wide for the available
+    // space — see URG-225), so the claim was trimmed to what that release
+    // actually delivered rather than left standing as a false entry.
+    version: "0.40.5",
+    date: "August 5, 2026",
+    highlights: [
+      "Your release cards now line up with the workspace card and UrgAns panel instead of sitting lower than both.",
+    ],
+  },
+  {
+    version: "0.40.4",
+    date: "August 5, 2026",
+    highlights: [
+      "Workspace identity and Workspace logo now share one row in Settings instead of stacking full-width — a tidier fit since they're really one pairing (both feed your workspace card).",
+    ],
+  },
+  {
+    version: "0.40.3",
+    date: "August 5, 2026",
+    highlights: [
+      "Signing in now greets you with the Urganize mark instead of a generic spinner while your workspace loads.",
+    ],
+  },
+  {
+    version: "0.40.2",
+    date: "August 5, 2026",
+    highlights: [
+      "Teammates now leads Settings — it's the first thing you see instead of being buried below your workspace details.",
     ],
   },
   {

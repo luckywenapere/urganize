@@ -12,7 +12,14 @@ import type { Profile } from '@/lib/supabase/client';
 
 type EmptyAnalyticsProperties = Record<string, never>;
 
-export type ReleaseCreatedSource = 'onboarding' | 'dashboard' | 'empty_state' | 'chappi';
+export type ReleaseCreatedSource =
+  | 'onboarding'
+  | 'dashboard'
+  | 'empty_state'
+  | 'chappi'
+  // The UrgAns planner intake, when it creates the release itself (started
+  // from a note or an assistant chip rather than an existing release).
+  | 'planner';
 export type TaskCreatedSource = 'quick_create' | 'inline' | 'detail_panel' | 'onboarding';
 
 export interface AnalyticsEventPropertiesMap {
@@ -36,7 +43,15 @@ export interface AnalyticsEventPropertiesMap {
   };
   release_created: { release_id: string; source: ReleaseCreatedSource };
   release_opened: { release_id: string };
-  release_date_set: { release_id: string };
+  /** `deferred` marks a date filled in AFTER creation, from the activities
+   * view's SetReleaseDateCard, rather than in the create modal (URG-230).
+   * `activities_created` is non-zero when that save also built a rollout
+   * plan that had been waiting on the date. Both absent on the create path. */
+  release_date_set: {
+    release_id: string;
+    deferred?: boolean;
+    activities_created?: number;
+  };
   release_deleted: { release_id: string };
   playbook_step_completed: {
     release_id: string;
@@ -81,6 +96,24 @@ export interface AnalyticsEventPropertiesMap {
   // server-side, once per account, computed from auth.user.created_at.
   time_to_first_release: { seconds_since_signup: number };
   time_to_first_completed_task: { seconds_since_signup: number };
+  // UrgAns planner funnel. The question worth answering is where managers drop
+  // out of a seven-question intake, and whether they edit the draft before
+  // approving it or take it as written.
+  planner_intake_opened: { source: 'empty_state' | 'note' | 'chip'; has_release: boolean };
+  planner_intake_step: { step: number };
+  planner_intake_dismissed: { step: number };
+  planner_draft_generated: {
+    source: 'empty_state' | 'note' | 'chip';
+    release_type: 'single' | 'ep' | 'album';
+  };
+  planner_scene_opened: { has_draft: boolean };
+  planner_phase_regenerated: { phase: string; ok: boolean };
+  planner_draft_approved: {
+    task_count: number;
+    tasks_removed: number;
+    tasks_added: number;
+    ai_applied: boolean;
+  };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;

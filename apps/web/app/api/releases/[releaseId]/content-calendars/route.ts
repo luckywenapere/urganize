@@ -119,7 +119,7 @@ export async function POST(
 
   if (!isValidPlatform(body.platform)) {
     return NextResponse.json(
-      { error: 'platform is required and must be one of the social_platform enum values.' },
+      { error: 'Pick a platform from the list.' },
       { status: 400 }
     );
   }

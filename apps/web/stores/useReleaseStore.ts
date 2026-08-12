@@ -6,6 +6,7 @@ import type { CommandCenterData, ExecutionRelease, ExecutionTask } from '@/lib/e
 import { useActivityStore } from '@/stores/useActivityStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { useSceneDataStore } from '@/stores/useSceneDataStore';
 
 type ReleaseStore = {
   releases: ExecutionRelease[];
@@ -132,7 +133,12 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       }
 
       if (!accessToken) {
-        set({ isInitialLoading: false, isRefreshing: false, error: 'Session expired. Please sign in again.' });
+        // Silent: this now runs on mount WITHOUT waiting for the auth store
+        // (so the request races the GoTrue chain instead of queuing behind
+        // it), which means "no session yet" is a normal state here, not an
+        // error. The page's own auth effect owns the /auth redirect — showing
+        // "Session expired" would just flash a wrong message on the way out.
+        set({ isRefreshing: false });
         return null;
       }
 
@@ -197,7 +203,7 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       }),
     });
 
-    const payload = (await response.json().catch(() => ({}))) as { releaseId?: string; release?: { title?: string; artistId?: string; artistName?: string; releaseDate?: string | null }; error?: string };
+    const payload = (await response.json().catch(() => ({}))) as { releaseId?: string; templatePending?: boolean; release?: { title?: string; artistId?: string; artistName?: string; releaseDate?: string | null }; error?: string };
     if (!response.ok || !payload.releaseId) {
       set({ error: payload.error || 'Could not create release.' });
       return null;
@@ -210,6 +216,10 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       artistName: payload.release?.artistName || 'New Artist',
       releaseDate: payload.release?.releaseDate || null,
       description: null,
+      // Echoed from the create response (URG-230) so the optimistic row
+      // agrees with the server about whether a rollout plan is still waiting
+      // on a date — the activities view picks its card variant from this.
+      templatePending: payload.templatePending === true,
       status: 'draft',
       state: 'idea',
       readinessScore: 0,
@@ -229,6 +239,10 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
     return release;
   },
   removeReleaseLocal: (releaseId) => {
+    // Its cached scenes (metadata / files / press kit / calendar) go with it —
+    // otherwise a re-created release reusing the id, or just a stale disk
+    // entry, could paint a deleted release's data.
+    useSceneDataStore.getState().invalidate(releaseId);
     const taskStore = useTaskStore.getState();
     taskStore.setTasks(taskStore.tasks.filter((task) => task.releaseId !== releaseId));
     set((current) => ({

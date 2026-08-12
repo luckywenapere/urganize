@@ -53,9 +53,14 @@ captures/
 .idea/navEditor.xml
 
 # Keystore files
-# Uncomment the following lines if you do not want to check your keystore files in.
-#*.jks
-#*.keystore
+# DELIBERATELY UNCOMMENTED (2026-08-07): the upload keystore signs every Play
+# Store release. Committing it — or the properties file holding its passwords —
+# would let anyone who can read this repo publish an update as us. Both stay
+# local; see docs/mobile/android-signing.md for the backup procedure, since
+# losing the keystore is the OTHER way to lose the app.
+*.jks
+*.keystore
+keystore.properties
 
 # External native build folder generated in Android Studio 2.2 and later
 .externalNativeBuild

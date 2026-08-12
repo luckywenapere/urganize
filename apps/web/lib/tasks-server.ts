@@ -30,6 +30,7 @@ import {
   type WorkspaceMembersResponse,
 } from '@/lib/tasks';
 import { sendPushToUsers, type PushPayload } from '@/lib/push-server';
+import { mapTaskOutcomeRow, type TaskOutcome } from '@/lib/task-outcomes';
 
 export const WORKSPACES_TABLE = 'workspaces';
 export const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
@@ -38,6 +39,7 @@ export const TASKS_TABLE = 'tasks';
 export const TASK_COMMENTS_TABLE = 'task_comments';
 export const TASK_ATTACHMENTS_TABLE = 'task_attachments';
 export const TASK_ACTIVITY_TABLE = 'task_activity';
+export const TASK_OUTCOMES_TABLE = 'task_outcomes';
 export const NOTIFICATIONS_TABLE = 'notifications';
 export const ORGANIZATIONS_TABLE = 'organizations';
 export const ORGANIZATION_MEMBERS_TABLE = 'organization_members';
@@ -633,10 +635,26 @@ async function syncOrganizationMembersIntoWorkspace(
     .upsert(inviteRows, { onConflict: 'workspace_id,email' });
 }
 
+/** Thrown when a curator account reaches a team-provisioning path. */
+export class CuratorAccountError extends Error {
+  constructor() {
+    super('Playlist owner accounts cannot create releases.');
+    this.name = 'CuratorAccountError';
+  }
+}
+
 export async function ensureOwnedWorkspace(
   adminClient: SupabaseClient,
   owner: DatabaseUser
 ): Promise<WorkspaceRow> {
+  // A curator must never get a team of their own. loadWorkspaceAccessContext
+  // bails before it reaches here, but this function is also called directly by
+  // the release-creation and workspace-logo routes, so the guard belongs at the
+  // provisioning step itself rather than at each caller.
+  if ((await loadAccountRole(adminClient, owner.id)) === 'curator') {
+    throw new CuratorAccountError();
+  }
+
   const workspaceResult = await adminClient
     .from(WORKSPACES_TABLE)
     .select('id,owner_id,name,created_at,updated_at')
@@ -698,13 +716,16 @@ export async function ensureOwnedWorkspace(
   return workspace;
 }
 
+/** Claims any email-invited membership rows for this user. Returns whether it
+ * actually activated anything — callers that resolved access concurrently use
+ * that to decide if they need to re-resolve (see loadWorkspaceAccessContext). */
 export async function activatePendingWorkspaceInvitesForUser(
   adminClient: SupabaseClient,
   user: DatabaseUser
-) {
+): Promise<boolean> {
   const email = normalizeEmail(user.email);
   if (!email) {
-    return;
+    return false;
   }
 
   const existingRowsResult = await adminClient
@@ -714,12 +735,12 @@ export async function activatePendingWorkspaceInvitesForUser(
     .neq('status', 'removed');
 
   if (existingRowsResult.error || !Array.isArray(existingRowsResult.data)) {
-    return;
+    return false;
   }
 
   const pendingRows = existingRowsResult.data.filter((row) => !readString(row.user_id));
   if (!pendingRows.length) {
-    return;
+    return false;
   }
 
   await Promise.all(
@@ -735,6 +756,8 @@ export async function activatePendingWorkspaceInvitesForUser(
         .eq('id', row.id)
     )
   );
+
+  return true;
 }
 
 // Pure-read half of access resolution: membership rows, their workspaces,
@@ -904,6 +927,46 @@ async function resolveWorkspaceAccessContext(
   };
 }
 
+/**
+ * A context that grants nothing. Returned for a curator account (the
+ * playlist-pitching user type): a curator belongs to no team and owns no
+ * release, so every workspace-aware read resolves to an empty set rather than
+ * to their own auto-provisioned team.
+ *
+ * releaseOwnerIds is deliberately EMPTY, not [user.id]: callers pass it
+ * straight into `.in('owner_user_id', ...)`, and an empty list is the
+ * fail-closed answer.
+ */
+const EMPTY_WORKSPACE_ACCESS_CONTEXT: WorkspaceAccessContext = {
+  memberships: [],
+  workspaceIds: [],
+  membershipIds: [],
+  primaryWorkspaceId: null,
+  primaryWorkspace: null,
+  releaseOwnerIds: [],
+  artistScopeByOwnerId: {},
+  artistScopeByWorkspaceId: {},
+};
+
+/** Reads profiles.role. Never throws: an unreadable profile is treated as a
+ * normal account, which is the pre-existing behavior. */
+async function loadAccountRole(
+  adminClient: SupabaseClient,
+  userId: string
+): Promise<string> {
+  try {
+    const { data, error } = await adminClient
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+    if (error) return '';
+    return String(data?.role || '');
+  } catch {
+    return '';
+  }
+}
+
 export async function loadWorkspaceAccessContext(
   adminClient: SupabaseClient,
   user: DatabaseUser
@@ -912,17 +975,35 @@ export async function loadWorkspaceAccessContext(
   // steady state. It used to run ensureOwnedWorkspace unconditionally — an
   // owner-membership UPSERT (a real write, stamping updated_at) plus a
   // 4-query organization-member sync on every GET. Now:
-  //   1. Invite activation stays first (one indexed read when the user has
-  //      no pending email-invites) so an invited user sees their workspace
-  //      on first load, not after their first write.
+  //   1. Invite activation runs ALONGSIDE the resolve, not before it. On the
+  //      steady state (no pending email-invites) it's one indexed read whose
+  //      latency now hides behind the resolve instead of adding to it; when
+  //      it does activate rows, we re-resolve so an invited user still sees
+  //      their workspace on this same request rather than the next one.
   //   2. Resolve the context with reads only.
   //   3. Provision-on-miss: only a user whose OWN workspace + owner
   //      membership isn't intact (first-ever load, or a corrupted/missing
   //      owner row — the cases the old unconditional upsert was silently
   //      self-healing) pays the write path, then the context is re-resolved.
-  await activatePendingWorkspaceInvitesForUser(adminClient, user);
+  //   0. A curator gets an empty context and, crucially, never reaches the
+  //      provision-on-miss step below. Without this bail, the first
+  //      workspace-aware request a curator made would silently hand them a
+  //      team of their own, which the whole account type is defined against.
+  //      The role read rides in the same Promise.all so its latency hides
+  //      behind the resolve on the steady state.
+  const [activatedInvites, initialResolved, accountRole] = await Promise.all([
+    activatePendingWorkspaceInvitesForUser(adminClient, user),
+    resolveWorkspaceAccessContext(adminClient, user),
+    loadAccountRole(adminClient, user.id),
+  ]);
 
-  let resolved = await resolveWorkspaceAccessContext(adminClient, user);
+  if (accountRole === 'curator') {
+    return EMPTY_WORKSPACE_ACCESS_CONTEXT;
+  }
+
+  let resolved = activatedInvites
+    ? await resolveWorkspaceAccessContext(adminClient, user)
+    : initialResolved;
 
   if (!resolved.hasProvisionedOwnWorkspace) {
     try {
@@ -1514,16 +1595,40 @@ export async function loadTaskActivity(
   });
 }
 
+/**
+ * The task's outcome ("Done. How did it go?"), or null when the feature is
+ * off, the task has never been completed through the sheet, or the read
+ * fails. Read errors degrade to null on purpose: an outcome is decoration on
+ * the task detail view, and an unmigrated environment must not take the whole
+ * task read down with it.
+ */
+export async function loadTaskOutcome(
+  adminClient: SupabaseClient,
+  taskId: string
+): Promise<TaskOutcome | null> {
+  if (process.env.NEXT_PUBLIC_FEATURE_TASK_OUTCOMES !== 'true') return null;
+
+  const result = await adminClient
+    .from(TASK_OUTCOMES_TABLE)
+    .select('*')
+    .eq('task_id', taskId)
+    .maybeSingle();
+
+  if (result.error) return null;
+  return mapTaskOutcomeRow(result.data as Record<string, unknown> | null);
+}
+
 export async function loadTaskDetail(
   adminClient: SupabaseClient,
   taskRow: TaskRow,
   currentUserId: string
 ): Promise<TaskDetail> {
-  const [tasks, comments, attachments, activity] = await Promise.all([
+  const [tasks, comments, attachments, activity, outcome] = await Promise.all([
     loadTasks(adminClient, [taskRow], currentUserId),
     loadTaskComments(adminClient, taskRow.id, currentUserId),
     loadTaskAttachments(adminClient, taskRow.id),
     loadTaskActivity(adminClient, taskRow.id),
+    loadTaskOutcome(adminClient, taskRow.id),
   ]);
 
   const task = tasks[0];
@@ -1532,6 +1637,7 @@ export async function loadTaskDetail(
     comments,
     attachments,
     activity,
+    outcome,
   };
 }
 
@@ -1828,6 +1934,13 @@ export function buildInviteUrl(token: string): string {
  * /invite/accept flow. */
 export function buildJoinUrl(code: string): string {
   return `${resolveAppBaseUrl()}/join/${encodeURIComponent(code)}`;
+}
+
+/** Curator invite links: /curator/join/<code>. Kept here so every invite URL
+ * in the product resolves its base the same way, including the canonical-domain
+ * fallback that stops a link pointing at an SSO-walled deployment host. */
+export function buildCuratorJoinUrl(code: string): string {
+  return `${resolveAppBaseUrl()}/curator/join/${encodeURIComponent(code)}`;
 }
 
 export function buildWorkspaceMembersResponse(

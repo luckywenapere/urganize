@@ -37,10 +37,24 @@ export function buildPageMetadata({
   title,
   description,
   path,
+  noIndex = false,
 }: {
   title: string;
   description: string;
   path: string;
+  /**
+   * Keep this page out of search results. Emits `noindex, follow` — the page
+   * still passes link equity onward, it just never appears as a result
+   * itself. Use for pages that must exist and be reachable but should never
+   * compete with the marketing pages for a query like "urganize".
+   *
+   * Deliberately paired with robots.txt staying OPEN for these paths: a
+   * `Disallow` would stop crawlers from FETCHING the page, so they'd never
+   * read this tag, and an already-indexed URL would linger in results as a
+   * bare link. Blocking the crawl is what keeps a page indexed; letting it
+   * crawl and read `noindex` is what removes it.
+   */
+  noIndex?: boolean;
 }): Metadata {
   const url = `${SITE_URL}${path}`;
 
@@ -48,6 +62,9 @@ export function buildPageMetadata({
     title,
     description,
     alternates: { canonical: url },
+    ...(noIndex
+      ? { robots: { index: false, follow: true } }
+      : {}),
     openGraph: {
       title,
       description,

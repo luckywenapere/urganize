@@ -19,6 +19,10 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "Join the Urganize community, a group chat for artist managers and small labels running releases.",
   path: "/community",
+  // Kept out of search so the homepage's sitelinks stay commercial
+  // (Features / Pricing / For managers / For labels). The page stays public
+  // and footer-linked — it just never competes as a search result.
+  noIndex: true,
 });
 
 export default function CommunityPage() {

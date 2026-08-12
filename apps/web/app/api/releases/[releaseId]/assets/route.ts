@@ -18,7 +18,7 @@ const RELEASES_TABLE = 'releases';
 
 // Feature flag (URG-182): the file storage feature stays dark until
 // NEXT_PUBLIC_FEATURE_FILES is 'true'. Every handler checks this first and
-// 404s when off, so direct API calls cannot reach it either (the tailor-plan
+// 404s when off, so direct API calls cannot reach it either (the plan
 // route precedent). Existing rows/storage objects are untouched by this
 // flag — it only gates access.
 const isFilesFeatureEnabled = (): boolean =>

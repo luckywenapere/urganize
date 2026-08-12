@@ -55,49 +55,62 @@ export async function GET(request: NextRequest) {
     // Access first: its releaseOwnerIds drive whole-workspace release
     // visibility (a teammate sees the shared catalog, not just their own).
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
-    const releases = await releaseService.getReleasesForUser(
-      auth.user.id,
-      access.releaseOwnerIds,
-      access.artistScopeByOwnerId
-    );
 
-    let tasks: ExecutionTask[] = [];
-    if (access.workspaceIds.length && access.membershipIds.length) {
-      tasks = await taskService.getTasksForUser(auth.user.id, access.workspaceIds) as ExecutionTask[];
-      // Artist-scoped members only see activities for THEIR releases — the
-      // release list above is already scope-filtered, so it doubles as the
-      // allow-list. Unscoped users skip this entirely.
-      if (Object.keys(access.artistScopeByOwnerId).length > 0) {
-        const visibleReleaseIds = new Set(releases.map((release) => release.id));
-        tasks = tasks.filter((task) => task.releaseId && visibleReleaseIds.has(task.releaseId));
-      }
-    }
+    // Releases, tasks, and activity are independent reads — they used to run
+    // as three serial round trips (plus the actor-profile lookup nested in
+    // activity). Fanned out, the request costs the slowest one, not the sum.
+    const [releases, rawTasks, activity] = await Promise.all([
+      releaseService.getReleasesForUser(
+        auth.user.id,
+        access.releaseOwnerIds,
+        access.artistScopeByOwnerId
+      ),
+      (async (): Promise<ExecutionTask[]> => {
+        if (!access.workspaceIds.length || !access.membershipIds.length) return [];
+        return (await taskService.getTasksForUser(
+          auth.user.id,
+          access.workspaceIds
+        )) as ExecutionTask[];
+      })(),
+      (async (): Promise<ActivityLogEntry[]> => {
+        // owner_user_id is NOT NULL, so a plain eq matches everything this
+        // user owns and rides activity_logs_owner_created_idx (owner_user_id,
+        // created_at desc) exactly.
+        const activityResult = await adminClient
+          .from(ACTIVITY_LOG_TABLE)
+          .select('id,release_id,task_id,actor_user_id,action,message,metadata,created_at')
+          .eq('owner_user_id', auth.user.id)
+          .order('created_at', { ascending: false })
+          .limit(20);
 
-    // owner_user_id is NOT NULL, so a plain eq matches everything this user
-    // owns and rides activity_logs_owner_created_idx (owner_user_id,
-    // created_at desc) exactly.
-    const activityResult = await adminClient
-      .from(ACTIVITY_LOG_TABLE)
-      .select('id,release_id,task_id,actor_user_id,action,message,metadata,created_at')
-      .eq('owner_user_id', auth.user.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
+        // Activity is non-critical to the dashboard payload — degrade to an
+        // empty feed rather than failing the whole request, but say so in the
+        // logs (a silent coerce-to-[] is what hid the previous schema
+        // mismatch here). Kept INSIDE this closure so a failure here can't
+        // reject the Promise.all and take releases/tasks down with it.
+        if (activityResult.error) {
+          console.error('[command-center] activity query failed:', activityResult.error.message);
+          return [];
+        }
+        if (!Array.isArray(activityResult.data)) return [];
 
-    // Activity is non-critical to the dashboard payload — degrade to an empty
-    // feed rather than failing the whole request, but say so in the logs
-    // (a silent coerce-to-[] is what hid the previous schema mismatch here).
-    if (activityResult.error) {
-      console.error('[command-center] activity query failed:', activityResult.error.message);
-    }
+        const rows = activityResult.data as Record<string, unknown>[];
+        const actorProfileById = await loadProfilesByIds(
+          adminClient,
+          rows.map((row) => (row.actor_user_id ? String(row.actor_user_id) : ''))
+        );
+        return rows.map((row) => toActivity(row, actorProfileById));
+      })(),
+    ]);
 
-    let activity: ActivityLogEntry[] = [];
-    if (!activityResult.error && Array.isArray(activityResult.data)) {
-      const rows = activityResult.data as Record<string, unknown>[];
-      const actorProfileById = await loadProfilesByIds(
-        adminClient,
-        rows.map((row) => (row.actor_user_id ? String(row.actor_user_id) : ''))
-      );
-      activity = rows.map((row) => toActivity(row, actorProfileById));
+    // Artist-scoped members only see activities for THEIR releases — the
+    // release list is already scope-filtered, so it doubles as the
+    // allow-list. Unscoped users skip this entirely. Pure JS, so it happens
+    // after the fan-out rather than forcing tasks to wait on releases.
+    let tasks: ExecutionTask[] = rawTasks;
+    if (tasks.length && Object.keys(access.artistScopeByOwnerId).length > 0) {
+      const visibleReleaseIds = new Set(releases.map((release) => release.id));
+      tasks = tasks.filter((task) => task.releaseId && visibleReleaseIds.has(task.releaseId));
     }
 
     let todaysDirective: ExecutionTask | null = null;

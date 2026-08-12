@@ -8,6 +8,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useToast } from '@/components/shared/ToastProvider';
 import { getNotificationMessage, type TaskNotification } from '@/lib/tasks';
+import { formatRelativeTime } from '@/lib/relative-time';
 
 // Phase 1 of in-app notifications: the front door for an already-built
 // backend (notifications table + GET /api/notifications +
@@ -28,27 +29,6 @@ async function getAccessToken(): Promise<string> {
     data: { session },
   } = await supabase.auth.getSession();
   return session?.access_token || '';
-}
-
-// Compact relative-time formatter. The backend ships ISO `createdAt`; the
-// dropdown wants "3m / 4h / 2d" labels. Kept inline because no other surface
-// in the app needs a short-form relative timestamp today — promoting this to
-// /lib would be premature.
-function formatRelativeTime(iso: string): string {
-  const ts = new Date(iso).getTime();
-  if (!Number.isFinite(ts)) return '';
-  const diff = Date.now() - ts;
-  const seconds = Math.max(1, Math.round(diff / 1000));
-  if (seconds < 60) return 'just now';
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.round(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  const weeks = Math.round(days / 7);
-  if (weeks < 5) return `${weeks}w ago`;
-  return new Date(iso).toLocaleDateString();
 }
 
 /**

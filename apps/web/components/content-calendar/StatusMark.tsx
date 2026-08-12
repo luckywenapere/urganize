@@ -95,7 +95,12 @@ export function StatusMark({ status, overdue, canToggle, onToggle, className = '
       }}
       title={overdue ? 'Overdue' : `Mark ${nextStatusLabel}`}
       aria-label={`Mark ${nextStatusLabel}`}
-      className={`inline-flex h-4 w-4 shrink-0 items-center justify-center transition-opacity hover:opacity-75 ${className}`}
+      // 28px hit area around the 10-12px glyph (this is the calendar's primary
+      // one-tap action, and 16px was far under the 24px WCAG floor). The
+      // negative margins keep the LAYOUT footprint at the old 16px so chips
+      // don't grow; the small overlap into neighbors is safe because later
+      // siblings paint (and hit-test) above this button.
+      className={`-mx-1.5 -my-1.5 inline-flex h-7 w-7 shrink-0 items-center justify-center transition-opacity hover:opacity-75 ${className}`}
     >
       <StatusGlyph status={status} overdue={overdue} />
     </button>

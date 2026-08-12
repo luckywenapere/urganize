@@ -39,7 +39,7 @@ export const MAX_CAPTION_LENGTH = 2000;
 // Feature flag: the whole content calendar surface stays dark until
 // NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR is 'true'. Every handler checks this
 // first and 404s when off, so direct API calls cannot reach the feature
-// either (the tailor-plan route precedent).
+// either (the EPK / plan route precedent).
 export const isContentCalendarFeatureEnabled = (): boolean =>
   process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 

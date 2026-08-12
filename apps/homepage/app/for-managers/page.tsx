@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
+import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
@@ -20,6 +21,13 @@ export const metadata: Metadata = buildPageMetadata({
 // rollout planner's AI tailoring and the status generator are flag-gated
 // off in production pending model activation) — this page describes the
 // template, task, file, and status mechanics underneath them.
+//
+// 2026-08-05 (URG-218): same conversion fix as /why-urganize. This page
+// had no CTA until the very bottom (~6 screens down), four identical
+// kicker/title/body/bullets blocks in a row, and not a single product
+// screenshot anywhere. Fixed by: a CTA in the hero, "The plan" kept as
+// the one full-size block with the workspace screenshot right after it,
+// and the other three folded into one compact section. Keep it that way.
 const valueBlocks = [
   {
     kicker: "The plan",
@@ -31,35 +39,26 @@ const valueBlocks = [
       "Edit, reorder, or delete anything before you save it",
     ],
   },
+] as const;
+
+// Folded from three full-size blocks into one compact section (see the
+// note above). One sentence per side, tightened from the previously
+// approved block copy — same claims, less scroll.
+const compactBlocks = [
   {
     kicker: "Ownership",
     title: "Hand work off without babysitting it.",
-    body: "Every activity has an owner, a due date, and a priority. Assign your PR, designer, or distributor directly. Activities wait for each other in the right order, so nothing starts before the step it needs is done.",
-    points: [
-      "Assign anyone on your team to any activity",
-      "Blocked activities show exactly what's blocking them",
-      "A blocked activity unlocks the moment the step before it is done",
-    ],
+    body: "Every activity has an owner, a due date, and a priority, and nothing starts before the step it needs is done.",
   },
   {
     kicker: "Press kit",
     title: "One link, ready whenever press asks.",
-    body: "Urganize builds a press kit from the release: cover art, details, and photos. It updates itself when the release changes. Send one link to press, curators, and bookers, for any artist you run.",
-    points: [
-      "Built for you from the release",
-      "Always up to date. No rebuilding by hand",
-      "One link. Turn it off anytime",
-    ],
+    body: "Urganize builds a press kit from the release, keeps it up to date, and works the same for any artist you run.",
   },
   {
     kicker: "Status",
     title: "Answer \"where's that release?\" without scrolling WhatsApp.",
-    body: "One workspace shows every release you run: progress, what's overdue, what's due this week, and which artist it belongs to. Click a release to see just its work.",
-    points: [
-      "Every release and activity on one screen",
-      "Overdue and due-today shown first",
-      "See one release on its own when that's all you need",
-    ],
+    body: "One workspace shows every release you run: progress, what's overdue, what's due this week, and which artist it belongs to.",
   },
 ] as const;
 
@@ -93,6 +92,15 @@ export default function ForManagersPage() {
               keeping it all moving becomes the real job. Urganize is built
               for that part.
             </p>
+            {/* CTA moved into the hero (2026-08-05, URG-218): the page
+                previously had no ask until the very bottom, ~6 screens
+                down, so anyone who stopped reading early never saw one.
+                No ProofLine here (Antoine's full quote already sits above
+                the final CTA — see the mount table note in ProofLine.tsx
+                about not stacking two testimonials on one page's CTAs). */}
+            <div className="mt-8 flex w-full flex-col items-center gap-3">
+              <WaitlistForm source="for_managers_hero" />
+            </div>
           </div>
         </SectionShell>
 
@@ -140,13 +148,55 @@ export default function ForManagersPage() {
           </ScrollReveal>
         ))}
 
-        {/* TESTIMONIAL — Antoine's quote, verbatim, signed off 2026-07-06.
-            Never edit a quote after sign-off without re-approval. Sourced
-            from content/testimonials.ts — the single canonical copy; the
-            same words also appear as one of the TransformationSection rows
-            on the landing page. Swapped off Adenaiye 2026-07-31 when her
-            quote (about file storage) was retired from display; Antoine's
-            plan-already-laid-out story fits a manager audience directly. */}
+        {/* PRODUCT PROOF (2026-08-05, URG-218) — this page had zero product
+            imagery; reuses the homepage's screenshot section verbatim so a
+            manager sees the multi-release catalog the copy is describing. */}
+        <WorkspaceShotSection />
+
+        {/* THE REST, COMPACTED (2026-08-05, URG-218) — was three more
+            full-size boxed blocks (Ownership, Press kit, Status); folded
+            into one section, one sentence each. See the valueBlocks
+            comment. */}
+        <ScrollReveal>
+          <SectionShell
+            className="py-[60px] lg:py-[80px]"
+            containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
+          >
+            <div className="mx-auto max-w-[64rem] border-t border-[color:var(--marketing-border)] pt-14">
+              <p className="mono-label text-[var(--marketing-accent)]">
+                Everything else
+              </p>
+              <h2 className={`mt-5 max-w-[40rem] ${headlineClass}`}>
+                Hand-offs, the press kit, and status come with it.
+              </h2>
+
+              <div className="mt-10 divide-y divide-[color:var(--marketing-border)]">
+                {compactBlocks.map((item) => (
+                  <div key={item.kicker} className="py-6">
+                    <p className="mono-label text-[var(--marketing-text-subtle)]">
+                      {item.kicker}
+                    </p>
+                    <p className="mt-3 max-w-[52rem] text-[0.95rem] leading-7 text-[var(--marketing-text-muted)]">
+                      <span className="font-medium text-[var(--marketing-text)]">
+                        {item.title}
+                      </span>{" "}
+                      {item.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </SectionShell>
+        </ScrollReveal>
+
+        {/* TESTIMONIAL — Adenaiye's quote, verbatim, signed off 2026-08-05
+            (URG-220). Never edit a quote after sign-off without
+            re-approval. Sourced from content/testimonials.ts — the single
+            canonical copy. Swapped in 2026-08-05: her new review's chaos/
+            multiple-releases-and-artists-and-team sentence is this page's
+            exact audience. Antoine (the prior quote here) still carries the
+            landing TransformationSection's "plan" row and the /features CTA
+            ProofLine, so his voice isn't lost from the site. */}
         <ScrollReveal>
           <SectionShell
             className="py-[80px] lg:py-[100px]"
@@ -154,10 +204,10 @@ export default function ForManagersPage() {
           >
             <div className="border-t border-[color:var(--marketing-border)] pt-14 text-center">
               <blockquote className="text-balance text-[1.4rem] font-medium leading-[1.5] tracking-[-0.02em] text-[var(--marketing-text)] sm:text-[1.7rem]">
-                &ldquo;{TESTIMONIALS.antoine.quote}&rdquo;
+                &ldquo;{TESTIMONIALS.adenaiye.quote}&rdquo;
               </blockquote>
               <p className="mono-label mt-6 text-[var(--marketing-text-subtle)]">
-                {TESTIMONIALS.antoine.name}, {TESTIMONIALS.antoine.role}
+                {TESTIMONIALS.adenaiye.name}, {TESTIMONIALS.adenaiye.role}
               </p>
             </div>
           </SectionShell>

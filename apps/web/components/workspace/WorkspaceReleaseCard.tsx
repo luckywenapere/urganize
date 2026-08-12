@@ -17,11 +17,13 @@ type WorkspaceReleaseCardProps = {
    * - 'tile' (default): stacked card — full-width square cover banner above
    *   the meta block. Right for grids and rails where the card is ~180–280px
    *   wide and the square stays a modest thumbnail.
-   * - 'focused': compact horizontal header — fixed-size square art beside the
-   *   meta. Used for the centered focus card in WorkspaceDesktopFocused,
-   *   whose column spans most of the viewport; a full-width square there
-   *   ballooned into a huge empty banner (the art scales with card width),
-   *   so the focused card pins the art to a thumbnail instead.
+   * - 'focused': horizontal row — fixed-size square art beside the meta.
+   *   Right wherever the card is WIDE, because pinning the art to a
+   *   thumbnail stops it scaling with the card and ballooning into a huge
+   *   empty banner. Two callers: the centered focus card in
+   *   WorkspaceDesktopFocused (its column spans most of the viewport), and
+   *   the whole mobile catalog in ReleasesColumn (2026-08-07 — rows replaced
+   *   capped tiles there; see that file for the full rationale).
    */
   variant?: 'tile' | 'focused';
 };
@@ -35,10 +37,19 @@ const statusLabel: Record<string, string> = {
   archived: 'Archived',
 };
 
-function formatReleaseDate(value: string | null): string {
-  if (!value) return 'Date not set';
+/**
+ * Returns null — not a placeholder string — when a release has no date, so
+ * the caller can drop the line entirely (founder call, 2026-08-09). A date
+ * is optional since v0.41.0, so "Date not set" was printed on every release
+ * created without one: a permanent label restating an absence the card
+ * already communicates by having nothing there. Setting a date is prompted
+ * where it can actually be acted on (SetReleaseDateCard, in the activity
+ * list), not nagged from a card that can't edit it.
+ */
+function formatReleaseDate(value: string | null): string | null {
+  if (!value) return null;
   const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return 'Date not set';
+  if (Number.isNaN(parsed.getTime())) return null;
   return new Intl.DateTimeFormat('en', {
     month: 'short',
     day: 'numeric',
@@ -80,6 +91,7 @@ export function WorkspaceReleaseCard({
 }: WorkspaceReleaseCardProps) {
   const progress = tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0;
   const normalizedStatus = statusLabel[release.status] || release.status.replace(/_/g, ' ');
+  const releaseDateLabel = formatReleaseDate(release.releaseDate);
 
   // Shared meta block — identical content in both layouts; only the frame
   // around it changes.
@@ -102,13 +114,18 @@ export function WorkspaceReleaseCard({
         ) : null}
       </div>
 
-      <h3 className="mt-2 line-clamp-2 font-display text-base font-semibold leading-snug text-content-primary sm:text-lg">
+      {/* One size at every breakpoint (2026-08-07). This used to be
+          `text-base sm:text-lg`, which gave the SMALLEST title to the
+          NARROWEST screen — backwards. The phone row is now the widest text
+          column a title ever gets; `line-clamp-2` handles the desktop grid's
+          220-280px tracks. */}
+      <h3 className="mt-2 line-clamp-2 font-display text-lg font-semibold leading-snug text-content-primary">
         {release.title}
       </h3>
 
-      <p className="mt-2 text-xs text-content-secondary">
-        {formatReleaseDate(release.releaseDate)}
-      </p>
+      {releaseDateLabel ? (
+        <p className="mt-2 text-xs text-content-secondary">{releaseDateLabel}</p>
+      ) : null}
 
       <div className="mt-3">
         <div className="mb-1.5 flex items-center justify-between text-[11px]">
@@ -131,10 +148,16 @@ export function WorkspaceReleaseCard({
     </>
   );
 
-  const frameClass = `group motion-focus block w-full overflow-hidden rounded-xl border bg-bg-surface text-left transition-colors ${
+  // `motion-lift` is the utility globals.css reserves for cards/surfaces
+  // (a 1px hover rise) — declared there but unused until now. `motion-press`
+  // is deliberately NOT used: that same block documents it as buttons and
+  // small controls only. Touch gets `active:bg-bg-hover` instead, which is
+  // the press cue that reads correctly on a full-width row where a scale
+  // transform would look like the whole list flinching.
+  const frameClass = `group motion-focus motion-lift block w-full overflow-hidden rounded-xl border bg-bg-surface text-left transition-colors ${
     selected
       ? 'border-brand bg-brand/8'
-      : 'border-stroke-default hover:border-stroke-strong hover:bg-bg-hover'
+      : 'border-stroke-default hover:border-stroke-strong hover:bg-bg-hover active:bg-bg-hover'
   }`;
 
   if (variant === 'focused') {
@@ -187,7 +210,11 @@ export function WorkspaceReleaseCard({
             width={720}
             height={720}
             className="h-full w-full object-cover transition-transform duration-slow ease-out group-hover:scale-[1.02]"
-            sizes="(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw"
+            // Tiles only render in the desktop grid now (auto-fit 220-280px
+            // tracks) — mobile switched to the `focused` row in 2026-08-07.
+            // The old value claimed 100vw below 768px and over-fetched on
+            // every phone.
+            sizes="280px"
           />
         ) : (
           <DefaultCoverArt markClassName="w-14 sm:w-16" />

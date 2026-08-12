@@ -13,6 +13,9 @@ const WORKSPACE_FEATURE_ENABLED =
 const IDENTITY_PANEL_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' && WORKSPACE_FEATURE_ENABLED;
 
+// The "After tasks" check-in toggle, same gate the real section reads.
+const TASK_OUTCOMES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_OUTCOMES === 'true';
+
 type SettingsPageSkeletonProps = {
   /** Best-effort role hints derived from whatever `user` the auth store has
    * on hand right now — usually already correct. Zustand's `persist`
@@ -68,24 +71,27 @@ export function SettingsPageSkeleton({
           {/* Flat single-column sections divided by hairlines — mirrors the
               redesigned page (2026-07-23): each slot is a dim kicker line +
               content block, no card boxes. Gating matches the real page's
-              conditionals; order (identity leads when present, artist right
-              after — we serve the artist): Workspace identity -> Workspace
-              logo -> Workspace artist -> Artist profile -> Profile ->
-              Appearance -> Teammates -> Releases -> Security -> Session ->
-              Delete. */}
+              conditionals; order — overridden 2026-08-05 (founder call,
+              Teammates now leads): Teammates -> Workspace identity/logo
+              (paired row) -> Workspace artist -> Artist profile -> Profile
+              -> Appearance -> Releases -> Security -> Session -> Delete. */}
           <div className="divide-y divide-stroke-subtle">
             {[
-              { key: 'workspace-identity', height: 'h-24', show: IDENTITY_PANEL_ENABLED },
-              { key: 'workspace-logo', height: 'h-24', show: IDENTITY_PANEL_ENABLED },
+              // Teammates renders for EVERY account since v0.26.0 (read-only
+              // for non-managers) — count-aware rows, special-cased below.
+              { key: 'teammates', height: 'h-32', show: true },
+              // Workspace identity + logo share one two-column row on the
+              // real page (2026-08-05) — special-cased in the render below,
+              // same shape as appearance-notifications.
+              { key: 'workspace-identity-logo', height: 'h-24', show: IDENTITY_PANEL_ENABLED },
               { key: 'workspace-artist', height: 'h-28', show: WORKSPACE_FEATURE_ENABLED },
               { key: 'artist-profile', height: 'h-28', show: isArtistAccount },
               { key: 'profile', height: 'h-40', show: true },
               // Appearance + Notifications share one two-column row on the
               // real page — special-cased in the render below.
               { key: 'appearance-notifications', height: 'h-24', show: true },
-              // Teammates renders for EVERY account since v0.26.0 (read-only
-              // for non-managers) — count-aware rows, special-cased below.
-              { key: 'teammates', height: 'h-32', show: true },
+              // Post-completion check-in toggle ("After tasks").
+              { key: 'task-check-in', height: 'h-16', show: TASK_OUTCOMES_ENABLED },
               // Count-aware release rows, special-cased below.
               { key: 'releases', height: 'h-32', show: true },
               { key: 'security', height: 'h-40', show: true },
@@ -94,7 +100,8 @@ export function SettingsPageSkeleton({
             ]
               .filter((section) => section.show)
               .map((section) =>
-                section.key === 'appearance-notifications' ? (
+                section.key === 'appearance-notifications' ||
+                section.key === 'workspace-identity-logo' ? (
                   <div key={section.key} className="grid gap-x-10 py-9 sm:grid-cols-2">
                     <div>
                       <SkeletonBlock className="mb-5 h-3 w-28" />

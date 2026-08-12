@@ -49,20 +49,41 @@ export function WorkspaceDesktopGrid({
           }
         />
       ) : (
-        // Auto-fit columns capped at 260px, centered as a row (founder call,
-        // 2026-07-23; cap tightened 260<-280 on 2026-08-05, URG-214 follow-up):
+        // Auto-fit columns, centered as a row (founder call, 2026-07-23):
         // with `repeat(auto-fit, minmax(...))` the browser fits as many
-        // ~260px columns as the container allows, and `justify-center`
-        // centers the row when there are FEWER releases than fit, instead of
-        // leaving them left-anchored with dead space to the right.
-        // `auto-fit`'s track count is computed from the MAX bound, not the
-        // min — so with the workspace identity panel + the open UrgAns rail
-        // both on screen (the common case once both ship), the center column
-        // narrows to ~555px, and the old 280px cap meant 2*280+gap (576px)
-        // didn't fit, collapsing to a single column even though there was
-        // clearly room for two. 260px clears that squeeze (2*260+gap = 536px)
-        // while keeping the same look everywhere else.
-        <div className="grid justify-center gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,260px))]">
+        // columns as the container allows, and `justify-center` centers the
+        // row when there are FEWER releases than fit, instead of leaving
+        // them left-anchored with dead space to the right.
+        //
+        // THE TRACK COUNT USES THE MAX BOUND, NOT THE MIN (per the Grid spec:
+        // auto-fit repetitions are computed with each track at its max sizing
+        // function when that's definite). Every sizing bug in this grid's
+        // history has come from forgetting that, so do the arithmetic before
+        // changing either number below.
+        //
+        // THE REAL WIDTH BUDGET (measured on production, 2026-08-05, URG-225).
+        // AppShell caps the page at 1440px, and by the time width reaches
+        // this grid three things have taken their cut:
+        //   1440 − 272 (WorkspaceIdentityPanel: 240 + mr-8)
+        //        −  64 (<main>'s lg:px-8)
+        //        −  48 (WorkspaceView's wrapper sm:px-6)
+        //        = 1056px with the UrgAns rail CLOSED
+        //        =  564px with it OPEN (the rail takes a further 492: its
+        //           clamp(360px,31vw,460px) plus mr-8)
+        //
+        // 240px max track (was 260px, URG-225): 4 cards + 3 gap-4 (16px) gaps
+        // needs 4*240+48 = 1008px, which fits the 1056px budget with 48px of
+        // slack. The previous 260px cap needed 1088px — 32px MORE than the
+        // budget — so the grid could only ever reach 3 columns, which is the
+        // bug URG-225 fixed (URG-224 shipped a max-w cap sized to that same
+        // nonexistent 1088px budget, so it changed nothing). 250px would also
+        // fit but leaves only 8px of slack; 240px is the robust choice.
+        // Rail-open still resolves to 2 columns (564 budget, URG-216's fix).
+        //
+        // max-w + mx-auto keep the ceiling STRUCTURAL rather than incidental:
+        // 1008px is exactly 4 max-width cards plus their gaps, so no future
+        // width change anywhere upstream can produce a 5th column.
+        <div className="mx-auto grid max-w-[1008px] justify-center gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,240px))]">
           {releases.map(({ release, tasksDone, tasksTotal, coverArtUrl }) => (
             <WorkspaceReleaseCard
               key={release.id}

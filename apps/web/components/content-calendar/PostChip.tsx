@@ -28,7 +28,10 @@ export function PostChip({ post, today, onOpen, onToggleStatus }: PostChipProps)
   const statusText = `${getStatusLabel(post.status)}${overdue ? ', overdue' : ''}`;
 
   return (
-    <div className="flex min-w-0 items-center gap-1.5 rounded-sm bg-[var(--cc-fill)] px-1.5 py-1">
+    // py-1.5 (was py-1): the title button is the only way to open a post, and
+    // the row was ~24px tall — under the touch floor for the mobile agenda,
+    // where this chip is the primary control (2026-08-10 tap-target pass).
+    <div className="flex min-w-0 items-center gap-1.5 rounded-sm bg-[var(--cc-fill)] px-1.5 py-1.5">
       <StatusMark
         status={post.status}
         overdue={overdue}
@@ -43,7 +46,7 @@ export function PostChip({ post, today, onOpen, onToggleStatus }: PostChipProps)
         }}
         aria-label={`${post.title}, ${statusText}`}
         title={post.title}
-        className="min-w-0 flex-1 truncate text-left text-[11px] font-medium leading-4 text-[var(--cc-on-fill)] hover:underline"
+        className="-my-1.5 min-w-0 flex-1 truncate py-1.5 text-left text-[11px] font-medium leading-4 text-[var(--cc-on-fill)] hover:underline"
       >
         {post.title}
       </button>

@@ -14,6 +14,10 @@ import {
 } from './_shared';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
 import { type ReleaseOption } from '@/lib/release-helpers';
+import { DEFAULT_RELEASE_TITLE } from '@/types/releases';
+import { writeTemplatePending } from '@/lib/release-template-pending';
+import { writePlannerPending } from '@/lib/release-planner-pending';
+import { isReleasePlannerEnabled } from '@/lib/release-planning';
 
 type ReleaseSelectorListResponse = { releases: ReleaseOption[] };
 
@@ -193,7 +197,12 @@ function isValidHttpUrl(value: string): boolean {
 }
 
 function normalizeReleaseCreatedSource(value: unknown): ReleaseCreatedSource {
-  if (value === 'onboarding' || value === 'empty_state' || value === 'chappi') {
+  if (
+    value === 'onboarding' ||
+    value === 'empty_state' ||
+    value === 'chappi' ||
+    value === 'planner'
+  ) {
     return value;
   }
 
@@ -294,7 +303,19 @@ export async function POST(request: NextRequest) {
     const body = (await request.json().catch(() => ({}))) as CreateReleaseBody;
     const artistId = trimString(body?.artistId);
     const artistNameInput = sanitizeTextField(trimString(body?.artistName), 120);
-    const title = sanitizeTextField(trimString(body?.title), 140);
+    // Title and release date are both OPTIONAL as of URG-230 (founder call):
+    // creating a release should have zero required fields. An untitled
+    // release takes DEFAULT_RELEASE_TITLE, which the read path in
+    // lib/services/release-service.ts already used as its empty-title
+    // fallback — so this stores what the UI would have displayed anyway.
+    //
+    // Dropping the date requirement reopens the path the 2026-05-26 modal
+    // change closed (a release created with no date silently getting zero
+    // activities). It is no longer silent: a dateless Rollout-plan release
+    // is marked `template_pending` below and the activities view carries a
+    // card explaining that setting a date builds the plan. See the
+    // instantiation block further down.
+    const title = sanitizeTextField(trimString(body?.title), 140) || DEFAULT_RELEASE_TITLE;
     const releaseDateInput = trimString(body?.releaseDate);
     const description = sanitizeTextField(trimString(body?.description), 400);
     const releaseType = trimString(body?.releaseType) || 'single';
@@ -302,12 +323,9 @@ export async function POST(request: NextRequest) {
     const releaseSource = normalizeReleaseCreatedSource(body?.source);
     const releasePlan = trimString(body?.plan) === 'blank' ? 'blank' : 'template';
 
-    if (!title) return NextResponse.json({ error: 'Release title is required.' }, { status: 400 });
-
-    if (!releaseDateInput) {
-      return NextResponse.json({ error: 'Release date is required.' }, { status: 400 });
-    }
-
+    // parseOptionalReleaseDate returns { value: null } for empty input — the
+    // tolerance it was always written for, previously unreachable because the
+    // hard 400 above sat in front of it. A malformed date is still a 400.
     const releaseDateResult = parseOptionalReleaseDate(releaseDateInput);
     if (releaseDateResult.error) {
       return NextResponse.json({ error: releaseDateResult.error }, { status: 400 });
@@ -453,6 +471,20 @@ export async function POST(request: NextRequest) {
     const slug = normalizeReleaseSlug(title) || `release-${Date.now()}`;
     const now = new Date().toISOString();
 
+    // With the planner on, a Rollout-plan release is created with no
+    // activities at all: the manager plans it with UrgAns and approves a draft
+    // before anything is scheduled. Recorded as its own marker rather than
+    // reusing template_pending, because that flag makes the schedule route
+    // instantiate the whole template the moment a date lands, which is exactly
+    // what the draft flow exists to prevent. See lib/release-planner-pending.ts.
+    const plannerPending = isReleasePlannerEnabled() && releasePlan !== 'blank';
+
+    // A Rollout-plan release with no date owes its activities (URG-230).
+    // Recorded rather than inferred — see lib/release-template-pending.ts for
+    // why it can't be derived, and why it lives in `metadata`.
+    const templatePending =
+      !plannerPending && releasePlan !== 'blank' && !releaseDateResult.value;
+
     const releaseResult = await adminClient
       .from('releases')
       .insert({
@@ -472,6 +504,8 @@ export async function POST(request: NextRequest) {
         // stores/useReleaseStore.ts) first or the dashboard 500s.
         release_type: releaseType,
         description: description || null,
+        ...(templatePending ? { metadata: writeTemplatePending(null, true) } : {}),
+        ...(plannerPending ? { metadata: writePlannerPending(null, true) } : {}),
         updated_at: now,
       })
       .select('id,status,artist_name,title,release_date,created_at,updated_at')
@@ -526,13 +560,23 @@ export async function POST(request: NextRequest) {
     // This is a known limitation of v1 — recoverable state (release exists,
     // tasks missing) beats partial-rollback risk (orphaned release row).
     //
-    // Common failure modes absorbed here: TemplateNotAvailableError when the
-    // release_type has no template yet (ep, album, music_video at v1), and
-    // TemplateInstantiationError with reason 'missing_release_date' when the
-    // release was created without a date.
+    // Common failure mode absorbed here: TemplateNotAvailableError when the
+    // release_type has no template yet (ep, album, music_video at v1).
+    //
     // Blank releases (founder call, 2026-07-23) skip the rollout plan
     // entirely — the user builds their own activities from zero.
-    if (releasePlan !== 'blank') {
+    //
+    // A dateless release is no longer routed here at all (URG-230). It used
+    // to fall through and throw 'missing_release_date' into the catch below,
+    // which is exactly the silent no-tasks path the required-date rule
+    // existed to prevent. Now `templatePending` short-circuits it, and the
+    // plan is built by POST /api/releases/[releaseId]/schedule when a date
+    // arrives — same instantiateTemplate call, just later.
+    //
+    // With the planner on (`plannerPending`), no plan is built here at all.
+    // The manager answers the intake, edits the draft UrgAns tailors from this
+    // same template, and approval is what writes the task rows.
+    if (releasePlan !== 'blank' && !templatePending && !plannerPending) {
       try {
         // Reuse the workspace id the artist branch already resolved — a normal
         // create used to run the full ensureOwnedWorkspace (upsert + org sync)
@@ -607,6 +651,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       releaseId,
       status: String(releaseResult.data.status || 'draft'),
+      // Lets the caller tell "plan built" from "plan waiting on a date"
+      // without re-reading the row — the create flows use it to skip the
+      // "Your release is set up" guide, which would be untrue here.
+      templatePending,
+      // True when this release is waiting to be planned with UrgAns. Callers
+      // use it to route the manager into the planner instead of showing a
+      // "your release is set up" guide that would not be true yet.
+      plannerPending,
       release: {
         id: releaseId,
         title: String(releaseResult.data.title || title),

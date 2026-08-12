@@ -4,6 +4,10 @@ import { useState } from 'react';
 import { CheckCircle2, X } from 'lucide-react';
 import { useTaskStore } from '@/stores/useTaskStore';
 
+// Same reasoning as ToastProvider — raise this above MobileNavBar below lg
+// rather than let the Undo button land on/under the bar.
+const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
+
 /**
  * Floating "Task completed · Undo" toast surfaced after a tick. Mounted once
  * globally inside TaskUIProvider so the same affordance covers every surface
@@ -46,7 +50,9 @@ export function UndoCompletionToast() {
     <div
       role="status"
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4 sm:bottom-8"
+      className={`pointer-events-none fixed inset-x-0 z-50 flex justify-center px-4 ${
+        MOBILE_NAV_ENABLED ? 'mobile-nav-raise lg:bottom-8' : 'bottom-6 sm:bottom-8'
+      }`}
     >
       <div
         key={completionToast.tick}

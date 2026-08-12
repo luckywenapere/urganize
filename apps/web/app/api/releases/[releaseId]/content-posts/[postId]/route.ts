@@ -136,7 +136,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (body.format !== undefined) {
     if (!isValidPostFormat(body.format)) {
       return NextResponse.json(
-        { error: 'format must be one of the content_post_format enum values.' },
+        { error: 'Pick a format from the list.' },
         { status: 400 }
       );
     }
@@ -146,7 +146,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (body.status !== undefined) {
     if (!isValidPostStatus(body.status)) {
       return NextResponse.json(
-        { error: 'status must be one of the content_post_status enum values.' },
+        { error: 'Status must be Draft, Ready or Posted.' },
         { status: 400 }
       );
     }
@@ -156,7 +156,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (body.pillar !== undefined) {
     if (body.pillar !== null && !isValidPostPillar(body.pillar)) {
       return NextResponse.json(
-        { error: 'pillar must be one of the content_post_pillar enum values.' },
+        { error: 'Pick a pillar from the list, or leave it empty.' },
         { status: 400 }
       );
     }

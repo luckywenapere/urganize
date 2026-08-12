@@ -158,8 +158,30 @@ export interface Task {
   attachmentCount?: number;
 }
 
+export const TASK_OUTCOME_RATINGS = ['went_well', 'went_okay', 'not_to_plan'] as const;
+
+export type TaskOutcomeRating = (typeof TASK_OUTCOME_RATINGS)[number];
+
+/** One row per task: how the last completion went, per the person who
+ * completed it. Re-completing a task replaces its outcome. */
+export interface TaskOutcome {
+  id: string;
+  taskId: string;
+  releaseId: string;
+  outcome: TaskOutcomeRating;
+  note: string | null;
+  /** Always present: AI-written when a note exists, template-built otherwise,
+   * so recap consumers never need to re-summarize. */
+  summary: string;
+  aiFollowupQuestion: string | null;
+  aiFollowupAnswer: string | null;
+  createdBy: string;
+  createdAt: string;
+}
+
 export interface TaskDetail extends Task {
   comments: TaskComment[];
   attachments: TaskAttachment[];
   activity: TaskActivityEntry[];
+  outcome: TaskOutcome | null;
 }

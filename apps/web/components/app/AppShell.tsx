@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
 import { RAIL_OPEN_KEY, RAIL_OPEN_VERSION, useChappiStore } from '@/stores/useChappiStore';
@@ -15,6 +15,13 @@ import { ToastProvider } from '@/components/shared/ToastProvider';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
 import { registerPushServiceWorker } from '@/lib/push';
+import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
+import { CURATOR_HOME_PATH } from '@/lib/home-path';
+
+/** The only routes a signed-in user navigates between. Deliberately short —
+ * every entry costs a speculative request, and prefetching pages nobody opens
+ * is exactly the kind of waste this work is trying to remove. */
+const PREFETCHED_ROUTES = ['/dashboard', '/dashboard/urgans', '/settings'];
 
 // None of these are needed for first paint — the onboarding wizard, the
 // create-release modal, and the floating support widgets used to be
@@ -31,6 +38,10 @@ const ChappiDock = dynamic(
   () => import('@/components/chappi/ChappiDock').then((m) => m.ChappiDock),
   { ssr: false }
 );
+const MobileNavBar = dynamic(
+  () => import('@/components/app/MobileNavBar').then((m) => m.MobileNavBar),
+  { ssr: false }
+);
 const ChappiSidePanel = dynamic(
   () => import('@/components/chappi/ChappiSidePanel').then((m) => m.ChappiSidePanel),
   { ssr: false }
@@ -41,6 +52,15 @@ const WorkspaceIdentityPanel = dynamic(
 );
 const CreateReleaseModal = dynamic(
   () => import('@/components/releases/CreateReleaseModal').then((m) => m.CreateReleaseModal),
+  { ssr: false }
+);
+// Mounted once for the whole app so the workspace empty-state card, a note,
+// and an UrgAns chip all open the same instance — the three live in different
+// ownership islands, and threading a callback to each would touch a file per
+// entry point. Dynamic + flag-gated, so while the planner is off its chunk is
+// never requested.
+const PlannerIntakeModal = dynamic(
+  () => import('@/components/planner/PlannerIntakeModal').then((m) => m.PlannerIntakeModal),
   { ssr: false }
 );
 const WhatsNewModal = dynamic(
@@ -59,6 +79,18 @@ const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTIC
 // WhatsApp founder line moves into their footers. With the flag off, the
 // standalone SupportChat pill renders exactly as before.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
+// Bottom tab bar, below lg only — see MobileNavBar.tsx. Moves the topbar's
+// nav icons + create CTA down to where a thumb reaches on a phone, and
+// stands in for the ChappiDock launcher on that same range (ChappiDock
+// retires itself when this is on; AppShell's dock mount line below is
+// unchanged).
+const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
+
+// The UrgAns planner's intake modal is mounted app-wide (see the dynamic import
+// above), so a note or an assistant chip can open it without the notes page or
+// the assistant page owning a copy.
+const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
 // The workspace identity card (URG-214) — a persistent left column, mirroring
 // the UrgAns rail's right column. Only meaningful once workspaces exist, so
@@ -81,6 +113,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isAuthLoading = useAuthStore((state) => state.isLoading);
   const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
+  const router = useRouter();
   // Lifted here so the universal topbar "New release" button opens the same
   // creation modal the page-level buttons use, from any dashboard page,
   // without navigating away.
@@ -107,6 +140,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isOnboardingRoute = pathname?.startsWith('/onboarding');
   const isInviteRoute = pathname?.startsWith('/invite');
   const isSettingsRoute = pathname === '/settings';
+  // The curator surface carries its own frame (CuratorShell) and shows none of
+  // the team chrome: no topbar, no identity card, no UrgAns rail, no dock.
+  const isCuratorRoute = pathname?.startsWith('/curator');
   const isPublicStandaloneRoute =
     pathname === '/' ||
     pathname?.startsWith('/credits/') ||
@@ -114,15 +150,19 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname?.startsWith('/epk/') ||
     isPreSavePublicRoute ||
     isOnboardingRoute ||
-    isInviteRoute;
+    isInviteRoute ||
+    isCuratorRoute;
   const hasCompletedOnboarding = user?.onboarding_completed === true;
   // Stage 2: the sidebar is gone, so the only chrome that varies between
   // "authenticated" and "still loading" is whether the WorkspaceMenu
   // monogram has the user's initial yet — and that gracefully falls back
   // to "U" when userName is empty. We collapse the two previous branches
   // (showWorkspaceSidebar / showWorkspaceSidebarSkeleton) into one.
+  const isCuratorAccount = user?.role === 'curator';
   const showWorkspaceChrome =
-    (isAuthenticated || isAuthLoading) && (isDashboardRoute || isSettingsRoute);
+    (isAuthenticated || isAuthLoading) &&
+    (isDashboardRoute || isSettingsRoute) &&
+    !isCuratorAccount;
   const requiresArtistNameGate =
     isAuthenticated &&
     !isAuthLoading &&
@@ -131,15 +171,44 @@ export function AppShell({ children }: { children: ReactNode }) {
     user?.role === 'artist' &&
     !String(user?.artist_name || '').trim();
   const showHelpMenu =
-    isAuthenticated && !isAuthLoading && !isAuthRoute && !isPublicStandaloneRoute && !requiresArtistNameGate;
+    isAuthenticated &&
+    !isAuthLoading &&
+    !isAuthRoute &&
+    !isPublicStandaloneRoute &&
+    !requiresArtistNameGate &&
+    !isCuratorAccount;
 
   const workspaceUserName = user?.name || user?.artist_name || user?.email || '';
+
+  // The dock's corner launcher is what pb-28 clears; with MOBILE_NAV_ENABLED
+  // the dock retires below lg and the bar itself needs clearing instead — see
+  // .mobile-nav-clearance / .chappi-main-padding-nav in globals.css. Kept as
+  // a precomputed value so the <main> className below stays a one-token swap.
+  const mainPaddingClass = isChappiRoute
+    ? MOBILE_NAV_ENABLED
+      ? 'chappi-main-padding-nav'
+      : 'chappi-main-padding'
+    : MOBILE_NAV_ENABLED
+      ? 'mobile-nav-clearance'
+      : 'pb-28 md:pb-10';
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
       void checkAuth();
     }
   }, [checkAuth, isAuthenticated, user]);
+
+  // A curator has no team, so every dashboard and settings route is a dead end
+  // for them: the APIs behind those pages return 403 and the pages would render
+  // permanent empty states. Send them to their own surface instead. Handled
+  // here rather than per page so a stale link, a back button or an installed
+  // PWA's start_url all resolve the same way.
+  useEffect(() => {
+    if (isAuthLoading || !isCuratorAccount) return;
+    if (isDashboardRoute || isSettingsRoute) {
+      router.replace(CURATOR_HOME_PATH);
+    }
+  }, [isAuthLoading, isCuratorAccount, isDashboardRoute, isSettingsRoute, router]);
 
   // Hydrate the side rail's persisted open state once per load — same
   // SSR-safe pattern as ChappiDock (first paint closed, storage read in a
@@ -173,6 +242,28 @@ export function AppShell({ children }: { children: ReactNode }) {
     useChappiStore.getState().setRailOpen(true);
   }, [pathname]);
 
+  // Warm the route chunks for the app's three real destinations while the
+  // browser is idle. These pages are thin server wrappers over big client
+  // components, so what a prefetch actually buys is the JS chunk landing in
+  // cache before the click — on a slow link that's the whole difference
+  // between an instant switch and a skeleton. Once per mount, and skipped on
+  // Data Saver / 2g (see lib/connection.ts). Prefetch is a no-op in dev.
+  useEffect(() => {
+    if (!isAuthenticated || isAuthLoading) return;
+    // Nothing in PREFETCHED_ROUTES is reachable by a curator.
+    if (isCuratorAccount) return;
+    if (!shouldBackgroundPrefetch()) return;
+    return runWhenIdle(() => {
+      for (const route of PREFETCHED_ROUTES) {
+        try {
+          router.prefetch(route);
+        } catch {
+          // Prefetch is best-effort; a failure must never break navigation.
+        }
+      }
+    });
+  }, [isAuthLoading, isAuthenticated, isCuratorAccount, router]);
+
   // Register the push service worker once per load. Registration alone never
   // prompts for permission — the prompt only fires when the user explicitly
   // enables notifications in Settings (PushNotificationsSection). Having the
@@ -189,6 +280,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   // from re-pinging.
   useEffect(() => {
     if (!isAuthenticated || isAuthLoading || !user) return;
+    // The drip's copy and deep links are all about releases and tasks, so it
+    // has nothing to say to a curator.
+    if (isCuratorAccount) return;
     try {
       if (window.sessionStorage.getItem('urganize.engagement.pinged')) return;
       window.sessionStorage.setItem('urganize.engagement.pinged', '1');
@@ -211,7 +305,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         // Best-effort — never let engagement plumbing affect the app.
       }
     })();
-  }, [isAuthenticated, isAuthLoading, user]);
+  }, [isAuthenticated, isAuthLoading, isCuratorAccount, user]);
 
   return (
     // ToastProvider wraps TaskUIProvider so any surface inside the app shell
@@ -250,11 +344,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 page itself — that page IS the chat. */}
             <div className="flex min-h-0 flex-1">
               {IDENTITY_PANEL_ENABLED ? <WorkspaceIdentityPanel /> : null}
-              <main
-                className={`min-w-0 flex-1 px-4 pt-5 sm:px-5 md:px-6 lg:px-8 ${
-                  isChappiRoute ? 'chappi-main-padding' : 'pb-28 md:pb-10'
-                }`}
-              >
+              <main className={`min-w-0 flex-1 px-4 pt-5 sm:px-5 md:px-6 lg:px-8 ${mainPaddingClass}`}>
                 {children}
               </main>
               {CHAPPI_ENABLED && !isChappiRoute ? (
@@ -270,6 +360,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       {showHelpMenu ? (
         CHAPPI_ENABLED ? <ChappiDock onNewRelease={openCreateRelease} /> : <SupportChat />
       ) : null}
+      {MOBILE_NAV_ENABLED && showWorkspaceChrome && !requiresArtistNameGate ? (
+        <MobileNavBar onNewRelease={openCreateRelease} />
+      ) : null}
       <CreateReleaseModal
         open={isCreateReleaseOpen}
         onClose={closeCreateRelease}
@@ -281,6 +374,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           void useReleaseStore.getState().loadCommandCenter();
         }}
       />
+      {PLANNER_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
+        <PlannerIntakeModal />
+      ) : null}
       {/* "What's new" (founder request, 2026-07-23): announces changelog
           entries this device hasn't seen yet, once per release, on signed-in
           app surfaces only. */}

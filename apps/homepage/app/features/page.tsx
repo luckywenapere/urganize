@@ -17,9 +17,17 @@ export const metadata: Metadata = buildPageMetadata({
 
 // Every claim on this page must describe the product as it ships today.
 // The honesty rule from /pricing applies here: we don't advertise what
-// isn't built (no credits, no pre-save, no stages). The Assistant block
+// isn't built (no credits, no pre-save, no stages). The Assistant row
 // below describes UrgAns's live deterministic commands only — no
 // conversational-AI framing until a capable model is actually wired.
+//
+// 2026-08-05 (URG-218): same conversion fix as /why-urganize. This page
+// had no CTA until the very bottom (~7 screens down) and ran SIX identical
+// kicker/title/body/bullets blocks in a row, only the first of which had a
+// screenshot — readers extract the pattern after block one and stop.
+// Fixed by: a CTA in the hero, "The plan" (with its screenshot) kept as
+// the one full-size block, and the other five folded into one compact
+// section in a different format. Keep it that way.
 const features = [
   {
     kicker: "The plan",
@@ -41,55 +49,36 @@ const features = [
       alt: "A release open in Urganize: the progress bar at 1 of 64, the upcoming activities with owners and due dates on every row, and the UrgAns assistant docked alongside them.",
     },
   },
+] as const;
+
+// Folded from five full-size blocks into one compact section (see the note
+// above). One sentence per feature, tightened from the previously approved
+// block copy — same claims, same honesty rule, less scroll.
+const compactFeatures = [
   {
     kicker: "Activities",
     title: "Owned, dated, and in order.",
-    body: "Every activity has an owner, a due date, and a priority. Activities wait for each other in the right order: the artwork upload stays locked until the artwork is approved. The moment it is, it unlocks.",
-    points: [
-      "Assign your A&R, PR, designer, distributor",
-      "Blocked activities show exactly what's blocking them",
-      "Check things off from the release page or your own list",
-    ],
+    body: "Every activity has an owner, a due date, and a priority, and a blocked activity unlocks the moment the step it's waiting on is done.",
   },
   {
     kicker: "Press kit",
     title: "One link, ready to send.",
-    body: "Urganize builds a press kit from your release: cover art, details, and photos. It updates itself when the release changes. Send one link to press, curators, and bookers. Turn the link off anytime.",
-    points: [
-      "Built for you from the release",
-      "Always up to date. No rebuilding by hand",
-      "One link. Turn it off anytime",
-    ],
+    body: "Urganize builds a press kit from your release, keeps it up to date when the release changes, and you can turn the link off anytime.",
   },
   {
     kicker: "Assistant",
     title: "UrgAns handles the small stuff.",
-    body: "UrgAns is the assistant built into your workspace. Tell it what you need. Create a release. Add an activity. Mark something done. Type it and it happens, with no menus to hunt through.",
-    points: [
-      "Create releases and activities by typing what you want",
-      "Built into the workspace, not a separate app",
-      "It keeps getting better",
-    ],
+    body: "Tell the assistant built into your workspace what you need. Create a release, add an activity, mark something done. Type it and it happens.",
   },
   {
     kicker: "Milestones",
     title: "The moments that matter, on the timeline.",
-    body: "Listening party, video shoot, release day. Milestones sit inside the release plan as dated events, so the team sees the big moments coming, not just the chores.",
-    points: [
-      "Milestones show up on the release timeline",
-      "Dated around the drop",
-      "Visible to everyone on the workspace",
-    ],
+    body: "Listening party, video shoot, release day. Milestones sit inside the release plan as dated events the whole team sees coming.",
   },
   {
     kicker: "Visibility",
     title: "Know where every release stands.",
-    body: "One workspace shows every release you have going: progress, what's overdue, what's due this week, and which release each activity belongs to. You stop needing a meeting to know the status.",
-    points: [
-      "All releases and activities on one screen",
-      "Click a release to see just its work",
-      "Overdue and due-today shown first",
-    ],
+    body: "One workspace shows every release you have going: progress, what's overdue, and what's due this week. No meeting needed.",
   },
 ] as const;
 
@@ -121,6 +110,14 @@ export default function FeaturesPage() {
               Urganize gives your music the release it deserves. The plan, the
               work, and the status all live in one place.
             </p>
+            {/* CTA moved into the hero (2026-08-05, URG-218): the page
+                previously had no ask until the very bottom, ~7 screens
+                down, so anyone who stopped reading early never saw one.
+                No ProofLine here on purpose (keep the first touch light);
+                antoine stays on the final CTA below. */}
+            <div className="mt-8 flex w-full flex-col items-center gap-3">
+              <WaitlistForm source="features_hero" />
+            </div>
           </div>
         </SectionShell>
 
@@ -180,6 +177,42 @@ export default function FeaturesPage() {
             </SectionShell>
           </ScrollReveal>
         ))}
+
+        {/* THE REST OF THE TOOLKIT, COMPACTED (2026-08-05, URG-218) — was
+            five more full-size blocks (Activities, Press kit, Assistant,
+            Milestones, Visibility); folded into one section, one sentence
+            per feature. See the features array comment. */}
+        <ScrollReveal>
+          <SectionShell
+            className="py-[60px] lg:py-[80px]"
+            containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
+          >
+            <div className="mx-auto max-w-[64rem] border-t border-[color:var(--marketing-border)] pt-14">
+              <p className="mono-label text-[var(--marketing-accent)]">
+                Everything else
+              </p>
+              <h2 className={`mt-5 max-w-[40rem] ${headlineClass}`}>
+                The rest of what a release gets.
+              </h2>
+
+              <div className="mt-10 divide-y divide-[color:var(--marketing-border)]">
+                {compactFeatures.map((item) => (
+                  <div key={item.kicker} className="py-6">
+                    <p className="mono-label text-[var(--marketing-text-subtle)]">
+                      {item.kicker}
+                    </p>
+                    <p className="mt-3 max-w-[52rem] text-[0.95rem] leading-7 text-[var(--marketing-text-muted)]">
+                      <span className="font-medium text-[var(--marketing-text)]">
+                        {item.title}
+                      </span>{" "}
+                      {item.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </SectionShell>
+        </ScrollReveal>
 
         {/* FINAL CTA */}
         <ScrollReveal>

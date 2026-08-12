@@ -31,7 +31,6 @@ const BASELINE = new Set([
   'app/api/releases/[releaseId]/generate-status/route.ts',
   'app/api/releases/[releaseId]/metadata/route.ts',
   'app/api/releases/[releaseId]/route.ts',
-  'app/api/releases/[releaseId]/tailor-plan/route.ts',
   'app/api/releases/[releaseId]/task-groups/[groupId]/route.ts',
   'app/api/releases/[releaseId]/task-groups/route.ts',
   'app/api/releases/[releaseId]/tasks/route.ts',

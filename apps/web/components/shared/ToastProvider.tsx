@@ -11,6 +11,10 @@ import {
 } from 'react';
 import { Toast } from './Toast';
 
+// When on, MobileNavBar occupies the bottom 4rem below lg — raise the stack
+// above it there instead of letting it land on the bar.
+const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
+
 type ToastTone = 'success' | 'error' | 'warning';
 
 type ToastItem = {
@@ -93,7 +97,9 @@ export function ToastProvider({ children }: ToastProviderProps) {
         <div
           aria-live="polite"
           aria-atomic="false"
-          className="pointer-events-none fixed inset-x-4 bottom-6 z-[200] flex flex-col items-end gap-2 sm:inset-x-auto sm:right-6"
+          className={`pointer-events-none fixed inset-x-4 z-[200] flex flex-col items-end gap-2 sm:inset-x-auto sm:right-6 ${
+            MOBILE_NAV_ENABLED ? 'mobile-nav-raise lg:bottom-6' : 'bottom-6'
+          }`}
         >
           {items.map((item) => (
             <div key={item.id} className="pointer-events-auto animate-enter w-full max-w-sm">

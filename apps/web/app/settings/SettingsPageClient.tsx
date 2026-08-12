@@ -26,6 +26,7 @@ import {
 } from '@/components/settings/WorkspaceArtistSection';
 import { ArtistProfileSection } from '@/components/settings/ArtistProfileSection';
 import { PushNotificationsSection } from '@/components/settings/PushNotificationsSection';
+import { TaskCheckInSection } from '@/components/settings/TaskCheckInSection';
 import { TeammatesSection } from '@/components/settings/TeammatesSection';
 import { ReleasesSection } from '@/components/settings/ReleasesSection';
 import { SessionSection } from '@/components/settings/SessionSection';
@@ -514,15 +515,39 @@ export default function SettingsPage() {
             </button>
           </div>
 
-          {/* Section order (founder call, 2026-07-23): the workspace artist
-              leads — we're serving the artist, so the artist comes first.
-              Then the day-to-day surfaces (profile, appearance, team,
-              releases), and account plumbing (password, session, delete)
-              sits at the bottom where rarely-used, high-consequence actions
-              belong. */}
+          {/* Section order — overridden 2026-08-05 (founder call): Teammates
+              leads now, ahead of even the workspace artist. The prior order
+              (2026-07-23) put the artist first on the logic that we're
+              serving the artist; this supersedes that for "who's on this
+              team" specifically. Below Teammates the original ordering
+              holds: workspace identity/artist, then the day-to-day surfaces
+              (profile, appearance, releases), then account plumbing
+              (password, session, delete) at the bottom where rarely-used,
+              high-consequence actions belong. */}
           <div className="divide-y divide-stroke-subtle">
+          {/* Rendered for every account — the section itself is read-only
+              for non-managers (the shared "who's on this team" surface). */}
+          <TeammatesSection
+            teammates={teammates}
+            isLoadingTeammates={isLoadingTeammates && !teammatesPrimed}
+            onTeammatesChange={(next) => {
+              setTeammates(next);
+              if (userId) {
+                writePersistedState<TeammatesCache>(TEAMMATES_CACHE_KEY, SETTINGS_CACHE_VERSION, {
+                  userId,
+                  members: next,
+                });
+              }
+            }}
+            onRefetch={() => void loadTeammates()}
+          />
+
+          {/* Workspace identity + logo share one row (founder call,
+              2026-08-05): a natural pair — both just feed the workspace card
+              shown across the app — same two-column-from-sm pattern as
+              Appearance + Notifications below. */}
           {IDENTITY_PANEL_ENABLED && (
-            <>
+            <div className="grid gap-x-10 divide-y divide-stroke-subtle sm:grid-cols-2 sm:divide-y-0">
               <WorkspaceIdentitySection
                 input={workspaceNameInput}
                 onInputChange={setWorkspaceNameInput}
@@ -543,7 +568,7 @@ export default function SettingsPage() {
                 onUpload={(file) => void handleUploadWorkspaceLogo(file)}
                 onRemove={() => void handleRemoveWorkspaceLogo()}
               />
-            </>
+            </div>
           )}
 
           {WORKSPACE_FEATURE_ENABLED && (
@@ -572,25 +597,7 @@ export default function SettingsPage() {
             <PushNotificationsSection />
           </div>
 
-          {/* Rendered for every account — the section itself is read-only
-              for non-managers (the shared "who's on this team" surface). */}
-          {(
-            <TeammatesSection
-              teammates={teammates}
-              isLoadingTeammates={isLoadingTeammates && !teammatesPrimed}
-              onTeammatesChange={(next) => {
-                setTeammates(next);
-                if (userId) {
-                  writePersistedState<TeammatesCache>(TEAMMATES_CACHE_KEY, SETTINGS_CACHE_VERSION, {
-                    userId,
-                    members: next,
-                  });
-                }
-              }}
-              onRefetch={() => void loadTeammates()}
-            />
-          )}
-
+          <TaskCheckInSection />
           <ReleasesSection />
           <SecuritySection />
           <SessionSection />

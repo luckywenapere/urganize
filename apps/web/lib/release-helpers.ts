@@ -19,14 +19,20 @@ export interface ReleaseOption {
   updatedAt: string;
 }
 
-export function formatReleaseDate(value: string | null): string {
+/**
+ * Returns null for a release with no date so callers can omit the line
+ * rather than print a placeholder (founder call, 2026-08-09). A date is
+ * optional since v0.41.0, so "Date TBA" had become a standing label on
+ * every dateless release instead of the exception it was written for.
+ */
+export function formatReleaseDate(value: string | null): string | null {
   if (!value) {
-    return 'Date TBA';
+    return null;
   }
 
   const parsedDate = new Date(`${value}T00:00:00`);
   if (Number.isNaN(parsedDate.getTime())) {
-    return 'Date TBA';
+    return null;
   }
 
   return parsedDate.toLocaleDateString(undefined, {

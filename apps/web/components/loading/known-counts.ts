@@ -38,6 +38,25 @@ export function useKnownReleaseCount(fallback = 4, max = 12): number {
   return count;
 }
 
+// Written by useNotesStore on every successful load.
+const NOTE_COUNT_KEY = 'urganize.notes.note-count';
+
+/** Last-known notebook size. */
+export function useKnownNoteCount(fallback = 5, max = 10): number {
+  const [count, setCount] = useState(fallback);
+  useEffect(() => {
+    const persisted = readPersistedState<number>(
+      NOTE_COUNT_KEY,
+      1,
+      (value): value is number => typeof value === 'number' && Number.isFinite(value)
+    );
+    if (persisted !== null && persisted >= 0) {
+      setCount(clamp(persisted || 1, 1, max));
+    }
+  }, [max]);
+  return count;
+}
+
 /** Last-known teammates-list size (includes pending invites). */
 export function useKnownTeammateCount(fallback = 2, max = 8): number {
   const [count, setCount] = useState(fallback);

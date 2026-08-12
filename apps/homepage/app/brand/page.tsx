@@ -10,6 +10,10 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "How Urganize looks, how it speaks, and what it stands for. Voice, colors, and logos you can download.",
   path: "/brand",
+  // Kept out of search so the homepage's sitelinks stay commercial
+  // (Features / Pricing / For managers / For labels). The page stays public
+  // and footer-linked — it just never competes as a search result.
+  noIndex: true,
 });
 
 const VOICE_PILLARS = [

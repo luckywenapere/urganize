@@ -5,8 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { HOME_PATH } from '@/lib/home-path';
 import { isBillingPlanId, getPlan } from '@urganize/pricing';
-import { Loader2 } from 'lucide-react';
-import { LoadingScreen } from '@urganize/ui';
+import { LoadingMark, LoadingScreen } from '@urganize/ui';
 
 // Paystack post-checkout landing.
 //
@@ -63,7 +62,7 @@ function PaymentCallbackContent() {
         if (res.ok && payload.status === 'success') {
           setStatus('success');
           setResult(payload);
-          await checkAuth();
+          await checkAuth({ force: true });
           return;
         }
 
@@ -101,7 +100,7 @@ function PaymentCallbackContent() {
     <div className="w-full max-w-md rounded-3xl border border-stroke-subtle bg-bg-surface/95 p-6 shadow-[0_12px_32px_rgb(var(--shadow-ink)/calc(0.18*var(--shadow-alpha-scale)))] backdrop-blur-sm">
       {status === 'verifying' && (
         <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 text-center">
-          <Loader2 className="h-5 w-5 animate-spin text-content-tertiary" aria-hidden="true" />
+          <LoadingMark />
           <p className="text-sm text-content-secondary">Verifying payment</p>
           <p className="text-xs text-content-tertiary">Confirming with Paystack — this usually takes a few seconds.</p>
         </div>

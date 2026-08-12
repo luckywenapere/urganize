@@ -20,10 +20,14 @@ import { WorkspaceView } from '@/components/workspace/WorkspaceView';
 // validated; flip via .env.local for dev preview.
 const WORKSPACE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
-function formatDate(value: string | null): string {
-  if (!value) return 'No date set';
+// Null for a dateless release so the caller omits the line — matching
+// WorkspaceReleaseCard (2026-08-09). Kept in sync even though this legacy
+// layout is dark in production, so the documented revert path doesn't
+// resurrect the old placeholder.
+function formatDate(value: string | null): string | null {
+  if (!value) return null;
   const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return 'No date set';
+  if (Number.isNaN(parsed.getTime())) return null;
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(parsed);
 }
 
@@ -155,10 +159,14 @@ function LegacyDashboard() {
                       {release.title}
                     </h3>
                     <div className="mt-3 flex items-center gap-4 text-xs text-content-secondary">
-                      <span className="flex items-center gap-1.5">
-                        <CalendarDays className="h-3.5 w-3.5 text-content-tertiary" />
-                        {formatDate(release.releaseDate)}
-                      </span>
+                      {/* Icon and date drop together for a dateless release —
+                          a lone calendar glyph would read as a broken value. */}
+                      {formatDate(release.releaseDate) ? (
+                        <span className="flex items-center gap-1.5">
+                          <CalendarDays className="h-3.5 w-3.5 text-content-tertiary" />
+                          {formatDate(release.releaseDate)}
+                        </span>
+                      ) : null}
                       <span>
                         {doneTasks.length} of {releaseTasks.length} tasks done
                       </span>

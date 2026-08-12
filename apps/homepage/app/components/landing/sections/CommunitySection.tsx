@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/community";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
@@ -46,12 +47,17 @@ export function CommunitySection() {
             >
               Join the community
             </a>
-            <a
+            {/* next/link, not a bare anchor: /community is an internal route,
+                and an <a> forced a full document reload (re-downloading the
+                fonts, CSS and JS the visitor already has) instead of a client
+                transition. The sibling above is correctly an <a> — it leaves
+                the site. */}
+            <Link
               href="/community"
               className="text-sm text-[var(--marketing-text-subtle)] underline underline-offset-4 hover:text-[var(--marketing-text)]"
             >
               About the community
-            </a>
+            </Link>
           </div>
         </div>
       </SectionShell>

@@ -3,15 +3,21 @@ import Link from "next/link";
 import { ProductMenu } from "./ProductMenu";
 import { ThemeToggle } from "./ThemeToggle";
 
-const APP_AUTH_URL = "https://app.urganize.app/auth";
-
-// One header for every marketing page. The public funnel is waitlist-only:
-// the single CTA is the inline waitlist capture in the page body, and there
-// is deliberately NO "Start free" / signup link competing with it up here.
-// The one remaining app link is Login, for existing customers to sign in.
-// Product pages (Features, Pricing, Why Urganize, Privacy) live in the
-// ProductMenu dropdown — their ONLY home; they're deliberately not in the
-// footer (URG-161).
+// One header for every marketing page. Product pages (Features, Pricing, Why
+// Urganize, Privacy) live in the ProductMenu dropdown — their ONLY home;
+// they're deliberately not in the footer (URG-161).
+//
+// Funnel note (founder call, 2026-08-09): the waitlist-only funnel
+// (URG-125 + URG-136) no longer holds — signup is a direct path again, via
+// /signup in the ProductMenu. The inline waitlist capture stays in the page
+// body; signup is an additional door, not a replacement for it.
+//
+// Login points at /login on THIS domain rather than jumping straight to
+// app.urganize.app. That costs a returning user one click, bought
+// deliberately: sitelinks under the urganize.app result can only be
+// urganize.app pages, so "Log in" can't appear there without a real page
+// here. Keeping this link and the ProductMenu's on the same destination also
+// avoids two "Log in" links in one header going to different places.
 export function MarketingHeader() {
   return (
     <>
@@ -35,10 +41,10 @@ export function MarketingHeader() {
           <div className="flex items-center gap-4 sm:gap-6">
             <ProductMenu />
             <Link
-              href={APP_AUTH_URL}
+              href="/login"
               className="text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)]"
             >
-              Login
+              Log in
             </Link>
             <ThemeToggle />
           </div>

@@ -2,12 +2,15 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { LoadingScreen } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
-import { HOME_PATH } from '@/lib/home-path';
+import { HOME_PATH, resolveHomePath } from '@/lib/home-path';
 
-const ALLOWED_ROLES = new Set(['artist', 'manager', 'artist-team', 'artist-manager']);
+// Roles a signup may carry in auth metadata. 'curator' is here so a playlist
+// owner signing in with Google keeps their role through this fallback upsert
+// instead of being written back to 'artist-manager'.
+const ALLOWED_ROLES = new Set(['artist', 'manager', 'artist-team', 'artist-manager', 'curator']);
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -71,16 +74,6 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        const { data: existingProfile, error: existingProfileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', session.user.id)
-          .maybeSingle();
-        if (existingProfileError) {
-          console.warn('Profile existence check warning:', existingProfileError.message);
-        }
-        const isFirstLogin = !existingProfile?.id;
-
         // Profile sync should not block login completion.
         const fallbackName = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User';
         const roleFromMetadata = session.user.user_metadata?.role;
@@ -108,7 +101,7 @@ export default function AuthCallbackPage() {
         }
 
         try {
-          await checkAuth();
+          await checkAuth({ force: true });
         } catch (error) {
           if (!isAbortError(error)) {
             throw error;
@@ -127,8 +120,15 @@ export default function AuthCallbackPage() {
           }
         }
 
+        // Role-aware landing: a curator cannot open any dashboard route, so
+        // HOME_PATH would bounce them straight back out. checkAuth above has
+        // already hydrated the profile, so the store is the freshest read here.
+        // An explicit `next` still wins — that is how the curator join flow
+        // returns to its own page after the OAuth round trip.
         const hasExplicitNext = Boolean(next && next.startsWith('/'));
-        const destination = isFirstLogin && !hasExplicitNext ? HOME_PATH : safeNext;
+        const destination = hasExplicitNext
+          ? safeNext
+          : resolveHomePath(useAuthStore.getState().user?.role);
 
         window.clearTimeout(timeout);
         router.replace(destination);
@@ -149,16 +149,5 @@ export default function AuthCallbackPage() {
     handleCallback();
   }, [router, checkAuth]);
 
-  return (
-    <main
-      className="flex min-h-screen items-center justify-center bg-bg-base px-4 text-content-primary"
-      role="status"
-      aria-live="polite"
-    >
-      <div className="flex flex-col items-center gap-3 text-center">
-        <Loader2 className="h-5 w-5 animate-spin text-content-tertiary" aria-hidden="true" />
-        <p className="text-sm text-content-secondary">Finishing sign-in</p>
-      </div>
-    </main>
-  );
+  return <LoadingScreen title="Finishing sign-in" />;
 }

@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Newspaper, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Newspaper, NotebookPen, Plus, Radio, Sparkles } from 'lucide-react';
 import {
   getTaskSectionLabel,
   groupTasksIntoSections,
@@ -14,6 +15,40 @@ import { TaskRow } from '@/components/tasks/TaskRow';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useSceneOverlay, type SceneName } from './useSceneOverlay';
+
+// Metadata entry point (URG-108). This flag also gates the identity panel's
+// "Collect metadata" nav item (WorkspaceIdentityPanel) — the two must never
+// disagree about whether the feature exists, only about WHICH surface shows
+// it at a given viewport.
+const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
+
+// Mirrors AppShell's own gate for the identity card, which is what hosts the
+// "Collect metadata" nav item this pill defers to at wide widths. Read here
+// because the pill may only step aside where that card actually renders —
+// both flags default to false and are independent of METADATA above, so
+// without this check a metadata-on / identity-panel-off environment (the
+// DEFAULT combination) would hide the pill at `lg`+ with nothing replacing
+// it, making Metadata unreachable on desktop entirely.
+const IDENTITY_PANEL_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' &&
+  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
+
+// The identity card hides itself at `lg`-`xl` whenever the UrgAns rail is open
+// (see WorkspaceIdentityPanel's railIsCompeting), so with the assistant on
+// there is no width below `xl` where the card is GUARANTEED to be present.
+// Rather than duplicate that runtime rail state here — the kind of mirrored
+// condition that silently drifts — the pill retreats one breakpoint later
+// when Chappi is on. Cost: a redundant second control at `lg`-`xl` while the
+// rail happens to be closed. That is strictly better than a viewport band
+// where the feature has no entry point at all.
+// Exported so WorkspaceSkeleton reserves the placeholder at exactly the same
+// breakpoints (the loading-skeleton-sync rule that file documents; it has
+// already drifted from this row once).
+export const METADATA_PILL_HIDE_CLASS = !IDENTITY_PANEL_ENABLED
+  ? ''
+  : process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true'
+    ? 'xl:hidden'
+    : 'lg:hidden';
 
 // Content calendar entry point (URG-157): the workspace is the surface users
 // actually land on after login, so the scoped-release header carries the
@@ -30,10 +65,28 @@ const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 // users actually land on. Same flag that gates the EPK page and API routes.
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 
-// Metadata hub entry point (URG-108): distribution fields + collaborator
-// credit capture, the third conscious v1 scope expansion (see CLAUDE.md).
-// Same shape as the Press kit link above.
-const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
+// Notes entry point: same flag AppTopbar and the identity panel read.
+const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
+
+// Playlist pitching entry point: same flag gates the curator surface, the
+// /api/pitching routes and the /api/curator routes.
+const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
+
+/**
+ * The scene-pill row's neutral (never-lit) pill treatment — hoisted to
+ * module scope and exported as the one source of truth. WorkspaceView's
+ * `extraActions` pills (Status update / Release recap) used to hand-roll a
+ * byte-for-byte copy of this string; that copy had already drifted (missing
+ * `shrink-0 whitespace-nowrap`) by the time this row grew to 9 pills on
+ * mobile, which is how "Get your release recap" ended up wrapping across
+ * three lines inside a fixed 32px pill (2026-08-10 bug fix). `shrink-0
+ * whitespace-nowrap` matter here specifically because this row becomes a
+ * horizontal scroller below `lg` (see the container below) — a flex child
+ * without them compresses and wraps its own label instead of just
+ * scrolling off-screen.
+ */
+export const taskPanelPillClass =
+  'motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover';
 
 // Overdue first (genuine slippage, most urgent), then Catch Up (start-here
 // for compressed-runway plans — calm, neutral framing), then standard
@@ -99,23 +152,70 @@ type TasksPanelProps = {
    * WorkspaceView builds this (a ReleaseScenePanel) from the `?scene=` param.
    */
   sceneContent?: ReactNode;
+  /**
+   * Rendered at the top of the ACTIVITIES list only — above the buckets,
+   * below the header pills (2026-08-06, URG-230: the SetReleaseDateCard for a
+   * release with no date yet).
+   *
+   * Deliberately inside the activities branch rather than above the body: a
+   * scene (Calendar / Files / Press kit) is its own task, and a
+   * date prompt hanging over it is noise. It reappears when the user comes
+   * back to the activity list.
+   */
+  activitiesBanner?: ReactNode;
+  /**
+   * Set when `activitiesBanner` already explains the empty list AND offers a
+   * way to act on it — the plan-waiting SetReleaseDateCard does both, so the
+   * generic empty state below would just repeat it (URG-233).
+   *
+   * NOT inferred from `activitiesBanner` being present: the compact date row
+   * explains nothing about the activity list, so an empty view under it still
+   * needs its own empty state. Inferring would leave that case blank.
+   */
+  bannerReplacesEmptyState?: boolean;
+  /**
+   * Show the Plan pill. Owned by WorkspaceView because the answer depends on
+   * whether a draft exists, which only it knows — this component stays
+   * presentational.
+   */
+  showPlanPill?: boolean;
 };
 
-export function TasksPanel({ tasks, scopedRelease, id, extraActions, sceneContent }: TasksPanelProps) {
+export function TasksPanel({
+  tasks,
+  scopedRelease,
+  id,
+  extraActions,
+  sceneContent,
+  activitiesBanner,
+  bannerReplacesEmptyState = false,
+  showPlanPill = false,
+}: TasksPanelProps) {
   // openTask opens the global task detail pop-up mounted by TaskUIProvider —
   // this panel stays where it is underneath the modal.
   const { openTask, openQuickCreate } = useTaskUI();
 
   // The pills below swap this panel's body between the activity buckets and a
-  // release scene (Metadata / Calendar / Files / Press kit), in place — they
+  // release scene (Calendar / Files / Press kit), in place — they
   // were nav links to separate pages until 2026-08-04, then briefly modal
   // overlays, and are now an inline swap per the founder's correction. Clicking
   // the pill of the scene that's already open closes it, back to activities.
-  const { activeScene, openScene, closeScene } = useSceneOverlay();
+  const { activeScene: urlScene, openScene, closeScene } = useSceneOverlay();
+  // Mirror WorkspaceView's flag gate: with the calendar flag off, a stale
+  // `?scene=calendar` URL must not flip the leading pill to "Activities" for a
+  // scene that isn't rendering (WorkspaceView passes no sceneContent then).
+  const activeScene = urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED ? null : urlScene;
 
-  /** Pill classes, lit when that scene is the open one. */
+  /**
+   * Pill classes, lit when that scene is the open one. `shrink-0
+   * whitespace-nowrap` (2026-08-10 bug fix): this row becomes a horizontal
+   * scroller below lg (see the container below), and without these a flex
+   * child is free to compress and wrap its own label instead of just
+   * scrolling off-screen — which is exactly how "Get your release recap"
+   * used to spill across three lines inside a fixed 32px pill.
+   */
   const pillClass = (scene: SceneName) =>
-    `motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors ${
+    `motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors ${
       activeScene === scene
         ? 'border-brand bg-brand/10 text-content-primary'
         : 'border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover'
@@ -123,8 +223,10 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions, sceneConten
 
   // Shared with the New activity / Activities toggle below — same neutral
   // (never-lit) treatment regardless of which of the two states it's in.
-  const neutralPillClass =
-    'motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover';
+  // Hoisted to module scope as the exported `taskPanelPillClass` (above the
+  // component) so WorkspaceView's extraActions pills use the real thing
+  // instead of a hand-rolled copy.
+  const neutralPillClass = taskPanelPillClass;
 
   /** Open the scene, or close it if it's the one already showing. */
   const toggleScene = (scene: SceneName, releaseId: string) => {
@@ -199,12 +301,47 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions, sceneConten
           topbar's `min-h-16`; AppTopbar is `sticky top-0` in the same
           document scroll, so this docks flush beneath it). `bg-bg-base`
           matches the page background so scrolled content doesn't show
-          through as it passes underneath. */}
-      <div className="sticky top-16 z-10 flex shrink-0 flex-wrap items-center justify-end gap-2 bg-bg-base pb-3 pt-1">
-        <div className="flex items-center gap-2">
+          through as it passes underneath.
+
+          `lg:static` (2026-08-05 bug fix): sticky is for MOBILE ONLY. On
+          desktop this panel lives inside WorkspaceDesktopFocused, whose grid
+          is `overflow-hidden` — and overflow:hidden makes that grid the
+          nearest scrollport for sticky purposes. This row sits at the very
+          top of that box in flow, so `sticky top-16` pushed it 64px DOWN
+          into the scrolling body (tasks slid behind the pills, an empty band
+          where the row belonged). At lg+ the row never needs sticky anyway —
+          it's outside the scroll box, always visible by construction — so it
+          goes back to static flow there. The lg boundary is exact: the only
+          two mounts are WorkspaceView's mobile branch (`lg:hidden`) and
+          WorkspaceDesktopFocused (inside `hidden lg:block`).
+
+          Row shape below `lg` (2026-08-10 bug fix): the outer div used to be
+          `flex-wrap justify-end` around a SINGLE non-wrapping inner child, so
+          the outer `flex-wrap` was dead weight — with up to 9 pills the inner
+          row simply overflowed, and `justify-end` pushed the overflow off the
+          LEFT edge, where `body { overflow-x: hidden }` (globals.css) cropped
+          it silently instead of letting it scroll (the "lendar" pill in the
+          founder's screenshot was "Calendar" cropped this way). The inner div
+          is now the horizontal scroller itself — the standard mobile chip-row
+          pattern (PostHog's tabs, Linear's filters): one left-anchored line,
+          nothing wraps or shrinks (see `shrink-0 whitespace-nowrap` on every
+          pill class), hidden scrollbar, first pill fully visible at rest, and
+          a later pill peeking at the edge as the scroll affordance. At `lg+`
+          this reverts to the original static, right-aligned, wrapping row —
+          desktop never had either bug (see the width-budget note two scenes
+          up), so it must render exactly as before. */}
+      <div className="sticky top-16 z-10 flex shrink-0 items-center bg-bg-base pb-3 pt-1 lg:static lg:justify-end">
+        {/* -mx/px bleed matches <main>'s own gutter at each breakpoint
+            (AppShell.tsx: px-4 sm:px-5 md:px-6, lg:px-8) so the row's first
+            pill sits flush with the page content at rest, but the negative
+            margin still lets the LAST pill scroll flush to the true screen
+            edge rather than stopping short at the content gutter — the same
+            edge-bleed trick PostHog/Material chip rows use. Dead at lg+
+            (`lg:m-0 lg:w-auto lg:p-0`), where the row was never a scroller. */}
+        <div className="no-scrollbar flex w-full items-center gap-2 overflow-x-auto -mx-4 px-4 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:m-0 lg:w-auto lg:flex-wrap lg:justify-end lg:overflow-visible lg:p-0">
           {/* Toggles with the scene body below: "New activity" opens Quick
-              Create while the activity list is showing; once a scene (Metadata
-              / Calendar / Files / Press kit) has taken this slot, the SAME
+              Create while the activity list is showing; once a scene (Calendar
+              / Files / Press kit) has taken this slot, the SAME
               button position becomes "Activities" so there's always a way
               back without hunting for the scene's own pill again. */}
           {activeScene ? (
@@ -227,23 +364,40 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions, sceneConten
               New activity
             </button>
           )}
-          {/* Metadata link (URG-108), FIRST among the scene links (founder
-              call, 2026-08-04) — distribution fields + collaborator credits
-              are the surface the founder reaches for most, now that the
-              release detail page is gone and this header is the single
-              navigation row for every release scene. */}
+          {/* Plan pill, first while it exists. A release with no activities
+              has exactly one job, and this is it; once a plan is approved the
+              pill disappears, because from then on the activity list IS the
+              plan. Only shown while there is something to open (no activities
+              yet, or a draft already waiting) so it never becomes permanent
+              chrome. */}
+          {showPlanPill && scopedRelease ? (
+            <button
+              type="button"
+              onClick={() => toggleScene('plan', scopedRelease.id)}
+              aria-pressed={activeScene === 'plan'}
+              className={pillClass('plan')}
+            >
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              Plan
+            </button>
+          ) : null}
+          {/* Metadata link (URG-108) — NARROW widths only as of 2026-08-12,
+              since the identity panel's "Collect metadata" nav item is now
+              this release's persistent entry point (see
+              WorkspaceIdentityPanel) and two controls for one scene is noise.
+              But that panel never renders on small viewports, so the pill has
+              to survive there: this row is the only surface present at every
+              width. See METADATA_PILL_HIDE_CLASS for exactly where it
+              retreats — it stays put entirely when the panel is flagged off. */}
           {METADATA_ENABLED && scopedRelease ? (
             <button
               type="button"
               onClick={() => toggleScene('metadata', scopedRelease.id)}
               aria-pressed={activeScene === 'metadata'}
-              className={pillClass('metadata')}
+              className={`${pillClass('metadata')} ${METADATA_PILL_HIDE_CLASS}`}
             >
               <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
-              Metadata
-              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-                Beta
-              </span>
+              Collect metadata
             </button>
           ) : null}
           {/* Calendar (URG-157). Opens as a WIDE overlay window rather than the
@@ -301,31 +455,94 @@ export function TasksPanel({ tasks, scopedRelease, id, extraActions, sceneConten
               </span>
             </button>
           ) : null}
+          {/* Playlist pitching: browse curator playlists and send this
+              release's song, with each curator's answer shown beside it. */}
+          {PITCHING_ENABLED && scopedRelease ? (
+            <button
+              type="button"
+              onClick={() => toggleScene('pitch', scopedRelease.id)}
+              aria-pressed={activeScene === 'pitch'}
+              className={pillClass('pitch')}
+            >
+              <Radio className="h-3.5 w-3.5" aria-hidden="true" />
+              Pitch
+              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+                Beta
+              </span>
+            </button>
+          ) : null}
+          {/* Notes for this release. Deliberately a plain LINK, not a scene
+              toggle like its neighbours: notes are a global surface that
+              happens to filter by release, not a per-release panel body — so
+              this navigates to the notes page pre-filtered rather than
+              swapping this panel's contents. (Not a regression of the
+              2026-08-05 "scenes render inline, not as pages" call: that call
+              was about the four release scenes, which stay inline.) */}
+          {NOTES_ENABLED && scopedRelease ? (
+            <Link
+              href={`/dashboard/notes?release=${scopedRelease.id}`}
+              className={neutralPillClass}
+            >
+              <NotebookPen className="h-3.5 w-3.5" aria-hidden="true" />
+              Notes
+            </Link>
+          ) : null}
           {extraActions}
         </div>
       </div>
 
-      {/* Scrollable body — the ONLY thing that scrolls now, so its native
-          scrollbar (the `pr-1` inset below) is confined to this box and never
-          runs past the sticky header above. On desktop this box gets a real
-          bounded height from the ancestor chain (WorkspaceDesktopFocused's
-          viewport-locked column) and genuinely scrolls internally; on mobile
-          there's no such bound, so `overflow-y-auto` here never actually
-          triggers — the page scrolls instead, which is what mobile always
-          did. A release scene takes this slot when one is open, otherwise the
+      {/* Scrollable body — desktop-only internal scroll box (`lg:` prefix).
+          On desktop this box gets a real bounded height from the ancestor
+          chain (WorkspaceDesktopFocused's viewport-locked column), so it's
+          the ONLY thing that scrolls there and its native scrollbar (the
+          `pr-1` inset, also `lg:`-only) is confined to this box and never
+          runs past the static header above.
+
+          On mobile it must stay a plain block, NOT a scroll container.
+          `overflow-y-auto` makes a div a scroll target for touch purposes
+          even with no height bound to actually fill, and pairing that with
+          `overscroll-contain` blocks the swipe from ever chaining up to the
+          page — a swipe starting on a task row died right there instead of
+          scrolling. (An earlier version of this comment claimed
+          `overflow-y-auto` "never actually triggers" on mobile; it does
+          trigger scroll-container status, just not an internal scrollbar,
+          and that was enough to trap the gesture — this was the reported
+          bug.) Below `lg` this is unclassed flow content, so touches on
+          task rows scroll the page natively, same as anywhere else on the
+          page.
+
+          A release scene takes this slot when one is open, otherwise the
           activity buckets do; the header row above stays put either way, so
           the scene switcher never disappears (founder call, 2026-08-05). */}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4 pr-1">
+      <div className="min-h-0 flex-1 pb-4 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
       {sceneContent ? (
         sceneContent
       ) : (
       <div className="space-y-3">
+        {activitiesBanner}
         {/* Every bucket empty: the buckets below have all suppressed
-            themselves, so leave one quiet line instead of a blank panel. */}
-        {sectionOrder.every((sectionKey) => sections[sectionKey].length === 0) ? (
-          <p className="px-1 py-4 text-xs text-content-tertiary">
-            {scopedRelease ? 'No activities for this release yet.' : 'No activities yet.'}
-          </p>
+            themselves, so this stands in for the whole list.
+            Actionable rather than a muted line (URG-233) — an empty panel
+            whose only affordance is a small pill in the header row reads as
+            "nothing to do here" instead of "start here". Skipped when the
+            banner already covers both jobs. */}
+        {!bannerReplacesEmptyState &&
+        sectionOrder.every((sectionKey) => sections[sectionKey].length === 0) ? (
+          <div className="px-1 py-6 text-center">
+            <p className="text-sm text-content-secondary">
+              {scopedRelease ? 'No activities for this release yet.' : 'No activities yet.'}
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                openQuickCreate({ releaseId: scopedRelease?.id || undefined, source: 'inline' })
+              }
+              className="motion-focus motion-press mt-3 inline-flex h-9 items-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-3.5 text-sm font-medium text-content-primary transition-colors hover:border-stroke-strong hover:bg-bg-hover"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              Add your first activity
+            </button>
+          </div>
         ) : null}
         {sectionOrder.map((sectionKey) => {
           const sectionTasks = sections[sectionKey];
