@@ -1,15 +1,26 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ClipboardList, ShieldCheck } from "lucide-react";
+import { ClipboardList, PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
 import { useWorkspaceIdentityStore } from "@/stores/useWorkspaceIdentityStore";
 import { useReleaseStore } from "@/stores/useReleaseStore";
 import { useChappiStore } from "@/stores/useChappiStore";
 import { CatalogIcon, ChappiIcon, GearIcon, NotesIcon } from "@/components/app/BrandIcons";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
+import { readPersistedState, writePersistedState } from "@/lib/persisted-state";
+
+// Collapsed state — same lib/persisted-state pattern as the UrgAns rail's
+// RAIL_OPEN_KEY, and for the same reason: pure UI-chrome state, so a reload
+// shouldn't snap the layout back. Kept as local component state rather than a
+// store (unlike railOpen) because nothing outside this panel toggles it — the
+// card owns its own width and flexbox does the rest, so AppShell needs no
+// changes.
+const SIDEBAR_COLLAPSED_KEY = "urganize.workspace.sidebar-collapsed";
+const SIDEBAR_COLLAPSED_VERSION = 1;
+const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
 
 // Same flag TasksPanel's scene pill and MetadataSection read. At `lg`+ this
 // card is the primary entry point ("Collect metadata" below); TasksPanel's
@@ -152,6 +163,27 @@ export function WorkspaceIdentityPanel() {
     setLogoFailed(false);
   }, [logo?.url]);
 
+  // Always false for the first paint so SSR and the initial client render
+  // agree; the mount effect below then applies the stored choice. Same
+  // SSR-safe hydration order AppShell uses for the UrgAns rail.
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const persisted = readPersistedState(
+      SIDEBAR_COLLAPSED_KEY,
+      SIDEBAR_COLLAPSED_VERSION,
+      isBoolean,
+    );
+    if (persisted !== null) setCollapsed(persisted);
+  }, []);
+
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed((previous) => {
+      const next = !previous;
+      writePersistedState(SIDEBAR_COLLAPSED_KEY, SIDEBAR_COLLAPSED_VERSION, next);
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     void load();
     // Non-forced: dedupes against WorkspaceView's own load via the store's
@@ -183,21 +215,93 @@ export function WorkspaceIdentityPanel() {
       // Without ml-8 this card started flush at the container edge — 32px left
       // of the logo directly above it, making the page's left and right gaps
       // asymmetric (120 vs 152, measured). Keep both margins in step.
-      className={`hidden w-[240px] shrink-0 self-start sticky top-[calc(5.25rem+1px)] ml-8 mr-8 h-[calc(100dvh-7.75rem-1px)] min-h-[24rem] ${
-        railIsCompeting ? "xl:block" : "lg:block"
-      }`}
+      //
+      // Collapsed, the card is a 64px icon rail rather than hidden outright:
+      // hiding it would leave the topbar as the only way to reach these
+      // surfaces, which is what the rail exists to avoid. 64px fits the 40px
+      // hit targets plus the card's own padding.
+      //
+      // The rail-competition rule (see railIsCompeting) is relaxed while
+      // collapsed — the width-budget note it defends is about THREE full
+      // columns squeezing the centre; a 64px rail costs ~176px less, so at
+      // lg-xl a collapsed card and an open UrgAns rail coexist fine. That
+      // makes collapsing the user's own fix for the squeeze.
+      className={`hidden shrink-0 self-start sticky top-[calc(5.25rem+1px)] ml-8 mr-8 h-[calc(100dvh-7.75rem-1px)] min-h-[24rem] transition-[width] duration-base ease-out ${
+        collapsed ? "w-16" : "w-[240px]"
+      } ${railIsCompeting && !collapsed ? "xl:block" : "lg:block"}`}
     >
       <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
+        {/* Toggle sits in its own row ABOVE the identity block rather than
+          floating over it: the identity block is a <Link>, and a <button>
+          cannot nest inside an <a>. Right-aligned when expanded (the Linear
+          position), centered when collapsed so it lines up with the icon
+          column below it. */}
+        <div
+          className={`flex shrink-0 items-center px-2 pt-2 ${
+            collapsed ? "justify-center" : "justify-end"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? "Expand workspace menu" : "Collapse workspace menu"}
+            title={collapsed ? "Expand menu" : "Collapse menu"}
+            className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+            )}
+          </button>
+        </div>
+
         <Link
           href="/settings"
-          className="motion-focus block shrink-0 p-4 transition-colors hover:bg-bg-hover"
+          title={collapsed ? name || "Your workspace" : undefined}
+          className={`motion-focus block shrink-0 pb-4 transition-colors hover:bg-bg-hover ${
+            collapsed ? "px-2 pt-1" : "px-4 pt-1"
+          }`}
         >
           {showSkeleton ? (
-            <div className="space-y-3">
-              <SkeletonBlock className="h-14 w-14 rounded-xl" />
-              <SkeletonBlock className="h-4 w-3/4 rounded" />
-              <SkeletonBlock className="h-3 w-1/2 rounded" />
-            </div>
+            collapsed ? (
+              <SkeletonBlock className="mx-auto h-10 w-10 rounded-xl" />
+            ) : (
+              <div className="space-y-3">
+                <SkeletonBlock className="h-14 w-14 rounded-xl" />
+                <SkeletonBlock className="h-4 w-3/4 rounded" />
+                <SkeletonBlock className="h-3 w-1/2 rounded" />
+              </div>
+            )
+          ) : collapsed ? (
+            // Collapsed identity: the mark alone, with the workspace name kept
+            // in the accessibility tree (sr-only) so this link keeps the same
+            // accessible name it has when expanded.
+            <>
+              {logo && !logoFailed ? (
+                // eslint-disable-next-line @next/next/no-img-element -- signed
+                // Storage URL, same rationale as the expanded branch below.
+                <img
+                  src={logo.url}
+                  alt=""
+                  className="mx-auto h-10 w-10 rounded-xl border border-stroke-subtle object-cover"
+                  onError={() => setLogoFailed(true)}
+                />
+              ) : (
+                <div className="mx-auto grid h-10 w-10 place-items-center rounded-xl border border-stroke-subtle bg-bg-elevated">
+                  <Image
+                    src="/images/urganize-mark.png"
+                    alt=""
+                    aria-hidden="true"
+                    width={24}
+                    height={24}
+                    className="app-wordmark h-6 w-6 object-contain"
+                  />
+                </div>
+              )}
+              <span className="sr-only">{name || "Your workspace"}</span>
+            </>
           ) : (
             <>
               {logo && !logoFailed ? (
@@ -271,8 +375,17 @@ export function WorkspaceIdentityPanel() {
             without the release-dependent item (equivalent to no release being
             scoped yet), never a spinner, so the rest of the nav never blocks
             on it. */}
-          <Suspense fallback={<WorkspaceNavList navItems={buildNavItems(null, null)} pathname={pathname} isAdmin={isAdmin} />}>
-            <WorkspaceNavLinks pathname={pathname} isAdmin={isAdmin} />
+          <Suspense
+            fallback={
+              <WorkspaceNavList
+                navItems={buildNavItems(null, null)}
+                pathname={pathname}
+                isAdmin={isAdmin}
+                collapsed={collapsed}
+              />
+            }
+          >
+            <WorkspaceNavLinks pathname={pathname} isAdmin={isAdmin} collapsed={collapsed} />
           </Suspense>
         </nav>
       </div>
@@ -284,7 +397,15 @@ export function WorkspaceIdentityPanel() {
  * plain (Suspense-free) list renderer below. Split out purely so the
  * Suspense boundary above wraps only the part that actually calls
  * useSearchParams. */
-function WorkspaceNavLinks({ pathname, isAdmin }: { pathname: string | null; isAdmin: boolean }) {
+function WorkspaceNavLinks({
+  pathname,
+  isAdmin,
+  collapsed,
+}: {
+  pathname: string | null;
+  isAdmin: boolean;
+  collapsed: boolean;
+}) {
   const searchParams = useSearchParams();
   // Same `?release=` / `?scene=` params useReleaseScope / useSceneOverlay own
   // — read directly here (not via those hooks) since this component only
@@ -292,7 +413,14 @@ function WorkspaceNavLinks({ pathname, isAdmin }: { pathname: string | null; isA
   const scopedReleaseId = searchParams.get("release");
   const activeScene = searchParams.get("scene");
   const navItems = buildNavItems(scopedReleaseId, activeScene);
-  return <WorkspaceNavList navItems={navItems} pathname={pathname} isAdmin={isAdmin} />;
+  return (
+    <WorkspaceNavList
+      navItems={navItems}
+      pathname={pathname}
+      isAdmin={isAdmin}
+      collapsed={collapsed}
+    />
+  );
 }
 
 /** Plain render of the nav rows — no hooks of its own, so it doubles as the
@@ -302,11 +430,26 @@ function WorkspaceNavList({
   navItems,
   pathname,
   isAdmin,
+  collapsed,
 }: {
   navItems: NavItem[];
   pathname: string | null;
   isAdmin: boolean;
+  collapsed: boolean;
 }) {
+  // Collapsed rows center a single icon; the label stays in the DOM as
+  // sr-only rather than being swapped for an aria-label, so the accessible
+  // name is identical in both states and can't drift. `title` gives sighted
+  // users the native tooltip that replaces the missing text.
+  const rowClass = (active: boolean) =>
+    `motion-focus mb-0.5 flex items-center rounded-lg py-2 text-sm transition-colors ${
+      collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
+    } ${
+      active
+        ? "bg-brand/10 text-brand"
+        : "text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+    }`;
+
   return (
     <>
       {navItems.map(({ href, label, Icon, isActive }) => {
@@ -316,14 +459,11 @@ function WorkspaceNavList({
             key={href}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={`motion-focus mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
-              active
-                ? "bg-brand/10 text-brand"
-                : "text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-            }`}
+            title={collapsed ? label : undefined}
+            className={rowClass(active)}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            {label}
+            <span className={collapsed ? "sr-only" : undefined}>{label}</span>
           </Link>
         );
       })}
@@ -339,14 +479,11 @@ function WorkspaceNavList({
         <Link
           href="/admin"
           aria-current={pathname?.startsWith("/admin") ? "page" : undefined}
-          className={`motion-focus mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
-            pathname?.startsWith("/admin")
-              ? "bg-brand/10 text-brand"
-              : "text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-          }`}
+          title={collapsed ? "Admin" : undefined}
+          className={rowClass(Boolean(pathname?.startsWith("/admin")))}
         >
           <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
-          Admin
+          <span className={collapsed ? "sr-only" : undefined}>Admin</span>
         </Link>
       ) : null}
     </>
