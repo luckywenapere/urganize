@@ -11,12 +11,26 @@ import { useChappiStore } from '@/stores/useChappiStore';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
-import { CatalogIcon, ChappiIcon } from '@/components/app/BrandIcons';
+import { CatalogIcon, ChappiIcon, NotesIcon } from '@/components/app/BrandIcons';
 
 // Same flag ChappiPageClient reads. Inlined at build time (NEXT_PUBLIC_
 // prefix) so the icon only appears once Chappi's own dedicated page is
 // reachable.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
+// Same flag NotesPageClient and the /api/notes routes read. Deliberately
+// gated on its own, OUTSIDE the Chappi pair below: notes have nothing to do
+// with the assistant, and burying them in that fragment would hide them
+// whenever the assistant is switched off.
+const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
+
+// When on, MobileNavBar (mounted by AppShell) carries these controls below
+// lg instead — the topbar hides its own copies there rather than showing
+// both. NAV_ICON_DISPLAY replaces the bare `grid` these controls' root
+// classNames used to open with; flag off, the string is byte-identical to
+// before.
+const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
+const NAV_ICON_DISPLAY = MOBILE_NAV_ENABLED ? 'hidden lg:grid' : 'grid';
 
 type AppTopbarProps = {
   /** Opens the release creation modal. Lifted to AppShell so this universal
@@ -82,9 +96,11 @@ function ContextTitle() {
   // activities fill that space; its picture and name live here instead.
   // Hidden below sm (founder call, 2026-07-23): on phones the drill-down's
   // own back header already names the release, and the topbar needs the
-  // room for its controls.
+  // room for its controls. That room constraint no longer holds once
+  // MobileNavBar has moved those controls to the bottom, so this shows at
+  // every width when the flag is on.
   return (
-    <div className="hidden min-w-0 items-center gap-3 sm:flex">
+    <div className={`${MOBILE_NAV_ENABLED ? 'flex' : 'hidden sm:flex'} min-w-0 items-center gap-3`}>
       <div className="hidden h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-stroke-subtle bg-bg-elevated sm:block">
         {release.coverArtUrl ? (
           <Image
@@ -136,7 +152,7 @@ const CatalogLinkFallback = (
     href="/dashboard"
     aria-label="Workspace"
     title="Workspace"
-    className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+    className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary`}
   >
     <CatalogIcon className="h-[18px] w-[18px]" />
   </Link>
@@ -150,7 +166,7 @@ const ChappiLinkFallback = (
     href="/dashboard/urgans"
     aria-label="UrgAns"
     title="UrgAns"
-    className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+    className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary`}
   >
     <ChappiIcon className="h-[18px] w-[18px]" />
   </Link>
@@ -181,7 +197,7 @@ function CatalogTopbarAction() {
         aria-label="Workspace"
         title="Workspace"
         aria-pressed
-        className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand transition-colors"
+        className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand transition-colors`}
       >
         <CatalogIcon className="h-[18px] w-[18px]" />
       </button>
@@ -193,7 +209,7 @@ function CatalogTopbarAction() {
       href="/dashboard"
       aria-label="Workspace"
       title="Workspace"
-      className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
+      className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
         pathname === '/dashboard'
           ? 'bg-brand/10 text-brand'
           : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
@@ -228,7 +244,7 @@ function ChappiTopbarAction() {
         href="/dashboard/urgans"
         aria-label="UrgAns"
         title="UrgAns"
-        className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand transition-colors"
+        className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand transition-colors`}
       >
         <ChappiIcon className="h-[18px] w-[18px]" />
       </Link>
@@ -259,7 +275,7 @@ function ChappiTopbarAction() {
       aria-label="UrgAns"
       title="UrgAns"
       aria-pressed={isRailOpen}
-      className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary ${
+      className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary ${
         // lg:-scoped so the tint can never light up below lg, where the
         // rail doesn't exist and this button is a plain navigate instead.
         isRailOpen ? 'lg:bg-brand/10 lg:text-brand lg:hover:bg-brand/10 lg:hover:text-brand' : ''
@@ -276,7 +292,18 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
 
   return (
     <header className="sticky top-0 z-30 border-b border-stroke-subtle bg-bg-base/88 backdrop-blur-xl">
-      <div className="flex min-h-16 items-center gap-3 px-4 sm:px-5 md:px-6 lg:px-8">
+      {/* Tighter gap/padding below sm only. With Notes added, the phone-width
+          bar carries logo + 3 nav icons + bell + account = 80 + 5x40 + gaps.
+          At gap-3/px-4 that totals 352px against 343px of usable width at
+          375px — a real overflow. gap-2/px-3 buys it back (328 vs 351) and
+          still clears 360px; every value is restored from sm up, where the
+          bar has ample slack. The 40px hit targets are the app-wide touch
+          standard and are NOT what gives here.
+          With NEXT_PUBLIC_FEATURE_MOBILE_NAV on, this math is moot below lg:
+          the nav icons, Notes and the account trigger all move to
+          MobileNavBar, leaving only the logo, the (now-visible) release
+          context and the bell up here — comfortably under budget. */}
+      <div className="flex min-h-16 items-center gap-2 px-3 sm:gap-3 sm:px-5 md:px-6 lg:px-8">
         {/* Stage 2: the logo now lives in the topbar (the sidebar that
             previously hosted it is gone). Links back to /dashboard so the
             top-left "click the logo" affordance still gets users home from
@@ -324,7 +351,11 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
         <button
           type="button"
           onClick={onNewRelease}
-          className="motion-focus motion-press hidden h-10 items-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse shadow-[0_18px_36px_-28px_rgb(var(--color-brand)/0.55)] hover:bg-brand-hover sm:inline-flex"
+          className={`motion-focus motion-press hidden h-10 items-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse shadow-[0_18px_36px_-28px_rgb(var(--color-brand)/0.55)] hover:bg-brand-hover ${
+            // Below lg, MobileNavBar's center button is the create
+            // affordance — showing both would be a double CTA on tablets.
+            MOBILE_NAV_ENABLED ? 'lg:inline-flex' : 'sm:inline-flex'
+          }`}
         >
           <Plus className="h-4 w-4" />
           <span>New release</span>
@@ -354,6 +385,27 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           </>
         ) : null}
 
+        {/* Notes — a plain destination, deliberately NOT part of the
+            Catalog/UrgAns toggle pair above. Those two are mutual toggles
+            because they're a binary (you're in one or the other); a third
+            surface breaks that metaphor, so this is an ordinary link that
+            lights up on its own route. Reads no search params, so unlike its
+            neighbours it needs no Suspense boundary. */}
+        {NOTES_ENABLED ? (
+          <Link
+            href="/dashboard/notes"
+            aria-label="Notes"
+            title="Notes"
+            className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
+              pathname === '/dashboard/notes'
+                ? 'bg-brand/10 text-brand'
+                : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
+            }`}
+          >
+            <NotesIcon className="h-[18px] w-[18px]" />
+          </Link>
+        ) : null}
+
         {/* Phase 1 notifications surface — gated internally on
             NEXT_PUBLIC_FEATURE_WORKSPACE so prod can keep the topbar exactly
             as it was until the bell is flipped on. Sits left of WorkspaceMenu
@@ -364,7 +416,10 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             same quiet mono launcher, now among the rest of the nav. */}
         <HelpMenu />
 
-        <WorkspaceMenu userName={userName} />
+        <WorkspaceMenu
+          userName={userName}
+          className={MOBILE_NAV_ENABLED ? 'hidden lg:block' : undefined}
+        />
       </div>
     </header>
   );

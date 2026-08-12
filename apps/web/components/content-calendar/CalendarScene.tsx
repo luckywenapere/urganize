@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { formatArtistName } from '@/lib/release-execution';
-import { supabase } from '@/lib/supabase/client';
 import { getClientTodayIso, getPlatformLabel, resolveMonth } from '@/lib/content-calendar';
+import { getAccessToken } from '@/components/content-calendar/get-access-token';
 import {
   SOCIAL_PLATFORM_OPTIONS,
   type ContentCalendar,
@@ -22,6 +22,7 @@ import { CalendarOverflowMenu } from '@/components/content-calendar/CalendarOver
 import { MonthGrid } from '@/components/content-calendar/MonthGrid';
 import { AgendaList } from '@/components/content-calendar/AgendaList';
 import { PostModal } from '@/components/content-calendar/PostModal';
+import { useSceneDataStore } from '@/stores/useSceneDataStore';
 
 /**
  * The release content calendar, as the body of an overlay window over the
@@ -57,13 +58,6 @@ import { PostModal } from '@/components/content-calendar/PostModal';
  * rails while it's open so the month grid has the width it was designed for.
  */
 
-async function getAccessToken(): Promise<string> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session?.access_token || '';
-}
-
 function formatMonthLabel(month: string): string {
   const parsed = new Date(`${month}-01T00:00:00`);
   if (Number.isNaN(parsed.getTime())) return month;
@@ -82,11 +76,14 @@ function isIsoDateString(value: unknown): value is string {
 
 type CalendarSceneProps = {
   release: Pick<Release, 'id' | 'title' | 'artistName' | 'releaseDate'>;
-  onClose: () => void;
+  /** Accepted for parity with the other scenes' panel contract, but unused
+   * here since 2026-08-10: the sticky "Activities" pill in TasksPanel's header
+   * is the one back control, and the in-scene duplicate was removed. */
+  onClose?: () => void;
   onToast: (message: string, tone: 'success' | 'error' | 'warning') => void;
 };
 
-export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps) {
+export function CalendarScene({ release, onToast }: CalendarSceneProps) {
   const releaseId = release.id;
   const router = useRouter();
   const pathname = usePathname();
@@ -94,35 +91,34 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
   const showToast = onToast;
 
   // --- Calendars list: self-contained fetch, the AssetSection precedent ---
-  const [calendars, setCalendars] = useState<ContentCalendar[]>([]);
-  const [isLoadingCalendars, setIsLoadingCalendars] = useState(true);
+  const loadScene = useSceneDataStore((state) => state.loadScene);
+  const setScene = useSceneDataStore((state) => state.setScene);
+
+  // Cache-first seed. Unlike the other three scenes this one keeps local state
+  // as its source of truth — six mutation paths (create / rename / delete /
+  // post-count bumps) already maintain it, and routing all of them through the
+  // store would be a rewrite for no gain. Instead: seed synchronously from the
+  // cache so a re-open paints the tab strip with no spinner, and sync back on
+  // every change (effect below) so the cache never goes stale behind us.
+  const cachedCalendars = useMemo(
+    () => useSceneDataStore.getState().getScene(releaseId, 'calendar')?.calendars ?? null,
+    [releaseId]
+  );
+  const [calendars, setCalendars] = useState<ContentCalendar[]>(cachedCalendars ?? []);
+  const [isLoadingCalendars, setIsLoadingCalendars] = useState(cachedCalendars === null);
   const [calendarsError, setCalendarsError] = useState('');
 
   const loadCalendars = useCallback(async () => {
-    setIsLoadingCalendars(true);
     setCalendarsError('');
     try {
-      const token = await getAccessToken();
-      if (!token) {
-        setCalendarsError('Session expired. Please sign in again.');
-        return;
-      }
-      const res = await fetch(`/api/releases/${releaseId}/content-calendars`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: 'no-store',
-      });
-      const data = (await res.json().catch(() => ({}))) as { calendars?: ContentCalendar[]; error?: string };
-      if (!res.ok) {
-        setCalendarsError(data.error || 'Could not load calendars.');
-        return;
-      }
-      setCalendars(Array.isArray(data.calendars) ? data.calendars : []);
+      const payload = await loadScene(releaseId, 'calendar');
+      if (payload) setCalendars(payload.calendars);
     } catch (err) {
       setCalendarsError(err instanceof Error ? err.message : 'Could not load calendars.');
     } finally {
       setIsLoadingCalendars(false);
     }
-  }, [releaseId]);
+  }, [loadScene, releaseId]);
 
   // No auth gate needed here (unlike the old page): this only mounts once
   // ReleaseSceneOverlay has resolved a release from the store, which already
@@ -130,6 +126,13 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
   useEffect(() => {
     void loadCalendars();
   }, [loadCalendars]);
+
+  // Write-through: one place instead of six, since every mutation path already
+  // funnels through this state.
+  useEffect(() => {
+    if (isLoadingCalendars) return;
+    setScene(releaseId, 'calendar', { calendars });
+  }, [calendars, isLoadingCalendars, releaseId, setScene]);
 
   // --- Active calendar resolution ---
   const calendarParam = searchParams.get('calendar');
@@ -172,9 +175,12 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
       // instead of leaving the user on whatever they were viewing before.
       // MERGES the existing params — building this fresh would drop `release=`
       // and `scene=` and close the window (see the port notes at the top).
+      // REPLACE, not push: creating a calendar is a state change inside an
+      // already-open scene, and pushing meant the mobile back button walked
+      // back through every calendar creation before it would close the scene.
       const params = new URLSearchParams(searchParams.toString());
       params.set('calendar', calendar.id);
-      router.push(`${pathname ?? ''}?${params.toString()}`);
+      router.replace(`${pathname ?? ''}?${params.toString()}`, { scroll: false });
     },
     [pathname, router, searchParams]
   );
@@ -190,6 +196,13 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
 
   const handleCalendarDeleted = useCallback(
     (calendarId: string) => {
+      // Pre-arm the stale-param guard BEFORE touching state: setCalendars
+      // commits a render where the URL still names the deleted id (the
+      // router.replace below lands a transition later), and in that window the
+      // stale-toast effect would otherwise fire "That calendar no longer
+      // exists." as a false positive — overwriting the "Calendar deleted"
+      // success toast with a 6-second warning.
+      staleToastShownForRef.current = calendarId;
       const remaining = calendars.filter((c) => c.id !== calendarId);
       setCalendars(remaining);
       if (activeCalendarId !== calendarId) return;
@@ -231,17 +244,31 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
   const [posts, setPosts] = useState<ContentPost[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
   const [postsError, setPostsError] = useState('');
+  // Which `${calendarId}:${month}` the posts in state actually belong to.
+  // Two bugs lived here before this key existed (2026-08-10): switching
+  // calendars kept the PREVIOUS calendar's posts on screen until the new
+  // response landed (the skeleton was gated on `posts.length === 0`), and
+  // paging months painted a silently empty grid for the same reason.
+  const [loadedPostsKey, setLoadedPostsKey] = useState<string | null>(null);
+  // Monotonic request counter: rapid month paging can land responses out of
+  // order, and without this the LOSER's data would stick in state.
+  const postsRequestSeqRef = useRef(0);
+  const postsKey = activeCalendarId ? `${activeCalendarId}:${month}` : null;
 
   const loadPosts = useCallback(async () => {
+    const seq = ++postsRequestSeqRef.current;
     if (!activeCalendarId) {
       setPosts([]);
+      setLoadedPostsKey(null);
       setIsLoadingPosts(false);
       return;
     }
+    const requestKey = `${activeCalendarId}:${month}`;
     setIsLoadingPosts(true);
     setPostsError('');
     try {
       const token = await getAccessToken();
+      if (seq !== postsRequestSeqRef.current) return;
       if (!token) {
         setPostsError('Session expired. Please sign in again.');
         return;
@@ -251,15 +278,20 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
         { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
       );
       const data = (await res.json().catch(() => ({}))) as { posts?: ContentPost[]; error?: string };
+      if (seq !== postsRequestSeqRef.current) return;
       if (!res.ok) {
         setPostsError(data.error || 'Could not load posts.');
         return;
       }
       setPosts(Array.isArray(data.posts) ? data.posts : []);
+      setLoadedPostsKey(requestKey);
     } catch (err) {
+      if (seq !== postsRequestSeqRef.current) return;
       setPostsError(err instanceof Error ? err.message : 'Could not load posts.');
     } finally {
-      setIsLoadingPosts(false);
+      if (seq === postsRequestSeqRef.current) {
+        setIsLoadingPosts(false);
+      }
     }
   }, [activeCalendarId, month, releaseId]);
 
@@ -406,26 +438,27 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
   const showReleaseMonthButton = Boolean(release.releaseDate) && release.releaseDate!.slice(0, 7) !== month;
 
   return (
-    <div className={calendarFontVariables}>
+    // cc-scene-container makes this an inline-size container: MonthGrid /
+    // AgendaList swap on ITS width (the .cc-month-view/.cc-agenda-view classes
+    // in globals.css), not the viewport — so an open UrgAns rail or identity
+    // panel narrowing the centre column swaps to the agenda instead of
+    // squeezing the 7-column grid.
+    <div className={`cc-scene-container ${calendarFontVariables}`}>
       {/* Width math lives entirely here — the same mx-auto max-w-[1200px] this
-          had as a page. MonthGrid/AgendaList swap on Tailwind's viewport-gated
-          lg: breakpoint, so nothing around this should add horizontal padding
-          that eats into the grid's room; WorkspaceView hides the release rails
-          while this is open for the same reason. */}
-      <div className="mx-auto max-w-[1200px] px-4 pb-8 pt-6 sm:px-6">
+          had as a page. No horizontal padding below sm: AppShell's <main>
+          already carries px-4 on phones, and layering another px-4 here
+          compounded to 32px a side (the same bug WorkspaceView documents on
+          its own wrapper). WorkspaceView still hides the release rails while
+          this is open so the grid has room at lg. */}
+      <div className="mx-auto max-w-[1200px] pb-8 pt-6 sm:px-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            {/* Was a "Back to release" Link when this was a page. It closes the
-                scene now, returning this slot to the activity list. */}
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex items-center gap-1 text-xs text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" /> Activities
-            </button>
-            <p className="mt-2 font-[family-name:var(--font-cc-mono)] text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cc-accent)]">
-              {formatArtistName(release.artistName)} / SINGLE
+            {/* The way back to the activity list is the sticky "Activities"
+                pill in TasksPanel's header row above — the tiny duplicate back
+                link this header used to carry (~16px tall, unreachable on
+                touch) was removed 2026-08-10. */}
+            <p className="font-[family-name:var(--font-cc-mono)] text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cc-accent)]">
+              {formatArtistName(release.artistName)}
             </p>
             <div className="mt-1 flex items-center gap-3">
               <h1 className="font-[family-name:var(--font-cc-display)] text-3xl font-medium tracking-tight text-[var(--cc-text)]">
@@ -446,7 +479,7 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
                 type="button"
                 onClick={() => setMonthParam(shiftMonth(month, -1))}
                 aria-label="Previous month"
-                className="flex h-9 w-9 items-center justify-center border border-[var(--cc-border)] text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
+                className="flex h-10 w-10 items-center justify-center border border-[var(--cc-border)] text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -457,7 +490,7 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
                 type="button"
                 onClick={() => setMonthParam(shiftMonth(month, 1))}
                 aria-label="Next month"
-                className="flex h-9 w-9 items-center justify-center border border-[var(--cc-border)] text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
+                className="flex h-10 w-10 items-center justify-center border border-[var(--cc-border)] text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -483,12 +516,12 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
 
         {releaseDateNotice ? (
           <div className="mt-4 flex items-center justify-between gap-3 border border-[var(--cc-border)] bg-[var(--cc-text)]/5 px-3 py-2 text-sm text-[var(--cc-text-muted)]">
-            <span>Release date moved; your posts kept their dates.</span>
+            <span>Release date moved; your posts kept their dates. Worth a quick check that their timing still fits.</span>
             <button
               type="button"
               onClick={() => setReleaseDateNotice(false)}
               aria-label="Dismiss"
-              className="shrink-0 text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
+              className="-my-1 flex h-8 w-8 shrink-0 items-center justify-center text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -591,9 +624,12 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
                 onCreated={handleCalendarCreated}
               />
 
-              {isLoadingPosts && posts.length === 0 && !postsError ? (
+              {isLoadingPosts && loadedPostsKey !== postsKey ? (
+                // Gated on the KEY, not `posts.length === 0`: switching
+                // calendars or paging months must show the skeleton rather
+                // than the previous view's posts (or a silently empty grid).
                 <CalendarGridSkeleton />
-              ) : postsError && posts.length === 0 ? (
+              ) : postsError && loadedPostsKey !== postsKey ? (
                 <div className="mt-4 flex flex-col items-start gap-3 border border-[var(--cc-border)] bg-[var(--cc-text)]/5 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-[var(--cc-text)]">Couldn&rsquo;t load posts.</p>
                   <button
@@ -641,6 +677,7 @@ export function CalendarScene({ release, onClose, onToast }: CalendarSceneProps)
           onClose={closePostModal}
           onSaved={handlePostSaved}
           onDeleted={handlePostDeleted}
+          onToast={showToast}
         />
       ) : null}
     </div>

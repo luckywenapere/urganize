@@ -26,6 +26,7 @@ import {
 } from '@/components/settings/WorkspaceArtistSection';
 import { ArtistProfileSection } from '@/components/settings/ArtistProfileSection';
 import { PushNotificationsSection } from '@/components/settings/PushNotificationsSection';
+import { TaskCheckInSection } from '@/components/settings/TaskCheckInSection';
 import { TeammatesSection } from '@/components/settings/TeammatesSection';
 import { ReleasesSection } from '@/components/settings/ReleasesSection';
 import { SessionSection } from '@/components/settings/SessionSection';
@@ -596,6 +597,7 @@ export default function SettingsPage() {
             <PushNotificationsSection />
           </div>
 
+          <TaskCheckInSection />
           <ReleasesSection />
           <SecuritySection />
           <SessionSection />

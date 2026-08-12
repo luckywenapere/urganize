@@ -46,6 +46,37 @@ const isSameOrigin = (input: RequestInfo | URL): boolean => {
   }
 };
 
+/**
+ * Speculative background requests (the release-scene prefetch) opt out of the
+ * redirect by carrying this header. A prefetch the user never asked for must
+ * not be able to navigate them off the page they're reading — if their access
+ * really has lapsed, the next request they DO initiate carries the same 402
+ * and redirects then, which is the moment it makes sense to.
+ */
+const PREFETCH_HEADER = 'x-urganize-prefetch';
+
+const isPrefetchRequest = (input: RequestInfo | URL, init?: RequestInit): boolean => {
+  const headers = init?.headers;
+  if (headers) {
+    if (headers instanceof Headers) return headers.has(PREFETCH_HEADER);
+    if (Array.isArray(headers)) {
+      return headers.some(([name]) => String(name).toLowerCase() === PREFETCH_HEADER);
+    }
+    if (
+      Object.keys(headers).some((name) => name.toLowerCase() === PREFETCH_HEADER)
+    ) {
+      return true;
+    }
+  }
+  if (typeof input === 'object' && input !== null && 'headers' in input) {
+    const requestHeaders = (input as Request).headers;
+    if (requestHeaders && typeof requestHeaders.has === 'function') {
+      return requestHeaders.has(PREFETCH_HEADER);
+    }
+  }
+  return false;
+};
+
 let installed = false;
 
 export function installAccessRedirect(): void {
@@ -57,7 +88,7 @@ export function installAccessRedirect(): void {
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const response = await originalFetch(input, init);
 
-    if (response.status === 402 && isSameOrigin(input)) {
+    if (response.status === 402 && isSameOrigin(input) && !isPrefetchRequest(input, init)) {
       const currentPath = window.location.pathname || '/';
       if (!isSafePath(currentPath)) {
         const reason = await extractReason(response);

@@ -20,6 +20,78 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.45.0",
+    date: "August 12, 2026",
+    highlights: [
+      "First release, no detours: if you haven't created a release yet, the New release screen now opens on its own and stays open until you make one — there's nothing else to do on an empty dashboard anyway. Signing out is still always available.",
+    ],
+  },
+  {
+    version: "0.44.3",
+    date: "August 12, 2026",
+    highlights: [
+      "The content calendar got a proper tune-up on phones. An empty month now gives you a Plan a post button instead of telling you to tap a day that isn't there, there's an Add a post button under the list for any other day, and the small controls — marking a post as posted, opening a post, closing things — are all easier to hit.",
+      "It behaves better on desktop too: with the UrgAns panel open the calendar now switches to its list view instead of cramming seven skinny columns into the space that's left, and switching between calendars or months shows a loading state instead of briefly showing the wrong posts.",
+      "A handful of small wrongs put right: deleting a calendar no longer flashes a confusing warning over its own confirmation, the back button no longer replays your calendar setup steps, error messages lost their database jargon, and the post form no longer shows a disabled \"coming soon\" row.",
+    ],
+  },
+  {
+    version: "0.44.2",
+    date: "August 10, 2026",
+    highlights: [
+      "Metadata is no longer marked Beta. Distribution fields and collaborator credits have been in real use long enough to stand on their own.",
+    ],
+  },
+  {
+    version: "0.44.1",
+    date: "August 10, 2026",
+    highlights: [
+      "Fixed the row of buttons above your release's activities (Metadata, Calendar, Notes, and the rest) on phones — it used to crop the first one off the edge of the screen and could wrap a button's own label across it. It now scrolls as one line, so every button is there and reads correctly.",
+    ],
+  },
+  {
+    version: "0.44.0",
+    date: "August 10, 2026",
+    highlights: [
+      "Finished a release? You can now get a recap card for it: a poster built from your own numbers, the activities you completed, the days of work behind it and the size of your team. It appears on a release once its date has passed or every activity is done.",
+      "Two sizes come out of it, one shaped for stories and one for feeds. Before it builds you can add one thing you are proud of. It's optional, so skipping it still gives you a card that looks right.",
+      "Share it straight from your phone or download it on the web. Rebuild it whenever the numbers change.",
+    ],
+  },
+  {
+    version: "0.43.0",
+    date: "August 10, 2026",
+    highlights: [
+      "Mark a task done and UrgAns now asks how it went. Three taps to answer — Went well, Went okay, or Didn't go to plan — plus a line about what happened if you feel like it. The task completes the instant you tick it, so answering is never something you wait on, and skipping costs one tap with no follow-up.",
+      "What you say is kept with the task, so the story of a release builds itself as you work instead of being reconstructed later from memory.",
+      "If you'd rather not be asked, turn off \"Ask me after tasks\" in Settings and the question stops for good.",
+    ],
+  },
+  {
+    version: "0.42.1",
+    date: "August 9, 2026",
+    highlights: [
+      "A release with no date set no longer shows a date line at all. It used to read \"Date not set\" on every card, which said nothing you couldn't already see — the prompt to add one still sits in the release's activity list, where you can actually set it.",
+    ],
+  },
+  {
+    version: "0.42.0",
+    date: "August 9, 2026",
+    highlights: [
+      "Added Notes — a private place to jot things down the moment they come up, mid-call or mid-DM, with no setup and nothing to fill in first. Link a note to a release whenever it's relevant, or leave it as-is; either way it saves as you type.",
+    ],
+  },
+  {
+    version: "0.41.4",
+    date: "August 8, 2026",
+    highlights: [
+      "The app is faster to open, especially on a slow or busy connection. Your releases and activities now start loading the moment the page does, instead of waiting on a sign-in check first, and the server fetches them all at once rather than one after another.",
+      "Metadata, Files, Press kit and Content calendar now open instantly. Once you pick a release, they quietly load in the background while you read your activities, and re-opening one you've already seen doesn't reload at all.",
+      "Switching between your workspace, UrgAns and Settings is quicker, and each shows one clean loading state instead of flashing through two.",
+      "None of this runs when your phone is on Data Saver or a 2G connection, so it never spends your data without earning it.",
+    ],
+  },
+  {
     version: "0.41.3",
     date: "August 7, 2026",
     highlights: [

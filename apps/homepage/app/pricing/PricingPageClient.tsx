@@ -1,8 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { RiArrowRightLine } from "react-icons/ri";
 import { ProofLine } from "../components/landing/ProofLine";
+import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
@@ -22,15 +22,15 @@ import { SALES_CONTACT_EMAIL } from "@urganize/pricing";
 
 const DEMO_MAILTO = `mailto:${SALES_CONTACT_EMAIL}?subject=${encodeURIComponent("Book an Urganize demo")}`;
 
-const fadeInUp = {
-  initial: { opacity: 0, y: 20 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true },
-  transition: {
-    duration: 0.6,
-    ease: [0.22, 1, 0.36, 1] as const,
-  },
-};
+// ANIMATION: CSS, not framer-motion (2026-08-08 performance pass).
+//
+// This page was the only framer-motion consumer on the whole site, and it used
+// it for thirteen plain fade/slide-ins — every one of which the site already
+// expresses in CSS everywhere else: `hero-fade-in` + `hero-delay-*` for the
+// on-load hero stagger, `<ScrollReveal>` (an IntersectionObserver toggling a
+// class) for reveal-on-scroll. Shipping an animation library to /pricing to
+// duplicate that was pure weight on a page a visitor may load on a slow phone.
+// Delays match the previous ones almost exactly (0.2s / 0.4s / 0.6s).
 
 export function PricingPageClient() {
   return (
@@ -41,43 +41,24 @@ export function PricingPageClient() {
         {/* HERO */}
         <section className="relative px-6 pb-16 pt-14 sm:pt-20">
           <div className="mx-auto max-w-4xl text-center">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mb-8 inline-flex items-center gap-2 rounded-full border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-accent)]"
-            >
+            <div className="hero-fade-in mb-8 inline-flex items-center gap-2 rounded-full border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-accent)]">
               <span className="h-1.5 w-1.5 animate-ping rounded-full bg-[var(--marketing-accent)]" />
               Pricing
-            </motion.div>
+            </div>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="mb-8 text-5xl font-black leading-[0.95] tracking-tighter sm:text-6xl md:text-7xl"
-            >
+            <h1 className="hero-fade-in hero-delay-1 mb-8 text-5xl font-black leading-[0.95] tracking-tighter sm:text-6xl md:text-7xl">
               No price table.
               <br />
               <span className="text-[var(--marketing-accent)]">Book a demo.</span>
-            </motion.h1>
+            </h1>
 
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl"
-            >
+            <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
               Urganize gives your music the release it deserves. Right now we
               set up every team personally. You show us your roster. We show
               you the product. We take it from there.
-            </motion.p>
+            </p>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.55 }}
-              className="mt-10"
-            >
+            <div className="hero-fade-in hero-delay-3 mt-10">
               <a
                 href={DEMO_MAILTO}
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_12px_32px_var(--marketing-shadow-strong)] hover:bg-[var(--marketing-primary-hover)]"
@@ -88,7 +69,7 @@ export function PricingPageClient() {
               <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-[var(--marketing-text-subtle)]">
                 Built for artist managers and small labels running more than one artist.
               </p>
-            </motion.div>
+            </div>
           </div>
         </section>
 
@@ -115,21 +96,19 @@ export function PricingPageClient() {
                 },
               ] as const
             ).map((item) => (
-              <motion.div
-                key={item.step}
-                {...fadeInUp}
-                className="rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6"
-              >
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
-                  {item.step}
-                </p>
-                <p className="mt-3 text-base font-bold tracking-tight text-[var(--marketing-text)]">
-                  {item.title}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[var(--marketing-text-muted)]">
-                  {item.body}
-                </p>
-              </motion.div>
+              <ScrollReveal key={item.step}>
+                <div className="h-full rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6">
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
+                    {item.step}
+                  </p>
+                  <p className="mt-3 text-base font-bold tracking-tight text-[var(--marketing-text)]">
+                    {item.title}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--marketing-text-muted)]">
+                    {item.body}
+                  </p>
+                </div>
+              </ScrollReveal>
             ))}
           </div>
         </section>
@@ -139,19 +118,15 @@ export function PricingPageClient() {
             (URG-125/URG-136). */}
         <section id="waitlist" className="relative scroll-mt-28 px-6 pb-28">
           <div className="mx-auto max-w-3xl text-center">
-            <motion.h2
-              {...fadeInUp}
-              className="text-3xl font-black tracking-tight md:text-4xl"
-            >
-              Not ready to talk yet?
-            </motion.h2>
-            <motion.p
-              {...fadeInUp}
-              className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[var(--marketing-text-muted)]"
-            >
-              Leave your email and we&apos;ll get in touch when the time is
-              right for your team.
-            </motion.p>
+            <ScrollReveal>
+              <h2 className="text-3xl font-black tracking-tight md:text-4xl">
+                Not ready to talk yet?
+              </h2>
+              <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[var(--marketing-text-muted)]">
+                Leave your email and we&apos;ll get in touch when the time is
+                right for your team.
+              </p>
+            </ScrollReveal>
             <div className="mt-8">
               <WaitlistForm source="pricing" />
               <ProofLine id="zaddyfunds" className="mt-4" />

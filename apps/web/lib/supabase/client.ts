@@ -24,7 +24,10 @@ export type Profile = {
   country?: string | null;
   locale?: string | null;
   timezone?: string | null;
-  role: 'artist' | 'manager' | 'artist-team' | 'artist-manager' | 'team-member' | 'viewer';
+  // 'curator' is the playlist-pitching account type: invited, teamless, and
+  // never able to see a release. It routes to /curator instead of /dashboard
+  // (see resolveHomePath in lib/home-path.ts).
+  role: 'artist' | 'manager' | 'artist-team' | 'artist-manager' | 'team-member' | 'viewer' | 'curator';
   artist_name?: string | null;
   onboarding_completed?: boolean;
   onboarding_step?: number;
@@ -51,6 +54,9 @@ export type Profile = {
     | null;
   onboarding_release_id?: string | null;
   onboarding_task_id?: string | null;
+  /** "Ask me after tasks" — gates the post-completion outcome sheet.
+   * Default true; undefined (pre-migration rows) counts as on. */
+  ask_after_tasks?: boolean;
   created_at: string;
   updated_at: string;
   is_subscribed?: boolean; 

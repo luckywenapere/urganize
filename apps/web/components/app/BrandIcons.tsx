@@ -40,6 +40,19 @@ export function ChappiIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
   );
 }
 
+/** Notes: a lyric sheet — two written lines and a quarter note. The words
+ * and the music, on the back of an envelope. */
+export function NotesIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="5.5" y="3.5" width="13" height="17" rx="1.8" />
+      <path d="M8.5 8.2h7M8.5 11.4h7" strokeLinecap="round" />
+      <path d="M14.4 13.9v4" strokeLinecap="round" />
+      <circle cx="13.1" cy="17.7" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 /** Docs: a tour laminate — your crew pass to how everything works. */
 export function DocsIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
   return (

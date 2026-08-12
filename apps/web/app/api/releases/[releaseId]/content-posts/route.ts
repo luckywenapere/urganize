@@ -174,21 +174,21 @@ export async function POST(
 
   if (body.format !== undefined && !isValidPostFormat(body.format)) {
     return NextResponse.json(
-      { error: 'format must be one of the content_post_format enum values.' },
+      { error: 'Pick a format from the list.' },
       { status: 400 }
     );
   }
 
   if (body.status !== undefined && !isValidPostStatus(body.status)) {
     return NextResponse.json(
-      { error: 'status must be one of the content_post_status enum values.' },
+      { error: 'Status must be Draft, Ready or Posted.' },
       { status: 400 }
     );
   }
 
   if (body.pillar !== undefined && body.pillar !== null && !isValidPostPillar(body.pillar)) {
     return NextResponse.json(
-      { error: 'pillar must be one of the content_post_pillar enum values.' },
+      { error: 'Pick a pillar from the list, or leave it empty.' },
       { status: 400 }
     );
   }

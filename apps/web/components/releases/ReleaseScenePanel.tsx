@@ -9,6 +9,8 @@ import { MetadataSection } from '@/components/releases/MetadataSection';
 import { EpkSection } from '@/components/releases/EpkSection';
 import { AssetSection } from '@/components/releases/AssetSection';
 import { CalendarScene } from '@/components/content-calendar/CalendarScene';
+import { PitchScene } from '@/components/pitching/PitchScene';
+import { PlanScene } from '@/components/planner/PlanScene';
 import { calendarFontVariables } from '@/components/content-calendar/calendar-fonts';
 
 /**
@@ -42,6 +44,8 @@ const SCENE_LABELS: Record<SceneName, string> = {
   files: 'Files',
   epk: 'Press kit',
   calendar: 'Content calendar',
+  pitch: 'Playlist pitches',
+  plan: 'Plan',
 };
 
 type ReleaseScenePanelProps = {
@@ -49,6 +53,13 @@ type ReleaseScenePanelProps = {
   release: Pick<Release, 'id' | 'title' | 'artistName' | 'releaseDate'>;
   onClose: () => void;
   onToast: (message: string, tone: 'success' | 'error' | 'warning') => void;
+  /** Activities already on this release, so the plan scene can say that
+   * approving adds to them rather than replacing them. */
+  existingTaskCount?: number;
+  /** The plan was approved: its tasks now exist. */
+  onPlanApproved?: () => void;
+  /** Start the intake, for a plan scene reached without a draft. */
+  onStartPlanIntake?: () => void;
 };
 
 /** Shared "get me back to the activity list" control. Reads as a return
@@ -65,7 +76,15 @@ function BackToActivities({ onClose }: { onClose: () => void }) {
   );
 }
 
-export function ReleaseScenePanel({ scene, release, onClose, onToast }: ReleaseScenePanelProps) {
+export function ReleaseScenePanel({
+  scene,
+  release,
+  onClose,
+  onToast,
+  existingTaskCount = 0,
+  onPlanApproved,
+  onStartPlanIntake,
+}: ReleaseScenePanelProps) {
   // Feature-discovery analytics used to ride the route change (a
   // featureRouteMatchers entry for the old /metadata path). With no route change
   // left, report it explicitly on the open transition; the localStorage dedupe
@@ -92,6 +111,22 @@ export function ReleaseScenePanel({ scene, release, onClose, onToast }: ReleaseS
   // gets the island wrapper and none of the generic chrome. WorkspaceView
   // additionally hides the release rails for this scene only, so the month grid
   // gets the width it needs (founder call).
+  // The plan scene brings its own header (it needs the save indicator and the
+  // task count beside it), so it skips the generic chrome the same way the
+  // calendar does.
+  if (scene === 'plan') {
+    return (
+      <PlanScene
+        release={release}
+        existingTaskCount={existingTaskCount}
+        onClose={onClose}
+        onToast={onToast}
+        onApproved={onPlanApproved ?? onClose}
+        onStartIntake={onStartPlanIntake ?? onClose}
+      />
+    );
+  }
+
   if (scene === 'calendar') {
     return (
       <section
@@ -120,6 +155,7 @@ export function ReleaseScenePanel({ scene, release, onClose, onToast }: ReleaseS
       {scene === 'metadata' ? <MetadataSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'files' ? <AssetSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'epk' ? <EpkSection releaseId={release.id} onToast={onToast} /> : null}
+      {scene === 'pitch' ? <PitchScene release={release} onToast={onToast} /> : null}
     </section>
   );
 }

@@ -292,6 +292,44 @@ html[data-theme='light'] .cc-island {
   --cc-chip-accent: #7fd99a;
 }
 
+/* Content-calendar view swap (2026-08-10). The month grid and the agenda list
+   used to swap on Tailwind's viewport-gated `lg:` — but the workspace's side
+   panels (the UrgAns rail, the identity card) are AppShell flex siblings that
+   shrink the centre column WITHOUT shrinking the viewport, so at 1280px with
+   both open the 7-column grid rendered ~54px day cells while `lg:` stayed
+   satisfied. These classes swap on the CONTAINER's width instead: the scene
+   root declares itself an inline-size container, and the grid only shows when
+   the column it actually lives in has room (~720px). Browsers without
+   container-query support (none evergreen) fall back to the old viewport gate
+   via @supports. */
+.cc-scene-container {
+  container-type: inline-size;
+}
+.cc-month-view {
+  display: none;
+}
+.cc-agenda-view {
+  display: block;
+}
+@container (min-width: 45rem) {
+  .cc-month-view {
+    display: block;
+  }
+  .cc-agenda-view {
+    display: none;
+  }
+}
+@supports not (container-type: inline-size) {
+  @media (min-width: 1024px) {
+    .cc-month-view {
+      display: block;
+    }
+    .cc-agenda-view {
+      display: none;
+    }
+  }
+}
+
 /* Public EPK island (URG-196). Same single-source-of-truth pattern as
    .cc-island above, but deliberately DARK-LOCKED — no light override: a
    press kit is a branded artifact sent outside the product, so every
@@ -560,6 +598,20 @@ h1, h2, h3, h4 {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-strong);
+}
+
+/* Hides the scrollbar on an inner scroll region while leaving the scroll
+   itself intact — for chip/pill rows that scroll horizontally by design
+   (e.g. the workspace's scoped-release pill row below `lg`, TasksPanel.tsx,
+   2026-08-10). Without this the themed ::-webkit-scrollbar rule above would
+   render a visible bar under the pills; that's correct for a real content
+   scroll box, wrong for a one-line chip strip. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes enter-staggered {
@@ -884,6 +936,26 @@ h1, h2, h3, h4 {
   from {
     opacity: 0;
     transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide-up entrance for the post-completion check-in sheet. A named keyframe
+   rather than utility classes: tailwindcss-animate is not installed, so only
+   the hand-rolled .animate-in rule above resolves. The panel carries an
+   inline transform for swipe-to-dismiss, and an animation outranks inline
+   style while it runs, so the two compose without fighting. */
+.task-outcome-sheet {
+  animation: task-outcome-sheet-enter 220ms var(--motion-out);
+}
+
+@keyframes task-outcome-sheet-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
   }
   to {
     opacity: 1;
@@ -1485,8 +1557,84 @@ body:focus-within .keyboard-hint,
   }
 }
 
+/* The notes page's two-pane column height at lg+, where the list and the
+   editor scroll independently and the PAGE itself never scrolls. Below lg the
+   page flows normally (single pane at a time, document scroll) — an internal
+   scroll box there would trap touch gestures, the same reason TasksPanel keeps
+   its scroll box lg:-prefixed. Chrome being subtracted matches
+   .chappi-shell-height's desktop term, since Notes uses AppShell's default
+   <main> padding: topbar min-h-16 + 1px border (4rem) + main pt-5 (1.25rem) +
+   main md:pb-10 (2.5rem). Shared by NotesPageClient and NotesPageSkeleton —
+   keep both in sync (see CLAUDE.md's loading-skeleton rule). */
+@media (min-width: 1024px) {
+  .notes-shell-height {
+    height: calc(100dvh - 7.75rem - 1px);
+    min-height: 24rem;
+  }
+}
+
 .mobile-safe-bottom-offset {
   bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+}
+
+/* ── Mobile bottom nav (NEXT_PUBLIC_FEATURE_MOBILE_NAV) ──────────────────
+   A fixed h-16 tab bar below lg replaces the topbar's nav icons + create CTA
+   and retires the ChappiDock launcher on that same range. Every value below
+   hard-codes the bar's 4rem row height — change MobileNavBar.tsx's height
+   and all of these in lockstep. The bar's own breakpoint is lg (1024px),
+   which is why these use that boundary rather than the md (768px) one
+   .chappi-main-padding/.chappi-shell-height use above — the bar persists
+   through the tablet range those two already treat as "desktop". */
+.mobile-nav-bar {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* AppShell <main> clearance when the bar is on: bar (4rem) + breathing room
+   + safe area, below lg; same md:pb-10-equivalent above it. */
+.mobile-nav-clearance {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 1024px) {
+  .mobile-nav-clearance {
+    padding-bottom: 2.5rem;
+  }
+}
+
+/* .chappi-main-padding's flag-on twin: same 1rem + safe-area gap the chat
+   composer already clears the dock corner by, plus the bar's own 4rem. */
+.chappi-main-padding-nav {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem + 4rem);
+}
+
+@media (min-width: 1024px) {
+  .chappi-main-padding-nav {
+    padding-bottom: 2.5rem;
+  }
+}
+
+/* .chappi-shell-height's flag-on twin — shared by ChappiPageClient and
+   ChappiPageSkeleton, keep both in sync. Chrome being subtracted below lg:
+   topbar min-h-16 + 1px border (4rem) + main pt-5 (1.25rem) +
+   chappi-main-padding-nav (1rem + 4rem + safe-area) = 10.25rem. */
+.chappi-shell-height-nav {
+  height: calc(100dvh - 10.25rem - env(safe-area-inset-bottom, 0px) - 1px);
+  min-height: 24rem;
+}
+
+@media (min-width: 1024px) {
+  .chappi-shell-height-nav {
+    height: calc(100dvh - 7.75rem - 1px);
+  }
+}
+
+/* Lifts a fixed bottom-anchored surface (toasts, the flag-off-Chappi
+   SupportChat pill) above the bar. Pair with an lg:bottom-* utility for the
+   value to restore once the bar disappears. */
+@media (max-width: 1023px) {
+  .mobile-nav-raise {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 @media (max-width: 768px) {

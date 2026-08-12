@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { AlertCircle, ArrowLeft, Sparkles } from 'lucide-react';
+import { AlertCircle, ArrowLeft, PartyPopper, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -11,21 +11,24 @@ import { useChappiStore } from '@/stores/useChappiStore';
 import { type Task } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
 import { supabase } from '@/lib/supabase/client';
-import { type ReleaseContext } from '@/lib/release-tailoring';
 import { Toast } from '@/components/shared/Toast';
 import { NewReleaseGuide } from '@/components/releases/NewReleaseGuide';
 import { SetReleaseDateCard } from '@/components/releases/SetReleaseDateCard';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
-import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
+import { useFirstReleaseRequired } from '@/components/releases/useFirstReleaseRequired';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
-import { TasksPanel } from './TasksPanel';
+import { TasksPanel, taskPanelPillClass } from './TasksPanel';
 import { useSceneOverlay } from './useSceneOverlay';
+import { useScenePrefetch } from './useScenePrefetch';
+import { useIsDesktopViewport } from './useIsDesktopViewport';
 import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
+import { usePlannerStore } from '@/stores/usePlannerStore';
+import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
 
 const TASKS_PANEL_ID = 'workspace-tasks';
 
@@ -41,21 +44,46 @@ const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 // Ported from the removed release detail page (2026-08-04, founder call):
-// both AI features stay hidden until the gateway is wired to a capable
-// model. NEXT_PUBLIC_ prefix so the value is inlined at build time; the API
-// routes guard the same flags server-side.
-const TAILOR_PLAN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TAILOR_PLAN === 'true';
+// stays hidden until the gateway is wired to a capable model. NEXT_PUBLIC_
+// prefix so the value is inlined at build time; the API route guards the same
+// flag server-side.
 const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
+
+// The shareable end-of-release card. Unlike the two AI actions above, this pill
+// is also gated on the release actually being finished, so it appears at the
+// moment there is something to celebrate rather than sitting there all campaign.
+const RELEASE_RECAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_RECAP === 'true';
+
+// The UrgAns planner. When on, a release with no activities shows the planner
+// card as its whole empty state, and the Plan pill joins the scene switcher
+// until a plan is approved. Supersedes the immediate-apply tailor-plan feature,
+// which mutated real task rows the moment the model answered.
+const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
+
+// Same flag TasksPanel reads for its Calendar pill. The scene URL param has to
+// be gated on it too: with the flag off, a stale `?scene=calendar` bookmark
+// used to render the calendar island shell around a permanently failing fetch
+// (its API routes 404 when off) instead of the normal activity list.
+const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
+
+// Dynamic for the same reason AppShell already loads it that way — a static
+// import here defeated that, dragging the ~460-line modal into the /dashboard
+// entry chunk that every user downloads before first paint, for a surface
+// most sessions never open.
+const CreateReleaseModal = dynamic(
+  () => import('@/components/releases/CreateReleaseModal').then((m) => m.CreateReleaseModal),
+  { ssr: false }
+);
 
 // Dynamic + flag-gated, same rationale as the removed page: while a flag is
 // off — as both are in production today — the modal's chunk is never
 // requested at all.
-const TailorPlanModal = dynamic(
-  () => import('@/components/releases/TailorPlanModal').then((m) => m.TailorPlanModal),
-  { ssr: false }
-);
 const StatusUpdateModal = dynamic(
   () => import('@/components/releases/StatusUpdateModal').then((m) => m.StatusUpdateModal),
+  { ssr: false }
+);
+const RecapModal = dynamic(
+  () => import('@/components/releases/RecapModal').then((m) => m.RecapModal),
   { ssr: false }
 );
 
@@ -86,12 +114,30 @@ export function WorkspaceView() {
   // the way UrgAns is on the side but in the place where activity lists
   // appear"), so this view has to know about it to build the panel body and to
   // give the calendar its width.
-  const { activeScene, closeScene } = useSceneOverlay();
+  const { activeScene: urlScene, openScene, closeScene } = useSceneOverlay();
+  // Flag-gate the calendar scene at the one place the URL is resolved: with
+  // the flag off the param is treated as no-scene, matching the pill (which
+  // never renders) and the API routes (which 404).
+  const activeScene = urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED ? null : urlScene;
+  // Which of the two always-in-the-DOM layout branches (mobile drill-down /
+  // desktop focused) should receive side-effectful children — see the hook.
+  const isDesktopViewport = useIsDesktopViewport();
+  // Warm the scoped release's four scenes during idle time, so the pills in
+  // TasksPanel's header open instantly instead of each costing a round trip.
+  // Skipped entirely on Data Saver / 2g — see useScenePrefetch.
+  useScenePrefetch(scopedReleaseId, !isInitialLoading);
   // Same global quick-create TasksPanel's header pill opens — the date card's
   // "add an activity yourself" action routes here so both entry points land
   // in one modal (URG-233).
   const { openQuickCreate } = useTaskUI();
   const isRailOpen = useChappiStore((state) => state.railOpen);
+  // The intake modal is mounted once by AppShell; this opens it.
+  const openIntake = usePlannerStore((state) => state.openIntake);
+  // True between firing the generate call and it returning, so the card and the
+  // scene can both say UrgAns is working rather than showing an empty plan.
+  const isPlanGenerating = usePlannerStore((state) =>
+    scopedReleaseId ? state.generatingReleaseIds.includes(scopedReleaseId) : false
+  );
   // Task detail renders as a global pop-up mounted by TaskUIProvider
   // (2026-07-23) — this view no longer swaps its layout when a task opens.
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -101,10 +147,12 @@ export function WorkspaceView() {
   // AI actions + toast, ported verbatim from the removed release detail page
   // (2026-08-04) — this is now the only surface a scoped release renders on.
   const [toast, setToast] = useState<ToastState | null>(null);
-  const [isTailorOpen, setIsTailorOpen] = useState(false);
-  const [savedContext, setSavedContext] = useState<ReleaseContext | null>(null);
-  const [hasTailoring, setHasTailoring] = useState(false);
+  // Does the scoped release already have a draft plan waiting? One scoped
+  // fetch, the same shape the tailor-plan context load had, because both the
+  // planner card's wording and the Plan pill's visibility depend on it.
+  const [hasPlanDraft, setHasPlanDraft] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isRecapOpen, setIsRecapOpen] = useState(false);
   const [isGeneratingStatus, setIsGeneratingStatus] = useState(false);
   const [statusUpdate, setStatusUpdate] = useState('');
   // One-time getting-started guide (NewReleaseGuide), triggered by ?new=1
@@ -120,14 +168,39 @@ export function WorkspaceView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per mount to consume the param; router/searchParams identity churn shouldn't re-fire this.
   }, []);
 
+  // Fire the dashboard fetch IMMEDIATELY, without waiting on the auth store.
+  // loadCommandCenter reads its own bearer token from supabase.auth.getSession()
+  // (a local storage read), so it doesn't need the auth store's server-verified
+  // profile — gating it behind authLoading serialized it after the GoTrue
+  // getUser round trip for no benefit. With no session it returns silently and
+  // the effect below redirects.
+  useEffect(() => {
+    void loadCommandCenter();
+  }, [loadCommandCenter]);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
       router.replace('/auth');
       return;
     }
+    // Backstop for the early call above: if the session wasn't readable yet at
+    // mount, this re-runs it once auth resolves. Cheap — the store's in-flight
+    // and recency guards collapse it to a no-op in the normal case.
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
+
+  // URG-217: a user with zero releases can't do anything here, so the create
+  // modal opens itself and (in the modal) loses its exits until they create
+  // one. Only fires once the store has CONFIRMED zero releases — the predicate
+  // fails open while loading and on load errors, so a network blip can't wall
+  // anyone off. Deleting your last release re-triggers this by design.
+  const firstReleaseRequired = useFirstReleaseRequired();
+  useEffect(() => {
+    if (firstReleaseRequired) {
+      setIsCreateModalOpen(true);
+    }
+  }, [firstReleaseRequired]);
 
   const generateStatus = async () => {
     if (!scopedReleaseId) return;
@@ -164,41 +237,43 @@ export function WorkspaceView() {
     }
   };
 
-  // Load any prior tailoring so the button label and modal pre-fill reflect
-  // it, whenever the scoped release changes.
+  // Does the scoped release have a draft plan waiting? Asked whenever the
+  // scope changes, and again when a generate call finishes, so the card stops
+  // saying "let's plan this" the moment there is something to review.
+  //
+  // A single scoped fetch rather than a field on the command-center payload:
+  // only the open release can show the card or the pill, so there is nothing to
+  // gain from carrying the answer for every release in the catalog.
   useEffect(() => {
-    setSavedContext(null);
-    setHasTailoring(false);
-    if (!TAILOR_PLAN_ENABLED || authLoading || !user || !scopedReleaseId) return;
+    setHasPlanDraft(false);
+    if (!PLANNER_ENABLED || authLoading || !user || !scopedReleaseId) return;
     let cancelled = false;
-    const loadTailoring = async () => {
+    const loadPlanDraft = async () => {
       try {
         const {
           data: { session },
         } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) return;
-        const res = await fetch(`/api/releases/${scopedReleaseId}/tailor-plan`, {
+        const res = await fetch(`/api/releases/${scopedReleaseId}/plan`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: 'no-store',
         });
         if (!res.ok) return;
         const data = (await res.json().catch(() => ({}))) as {
-          context?: ReleaseContext | null;
-          has_tailoring?: boolean;
+          draft?: { status?: string } | null;
         };
         if (cancelled) return;
-        setSavedContext(data.context ?? null);
-        setHasTailoring(Boolean(data.has_tailoring));
+        setHasPlanDraft(data.draft?.status === 'draft');
       } catch {
-        // Non-blocking: the button just defaults to "Tailor plan".
+        // Non-blocking: the card just offers to start a plan.
       }
     };
-    void loadTailoring();
+    void loadPlanDraft();
     return () => {
       cancelled = true;
     };
-  }, [authLoading, scopedReleaseId, user]);
+  }, [authLoading, scopedReleaseId, user, isPlanGenerating]);
 
   useEffect(() => {
     if (!toast) return;
@@ -257,7 +332,7 @@ export function WorkspaceView() {
   // wider shape structurally.
   const scopedReleaseSlim = useMemo<Pick<
     Release,
-    'id' | 'title' | 'artistName' | 'releaseDate' | 'templatePending'
+    'id' | 'title' | 'artistName' | 'releaseDate' | 'templatePending' | 'status'
   > | null>(() => {
     if (!scopedReleaseId) return null;
     const found = releases.find((r) => r.id === scopedReleaseId);
@@ -268,6 +343,7 @@ export function WorkspaceView() {
       artistName: found.artistName,
       releaseDate: found.releaseDate,
       templatePending: found.templatePending,
+      status: found.status,
     };
   }, [scopedReleaseId, releases]);
 
@@ -317,9 +393,18 @@ export function WorkspaceView() {
   // path uses `scopedReleaseSlim` directly for the same reason.
   const isDesktopFocusedMode = Boolean(scopedReleaseId && selectedCard);
 
+  /** Open the intake for the scoped release. */
+  const openPlanIntake = () => {
+    if (!scopedReleaseId) return;
+    openIntake({ source: 'empty_state', releaseId: scopedReleaseId });
+  };
+
   // The open release scene's body, handed to TasksPanel so it replaces the
   // activity buckets in place while the pill row above stays put. Null unless
   // the URL names a scene AND the release resolved — same guard the panels use.
+  // Handed to ONE branch only (isDesktopViewport below): both layout branches
+  // are always in the DOM, and giving this node to both mounted every scene
+  // twice — the calendar double-fetched everything on every open.
   const scenePanel =
     activeScene && scopedReleaseSlim ? (
       <ReleaseScenePanel
@@ -327,50 +412,116 @@ export function WorkspaceView() {
         release={scopedReleaseSlim}
         onClose={closeScene}
         onToast={(message, tone) => setToast({ message, tone })}
+        existingTaskCount={scopedTasks.length}
+        onPlanApproved={() => {
+          setHasPlanDraft(false);
+          closeScene();
+          void loadCommandCenter({ force: true });
+        }}
+        onStartPlanIntake={() => openPlanIntake()}
       />
     ) : undefined;
 
-  // The content calendar's month grid is built for ~1200px and swaps to its
-  // agenda list on a VIEWPORT-gated breakpoint, so it needs the release rails
-  // out of the way to have room — the same treatment the UrgAns rail already
-  // triggers. The other three scenes fit the normal centre column, so they
-  // leave the rails alone (founder call).
+  // The content calendar's month grid is built for ~1200px, so it gets the
+  // release rails out of the way — the same treatment the UrgAns rail already
+  // triggers. The grid↔agenda swap itself is container-width-based now
+  // (cc-month-view/cc-agenda-view in globals.css), so a still-narrow column
+  // (identity panel or rail open) degrades to the agenda instead of squeezing
+  // the grid; hiding the rails here is what makes the grid the COMMON case at
+  // lg+ rather than the lucky one. The other scenes fit the normal centre
+  // column, so they leave the rails alone (founder call).
   const hideRailsForLayout = (CHAPPI_ENABLED && isRailOpen) || activeScene === 'calendar';
+
+  // A recap is only worth offering once the release has actually happened.
+  // Mirrors the server predicate in the recap route's _shared.ts exactly, so
+  // the pill and the API can never disagree about what "finished" means.
+  // Release day itself counts: the share moment is the launch, not the day
+  // after. The all-tasks-done clause is what makes "complete" real today, since
+  // nothing in the product writes the released status, and it is the only route
+  // to a recap for a release whose date was never set.
+  const isRecapEligible = useMemo(() => {
+    if (!scopedReleaseSlim) return false;
+    if (scopedReleaseSlim.status === 'released' || scopedReleaseSlim.status === 'archived') {
+      return true;
+    }
+    if (scopedReleaseSlim.releaseDate) {
+      const releaseDay = new Date(`${scopedReleaseSlim.releaseDate}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (Number.isFinite(releaseDay.getTime()) && releaseDay.getTime() <= today.getTime()) {
+        return true;
+      }
+    }
+    return scopedTasks.length > 0 && scopedTasks.every((task) => task.status === 'done');
+  }, [scopedReleaseSlim, scopedTasks]);
 
   // The two AI action pills, ported from the removed release detail page —
   // only meaningful (and only rendered) when a release is scoped, so both
   // TasksPanel mounts get this via `extraActions` only in that case.
+  //
+  // Both now use `taskPanelPillClass` (TasksPanel's own neutral-pill class,
+  // exported) instead of a hand-rolled copy: the copy had already drifted
+  // (missing `shrink-0 whitespace-nowrap`) by the time this row grew to 9
+  // pills on mobile, which combined with the two longest labels here to
+  // wrap "Get your release recap" across three lines inside a fixed 32px
+  // pill (2026-08-10 bug fix). Labels also shortened to match how a chip
+  // row is supposed to read — one or two words, not a sentence; the icon
+  // already carries the rest of the meaning (Sparkles = AI action,
+  // PartyPopper = celebration).
   const taskPanelExtraActions = scopedReleaseId ? (
     <>
-      {TAILOR_PLAN_ENABLED ? (
-        <button
-          type="button"
-          onClick={() => setIsTailorOpen(true)}
-          className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
-        >
-          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          {hasTailoring ? 'Re-tailor plan' : 'Tailor plan'}
-        </button>
-      ) : null}
       {STATUS_UPDATE_ENABLED ? (
         <button
           type="button"
           onClick={() => void generateStatus()}
           disabled={isGeneratingStatus}
-          className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:opacity-60"
+          className={`${taskPanelPillClass} disabled:opacity-60`}
         >
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          {isGeneratingStatus ? 'Generating…' : 'Generate status update'}
+          {isGeneratingStatus ? 'Generating…' : 'Status update'}
+        </button>
+      ) : null}
+      {RELEASE_RECAP_ENABLED && isRecapEligible ? (
+        <button type="button" onClick={() => setIsRecapOpen(true)} className={taskPanelPillClass}>
+          <PartyPopper className="h-3.5 w-3.5" aria-hidden="true" />
+          Release recap
         </button>
       ) : null}
     </>
   ) : null;
 
+  // The Plan pill only exists while there is something to open: no activities
+  // yet, or a draft already waiting. Once a plan is approved it disappears,
+  // because from then on the activity list IS the plan.
+  const showPlanPill = Boolean(
+    PLANNER_ENABLED && scopedReleaseId && (scopedTasks.length === 0 || hasPlanDraft)
+  );
+
+  // With the planner on, a scoped release with no activities shows the planner
+  // card as its ENTIRE body — no empty list under it, nothing above it. That is
+  // what makes the main door impossible to miss.
+  //
+  // It also supersedes the plan-waiting date card for this case: that card asks
+  // for a date so the template can be instantiated, and under the planner the
+  // date is question three of the intake instead.
+  const planBanner =
+    PLANNER_ENABLED && scopedReleaseSlim && scopedTasks.length === 0 ? (
+      <PlanReleaseCard
+        hasDraft={hasPlanDraft}
+        isGenerating={isPlanGenerating}
+        onPlan={() => openPlanIntake()}
+        onReview={() => openScene('plan', scopedReleaseSlim.id)}
+        onAddActivity={() =>
+          openQuickCreate({ releaseId: scopedReleaseSlim.id, source: 'inline' })
+        }
+      />
+    ) : null;
+
   // Any scoped release without a date gets the card at the top of its
   // activity list (URG-230). It reports its own success through the existing
   // workspace toast and unmounts on its own once the store reports a date.
   const setReleaseDateBanner =
-    scopedReleaseSlim && !scopedReleaseSlim.releaseDate ? (
+    !planBanner && scopedReleaseSlim && !scopedReleaseSlim.releaseDate ? (
       <SetReleaseDateCard
         releaseId={scopedReleaseSlim.id}
         releaseTitle={scopedReleaseSlim.title}
@@ -382,11 +533,12 @@ export function WorkspaceView() {
       />
     ) : null;
 
-  // Only the plan-waiting card explains the empty list and offers a way to
-  // act on it; the compact date row does neither, so a view under it still
-  // needs TasksPanel's own empty state (URG-233).
+  // Only a card that explains the empty list AND offers a way to act on it
+  // replaces the generic empty state; the compact date row does neither, so a
+  // view under it still needs TasksPanel's own (URG-233). The planner card does
+  // both, always.
   const bannerReplacesEmptyState = Boolean(
-    setReleaseDateBanner && scopedReleaseSlim?.templatePending
+    planBanner || (setReleaseDateBanner && scopedReleaseSlim?.templatePending)
   );
 
   // Suppressed while the release has no date: this guide opens with "Your
@@ -395,7 +547,7 @@ export function WorkspaceView() {
   // is the honest version of the same moment, and stacking both would put
   // two banners over one empty list.
   const newReleaseGuideBanner =
-    showNewReleaseGuide && !setReleaseDateBanner ? (
+    showNewReleaseGuide && !setReleaseDateBanner && !planBanner ? (
       <NewReleaseGuide onDismiss={() => setShowNewReleaseGuide(false)} />
     ) : null;
 
@@ -551,40 +703,47 @@ export function WorkspaceView() {
                     to bg-surface in light mode). stroke-strong is the theme-
                     flipped foreground color at 10% opacity, so it scales its
                     visibility with whatever it sits on instead of matching
-                    it. Bar bumped h-1 -> h-1.5 for perceptual presence. */}
-                <div className="mb-4 flex items-center gap-3">
-                  <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
-                    Motion
-                  </span>
-                  <div className="h-1.5 min-w-0 flex-1 rounded-full bg-stroke-strong" aria-hidden="true">
-                    <div
-                      className="h-full rounded-full bg-brand transition-[width] duration-300"
-                      style={{
-                        width: `${
-                          scopedTasks.length > 0
-                            ? Math.round(
-                                (scopedTasks.filter((t) => t.status === 'done').length /
-                                  scopedTasks.length) *
-                                  100
-                              )
-                            : 0
-                        }%`,
-                      }}
-                    />
+                    it. Bar bumped h-1 -> h-1.5 for perceptual presence.
+                    Hidden while a scene is open (2026-08-10): it describes
+                    the ACTIVITY list, not the scene body that replaced it,
+                    and on a phone it was one of ~250px of stacked chrome
+                    between the topbar and the scene's own content. */}
+                {activeScene ? null : (
+                  <div className="mb-4 flex items-center gap-3">
+                    <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+                      Motion
+                    </span>
+                    <div className="h-1.5 min-w-0 flex-1 rounded-full bg-stroke-strong" aria-hidden="true">
+                      <div
+                        className="h-full rounded-full bg-brand transition-[width] duration-300"
+                        style={{
+                          width: `${
+                            scopedTasks.length > 0
+                              ? Math.round(
+                                  (scopedTasks.filter((t) => t.status === 'done').length /
+                                    scopedTasks.length) *
+                                    100
+                                )
+                              : 0
+                          }%`,
+                        }}
+                      />
+                    </div>
+                    <span className="shrink-0 font-mono text-[11px] font-semibold text-content-primary">
+                      {scopedTasks.filter((t) => t.status === 'done').length}/{scopedTasks.length}
+                    </span>
                   </div>
-                  <span className="shrink-0 font-mono text-[11px] font-semibold text-content-primary">
-                    {scopedTasks.filter((t) => t.status === 'done').length}/{scopedTasks.length}
-                  </span>
-                </div>
+                )}
                 {newReleaseGuideBanner}
                 <TasksPanel
                   id={TASKS_PANEL_ID}
                   tasks={scopedTasks}
                   scopedRelease={scopedReleaseSlim}
                   extraActions={taskPanelExtraActions}
-                  sceneContent={scenePanel}
-                  activitiesBanner={setReleaseDateBanner}
+                  sceneContent={isDesktopViewport ? undefined : scenePanel}
+                  activitiesBanner={planBanner ?? setReleaseDateBanner}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
+                  showPlanPill={showPlanPill}
                 />
                 {/* The per-release files surface lives inside TasksPanel as an
                     inline collapsible segment at the top of the task area,
@@ -622,9 +781,10 @@ export function WorkspaceView() {
                 hideRails={hideRailsForLayout}
                 banner={newReleaseGuideBanner}
                 panelExtraActions={taskPanelExtraActions}
-                panelSceneContent={scenePanel}
-                panelActivitiesBanner={setReleaseDateBanner}
+                panelSceneContent={isDesktopViewport ? scenePanel : undefined}
+                panelActivitiesBanner={planBanner ?? setReleaseDateBanner}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
+                panelShowPlanPill={showPlanPill}
               />
             ) : (
               <WorkspaceDesktopGrid
@@ -639,7 +799,7 @@ export function WorkspaceView() {
       <CreateReleaseModal
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onCreated={(releaseId, plan) => {
+        onCreated={(releaseId, plan, result) => {
           setIsCreateModalOpen(false);
           // CreateReleaseModal already force-resyncs the store on success;
           // this non-forced call piggybacks on that in-flight load (or the
@@ -648,8 +808,18 @@ export function WorkspaceView() {
           // First release ever (releases still empty at this point, since the
           // forced resync above hasn't landed) → stage the "first win" reveal
           // instead of navigating. The reveal handles navigation on dismiss.
-          if (FIRST_WIN_ENABLED && releases.length === 0) {
+          // With the planner on, a rollout-plan release is created with no
+          // activities, so the "first win" reveal would celebrate an empty
+          // list. The planner card is the honest version of that moment.
+          const plannerPending = result?.plannerPending === true;
+
+          if (FIRST_WIN_ENABLED && releases.length === 0 && !plannerPending) {
             setWinReleaseId(releaseId);
+          } else if (plannerPending) {
+            // Straight into the intake: planning is the whole point of having
+            // chosen a rollout plan, and the release has nothing else in it.
+            router.push(`/dashboard?release=${releaseId}`);
+            openIntake({ source: 'empty_state', releaseId });
           } else {
             // ?new=1 triggers the one-time dismissible getting-started guide
             // (NewReleaseGuide) — only for TEMPLATE creations; its copy
@@ -676,24 +846,6 @@ export function WorkspaceView() {
         />
       ) : null}
 
-      {TAILOR_PLAN_ENABLED && scopedReleaseId ? (
-        <TailorPlanModal
-          open={isTailorOpen}
-          releaseId={scopedReleaseId}
-          initialContext={savedContext}
-          onClose={() => setIsTailorOpen(false)}
-          onTailored={(result, context) => {
-            setHasTailoring(true);
-            setSavedContext(context);
-            setToast({
-              tone: 'success',
-              message: `Plan tailored: ${result.tasks_removed} removed, ${result.tasks_modified} updated`,
-            });
-            void loadCommandCenter({ force: true });
-          }}
-        />
-      ) : null}
-
       {STATUS_UPDATE_ENABLED ? (
         <StatusUpdateModal
           open={isStatusOpen}
@@ -701,6 +853,17 @@ export function WorkspaceView() {
           statusUpdate={statusUpdate}
           onClose={() => setIsStatusOpen(false)}
           onRegenerate={() => void generateStatus()}
+        />
+      ) : null}
+
+      {/* Mounted only while open, so each open refetches and never shows a
+          signed preview URL that expired since last time. */}
+      {RELEASE_RECAP_ENABLED && isRecapOpen && scopedReleaseSlim ? (
+        <RecapModal
+          releaseId={scopedReleaseSlim.id}
+          releaseTitle={scopedReleaseSlim.title}
+          onClose={() => setIsRecapOpen(false)}
+          onToast={(message, tone) => setToast({ message, tone })}
         />
       ) : null}
     </main>

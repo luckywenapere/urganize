@@ -16,6 +16,8 @@ import { normalizeReleaseSlug } from '@/lib/release-ops';
 import { type ReleaseOption } from '@/lib/release-helpers';
 import { DEFAULT_RELEASE_TITLE } from '@/types/releases';
 import { writeTemplatePending } from '@/lib/release-template-pending';
+import { writePlannerPending } from '@/lib/release-planner-pending';
+import { isReleasePlannerEnabled } from '@/lib/release-planning';
 
 type ReleaseSelectorListResponse = { releases: ReleaseOption[] };
 
@@ -195,7 +197,12 @@ function isValidHttpUrl(value: string): boolean {
 }
 
 function normalizeReleaseCreatedSource(value: unknown): ReleaseCreatedSource {
-  if (value === 'onboarding' || value === 'empty_state' || value === 'chappi') {
+  if (
+    value === 'onboarding' ||
+    value === 'empty_state' ||
+    value === 'chappi' ||
+    value === 'planner'
+  ) {
     return value;
   }
 
@@ -464,10 +471,19 @@ export async function POST(request: NextRequest) {
     const slug = normalizeReleaseSlug(title) || `release-${Date.now()}`;
     const now = new Date().toISOString();
 
+    // With the planner on, a Rollout-plan release is created with no
+    // activities at all: the manager plans it with UrgAns and approves a draft
+    // before anything is scheduled. Recorded as its own marker rather than
+    // reusing template_pending, because that flag makes the schedule route
+    // instantiate the whole template the moment a date lands, which is exactly
+    // what the draft flow exists to prevent. See lib/release-planner-pending.ts.
+    const plannerPending = isReleasePlannerEnabled() && releasePlan !== 'blank';
+
     // A Rollout-plan release with no date owes its activities (URG-230).
     // Recorded rather than inferred — see lib/release-template-pending.ts for
     // why it can't be derived, and why it lives in `metadata`.
-    const templatePending = releasePlan !== 'blank' && !releaseDateResult.value;
+    const templatePending =
+      !plannerPending && releasePlan !== 'blank' && !releaseDateResult.value;
 
     const releaseResult = await adminClient
       .from('releases')
@@ -489,6 +505,7 @@ export async function POST(request: NextRequest) {
         release_type: releaseType,
         description: description || null,
         ...(templatePending ? { metadata: writeTemplatePending(null, true) } : {}),
+        ...(plannerPending ? { metadata: writePlannerPending(null, true) } : {}),
         updated_at: now,
       })
       .select('id,status,artist_name,title,release_date,created_at,updated_at')
@@ -555,7 +572,11 @@ export async function POST(request: NextRequest) {
     // existed to prevent. Now `templatePending` short-circuits it, and the
     // plan is built by POST /api/releases/[releaseId]/schedule when a date
     // arrives — same instantiateTemplate call, just later.
-    if (releasePlan !== 'blank' && !templatePending) {
+    //
+    // With the planner on (`plannerPending`), no plan is built here at all.
+    // The manager answers the intake, edits the draft UrgAns tailors from this
+    // same template, and approval is what writes the task rows.
+    if (releasePlan !== 'blank' && !templatePending && !plannerPending) {
       try {
         // Reuse the workspace id the artist branch already resolved — a normal
         // create used to run the full ensureOwnedWorkspace (upsert + org sync)
@@ -634,6 +655,10 @@ export async function POST(request: NextRequest) {
       // without re-reading the row — the create flows use it to skip the
       // "Your release is set up" guide, which would be untrue here.
       templatePending,
+      // True when this release is waiting to be planned with UrgAns. Callers
+      // use it to route the manager into the planner instead of showing a
+      // "your release is set up" guide that would not be true yet.
+      plannerPending,
       release: {
         id: releaseId,
         title: String(releaseResult.data.title || title),

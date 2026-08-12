@@ -6,6 +6,7 @@ import type { CommandCenterData, ExecutionRelease, ExecutionTask } from '@/lib/e
 import { useActivityStore } from '@/stores/useActivityStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { useSceneDataStore } from '@/stores/useSceneDataStore';
 
 type ReleaseStore = {
   releases: ExecutionRelease[];
@@ -132,7 +133,12 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       }
 
       if (!accessToken) {
-        set({ isInitialLoading: false, isRefreshing: false, error: 'Session expired. Please sign in again.' });
+        // Silent: this now runs on mount WITHOUT waiting for the auth store
+        // (so the request races the GoTrue chain instead of queuing behind
+        // it), which means "no session yet" is a normal state here, not an
+        // error. The page's own auth effect owns the /auth redirect — showing
+        // "Session expired" would just flash a wrong message on the way out.
+        set({ isRefreshing: false });
         return null;
       }
 
@@ -233,6 +239,10 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
     return release;
   },
   removeReleaseLocal: (releaseId) => {
+    // Its cached scenes (metadata / files / press kit / calendar) go with it —
+    // otherwise a re-created release reusing the id, or just a stale disk
+    // entry, could paint a deleted release's data.
+    useSceneDataStore.getState().invalidate(releaseId);
     const taskStore = useTaskStore.getState();
     taskStore.setTasks(taskStore.tasks.filter((task) => task.releaseId !== releaseId));
     set((current) => ({

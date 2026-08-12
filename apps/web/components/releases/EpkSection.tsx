@@ -1,10 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check, Copy, ExternalLink, Loader2, Newspaper } from 'lucide-react';
 import type { ReleaseEpk } from '@/types/epk';
 import { supabase } from '@/lib/supabase/client';
 import { ShareLinkCardSkeleton } from '@/components/loading/ReleaseSectionSkeletons';
+import { useSceneData } from './useSceneData';
+import { useSceneDataStore } from '@/stores/useSceneDataStore';
 
 // The EPK share-link manager (URG-196). Self-contained: takes releaseId,
 // fetches its own data, renders its own loading/empty/error states. Hosted by
@@ -30,52 +32,27 @@ type EpkSectionProps = {
 };
 
 export function EpkSection({ releaseId, onToast }: EpkSectionProps) {
-  const [epk, setEpk] = useState<ReleaseEpk | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  // Distinguishes "no kit yet" from "the load failed", the same split
-  // ContentCalendarSection draws so a fetch failure never masquerades as the
-  // warm empty invitation.
-  const [loadError, setLoadError] = useState('');
+  // Cache-first (see useSceneData): a kit already fetched this session — or
+  // warmed by the workspace's idle prefetch — renders with no spinner, and any
+  // refetch happens silently underneath.
+  const {
+    data,
+    isLoading,
+    // Distinguishes "no kit yet" from "the load failed", the same split the
+    // calendar scene draws so a fetch failure never masquerades as the warm
+    // empty invitation.
+    error: loadError,
+    reload: loadEpk,
+  } = useSceneData(releaseId, 'epk', { enabled: EPK_ENABLED });
+  const setScene = useSceneDataStore((state) => state.setScene);
+  const epk = data?.epk ?? null;
+
   const [isMutating, setIsMutating] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const shareUrl = epk
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/epk/${epk.shareToken}`
     : '';
-
-  const loadEpk = useCallback(async () => {
-    setIsLoading(true);
-    setLoadError('');
-    try {
-      const token = await getAccessToken();
-      if (!token) {
-        setLoadError('Session expired. Please sign in again.');
-        return;
-      }
-      const res = await fetch(`/api/releases/${releaseId}/epk`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: 'no-store',
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        epk?: ReleaseEpk | null;
-        error?: string;
-      };
-      if (!res.ok) {
-        setLoadError(data.error || 'Could not load press kit.');
-        return;
-      }
-      setEpk(data.epk ?? null);
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : 'Could not load press kit.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [releaseId]);
-
-  useEffect(() => {
-    if (!EPK_ENABLED) return;
-    void loadEpk();
-  }, [loadEpk]);
 
   useEffect(() => {
     if (!copied) return;
@@ -104,7 +81,9 @@ export function EpkSection({ releaseId, onToast }: EpkSectionProps) {
         onToast?.(data.error || 'Could not create press kit.', 'error');
         return;
       }
-      setEpk(data.epk);
+      // Write-through: the POST response IS the new state, so the cache is
+      // updated directly rather than re-fetching what we just received.
+      setScene(releaseId, 'epk', { epk: data.epk });
       onToast?.('Press kit link is live.', 'success');
     } catch (err) {
       onToast?.(err instanceof Error ? err.message : 'Could not create press kit.', 'error');
@@ -131,7 +110,7 @@ export function EpkSection({ releaseId, onToast }: EpkSectionProps) {
         onToast?.(data.error || 'Could not revoke the link.', 'error');
         return;
       }
-      setEpk(null);
+      setScene(releaseId, 'epk', { epk: null });
       onToast?.('Press kit link revoked. Anyone holding it now sees nothing.', 'success');
     } catch (err) {
       onToast?.(err instanceof Error ? err.message : 'Could not revoke the link.', 'error');

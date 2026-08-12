@@ -13,6 +13,9 @@ const WORKSPACE_FEATURE_ENABLED =
 const IDENTITY_PANEL_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' && WORKSPACE_FEATURE_ENABLED;
 
+// The "After tasks" check-in toggle, same gate the real section reads.
+const TASK_OUTCOMES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_OUTCOMES === 'true';
+
 type SettingsPageSkeletonProps = {
   /** Best-effort role hints derived from whatever `user` the auth store has
    * on hand right now — usually already correct. Zustand's `persist`
@@ -87,6 +90,8 @@ export function SettingsPageSkeleton({
               // Appearance + Notifications share one two-column row on the
               // real page — special-cased in the render below.
               { key: 'appearance-notifications', height: 'h-24', show: true },
+              // Post-completion check-in toggle ("After tasks").
+              { key: 'task-check-in', height: 'h-16', show: TASK_OUTCOMES_ENABLED },
               // Count-aware release rows, special-cased below.
               { key: 'releases', height: 'h-32', show: true },
               { key: 'security', height: 'h-40', show: true },

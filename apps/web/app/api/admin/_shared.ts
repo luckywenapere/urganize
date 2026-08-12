@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { neon } from '@neondatabase/serverless';
 
 // The waitlist + growth dashboards were ported into this hub from
@@ -20,8 +20,16 @@ export const parseAdminEmails = (): string[] => {
     .filter(Boolean);
 };
 
+// supabaseAdmin is annotated `SupabaseClient` rather than inferred via
+// ReturnType<typeof createClient>, matching createAdminClient in
+// app/api/_shared/auth.ts. The inferred form resolves to a client whose schema
+// declares no tables, so EVERY table's row type collapses to `never`: reads
+// still compile where a route casts the result to Record<string, unknown> (as
+// most admin routes do), but any .insert()/.update() with an object literal, or
+// any direct field access off .maybeSingle(), fails to type check. Keep the
+// annotation.
 export const verifyAdmin = async (req: NextRequest): Promise<
-  | { ok: true; supabaseAdmin: ReturnType<typeof createClient>; userId: string }
+  | { ok: true; supabaseAdmin: SupabaseClient; userId: string }
   | { ok: false; response: NextResponse }
 > => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

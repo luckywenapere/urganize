@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, MoreHorizontal } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
+import { getAccessToken } from './get-access-token';
 import type { ContentCalendar } from '@/types/content-calendar';
 
 /**
@@ -14,13 +14,6 @@ import type { ContentCalendar } from '@/types/content-calendar';
  * the same one-confirm-step pattern PostModal uses for post delete.
  */
 
-async function getAccessToken(): Promise<string> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session?.access_token || '';
-}
-
 type CalendarOverflowMenuProps = {
   releaseId: string;
   calendar: ContentCalendar;
@@ -31,11 +24,34 @@ type CalendarOverflowMenuProps = {
 
 export function CalendarOverflowMenu({ releaseId, calendar, onRenamed, onDeleted, onToast }: CalendarOverflowMenuProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<'menu' | 'rename'>('menu');
   const [name, setName] = useState(calendar.name);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // role="menu" keyboard contract (2026-08-10): focus lands on the first item
+  // when the menu opens, ArrowUp/Down move between items. Escape/click-outside
+  // close in the effect below. The rename form keeps its own autoFocus.
+  useEffect(() => {
+    if (!isOpen || mode !== 'menu') return;
+    const items = menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]');
+    items?.[0]?.focus();
+  }, [isOpen, mode]);
+
+  const handleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    const items = Array.from(
+      menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []
+    );
+    if (items.length === 0) return;
+    event.preventDefault();
+    const currentIndex = items.findIndex((item) => item === document.activeElement);
+    const delta = event.key === 'ArrowDown' ? 1 : -1;
+    const nextIndex = (currentIndex + delta + items.length) % items.length;
+    items[nextIndex]?.focus();
+  };
 
   const close = () => {
     setIsOpen(false);
@@ -130,7 +146,12 @@ export function CalendarOverflowMenu({ releaseId, calendar, onRenamed, onDeleted
       {isOpen ? (
         <div
           role="menu"
-          className="absolute right-0 top-full z-20 mt-1.5 w-56 border border-[var(--cc-border)] bg-[var(--cc-ground)] p-1 text-sm shadow-lg"
+          ref={menuRef}
+          onKeyDown={handleMenuKeyDown}
+          // z-40: must clear MobileNavBar's z-30, or the rename/delete menu
+          // renders UNDER the bottom bar when the header is low on a phone
+          // screen (2026-08-10 fix).
+          className="absolute right-0 top-full z-40 mt-1.5 w-56 border border-[var(--cc-border)] bg-[var(--cc-ground)] p-1 text-sm shadow-lg"
         >
           {mode === 'menu' ? (
             <>
@@ -185,7 +206,7 @@ export function CalendarOverflowMenu({ releaseId, calendar, onRenamed, onDeleted
                   type="button"
                   onClick={close}
                   disabled={isSaving}
-                  className="px-2 py-1 text-xs text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
+                  className="px-3 py-2 text-xs text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
                 >
                   Cancel
                 </button>
@@ -193,7 +214,7 @@ export function CalendarOverflowMenu({ releaseId, calendar, onRenamed, onDeleted
                   type="button"
                   onClick={() => void handleRename()}
                   disabled={isSaving}
-                  className="inline-flex items-center gap-1.5 bg-[var(--cc-accent)] px-2.5 py-1 text-xs font-semibold text-[var(--cc-ground)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 bg-[var(--cc-accent)] px-3 py-2 text-xs font-semibold text-[var(--cc-ground)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                   Save

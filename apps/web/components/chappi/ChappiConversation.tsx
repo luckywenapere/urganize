@@ -4,12 +4,14 @@ import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'rea
 import { useRouter } from 'next/navigation';
 import {
   ArrowUp,
+  ClipboardList,
   Disc3,
-  FileText,
-  ListPlus,
+  Layers,
   Loader2,
+  PiggyBank,
   RotateCcw,
-  Target,
+  Rocket,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import { ChappiBetaBadge } from '@/components/chappi/ChappiBetaBadge';
@@ -17,12 +19,13 @@ import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
+import { useTaskStore } from '@/stores/useTaskStore';
+import { usePlannerStore } from '@/stores/usePlannerStore';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { supabase } from '@/lib/supabase/client';
 import { CHAPPI_CHIPS, buildHelpReply, resolveIntent } from '@/lib/chappi/intent-router';
 import type {
   ChappiChip,
-  ChappiChipIntent,
   ChappiClientAction,
   ChappiIntent,
   ChappiMessage,
@@ -45,22 +48,33 @@ type ChappiConversationProps = {
 };
 
 // Icons live here, not in the client-safe intent-router lib (icons are React
-// nodes). Keyed by chip intent so the two can't drift.
-const CHIP_ICONS: Record<ChappiChipIntent, LucideIcon> = {
-  new_release: Disc3,
-  add_task: ListPlus,
-  todays_focus: Target,
-  generate_status: FileText,
+// nodes). Keyed by chip id (not intent) so the three plan_release chips can
+// each get their own distinct glyph instead of sharing one. Sparkles is the
+// fallback for any chip id without an entry.
+const DEFAULT_CHIP_ICON: LucideIcon = Sparkles;
+const CHIP_ICONS: Record<string, LucideIcon> = {
+  'new-release': Disc3,
+  'plan-single-6w': Rocket,
+  'plan-ep': Layers,
+  'plan-small-budget': PiggyBank,
+  'add-task': ClipboardList,
 };
 
 // Hover tooltip (title attr) for each quick-action button — the "clicks"
 // this page exists to preserve, kept compact per the PostHog-style landing.
-const CHIP_DESCRIPTIONS: Record<ChappiChipIntent, string> = {
-  new_release: 'Start a new release with a rollout plan',
-  add_task: 'Create an activity for one of your releases',
-  todays_focus: "See what needs your attention right now",
-  generate_status: 'Draft a status update for a release',
+const CHIP_DESCRIPTIONS: Record<string, string> = {
+  'new-release': 'Start a new release with a rollout plan',
+  'plan-single-6w': 'Answer a few questions and get a draft rollout plan',
+  'plan-ep': 'Answer a few questions and get a draft rollout plan',
+  'plan-small-budget': 'Answer a few questions and get a draft rollout plan',
+  'add-task': 'Create an activity for one of your releases',
 };
+
+/** A date `weeks` from today, as YYYY-MM-DD. Module scope for the same reason
+ * nextMessageId is: the clock must not be read during render. */
+function ymdWeeksFromNow(weeks: number): string {
+  return new Date(Date.now() + weeks * 7 * 86_400_000).toISOString().slice(0, 10);
+}
 
 function greetingPrefix(now: Date): string {
   const hour = now.getHours();
@@ -92,8 +106,8 @@ function nextMessageId(role: 'u' | 'a'): string {
  *
  * Two states, switched on `messages.length`:
  *  - Empty: PostHog-home-style landing — centered greeting, the input
- *    mid-screen, and the 4 quick-action buttons (the "clicks" — New release,
- *    Add task, Today's focus, Generate status) directly BELOW the box.
+ *    mid-screen, and the quick-action buttons (the "clicks" — New release
+ *    or the three planner chips, plus Add activity) directly BELOW the box.
  *  - Active: a scrolling transcript of every turn, chip-triggered or typed,
  *    with the input pinned at the bottom.
  *
@@ -110,6 +124,10 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const todaysDirective = useReleaseStore((state) => state.todaysDirective);
   const releases = useReleaseStore((state) => state.releases);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
+  const tasks = useTaskStore((state) => state.tasks);
+  // The planner intake is mounted app-wide by AppShell, so a chip can open it
+  // from here as well as from the dock, with no modal of its own.
+  const openIntake = usePlannerStore((state) => state.openIntake);
   const {
     input,
     setInput,
@@ -156,6 +174,35 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         onNewRelease();
         appendAssistantReply("Let's set up a new release — the form is open.");
         return;
+      case 'plan_release': {
+        const preset = intent.plannerPreset;
+        // Only hand the planner an existing release when it has nothing in it
+        // yet. A release with activities already has a plan, so planning it
+        // again would be refused server-side.
+        const scopedHasTasks = scopedRelease
+          ? tasks.some((task) => task.releaseId === scopedRelease.id)
+          : false;
+        const target = scopedRelease && !scopedHasTasks ? scopedRelease.id : undefined;
+
+        openIntake({
+          source: 'chip',
+          releaseId: target,
+          prefill: {
+            releaseType: preset?.releaseType,
+            // Resolved at click time, not module load: a chip is a constant and
+            // a baked-in date would go stale.
+            releaseDate:
+              typeof preset?.weeksOut === 'number'
+                ? ymdWeeksFromNow(preset.weeksOut)
+                : undefined,
+            budget: preset?.budget,
+          },
+        });
+        appendAssistantReply(
+          "Let's plan it. Seven quick questions, then I'll draft your rollout."
+        );
+        return;
+      }
       case 'add_task':
         // 'quick_create' is the canonical source; TaskCreateSource has no
         // 'chappi' member and adding one is out of scope. The scoped release
@@ -212,7 +259,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
 
   const handleChipClick = (chip: ChappiChip) => {
     appendMessage({ id: nextMessageId('u'), role: 'user', content: chip.label });
-    handleIntent({ kind: chip.intent });
+    handleIntent({ kind: chip.intent, plannerPreset: chip.plannerPreset });
   };
 
   // Client-side actions the agent asks us to perform.
@@ -361,13 +408,13 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
 
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           {CHAPPI_CHIPS.map((chip) => {
-            const Icon = CHIP_ICONS[chip.intent];
+            const Icon = CHIP_ICONS[chip.id] ?? DEFAULT_CHIP_ICON;
             return (
               <button
                 key={chip.id}
                 type="button"
                 onClick={() => handleChipClick(chip)}
-                title={CHIP_DESCRIPTIONS[chip.intent]}
+                title={CHIP_DESCRIPTIONS[chip.id]}
                 className="motion-focus motion-press inline-flex items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
               >
                 <Icon className="h-3.5 w-3.5 text-brand" aria-hidden="true" />

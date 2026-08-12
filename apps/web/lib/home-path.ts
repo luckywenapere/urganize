@@ -16,3 +16,22 @@
 // mid-session or with an installed PWA pointed at it.
 export const HOME_PATH =
   process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true' ? '/dashboard/urgans' : '/dashboard';
+
+/** Where a curator lands. Their surface has no team chrome at all. */
+export const CURATOR_HOME_PATH = '/curator';
+
+/**
+ * The post-auth destination for a given account.
+ *
+ * Curators (the playlist-pitching account type) have no team and cannot open
+ * any dashboard route, so sending them to HOME_PATH would bounce them straight
+ * back out. Every other role resolves to HOME_PATH exactly as before.
+ *
+ * Use this at any entry point a curator can actually arrive through: login, the
+ * OAuth callback, and the root redirect. The remaining HOME_PATH importers
+ * (onboarding completion, invite acceptance, paywall unlock, promo redemption,
+ * post-checkout) are team-only flows a curator never reaches.
+ */
+export function resolveHomePath(role?: string | null): string {
+  return String(role || '').trim().toLowerCase() === 'curator' ? CURATOR_HOME_PATH : HOME_PATH;
+}

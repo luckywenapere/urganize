@@ -5,9 +5,9 @@ import { useAuthStore } from '@/lib/auth-store';
 import { errorMessage } from '@/lib/errors';
 import { panelClass } from './panelClass';
 
-/** Self-gates on `user.role === 'artist'`, returns null otherwise — mirrors
- * how `components/releases/ContentCalendarSection.tsx` self-checks its own
- * flag rather than the parent wrapping it in JSX. */
+/** Self-gates on `user.role === 'artist'`, returns null otherwise — the
+ * component checks its own visibility condition rather than the parent
+ * wrapping it in JSX. */
 export function ArtistProfileSection() {
   const user = useAuthStore((state) => state.user);
   const updateArtistName = useAuthStore((state) => state.updateArtistName);

@@ -11,6 +11,7 @@ import {
   BadgeDollarSign,
   ChevronRight,
   ClipboardList,
+  ListMusic,
   Mic,
   Radio,
   TrendingUp,
@@ -43,6 +44,12 @@ const SECTIONS: Array<{
     label: 'Pricing validation',
     description: 'Willingness-to-pay survey responses, by price band and placement.',
     icon: BadgeDollarSign,
+  },
+  {
+    href: '/admin/curator-invites',
+    label: 'Playlist owners',
+    description: 'Invite links for playlist owners, and who has used them.',
+    icon: ListMusic,
   },
   {
     href: '/admin/waitlist',

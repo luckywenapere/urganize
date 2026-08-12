@@ -158,7 +158,7 @@ export default function LockedPage() {
         throw new Error(payload.error || 'Could not start trial.');
       }
 
-      await checkAuth();
+      await checkAuth({ force: true });
       router.replace(HOME_PATH);
     } catch (error) {
       setTrialError(errorMessage(error, 'Could not start trial.'));

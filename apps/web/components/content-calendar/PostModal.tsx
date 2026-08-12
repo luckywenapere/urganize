@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, Loader2, X } from 'lucide-react';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
-import { supabase } from '@/lib/supabase/client';
+import { getAccessToken } from './get-access-token';
 import { calendarFontVariables } from './calendar-fonts';
 import {
   CONTENT_POST_FORMAT_OPTIONS,
@@ -19,16 +19,17 @@ import { getStatusLabel } from './StatusMark';
 
 /**
  * Create/edit modal for a single post (URG-157, Phase A). Same
- * portal + backdrop + Escape + body-scroll-lock pattern as CreateReleaseModal
- * / TailorPlanModal, styled inside the brand island (var(--cc-*) only, no
- * raw colors here, including for the error/destructive states: severity is
- * conveyed by icon + wording ("quiet destructive"), not a new hue, since the
- * island's palette has no red to spend without breaking the "only cc-vars"
- * rule).
+ * portal + backdrop + Escape + body-scroll-lock pattern as CreateReleaseModal,
+ * styled inside the brand island (var(--cc-*) only, no raw colors here,
+ * including for the error/destructive states: severity is conveyed by icon +
+ * wording ("quiet destructive"), not a new hue, since the island's palette
+ * has no red to spend without breaking the "only cc-vars" rule).
  *
- * Sharing ("Also post on other calendars") is a disabled placeholder row,
- * Phase B. Delete is a quiet text button, edit mode only, one
- * window.confirm step, matching the spec's "quiet destructive" wording.
+ * Delete is a quiet text button, edit mode only, one window.confirm step,
+ * matching the spec's "quiet destructive" wording. (The "Also post on other
+ * calendars — Coming soon" placeholder row was removed 2026-08-10: a
+ * permanently disabled control that also implied the product posts for you.
+ * Phase B sharing gets a real control when it ships.)
  */
 
 const MAX_TITLE_LENGTH = 120;
@@ -66,13 +67,6 @@ function getPillarLabel(pillar: ContentPostPillar): string {
   }
 }
 
-async function getAccessToken(): Promise<string> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session?.access_token || '';
-}
-
 type PostModalProps = {
   open: boolean;
   releaseId: string;
@@ -84,9 +78,11 @@ type PostModalProps = {
   onClose: () => void;
   onSaved: (post: ContentPost, mode: 'created' | 'updated') => void;
   onDeleted: (postId: string) => void;
+  /** Out-of-band notices that must outlive the modal (it closes on save). */
+  onToast?: (message: string, tone: 'success' | 'error' | 'warning') => void;
 };
 
-export function PostModal({ open, releaseId, calendarId, initialDate, post, onClose, onSaved, onDeleted }: PostModalProps) {
+export function PostModal({ open, releaseId, calendarId, initialDate, post, onClose, onSaved, onDeleted, onToast }: PostModalProps) {
   const isEditMode = Boolean(post);
 
   const [scheduledDate, setScheduledDate] = useState('');
@@ -106,7 +102,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
   }, []);
 
   // Pre-fill whenever the modal opens, for both create and edit; mirrors
-  // TailorPlanModal's "reset on open" convention.
+  // The house "reset on open" convention for modals.
   useEffect(() => {
     if (!open) return;
     setError('');
@@ -141,6 +137,21 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
   useEffect(() => {
     if (!open) return;
     return lockBodyScroll();
+  }, [open]);
+
+  // Minimal dialog focus contract (2026-08-10): focus lands on the title
+  // input when the modal opens (the date is usually pre-filled by the tapped
+  // day) and returns to the opener on close. Not a full trap — the backdrop
+  // button is tabIndex={-1} so Tab can't land outside the dialog's visible
+  // controls by accident.
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    titleInputRef.current?.focus();
+    return () => {
+      opener?.focus();
+    };
   }, [open]);
 
   const isBusy = isSaving || isDeleting;
@@ -203,6 +214,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
       // If the user picked status=posted AND typed a link in this same
       // create step, follow up with a PATCH so their input isn't silently
       // dropped, honoring the visible-state principle over a smaller diff.
+      let linkDropped = false;
       if (status === 'posted' && postedUrl.trim()) {
         const patchRes = await fetch(`/api/releases/${releaseId}/content-posts/${created.id}`, {
           method: 'PATCH',
@@ -212,9 +224,17 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
         const patchData = (await patchRes.json().catch(() => ({}))) as { post?: ContentPost };
         if (patchRes.ok && patchData.post) {
           created = patchData.post;
+        } else {
+          linkDropped = true;
         }
       }
       onSaved(created, 'created');
+      if (linkDropped) {
+        // The post itself saved, but the link PATCH failed — saying nothing
+        // would be a silent data drop. AFTER onSaved, so this warning wins
+        // over its "Post saved" toast in the single toast slot.
+        onToast?.('Post saved, but the link didn’t stick — open the post and add it again.', 'warning');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save post.');
     } finally {
@@ -265,6 +285,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
       <button
         type="button"
         aria-label="Close post modal"
+        tabIndex={-1}
         className="absolute inset-0"
         onClick={() => {
           if (!isBusy) onClose();
@@ -288,7 +309,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
               onClick={onClose}
               disabled={isBusy}
               aria-label="Close modal"
-              className="shrink-0 p-1 text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] disabled:cursor-not-allowed disabled:opacity-60"
+              className="-m-2 flex h-9 w-9 shrink-0 items-center justify-center text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <X className="h-4 w-4" />
             </button>
@@ -314,6 +335,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                 Title
               </span>
               <input
+                ref={titleInputRef}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 required
@@ -411,16 +433,6 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                 />
               </label>
             ) : null}
-
-            <div
-              className="flex items-center justify-between border border-dashed border-[var(--cc-border)] px-3 py-2.5 text-sm text-[var(--cc-text-faint)] opacity-60"
-              title="Coming soon"
-            >
-              <span>Also post on other calendars</span>
-              <span className="font-[family-name:var(--font-cc-mono)] text-[10px] uppercase tracking-wide">
-                Coming soon
-              </span>
-            </div>
           </div>
 
           {error ? (
@@ -430,7 +442,10 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
             </div>
           ) : null}
 
-          <div className="flex shrink-0 items-center justify-between gap-2 border-t border-[var(--cc-border)] p-4 sm:p-5">
+          {/* pb includes the safe-area inset: layout.tsx sets viewportFit
+              'cover', so on a notched phone 100dvh includes the home-indicator
+              strip and the Save/Cancel/Delete row could land inside it. */}
+          <div className="flex shrink-0 items-center justify-between gap-2 border-t border-[var(--cc-border)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:p-5 sm:pb-5">
             {isEditMode ? (
               <button
                 type="button"

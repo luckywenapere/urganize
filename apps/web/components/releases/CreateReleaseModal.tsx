@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { useRouter } from 'next/navigation';
 import { AlertCircle, ArrowLeft, CalendarDays, Loader2, X } from 'lucide-react';
 import { Button, IconButton } from '@urganize/ui';
 import { BlankSheetIllustration, PlanIllustration } from '@/components/app/BrandIcons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { supabase } from '@/lib/supabase/client';
+import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { useFirstReleaseRequired } from './useFirstReleaseRequired';
 import { getTemplate, getTemplateLeadTimeDays } from '@/lib/release-templates/loader';
 import { DEFAULT_RELEASE_TITLE } from '@/types/releases';
 
@@ -16,6 +19,11 @@ import { DEFAULT_RELEASE_TITLE } from '@/types/releases';
 // picker, look this up dynamically from the picked type instead.
 const ACTIVE_TEMPLATE = getTemplate('single');
 const LEAD_TIME_DAYS = getTemplateLeadTimeDays(ACTIVE_TEMPLATE);
+
+// With the planner on, choosing a rollout plan here does not create activities:
+// it creates the release, and the manager plans it with UrgAns next. Only the
+// wording changes, so the flag is read for copy alone.
+const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
 function formatYmdLocal(date: Date): string {
   const year = date.getFullYear();
@@ -37,8 +45,16 @@ type CreateReleaseModalProps = {
   onClose: () => void;
   /** `plan` tells the caller HOW the release was created — template
    * creations get the post-create rollout guide (?new=1); blank ones don't
-   * (its copy describes the plan that doesn't exist). */
-  onCreated: (releaseId: string, plan: ReleasePlanChoice) => void;
+   * (its copy describes the plan that doesn't exist).
+   *
+   * `plannerPending` is what the server actually did: with the planner on, a
+   * template creation makes no activities at all and the manager plans it
+   * with UrgAns, so the guide would be describing a plan nobody has yet. */
+  onCreated: (
+    releaseId: string,
+    plan: ReleasePlanChoice,
+    result?: { plannerPending: boolean }
+  ) => void;
 };
 
 type CreateReleaseResponse = {
@@ -48,6 +64,8 @@ type CreateReleaseResponse = {
     id?: string;
   };
   redirectTo?: string;
+  /** True when the release was created ready to be planned with UrgAns. */
+  plannerPending?: boolean;
   error?: string;
 };
 
@@ -80,7 +98,20 @@ function validateReleaseDate(value: string): string {
 }
 
 export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseModalProps) {
+  const router = useRouter();
+  const logout = useAuthStore((state) => state.logout);
+  // MANDATORY MODE (URG-217). A user with zero releases has nothing to do in
+  // the product, so for them this modal loses every exit — no Escape, no
+  // backdrop click, no X, no Cancel — and creating a release is the only way
+  // forward. Signing out stays available (an invited teammate who shouldn't be
+  // creating releases, or anyone who needs to reach support, would otherwise
+  // have closing the browser tab as their only option).
+  //
+  // The predicate fails open on every uncertainty — see lib/first-release-required.ts.
+  const isMandatory = useFirstReleaseRequired();
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const cardRef = useRef<HTMLFormElement>(null);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const [title, setTitle] = useState('');
   const [releaseDate, setReleaseDate] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -123,14 +154,43 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !isSubmitting) {
+      // Escape closes — except in mandatory mode, where there is no way out
+      // but creating a release (or signing out).
+      if (event.key === 'Escape' && !isSubmitting && !isMandatory) {
         onClose();
+        return;
+      }
+
+      // Mandatory mode also traps Tab inside the dialog. Without this, Tab
+      // reaches the topbar behind the overlay and a keyboard user can navigate
+      // straight out of a modal that is supposed to be inescapable. Same
+      // implementation as TaskQuickCreateModal's trap.
+      if (event.key === 'Tab' && isMandatory && cardRef.current) {
+        const focusables = Array.from(
+          cardRef.current.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((element) => element.offsetParent !== null);
+        if (!focusables.length) {
+          return;
+        }
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+
+        if (event.shiftKey && (active === first || !cardRef.current.contains(active))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (active === last || !cardRef.current.contains(active))) {
+          event.preventDefault();
+          first.focus();
+        }
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isSubmitting, onClose, open]);
+  }, [isMandatory, isSubmitting, onClose, open]);
 
   // Lock background scroll while the modal is open — the shared ref-counted
   // lock (lib/body-scroll-lock.ts) captures/restores overflow + scrollbar
@@ -195,6 +255,22 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     return Object.keys(nextErrors).length === 0;
   };
 
+  // The one escape from mandatory mode. Same sequence Settings uses.
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      await logout();
+      router.push('/auth');
+    } catch {
+      // Surface it in the modal's existing error slot rather than silently
+      // leaving a dead button — this is the only exit, so a failure here has
+      // to be visible.
+      setSubmitError('Could not sign out. Please try again.');
+      setIsSigningOut(false);
+    }
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!validateForm()) {
@@ -244,7 +320,9 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
       // follow-up non-forced loadCommandCenter() calls piggyback on this
       // in-flight load instead of firing a duplicate fetch.
       void useReleaseStore.getState().loadCommandCenter({ force: true });
-      onCreated(releaseId, plan || 'template');
+      onCreated(releaseId, plan || 'template', {
+        plannerPending: payload.plannerPending === true,
+      });
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Could not create release.');
     } finally {
@@ -261,16 +339,23 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
       className="fixed inset-x-0 top-0 z-[220] flex h-[100dvh] items-center justify-center bg-black/72 px-4 py-4 backdrop-blur-sm sm:py-8"
       role="presentation"
     >
-      <button
-        type="button"
-        aria-label="Close create release modal"
-        className="absolute inset-0"
-        onClick={() => {
-          if (!isSubmitting) {
-            onClose();
-          }
-        }}
-      />
+      {/* In mandatory mode this is a plain div, not a button: it still covers
+          the viewport so clicks can't reach the chrome underneath, but it must
+          not advertise a close affordance that does nothing. */}
+      {isMandatory ? (
+        <div className="absolute inset-0" aria-hidden="true" />
+      ) : (
+        <button
+          type="button"
+          aria-label="Close create release modal"
+          className="absolute inset-0"
+          onClick={() => {
+            if (!isSubmitting) {
+              onClose();
+            }
+          }}
+        />
+      )}
 
       <div
         role="dialog"
@@ -279,13 +364,14 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
         className="relative mx-auto w-full max-w-3xl"
       >
         <form
+          ref={cardRef}
           onSubmit={(event) => void handleSubmit(event)}
           className="relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))] sm:max-h-[calc(100dvh-4rem)]"
         >
           <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stroke-subtle p-4 sm:p-5">
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
-                Create release
+                {isMandatory ? 'Welcome to Urganize' : 'Create release'}
                 {plan ? (
                   <button
                     type="button"
@@ -299,18 +385,47 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                 ) : null}
               </p>
               <h2 id="create-release-title" className="mt-2 font-display text-2xl font-semibold text-content-primary">
-                {plan ? 'New release' : 'How do you want to start?'}
+                {isMandatory
+                  ? plan
+                    ? 'Your first release'
+                    : 'Create your first release'
+                  : plan
+                    ? 'New release'
+                    : 'How do you want to start?'}
               </h2>
+              {/* First-run context, echoing the onboarding wizard's own line
+                  ("Every release gets a workspace.") so the two first-run
+                  surfaces sound like one product. */}
+              {isMandatory ? (
+                <p className="mt-2 max-w-xl text-sm leading-6 text-content-secondary">
+                  Every release gets its own workspace — activities, files, and your team in
+                  one place. Start with this one and everything else follows.
+                </p>
+              ) : null}
             </div>
-            <IconButton
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              aria-label="Close modal"
-              className="shrink-0 border-stroke-default bg-[rgb(var(--color-stroke)/0.02)]"
-            >
-              <X className="h-4 w-4" />
-            </IconButton>
+            {/* Mandatory mode swaps the close button for the sign-out escape.
+                It sits in the header (not the footer) so it's reachable on both
+                steps — the footer only renders once a plan is picked. */}
+            {isMandatory ? (
+              <button
+                type="button"
+                onClick={() => void handleSignOut()}
+                disabled={isSubmitting || isSigningOut}
+                className="motion-focus shrink-0 rounded-full px-2 py-1 text-xs font-medium text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary disabled:opacity-60"
+              >
+                {isSigningOut ? 'Signing out…' : 'Sign out'}
+              </button>
+            ) : (
+              <IconButton
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                aria-label="Close modal"
+                className="shrink-0 border-stroke-default bg-[rgb(var(--color-stroke)/0.02)]"
+              >
+                <X className="h-4 w-4" />
+              </IconButton>
+            )}
           </div>
 
           {/* Step 1 — the chooser (founder call, 2026-07-23): two option
@@ -333,9 +448,9 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                   </span>
                 </span>
                 <span className="text-sm leading-6 text-content-secondary">
-                  Start with the proven release plan — every activity from first
-                  prep to release day, scheduled around your date and ready to
-                  edit. No date yet? It waits for one.
+                  {PLANNER_ENABLED
+                    ? 'Plan it with UrgAns. A few questions, then a draft rollout you can edit before anything is scheduled.'
+                    : 'Start with the proven release plan — every activity from first prep to release day, scheduled around your date and ready to edit. No date yet? It waits for one.'}
                 </span>
               </button>
 
@@ -422,7 +537,9 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                   // genuinely cannot be built yet.
                   <p className="mt-2 text-xs leading-5 text-content-secondary">
                     {plan === 'template'
-                      ? "Don't have one yet? Skip it — your rollout plan gets built the moment you set a date."
+                      ? PLANNER_ENABLED
+                        ? "Don't have one yet? Skip it. UrgAns can suggest a date while you plan."
+                        : "Don't have one yet? Skip it — your rollout plan gets built the moment you set a date."
                       : "Don't have one yet? Skip it and add it whenever it's confirmed."}
                   </p>
                 ) : null}
@@ -438,9 +555,11 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
 
           {plan ? (
             <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-stroke-subtle p-4 sm:flex-row sm:justify-end sm:p-5">
-              <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
-                Cancel
-              </Button>
+              {isMandatory ? null : (
+                <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+                  Cancel
+                </Button>
+              )}
               <Button
                 type="submit"
                 disabled={!canSubmit}
