@@ -231,37 +231,11 @@ export function WorkspaceIdentityPanel() {
       } ${railIsCompeting && !collapsed ? "xl:block" : "lg:block"}`}
     >
       <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
-        {/* Toggle sits in its own row ABOVE the identity block rather than
-          floating over it: the identity block is a <Link>, and a <button>
-          cannot nest inside an <a>. Right-aligned when expanded (the Linear
-          position), centered when collapsed so it lines up with the icon
-          column below it. */}
-        <div
-          className={`flex shrink-0 items-center px-2 pt-2 ${
-            collapsed ? "justify-center" : "justify-end"
-          }`}
-        >
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            aria-expanded={!collapsed}
-            aria-label={collapsed ? "Expand workspace menu" : "Collapse workspace menu"}
-            title={collapsed ? "Expand menu" : "Collapse menu"}
-            className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
-          >
-            {collapsed ? (
-              <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
-            ) : (
-              <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
-            )}
-          </button>
-        </div>
-
         <Link
           href="/settings"
           title={collapsed ? name || "Your workspace" : undefined}
-          className={`motion-focus block shrink-0 pb-4 transition-colors hover:bg-bg-hover ${
-            collapsed ? "px-2 pt-1" : "px-4 pt-1"
+          className={`motion-focus block shrink-0 transition-colors hover:bg-bg-hover ${
+            collapsed ? "px-2 py-4" : "p-4"
           }`}
         >
           {showSkeleton ? (
@@ -388,6 +362,34 @@ export function WorkspaceIdentityPanel() {
             <WorkspaceNavLinks pathname={pathname} isAdmin={isAdmin} collapsed={collapsed} />
           </Suspense>
         </nav>
+
+        {/* Collapse control, pinned to the base of the card (founder call,
+          2026-08-12). The nav above it is `flex-1`, so this row needs no
+          positioning of its own — it simply takes the space left over at the
+          bottom. It is a sibling of the identity <Link> rather than a child:
+          a <button> cannot nest inside an <a>. Right-aligned when expanded so
+          the left-pointing icon reads as "push the panel closed"; centered
+          when collapsed to sit over the icon column above it. */}
+        <div
+          className={`flex shrink-0 items-center border-t border-stroke-subtle p-2 ${
+            collapsed ? "justify-center" : "justify-end"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? "Expand workspace menu" : "Collapse workspace menu"}
+            title={collapsed ? "Expand menu" : "Collapse menu"}
+            className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+            )}
+          </button>
+        </div>
       </div>
     </aside>
   );

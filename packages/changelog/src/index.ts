@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.48.1",
+    date: "August 12, 2026",
+    highlights: [
+      "The arrow that folds the left menu now sits at the bottom of it rather than up beside your workspace name, so the top of the panel is just your logo and your details.",
+    ],
+  },
+  {
     version: "0.48.0",
     date: "August 12, 2026",
     highlights: [
