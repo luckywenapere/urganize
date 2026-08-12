@@ -219,11 +219,6 @@ export function TeammatesSection({
     <section id="teammates" className={`${panelClass} scroll-mt-24`}>
       <h2 className="mb-5 flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         Teammates
-        {/* Team invites are Beta (founder call, 2026-07-23) — same pill as
-            the other Beta-tagged surfaces (statuses, attachments, calendar). */}
-        <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-          Beta
-        </span>
       </h2>
       {canManage ? (
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
