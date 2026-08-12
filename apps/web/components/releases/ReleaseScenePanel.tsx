@@ -69,7 +69,10 @@ function BackToActivities({ onClose }: { onClose: () => void }) {
     <button
       type="button"
       onClick={onClose}
-      className="motion-focus inline-flex items-center gap-1 text-xs text-content-tertiary transition-colors hover:text-content-primary"
+      // shrink-0 because the heading block beside this can now carry a long
+      // release title; without it a wide title squeezes "Activities" into a
+      // wrap. The title truncates instead (min-w-0 + truncate over there).
+      className="motion-focus inline-flex shrink-0 items-center gap-1 text-xs text-content-tertiary transition-colors hover:text-content-primary"
     >
       <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Activities
     </button>
@@ -140,10 +143,31 @@ export function ReleaseScenePanel({
 
   return (
     <section aria-label={`${release.title} — ${SCENE_LABELS[scene]}`} className="min-w-0">
-      <div className="flex items-center justify-between gap-3 border-b border-stroke-subtle pb-3">
-        <h2 className="font-display text-lg font-semibold text-content-primary">
-          {SCENE_LABELS[scene]}
-        </h2>
+      {/* `items-start`, not `items-center`: the heading block is two lines now,
+          and the back control should sit level with the scene name. */}
+      <div className="flex items-start justify-between gap-3 border-b border-stroke-subtle pb-3">
+        <div className="min-w-0">
+          <h2 className="font-display text-lg font-semibold text-content-primary">
+            {SCENE_LABELS[scene]}
+          </h2>
+          {/* Which release this scene belongs to (founder report, 2026-08-12:
+              "no way for any user to know which particular release they are
+              collecting metadata for"). The panel always KNEW — the release is
+              in this section's aria-label and in the tab title just above —
+              but neither is visible on screen, and the topbar's own copy sits
+              far from the form and reads as generic page context rather than
+              "this is what you are editing".
+
+              Phrased "for <release>" rather than shown as a bare eyebrow so
+              the relationship is stated, not inferred. Applies to every scene
+              that uses this generic header — Files, Press kit and Pitch had
+              the same ambiguity. The calendar scene is unaffected: it bypasses
+              this header and has always named its release in its own. */}
+          <p className="mt-0.5 truncate text-xs text-content-secondary">
+            for <span className="font-medium text-content-primary">{release.title}</span>
+            {release.artistName ? ` · ${release.artistName}` : ''}
+          </p>
+        </div>
         <BackToActivities onClose={onClose} />
       </div>
 

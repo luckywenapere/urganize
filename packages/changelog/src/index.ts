@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.48.2",
+    date: "August 12, 2026",
+    highlights: [
+      "Metadata, Files, Press kit and Pitch now name the release you have open, right under the heading — \"for Best · Babyboy Dorian\". Collecting credits or sending a pitch without a visible reminder of which release you were in meant taking it on trust, which is a bad thing to guess at when the details go out to a distributor.",
+    ],
+  },
+  {
     version: "0.48.1",
     date: "August 12, 2026",
     highlights: [
