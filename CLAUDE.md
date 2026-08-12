@@ -267,6 +267,11 @@ Both use `npx turbo-ignore @urganize/<app>` as the Ignored Build Step.
 
 **CI/CD:** Vercel git integration only. No GitHub Actions. No automated tests. `pnpm lint` is the only CI gate.
 
+**`vercel.json` lives at the REPO ROOT, and only there (found 2026-08-12).** Both Vercel projects have Root Directory `.`, so Vercel reads `/vercel.json` for both and **never reads `apps/*/vercel.json` at all**. Those per-app files look authoritative and are inert. This cost real delivery: the two cron jobs were declared in `apps/web/vercel.json`, so they were never registered with Vercel — the Cron Jobs tab sat on its empty-state tutorial while the hourly due-date sweep and the 15-minute notification flusher had simply never run. The engagement drip masked it, because that path also runs opportunistically from `POST /api/engagement/login-ping` on sign-in and so kept working without a cron. Consequences to keep in mind:
+- **Cron paths must exist in `apps/web`, but they register on BOTH projects.** `the-urganization` also registers `/api/cron/*` and 404s them every hour, since those routes only exist in the product app. Accepted as harmless noise. The clean fix is setting the `urganize` project's Root Directory to `apps/web` so it reads that app's own file, but that changes how the monorepo install/build resolves and must be validated on a preview deploy before anyone tries it. If Root Directory ever does change, **the crons have to move with it** or they silently vanish again.
+- **`apps/homepage/vercel.json` is inert too.** It sets `NEXT_PRIVATE_BUILD_WORKER=webpack` for the homepage build, and that has never taken effect. Left alone deliberately: hoisting it to the root would apply it to the product app's build as well.
+- Crons register **on production deployment**, so a change to the block only takes effect after it merges to `main`.
+
 **Env handling:** Root `turbo.json` declares the env allowlist for build hashing. Each Vercel project owns its own env set. Local development uses `.env.local` per app. Both apps have `.env.example` files documenting every env var with required/optional markers.
 
 **Environments:** Production = `main` on both Vercel projects. Vercel preview deployments per PR. No dedicated staging.
