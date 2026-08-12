@@ -20,6 +20,23 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.48.0",
+    date: "August 12, 2026",
+    highlights: [
+      "The menu on the left now folds down to a strip of icons. Use the arrow in its corner and it narrows, handing the space back to whatever you are working on. The choice sticks as you move around the app and after a reload, so it stays the way you left it.",
+      "Folding it also keeps it around in places it used to vanish. On a mid-sized screen with UrgAns open beside your work there was not room for both, so the menu hid itself. Now you can shrink it instead of losing it.",
+    ],
+  },
+  {
+    version: "0.47.0",
+    date: "August 12, 2026",
+    highlights: [
+      "Deadline reminders reach you earlier. Until now you only heard about an activity the day before it was due, which is late if the thing takes a week. You get a nudge seven days out, another three days out, then one the day before.",
+      "A short note of encouragement once a week, because most of a rollout is waiting between the busy parts. If you would rather not get them there is a switch to turn them off in Settings.",
+      "Start a release and you get a reminder to come back and finish setting it up. It is easy to create one then get pulled into something else before it has a date or a plan.",
+    ],
+  },
+  {
     version: "0.46.0",
     date: "August 12, 2026",
     highlights: [
