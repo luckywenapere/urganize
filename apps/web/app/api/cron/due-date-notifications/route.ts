@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, createDueDateNotificationsForAllUsers } from '@/lib/tasks-server';
+import { sendWeeklyMotivationalNudges } from '@/lib/motivation-server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
 // Cron automatically sends `Authorization: Bearer ${CRON_SECRET}` when that
@@ -28,6 +29,12 @@ export async function GET(request: NextRequest) {
   }
 
   await createDueDateNotificationsForAllUsers(adminClient);
+
+  // Weekly motivational nudges (mobile push notifications, 2026-08-10)
+  // piggyback on this same hourly run rather than a new cron entry — see
+  // lib/motivation-server.ts for why an hourly cadence safely covers a
+  // weekly send.
+  await sendWeeklyMotivationalNudges(adminClient);
 
   return NextResponse.json({ ok: true });
 }

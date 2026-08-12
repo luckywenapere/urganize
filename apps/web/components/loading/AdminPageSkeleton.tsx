@@ -101,7 +101,7 @@ export function AdminPageSkeleton({
 
       {hubGrid ? (
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {Array.from({ length: 6 }).map((_, index) => (
+          {Array.from({ length: 8 }).map((_, index) => (
             <div
               key={`hub-card-${index}`}
               className="flex items-start gap-4 rounded-lg border border-stroke-default bg-bg-surface p-5"

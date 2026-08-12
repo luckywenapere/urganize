@@ -57,6 +57,10 @@ export type Profile = {
   /** "Ask me after tasks" — gates the post-completion outcome sheet.
    * Default true; undefined (pre-migration rows) counts as on. */
   ask_after_tasks?: boolean;
+  /** "Send me motivational nudges" — gates the weekly motivational push
+   * (lib/motivation-server.ts). Default true; undefined (pre-migration
+   * rows) counts as on. */
+  motivational_nudges?: boolean;
   created_at: string;
   updated_at: string;
   is_subscribed?: boolean; 

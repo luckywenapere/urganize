@@ -36,6 +36,15 @@ const config: CapacitorConfig = {
     // native splash flash.
     backgroundColor: '#0d120e',
   },
+  plugins: {
+    // Foreground presentation for push notifications (docs/mobile/push-setup.md).
+    // iOS-only in effect — Android always shows a system-tray notification
+    // when the app is backgrounded and has no equivalent foreground option
+    // here, but the config key is harmless to set on both platforms.
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
+  },
 };
 
 export default config;

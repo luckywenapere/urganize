@@ -3,19 +3,29 @@
 // code; the browser half is lib/push.ts.
 import webpush from 'web-push';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { sendFcmToTokens, isFcmConfigured, DEVICE_PUSH_TOKENS_TABLE } from '@/lib/fcm-server';
 
-// Server half of the Web Push wiring. The ONLY place pushes are sent from —
-// the payload shape here is the contract public/sw.js renders.
+// Server half of the push wiring. The ONLY place pushes are sent from — the
+// payload shape here is the contract public/sw.js renders, and the contract
+// buildFcmMessage (lib/fcm.ts) maps onto for native devices.
+//
+// Two transports fan out from here: Web Push (this file's original job —
+// browsers and installed PWAs) and FCM (lib/fcm-server.ts — the Capacitor
+// native shell, which has no PushManager and so cannot use Web Push at all).
+// Every caller (task notifications, the engagement drip, admin broadcast)
+// goes through sendPushToUsers/sendPushToAllUsers and gets both transports
+// for free; nothing above this file needs to know which devices a user has.
 //
 // Env (see .env.example):
 //   NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY — also used by the browser to
 //     subscribe; the pair identifies this app to the push services.
 //   WEB_PUSH_VAPID_PRIVATE_KEY — server-only signing key.
 //   WEB_PUSH_CONTACT — mailto: or https: contact for push-service operators.
-// Generate a key pair once with `npx web-push generate-vapid-keys`.
+//   FCM_SERVICE_ACCOUNT_JSON — server-only, see lib/fcm-server.ts.
+// Generate a Web Push key pair once with `npx web-push generate-vapid-keys`.
 //
-// Degrades to a no-op when the keys aren't configured — task flows never
-// fail because push isn't set up.
+// Degrades to a no-op when neither transport is configured — task flows
+// never fail because push isn't set up.
 
 export const PUSH_SUBSCRIPTIONS_TABLE = 'push_subscriptions';
 
@@ -57,7 +67,7 @@ type SubscriptionRow = {
   auth: string;
 };
 
-async function sendToSubscriptions(
+async function sendToWebPushSubscriptions(
   adminClient: SupabaseClient,
   rows: SubscriptionRow[],
   payload: PushPayload
@@ -105,53 +115,88 @@ async function sendToSubscriptions(
   return { sent, pruned: goneEndpoints.length };
 }
 
-/** Push to every registered device of the given users. Never throws. */
+type DeviceTokenRow = { id: string; user_id: string; token: string };
+
+function sumResults(
+  results: Array<{ sent: number; pruned: number }>
+): { sent: number; pruned: number } {
+  return results.reduce(
+    (total, result) => ({ sent: total.sent + result.sent, pruned: total.pruned + result.pruned }),
+    { sent: 0, pruned: 0 }
+  );
+}
+
+/** Push to every registered device of the given users, across both
+ * transports (Web Push subscriptions + native FCM tokens). Never throws. */
 export async function sendPushToUsers(
   adminClient: SupabaseClient,
   userIds: string[],
   payload: PushPayload
 ): Promise<{ sent: number; pruned: number }> {
-  if (!ensureConfigured() || userIds.length === 0) {
+  const webPushOn = ensureConfigured();
+  const fcmOn = isFcmConfigured();
+  if ((!webPushOn && !fcmOn) || userIds.length === 0) {
     return { sent: 0, pruned: 0 };
   }
 
   try {
-    const { data, error } = await adminClient
-      .from(PUSH_SUBSCRIPTIONS_TABLE)
-      .select('id,user_id,endpoint,p256dh,auth')
-      .in('user_id', userIds);
-    if (error || !Array.isArray(data)) {
-      return { sent: 0, pruned: 0 };
-    }
-    return await sendToSubscriptions(adminClient, data as SubscriptionRow[], payload);
+    const [webPushResult, fcmResult] = await Promise.all([
+      webPushOn ? fetchAndSendWebPush(adminClient, payload, userIds) : NO_RESULT,
+      fcmOn ? fetchAndSendFcm(adminClient, payload, userIds) : NO_RESULT,
+    ]);
+    return sumResults([webPushResult, fcmResult]);
   } catch (error) {
     console.error('[push] sendPushToUsers failed', error);
     return { sent: 0, pruned: 0 };
   }
 }
 
-/** Broadcast to every registered device across all users. This is the
- * primitive the future "send periodic notifications to all users" admin
- * dashboard will call — deliberately built now so that surface is a UI
- * task, not a plumbing one. Never throws. */
+/** Broadcast to every registered device across all users, across both
+ * transports. This is the primitive the admin broadcast dashboard calls —
+ * deliberately built as a single choke point so native reach is a
+ * plumbing-layer change, not a per-feature one. Never throws. */
 export async function sendPushToAllUsers(
   adminClient: SupabaseClient,
   payload: PushPayload
 ): Promise<{ sent: number; pruned: number }> {
-  if (!ensureConfigured()) {
+  const webPushOn = ensureConfigured();
+  const fcmOn = isFcmConfigured();
+  if (!webPushOn && !fcmOn) {
     return { sent: 0, pruned: 0 };
   }
 
   try {
-    const { data, error } = await adminClient
-      .from(PUSH_SUBSCRIPTIONS_TABLE)
-      .select('id,user_id,endpoint,p256dh,auth');
-    if (error || !Array.isArray(data)) {
-      return { sent: 0, pruned: 0 };
-    }
-    return await sendToSubscriptions(adminClient, data as SubscriptionRow[], payload);
+    const [webPushResult, fcmResult] = await Promise.all([
+      webPushOn ? fetchAndSendWebPush(adminClient, payload) : NO_RESULT,
+      fcmOn ? fetchAndSendFcm(adminClient, payload) : NO_RESULT,
+    ]);
+    return sumResults([webPushResult, fcmResult]);
   } catch (error) {
     console.error('[push] sendPushToAllUsers failed', error);
     return { sent: 0, pruned: 0 };
   }
+}
+
+const NO_RESULT = Promise.resolve({ sent: 0, pruned: 0 });
+
+async function fetchAndSendWebPush(
+  adminClient: SupabaseClient,
+  payload: PushPayload,
+  userIds?: string[]
+): Promise<{ sent: number; pruned: number }> {
+  const base = adminClient.from(PUSH_SUBSCRIPTIONS_TABLE).select('id,user_id,endpoint,p256dh,auth');
+  const { data, error } = await (userIds ? base.in('user_id', userIds) : base);
+  if (error || !Array.isArray(data)) return { sent: 0, pruned: 0 };
+  return await sendToWebPushSubscriptions(adminClient, data as SubscriptionRow[], payload);
+}
+
+async function fetchAndSendFcm(
+  adminClient: SupabaseClient,
+  payload: PushPayload,
+  userIds?: string[]
+): Promise<{ sent: number; pruned: number }> {
+  const base = adminClient.from(DEVICE_PUSH_TOKENS_TABLE).select('id,user_id,token');
+  const { data, error } = await (userIds ? base.in('user_id', userIds) : base);
+  if (error || !Array.isArray(data)) return { sent: 0, pruned: 0 };
+  return await sendFcmToTokens(adminClient, data as DeviceTokenRow[], payload);
 }

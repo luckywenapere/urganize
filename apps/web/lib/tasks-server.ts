@@ -31,6 +31,9 @@ import {
 } from '@/lib/tasks';
 import { sendPushToUsers, type PushPayload } from '@/lib/push-server';
 import { mapTaskOutcomeRow, type TaskOutcome } from '@/lib/task-outcomes';
+import { assignDueTier, type DueTier } from '@/lib/due-tiers';
+import { getNotificationPresets } from '@/lib/notification-presets-server';
+import type { NotificationPresets } from '@/lib/notification-presets';
 
 export const WORKSPACES_TABLE = 'workspaces';
 export const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
@@ -1662,23 +1665,38 @@ export async function logTaskActivity(
 // the click deep-links to the workspace scoped to the task's release (same
 // destination NotificationsBell navigates to). Tagged per task+type so a
 // re-fired notification replaces the stale one instead of stacking.
+//
+// `copyOverrides` (mobile push notifications, 2026-08-10) lets the deadline
+// sweep pass in admin-edited preset copy for the three due-date tiers
+// without this function knowing anything about app_settings — see
+// createDueDateNotificationsForAllUsers, which loads presets once per run.
 function buildTaskPushPayload(
   type: NotificationType,
   taskTitle: string,
   taskId: string,
-  releaseId: string | null
+  releaseId: string | null,
+  copyOverrides?: Partial<Record<NotificationType, { title: string; body: string }>>
 ): PushPayload {
   const quoted = taskTitle ? `“${taskTitle}”` : 'An activity';
   const copy: Partial<Record<NotificationType, { title: string; body: string }>> = {
     task_assigned: { title: 'New activity for you', body: `${quoted} was assigned to you.` },
     task_status_changed: { title: 'Activity update', body: `${quoted} changed status.` },
     task_due_soon: { title: 'Due soon', body: `${quoted} is due within 24 hours.` },
+    task_due_3d: { title: 'Due in 3 days', body: `${quoted} is due in 3 days.` },
+    task_due_7d: { title: 'Due in 7 days', body: `${quoted} is due in 7 days.` },
     task_overdue: { title: 'Overdue', body: `${quoted} is overdue.` },
     task_commented: { title: 'New comment', body: `New comment on ${quoted}.` },
+    ...copyOverrides,
   };
   const entry = copy[type] || { title: 'Urganize', body: `${quoted} was updated.` };
+  // Admin-edited preset copy (copyOverrides) carries the literal placeholder
+  // `{taskTitle}` — see lib/notification-presets.ts — since the preset is
+  // authored without knowing which task it'll fire for. The built-in
+  // defaults above never contain the placeholder (they interpolate `quoted`
+  // directly), so this replace is a no-op for them.
   return {
-    ...entry,
+    title: entry.title.replace('{taskTitle}', quoted),
+    body: entry.body.replace('{taskTitle}', quoted),
     url: releaseId ? `/dashboard?release=${releaseId}` : '/dashboard',
     tag: `task-${taskId}-${type}`,
   };
@@ -1691,6 +1709,7 @@ export async function createTaskNotification(
     type: NotificationType;
     taskId: string;
     actorId?: string | null;
+    copyOverrides?: Partial<Record<NotificationType, { title: string; body: string }>>;
   }
 ) {
   if (!input.userId) {
@@ -1738,7 +1757,11 @@ export async function createTaskNotification(
       .maybeSingle();
     const taskTitle = String(taskResult.data?.title || '').trim();
     const releaseId = taskResult.data?.release_id ? String(taskResult.data.release_id) : null;
-    await sendPushToUsers(adminClient, [input.userId], buildTaskPushPayload(input.type, taskTitle, input.taskId, releaseId));
+    await sendPushToUsers(
+      adminClient,
+      [input.userId],
+      buildTaskPushPayload(input.type, taskTitle, input.taskId, releaseId, input.copyOverrides)
+    );
   } catch (error) {
     console.error('[push] task notification push failed', error);
   }
@@ -1762,8 +1785,21 @@ export async function createDueDateNotificationsForAllUsers(adminClient: Supabas
     return;
   }
 
+  // Loaded once per sweep, not once per task — see
+  // lib/notification-presets-server.ts. Deadline reminders can be turned
+  // off globally via the deadlineReminders.enabled preset; the three NEW
+  // tiers (7d/3d/1d — mobile push notifications, 2026-08-10) share that one
+  // switch rather than three, since they're one feature to a user. This must
+  // NOT also gate task_overdue below: that notification predates this
+  // feature (it isn't part of what the "Deadline reminders" toggle in
+  // /admin/notifications advertises) and an earlier version of this
+  // function returned before the loop at all, silently killing overdue
+  // notifications the moment an admin turned the new tiers off.
+  const presets = await getNotificationPresets(adminClient);
+  const deadlineRemindersEnabled = presets.deadlineReminders.enabled;
+  const copyOverrides = buildDeadlineTierCopyOverrides(presets);
+
   const now = Date.now();
-  const in24Hours = now + 24 * 60 * 60 * 1000;
 
   for (const row of result.data) {
     const taskId = readString((row as { id?: string }).id);
@@ -1778,27 +1814,32 @@ export async function createDueDateNotificationsForAllUsers(adminClient: Supabas
     }
 
     const dueDate = new Date(dueDateRaw).getTime();
-    if (!Number.isFinite(dueDate)) {
+    const tier: DueTier = assignDueTier(dueDate, now);
+    if (!tier) {
+      continue;
+    }
+    if (tier !== 'task_overdue' && !deadlineRemindersEnabled) {
       continue;
     }
 
-    if (dueDate < now) {
-      await createTaskNotification(adminClient, {
-        userId: assigneeUserId,
-        type: 'task_overdue',
-        taskId,
-      });
-      continue;
-    }
-
-    if (dueDate <= in24Hours) {
-      await createTaskNotification(adminClient, {
-        userId: assigneeUserId,
-        type: 'task_due_soon',
-        taskId,
-      });
-    }
+    await createTaskNotification(adminClient, {
+      userId: assigneeUserId,
+      type: tier,
+      taskId,
+      copyOverrides: tier === 'task_overdue' ? undefined : copyOverrides,
+    });
   }
+}
+
+function buildDeadlineTierCopyOverrides(
+  presets: NotificationPresets
+): Partial<Record<NotificationType, { title: string; body: string }>> {
+  const { copy } = presets.deadlineReminders;
+  return {
+    task_due_soon: copy.task_due_soon,
+    task_due_3d: copy.task_due_3d,
+    task_due_7d: copy.task_due_7d,
+  };
 }
 
 export async function listNotifications(

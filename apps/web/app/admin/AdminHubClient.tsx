@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   BadgeDollarSign,
+  BellRing,
   ChevronRight,
   ClipboardList,
   ListMusic,
@@ -38,6 +39,12 @@ const SECTIONS: Array<{
     label: 'Broadcast',
     description: 'Send a push notification to every device with notifications turned on.',
     icon: Radio,
+  },
+  {
+    href: '/admin/notifications',
+    label: 'Notifications',
+    description: 'Edit the copy and timing for release reminders, motivational nudges, and deadline reminders.',
+    icon: BellRing,
   },
   {
     href: '/admin/pricing-validation',

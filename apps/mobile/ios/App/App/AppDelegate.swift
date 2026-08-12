@@ -46,4 +46,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
+    // Push notifications (docs/mobile/push-setup.md). @capacitor/push-notifications
+    // requires these two callbacks to be added by hand — they forward the APNs
+    // device token / registration failure into NotificationCenter, which is
+    // where the plugin's native side picks it up and turns it into the
+    // 'registration' / 'registrationError' JS events that
+    // components/providers/CapacitorPushBridge.tsx listens for. Inert until the
+    // Push Notifications capability + aps-environment entitlement are added in
+    // Xcode (blocked on the founder's Apple Developer setup — see the doc).
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+
 }

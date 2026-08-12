@@ -18,6 +18,7 @@ import { DEFAULT_RELEASE_TITLE } from '@/types/releases';
 import { writeTemplatePending } from '@/lib/release-template-pending';
 import { writePlannerPending } from '@/lib/release-planner-pending';
 import { isReleasePlannerEnabled } from '@/lib/release-planning';
+import { enqueueReleaseReminders } from '@/lib/release-reminders-server';
 
 type ReleaseSelectorListResponse = { releases: ReleaseOption[] };
 
@@ -647,6 +648,17 @@ export async function POST(request: NextRequest) {
         })
       );
     }
+
+    // Re-engagement nudges (mobile push notifications, 2026-08-10): a couple
+    // of reminders in case the user creates this release and doesn't come
+    // back. Never throws — a queueing failure must never fail release
+    // creation. Rides the existing scheduled_notifications flusher, no new
+    // cron.
+    await enqueueReleaseReminders(adminClient, {
+      userId: auth.user.id,
+      releaseId,
+      releaseTitle: String(releaseResult.data.title || title),
+    });
 
     return NextResponse.json({
       releaseId,

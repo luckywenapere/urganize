@@ -43,4 +43,11 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Push notifications (docs/mobile/push-setup.md). Required at runtime
+         from Android 13 / API 33 (targetSdk 35 here); the app must call
+         PushNotifications.requestPermissions() before the OS will deliver a
+         notification tray entry — see components/providers/CapacitorPushBridge.tsx
+         and lib/native-push.ts. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

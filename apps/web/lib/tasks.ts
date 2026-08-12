@@ -88,6 +88,8 @@ export const NOTIFICATION_TYPE_OPTIONS = [
   'task_assigned',
   'task_commented',
   'task_due_soon',
+  'task_due_3d',
+  'task_due_7d',
   'task_overdue',
   'task_status_changed',
 ] as const;
@@ -181,6 +183,10 @@ export function getNotificationMessage(notification: TaskNotification): string {
       return `${notification.actorName} commented on an activity`;
     case 'task_due_soon':
       return 'An activity is due soon';
+    case 'task_due_3d':
+      return 'An activity is due in 3 days';
+    case 'task_due_7d':
+      return 'An activity is due in 7 days';
     case 'task_overdue':
       return 'An activity is overdue';
     case 'task_status_changed':

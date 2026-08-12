@@ -27,6 +27,7 @@ import {
 import { ArtistProfileSection } from '@/components/settings/ArtistProfileSection';
 import { PushNotificationsSection } from '@/components/settings/PushNotificationsSection';
 import { TaskCheckInSection } from '@/components/settings/TaskCheckInSection';
+import { MotivationalNudgesSection } from '@/components/settings/MotivationalNudgesSection';
 import { TeammatesSection } from '@/components/settings/TeammatesSection';
 import { ReleasesSection } from '@/components/settings/ReleasesSection';
 import { SessionSection } from '@/components/settings/SessionSection';
@@ -598,6 +599,7 @@ export default function SettingsPage() {
           </div>
 
           <TaskCheckInSection />
+          <MotivationalNudgesSection />
           <ReleasesSection />
           <SecuritySection />
           <SessionSection />

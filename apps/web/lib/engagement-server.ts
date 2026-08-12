@@ -3,11 +3,18 @@
 // On every login the app pings /api/engagement/login-ping, which:
 //   1. sends a WELCOME push right away (once per 6h, so daily/multi-device
 //      logins don't spam),
-//   2. cancels the user's pending scheduled rows and re-queues the drip:
+//   2. cancels the user's pending LOGIN-DRIP rows and re-queues the drip:
 //      momentum +30m, then come-back reminders +1d / +7d / +14d / +30d.
 // Because the queue resets on every login, the long-range reminders behave
 // as "days since the last visit" — nobody gets a "we miss you" the day
 // after they showed up.
+//
+// The cancel in step 2 is scoped to DRIP_STEPS' own kinds (see
+// enqueueLoginDrip below) — mobile push notifications (2026-08-10) added
+// other scheduled_notifications producers (release reminders, weekly
+// motivational nudges), and an unscoped "cancel everything pending" would
+// wipe those out on the next login. If you add a new kind anywhere in this
+// file, scope its cancellation the same way.
 //
 // Delivery: flushDueNotifications() runs from /api/cron/notifications
 // (Vercel Cron) and opportunistically from the login-ping route, so due
@@ -81,6 +88,11 @@ export const DRIP_STEPS: DripStep[] = [
   },
 ];
 
+// The set of kinds enqueueLoginDrip is allowed to cancel on a fresh login —
+// deliberately just this drip's own steps, not "everything pending" (see
+// the header comment above).
+const DRIP_KINDS: string[] = DRIP_STEPS.map((step) => step.kind);
+
 /** Welcome push + fresh drip for a user who just logged in. Never throws. */
 export async function enqueueLoginDrip(
   adminClient: SupabaseClient,
@@ -111,7 +123,7 @@ export async function enqueueLoginDrip(
         title: WELCOME_STEP.title,
         body: WELCOME_STEP.body,
         url: WELCOME_STEP.url,
-        tag: 'urganize-engagement',
+        tag: `urganize-${WELCOME_STEP.kind}`,
       };
       await sendPushToUsers(adminClient, [userId], payload);
       welcomed = true;
@@ -127,11 +139,15 @@ export async function enqueueLoginDrip(
       });
     }
 
-    // 2. Reset the drip: cancel anything pending, queue the fresh schedule.
+    // 2. Reset the drip: cancel this drip's OWN pending rows, queue the
+    // fresh schedule. Scoped to DRIP_STEPS' kinds so other
+    // scheduled_notifications producers (release reminders, weekly
+    // motivational nudges) are untouched by a login.
     await adminClient
       .from(SCHEDULED_NOTIFICATIONS_TABLE)
       .update({ canceled_at: nowIso })
       .eq('user_id', userId)
+      .in('kind', DRIP_KINDS)
       .is('sent_at', null)
       .is('canceled_at', null);
 
@@ -193,11 +209,15 @@ export async function flushDueNotifications(
         .maybeSingle();
       if (claim.error || !claim.data) continue;
 
+      // Tag by kind, not a shared 'urganize-engagement' string — otherwise a
+      // release reminder and a comeback nudge (both delivered through this
+      // same flusher) would collapse-replace each other in the system tray
+      // instead of each getting its own notification.
       const result = await sendPushToUsers(adminClient, [row.user_id], {
         title: row.title,
         body: row.body,
         url: row.url || '/dashboard',
-        tag: 'urganize-engagement',
+        tag: `urganize-${row.kind}`,
       });
       if (result.sent > 0) delivered += 1;
     }

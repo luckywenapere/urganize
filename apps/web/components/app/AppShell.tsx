@@ -14,6 +14,7 @@ import { NavigationTracker } from '@/components/app/NavigationTracker';
 import { ToastProvider } from '@/components/shared/ToastProvider';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
+import { CapacitorPushBridge } from '@/components/providers/CapacitorPushBridge';
 import { registerPushServiceWorker } from '@/lib/push';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { CURATOR_HOME_PATH } from '@/lib/home-path';
@@ -315,6 +316,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     // moments that currently render inline toast boxes.
     <ToastProvider>
     <CapacitorAuthBridge />
+    <CapacitorPushBridge />
     {/* Records every route change so back affordances (Settings' back
         button) can return to the exact previous page. */}
     <NavigationTracker />
