@@ -1,9 +1,17 @@
 // SERVER ONLY — weekly motivational nudges (mobile push notifications,
-// 2026-08-10). Runs from the existing hourly due-date cron
+// 2026-08-10). Runs from the existing due-date cron
 // (app/api/cron/due-date-notifications/route.ts) rather than a new Vercel
-// Cron entry — hourly runs easily cover a weekly cadence with room to
-// drain a backlog, and the project's cron budget (2 entries already,
-// implying a paid Vercel plan) shouldn't grow for this.
+// Cron entry: daily runs cover a weekly cadence with room to drain a
+// backlog, since the gate below is "has this user had one in the last 7
+// days" rather than anything tied to how often the sweep fires.
+//
+// Corrected 2026-08-12: this said "hourly", and justified itself partly on
+// "2 cron entries already, implying a paid Vercel plan". Both were wrong.
+// The account is on Hobby, which caps crons at once per day, and the two
+// entries had never run at all because they were declared in a vercel.json
+// Vercel does not read (see CLAUDE.md → Deployment). Cadence-independence is
+// the real reason this is safe to piggyback, so that is what is written here
+// now.
 //
 // Delivery record: rather than a dedicated table, each send is recorded as
 // a `kind: 'motivational'` row in scheduled_notifications with

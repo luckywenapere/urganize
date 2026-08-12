@@ -272,6 +272,14 @@ Both use `npx turbo-ignore @urganize/<app>` as the Ignored Build Step.
 - **`apps/homepage/vercel.json` is inert too.** It sets `NEXT_PRIVATE_BUILD_WORKER=webpack` for the homepage build, and that has never taken effect. Left alone deliberately: hoisting it to the root would apply it to the product app's build as well.
 - Crons register **on production deployment**, so a change to the block only takes effect after it merges to `main`.
 
+**The Vercel account is on the HOBBY plan, which caps cron jobs at once per DAY (2026-08-12).** Any expression that would fire more often — `0 * * * *`, `*/15 * * * *` — **fails the deployment**, it does not degrade. Both schedules in this repo were exactly that, so even once they were moved to the file Vercel reads, the deploy failed until they were made daily. The two problems had been hiding each other: sitting in an unread file, the illegal schedules were never validated. Correcting an assumption recorded elsewhere in this file: two cron entries do **not** imply a paid plan.
+
+Current schedules, both daily and both approximate — Hobby precision is ±59 minutes:
+- `/api/cron/due-date-notifications` at `0 7 * * *` (≈08:00 WAT) — the deadline sweep plus the weekly motivational nudge.
+- `/api/cron/notifications` at `0 8 * * *` (≈09:00 WAT) — the `scheduled_notifications` flusher.
+
+**What daily costs, and what it does not.** The deadline tiers (7d/3d/1d) and the weekly nudge are unaffected in substance: both are day-granularity, and the nudge's gate is "has this user had one in the last 7 days", not a function of sweep frequency. What genuinely degrades is `momentum_30m`, the drip step meant to land 30 minutes after a login — a once-daily flusher cannot honour that. It partly survives because `POST /api/engagement/login-ping` also flushes opportunistically, so the step goes out on the user's *next* sign-in rather than 30 minutes into the current one. Restoring true 30-minute behaviour means Pro, not a code change.
+
 **Env handling:** Root `turbo.json` declares the env allowlist for build hashing. Each Vercel project owns its own env set. Local development uses `.env.local` per app. Both apps have `.env.example` files documenting every env var with required/optional markers.
 
 **Environments:** Production = `main` on both Vercel projects. Vercel preview deployments per PR. No dedicated staging.

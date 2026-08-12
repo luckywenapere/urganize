@@ -12,8 +12,10 @@ import { panelClass } from './panelClass';
 // gate: unlike TaskCheckInSection (gated on NEXT_PUBLIC_FEATURE_TASK_OUTCOMES,
 // which controls the exact feature it opts out of), the weekly motivational
 // sweep (lib/motivation-server.ts) delivers via the pre-existing Web Push
-// transport unconditionally, run from the already-live hourly cron — it has
-// no client flag of its own. Gating this toggle on
+// transport unconditionally, run from the daily due-date cron — it has
+// no client flag of its own. ("already-live hourly cron" until 2026-08-12:
+// that cron was neither live nor hourly, see CLAUDE.md → Deployment.)
+// Gating this toggle on
 // NEXT_PUBLIC_FEATURE_NATIVE_PUSH hid the only opt-out from every web-only
 // user, who would keep receiving nudges with no way to turn them off.
 
