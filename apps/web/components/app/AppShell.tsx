@@ -226,10 +226,17 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Arm the rail on the FIRST assistant-page visit of the session (that's
-  // the login landing when the flag is on): from then on, anywhere the user
-  // switches to has UrgAns on the side — until they close it, which sticks
-  // for the rest of the session. Later assistant-page visits don't re-arm.
+  // Arm the rail on the FIRST assistant-page visit of the session: from then
+  // on, anywhere the user switches to has UrgAns on the side — until they
+  // close it, which sticks for the rest of the session. Later assistant-page
+  // visits don't re-arm.
+  //
+  // 2026-08-12: this used to fire on the login landing, because the assistant
+  // page WAS the landing surface. The catalog is the front door again, so the
+  // rail no longer opens by itself in a session that never opens this page.
+  // That reads as the intent of the founder's call (land on the catalog, the
+  // assistant on request) rather than an oversight: moving the trigger to
+  // "first authenticated page" would put the rail back in front of everyone.
   useEffect(() => {
     if (!CHAPPI_ENABLED || pathname !== '/dashboard/urgans') return;
     try {

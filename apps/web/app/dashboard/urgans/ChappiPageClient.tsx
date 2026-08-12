@@ -62,10 +62,12 @@ export default function ChappiPageClient() {
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
 
-  // URG-217 — same forced first-release flow as the workspace. This page is
-  // the post-login landing surface when the UrgAns flag is on (HOME_PATH), so
-  // it needs the auto-open too or a zero-release user lands somewhere the lock
-  // never fires. See WorkspaceView for the fail-open rationale.
+  // URG-217 — same forced first-release flow as the workspace. Kept here even
+  // though the catalog is the landing surface again (2026-08-12): a
+  // zero-release user can still arrive on this page from the topbar, the
+  // mobile nav or an installed PWA pointed at the old start_url, and the lock
+  // has to fire wherever they land. See WorkspaceView for the fail-open
+  // rationale.
   const firstReleaseRequired = useFirstReleaseRequired();
   useEffect(() => {
     if (firstReleaseRequired) {
