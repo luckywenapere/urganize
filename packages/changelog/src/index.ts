@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.45.1",
+    date: "August 12, 2026",
+    highlights: [
+      "Signing in now takes you straight to your releases instead of to UrgAns. Your catalog is what you came for, so it is what you see first. UrgAns is still one tap away from the top bar, from the bottom bar on phones and from the panel on the left.",
+    ],
+  },
+  {
     version: "0.45.0",
     date: "August 12, 2026",
     highlights: [

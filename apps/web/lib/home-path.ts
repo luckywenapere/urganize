@@ -14,8 +14,16 @@
 // to /dashboard/urgans alongside its user-facing rename to UrgAns. The old
 // path still 308-redirects (app/dashboard/chappi/page.tsx) for anyone
 // mid-session or with an installed PWA pointed at it.
-export const HOME_PATH =
-  process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true' ? '/dashboard/urgans' : '/dashboard';
+//
+// 2026-08-12 (founder decision): the catalog is the front door again, and
+// this is now unconditional. It no longer reads the assistant's flag: a
+// signed-in user lands on their releases whether or not UrgAns is enabled.
+// The assistant is still one tap away from the topbar, the mobile nav bar
+// and the identity panel, and the side rail still opens beside every page.
+// This is the THIRD flip of this value (07-15 assistant, 07-23 catalog,
+// 07-31 assistant, now catalog) — the reason this constant exists is that
+// every entry point moves together, so a future reversal is this line.
+export const HOME_PATH = '/dashboard';
 
 /** Where a curator lands. Their surface has no team chrome at all. */
 export const CURATOR_HOME_PATH = '/curator';

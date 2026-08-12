@@ -215,8 +215,8 @@ function ReleaseCardSkeleton() {
  * column on desktop, or sit inert in mobile's plain document flow — same
  * "flex-1 is inert without a flex parent" property the real component
  * documents. Pill count mirrors the real header exactly: New activity
- * always, then one per enabled flag in order (Calendar / Files / Press kit /
- * Pitch / Notes — see TasksPanel), then the two AI action pills
+ * always, then one per enabled flag in order (Pitch / Calendar / Files /
+ * Press kit / Notes — see TasksPanel), then the two AI action pills
  * WorkspaceView appends. Widths approximate each label so the row's
  * footprint matches ("Status update", shortened 2026-08-10 to fit a chip
  * row — see WorkspaceView).
@@ -227,10 +227,12 @@ function ReleaseCardSkeleton() {
  * loading-skeleton-sync rule this file otherwise follows). */
 function TasksPanelSkeleton() {
   const pillWidths = [
+    // Pitch leads the row (founder call, 2026-08-10) and carries no Beta tag,
+    // so it reserves the same width as Files rather than a tagged pill's.
+    ...(PITCHING_ENABLED ? ['w-16'] : []), // Pitch
     ...(CONTENT_CALENDAR_ENABLED ? ['w-28'] : []), // Calendar + Beta tag
     ...(FILES_ENABLED ? ['w-16'] : []), // Files
     ...(EPK_ENABLED ? ['w-24'] : []), // Press kit
-    ...(PITCHING_ENABLED ? ['w-24'] : []), // Pitch + Beta tag
     ...(NOTES_ENABLED ? ['w-20'] : []), // Notes
     ...(STATUS_UPDATE_ENABLED ? ['w-28'] : []), // Status update
     // The Plan pill is deliberately NOT reserved. Whether it renders depends on
