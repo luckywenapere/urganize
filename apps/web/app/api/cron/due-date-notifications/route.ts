@@ -31,9 +31,11 @@ export async function GET(request: NextRequest) {
   await createDueDateNotificationsForAllUsers(adminClient);
 
   // Weekly motivational nudges (mobile push notifications, 2026-08-10)
-  // piggyback on this same hourly run rather than a new cron entry — see
-  // lib/motivation-server.ts for why an hourly cadence safely covers a
-  // weekly send.
+  // piggyback on this same run rather than a new cron entry — see
+  // lib/motivation-server.ts for why a daily cadence safely covers a
+  // weekly send. (This cron was hourly on paper until 2026-08-12, when it
+  // turned out it had never actually run: the schedule lived in a vercel.json
+  // Vercel does not read, and hourly is not allowed on the Hobby plan anyway.)
   await sendWeeklyMotivationalNudges(adminClient);
 
   return NextResponse.json({ ok: true });
