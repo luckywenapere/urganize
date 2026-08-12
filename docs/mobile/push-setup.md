@@ -6,9 +6,25 @@ Background: Web Push (`apps/web/lib/push-server.ts`, `public/sw.js`) already rea
 
 **Android can ship without any of the iOS steps.** Part 1 + 2 alone unblock Android; part 3 is the Apple-side work and is explicitly deferred until you're ready to do it.
 
-## 1. Firebase Console → create the project + register the Android app
+## 1. Firebase Console → create the project + register the Android app — **DONE (2026-08-12)**
 
-Go to **[FILL IN: https://console.firebase.google.com/]** → Add project (or reuse an existing one if the founder already has a Firebase project for something else).
+Done, and the values it produced are recorded here so nothing downstream has to go looking for them:
+
+| | |
+|---|---|
+| Firebase project name | `urganize` |
+| **Project ID** | **`urganize-2b082`** — the suffix is Firebase's, because plain `urganize` was already taken globally. This is the `project_id` that shows up in the service-account JSON and in the FCM v1 endpoint URL. |
+| Project number | `776089505317` |
+| Android app ID | `1:776089505317:android:e143bc33b176867e38f9cc` |
+| Package name | `com.urganize.app` |
+| Google Analytics | **not enabled** — deliberately skipped; the product already runs PostHog, and this project exists only to carry FCM. |
+| SHA-1 fingerprint | **not set, and not needed.** FCM does not require one. It is only for Firebase Auth / Dynamic Links, and Google sign-in here goes through the system browser to Supabase, not Firebase. |
+
+`apps/mobile/android/app/google-services.json` is committed. It carries only client config (project/app ids plus a package-scoped API key) — no private key, no service-account material — which is why it belongs in git. Gradle picks it up automatically via the conditional apply block in `app/build.gradle`.
+
+Original instructions, kept for reference if the project is ever rebuilt from scratch:
+
+Go to <https://console.firebase.google.com/> → Add project (or reuse an existing one if the founder already has a Firebase project for something else).
 
 Add an Android app to the project:
 - **Android package name**: `com.urganize.app` (from `apps/mobile/capacitor.config.ts`'s `appId` — must match exactly).
