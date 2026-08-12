@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useChappiStore } from '@/stores/useChappiStore';
+import { METADATA_PILL_HIDE_CLASS } from '@/components/workspace/TasksPanel';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownReleaseCount } from './known-counts';
 
@@ -15,9 +16,12 @@ const SCOPE_PARAM = 'release';
 // Same build-time flags TasksPanel reads for its scoped-header pills. The
 // skeleton renders one placeholder pill per REAL pill so the row doesn't
 // change width when content swaps in: New activity is always present;
-// Metadata / Calendar / Files / Press kit appear per flag, in that order
-// (2026-08-04 — the release detail page and its "Overview" pill were
-// removed; Metadata moved to the front of the row).
+// Calendar / Files / Press kit appear per flag, in that order (2026-08-04 —
+// the release detail page and its "Overview" pill were removed). Metadata
+// moved to the identity panel's left-hand nav as "Collect metadata" at `lg`+
+// (2026-08-12 — see WorkspaceIdentityPanel), but the pill survives BELOW
+// `lg` (that panel never renders there), so it's still reserved here, just
+// viewport-restricted like its real counterpart.
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
@@ -211,8 +215,8 @@ function ReleaseCardSkeleton() {
  * column on desktop, or sit inert in mobile's plain document flow — same
  * "flex-1 is inert without a flex parent" property the real component
  * documents. Pill count mirrors the real header exactly: New activity
- * always, then one per enabled flag in order (Metadata / Calendar / Files /
- * Press kit / Pitch / Notes — see TasksPanel), then the two AI action pills
+ * always, then one per enabled flag in order (Calendar / Files / Press kit /
+ * Pitch / Notes — see TasksPanel), then the two AI action pills
  * WorkspaceView appends. Widths approximate each label so the row's
  * footprint matches ("Status update", shortened 2026-08-10 to fit a chip
  * row — see WorkspaceView).
@@ -223,8 +227,6 @@ function ReleaseCardSkeleton() {
  * loading-skeleton-sync rule this file otherwise follows). */
 function TasksPanelSkeleton() {
   const pillWidths = [
-    'w-28', // New activity
-    ...(METADATA_ENABLED ? ['w-24'] : []), // Metadata (Beta tag dropped 2026-08-10)
     ...(CONTENT_CALENDAR_ENABLED ? ['w-28'] : []), // Calendar + Beta tag
     ...(FILES_ENABLED ? ['w-16'] : []), // Files
     ...(EPK_ENABLED ? ['w-24'] : []), // Press kit
@@ -247,8 +249,19 @@ function TasksPanelSkeleton() {
           a placeholder row never actually needs to be dragged. */}
       <div className="sticky top-16 z-10 flex shrink-0 items-center bg-bg-base pb-3 pt-1 lg:static lg:justify-end">
         <div className="no-scrollbar flex w-full items-center gap-2 overflow-x-auto -mx-4 px-4 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:m-0 lg:w-auto lg:flex-wrap lg:justify-end lg:overflow-visible lg:p-0">
+          <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
+          {/* Metadata — narrow widths only, carrying the SAME hide class the
+              real pill computes (see TasksPanel.tsx's
+              METADATA_PILL_HIDE_CLASS: empty when the identity panel is
+              flagged off, else xl/lg depending on Chappi) so the reserved
+              footprint matches at every breakpoint. */}
+          {METADATA_ENABLED ? (
+            <SkeletonBlock
+              className={`h-8 w-36 shrink-0 rounded-full ${METADATA_PILL_HIDE_CLASS}`}
+            />
+          ) : null}
           {pillWidths.map((width, index) => (
-            <SkeletonBlock key={`pill-${index}`} className={`h-8 ${width} rounded-full`} />
+            <SkeletonBlock key={`pill-${index}`} className={`h-8 ${width} shrink-0 rounded-full`} />
           ))}
         </div>
       </div>

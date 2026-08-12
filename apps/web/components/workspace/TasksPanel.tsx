@@ -16,6 +16,40 @@ import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useSceneOverlay, type SceneName } from './useSceneOverlay';
 
+// Metadata entry point (URG-108). This flag also gates the identity panel's
+// "Collect metadata" nav item (WorkspaceIdentityPanel) — the two must never
+// disagree about whether the feature exists, only about WHICH surface shows
+// it at a given viewport.
+const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
+
+// Mirrors AppShell's own gate for the identity card, which is what hosts the
+// "Collect metadata" nav item this pill defers to at wide widths. Read here
+// because the pill may only step aside where that card actually renders —
+// both flags default to false and are independent of METADATA above, so
+// without this check a metadata-on / identity-panel-off environment (the
+// DEFAULT combination) would hide the pill at `lg`+ with nothing replacing
+// it, making Metadata unreachable on desktop entirely.
+const IDENTITY_PANEL_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' &&
+  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
+
+// The identity card hides itself at `lg`-`xl` whenever the UrgAns rail is open
+// (see WorkspaceIdentityPanel's railIsCompeting), so with the assistant on
+// there is no width below `xl` where the card is GUARANTEED to be present.
+// Rather than duplicate that runtime rail state here — the kind of mirrored
+// condition that silently drifts — the pill retreats one breakpoint later
+// when Chappi is on. Cost: a redundant second control at `lg`-`xl` while the
+// rail happens to be closed. That is strictly better than a viewport band
+// where the feature has no entry point at all.
+// Exported so WorkspaceSkeleton reserves the placeholder at exactly the same
+// breakpoints (the loading-skeleton-sync rule that file documents; it has
+// already drifted from this row once).
+export const METADATA_PILL_HIDE_CLASS = !IDENTITY_PANEL_ENABLED
+  ? ''
+  : process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true'
+    ? 'xl:hidden'
+    : 'lg:hidden';
+
 // Content calendar entry point (URG-157): the workspace is the surface users
 // actually land on after login, so the scoped-release header carries the
 // calendar affordance alongside Files rather than hiding it on the release
@@ -30,11 +64,6 @@ const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 // from the release detail page's side menu — invisible from the workspace
 // users actually land on. Same flag that gates the EPK page and API routes.
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
-
-// Metadata hub entry point (URG-108): distribution fields + collaborator
-// credit capture, the third conscious v1 scope expansion (see CLAUDE.md).
-// Same shape as the Press kit link above.
-const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 
 // Notes entry point: same flag AppTopbar and the identity panel read.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
@@ -129,7 +158,7 @@ type TasksPanelProps = {
    * release with no date yet).
    *
    * Deliberately inside the activities branch rather than above the body: a
-   * scene (Metadata / Calendar / Files / Press kit) is its own task, and a
+   * scene (Calendar / Files / Press kit) is its own task, and a
    * date prompt hanging over it is noise. It reappears when the user comes
    * back to the activity list.
    */
@@ -167,7 +196,7 @@ export function TasksPanel({
   const { openTask, openQuickCreate } = useTaskUI();
 
   // The pills below swap this panel's body between the activity buckets and a
-  // release scene (Metadata / Calendar / Files / Press kit), in place — they
+  // release scene (Calendar / Files / Press kit), in place — they
   // were nav links to separate pages until 2026-08-04, then briefly modal
   // overlays, and are now an inline swap per the founder's correction. Clicking
   // the pill of the scene that's already open closes it, back to activities.
@@ -311,8 +340,8 @@ export function TasksPanel({
             (`lg:m-0 lg:w-auto lg:p-0`), where the row was never a scroller. */}
         <div className="no-scrollbar flex w-full items-center gap-2 overflow-x-auto -mx-4 px-4 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:m-0 lg:w-auto lg:flex-wrap lg:justify-end lg:overflow-visible lg:p-0">
           {/* Toggles with the scene body below: "New activity" opens Quick
-              Create while the activity list is showing; once a scene (Metadata
-              / Calendar / Files / Press kit) has taken this slot, the SAME
+              Create while the activity list is showing; once a scene (Calendar
+              / Files / Press kit) has taken this slot, the SAME
               button position becomes "Activities" so there's always a way
               back without hunting for the scene's own pill again. */}
           {activeScene ? (
@@ -352,20 +381,23 @@ export function TasksPanel({
               Plan
             </button>
           ) : null}
-          {/* Metadata link (URG-108), FIRST among the scene links (founder
-              call, 2026-08-04) — distribution fields + collaborator credits
-              are the surface the founder reaches for most, now that the
-              release detail page is gone and this header is the single
-              navigation row for every release scene. */}
+          {/* Metadata link (URG-108) — NARROW widths only as of 2026-08-12,
+              since the identity panel's "Collect metadata" nav item is now
+              this release's persistent entry point (see
+              WorkspaceIdentityPanel) and two controls for one scene is noise.
+              But that panel never renders on small viewports, so the pill has
+              to survive there: this row is the only surface present at every
+              width. See METADATA_PILL_HIDE_CLASS for exactly where it
+              retreats — it stays put entirely when the panel is flagged off. */}
           {METADATA_ENABLED && scopedRelease ? (
             <button
               type="button"
               onClick={() => toggleScene('metadata', scopedRelease.id)}
               aria-pressed={activeScene === 'metadata'}
-              className={pillClass('metadata')}
+              className={`${pillClass('metadata')} ${METADATA_PILL_HIDE_CLASS}`}
             >
               <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
-              Metadata
+              Collect metadata
             </button>
           ) : null}
           {/* Calendar (URG-157). Opens as a WIDE overlay window rather than the

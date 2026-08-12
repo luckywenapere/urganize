@@ -1,15 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ShieldCheck } from "lucide-react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { ClipboardList, ShieldCheck } from "lucide-react";
 import { useWorkspaceIdentityStore } from "@/stores/useWorkspaceIdentityStore";
 import { useReleaseStore } from "@/stores/useReleaseStore";
 import { useChappiStore } from "@/stores/useChappiStore";
 import { CatalogIcon, ChappiIcon, GearIcon, NotesIcon } from "@/components/app/BrandIcons";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
+
+// Same flag TasksPanel's scene pill and MetadataSection read. At `lg`+ this
+// card is the primary entry point ("Collect metadata" below); TasksPanel's
+// own pill keeps a below-`lg` copy alive, since this card never renders on
+// small viewports and dropping the pill there with no replacement would make
+// Metadata unreachable on phones/tablets (2026-08-12).
+const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === "true";
 
 // The card's nav (URG-229). Same three global surfaces the topbar exposes,
 // using the SAME hand-drawn marks (BrandIcons) so the two entry points read
@@ -27,38 +34,72 @@ type NavItem = {
 // and disappear together.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === "true";
 
-const NAV_ITEMS: readonly NavItem[] = [
-  {
-    href: "/dashboard",
-    label: "Catalog",
-    Icon: CatalogIcon,
-    isActive: (pathname: string) => pathname === "/dashboard",
-  },
-  {
-    href: "/dashboard/urgans",
-    label: "UrgAns",
-    Icon: ChappiIcon,
-    isActive: (pathname: string) => pathname === "/dashboard/urgans",
-  },
-  // Exact match, like its neighbours: usePathname excludes the query string,
-  // so a ?release= / ?note= deep link still lights this up.
-  ...(NOTES_ENABLED
-    ? [
-        {
-          href: "/dashboard/notes",
-          label: "Notes",
-          Icon: NotesIcon,
-          isActive: (pathname: string) => pathname === "/dashboard/notes",
-        },
-      ]
-    : []),
-  {
-    href: "/settings",
-    label: "Settings",
-    Icon: GearIcon,
-    isActive: (pathname: string) => pathname.startsWith("/settings"),
-  },
-];
+// NavItem.Icon must always return a ReactElement (matching the BrandIcons
+// function components' signature); lucide-react's ForwardRefExoticComponent
+// types its call signature as `ReactElement | null`, so it can't be assigned
+// to that field directly — this thin wrapper closes the gap.
+function MetadataIcon({ className }: { className?: string }) {
+  return <ClipboardList className={className} />;
+}
+
+/**
+ * Built per-render (not a module constant like the old NAV_ITEMS) because the
+ * "Collect metadata" entry needs runtime state: it targets the release
+ * currently scoped in the URL, so it can't be a static href like its
+ * neighbours. Added here 2026-08-12 as this card's persistent home for the
+ * feature — Metadata is release-scoped, so unlike Catalog/UrgAns/Notes/
+ * Settings this item only appears once a release is scoped (?release=), the
+ * same gate TasksPanel's below-`lg` pill uses (`METADATA_ENABLED &&
+ * scopedRelease`) so the two can't disagree about when the feature exists.
+ */
+function buildNavItems(scopedReleaseId: string | null, activeScene: string | null): NavItem[] {
+  return [
+    {
+      href: "/dashboard",
+      label: "Catalog",
+      Icon: CatalogIcon,
+      isActive: (pathname: string) => pathname === "/dashboard",
+    },
+    {
+      href: "/dashboard/urgans",
+      label: "UrgAns",
+      Icon: ChappiIcon,
+      isActive: (pathname: string) => pathname === "/dashboard/urgans",
+    },
+    // Right after UrgAns (founder call on the old pill row carried over:
+    // Metadata was "FIRST among the scene links" — the surface reached for
+    // most). Active when the URL names this exact scene, not just /dashboard,
+    // since Catalog above already owns the bare scoped-release view.
+    ...(METADATA_ENABLED && scopedReleaseId
+      ? [
+          {
+            href: `/dashboard?release=${scopedReleaseId}&scene=metadata`,
+            label: "Collect metadata",
+            Icon: MetadataIcon,
+            isActive: (pathname: string) => pathname === "/dashboard" && activeScene === "metadata",
+          },
+        ]
+      : []),
+    // Exact match, like its neighbours: usePathname excludes the query string,
+    // so a ?release= / ?note= deep link still lights this up.
+    ...(NOTES_ENABLED
+      ? [
+          {
+            href: "/dashboard/notes",
+            label: "Notes",
+            Icon: NotesIcon,
+            isActive: (pathname: string) => pathname === "/dashboard/notes",
+          },
+        ]
+      : []),
+    {
+      href: "/settings",
+      label: "Settings",
+      Icon: GearIcon,
+      isActive: (pathname: string) => pathname.startsWith("/settings"),
+    },
+  ];
+}
 
 // Statuses that count as "still being worked" for the card's stat line.
 // Mirrors the URG-214 Linear issue's proposed definition — a release stops
@@ -222,48 +263,92 @@ export function WorkspaceIdentityPanel() {
           aria-label="Workspace navigation"
           className="min-h-0 flex-1 overflow-y-auto border-t border-stroke-subtle p-2"
         >
-          {NAV_ITEMS.map(({ href, label, Icon, isActive }) => {
-            const active = isActive(pathname || "");
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={`motion-focus mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
-                  active
-                    ? "bg-brand/10 text-brand"
-                    : "text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-                }`}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {label}
-              </Link>
-            );
-          })}
-
-          {/* Admin is visibility-gated on the identity payload's isAdmin; every
-            /admin route still runs its own verifyAdmin server-side.
-            Deliberately NOT skeleton-reserved above (URG-232): isAdmin only
-            resolves post-hydration, so a placeholder row would flash for
-            every non-admin viewer just to save an admin one pop-in — the
-            same "pop-in beats vanishing" tradeoff ChappiPageSkeleton's doc
-            comment makes for the invite-teammates banner. */}
-          {isAdmin ? (
-            <Link
-              href="/admin"
-              aria-current={pathname?.startsWith("/admin") ? "page" : undefined}
-              className={`motion-focus mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
-                pathname?.startsWith("/admin")
-                  ? "bg-brand/10 text-brand"
-                  : "text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-              }`}
-            >
-              <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
-              Admin
-            </Link>
-          ) : null}
+          {/* WorkspaceNavLinks needs useSearchParams (to find the currently
+            scoped release for "Collect metadata"), and this panel is mounted
+            from layout-level chrome (AppShell) rather than a page — same
+            reason AppTopbar's ContextTitle/CatalogTopbarAction/ChappiTopbarAction
+            each get their own Suspense boundary. Fallback renders the nav
+            without the release-dependent item (equivalent to no release being
+            scoped yet), never a spinner, so the rest of the nav never blocks
+            on it. */}
+          <Suspense fallback={<WorkspaceNavList navItems={buildNavItems(null, null)} pathname={pathname} isAdmin={isAdmin} />}>
+            <WorkspaceNavLinks pathname={pathname} isAdmin={isAdmin} />
+          </Suspense>
         </nav>
       </div>
     </aside>
+  );
+}
+
+/** Reads the search params `buildNavItems` needs, then hands off to the
+ * plain (Suspense-free) list renderer below. Split out purely so the
+ * Suspense boundary above wraps only the part that actually calls
+ * useSearchParams. */
+function WorkspaceNavLinks({ pathname, isAdmin }: { pathname: string | null; isAdmin: boolean }) {
+  const searchParams = useSearchParams();
+  // Same `?release=` / `?scene=` params useReleaseScope / useSceneOverlay own
+  // — read directly here (not via those hooks) since this component only
+  // needs them to build one nav href, not to read or write scene state.
+  const scopedReleaseId = searchParams.get("release");
+  const activeScene = searchParams.get("scene");
+  const navItems = buildNavItems(scopedReleaseId, activeScene);
+  return <WorkspaceNavList navItems={navItems} pathname={pathname} isAdmin={isAdmin} />;
+}
+
+/** Plain render of the nav rows — no hooks of its own, so it doubles as the
+ * Suspense fallback (called directly with a release-less item list) and the
+ * resolved output (via WorkspaceNavLinks above). */
+function WorkspaceNavList({
+  navItems,
+  pathname,
+  isAdmin,
+}: {
+  navItems: NavItem[];
+  pathname: string | null;
+  isAdmin: boolean;
+}) {
+  return (
+    <>
+      {navItems.map(({ href, label, Icon, isActive }) => {
+        const active = isActive(pathname || "");
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-current={active ? "page" : undefined}
+            className={`motion-focus mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
+              active
+                ? "bg-brand/10 text-brand"
+                : "text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+            }`}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            {label}
+          </Link>
+        );
+      })}
+
+      {/* Admin is visibility-gated on the identity payload's isAdmin; every
+        /admin route still runs its own verifyAdmin server-side.
+        Deliberately NOT skeleton-reserved above (URG-232): isAdmin only
+        resolves post-hydration, so a placeholder row would flash for
+        every non-admin viewer just to save an admin one pop-in — the
+        same "pop-in beats vanishing" tradeoff ChappiPageSkeleton's doc
+        comment makes for the invite-teammates banner. */}
+      {isAdmin ? (
+        <Link
+          href="/admin"
+          aria-current={pathname?.startsWith("/admin") ? "page" : undefined}
+          className={`motion-focus mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
+            pathname?.startsWith("/admin")
+              ? "bg-brand/10 text-brand"
+              : "text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+          }`}
+        >
+          <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
+          Admin
+        </Link>
+      ) : null}
+    </>
   );
 }
