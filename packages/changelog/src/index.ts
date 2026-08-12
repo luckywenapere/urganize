@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.45.0",
+    date: "August 12, 2026",
+    highlights: [
+      "First release, no detours: if you haven't created a release yet, the New release screen now opens on its own and stays open until you make one — there's nothing else to do on an empty dashboard anyway. Signing out is still always available.",
+    ],
+  },
+  {
     version: "0.44.3",
     date: "August 12, 2026",
     highlights: [
