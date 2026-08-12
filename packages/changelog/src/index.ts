@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.45.2",
+    date: "August 12, 2026",
+    highlights: [
+      "UrgAns opens beside your work again when you sign in. It had stopped doing that once signing in started taking you to your releases, because it was only opening for people who went to its own page. Close it and it stays closed for the rest of your session.",
+    ],
+  },
+  {
     version: "0.45.1",
     date: "August 12, 2026",
     highlights: [

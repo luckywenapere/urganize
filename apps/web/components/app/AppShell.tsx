@@ -227,19 +227,29 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Arm the rail on the FIRST assistant-page visit of the session: from then
-  // on, anywhere the user switches to has UrgAns on the side — until they
-  // close it, which sticks for the rest of the session. Later assistant-page
-  // visits don't re-arm.
+  // Arm the rail ONCE per session, on the first chrome-bearing page the user
+  // reaches: from then on, anywhere they switch to has UrgAns on the side —
+  // until they close it, which sticks for the rest of the session.
   //
-  // 2026-08-12: this used to fire on the login landing, because the assistant
-  // page WAS the landing surface. The catalog is the front door again, so the
-  // rail no longer opens by itself in a session that never opens this page.
-  // That reads as the intent of the founder's call (land on the catalog, the
-  // assistant on request) rather than an oversight: moving the trigger to
-  // "first authenticated page" would put the rail back in front of everyone.
+  // The trigger used to be the first visit to the assistant PAGE, which worked
+  // only because that page was also the login landing. When the catalog became
+  // the front door (2026-08-12, v0.45.1) the rail stopped opening by itself,
+  // so this now fires on the dashboard and settings too — restoring the
+  // pre-v0.45.1 behaviour without putting the assistant page back in front of
+  // anyone. Founder call, 2026-08-12.
+  //
+  // Three conditions, each load-bearing:
+  //  - auth must have RESOLVED (not merely be in flight): arming mid-load can
+  //    fire for a session that turns out to be signed out or a curator.
+  //  - a curator never gets the rail at all, so never burn their arm flag.
+  //  - only routes that actually render chrome. The rail is a flex sibling of
+  //    <main> on dashboard/settings; on a public page (/epk, /credits, an
+  //    invite) there is nothing for it to sit beside, and arming there would
+  //    spend the once-per-session flag before the user ever reaches the app.
   useEffect(() => {
-    if (!CHAPPI_ENABLED || pathname !== '/dashboard/urgans') return;
+    if (!CHAPPI_ENABLED) return;
+    if (!isAuthenticated || isAuthLoading || isCuratorAccount) return;
+    if (!isDashboardRoute && !isSettingsRoute) return;
     try {
       if (window.sessionStorage.getItem(RAIL_ARMED_KEY)) return;
       window.sessionStorage.setItem(RAIL_ARMED_KEY, '1');
@@ -248,7 +258,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       return;
     }
     useChappiStore.getState().setRailOpen(true);
-  }, [pathname]);
+  }, [isAuthenticated, isAuthLoading, isCuratorAccount, isDashboardRoute, isSettingsRoute]);
 
   // Warm the route chunks for the app's three real destinations while the
   // browser is idle. These pages are thin server wrappers over big client
