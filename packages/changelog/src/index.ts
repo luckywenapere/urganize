@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.46.0",
+    date: "August 12, 2026",
+    highlights: [
+      "You can pitch your songs to playlists from inside Urganize. Open a release, hit Pitch, then browse playlists by platform or genre with the owner's name and follower count on each one. Send a song with a link plus a short note. The link can be anything: a private stream, a demo host, or a live page if the song is already out.",
+      "Playlist owners answer you in the product instead of leaving you guessing. A pitch comes back marked Listened, Added or Passed, often with a line of feedback. You see the answer on the release beside the pitch you sent.",
+      "Playlist owners get their own small corner of Urganize. They join by invite only, they list their playlists then clear pitches in a couple of taps. They never see your releases, your tasks, your files or your team. Ask us for an invite link if there is a curator you want on board.",
+      "A release can have ten pitches waiting on a reply at once. It keeps you honest with the people you are pitching to. It also stops the same playlist getting the same song twice while the first one is still unanswered.",
+    ],
+  },
+  {
     version: "0.45.2",
     date: "August 12, 2026",
     highlights: [
