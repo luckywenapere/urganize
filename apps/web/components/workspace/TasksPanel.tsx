@@ -400,6 +400,23 @@ export function TasksPanel({
               Collect metadata
             </button>
           ) : null}
+          {/* Playlist pitching: browse curator playlists and send this
+              release's song, with each curator's answer shown beside it.
+              Sits high in the row (founder call, 2026-08-10) — right after
+              Collect metadata and ahead of Calendar. Note that Metadata's pill
+              retreats at wide widths (see METADATA_PILL_HIDE_CLASS), so this is
+              effectively the first link in the row at those widths. */}
+          {PITCHING_ENABLED && scopedRelease ? (
+            <button
+              type="button"
+              onClick={() => toggleScene('pitch', scopedRelease.id)}
+              aria-pressed={activeScene === 'pitch'}
+              className={pillClass('pitch')}
+            >
+              <Radio className="h-3.5 w-3.5" aria-hidden="true" />
+              Pitch
+            </button>
+          ) : null}
           {/* Calendar (URG-157). Opens as a WIDE overlay window rather than the
               small one the other scenes get — its month grid needs ~1200px, and
               at narrower widths it already falls back to its own agenda list.
@@ -450,22 +467,6 @@ export function TasksPanel({
               Press kit
               {/* Beta stamp, same tag as Calendar above — the press kit
                   generator shipped 2026-07-31 and is still early. */}
-              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-                Beta
-              </span>
-            </button>
-          ) : null}
-          {/* Playlist pitching: browse curator playlists and send this
-              release's song, with each curator's answer shown beside it. */}
-          {PITCHING_ENABLED && scopedRelease ? (
-            <button
-              type="button"
-              onClick={() => toggleScene('pitch', scopedRelease.id)}
-              aria-pressed={activeScene === 'pitch'}
-              className={pillClass('pitch')}
-            >
-              <Radio className="h-3.5 w-3.5" aria-hidden="true" />
-              Pitch
               <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
                 Beta
               </span>
