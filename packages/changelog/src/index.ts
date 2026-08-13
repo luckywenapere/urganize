@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.50.2",
+    date: "August 13, 2026",
+    highlights: [
+      "When something in the app breaks, it now says so and offers you a way on. A page that hit a problem used to just stop where it was, half drawn, with nothing to click and no hint that anything had gone wrong. You get a short explanation, a Try again, and a way back to your releases — and the menus and the UrgAns button stay put, so a broken page costs you the page and not your way out of it.",
+      "The panels either side of your work can no longer take the app down with them. If UrgAns or your workspace card runs into trouble it quietly steps aside and the rest keeps working, where before the whole screen went with it.",
+    ],
+  },
+  {
     version: "0.50.1",
     date: "August 13, 2026",
     highlights: [

@@ -9,6 +9,8 @@ import { RAIL_OPEN_KEY, RAIL_OPEN_VERSION, useChappiStore } from '@/stores/useCh
 import { readPersistedState } from '@/lib/persisted-state';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { AppTopbar } from '@/components/app/AppTopbar';
+import { ErrorBoundary } from '@/components/app/ErrorBoundary';
+import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { NavigationTracker } from '@/components/app/NavigationTracker';
 import { ToastProvider } from '@/components/shared/ToastProvider';
@@ -361,13 +363,25 @@ export function AppShell({ children }: { children: ReactNode }) {
                 a layout-flow column (content narrows; nothing is covered) on
                 every chrome page. The rail renders nowhere on the assistant
                 page itself — that page IS the chat. */}
+            {/* The two side columns are wrapped because they are OUTSIDE
+                app/error.tsx's reach — it renders inside this layout, so a throw
+                out here escapes to global-error.tsx and takes the whole app with
+                it. Neither column is load-bearing: if one breaks, it goes quiet
+                and the workspace keeps working. ErrorBoundary adds no DOM node,
+                which matters here — these are flex children of this row. */}
             <div className="flex min-h-0 flex-1">
-              {IDENTITY_PANEL_ENABLED ? <WorkspaceIdentityPanel /> : null}
+              {IDENTITY_PANEL_ENABLED ? (
+                <ErrorBoundary name="identity-panel" onError={reportBoundaryError}>
+                  <WorkspaceIdentityPanel />
+                </ErrorBoundary>
+              ) : null}
               <main className={`min-w-0 flex-1 px-4 pt-5 sm:px-5 md:px-6 lg:px-8 ${mainPaddingClass}`}>
                 {children}
               </main>
               {CHAPPI_ENABLED && !isChappiRoute ? (
-                <ChappiSidePanel onNewRelease={openCreateRelease} />
+                <ErrorBoundary name="urgans-rail" onError={reportBoundaryError}>
+                  <ChappiSidePanel onNewRelease={openCreateRelease} />
+                </ErrorBoundary>
               ) : null}
             </div>
           </div>
@@ -376,8 +390,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="app-layout lazy-fade lazy-fade-in">{children}</div>
       )}
       {/* HelpMenu moved into AppTopbar's right cluster (2026-07-23). */}
+      {/* Same reasoning as the side columns above. The dock is the one that
+          carries the WhatsApp founder link, so losing it silently is a real
+          cost — but strictly less than losing the entire application because a
+          floating widget threw. */}
       {showHelpMenu ? (
-        CHAPPI_ENABLED ? <ChappiDock onNewRelease={openCreateRelease} /> : <SupportChat />
+        <ErrorBoundary name="support-launcher" onError={reportBoundaryError}>
+          {CHAPPI_ENABLED ? <ChappiDock onNewRelease={openCreateRelease} /> : <SupportChat />}
+        </ErrorBoundary>
       ) : null}
       {MOBILE_NAV_ENABLED && showWorkspaceChrome && !requiresArtistNameGate ? (
         <MobileNavBar onNewRelease={openCreateRelease} />

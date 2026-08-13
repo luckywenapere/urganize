@@ -118,6 +118,21 @@ export interface AnalyticsEventPropertiesMap {
   // assistant reply. Thumbs are the first structured feedback signal on
   // assistant quality — worth watching once the agent model is wired.
   urgans_reply_action: { action: 'copy' | 'retry' | 'thumbs_up' | 'thumbs_down' };
+  /** A crash reached a boundary and the user was shown a failure instead of the
+   * thing they asked for. `scope` is 'route' for app/error.tsx, or the guarded
+   * widget's name for a component boundary ('urgans-rail').
+   *
+   * Deliberately carries NO error message: messages here can quote API
+   * responses, which can contain a teammate's email or a release title, and an
+   * error report is not a place to start leaking those. `error_name` (the
+   * constructor, e.g. 'TypeError') and `digest` (Next's server-error hash, which
+   * is what correlates with the Vercel log) are enough to act on. */
+  app_error_shown: {
+    scope: string;
+    pathname: string;
+    error_name: string;
+    digest?: string;
+  };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;
