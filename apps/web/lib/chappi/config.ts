@@ -1,15 +1,23 @@
 // Server-side Chappi config. Kept separate from lib/ai/provider.ts because the
-// Chappi agent uses its OWN transport (the Anthropic SDK) and its OWN
-// credentials, independent of the Zuplo gateway that serves the two single-shot
-// AI features. Capability is gated on CHAPPI_MODEL being set to a real model —
-// NOT on the qwen2.5:3b placeholder — so the agent stays dark until a capable
-// tool-calling model is wired (Phase 4).
+// Chappi agent uses its OWN transport (OpenAI-protocol tool calling against the
+// RodiumAi gateway; rewritten 2026-08-13 off the Anthropic SDK) and its OWN
+// credentials, independent of the gateway that serves the single-shot AI
+// features. Capability is gated on CHAPPI_MODEL being set to a real model —
+// so the agent stays dark until a capable tool-calling model is wired.
+
+// RodiumAi's OpenAI-compatible surface. CHAPPI_MODEL must be a tool-capable
+// catalogue id — e.g. openai/gpt-4o-mini (verified 2026-08-13 against the live
+// API: proper tool_calls, correct arguments). NOT a meta/llama-* free-tier
+// model: those are geo-blocked at the AWS Bedrock license level for this
+// account's region ("Access to Meta Llama models is not allowed from
+// unsupported countries") — confirmed live, not a code bug.
+const DEFAULT_CHAPPI_API_BASE = 'https://api.rodiumai.io/v1';
 
 export type ChappiModelConfig = {
   apiKey: string;
   model: string;
-  /** Optional SDK baseURL override for routing through a future proxy/gateway. */
-  baseURL?: string;
+  /** Gateway base URL (…/v1). Defaults to RodiumAi; override via CHAPPI_API_BASE. */
+  baseURL: string;
 };
 
 /** The client-facing flag: is the Chappi UI mounted at all. */
@@ -23,7 +31,8 @@ export function getChappiModelConfig(): ChappiModelConfig | null {
   const model = String(process.env.CHAPPI_MODEL || '').trim();
   if (!apiKey || !model) return null;
 
-  const baseURL = String(process.env.CHAPPI_API_BASE || '').trim() || undefined;
+  const baseURL =
+    String(process.env.CHAPPI_API_BASE || '').trim().replace(/\/+$/, '') || DEFAULT_CHAPPI_API_BASE;
   return { apiKey, model, baseURL };
 }
 

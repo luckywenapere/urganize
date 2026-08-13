@@ -34,8 +34,8 @@ export type McpToolDescriptor = {
 /**
  * MCP `tools/list` descriptors. Read straight off the registry — which already
  * stores the schema under camelCase `inputSchema`, exactly what MCP wants.
- * (Do NOT route this through getChappiToolSchemas(): that renames the field to
- * Anthropic's snake_case `input_schema`.)
+ * (Do NOT route this through getChappiToolSchemas(): that wraps each tool in
+ * the OpenAI `{ type: 'function', function: {...} }` envelope.)
  */
 export function getMcpToolDescriptors(): McpToolDescriptor[] {
   return MCP_TOOLS.map((tool) => ({
