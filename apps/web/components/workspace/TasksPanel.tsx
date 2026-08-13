@@ -602,34 +602,32 @@ export function TasksPanel({
         })}
       </div>
       )}
-      {/* Sticky Calendar pill (founder call, 2026-08-13 — corrected via
-          screenshot after two wrong placements: first inside the identity
-          card's scrolling nav list, then as the identity card's own footer
-          row. Neither was right — the arrow in the screenshot traced from
-          the header's old Calendar pill DOWN THROUGH the activity list
-          itself, ending at its base. This is that: a pill anchored to the
-          bottom of the activities body, reachable without scrolling back up
-          to the header.
-          `lg:sticky lg:bottom-2` only — desktop's version of this container
-          is a real bounded internal scroll box (`lg:overflow-y-auto`, see
-          the container comment above), the one place sticky positioning
-          here is predictable. Below `lg` this div is plain flow (the PAGE
-          scrolls, not this box), and the fixed `MobileNavBar` already owns
-          the bottom 64px of the viewport there — rather than hand-tune a
-          pixel offset to clear a bar that may not even be mounted
-          (NEXT_PUBLIC_FEATURE_MOBILE_NAV), the pill just renders in normal
-          flow as the last item on mobile, "under the activities" without
-          floating.
+      </div>
+
+      {/* Calendar footer pill (founder call, 2026-08-13 — third placement,
+          corrected twice via screenshot: not the identity card's nav list,
+          not the card's footer, and not floating just under the collapsed
+          buckets either. The final arrow pointed at the BASE of the
+          activities column, so this is a footer of the PANEL, not an item in
+          the list: a sibling AFTER the flex-1 scroll body, which pins it to
+          the bottom of the panel on desktop (where the aside fills the
+          viewport-locked column) whether or not the task list overflows —
+          the list scrolls behind it, this row never moves.
+          Below `lg` the aside is ordinary page flow with no bounded height,
+          so "the panel's base" and "after the list" are the same place — it
+          renders under the activities, and the fixed MobileNavBar keeps
+          owning the viewport's bottom edge (no offset war; this row is in
+          flow, not fixed).
           Hidden once a scene is open (`!sceneContent`): the header's
-          "Activities" pill is already the way back, and this would be a
-          redundant second entry into the very scene already showing. */}
+          "Activities" pill is already the way back, and a Calendar entry
+          while Calendar (or any scene) is showing is redundant chrome. */}
       {CONTENT_CALENDAR_ENABLED && scopedRelease && !sceneContent ? (
-        <div className="flex justify-center pt-3 lg:sticky lg:bottom-2 lg:z-10 lg:pt-0">
+        <div className="flex shrink-0 justify-center pb-4 pt-3 lg:pb-2">
           <button
             type="button"
             onClick={() => toggleScene('calendar', scopedRelease.id)}
             aria-pressed={activeScene === 'calendar'}
-            className={`${pillClass('calendar')} lg:shadow-lg lg:shadow-black/20`}
+            className={pillClass('calendar')}
           >
             <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
             Calendar
@@ -640,7 +638,6 @@ export function TasksPanel({
           </button>
         </div>
       ) : null}
-      </div>
     </aside>
   );
 }

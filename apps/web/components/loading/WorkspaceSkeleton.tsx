@@ -289,18 +289,18 @@ function TasksPanelSkeleton() {
             </div>
           </div>
         ))}
-        {/* Sticky Calendar pill placeholder (2026-08-13 — see the real
-            block's comment in TasksPanel.tsx for the full history: Calendar
-            moved out of the header pill row into its own sticky pill under
-            the activities). `lg:sticky lg:bottom-2` matches the real pill's
-            desktop-only sticky treatment exactly, so the reserved footprint
-            doesn't shift when content resolves. */}
-        {CONTENT_CALENDAR_ENABLED ? (
-          <div className="flex justify-center pt-3 lg:sticky lg:bottom-2 lg:pt-0">
-            <SkeletonBlock className="h-8 w-28 rounded-full" />
-          </div>
-        ) : null}
       </div>
+      {/* Calendar footer pill placeholder (2026-08-13 — see the real block's
+          comment in TasksPanel.tsx for the full history: Calendar left the
+          header pill row for a footer of the panel). A sibling AFTER the
+          flex-1 body, matching the real row's wrapper classes exactly, so
+          the reserved footprint sits pinned at the panel's base and doesn't
+          shift when content resolves. */}
+      {CONTENT_CALENDAR_ENABLED ? (
+        <div className="flex shrink-0 justify-center pb-4 pt-3 lg:pb-2">
+          <SkeletonBlock className="h-8 w-28 rounded-full" />
+        </div>
+      ) : null}
     </div>
   );
 }
