@@ -8,6 +8,7 @@ import { generatePlainTextAiOutput, isAiConfigured } from '@/lib/ai/provider';
 import {
   buildStatusMessages,
   stripMarkdownWrappers,
+  type StatusFacts,
   type StatusReleaseInfo,
   type StatusTaskSummary,
 } from '@/lib/release-status';
@@ -63,7 +64,11 @@ function formatShortDate(value: string): string {
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(date);
 }
 
-function summarizeTasks(rows: TaskRow[]): Omit<StatusTaskSummary, 'attachmentCount' | 'attachmentCategories'> {
+function summarizeTasks(
+  rows: TaskRow[]
+): Omit<StatusTaskSummary, 'attachmentCount' | 'attachmentCategories'> & {
+  dueThisWeekCount: number;
+} {
   const now = Date.now();
   const weekAhead = now + 7 * MS_PER_DAY;
   const twoWeeksAhead = now + 14 * MS_PER_DAY;
@@ -71,6 +76,9 @@ function summarizeTasks(rows: TaskRow[]): Omit<StatusTaskSummary, 'attachmentCou
   let doneCount = 0;
   let inProgressCount = 0;
   let blockedCount = 0;
+  // Counted separately from `comingUpThisWeek` below, which caps at five
+  // TITLES for the prompt. The tiles need the real total — see StatusFacts.
+  let dueThisWeekCount = 0;
   const inProgressTitles: string[] = [];
   const blockedTitles: string[] = [];
   const comingUpThisWeek: string[] = [];
@@ -93,14 +101,9 @@ function summarizeTasks(rows: TaskRow[]): Omit<StatusTaskSummary, 'attachmentCou
     const dueTime = row.due_date ? new Date(row.due_date).getTime() : NaN;
     const hasValidDue = Number.isFinite(dueTime);
 
-    if (
-      hasValidDue &&
-      !TERMINAL_STATUSES.has(status) &&
-      dueTime >= now &&
-      dueTime <= weekAhead &&
-      comingUpThisWeek.length < 5
-    ) {
-      comingUpThisWeek.push(title);
+    if (hasValidDue && !TERMINAL_STATUSES.has(status) && dueTime >= now && dueTime <= weekAhead) {
+      dueThisWeekCount += 1;
+      if (comingUpThisWeek.length < 5) comingUpThisWeek.push(title);
     }
 
     if (
@@ -117,6 +120,7 @@ function summarizeTasks(rows: TaskRow[]): Omit<StatusTaskSummary, 'attachmentCou
     doneCount,
     inProgressCount,
     blockedCount,
+    dueThisWeekCount,
     inProgressTitles,
     blockedTitles,
     comingUpThisWeek,
@@ -189,7 +193,7 @@ export async function POST(
   }
 
   const taskRows = (tasksResult.data || []) as TaskRow[];
-  const taskSummary = summarizeTasks(taskRows);
+  const { dueThisWeekCount, ...taskSummary } = summarizeTasks(taskRows);
 
   // Assets are non-critical context — if the lookup errors, treat as zero.
   const assetRows = assetsResult.error ? [] : ((assetsResult.data || []) as Array<{ category: string | null }>);
@@ -247,5 +251,17 @@ export async function POST(
     return NextResponse.json({ error: 'AI returned no usable text.' }, { status: 502 });
   }
 
-  return NextResponse.json({ status_update: statusUpdate });
+  // `stats` is additive: the Chappi/MCP tool layer reads `status_update` only
+  // (see lib/chappi/tools.ts generate_status_update), so this new field
+  // reaches the modal without touching that contract. Every figure comes from
+  // rows already loaded above — the tiles cost no extra queries.
+  const stats: StatusFacts = {
+    totalCount: taskRows.length,
+    doneCount: taskSummary.doneCount,
+    inProgressCount: taskSummary.inProgressCount,
+    blockedCount: taskSummary.blockedCount,
+    dueThisWeekCount,
+  };
+
+  return NextResponse.json({ status_update: statusUpdate, stats });
 }

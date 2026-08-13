@@ -3,11 +3,16 @@
 import { useState } from 'react';
 import { Check, Copy, Loader2, RefreshCw, Sparkles, X } from 'lucide-react';
 import { Button, IconButton } from '@urganize/ui';
+import { StatTiles } from '@/components/shared/StatTiles';
+import { buildStatusTiles, type StatusFacts } from '@/lib/release-status';
 
 type StatusUpdateModalProps = {
   open: boolean;
   isGenerating: boolean;
   statusUpdate: string;
+  /** The counts the paragraph was written from; null until the call returns
+   * (or when an older cached response carried none). */
+  stats?: StatusFacts | null;
   onClose: () => void;
   onRegenerate: () => void;
 };
@@ -16,6 +21,7 @@ export function StatusUpdateModal({
   open,
   isGenerating,
   statusUpdate,
+  stats,
   onClose,
   onRegenerate,
 }: StatusUpdateModalProps) {
@@ -82,8 +88,16 @@ export function StatusUpdateModal({
                 Generating…
               </div>
             ) : (
-              <div className="border border-stroke-default bg-bg-elevated/50 p-4 text-sm leading-7 text-content-primary">
-                {statusUpdate}
+              <div className="flex flex-col gap-3">
+                {/* Tiles ABOVE the paragraph: the reader meets the facts, then
+                    the sentence describing them. Reversed, the paragraph is
+                    the claim and the numbers become a footnote to it. */}
+                {stats ? (
+                  <StatTiles tiles={buildStatusTiles(stats)} ariaLabel="Release progress" />
+                ) : null}
+                <div className="border border-stroke-default bg-bg-elevated/50 p-4 text-sm leading-7 text-content-primary">
+                  {statusUpdate}
+                </div>
               </div>
             )}
           </div>

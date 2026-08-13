@@ -9,6 +9,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { type Task } from '@/lib/tasks';
+import type { StatusFacts } from '@/lib/release-status';
 import type { Release } from '@/types/releases';
 import { supabase } from '@/lib/supabase/client';
 import { Toast } from '@/components/shared/Toast';
@@ -155,6 +156,9 @@ export function WorkspaceView() {
   const [isRecapOpen, setIsRecapOpen] = useState(false);
   const [isGeneratingStatus, setIsGeneratingStatus] = useState(false);
   const [statusUpdate, setStatusUpdate] = useState('');
+  // The counts behind the generated paragraph, shown as tiles above it so the
+  // narration can be checked against its own source data.
+  const [statusStats, setStatusStats] = useState<StatusFacts | null>(null);
   // One-time getting-started guide (NewReleaseGuide), triggered by ?new=1
   // alongside ?release= from the create flows. Read into state once, then
   // both params are stripped via router.replace so a refresh never
@@ -229,6 +233,7 @@ export function WorkspaceView() {
     setIsStatusOpen(true);
     setIsGeneratingStatus(true);
     setStatusUpdate('');
+    setStatusStats(null);
     try {
       const {
         data: { session },
@@ -242,12 +247,16 @@ export function WorkspaceView() {
       });
       const payload = (await res.json().catch(() => ({}))) as {
         status_update?: string;
+        stats?: StatusFacts;
         error?: string;
       };
       if (!res.ok || !payload.status_update) {
         throw new Error(payload.error || 'Could not generate status update.');
       }
       setStatusUpdate(payload.status_update);
+      // Absent on a response from a deploy that predates the stats field; the
+      // modal simply renders no tiles rather than guessing at figures.
+      setStatusStats(payload.stats ?? null);
     } catch (err) {
       setIsStatusOpen(false);
       setToast({
@@ -883,6 +892,7 @@ export function WorkspaceView() {
           open={isStatusOpen}
           isGenerating={isGeneratingStatus}
           statusUpdate={statusUpdate}
+          stats={statusStats}
           onClose={() => setIsStatusOpen(false)}
           onRegenerate={() => void generateStatus()}
         />

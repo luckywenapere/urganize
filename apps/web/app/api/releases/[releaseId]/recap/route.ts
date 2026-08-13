@@ -9,7 +9,7 @@ import {
 import { RECAP_CARD_DIMENSIONS, renderRecapCard } from '@/lib/recap-card';
 import { formatRecapDate, type RecapCardSize } from '@/lib/recap-copy';
 import { loadRecapFonts } from '@/lib/recap-fonts';
-import { gatherRecapStats, selectRecapStats } from '@/lib/recap-stats';
+import { gatherRecapStats, selectRecapStats, type RecapStatLine } from '@/lib/recap-stats';
 import type { ReleaseRecap } from '@/types/recap';
 import {
   RECAP_COLUMNS,
@@ -126,11 +126,32 @@ export async function GET(
     return NextResponse.json({ error: error.message || 'Could not load the recap.' }, { status: 500 });
   }
 
-  if (!data) {
-    return NextResponse.json({ recap: null });
+  // The same stats the card will carry, so the modal can show them BEFORE
+  // generating (stat tiles, 2026-08-13): the form step otherwise asks for an
+  // optional highlight with no hint of what else lands on the poster, and a
+  // sparse card is exactly when that highlight earns its place.
+  //
+  // Failing soft is the point. gatherRecapStats THROWS on a task-query error,
+  // and a stats problem must never stop a manager reaching a recap they
+  // already have — the same posture this feature takes toward the pitches
+  // table it does not own.
+  let stats: RecapStatLine[] | null = null;
+  try {
+    stats = selectRecapStats(
+      await gatherRecapStats(adminClient, releaseId, ownership.release.releaseDate)
+    );
+  } catch (statsError) {
+    console.error('[recap] could not gather stats for the preview', statsError);
   }
 
-  return NextResponse.json({ recap: await signRecapRow(adminClient, data as Record<string, unknown>) });
+  if (!data) {
+    return NextResponse.json({ recap: null, stats });
+  }
+
+  return NextResponse.json({
+    recap: await signRecapRow(adminClient, data as Record<string, unknown>),
+    stats,
+  });
 }
 
 export async function POST(
