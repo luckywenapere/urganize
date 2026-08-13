@@ -1699,3 +1699,27 @@ body:focus-within .keyboard-hint,
     padding-right: clamp(24px, 3vw, 56px);
   }
 }
+
+/* Pre-hydration session gate for /auth. Paired with the session-probe script
+   in app/layout.tsx and the gate in app/auth/AuthPageClient.tsx — read those
+   two before changing any of this.
+
+   /auth server-renders the real login form so a failed or slow hydration still
+   leaves a usable page (bug report, 2026-08-12). A visitor who is already
+   signed in must not see that form, and "not see" has to mean "never painted",
+   which rules out deciding it in React. The script sets the attribute below
+   before the body exists; these rules therefore apply to the first frame.
+
+   Default state is the honest one for a page whose whole job is signing in:
+   form shown, loader hidden. Only a positive session hint swaps them. */
+.auth-session-loader {
+  display: none;
+}
+
+html[data-auth-session='1'] .auth-session-loader {
+  display: block;
+}
+
+html[data-auth-session='1'] .auth-form-shell {
+  display: none;
+}

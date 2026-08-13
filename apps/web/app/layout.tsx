@@ -140,6 +140,44 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             `,
           }}
         />
+        {/*
+          Pre-hydration session probe for /auth, the same shape as the theme
+          script above and for the same reason: a decision that has to be made
+          before the first paint cannot wait for React.
+
+          /auth server-renders the real login form so it survives a failed or
+          slow hydration (bug report, 2026-08-12). The server cannot know
+          whether the visitor is already signed in, and the React gate in
+          AuthPageClient can only correct that after hydration — which is fine
+          in practice but not a guarantee, because React may yield while
+          hydrating and let the browser paint the form first. This runs before
+          the body exists, so the CSS in globals.css keyed on the attribute is
+          applied to the very first frame.
+
+          It is a HINT, not authority: the flag is whatever the auth store last
+          persisted, so it can be stale (a session that expired while the app
+          was closed). AuthPageClient removes the attribute the moment Supabase
+          confirms there is no session, which is what reveals the form again.
+          Failing to set it at all — storage blocked, unexpected shape — simply
+          falls back to the React gate.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  if (!/^\\/auth\\/?$/.test(window.location.pathname)) return;
+                  var raw = localStorage.getItem('urganize-auth');
+                  if (!raw) return;
+                  var parsed = JSON.parse(raw);
+                  if (parsed && parsed.state && parsed.state.isAuthenticated === true) {
+                    document.documentElement.setAttribute('data-auth-session', '1');
+                  }
+                } catch (_) {}
+              })();
+            `,
+          }}
+        />
       </head>
       <body className="app-body bg-bg-base text-content-primary antialiased">
         <CursorRefresher />

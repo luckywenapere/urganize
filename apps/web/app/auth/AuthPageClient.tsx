@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
+import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { HOME_PATH } from '@/lib/home-path';
 import { Button } from '@urganize/ui';
 import { Input } from '@urganize/ui';
@@ -21,6 +22,9 @@ import { errorMessage } from "@/lib/errors";
 // bookmarks to the right entrance.
 type LoginProviderHint = 'unknown' | 'google' | 'email';
 const LAST_AUTH_EMAIL_KEY = 'urganize.last_auth_email';
+// Written by the pre-hydration probe in app/layout.tsx, read by the CSS gate in
+// app/globals.css, cleared here once Supabase confirms there is no session.
+const SESSION_HINT_ATTRIBUTE = 'data-auth-session';
 const normalizeAuthEmail = (value: string) => value.trim().toLowerCase();
 
 const resolveLoginProviderHint = async (normalizedEmail: string): Promise<LoginProviderHint> => {
@@ -41,14 +45,34 @@ const resolveLoginProviderHint = async (normalizedEmail: string): Promise<LoginP
 
 export default function AuthPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { login, loginWithGoogle, isAuthenticated, isLoading: authLoading } = useAuthStore();
-  const nextPath = searchParams.get('next') || HOME_PATH;
-  const inviteEmail = normalizeAuthEmail(searchParams.get('email') || '');
+
+  // Query string is read after mount rather than through useSearchParams(),
+  // which is what previously kept this page off the server entirely: reading it
+  // in a statically prerendered client component makes Next bail out to the
+  // nearest Suspense fallback, so the HTML Vercel served for /auth was
+  // app/auth/loading.tsx — a spinner — and the login form only ever existed
+  // once the client bundle hydrated. Making the route dynamic instead would
+  // fix the bailout but trade a CDN hit for a server round trip on every
+  // visit, which is the wrong way round for the slow-connection users this is
+  // for. Every consumer of these params runs after mount (the two legacy
+  // bounces, the email prefill, and the post-login redirect), so a first
+  // render with the defaults below changes nothing they observe. The read is
+  // pre-paint, and `paramsReady` holds the redirect effects until it lands so
+  // none of them can act on a default `next` and drop a real one.
+  const [searchParams, setSearchParams] = useState<URLSearchParams | null>(null);
+  const paramsReady = searchParams !== null;
+
+  useIsomorphicLayoutEffect(() => {
+    setSearchParams(new URLSearchParams(window.location.search));
+  }, []);
+
+  const nextPath = searchParams?.get('next') || HOME_PATH;
+  const inviteEmail = normalizeAuthEmail(searchParams?.get('email') || '');
   // Old bookmarks / sent emails may still carry ?mode=signup. Send those
   // to /onboarding (the organic signup home) so the user has a path
   // forward — /auth itself no longer offers a signup form.
-  const isLegacySignupMode = searchParams.get('mode') === 'signup';
+  const isLegacySignupMode = searchParams?.get('mode') === 'signup';
 
   // Legacy invite signature. The pre-token buildInviteUrl emitted
   // `/auth?next=/dashboard/tasks&email=…` (see git blame on
@@ -62,11 +86,32 @@ export default function AuthPage() {
   // round-trip fails (the user signs up via /onboarding and the trigger
   // still links them by email).
   const isLegacyInviteLink =
-    Boolean(inviteEmail) && searchParams.get('next') === '/dashboard/tasks';
+    Boolean(inviteEmail) && searchParams?.get('next') === '/dashboard/tasks';
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  // False on the server AND on the client's first render, so both render the
+  // same thing (the form) and hydration matches. Flipped pre-paint, which is
+  // what lets the session check below hide the form without the user ever
+  // seeing a painted frame of it. See the session gate near the bottom.
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useIsomorphicLayoutEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  // The pre-hydration probe in app/layout.tsx may have hidden the form on the
+  // strength of a persisted flag, which can be stale — a session that expired
+  // while the app was closed. Once Supabase has actually answered, this is what
+  // hands the page back: clearing the attribute reveals the form. Only the
+  // negative case is acted on; a confirmed session is the early-returned
+  // loader below, and while the answer is still unknown the hint stands so a
+  // returning user is not shown a form we are about to take away.
+  useIsomorphicLayoutEffect(() => {
+    if (authLoading || isAuthenticated) return;
+    document.documentElement.removeAttribute(SESSION_HINT_ATTRIBUTE);
+  }, [authLoading, isAuthenticated]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -90,10 +135,11 @@ export default function AuthPage() {
   // before the authenticated-redirect so we don't trap signed-in users
   // (rare, but possible if they clicked an old marketing link).
   useEffect(() => {
+    if (!paramsReady) return;
     if (isLegacySignupMode) {
       router.replace('/onboarding');
     }
-  }, [isLegacySignupMode, router]);
+  }, [paramsReady, isLegacySignupMode, router]);
 
   // Legacy invite link bounce. Fires once on mount when the URL matches
   // the pre-token invite signature. Resolves the email to a token
@@ -102,6 +148,7 @@ export default function AuthPage() {
   // falls through to the normal login form — the email pre-fill
   // behaviour below still applies.
   useEffect(() => {
+    if (!paramsReady) return;
     if (!isLegacyInviteLink) return;
     let cancelled = false;
 
@@ -135,14 +182,15 @@ export default function AuthPage() {
     return () => {
       cancelled = true;
     };
-  }, [isLegacyInviteLink, inviteEmail, router]);
+  }, [paramsReady, isLegacyInviteLink, inviteEmail, router]);
 
   useEffect(() => {
+    if (!paramsReady) return;
     if (authLoading) return;
     if (isAuthenticated) {
       router.replace(nextPath);
     }
-  }, [authLoading, isAuthenticated, nextPath, router]);
+  }, [paramsReady, authLoading, isAuthenticated, nextPath, router]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -229,15 +277,26 @@ export default function AuthPage() {
     }
   };
 
-  // Returning users must never see the login form. While the persisted
-  // session is still restoring (authLoading) — or once it's confirmed
-  // (isAuthenticated), while the redirect effect above navigates into the
-  // app — show a neutral loader instead of the form, exactly like the root
-  // `/` page. Interactive submits are excluded (local isLoading /
+  // Returning users must never see the login form — still true, and still the
+  // point of this gate. What changed (2026-08-12) is WHEN the decision is
+  // made. It used to be made during render and keyed on `authLoading`, which
+  // is true on the very first render for everybody; that made the form
+  // unreachable until the client bundle hydrated, so a dropped chunk on a
+  // weak connection left the user on this spinner with no way to sign in. The
+  // check now waits for `hasMounted`, which flips before the first paint:
+  // hydration still renders the same form the server sent (no mismatch), and a
+  // visitor who already has a session has it swapped for this loader before
+  // that frame is ever painted. `isAuthenticated` is rehydrated from storage
+  // synchronously by the auth store's persist middleware, so it is already
+  // correct at that point.
+  //
+  // `authLoading` is deliberately no longer part of the condition: waiting on
+  // it meant an anonymous visitor — the only person who needs this page — sat
+  // behind a spinner for a session check that was always going to come back
+  // empty. Interactive submits stay excluded (local isLoading /
   // isGoogleLoading) so the form keeps its inline "Signing in…" + error UX
-  // during a login attempt. The auth-store's INITIAL_SESSION handler always
-  // resolves authLoading, so this can't hang.
-  if ((authLoading || isAuthenticated) && !isLoading && !isGoogleLoading) {
+  // during a login attempt.
+  if (hasMounted && isAuthenticated && !isLoading && !isGoogleLoading) {
     return (
       <LoadingScreen
         variant="shell"
@@ -248,7 +307,22 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-bg-base p-4">
+    <>
+      {/* Shown INSTEAD of the form, by CSS alone, when the pre-hydration probe
+          found a persisted session — so a returning user's first painted frame
+          is this and not the form. Hidden by default for everyone else; React
+          swaps in its own identical loader once it takes over. Both halves of
+          the swap are the same component, so they cannot drift apart. */}
+      <div className="auth-session-loader">
+        <LoadingScreen
+          variant="shell"
+          title="Opening Urganize"
+          description="Checking your session…"
+          asPage={false}
+        />
+      </div>
+
+      <div className="auth-form-shell relative min-h-screen overflow-hidden bg-bg-base p-4">
       <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand/15 blur-3xl" />
       <div className="pointer-events-none absolute -left-24 bottom-0 h-72 w-72 rounded-full bg-status-info/15 blur-3xl" />
       <div className="mx-auto flex min-h-screen w-full max-w-md items-center justify-center">
@@ -260,6 +334,16 @@ export default function AuthPage() {
             Welcome
           </p>
         </div>
+
+        {/* Signing in needs JavaScript. Say so instead of leaving the user
+            tapping a button that silently does nothing. */}
+        <noscript>
+          <p className="mb-4 border border-status-warning/40 bg-bg-surface px-4 py-3 text-sm leading-relaxed text-content-secondary">
+            Signing in needs JavaScript switched on. If you are using a content
+            blocker or private-browsing restrictions, turn them off for
+            urganize.app and reload this page.
+          </p>
+        </noscript>
 
         <Card padding="lg" className="rounded-3xl border border-stroke-default bg-bg-surface/95 backdrop-blur-sm shadow-[0_10px_40px_rgb(var(--shadow-ink)/calc(0.18*var(--shadow-alpha-scale)))]">
           {/* Login only — signup moved to /onboarding (organic) and
@@ -420,7 +504,8 @@ export default function AuthPage() {
         </Card>
       </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
