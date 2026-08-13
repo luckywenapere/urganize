@@ -2,6 +2,7 @@
 
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { panelClass } from './panelClass';
+import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
 
 type WorkspaceIdentitySectionProps = {
   input: string;
@@ -57,16 +58,8 @@ export function WorkspaceIdentitySection({
               maxLength={80}
             />
           </label>
-          {message && (
-            <p className="rounded-lg border border-brand/35 bg-brand-muted px-3 py-2 text-sm text-brand">
-              {message}
-            </p>
-          )}
-          {error && (
-            <p className="rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
-              {error}
-            </p>
-          )}
+          {message && <p className={feedbackSuccessClass}>{message}</p>}
+          {error && <p className={feedbackErrorClass}>{error}</p>}
           <button
             type="button"
             onClick={onSave}
