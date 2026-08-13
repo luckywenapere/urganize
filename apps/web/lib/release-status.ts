@@ -26,6 +26,97 @@ export type StatusTaskSummary = {
   attachmentCategories: string[]; // distinct
 };
 
+/**
+ * The counts behind a generated status update, returned beside the paragraph
+ * so the modal can show the numbers it was written FROM (stat tiles,
+ * 2026-08-13). Derived entirely from rows the route already loaded — this adds
+ * no queries.
+ *
+ * `dueThisWeekCount` is a true count and deliberately NOT
+ * `comingUpThisWeek.length`: that list is capped at five titles because it
+ * feeds a prompt, so its length silently under-reports a busy week. A tile
+ * reading "5 due this week" when nine are due would be a wrong number
+ * presented as a fact.
+ */
+export type StatusFacts = {
+  totalCount: number;
+  doneCount: number;
+  inProgressCount: number;
+  blockedCount: number;
+  dueThisWeekCount: number;
+};
+
+/**
+ * One stat tile. Structurally compatible with the `StatTile` prop of
+ * components/shared/StatTiles.tsx, which is the presentational contract —
+ * declared here (not imported from there) for the same reason
+ * `RecapStatLine` lives in lib/recap-stats.ts: the selection logic is pure and
+ * belongs where it can be unit-tested without pulling a client component and
+ * its icon imports into the test process.
+ */
+export type StatusTile = {
+  key: string;
+  value: string;
+  label: string;
+  detail?: string;
+  tone?: 'default' | 'alert';
+};
+
+/**
+ * The tiles shown above a generated status update — the figures the paragraph
+ * was written from.
+ *
+ * The point is verification, not decoration: an AI paragraph asserting "we're
+ * over halfway with two blocked" is unfalsifiable on its own, and this app's
+ * AI posture is that the model narrates structured data rather than being
+ * trusted for it. Showing the numbers makes the narration checkable at a
+ * glance, which is what makes it safe to paste to an artist or label.
+ *
+ * Only Done is unconditional. The others appear when they carry signal: a zero
+ * in progress, a zero due this week or a zero blocked is the absence of news,
+ * and a row padded with zeroes buries the figures that matter. Blocked is the
+ * exception worth its own treatment — non-zero, it is the most important
+ * number on the screen, so it takes the alert tone.
+ */
+export function buildStatusTiles(stats: StatusFacts): StatusTile[] {
+  const tiles: StatusTile[] = [
+    {
+      key: 'done',
+      value: String(stats.doneCount),
+      label: 'Done',
+      // Omitted rather than "of 0": a release with no activities has no
+      // denominator worth printing.
+      detail: stats.totalCount > 0 ? `of ${stats.totalCount}` : undefined,
+    },
+  ];
+
+  if (stats.inProgressCount > 0) {
+    tiles.push({
+      key: 'in-progress',
+      value: String(stats.inProgressCount),
+      label: 'In progress',
+    });
+  }
+  if (stats.dueThisWeekCount > 0) {
+    tiles.push({
+      key: 'due-this-week',
+      value: String(stats.dueThisWeekCount),
+      label: 'Due',
+      detail: 'this week',
+    });
+  }
+  if (stats.blockedCount > 0) {
+    tiles.push({
+      key: 'blocked',
+      value: String(stats.blockedCount),
+      label: 'Blocked',
+      tone: 'alert',
+    });
+  }
+
+  return tiles;
+}
+
 const STATUS_SYSTEM_PROMPT = [
   'You are writing a status update for a music release. The update is from a manager to someone else involved with the release (the artist, the label, a collaborator). It should be conversational and direct, written in "we" voice (as the manager speaking about their team\'s work).',
   '',

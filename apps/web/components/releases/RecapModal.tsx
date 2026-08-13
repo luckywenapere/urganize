@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Download, Loader2, RefreshCw, Share2, Sparkles, X } from 'lucide-react';
 import { Button, IconButton } from '@urganize/ui';
+import { StatTiles, type StatTile } from '@/components/shared/StatTiles';
 import { supabase } from '@/lib/supabase/client';
 import { isNativePlatform } from '@/lib/platform';
 import { shareOrDownloadImage } from '@/lib/share-file';
+import type { RecapStatLine } from '@/lib/recap-stats';
 import type { ReleaseRecap } from '@/types/recap';
 
 // The release recap card: a shareable poster for a finished release.
@@ -50,9 +52,26 @@ function fileNameFor(title: string, size: PreviewSize): string {
   return `${slug}-recap-${size}.png`;
 }
 
+/**
+ * The stats the poster will carry, in app design language.
+ *
+ * The tiles show what the card is BUILT from; the card itself keeps its own
+ * poster typography (see lib/recap-card.tsx, whose comment asks it to read
+ * "as a designed poster, not a stats dashboard"). Deliberately not the same
+ * treatment in both places — the poster is an artifact sent outside the
+ * product, this is in-app chrome explaining it.
+ *
+ * The server has already applied the selection rule that no stat may render
+ * as a zero, so whatever arrives here is worth showing as-is.
+ */
+function toStatTiles(stats: RecapStatLine[]): StatTile[] {
+  return stats.map((stat) => ({ key: stat.key, value: stat.value, label: stat.label }));
+}
+
 export function RecapModal({ releaseId, releaseTitle, onClose, onToast }: RecapModalProps) {
   const [step, setStep] = useState<Step>('loading');
   const [recap, setRecap] = useState<ReleaseRecap | null>(null);
+  const [stats, setStats] = useState<RecapStatLine[] | null>(null);
   const [highlightInput, setHighlightInput] = useState('');
   const [previewSize, setPreviewSize] = useState<PreviewSize>('story');
   const [isSharing, setIsSharing] = useState(false);
@@ -68,8 +87,14 @@ export function RecapModal({ releaseId, releaseTitle, onClose, onToast }: RecapM
       });
       if (!response.ok) throw new Error('load failed');
 
-      const payload = (await response.json()) as { recap: ReleaseRecap | null };
+      const payload = (await response.json()) as {
+        recap: ReleaseRecap | null;
+        stats?: RecapStatLine[] | null;
+      };
       const existing = payload.recap;
+      // Null when the server could not gather them (it fails soft on purpose);
+      // the form then reads exactly as it did before the tiles existed.
+      setStats(payload.stats ?? null);
 
       if (existing?.storyImageUrl) {
         setRecap(existing);
@@ -195,6 +220,19 @@ export function RecapModal({ releaseId, releaseTitle, onClose, onToast }: RecapM
 
             {step === 'form' ? (
               <div className="flex flex-col gap-4">
+                {/* What the card will carry, before it is built. Answers the
+                    question the form used to leave open — "what actually goes
+                    on this thing?" — and tells the user whether the highlight
+                    is decoration or the main event. */}
+                {stats && stats.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-content-tertiary">
+                      On your card
+                    </p>
+                    <StatTiles tiles={toStatTiles(stats)} ariaLabel="Stats on your recap card" />
+                  </div>
+                ) : null}
+
                 <p className="text-sm leading-6 text-content-secondary">
                   One optional extra. Leave it blank if you like, the card works without it.
                 </p>
