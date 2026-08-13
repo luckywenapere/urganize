@@ -6,16 +6,15 @@ import { centeredHeadlineClass, mutedLeadClass } from "./shared";
 // Real rows from the single-release template (single_v0.3 — 64 tasks across
 // 11 weeks, signed off by two design partners). Keep these verbatim from
 // apps/web/lib/release-templates/single.ts so the marketing never drifts
-// from the product again.
+// from the product again. Trimmed 8 → 5 rows in the 2026-08-13 tone-down:
+// five is enough to prove the plan is real; the footnote's "+ N MORE" count
+// must always equal 64 minus the rows shown here.
 const templateExcerpt = [
   { week: "WK −8", title: "Lock the master file" },
-  { week: "WK −8", title: "Confirm release date and lock it" },
   { week: "WK −7", title: "Brief designer on cover art" },
-  { week: "WK −6", title: "Draft split sheet and circulate to all contributors" },
   { week: "WK −5", title: "Upload track and metadata to distributor" },
   { week: "WK −4", title: "Submit Spotify for Artists pitch" },
   { week: "DROP", title: "Release day: monitor distributor for go-live across all DSPs" },
-  { week: "WK +1", title: "Compile first-week stats: streams, saves, playlist adds" },
 ] as const;
 
 // The honest centerpiece: the hand-crafted release template is the product's
@@ -35,9 +34,8 @@ export function TemplatePlanSection() {
           </h2>
 
           <p className={`mx-auto mt-8 max-w-[40rem] ${mutedLeadClass}`}>
-            Create a release and Urganize lays out the whole 11-week rollout.
-            Real managers wrote it. Your team owns every activity, and you can
-            change anything.
+            Create a release and the full 11-week rollout appears, written by
+            real managers. Every activity has an owner. Change anything.
           </p>
         </div>
 
@@ -58,7 +56,7 @@ export function TemplatePlanSection() {
         </div>
 
         <p className="mt-6 text-center font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-          + 56 MORE, CREATED THE MOMENT YOU START A RELEASE
+          + 59 MORE, CREATED THE MOMENT YOU START A RELEASE
         </p>
 
         {/* Real screenshot of a release built from the template above (light

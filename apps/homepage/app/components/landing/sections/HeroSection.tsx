@@ -17,25 +17,33 @@ export function HeroSection() {
         </p>
 
         <div className="mt-8 flex flex-col items-center gap-8 sm:gap-10">
-          <h1 className="hero-fade-in hero-delay-1 mx-auto max-w-[22ch] text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.4rem] lg:text-[5.6rem]">
-            Stop running your artists&apos; releases out of{" "}
+          {/* Identity-first h1 (2026-08-13 tone-down): the old 13-word
+              pain-hook ("Stop running your artists' releases out of
+              WhatsApp threads...") said what to stop, not what this is.
+              The product identity now leads; the WhatsApp pain is demoted
+              to the subhead where it still triggers recognition. */}
+          <h1 className="hero-fade-in hero-delay-1 mx-auto max-w-[16ch] text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.4rem] lg:text-[5.6rem]">
+            One home for{" "}
             <span className="italic text-[var(--marketing-accent)]">
-              WhatsApp threads
+              every release
             </span>{" "}
-            and{" "}
-            <span className="italic text-[var(--marketing-accent)]">
-              scattered notes
-            </span>
-            .
+            you run.
           </h1>
 
           <p className="hero-fade-in hero-delay-2 mx-auto block w-full max-w-[44rem] text-balance text-center text-lg leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
-            One home for the whole release: the plan, the activities your
-            team owns, and a press kit ready to send.
+            Urganize plans the rollout, gives every activity an owner, and
+            shows you where each release stands. No more scrolling WhatsApp
+            to find out.
           </p>
         </div>
 
-        <div className="hero-fade-in hero-delay-3 relative z-[60] mt-8 flex w-full flex-col items-center gap-3">
+        {/* id="waitlist" is the anchor target for the header's
+            "Join the waitlist" CTA (every marketing page links to
+            /#waitlist); scroll-mt offsets the fixed header. */}
+        <div
+          id="waitlist"
+          className="hero-fade-in hero-delay-3 relative z-[60] mt-8 flex w-full scroll-mt-28 flex-col items-center gap-3"
+        >
           <WaitlistForm source="homepage_hero" />
           {/* Proof directly under the primary CTA (2026-07-31): the form
               previously had zero credibility signal next to it despite four

@@ -36,7 +36,7 @@ export function TransformationSection() {
             What changed
           </p>
           <h2 className={`mt-6 ${centeredHeadlineClass}`}>
-            They moved their releases into one home. In their words.
+            Managers who made the move, in their words.
           </h2>
         </div>
 
