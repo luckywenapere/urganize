@@ -2,7 +2,6 @@ import Link from "next/link";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/community";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
-import { centeredHeadlineClass } from "./shared";
 
 // Low-friction secondary conversion path (2026-07-31, renamed the same day
 // from ReleaseRoomSection when the community itself was retitled from "The
@@ -28,7 +27,10 @@ export function CommunitySection() {
               where managers compare notes" was a leftover of the retired
               "Release Room" name, and the room metaphor misled a literal
               reader about what they were joining (it is a chat). */}
-          <h2 className={centeredHeadlineClass}>
+          {/* Deliberately smaller than the section-h2 scale (2026-08-13
+              tone-down): this is the fallback offer after the final CTA,
+              not a headline act competing with it. */}
+          <h2 className="text-balance text-[1.5rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[var(--marketing-text)] sm:text-[1.75rem]">
             See how other managers run their releases.
           </h2>
 

@@ -17,6 +17,11 @@ const metadataSchema = z
   })
   .optional();
 
+// The four qualification fields went optional 2026-08-13 (waitlist-form
+// slim-down: step 2 now asks only name + phone + an optional role). The
+// enums are unchanged so any older client or other source still validates;
+// the Neon columns were nullable all along, so absent values insert as NULL
+// and no migration is needed.
 const signupSchema = z.object({
   email: z.string().trim().email(),
   name: z.string().trim().min(1).max(160),
@@ -26,21 +31,27 @@ const signupSchema = z.object({
     .min(7)
     .max(32)
     .regex(/^[+\d\s().-]+$/),
-  role: z.enum([
-    "independent_artist",
-    "artist_manager",
-    "a_and_r",
-    "music_producer",
-    "label_manager_executive",
-  ]),
-  teamSize: z.enum(["solo", "two_to_three", "four_to_six", "seven_plus"]),
-  releaseVolume: z.enum(["one", "two_to_four", "five_plus", "not_sure"]),
-  primaryNeed: z.enum([
-    "release_playbook",
-    "collaborator_credits",
-    "team_handoff",
-    "all_of_it",
-  ]),
+  role: z
+    .enum([
+      "independent_artist",
+      "artist_manager",
+      "a_and_r",
+      "music_producer",
+      "label_manager_executive",
+    ])
+    .optional(),
+  teamSize: z
+    .enum(["solo", "two_to_three", "four_to_six", "seven_plus"])
+    .optional(),
+  releaseVolume: z.enum(["one", "two_to_four", "five_plus", "not_sure"]).optional(),
+  primaryNeed: z
+    .enum([
+      "release_playbook",
+      "collaborator_credits",
+      "team_handoff",
+      "all_of_it",
+    ])
+    .optional(),
   metadata: metadataSchema,
 });
 
@@ -116,10 +127,10 @@ export async function POST(req: Request) {
         ${normalizedEmail},
         ${name},
         ${phone},
-        ${role},
-        ${teamSize},
-        ${releaseVolume},
-        ${primaryNeed},
+        ${role ?? null},
+        ${teamSize ?? null},
+        ${releaseVolume ?? null},
+        ${primaryNeed ?? null},
         CAST(${metadataJson} AS JSONB),
         false,
         ${referralCode},

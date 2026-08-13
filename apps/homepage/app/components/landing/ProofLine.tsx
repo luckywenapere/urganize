@@ -15,7 +15,11 @@ import { TESTIMONIALS, type TestimonialId } from "@/content/testimonials";
 //                                      verifiable one — max credibility
 //                                      per pixel, right where the primary
 //                                      CTA lives)
-//   homepage_final_cta → tamuno      (strongest relief close)
+//   homepage_final_cta → adenaiye    (sharpest ICP-match sentence; swapped
+//                                      off tamuno 2026-08-13 — his full
+//                                      quote already anchors Transformation-
+//                                      Section's "Status" row on the same
+//                                      page, so this mount repeated it)
 //   features_cta       → antoine     (plan-already-laid-out fits the page)
 //   why_urganize_cta   → tamuno      (status-at-a-glance is that page's
 //                                      remaining thesis; swapped off
