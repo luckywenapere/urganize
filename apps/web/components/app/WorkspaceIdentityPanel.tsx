@@ -35,10 +35,14 @@ const isBoolean = (value: unknown): value is boolean => typeof value === "boolea
 // Metadata unreachable on phones/tablets (2026-08-12).
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === "true";
 
-// Same flag TasksPanel's Calendar pill reads. Calendar joined this nav
+// Same flag TasksPanel's Calendar pill reads. Calendar joined this card
 // 2026-08-13 (founder call) on exactly the Metadata precedent above: at `lg`+
 // the card is the entry point, and TasksPanel keeps the below-`lg` pill alive
-// because this card never renders on phones/tablets.
+// because this card never renders on phones/tablets. Unlike Metadata, Calendar
+// renders as its own FOOTER row below the nav rather than inside its scrolling
+// list — see CalendarFooterLink further down, and the founder's screenshot
+// correction recorded there (a first pass put it inside the list, second from
+// the top, which was wrong).
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === "true";
 
 // The card's nav (URG-229). Same three global surfaces the topbar exposes,
@@ -142,26 +146,8 @@ function buildNavItems(scopedReleaseId: string | null, activeScene: string | nul
           },
         ]
       : []),
-    // Calendar, directly below Collect metadata (founder call, 2026-08-13),
-    // which is the order the two carried in TasksPanel's pill row. Same
-    // release-scoped gate as Metadata above, and the same Beta stamp its pill
-    // carries. A plain href rather than TasksPanel's toggle button: the scene
-    // is derived from the URL, so navigating here opens it exactly as clicking
-    // the pill did (an open-from-closed push — see useSceneOverlay's history
-    // model). Note the calendar's month grid wants a wide centre column and
-    // falls back to its own agenda list when squeezed, so on a narrower laptop
-    // collapsing this card is what buys the grid its width back.
-    ...(CONTENT_CALENDAR_ENABLED && scopedReleaseId
-      ? [
-          {
-            href: `/dashboard?release=${scopedReleaseId}&scene=calendar`,
-            label: "Calendar",
-            Icon: CalendarIcon,
-            badge: "Beta",
-            isActive: (pathname: string) => pathname === "/dashboard" && activeScene === "calendar",
-          },
-        ]
-      : []),
+    // Calendar is NOT in this list — it renders as its own footer row below
+    // the nav instead (see CalendarFooterLink further down).
     // Exact match, like its neighbours: usePathname excludes the query string,
     // so a ?release= / ?note= deep link still lights this up.
     ...(NOTES_ENABLED
@@ -431,6 +417,21 @@ export function WorkspaceIdentityPanel() {
           </Suspense>
         </nav>
 
+        {/* Calendar's own footer slot (founder call, 2026-08-13 — corrected
+          via screenshot after a first pass wrongly put it inside the
+          scrolling nav list, second row from the top). Sits in the space
+          between the nav and the collapse control, its own bordered block
+          rather than folded into either — matching where the arrow in that
+          screenshot actually pointed: the empty footer area at the base of
+          the card, not partway up the list.
+          Own Suspense boundary for the same reason WorkspaceNavLinks gets
+          one — it reads useSearchParams independently, and a fallback of
+          `null` just omits the row until the params resolve, same as
+          buildNavItems(null, null) omits Collect metadata above. */}
+        <Suspense fallback={null}>
+          <CalendarFooterLink pathname={pathname} collapsed={collapsed} />
+        </Suspense>
+
         {/* Collapse control, pinned to the base of the card (founder call,
           2026-08-12). The nav above it is `flex-1`, so this row needs no
           positioning of its own — it simply takes the space left over at the
@@ -493,6 +494,40 @@ function WorkspaceNavLinks({
   );
 }
 
+/** Calendar's footer row — reads `?release=`/`?scene=` itself (same params
+ * WorkspaceNavLinks reads, duplicated rather than threaded down since this
+ * lives in a sibling Suspense boundary outside <nav>). Renders nothing when
+ * the flag is off or no release is scoped, exactly mirroring how Collect
+ * metadata disappears from the list above under the same conditions — the
+ * two surfaces must never disagree about whether Calendar exists, only
+ * about where in the card it shows up. */
+function CalendarFooterLink({
+  pathname,
+  collapsed,
+}: {
+  pathname: string | null;
+  collapsed: boolean;
+}) {
+  const searchParams = useSearchParams();
+  const scopedReleaseId = searchParams.get("release");
+  const activeScene = searchParams.get("scene");
+  if (!CONTENT_CALENDAR_ENABLED || !scopedReleaseId) return null;
+
+  const calendarItem: NavItem = {
+    href: `/dashboard?release=${scopedReleaseId}&scene=calendar`,
+    label: "Calendar",
+    Icon: CalendarIcon,
+    badge: "Beta",
+    isActive: (path: string) => path === "/dashboard" && activeScene === "calendar",
+  };
+
+  return (
+    <div className="shrink-0 border-t border-stroke-subtle p-2">
+      {renderNavRow(calendarItem, pathname, collapsed)}
+    </div>
+  );
+}
+
 /** Collapsed rows center a single icon; the label stays in the DOM as sr-only
  * rather than being swapped for an aria-label, so the accessible name is
  * identical in both states and can't drift. `title` gives sighted users the
@@ -505,6 +540,39 @@ const navRowClass = (active: boolean, collapsed: boolean) =>
       ? "bg-brand/10 text-brand"
       : "text-content-secondary hover:bg-bg-hover hover:text-content-primary"
   }`;
+
+/** Hoisted out of WorkspaceNavList so CalendarFooterLink (its own footer
+ * block, outside the <nav> that component renders into) can render a row in
+ * the identical shape — same icon sizing, badge treatment, collapsed
+ * tooltip/sr-only handling — without a second hand-rolled copy drifting from
+ * this one. */
+function renderNavRow(
+  { href, label, Icon, isActive, badge }: NavItem,
+  pathname: string | null,
+  collapsed: boolean,
+) {
+  const active = isActive(pathname || "");
+  return (
+    <Link
+      key={href}
+      href={href}
+      aria-current={active ? "page" : undefined}
+      title={collapsed ? label : undefined}
+      className={navRowClass(active, collapsed)}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className={collapsed ? "sr-only" : undefined}>{label}</span>
+      {/* Same stamp shape TasksPanel's pills use. Dropped when collapsed —
+        the row is a 40px icon target there with no room for it, and the
+        label it qualifies is sr-only anyway. */}
+      {badge && !collapsed ? (
+        <span className="ml-auto shrink-0 rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+          {badge}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
 
 /** Plain render of the nav rows — no hooks of its own, so it doubles as the
  * Suspense fallback (called directly with a release-less item list) and the
@@ -523,29 +591,7 @@ function WorkspaceNavList({
   isAdmin: boolean;
   collapsed: boolean;
 }) {
-  const renderRow = ({ href, label, Icon, isActive, badge }: NavItem) => {
-    const active = isActive(pathname || "");
-    return (
-      <Link
-        key={href}
-        href={href}
-        aria-current={active ? "page" : undefined}
-        title={collapsed ? label : undefined}
-        className={navRowClass(active, collapsed)}
-      >
-        <Icon className="h-4 w-4 shrink-0" />
-        <span className={collapsed ? "sr-only" : undefined}>{label}</span>
-        {/* Same stamp shape TasksPanel's pills use. Dropped when collapsed —
-          the row is a 40px icon target there with no room for it, and the
-          label it qualifies is sr-only anyway. */}
-        {badge && !collapsed ? (
-          <span className="ml-auto shrink-0 rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-            {badge}
-          </span>
-        ) : null}
-      </Link>
-    );
-  };
+  const renderRow = (item: NavItem) => renderNavRow(item, pathname, collapsed);
 
   return (
     <>
