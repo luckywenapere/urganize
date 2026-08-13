@@ -986,6 +986,36 @@ h1, h2, h3, h4 {
   }
 }
 
+/* UrgAns reply reveal (2026-08-12): each word of a NEWLY ARRIVED assistant
+   reply fades in, staggered via an inline per-word animation-delay set by
+   RevealedText in ChappiConversation.tsx. CSS-only on purpose — framer-motion
+   was removed 2026-08-08, and an opacity stagger is exactly the kind of
+   motion CSS expresses fine. Opacity-only (no transform): the words are
+   inline spans inside whitespace-pre-wrap text, and opacity is the one
+   property that animates on inline boxes without disturbing line flow.
+
+   The reduced-motion override below is REQUIRED, not belt-and-braces: the
+   global prefers-reduced-motion rule clamps animation-DURATION to 1ms but
+   not animation-DELAY, so without this the staggered delays would leave
+   words invisible, popping in one by one — more motion, not less. */
+.urgans-word {
+  opacity: 0;
+  animation: urgans-word-in 0.35s ease-out forwards;
+}
+
+@keyframes urgans-word-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .urgans-word {
+    animation: none !important;
+    opacity: 1;
+  }
+}
+
 /* ============================================================================
    Legacy hover/press classes below — kept for now while the workspace sweep
    migrates callers to .motion-*. They reference the same motion tokens so

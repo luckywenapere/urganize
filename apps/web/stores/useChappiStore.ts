@@ -37,6 +37,10 @@ type ChappiStore = {
   setInput: (value: string) => void;
   setReply: (reply: ChappiReply | null) => void;
   appendMessage: (message: ChappiMessage) => void;
+  /** Removes `messageId` and everything after it — the retry action's
+   * "regenerate the last reply" primitive: drop the reply, keep the user
+   * turn that produced it, re-submit. No-op when the id isn't found. */
+  truncateFromMessage: (messageId: string) => void;
   setScopedReleaseId: (releaseId: string | null) => void;
   /** Opens/closes the side rail AND persists the choice — a user close
    * stays closed across pages and reloads until they reopen it (or a new
@@ -56,6 +60,13 @@ export const useChappiStore = create<ChappiStore>((set) => ({
   setReply: (reply) => set({ reply }),
   appendMessage: (message) =>
     set((current) => ({ messages: [...current.messages, message] })),
+  truncateFromMessage: (messageId) =>
+    set((current) => {
+      const index = current.messages.findIndex((message) => message.id === messageId);
+      if (index === -1) return {};
+      // Clear `reply` too: its suggestions belong to the reply being dropped.
+      return { messages: current.messages.slice(0, index), reply: null };
+    }),
   setScopedReleaseId: (releaseId) => set({ scopedReleaseId: releaseId }),
   setRailOpen: (open) => {
     set({ railOpen: open });

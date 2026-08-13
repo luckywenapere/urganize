@@ -4,7 +4,10 @@ import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'rea
 import { useRouter } from 'next/navigation';
 import {
   ArrowUp,
+  Check,
   ClipboardList,
+  Copy,
+  CornerDownLeft,
   Disc3,
   Layers,
   Loader2,
@@ -13,10 +16,13 @@ import {
   RotateCcw,
   Rocket,
   Sparkles,
+  ThumbsDown,
+  ThumbsUp,
   type LucideIcon,
 } from 'lucide-react';
 import { ChappiBetaBadge } from '@/components/chappi/ChappiBetaBadge';
 import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
+import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -139,6 +145,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     setReply,
     messages,
     appendMessage,
+    truncateFromMessage,
     reset,
     scopedReleaseId,
     setScopedReleaseId,
@@ -152,6 +159,24 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const { openQuickCreate, openTask } = useTaskUI();
   const [isThinking, setIsThinking] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Which assistant message (if any) gets the word-by-word reveal. Only a
+  // reply that ARRIVES while this instance is mounted animates: the transcript
+  // is shared store state carried across surfaces (dock ↔ rail ↔ page), so a
+  // remount or navigation must not replay the reveal over old messages —
+  // hence the initial state is "nothing animates" and only a change in the
+  // last message id observed by THIS instance arms it. Render-time prev-guard
+  // rather than an effect (the MonthGrid/DeleteReleaseDialog convention).
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+  const lastMessageId = lastMessage?.id ?? null;
+  const [prevLastMessageId, setPrevLastMessageId] = useState<string | null>(lastMessageId);
+  const [revealMessageId, setRevealMessageId] = useState<string | null>(null);
+  if (lastMessageId !== prevLastMessageId) {
+    setPrevLastMessageId(lastMessageId);
+    // A new user turn clears the reveal (the previous reply has finished
+    // animating; keeping the id would replay it if the node ever remounts).
+    setRevealMessageId(lastMessage?.role === 'assistant' ? lastMessageId : null);
+  }
 
   const hasMessages = messages.length > 0;
   const firstName = user?.name ? user.name.split(' ')[0] : null;
@@ -389,6 +414,24 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     sendUserTurn(trimmed);
   };
 
+  // Regenerate the last reply: drop it from the transcript (keeping the user
+  // turn that produced it) and re-submit the history up to that turn. Only
+  // offered on the transcript's final message, and only when a user turn
+  // precedes it — the standard chat-retry contract.
+  const canRetry =
+    !isThinking &&
+    lastMessage?.role === 'assistant' &&
+    messages.some((message) => message.role === 'user');
+  const handleRetry = () => {
+    if (!canRetry || !lastMessage) return;
+    const history = messages.slice(0, messages.length - 1);
+    const lastUserTurn = [...history].reverse().find((message) => message.role === 'user');
+    if (!lastUserTurn) return;
+    captureAnalyticsEvent({ name: 'urgans_reply_action', properties: { action: 'retry' } });
+    truncateFromMessage(lastMessage.id);
+    void submitPrompt(lastUserTurn.content, history);
+  };
+
   // One input, two positions: centered mid-screen on the empty landing
   // (PostHog-home style), pinned at the bottom once a conversation exists —
   // the Claude-desktop shape (founder call, 2026-07-23).
@@ -518,6 +561,9 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
             suggestions={reply?.suggestions}
             onSuggestion={sendUserTurn}
             bottomRef={bottomRef}
+            revealMessageId={revealMessageId}
+            retryMessageId={canRetry ? lastMessage?.id ?? null : null}
+            onRetry={handleRetry}
           />
         </div>
       </div>
@@ -535,15 +581,32 @@ type TranscriptProps = {
   suggestions?: string[];
   onSuggestion: (suggestion: string) => void;
   bottomRef: RefObject<HTMLDivElement | null>;
+  /** Assistant message that gets the word-by-word reveal (arrived while this
+   * surface was mounted); null = render everything plain. */
+  revealMessageId: string | null;
+  /** Assistant message the Retry action applies to (always the transcript's
+   * last message, when retryable); null hides the action. */
+  retryMessageId: string | null;
+  onRetry: () => void;
 };
 
 /**
  * The scrolling conversation log — Claude-style (founder call, 2026-07-23):
  * no "You" / "Chappi" role labels. The user's turns sit right-aligned in
  * soft rounded bubbles; the assistant's replies are plain text flowing the
- * column's width. Streamlined and quiet.
+ * column's width, each followed by a quiet action row (copy / retry /
+ * thumbs — the streamed-answer pattern, 2026-08-12). Streamlined and quiet.
  */
-function Transcript({ messages, isThinking, suggestions, onSuggestion, bottomRef }: TranscriptProps) {
+function Transcript({
+  messages,
+  isThinking,
+  suggestions,
+  onSuggestion,
+  bottomRef,
+  revealMessageId,
+  retryMessageId,
+  onRetry,
+}: TranscriptProps) {
   return (
     <div className="space-y-5 pb-2">
       {messages.map((message) =>
@@ -554,12 +617,12 @@ function Transcript({ messages, isThinking, suggestions, onSuggestion, bottomRef
             </div>
           </div>
         ) : (
-          <div
+          <AssistantMessage
             key={message.id}
-            className="whitespace-pre-wrap text-sm leading-7 text-content-primary"
-          >
-            {message.content}
-          </div>
+            content={message.content}
+            reveal={message.id === revealMessageId}
+            onRetry={message.id === retryMessageId ? onRetry : undefined}
+          />
         )
       )}
 
@@ -570,22 +633,187 @@ function Transcript({ messages, isThinking, suggestions, onSuggestion, bottomRef
         </div>
       ) : null}
 
+      {/* Follow-ups — a titled list of full-width rows (the streamed-answer
+          pattern, 2026-08-12), replacing the earlier floating pills: rows
+          read as "next questions to ask" rather than tags, and the ↵ mark
+          says "this sends" without any copy. Same data + click behavior. */}
       {suggestions?.length ? (
-        <div className="flex flex-wrap gap-2">
-          {suggestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              onClick={() => onSuggestion(suggestion)}
-              className="motion-focus rounded-full border border-stroke-default px-3 py-1 text-xs text-brand transition-colors hover:border-brand"
-            >
-              {suggestion}
-            </button>
-          ))}
+        <div>
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-content-tertiary">
+            Follow-ups
+          </p>
+          <div className="mt-1 divide-y divide-stroke-subtle">
+            {suggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => onSuggestion(suggestion)}
+                className="motion-focus flex w-full items-center gap-2.5 py-2.5 text-left text-sm text-content-secondary transition-colors hover:text-content-primary"
+              >
+                <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-content-tertiary" aria-hidden="true" />
+                {suggestion}
+              </button>
+            ))}
+          </div>
         </div>
       ) : null}
 
       <div ref={bottomRef} />
     </div>
+  );
+}
+
+// Per-word stagger for the reveal. The delay is capped so a long answer's
+// tail never keeps the user waiting — everything past the cap fades in
+// together, which reads as the stream "catching up".
+const REVEAL_WORD_STAGGER_MS = 24;
+const REVEAL_MAX_DELAY_MS = 1400;
+
+/**
+ * One assistant reply: the (optionally revealed) text plus its action row.
+ * Owns its own copy/feedback state so a transcript of many replies doesn't
+ * lift per-message UI state anywhere shared.
+ */
+function AssistantMessage({
+  content,
+  reveal,
+  onRetry,
+}: {
+  content: string;
+  reveal: boolean;
+  onRetry?: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
+  // Cleared on unmount so a copy right before navigating can't set state on
+  // a dead component.
+  const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (copyResetRef.current) clearTimeout(copyResetRef.current);
+    };
+  }, []);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      captureAnalyticsEvent({ name: 'urgans_reply_action', properties: { action: 'copy' } });
+      setCopied(true);
+      if (copyResetRef.current) clearTimeout(copyResetRef.current);
+      copyResetRef.current = setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard denied (permissions, insecure context) — nothing to show;
+      // the icon simply doesn't flip to the check.
+    }
+  };
+
+  const handleFeedback = (rating: 'up' | 'down') => {
+    // Re-clicking the same thumb is a no-op; switching sides re-captures.
+    if (feedback === rating) return;
+    setFeedback(rating);
+    captureAnalyticsEvent({
+      name: 'urgans_reply_action',
+      properties: { action: rating === 'up' ? 'thumbs_up' : 'thumbs_down' },
+    });
+  };
+
+  const actionButtonClass =
+    'motion-focus grid h-7 w-7 place-items-center rounded-md text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary';
+
+  return (
+    <div>
+      <div className="whitespace-pre-wrap text-sm leading-7 text-content-primary">
+        {reveal ? <RevealedText content={content} /> : content}
+      </div>
+      {/* Quiet action row — tertiary ink, brightening on hover, same voice as
+          the "New chat" control above the transcript. */}
+      <div className="mt-1.5 flex items-center gap-0.5">
+        <button
+          type="button"
+          onClick={() => void handleCopy()}
+          aria-label={copied ? 'Copied' : 'Copy reply'}
+          title={copied ? 'Copied' : 'Copy'}
+          className={actionButtonClass}
+        >
+          {copied ? (
+            <Check className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+          ) : (
+            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+          )}
+        </button>
+        {onRetry ? (
+          <button
+            type="button"
+            onClick={onRetry}
+            aria-label="Retry — regenerate this reply"
+            title="Retry"
+            className={actionButtonClass}
+          >
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => handleFeedback('up')}
+          aria-label="Good reply"
+          aria-pressed={feedback === 'up'}
+          title="Good reply"
+          className={`${actionButtonClass} ${feedback === 'up' ? 'text-brand' : ''}`}
+        >
+          <ThumbsUp className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onClick={() => handleFeedback('down')}
+          aria-label="Poor reply"
+          aria-pressed={feedback === 'down'}
+          title="Poor reply"
+          className={`${actionButtonClass} ${feedback === 'down' ? 'text-brand' : ''}`}
+        >
+          <ThumbsDown className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Tokenizes a reply for the reveal: whitespace runs (spaces, newlines) get
+ * `delay: null` and render as bare text nodes so `whitespace-pre-wrap` line
+ * breaks survive untouched; word tokens carry their staggered delay. Module
+ * scope and pure per call — the running word counter must not live inside
+ * the component render (react-hooks/purity forbids reassignment there).
+ */
+function buildRevealTokens(content: string): Array<{ token: string; delay: number | null }> {
+  let wordIndex = 0;
+  return content
+    .split(/(\s+)/)
+    .filter((token) => token !== '')
+    .map((token) => {
+      if (/^\s+$/.test(token)) return { token, delay: null };
+      const delay = Math.min(wordIndex * REVEAL_WORD_STAGGER_MS, REVEAL_MAX_DELAY_MS);
+      wordIndex += 1;
+      return { token, delay };
+    });
+}
+
+/**
+ * Word-by-word fade-in for a newly arrived reply (CSS only — framer-motion
+ * was removed 2026-08-08, and a stagger of opacity fades is exactly the kind
+ * of motion CSS expresses fine).
+ */
+function RevealedText({ content }: { content: string }) {
+  return (
+    <>
+      {buildRevealTokens(content).map(({ token, delay }, index) =>
+        delay === null ? (
+          token
+        ) : (
+          <span key={index} className="urgans-word" style={{ animationDelay: `${delay}ms` }}>
+            {token}
+          </span>
+        )
+      )}
+    </>
   );
 }

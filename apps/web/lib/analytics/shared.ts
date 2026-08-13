@@ -114,6 +114,10 @@ export interface AnalyticsEventPropertiesMap {
     tasks_added: number;
     ai_applied: boolean;
   };
+  // UrgAns reply action row (2026-08-12): copy / retry / thumbs under each
+  // assistant reply. Thumbs are the first structured feedback signal on
+  // assistant quality — worth watching once the agent model is wired.
+  urgans_reply_action: { action: 'copy' | 'retry' | 'thumbs_up' | 'thumbs_down' };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;
