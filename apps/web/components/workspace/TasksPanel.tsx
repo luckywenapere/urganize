@@ -23,22 +23,16 @@ import { useSceneOverlay, type SceneName } from './useSceneOverlay';
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 
 // Mirrors AppShell's own gate for the identity card, which is what hosts the
-// "Collect metadata" and "Calendar" nav items these pills defer to at wide
-// widths. Read here because a pill may only step aside where that card
-// actually renders — this flag defaults to false and is independent of the
-// per-feature flags above, so without this check a metadata-on (or
-// calendar-on) / identity-panel-off environment (the DEFAULT combination)
-// would hide the pill at `lg`+ with nothing replacing it, making the feature
-// unreachable on desktop entirely.
+// "Collect metadata" nav item this pill defers to at wide widths. Read here
+// because the pill may only step aside where that card actually renders —
+// both flags default to false and are independent of METADATA above, so
+// without this check a metadata-on / identity-panel-off environment (the
+// DEFAULT combination) would hide the pill at `lg`+ with nothing replacing
+// it, making Metadata unreachable on desktop entirely.
 const IDENTITY_PANEL_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' &&
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
-// Where a pill retreats once the identity card's nav is its wide-width home.
-// Governs BOTH pills hosted there — Metadata (2026-08-12) and Calendar
-// (2026-08-13) — so the rule has exactly one definition; it was named
-// METADATA_PILL_HIDE_CLASS while Metadata was the only one.
-//
 // The identity card hides itself at `lg`-`xl` whenever the UrgAns rail is open
 // (see WorkspaceIdentityPanel's railIsCompeting), so with the assistant on
 // there is no width below `xl` where the card is GUARANTEED to be present.
@@ -47,10 +41,10 @@ const IDENTITY_PANEL_ENABLED =
 // when Chappi is on. Cost: a redundant second control at `lg`-`xl` while the
 // rail happens to be closed. That is strictly better than a viewport band
 // where the feature has no entry point at all.
-// Exported so WorkspaceSkeleton reserves the placeholders at exactly the same
+// Exported so WorkspaceSkeleton reserves the placeholder at exactly the same
 // breakpoints (the loading-skeleton-sync rule that file documents; it has
 // already drifted from this row once).
-export const IDENTITY_NAV_PILL_HIDE_CLASS = !IDENTITY_PANEL_ENABLED
+export const METADATA_PILL_HIDE_CLASS = !IDENTITY_PANEL_ENABLED
   ? ''
   : process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true'
     ? 'xl:hidden'
@@ -59,10 +53,10 @@ export const IDENTITY_NAV_PILL_HIDE_CLASS = !IDENTITY_PANEL_ENABLED
 // Content calendar entry point (URG-157): the workspace is the surface users
 // actually land on after login, so the scoped-release header carries the
 // calendar affordance alongside Files rather than hiding it on the release
-// detail page alone. As of 2026-08-13 this flag also gates the identity
-// panel's "Calendar" nav item (WorkspaceIdentityPanel) — same rule as
-// METADATA above: the two surfaces must never disagree about whether the
-// feature exists, only about WHICH of them shows it at a given viewport.
+// detail page alone. As of 2026-08-13 (founder correction, via screenshot)
+// the pill itself moved OUT of this header row into its own sticky footer
+// row below the activity list — see the sticky Calendar block further down —
+// so this flag now only gates that footer row, not a header pill.
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 
 // Files entry point (URG-182): same flag gates the assets API routes and the
@@ -396,14 +390,14 @@ export function TasksPanel({
               WorkspaceIdentityPanel) and two controls for one scene is noise.
               But that panel never renders on small viewports, so the pill has
               to survive there: this row is the only surface present at every
-              width. See IDENTITY_NAV_PILL_HIDE_CLASS for exactly where it
+              width. See METADATA_PILL_HIDE_CLASS for exactly where it
               retreats — it stays put entirely when the panel is flagged off. */}
           {METADATA_ENABLED && scopedRelease ? (
             <button
               type="button"
               onClick={() => toggleScene('metadata', scopedRelease.id)}
               aria-pressed={activeScene === 'metadata'}
-              className={`${pillClass('metadata')} ${IDENTITY_NAV_PILL_HIDE_CLASS}`}
+              className={`${pillClass('metadata')} ${METADATA_PILL_HIDE_CLASS}`}
             >
               <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
               Collect metadata
@@ -412,9 +406,9 @@ export function TasksPanel({
           {/* Playlist pitching: browse curator playlists and send this
               release's song, with each curator's answer shown beside it.
               Sits high in the row (founder call, 2026-08-10) — right after
-              Collect metadata and ahead of Calendar. Note that BOTH of those
-              pills retreat at wide widths (see IDENTITY_NAV_PILL_HIDE_CLASS),
-              so this is effectively the first link in the row there. */}
+              Collect metadata. Note that pill retreats at wide widths (see
+              METADATA_PILL_HIDE_CLASS), so this is effectively the first
+              link in the row there. */}
           {PITCHING_ENABLED && scopedRelease ? (
             <button
               type="button"
@@ -426,31 +420,10 @@ export function TasksPanel({
               Pitch
             </button>
           ) : null}
-          {/* Calendar (URG-157). Opens as a WIDE overlay window rather than the
-              small one the other scenes get — its month grid needs ~1200px, and
-              at narrower widths it already falls back to its own agenda list.
-              (Until 2026-08-04 this was a nav Link to a full page, on the
-              reasoning that the panel couldn't give the grid enough width; the
-              window can.)
-              NARROW widths only as of 2026-08-13 (founder call), on exactly the
-              Metadata precedent above: the identity card's nav now carries
-              Calendar at `lg`+, and this pill survives below that because the
-              card doesn't render there. */}
-          {CONTENT_CALENDAR_ENABLED && scopedRelease ? (
-            <button
-              type="button"
-              onClick={() => toggleScene('calendar', scopedRelease.id)}
-              aria-pressed={activeScene === 'calendar'}
-              className={`${pillClass('calendar')} ${IDENTITY_NAV_PILL_HIDE_CLASS}`}
-            >
-              <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-              Calendar
-              {/* Beta stamp (2026-07-23): the content calendar ships as Beta. */}
-              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-                Beta
-              </span>
-            </button>
-          ) : null}
+          {/* Calendar is NOT a header pill (as of 2026-08-13, founder
+              correction via screenshot) — it opens from a sticky pill below
+              the activity list instead. See the sticky Calendar block further
+              down, right after the activity buckets. */}
           {/* Files link: its own page (URG-165), not a segment nested under
               the task list — files are a peer of tasks, not a child of them.
               Only renders when a release is scoped (assets is release-scoped,
@@ -629,6 +602,44 @@ export function TasksPanel({
         })}
       </div>
       )}
+      {/* Sticky Calendar pill (founder call, 2026-08-13 — corrected via
+          screenshot after two wrong placements: first inside the identity
+          card's scrolling nav list, then as the identity card's own footer
+          row. Neither was right — the arrow in the screenshot traced from
+          the header's old Calendar pill DOWN THROUGH the activity list
+          itself, ending at its base. This is that: a pill anchored to the
+          bottom of the activities body, reachable without scrolling back up
+          to the header.
+          `lg:sticky lg:bottom-2` only — desktop's version of this container
+          is a real bounded internal scroll box (`lg:overflow-y-auto`, see
+          the container comment above), the one place sticky positioning
+          here is predictable. Below `lg` this div is plain flow (the PAGE
+          scrolls, not this box), and the fixed `MobileNavBar` already owns
+          the bottom 64px of the viewport there — rather than hand-tune a
+          pixel offset to clear a bar that may not even be mounted
+          (NEXT_PUBLIC_FEATURE_MOBILE_NAV), the pill just renders in normal
+          flow as the last item on mobile, "under the activities" without
+          floating.
+          Hidden once a scene is open (`!sceneContent`): the header's
+          "Activities" pill is already the way back, and this would be a
+          redundant second entry into the very scene already showing. */}
+      {CONTENT_CALENDAR_ENABLED && scopedRelease && !sceneContent ? (
+        <div className="flex justify-center pt-3 lg:sticky lg:bottom-2 lg:z-10 lg:pt-0">
+          <button
+            type="button"
+            onClick={() => toggleScene('calendar', scopedRelease.id)}
+            aria-pressed={activeScene === 'calendar'}
+            className={`${pillClass('calendar')} lg:shadow-lg lg:shadow-black/20`}
+          >
+            <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+            Calendar
+            {/* Beta stamp (2026-07-23): the content calendar ships as Beta. */}
+            <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+              Beta
+            </span>
+          </button>
+        </div>
+      ) : null}
       </div>
     </aside>
   );
