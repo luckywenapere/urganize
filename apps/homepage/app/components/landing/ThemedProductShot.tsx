@@ -12,6 +12,16 @@ import Image from "next/image";
 // captures must show the current app. If the UI changes meaningfully,
 // retake BOTH the light and dark version together — a stale one is worse
 // than none.
+//
+// loading="eager" on both <Image>s is load-bearing, not a perf oversight:
+// the theme-inactive capture starts life at `display: none`, and a
+// `display: none` element never intersects the viewport, so the browser's
+// native `loading="lazy"` never fires its fetch — flipping the class to
+// `display: block` later does not retroactively trigger it. Without this,
+// switching theme after mount reveals a screenshot that was never
+// downloaded. `priority` was deliberately not used instead: it also adds
+// fetchpriority="high" and a <link rel="preload">, which would compete
+// with real above-the-fold assets for two below-the-fold decorative shots.
 interface ThemedProductShotProps {
   light: string;
   dark: string;
@@ -40,6 +50,7 @@ export function ThemedProductShot({
         width={width}
         height={height}
         sizes={sizes}
+        loading="eager"
         className={`theme-shot-light ${shared}`}
       />
       <Image
@@ -48,6 +59,7 @@ export function ThemedProductShot({
         width={width}
         height={height}
         sizes={sizes}
+        loading="eager"
         className={`theme-shot-dark ${shared}`}
       />
     </>
