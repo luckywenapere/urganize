@@ -22,9 +22,16 @@ export type ChappiChipIntent =
   | 'plan_release'
   | 'add_task'
   | 'todays_focus'
-  | 'generate_status';
+  | 'generate_status'
+  | 'take_note';
 
-export type ChappiIntentKind = ChappiChipIntent | 'help';
+/**
+ * `create_note` is intent-only, never a chip: it carries the note's text, so
+ * it can only come from something the user typed. A chip is a constant with
+ * nothing to say, which is what `take_note` is for — that one opens an empty
+ * editor instead.
+ */
+export type ChappiIntentKind = ChappiChipIntent | 'create_note' | 'help';
 
 /**
  * Answers the planner intake already knows before it asks, carried by a chip.
@@ -38,7 +45,13 @@ export type PlannerChipPreset = {
   budget?: 'none' | 'under_100k' | '100k_500k' | 'over_500k';
 };
 
-export type ChappiIntent = { kind: ChappiIntentKind; plannerPreset?: PlannerChipPreset };
+export type ChappiIntent = {
+  kind: ChappiIntentKind;
+  plannerPreset?: PlannerChipPreset;
+  /** Set only on `create_note` — the text after the "note" prefix, which
+   * becomes the note body (and whose first line becomes its title). */
+  noteBody?: string;
+};
 
 /** A quick-action chip shown under the prompt. Icon is resolved in the
  * component (icons are React nodes and can't live in this client-safe lib). */
@@ -72,6 +85,7 @@ export type ChappiToolName =
   | 'get_dashboard'
   | 'create_release'
   | 'create_task'
+  | 'create_note'
   | 'update_task'
   | 'complete_task'
   | 'reopen_task'

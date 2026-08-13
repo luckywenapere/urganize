@@ -287,6 +287,57 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
     },
   },
   {
+    name: 'create_note',
+    kind: 'mutate',
+    description: "Create a private note for the user. Optionally attach it to a release.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        body: {
+          type: 'string',
+          description: 'The note text. Its first line becomes the title.',
+        },
+        releaseId: {
+          type: 'string',
+          description: 'Release to attach the note to. Omit for a note with no release.',
+        },
+      },
+      required: ['body'],
+    },
+    execute: async (ctx, args) => {
+      const body = argString(args, 'body');
+      if (!body) return fail('The note needs some text.');
+      const res = await callInternalApi(ctx, '/api/notes', {
+        method: 'POST',
+        // Explicit null, not undefined: the route distinguishes "no release"
+        // from a malformed value, and JSON.stringify would drop undefined.
+        body: { body, releaseId: argString(args, 'releaseId') || null },
+      });
+      // The route 404s for two unrelated reasons and the model needs to tell
+      // them apart: the feature being off ('Not found.', the flag gate) versus
+      // a release that isn't the user's ('Release not found.', which is a
+      // useful thing to relay). Matching the exact flag-gate string keeps the
+      // ownership message intact instead of swallowing both as "not enabled".
+      //
+      // Translating the flag here rather than gating registration keeps the
+      // check per-request: NEXT_PUBLIC_* reads are inlined at build time, so a
+      // registry-level gate would bake the answer into the bundle. Same
+      // approach generate_status_update takes below.
+      if (res.status === 404 && res.body.error === 'Not found.') {
+        return fail("Notes aren't enabled yet.");
+      }
+      if (!res.ok) return fail(String(res.body.error || 'Could not save the note.'));
+      return {
+        ok: true,
+        summary: 'Saved the note.',
+        data: { noteId: (res.body.note as { id?: string })?.id ?? null },
+        // Deliberately no clientAction. Navigating away mid-conversation would
+        // interrupt the capture the user is still in, and `refresh` re-syncs
+        // the command center, which does not carry notes.
+      };
+    },
+  },
+  {
     name: 'update_task',
     kind: 'mutate',
     description: 'Update a task: title, description, due date, priority, or assignee.',
