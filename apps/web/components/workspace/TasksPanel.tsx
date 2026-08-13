@@ -53,7 +53,10 @@ export const METADATA_PILL_HIDE_CLASS = !IDENTITY_PANEL_ENABLED
 // Content calendar entry point (URG-157): the workspace is the surface users
 // actually land on after login, so the scoped-release header carries the
 // calendar affordance alongside Files rather than hiding it on the release
-// detail page alone.
+// detail page alone. As of 2026-08-13 (founder correction, via screenshot)
+// the pill itself moved OUT of this header row into its own sticky footer
+// row below the activity list — see the sticky Calendar block further down —
+// so this flag now only gates that footer row, not a header pill.
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 
 // Files entry point (URG-182): same flag gates the assets API routes and the
@@ -403,9 +406,9 @@ export function TasksPanel({
           {/* Playlist pitching: browse curator playlists and send this
               release's song, with each curator's answer shown beside it.
               Sits high in the row (founder call, 2026-08-10) — right after
-              Collect metadata and ahead of Calendar. Note that Metadata's pill
-              retreats at wide widths (see METADATA_PILL_HIDE_CLASS), so this is
-              effectively the first link in the row at those widths. */}
+              Collect metadata. Note that pill retreats at wide widths (see
+              METADATA_PILL_HIDE_CLASS), so this is effectively the first
+              link in the row there. */}
           {PITCHING_ENABLED && scopedRelease ? (
             <button
               type="button"
@@ -417,27 +420,10 @@ export function TasksPanel({
               Pitch
             </button>
           ) : null}
-          {/* Calendar (URG-157). Opens as a WIDE overlay window rather than the
-              small one the other scenes get — its month grid needs ~1200px, and
-              at narrower widths it already falls back to its own agenda list.
-              (Until 2026-08-04 this was a nav Link to a full page, on the
-              reasoning that the panel couldn't give the grid enough width; the
-              window can.) */}
-          {CONTENT_CALENDAR_ENABLED && scopedRelease ? (
-            <button
-              type="button"
-              onClick={() => toggleScene('calendar', scopedRelease.id)}
-              aria-pressed={activeScene === 'calendar'}
-              className={pillClass('calendar')}
-            >
-              <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-              Calendar
-              {/* Beta stamp (2026-07-23): the content calendar ships as Beta. */}
-              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-                Beta
-              </span>
-            </button>
-          ) : null}
+          {/* Calendar is NOT a header pill (as of 2026-08-13, founder
+              correction via screenshot) — it opens from a sticky pill below
+              the activity list instead. See the sticky Calendar block further
+              down, right after the activity buckets. */}
           {/* Files link: its own page (URG-165), not a segment nested under
               the task list — files are a peer of tasks, not a child of them.
               Only renders when a release is scoped (assets is release-scoped,
@@ -617,6 +603,41 @@ export function TasksPanel({
       </div>
       )}
       </div>
+
+      {/* Calendar footer pill (founder call, 2026-08-13 — third placement,
+          corrected twice via screenshot: not the identity card's nav list,
+          not the card's footer, and not floating just under the collapsed
+          buckets either. The final arrow pointed at the BASE of the
+          activities column, so this is a footer of the PANEL, not an item in
+          the list: a sibling AFTER the flex-1 scroll body, which pins it to
+          the bottom of the panel on desktop (where the aside fills the
+          viewport-locked column) whether or not the task list overflows —
+          the list scrolls behind it, this row never moves.
+          Below `lg` the aside is ordinary page flow with no bounded height,
+          so "the panel's base" and "after the list" are the same place — it
+          renders under the activities, and the fixed MobileNavBar keeps
+          owning the viewport's bottom edge (no offset war; this row is in
+          flow, not fixed).
+          Hidden once a scene is open (`!sceneContent`): the header's
+          "Activities" pill is already the way back, and a Calendar entry
+          while Calendar (or any scene) is showing is redundant chrome. */}
+      {CONTENT_CALENDAR_ENABLED && scopedRelease && !sceneContent ? (
+        <div className="flex shrink-0 justify-center pb-4 pt-3 lg:pb-2">
+          <button
+            type="button"
+            onClick={() => toggleScene('calendar', scopedRelease.id)}
+            aria-pressed={activeScene === 'calendar'}
+            className={pillClass('calendar')}
+          >
+            <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+            Calendar
+            {/* Beta stamp (2026-07-23): the content calendar ships as Beta. */}
+            <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+              Beta
+            </span>
+          </button>
+        </div>
+      ) : null}
     </aside>
   );
 }

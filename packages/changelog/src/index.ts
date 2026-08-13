@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.51.1",
+    date: "August 13, 2026",
+    highlights: [
+      "Settings and Admin now sit at the bottom of the workspace's left-hand menu instead of mixed in with your releases and UrgAns, so the everyday links stay together and account stuff stays out of the way until you need it.",
+      "Calendar moved out of the crowded release header and into its own pill that stays with you at the bottom of the task list on a wider screen, so you can jump to it without scrolling back up.",
+    ],
+  },
+  {
     version: "0.51.0",
     date: "August 13, 2026",
     highlights: [

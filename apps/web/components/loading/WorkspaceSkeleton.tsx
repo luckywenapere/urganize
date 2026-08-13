@@ -15,13 +15,14 @@ const SCOPE_PARAM = 'release';
 
 // Same build-time flags TasksPanel reads for its scoped-header pills. The
 // skeleton renders one placeholder pill per REAL pill so the row doesn't
-// change width when content swaps in: New activity is always present;
-// Calendar / Files / Press kit appear per flag, in that order (2026-08-04 —
-// the release detail page and its "Overview" pill were removed). Metadata
-// moved to the identity panel's left-hand nav as "Collect metadata" at `lg`+
-// (2026-08-12 — see WorkspaceIdentityPanel), but the pill survives BELOW
-// `lg` (that panel never renders there), so it's still reserved here, just
-// viewport-restricted like its real counterpart.
+// change width when content swaps in: New activity is always present; Files /
+// Press kit appear per flag, in that order (2026-08-04 — the release detail
+// page and its "Overview" pill were removed; Calendar left this row entirely
+// on 2026-08-13, see the sticky-pill placeholder further down). Metadata
+// (2026-08-12) moved to the identity panel's left-hand nav at `lg`+ (see
+// WorkspaceIdentityPanel), but its pill survives BELOW `lg` (that panel never
+// renders there), so it's still reserved here, just viewport-restricted like
+// its real counterpart.
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
@@ -222,11 +223,11 @@ function ReleaseCardSkeleton() {
  * column on desktop, or sit inert in mobile's plain document flow — same
  * "flex-1 is inert without a flex parent" property the real component
  * documents. Pill count mirrors the real header exactly: New activity
- * always, then one per enabled flag in order (Pitch / Calendar / Files /
- * Press kit / Notes — see TasksPanel), then the two AI action pills
- * WorkspaceView appends. Widths approximate each label so the row's
- * footprint matches ("Status update", shortened 2026-08-10 to fit a chip
- * row — see WorkspaceView).
+ * always, then one per enabled flag in order (Pitch / Files / Press kit /
+ * Notes — see TasksPanel; Calendar left this row 2026-08-13, see the sticky
+ * placeholder below), then the two AI action pills WorkspaceView appends.
+ * Widths approximate each label so the row's footprint matches ("Status
+ * update", shortened 2026-08-10 to fit a chip row — see WorkspaceView).
  * No left label (2026-08-05, #218 — the real row is `justify-end` only).
  * Container/wrapper classes below are kept byte-for-byte in sync with
  * TasksPanel.tsx's real row (2026-08-10 bug fix: this file's inner wrapper
@@ -237,7 +238,6 @@ function TasksPanelSkeleton() {
     // Pitch leads the row (founder call, 2026-08-10) and carries no Beta tag,
     // so it reserves the same width as Files rather than a tagged pill's.
     ...(PITCHING_ENABLED ? ['w-16'] : []), // Pitch
-    ...(CONTENT_CALENDAR_ENABLED ? ['w-28'] : []), // Calendar + Beta tag
     ...(FILES_ENABLED ? ['w-16'] : []), // Files
     ...(EPK_ENABLED ? ['w-24'] : []), // Press kit
     ...(NOTES_ENABLED ? ['w-20'] : []), // Notes
@@ -290,6 +290,17 @@ function TasksPanelSkeleton() {
           </div>
         ))}
       </div>
+      {/* Calendar footer pill placeholder (2026-08-13 — see the real block's
+          comment in TasksPanel.tsx for the full history: Calendar left the
+          header pill row for a footer of the panel). A sibling AFTER the
+          flex-1 body, matching the real row's wrapper classes exactly, so
+          the reserved footprint sits pinned at the panel's base and doesn't
+          shift when content resolves. */}
+      {CONTENT_CALENDAR_ENABLED ? (
+        <div className="flex shrink-0 justify-center pb-4 pt-3 lg:pb-2">
+          <SkeletonBlock className="h-8 w-28 rounded-full" />
+        </div>
+      ) : null}
     </div>
   );
 }
