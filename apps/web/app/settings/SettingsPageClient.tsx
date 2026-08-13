@@ -1,145 +1,51 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { readPreviousLocation } from '@/lib/nav-history';
 import { useAuthStore } from '@/lib/auth-store';
 import { getRolePermissions } from '@/lib/role-permissions';
-import { errorMessage } from '@/lib/errors';
-import { ASSET_MIME_ALLOWLIST, ASSET_SIZE_LIMITS, formatFileSize } from '@/lib/asset-constants';
-import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
-import type { WorkspaceMember } from '@/types/auth';
 import { SettingsPageSkeleton } from '@/components/loading/SettingsPageSkeleton';
 import { getAccessToken } from '@/components/settings/getAccessToken';
-import { ProfileSection } from '@/components/settings/ProfileSection';
-import { AppearanceSection } from '@/components/settings/AppearanceSection';
-import { SecuritySection } from '@/components/settings/SecuritySection';
-import { WorkspaceIdentitySection } from '@/components/settings/WorkspaceIdentitySection';
 import {
-  WorkspaceLogoSection,
-  type WorkspaceLogo,
-} from '@/components/settings/WorkspaceLogoSection';
-import {
-  WorkspaceArtistSection,
-  type WorkspaceArtist,
-} from '@/components/settings/WorkspaceArtistSection';
-import { ArtistProfileSection } from '@/components/settings/ArtistProfileSection';
-import { PushNotificationsSection } from '@/components/settings/PushNotificationsSection';
-import { TaskCheckInSection } from '@/components/settings/TaskCheckInSection';
-import { MotivationalNudgesSection } from '@/components/settings/MotivationalNudgesSection';
-import { TeammatesSection } from '@/components/settings/TeammatesSection';
-import { ReleasesSection } from '@/components/settings/ReleasesSection';
-import { SessionSection } from '@/components/settings/SessionSection';
-import { DeleteAccountSection } from '@/components/settings/DeleteAccountSection';
-import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+  SETTINGS_TABS,
+  SETTINGS_TAB_LABELS,
+  useSettingsTab,
+  type SettingsTab,
+} from '@/components/settings/useSettingsTab';
+import { useTeammates } from '@/components/settings/useTeammates';
+import { useWorkspaceSettings } from '@/components/settings/useWorkspaceSettings';
+import { AccountTab } from '@/components/settings/tabs/AccountTab';
+import { WorkspaceTab } from '@/components/settings/tabs/WorkspaceTab';
+import { TeamTab } from '@/components/settings/tabs/TeamTab';
+import { NotificationsTab } from '@/components/settings/tabs/NotificationsTab';
 
-// 2026-07-23 (founder calls): the Workspace logo section was removed from
-// Settings entirely (its API routes + read-time cover-art fallback stay
-// dormant — an already-uploaded logo keeps working; there's just no UI to
-// change it). The old placebo notifications-prefs section was removed the
-// same day and replaced by PushNotificationsSection — REAL per-device Web
-// Push (see lib/push.ts / lib/push-server.ts).
-
-// Workspace artist/logo editors are gated by the same flag that hides the
-// legacy artist input in the create-release modal. Lifting to many artists
-// later is a UI change only — the schema (artists.workspace_id, partial
-// unique on (workspace_id, slug)) already permits multiple rows per
-// workspace.
-const WORKSPACE_FEATURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
-
-// URG-214: the workspace identity card's editors. Only meaningful once
-// workspaces exist, same gate as the card itself and its API routes.
-const IDENTITY_PANEL_ENABLED =
-  process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' && WORKSPACE_FEATURE_ENABLED;
-
-const LOGO_MIME_ALLOWLIST = ASSET_MIME_ALLOWLIST.cover_art;
-const LOGO_SIZE_LIMIT = ASSET_SIZE_LIMITS.cover_art;
-
-type WorkspaceArtistResponse = {
-  workspaceId?: string;
-  artist: WorkspaceArtist | null;
-  releasesUpdated?: number;
-  error?: string;
-};
-
-// Cache-first (founder call, 2026-07-23): entering Settings must SHOW
-// settings, not loaders. The last-known workspace artist and teammates list
-// are persisted per user; a fresh visit renders them instantly while the
-// fetches below refresh silently in the background. Same pattern as
-// useReleaseStore's command-center cache.
-const ARTIST_CACHE_KEY = 'urganize.settings.workspace-artist';
-const TEAMMATES_CACHE_KEY = 'urganize.settings.teammates';
-const SETTINGS_CACHE_VERSION = 1;
-
-type ArtistCache = { userId: string; artist: WorkspaceArtist | null };
-type TeammatesCache = { userId: string; members: WorkspaceMember[] };
-
-const isArtistCache = (value: unknown): value is ArtistCache =>
-  typeof value === 'object' &&
-  value !== null &&
-  typeof (value as Record<string, unknown>).userId === 'string' &&
-  'artist' in (value as Record<string, unknown>);
-
-const isTeammatesCache = (value: unknown): value is TeammatesCache =>
-  typeof value === 'object' &&
-  value !== null &&
-  typeof (value as Record<string, unknown>).userId === 'string' &&
-  Array.isArray((value as Record<string, unknown>).members);
+// 2026-08-13: Settings was one flat column of twelve hairline-divided sections
+// with no grouping and no page title — rare admin work (Teammates) led it while
+// frequent trivia (Appearance) sat sixth, three notification toggles were spread
+// apart, and release deletion sat between two preference switches and the
+// password form. Founder call: four tabs. This file is now the shell — the
+// section state it used to own lives in useWorkspaceSettings / useTeammates, and
+// the JSX lives in components/settings/tabs.
 
 export default function SettingsPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const authLoading = useAuthStore((state) => state.isLoading);
+  const { activeTab, selectTab } = useSettingsTab();
 
   const rolePermissions = getRolePermissions(user?.role);
   const isManagerAccount = rolePermissions.role === 'manager';
   const isArtistAccount = user?.role === 'artist';
 
   // Hoisted, resolved ONCE per mount rather than once per section — the
-  // three mount-time loaders below fire within milliseconds of each other,
-  // so this dedupes near-simultaneous calls to the same
-  // supabase.auth.getSession(), not a page-wide cache. Click-triggered
-  // handlers (invite, upload, etc., inside the section components) still
-  // fetch their own token fresh — see components/settings/getAccessToken.ts.
+  // mount-time loaders in the two hooks below fire within milliseconds of each
+  // other, so this dedupes near-simultaneous calls to the same
+  // supabase.auth.getSession(), not a page-wide cache. Click-triggered handlers
+  // (invite, upload, etc.) still fetch their own token fresh — see
+  // components/settings/getAccessToken.ts.
   const [accessToken, setAccessToken] = useState('');
-
-  const [teammates, setTeammates] = useState<WorkspaceMember[]>([]);
-  const [isLoadingTeammates, setIsLoadingTeammates] = useState(false);
-  // "Primed" = hydrated from the per-user cache; the sections then render
-  // real content immediately and never show their skeletons for this visit.
-  const [teammatesPrimed, setTeammatesPrimed] = useState(false);
-  const [artistPrimed, setArtistPrimed] = useState(false);
-
-  const [workspaceArtist, setWorkspaceArtist] = useState<WorkspaceArtist | null | undefined>(null);
-  const [workspaceArtistInput, setWorkspaceArtistInput] = useState('');
-  const [isLoadingWorkspaceArtist, setIsLoadingWorkspaceArtist] = useState(false);
-  const [isSavingWorkspaceArtist, setIsSavingWorkspaceArtist] = useState(false);
-  const [workspaceArtistMessage, setWorkspaceArtistMessage] = useState('');
-  const [workspaceArtistError, setWorkspaceArtistError] = useState('');
-
-  // Workspace identity (name + logo) is sourced from the SAME global store
-  // the always-mounted identity card reads (useWorkspaceIdentityStore) —
-  // not a separate fetch here. The card (mounted app-wide by AppShell,
-  // including on this page) already calls load(); this effect below also
-  // calls it defensively so Settings doesn't depend on mount order between
-  // sibling components. The store's own recency guard makes the second call
-  // a no-op when the card already primed it.
-  const identityName = useWorkspaceIdentityStore((state) => state.name);
-  const identityLogo = useWorkspaceIdentityStore((state) => state.logo);
-  const identityHydrated = useWorkspaceIdentityStore((state) => state.hydrated);
-  const loadIdentity = useWorkspaceIdentityStore((state) => state.load);
-  const setIdentityName = useWorkspaceIdentityStore((state) => state.setName);
-  const setIdentityLogo = useWorkspaceIdentityStore((state) => state.setLogo);
-
-  const [workspaceNameInput, setWorkspaceNameInput] = useState('');
-  const [isSavingWorkspaceName, setIsSavingWorkspaceName] = useState(false);
-  const [workspaceNameMessage, setWorkspaceNameMessage] = useState('');
-  const [workspaceNameError, setWorkspaceNameError] = useState('');
-
-  const [isSavingWorkspaceLogo, setIsSavingWorkspaceLogo] = useState(false);
-  const [workspaceLogoMessage, setWorkspaceLogoMessage] = useState('');
-  const [workspaceLogoError, setWorkspaceLogoError] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
@@ -166,317 +72,59 @@ export default function SettingsPage() {
     };
   }, [userId]);
 
-  // Cache-first hydration: paint the last-known artist + teammates for THIS
-  // user before any fetch resolves. The loaders below still run and replace
-  // these with fresh data silently.
+  // Both called unconditionally, NOT per tab: the fetches keep firing on page
+  // mount exactly as they did before tabs, so switching tabs never pays a round
+  // trip. (The two sections that fetch for themselves — ReleasesSection's
+  // command-center load and the push-status probe — do now run on their tab's
+  // first open instead of page mount. Both are recency-guarded or
+  // skeleton-covered, so that's a cost worth the simpler ownership.)
+  const teammates = useTeammates(userId, accessToken);
+  const workspace = useWorkspaceSettings(userId, accessToken);
+
+  // Legacy deep-link support: `/settings#teammates` was the one addressable
+  // spot on the old flat page. UrgAns's invite banner now links straight to
+  // `?tab=team`, but stale entries can still arrive from an installed PWA's
+  // history, a bookmark, or an older conversation transcript.
   useEffect(() => {
-    if (!userId) return;
-    const artistCache = readPersistedState<ArtistCache>(
-      ARTIST_CACHE_KEY,
-      SETTINGS_CACHE_VERSION,
-      isArtistCache
-    );
-    if (artistCache && artistCache.userId === userId) {
-      setWorkspaceArtist(artistCache.artist ?? undefined);
-      setWorkspaceArtistInput(artistCache.artist?.name ?? '');
-      setArtistPrimed(true);
+    if (typeof window === 'undefined') return;
+    if (window.location.hash === '#teammates') {
+      router.replace('/settings?tab=team', { scroll: false });
     }
-    const teammatesCache = readPersistedState<TeammatesCache>(
-      TEAMMATES_CACHE_KEY,
-      SETTINGS_CACHE_VERSION,
-      isTeammatesCache
-    );
-    if (teammatesCache && teammatesCache.userId === userId) {
-      setTeammates(teammatesCache.members);
-      setTeammatesPrimed(true);
-    }
-  }, [userId]);
+  }, [router]);
 
-  const loadTeammates = useCallback(async () => {
-    if (!accessToken) return;
-    setIsLoadingTeammates(true);
-    try {
-      const response = await fetch('/api/workspace/members', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: 'no-store',
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        members?: WorkspaceMember[];
-        error?: string;
-      };
-      if (response.ok && Array.isArray(payload.members)) {
-        setTeammates(payload.members);
-        if (userId) {
-          writePersistedState<TeammatesCache>(TEAMMATES_CACHE_KEY, SETTINGS_CACHE_VERSION, {
-            userId,
-            members: payload.members,
-          });
-        }
-      }
-    } catch {
-      // Non-blocking
-    } finally {
-      setIsLoadingTeammates(false);
-    }
-  }, [accessToken, userId]);
-
-  // Loads for EVERY account (founder decision, 2026-07-23): teammates see
-  // their team read-only; TeammatesSection gates invite/remove internally.
-  useEffect(() => {
-    if (!userId || !accessToken) return;
-    void loadTeammates();
-  }, [userId, accessToken, loadTeammates]);
-
-  // Load the workspace artist behind the flag. Mirrors the logo loader's
-  // shape so the feedback paths and cleanup-on-unmount semantics stay
-  // consistent.
-  useEffect(() => {
-    if (!userId || !WORKSPACE_FEATURE_ENABLED || !accessToken) return;
-    let cancelled = false;
-
-    const load = async () => {
-      setIsLoadingWorkspaceArtist(true);
-      try {
-        const response = await fetch('/api/workspace/artist', {
-          headers: { Authorization: `Bearer ${accessToken}` },
-          cache: 'no-store',
-        });
-        const payload = (await response.json().catch(() => ({}))) as WorkspaceArtistResponse;
-        if (cancelled) return;
-        if (response.ok) {
-          setWorkspaceArtist(payload.artist ?? undefined);
-          setWorkspaceArtistInput(payload.artist?.name ?? '');
-          writePersistedState<ArtistCache>(ARTIST_CACHE_KEY, SETTINGS_CACHE_VERSION, {
-            userId,
-            artist: payload.artist ?? null,
-          });
-        }
-      } finally {
-        if (!cancelled) setIsLoadingWorkspaceArtist(false);
-      }
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, accessToken]);
-
-  useEffect(() => {
-    if (!userId || !IDENTITY_PANEL_ENABLED) return;
-    void loadIdentity();
-  }, [userId, loadIdentity]);
-
-  // Mirrors the artist input's pattern (no dirty-check against in-progress
-  // typing) — the store only refreshes on a fresh load, which per the
-  // recency guard won't refire mid-edit for a normal Settings visit.
-  useEffect(() => {
-    if (identityHydrated) setWorkspaceNameInput(identityName);
-  }, [identityHydrated, identityName]);
-
-  const handleSaveWorkspaceName = async () => {
-    setWorkspaceNameError('');
-    setWorkspaceNameMessage('');
-    const trimmed = workspaceNameInput.trim();
-    if (!trimmed) {
-      setWorkspaceNameError('Workspace name cannot be empty.');
-      return;
-    }
-    if (trimmed === identityName) {
-      setWorkspaceNameMessage('No changes.');
-      return;
-    }
-
-    setIsSavingWorkspaceName(true);
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Session expired. Please sign in again.');
-      const response = await fetch('/api/workspace', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name: trimmed }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as { name?: string; error?: string };
-      if (!response.ok || typeof payload.name !== 'string') {
-        throw new Error(payload.error || 'Could not rename workspace.');
-      }
-      setIdentityName(payload.name);
-      setWorkspaceNameInput(payload.name);
-      setWorkspaceNameMessage('Workspace renamed.');
-    } catch (err) {
-      setWorkspaceNameError(errorMessage(err, 'Could not rename workspace.'));
-    } finally {
-      setIsSavingWorkspaceName(false);
-    }
-  };
-
-  // Same three-step flow as release asset uploads (AssetUploadControl):
-  // signed upload URL → PUT bytes directly to storage → record the pointer.
-  const handleUploadWorkspaceLogo = async (file: File) => {
-    setWorkspaceLogoError('');
-    setWorkspaceLogoMessage('');
-
-    const mimeType = file.type || 'application/octet-stream';
-    if (!LOGO_MIME_ALLOWLIST.includes(mimeType)) {
-      setWorkspaceLogoError('Logo must be a JPEG, PNG, or WebP image.');
-      return;
-    }
-    if (file.size > LOGO_SIZE_LIMIT) {
-      setWorkspaceLogoError(`Logo must be ${formatFileSize(LOGO_SIZE_LIMIT)} or smaller.`);
-      return;
-    }
-
-    setIsSavingWorkspaceLogo(true);
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Session expired. Please sign in again.');
-
-      const uploadUrlResponse = await fetch('/api/workspace/logo/upload-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          file_name: file.name,
-          mime_type: mimeType,
-          file_size: file.size,
-        }),
-      });
-      const uploadUrlPayload = (await uploadUrlResponse.json().catch(() => ({}))) as {
-        upload_url?: string;
-        storage_path?: string;
-        error?: string;
-      };
-      if (!uploadUrlResponse.ok || !uploadUrlPayload.upload_url || !uploadUrlPayload.storage_path) {
-        throw new Error(uploadUrlPayload.error || 'Could not create upload URL.');
-      }
-
-      const storageResponse = await fetch(uploadUrlPayload.upload_url, {
-        method: 'PUT',
-        headers: { 'Content-Type': mimeType },
-        body: file,
-      });
-      if (!storageResponse.ok) {
-        throw new Error(`Storage upload failed (${storageResponse.status}).`);
-      }
-
-      const recordResponse = await fetch('/api/workspace/logo', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          storage_path: uploadUrlPayload.storage_path,
-          file_name: file.name,
-        }),
-      });
-      const recordPayload = (await recordResponse.json().catch(() => ({}))) as {
-        logo?: WorkspaceLogo | null;
-        error?: string;
-      };
-      if (!recordResponse.ok || !recordPayload.logo) {
-        throw new Error(recordPayload.error || 'Could not save logo.');
-      }
-
-      setIdentityLogo(recordPayload.logo);
-      setWorkspaceLogoMessage('Logo saved. Releases without cover art now show it automatically.');
-    } catch (err) {
-      setWorkspaceLogoError(errorMessage(err, 'Could not upload logo.'));
-    } finally {
-      setIsSavingWorkspaceLogo(false);
-    }
-  };
-
-  const handleRemoveWorkspaceLogo = async () => {
-    if (!identityLogo) return;
-    setWorkspaceLogoError('');
-    setWorkspaceLogoMessage('');
-    setIsSavingWorkspaceLogo(true);
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Session expired. Please sign in again.');
-      const response = await fetch('/api/workspace/logo', {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const payload = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error || 'Could not remove logo.');
-      }
-      setIdentityLogo(null);
-      setWorkspaceLogoMessage('Logo removed. Releases without cover art show the neutral placeholder again.');
-    } catch (err) {
-      setWorkspaceLogoError(errorMessage(err, 'Could not remove logo.'));
-    } finally {
-      setIsSavingWorkspaceLogo(false);
-    }
-  };
-
-  const handleSaveWorkspaceArtist = async () => {
-    if (!user || !workspaceArtist) return;
-    setWorkspaceArtistError('');
-    setWorkspaceArtistMessage('');
-    const trimmed = workspaceArtistInput.trim();
-    if (!trimmed) {
-      setWorkspaceArtistError('Artist name cannot be empty.');
-      return;
-    }
-    if (trimmed === workspaceArtist.name) {
-      setWorkspaceArtistMessage('No changes.');
-      return;
-    }
-
-    setIsSavingWorkspaceArtist(true);
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Session expired. Please sign in again.');
-      const response = await fetch('/api/workspace/artist', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name: trimmed }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as WorkspaceArtistResponse;
-      if (!response.ok || !payload.artist) {
-        throw new Error(payload.error || 'Could not rename artist.');
-      }
-      setWorkspaceArtist(payload.artist);
-      setWorkspaceArtistInput(payload.artist.name);
-      writePersistedState<ArtistCache>(ARTIST_CACHE_KEY, SETTINGS_CACHE_VERSION, {
-        userId,
-        artist: payload.artist,
-      });
-      const releasesNote =
-        typeof payload.releasesUpdated === 'number' && payload.releasesUpdated > 0
-          ? ` (${payload.releasesUpdated} release${payload.releasesUpdated === 1 ? '' : 's'} updated)`
-          : '';
-      setWorkspaceArtistMessage(`Artist renamed${releasesNote}.`);
-    } catch (err) {
-      setWorkspaceArtistError(errorMessage(err, 'Could not rename artist.'));
-    } finally {
-      setIsSavingWorkspaceArtist(false);
-    }
-  };
-
-  // ONE skeleton, rendered here (no route-segment Suspense fallback). SSR
-  // serializes this into HTML; hydration is a no-op reconciliation — no
-  // shimmer restart, no blank gap. Stays visible until auth resolves AND
-  // the user is known.
+  // SSR serializes this skeleton into the HTML (auth state is client-only, so
+  // the server never knows the user); hydration is a no-op reconciliation — no
+  // shimmer restart, no blank gap. app/settings/loading.tsx renders the same
+  // skeleton for the route-segment fallback. Stays visible until auth resolves
+  // AND the user is known.
   if (authLoading || !user) {
     return (
       <SettingsPageSkeleton
+        tab={activeTab}
         isManagerAccount={isManagerAccount}
         isArtistAccount={isArtistAccount}
       />
     );
   }
+
+  // Pill classes lifted from TasksPanel's scene pills so the two tab-like rows
+  // in the app read as one language. `shrink-0 whitespace-nowrap` matter: this
+  // row is a horizontal scroller, and without them a flex child compresses and
+  // wraps its own label instead of scrolling off-screen.
+  //
+  // `px-2.5` below `sm` is the one deliberate divergence from that shared
+  // language, and it exists to keep all four pills on screen without scrolling
+  // on a phone. Measured at a 375px layout width: `main`'s `px-4` leaves the row
+  // 343px, and the four labels need ~323px at `px-3` — fits, but only by ~5px at
+  // the 360px width much of Android reports. Trimming 2px of padding per side
+  // buys ~22px, which clears 360px comfortably. Restored to `px-3` at `sm`+,
+  // where there is width to spare and matching TasksPanel matters more.
+  const pillClass = (tab: SettingsTab) =>
+    `motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-xs font-semibold transition-colors sm:px-3 ${
+      activeTab === tab
+        ? 'border-brand bg-brand/10 text-content-primary'
+        : 'border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover'
+    }`;
 
   return (
     <main className="bg-bg-base text-content-primary">
@@ -491,120 +139,70 @@ export default function SettingsPage() {
         <div className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-status-info/12 blur-3xl" />
 
         {/* Inner form wrapper. Redesigned 2026-07-23 (founder call): the
-            boxed two-column card collage read as plastic. Settings is now ONE
-            flat column — sections divided by hairline rules (Linear/PostHog
-            style), mono uppercase kickers for section titles, sharp corners
-            throughout, per the Brand Bible. The column narrowed 960→760px to
-            suit the single-column rhythm. */}
+            boxed two-column card collage read as plastic. Sections are flat —
+            divided by hairline rules (Linear/PostHog style), mono uppercase
+            kickers for section titles, per the Brand Bible. The column is
+            760px to suit the single-column rhythm. */}
         <div className="relative mx-auto w-full max-w-[760px]">
-          {/* No in-page "Settings" heading — the topbar already titles this
-              route. The row carries a BACK button (founder request,
-              2026-07-23) that returns to the exact page the user came from
-              (via lib/nav-history), falling back to the workspace when
-              Settings was opened directly. */}
-          <div className="mb-4 flex sm:justify-end">
+          {/* The h1 is real now (2026-08-13). AppTopbar deliberately maps
+              /settings to an empty title/eyebrow, so before this the word
+              "Settings" appeared nowhere on the page except the browser tab —
+              twelve equally-quiet section kickers and nothing to orient
+              against. The BACK button (founder request, 2026-07-23) returns to
+              the exact page the user came from (via lib/nav-history), falling
+              back to the workspace when Settings was opened directly. */}
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-content-primary">
+              Settings
+            </h1>
             <button
               type="button"
               onClick={() => {
                 const previous = readPreviousLocation();
                 router.push(previous && !previous.startsWith('/settings') ? previous : '/dashboard');
               }}
-              className="motion-focus motion-press inline-flex w-full items-center justify-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-4 py-3 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary sm:w-auto sm:py-2"
+              className="motion-focus motion-press inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-4 py-2 text-center text-sm text-content-secondary hover:bg-bg-hover hover:text-content-primary"
             >
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
               Back
             </button>
           </div>
 
-          {/* Section order — overridden 2026-08-05 (founder call): Teammates
-              leads now, ahead of even the workspace artist. The prior order
-              (2026-07-23) put the artist first on the logic that we're
-              serving the artist; this supersedes that for "who's on this
-              team" specifically. Below Teammates the original ordering
-              holds: workspace identity/artist, then the day-to-day surfaces
-              (profile, appearance, releases), then account plumbing
-              (password, session, delete) at the bottom where rarely-used,
-              high-consequence actions belong. */}
-          <div className="divide-y divide-stroke-subtle">
-          {/* Rendered for every account — the section itself is read-only
-              for non-managers (the shared "who's on this team" surface). */}
-          <TeammatesSection
-            teammates={teammates}
-            isLoadingTeammates={isLoadingTeammates && !teammatesPrimed}
-            onTeammatesChange={(next) => {
-              setTeammates(next);
-              if (userId) {
-                writePersistedState<TeammatesCache>(TEAMMATES_CACHE_KEY, SETTINGS_CACHE_VERSION, {
-                  userId,
-                  members: next,
-                });
-              }
-            }}
-            onRefetch={() => void loadTeammates()}
-          />
+          {/* Tab row. All four always render: Workspace always holds Releases
+              and Notifications always holds the Motivation row, so no tab can
+              resolve to an empty page. */}
+          <div
+            role="tablist"
+            aria-label="Settings sections"
+            className="mb-2 flex gap-1.5 overflow-x-auto pb-1 sm:gap-2"
+          >
+            {SETTINGS_TABS.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab}
+                onClick={() => selectTab(tab)}
+                className={pillClass(tab)}
+              >
+                {SETTINGS_TAB_LABELS[tab]}
+              </button>
+            ))}
+          </div>
 
-          {/* Workspace identity + logo share one row (founder call,
-              2026-08-05): a natural pair — both just feed the workspace card
-              shown across the app — same two-column-from-sm pattern as
-              Appearance + Notifications below. */}
-          {IDENTITY_PANEL_ENABLED && (
-            <div className="grid gap-x-10 divide-y divide-stroke-subtle sm:grid-cols-2 sm:divide-y-0">
-              <WorkspaceIdentitySection
-                input={workspaceNameInput}
-                onInputChange={setWorkspaceNameInput}
-                isLoading={!identityHydrated}
-                isSaving={isSavingWorkspaceName}
-                message={workspaceNameMessage}
-                error={workspaceNameError}
-                onSave={() => void handleSaveWorkspaceName()}
-              />
-              <WorkspaceLogoSection
-                logo={identityLogo}
-                isLoading={!identityHydrated}
-                isSaving={isSavingWorkspaceLogo}
-                message={workspaceLogoMessage}
-                error={workspaceLogoError}
-                mimeAllowlist={LOGO_MIME_ALLOWLIST}
-                sizeLimit={LOGO_SIZE_LIMIT}
-                onUpload={(file) => void handleUploadWorkspaceLogo(file)}
-                onRemove={() => void handleRemoveWorkspaceLogo()}
-              />
-            </div>
-          )}
-
-          {WORKSPACE_FEATURE_ENABLED && (
-            <WorkspaceArtistSection
-              artist={workspaceArtist}
-              input={workspaceArtistInput}
-              onInputChange={setWorkspaceArtistInput}
-              isLoading={isLoadingWorkspaceArtist && !artistPrimed}
-              isSaving={isSavingWorkspaceArtist}
-              message={workspaceArtistMessage}
-              error={workspaceArtistError}
-              onSave={() => void handleSaveWorkspaceArtist()}
+          {/* Only the active tab renders (conditional, not CSS-hidden) — the
+              point of the split is that the other nine sections aren't there. */}
+          {activeTab === 'account' && <AccountTab />}
+          {activeTab === 'workspace' && <WorkspaceTab workspace={workspace} />}
+          {activeTab === 'team' && (
+            <TeamTab
+              teammates={teammates.teammates}
+              isLoadingTeammates={teammates.isLoadingTeammates}
+              onTeammatesChange={teammates.setTeammates}
+              onRefetch={teammates.refetch}
             />
           )}
-
-          <ArtistProfileSection />
-          <ProfileSection />
-          {/* Appearance + Notifications share one row (founder call,
-              2026-07-23): both are small per-device toggles. One divide-y
-              child, two columns from sm up; stacked below sm with their own
-              hairline (the sm:divide-y-0 flip). If push is unsupported the
-              Notifications half renders null and Appearance keeps its
-              column. */}
-          <div className="grid gap-x-10 divide-y divide-stroke-subtle sm:grid-cols-2 sm:divide-y-0">
-            <AppearanceSection />
-            <PushNotificationsSection />
-          </div>
-
-          <TaskCheckInSection />
-          <MotivationalNudgesSection />
-          <ReleasesSection />
-          <SecuritySection />
-          <SessionSection />
-          <DeleteAccountSection />
-          </div>
+          {activeTab === 'notifications' && <NotificationsTab />}
         </div>
       </div>
     </main>

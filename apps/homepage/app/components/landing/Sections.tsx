@@ -11,11 +11,12 @@
 // restructures the same four signed-off quotes as before→after pairs
 // instead of a standalone quote wall). Anything still importing
 // TestimonialSection needs to switch to TransformationSection.
-export { AskAISection } from "./sections/AskAISection";
+// MirrorSection and AskAISection were REMOVED 2026-08-13 (landing-page
+// tone-down, founder call) — files deleted, rebuild from git history if
+// either is ever wanted back.
 export { CommunitySection } from "./sections/CommunitySection";
 export { FinalCTASection } from "./sections/FinalCTASection";
 export { HeroSection } from "./sections/HeroSection";
-export { MirrorSection } from "./sections/MirrorSection";
 export { TemplatePlanSection } from "./sections/TemplatePlanSection";
 export { ThreeFeaturesSection } from "./sections/ThreeFeaturesSection";
 export { TransformationSection } from "./sections/TransformationSection";

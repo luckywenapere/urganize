@@ -9,10 +9,10 @@ type GenerateStructuredAiOutputOptions<T> = {
   timeoutMs?: number;
   maxRetries?: number;
   /**
-   * Upstream model id. Defaults per gateway: 'openrouter/free' when AI_API_BASE
-   * points at openrouter.ai, otherwise the Zuplo gateway's qwen2.5:3b. Lets a
+   * Upstream model id. Defaults per gateway: 'openrouter/free' on openrouter.ai,
+   * Claude Haiku on rodiumai.io, otherwise the Zuplo gateway's qwen2.5:3b. Lets a
    * caller route a specific request to a different model (e.g., the rollout
-   * planner via AI_TAILORING_MODEL) provided the gateway serves that model id.
+   * planner via AI_PLANNER_MODEL) provided the gateway serves that model id.
    */
   model?: string;
   parse: (raw: string) => T | null;
@@ -22,6 +22,14 @@ type GenerateStructuredAiOutputOptions<T> = {
 const DEFAULT_AI_API_BASE = 'https://urganize-main-34fd8f6.d2.zuplo.dev';
 const AI_MODEL = 'qwen2.5:3b';
 const OPENROUTER_DEFAULT_MODEL = 'openrouter/free';
+// RodiumAi's free-tier meta/llama-* models were tried first (cheapest option)
+// but are geo-blocked at the AWS Bedrock license level ("Access to Meta Llama
+// models is not allowed from unsupported countries" — confirmed 2026-08-13
+// against the live API from this account's region). openai/gpt-4o-mini is the
+// verified-working fallback: cheap, and OpenAI's function-calling support is
+// solid rather than an open question. Overridable per feature via
+// AI_PLANNER_MODEL / AI_STATUS_MODEL / AI_OUTCOME_MODEL.
+const RODIUM_DEFAULT_MODEL = 'openai/gpt-4o-mini';
 const DEFAULT_TIMEOUT_MS = 90_000;
 const DEFAULT_MAX_RETRIES = 3;
 const RETRYABLE_STATUS_CODES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
@@ -48,14 +56,29 @@ const getAiGatewayConfig = () => {
 
   if (!apiKey) return null;
 
-  const isOpenRouter = /(^|\.)openrouter\.ai$/i.test(safeHostname(apiBase));
+  const hostname = safeHostname(apiBase);
+  const isOpenRouter = /(^|\.)openrouter\.ai$/i.test(hostname);
+  const isRodium = /(^|\.)rodiumai\.io$/i.test(hostname);
 
   return {
     apiKey,
     apiBase,
     isOpenRouter,
-    defaultModel: isOpenRouter ? OPENROUTER_DEFAULT_MODEL : AI_MODEL,
+    // OpenRouter and RodiumAi both speak OpenAI chat-completions; the Zuplo
+    // gateway speaks Ollama's /api/chat.
+    usesOpenAiProtocol: isOpenRouter || isRodium,
+    defaultModel: isOpenRouter ? OPENROUTER_DEFAULT_MODEL : isRodium ? RODIUM_DEFAULT_MODEL : AI_MODEL,
   };
+};
+
+/**
+ * OpenAI-protocol gateways disagree on where the version prefix lives:
+ * OpenRouter serves /api/v1, RodiumAi serves /v1. Respect a base that already
+ * carries its own prefix so AI_API_BASE can be set either way without doubling it.
+ */
+const buildOpenAiBase = (apiBase: string, isOpenRouter: boolean): string => {
+  if (/\/v1$/.test(apiBase)) return apiBase;
+  return isOpenRouter ? `${apiBase}/api/v1` : `${apiBase}/v1`;
 };
 
 const safeHostname = (url: string): string => {
@@ -183,12 +206,12 @@ const requestAiGateway = async ({
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  // OpenRouter speaks the OpenAI chat-completions protocol; the Zuplo gateway
-  // speaks Ollama's /api/chat. Same response parsing handles both shapes.
-  const endpoint = config.isOpenRouter
-    ? `${config.apiBase}${config.apiBase.endsWith('/api/v1') ? '' : '/api/v1'}/chat/completions`
+  // OpenRouter and RodiumAi speak the OpenAI chat-completions protocol; the
+  // Zuplo gateway speaks Ollama's /api/chat. Same response parsing handles both.
+  const endpoint = config.usesOpenAiProtocol
+    ? `${buildOpenAiBase(config.apiBase, config.isOpenRouter)}/chat/completions`
     : `${config.apiBase}/api/chat`;
-  const headers: Record<string, string> = config.isOpenRouter
+  const headers: Record<string, string> = config.usesOpenAiProtocol
     ? {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${config.apiKey}`,
@@ -197,7 +220,7 @@ const requestAiGateway = async ({
         'Content-Type': 'application/json',
         'x-api-key': config.apiKey,
       };
-  const body = config.isOpenRouter
+  const body = config.usesOpenAiProtocol
     ? {
         model: resolvedModel,
         messages,

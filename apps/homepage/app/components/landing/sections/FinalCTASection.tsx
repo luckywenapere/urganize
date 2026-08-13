@@ -15,10 +15,12 @@ export function FinalCTASection() {
 
           <div className="relative z-[60] mt-10 flex w-full flex-col items-center gap-3">
             <WaitlistForm source="homepage_final_cta" />
-            {/* Strongest relief-close quote (Tamuno-Tekena: "that's a call I
-                don't have to make anymore") at the site's last chance to
-                convert a scroller. */}
-            <ProofLine id="tamuno" className="mt-2" />
+            {/* Adenaiye's chaos/multiple-releases sentence — the sharpest
+                ICP-match line on the site — at the last chance to convert a
+                scroller. Swapped off tamuno 2026-08-13: his full quote
+                already anchors TransformationSection's "Status" row, so
+                mounting him here repeated the same words twice on one page. */}
+            <ProofLine id="adenaiye" className="mt-2" />
           </div>
         </div>
       </SectionShell>

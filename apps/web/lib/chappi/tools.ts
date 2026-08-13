@@ -474,11 +474,15 @@ export function getChappiTool(name: string): ChappiTool | undefined {
   return TOOLS_BY_NAME.get(name);
 }
 
-/** Anthropic Messages API tool schemas derived from the registry. */
+/** OpenAI chat-completions tool schemas derived from the registry (the shape
+ * the RodiumAi gateway's /v1/chat/completions expects). */
 export function getChappiToolSchemas() {
   return CHAPPI_TOOLS.map((tool) => ({
-    name: tool.name,
-    description: tool.description,
-    input_schema: tool.inputSchema,
+    type: 'function' as const,
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.inputSchema,
+    },
   }));
 }

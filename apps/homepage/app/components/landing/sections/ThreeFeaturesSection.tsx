@@ -11,7 +11,7 @@ const featureColumns = [
   {
     kicker: "Assistant",
     title: "Tell UrgAns what you need.",
-    body: "UrgAns is the assistant built into your workspace. Type 'create a release' or 'mark the artwork done' and it happens. No menus. And it keeps getting better.",
+    body: "UrgAns is the assistant built into your workspace. Type 'create a release' or 'mark the artwork done' and it happens. No menus.",
   },
   {
     kicker: "Visibility",
@@ -30,7 +30,7 @@ export function ThreeFeaturesSection() {
               <p className="mono-label text-[var(--marketing-accent)]">
                 {feature.kicker}
               </p>
-              <h3 className="mt-5 text-balance text-[2.15rem] font-semibold leading-[1.04] tracking-[-0.045em] text-[var(--marketing-text)] sm:text-[2.6rem]">
+              <h3 className="mt-5 text-balance text-[1.5rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[var(--marketing-text)] sm:text-[1.75rem]">
                 {feature.title}
               </h3>
               <p className="mt-5 max-w-[24rem] text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">

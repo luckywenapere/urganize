@@ -3,11 +3,9 @@ import { MarketingFooter } from "./components/marketing/MarketingFooter";
 import { MarketingHeader } from "./components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 import {
-  AskAISection,
   CommunitySection,
   FinalCTASection,
   HeroSection,
-  MirrorSection,
   TemplatePlanSection,
   ThreeFeaturesSection,
   TransformationSection,
@@ -32,20 +30,19 @@ export default function Home() {
         <MarketingHeader />
 
         <main>
-          {/* Reordered 2026-07-31: proof moved from two-thirds down the
-              page (screen ~5) to screen two, directly after the hero, so
-              the credibility check happens before the visitor has already
-              decided to leave. MirrorSection moved down to sit as the
-              cost-of-doing-nothing beat right before the second opinion +
-              close, rather than breaking up the real-screenshot →
-              real-template → mechanics argument in the middle. */}
+          {/* Proof sits at screen two (2026-07-31 reorder), directly after
+              the hero, so the credibility check happens before the visitor
+              has already decided to leave. Trimmed 2026-08-13 (founder call:
+              the page was overwhelming): MirrorSection was cut because it
+              made the hero's WhatsApp/scattered-notes argument a third time,
+              and AskAISection was cut because it sent visitors off-site to
+              three AI chatbots one scroll before the final CTA. Rebuild both
+              from git history if either beat is ever wanted back. */}
           <HeroSection />
           <TransformationSection />
           <WorkspaceShotSection />
           <TemplatePlanSection />
           <ThreeFeaturesSection />
-          <MirrorSection />
-          <AskAISection />
           <FinalCTASection />
           <CommunitySection />
         </main>

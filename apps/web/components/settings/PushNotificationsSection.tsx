@@ -16,15 +16,19 @@ import {
   getNativePushStatus,
   isNativePushAvailable,
 } from '@/lib/native-push';
-import { panelClass } from './panelClass';
+import { SettingRow, settingRowButtonClass } from './SettingRow';
 
 // Real push notifications (2026-07-23) — replaces the placebo prefs section
 // removed earlier the same day. Per-device: enabling here registers THIS
 // browser/PWA for pushes (task assigned to you, task due, status changes).
 //
-// Native push (2026-08-10) reuses this exact section rather than a second
-// one: a browser can do Web Push OR the app can do native push, never both
-// on the same device, so exactly one status/toggle pair is ever relevant.
+// Native push (2026-08-10) reuses this exact row rather than a second one: a
+// browser can do Web Push OR the app can do native push, never both on the
+// same device, so exactly one status/toggle pair is ever relevant.
+//
+// Became a ROW inside NotificationsSettingsSection (2026-08-13) — it was a
+// standalone section paired two-up with Appearance, which put the app's push
+// switch nowhere near the two other notification toggles.
 
 const NATIVE_PUSH_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NATIVE_PUSH === 'true';
 
@@ -64,8 +68,10 @@ export function PushNotificationsSection() {
   }, [native]);
 
   // Hidden entirely (not disabled) when this device can't do push at all —
-  // an inert section would just be noise. Renders nothing until the status
-  // probe resolves so there's no flash of the wrong state.
+  // an inert row would just be noise. Renders nothing until the status probe
+  // resolves so there's no flash of the wrong state. The section around it
+  // still has rows either way (Motivation is unconditional), so this can
+  // vanish without leaving an empty tab.
   if (status === null || (!native && !isPushSupported())) return null;
 
   const handleToggle = async () => {
@@ -89,48 +95,39 @@ export function PushNotificationsSection() {
   };
 
   const copy = native ? NATIVE_STATUS_COPY : STATUS_COPY;
+  const isEnabled = status === 'enabled';
 
   return (
-    <section className={panelClass}>
-      <h2 className="mb-5 flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
-        Notifications
-        {/* Notifications are Beta (founder call, 2026-07-23) — standard pill. */}
+    <SettingRow
+      icon={
+        <BellRing
+          className={`h-4 w-4 ${isEnabled ? 'text-brand' : 'text-content-tertiary'}`}
+          aria-hidden="true"
+        />
+      }
+      title="Push notifications"
+      titleBadge={
+        /* Push is Beta (founder call, 2026-07-23); the badge sits on this row
+           rather than the section heading, where it would wrongly label the
+           other two toggles beta as well. */
         <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
           Beta
         </span>
-      </h2>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
-          <BellRing
-            className={`mt-0.5 h-4 w-4 shrink-0 ${status === 'enabled' ? 'text-brand' : 'text-content-tertiary'}`}
-            aria-hidden="true"
-          />
-          {copy[status] ? (
-            <p className="max-w-[46ch] text-sm text-content-secondary">{copy[status]}</p>
-          ) : (
-            <p className="text-sm text-content-secondary">On for this device.</p>
-          )}
-        </div>
-        {status !== 'blocked' ? (
+      }
+      description={copy[status] || 'On for this device.'}
+      action={
+        status !== 'blocked' ? (
           <button
             type="button"
             onClick={() => void handleToggle()}
             disabled={isWorking}
-            className={`shrink-0 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60 ${
-              status === 'enabled'
-                ? 'border border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover'
-                : 'bg-brand text-content-inverse hover:bg-brand-hover'
-            }`}
+            className={settingRowButtonClass(isEnabled)}
           >
-            {isWorking
-              ? 'Working…'
-              : status === 'enabled'
-                ? 'Turn off on this device'
-                : 'Turn on notifications'}
+            {isWorking ? 'Working…' : isEnabled ? 'Turn off on this device' : 'Turn on'}
           </button>
-        ) : null}
-      </div>
-      {error ? <p className="mt-3 text-sm text-status-error">{error}</p> : null}
-    </section>
+        ) : null
+      }
+      error={error}
+    />
   );
 }

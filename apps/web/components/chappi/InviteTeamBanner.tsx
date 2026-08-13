@@ -45,9 +45,12 @@ export function InviteTeamBanner() {
       <p className="min-w-0 flex-1 text-sm text-content-secondary sm:truncate">
         Get more out of Urganize by inviting your team
       </p>
+      {/* ?tab=team since 2026-08-13, when Settings became tabbed — the old
+          '#teammates' anchor still resolves (the page client redirects it) but
+          this is the direct route. */}
       <button
         type="button"
-        onClick={() => router.push('/settings#teammates')}
+        onClick={() => router.push('/settings?tab=team')}
         className="motion-focus motion-press inline-flex h-auto min-h-8 shrink-0 items-center gap-1.5 self-stretch border border-stroke-default bg-bg-elevated px-3 py-1.5 text-left text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover sm:self-auto"
       >
         <UserPlus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />

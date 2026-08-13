@@ -42,9 +42,22 @@ export function MarketingHeader() {
             <ProductMenu />
             <Link
               href="/login"
-              className="text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)]"
+              className="hidden text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)] sm:block"
             >
               Log in
+            </Link>
+            {/* The header's one primary CTA (added 2026-08-13): before this,
+                the signup path was buried in the ProductMenu dropdown and
+                every conversion depended on the visitor reaching an in-body
+                form. Anchors to the hero form on the homepage from every
+                marketing page. Below sm, "Log in" steps aside for it — the
+                waitlist is the funnel; returning users still have Log in via
+                the ProductMenu. */}
+            <Link
+              href="/#waitlist"
+              className="inline-flex shrink-0 items-center justify-center rounded-full bg-[var(--marketing-primary)] px-4 py-2 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)] sm:px-5 sm:py-2.5"
+            >
+              Join the waitlist
             </Link>
             <ThemeToggle />
           </div>
