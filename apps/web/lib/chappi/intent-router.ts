@@ -10,6 +10,25 @@ import type { ChappiChip, ChappiIntent, ChappiReply } from './types';
 // mint releases makes neither of them the main one.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
+// Same flag the Notes page, its API routes and the nav entries read — the chip
+// and the typed shortcut appear only where the feature itself does.
+const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
+
+/**
+ * "note <text>" — quick capture, the one intent that carries content.
+ *
+ * Anchored at the start rather than keyword-matched like the branches below,
+ * for two reasons: the text after it is the note itself, so it can only be
+ * read positionally; and an unanchored "note" would swallow every sentence
+ * that merely mentions one ("add a note to that task" is an add_task).
+ * A trailing separator is required, so a bare "note" falls through to opening
+ * an empty editor instead of saving nothing.
+ */
+const NOTE_PREFIX = /^\s*(?:take\s+a\s+note|make\s+a\s+note|note)\s*[:,\-–—]?\s+(\S[\s\S]*)$/i;
+
+/** Bare "note" / "take a note" with nothing after it. */
+const BARE_NOTE = /^\s*(?:take\s+a\s+note|make\s+a\s+note|new\s+note|note)\s*[.!]?\s*$/i;
+
 const PLANNER_CHIPS: ChappiChip[] = [
   {
     id: 'plan-single-6w',
@@ -38,6 +57,9 @@ export const CHAPPI_CHIPS: ChappiChip[] = [
     ? PLANNER_CHIPS
     : [{ id: 'new-release', label: 'New release', intent: 'new_release' as const }]),
   { id: 'add-task', label: 'Add activity', intent: 'add_task' },
+  ...(NOTES_ENABLED
+    ? [{ id: 'take-note', label: 'Take a note', intent: 'take_note' as const }]
+    : []),
 ];
 
 /**
@@ -48,6 +70,19 @@ export const CHAPPI_CHIPS: ChappiChip[] = [
 export function resolveIntent(raw: string): ChappiIntent {
   const text = raw.toLowerCase();
   const has = (...words: string[]) => words.some((word) => text.includes(word));
+
+  // First, and anchored, so it beats the keyword branches without competing
+  // with them: "note Call the promoter about the release" is a note, not a
+  // release. Matching on the raw string keeps the note's own capitalisation.
+  if (NOTES_ENABLED) {
+    const captured = NOTE_PREFIX.exec(raw);
+    if (captured) {
+      return { kind: 'create_note', noteBody: captured[1].trim() };
+    }
+    if (BARE_NOTE.test(raw)) {
+      return { kind: 'take_note' };
+    }
+  }
 
   if (has('task', 'to-do', 'todo', 'checklist item')) {
     return { kind: 'add_task' };
@@ -79,6 +114,7 @@ export function buildHelpReply(): ChappiReply {
     suggestions: [
       PLANNER_ENABLED ? 'Plan a release' : 'Create a new release',
       'Add an activity',
+      ...(NOTES_ENABLED ? ['Note Call the promoter about Friday'] : []),
       'What should I focus on today?',
       'Generate a status update',
     ],

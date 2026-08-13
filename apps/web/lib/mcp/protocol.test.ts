@@ -122,9 +122,9 @@ describe('toolResultToMcp', () => {
 });
 
 describe('MCP tool surface', () => {
-  it('exposes the ten Chappi tools and excludes navigate', () => {
+  it('exposes the eleven Chappi tools and excludes navigate', () => {
     const names = getMcpToolDescriptors().map((tool) => tool.name);
-    expect(names).toHaveLength(10);
+    expect(names).toHaveLength(11);
     expect(names).not.toContain('navigate');
     expect(names).toEqual(
       expect.arrayContaining([
@@ -134,6 +134,7 @@ describe('MCP tool surface', () => {
         'get_dashboard',
         'create_release',
         'create_task',
+        'create_note',
         'update_task',
         'complete_task',
         'reopen_task',

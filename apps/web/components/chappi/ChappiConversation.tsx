@@ -11,6 +11,7 @@ import {
   Disc3,
   Layers,
   Loader2,
+  NotebookPen,
   PiggyBank,
   RotateCcw,
   Rocket,
@@ -26,6 +27,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { useNotesStore } from '@/stores/useNotesStore';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { supabase } from '@/lib/supabase/client';
@@ -64,6 +66,7 @@ const CHIP_ICONS: Record<string, LucideIcon> = {
   'plan-ep': Layers,
   'plan-small-budget': PiggyBank,
   'add-task': ClipboardList,
+  'take-note': NotebookPen,
 };
 
 // Hover tooltip (title attr) for each quick-action button — the "clicks"
@@ -74,6 +77,7 @@ const CHIP_DESCRIPTIONS: Record<string, string> = {
   'plan-ep': 'Answer a few questions and get a draft rollout plan',
   'plan-small-budget': 'Answer a few questions and get a draft rollout plan',
   'add-task': 'Create an activity for one of your releases',
+  'take-note': 'Park a thought before it gets away',
 };
 
 /** A date `weeks` from today, as YYYY-MM-DD. Module scope for the same reason
@@ -192,6 +196,23 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     setReply(replyMeta ?? { text: replyText });
   };
 
+  // Opens a fresh, empty note on the Notes page. `?new=1` is the deep link
+  // NotesPageClient consumes to mint a note and focus its editor — the one
+  // sanctioned way to create from a link (clicking chrome never creates data),
+  // and it strips the param itself so a refresh doesn't mint a second one.
+  const openBlankNote = () => {
+    router.push(
+      scopedRelease
+        ? `/dashboard/notes?release=${scopedRelease.id}&new=1`
+        : '/dashboard/notes?new=1'
+    );
+    appendAssistantReply(
+      scopedRelease
+        ? `Opening a new note for ${scopedRelease.title}.`
+        : 'Opening a new note.'
+    );
+  };
+
   // Deterministic intent handling — chips, and the AI-off fallback for prompts.
   const handleIntent = (intent: ChappiIntent) => {
     switch (intent.kind) {
@@ -274,6 +295,41 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         }
         return;
       }
+      case 'create_note': {
+        const body = intent.noteBody?.trim() ?? '';
+        // Nothing to save — treat it as the chip and open an empty editor.
+        if (!body) {
+          openBlankNote();
+          return;
+        }
+        // In deterministic mode the scope picker IS the release context: there
+        // is no model to hear "put it under Best", so a scoped conversation
+        // attaches its notes the same way add_task attaches its activities.
+        const releaseId = scopedRelease?.id ?? null;
+        // create() resolves to null on a failed write rather than throwing, so
+        // the value is the success check; catch only covers a network throw.
+        void useNotesStore
+          .getState()
+          .create({ body, releaseId })
+          .then((note) => {
+            appendAssistantReply(
+              note
+                ? scopedRelease
+                  ? `Saved to Notes, under ${scopedRelease.title}.`
+                  : 'Saved to Notes.'
+                : "Couldn't save that note. Try again, or open Notes and write it there."
+            );
+          })
+          .catch(() => {
+            appendAssistantReply(
+              "Couldn't save that note. Try again, or open Notes and write it there."
+            );
+          });
+        return;
+      }
+      case 'take_note':
+        openBlankNote();
+        return;
       case 'help':
       default: {
         const helpReply = buildHelpReply();

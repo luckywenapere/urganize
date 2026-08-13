@@ -20,12 +20,20 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "0.49.2",
+    version: "0.50.1",
     date: "August 13, 2026",
     highlights: [
       "UrgAns replies now stream in word by word instead of appearing all at once, so you can start reading the moment the first words land.",
       "Every reply carries a quiet row of actions underneath: copy it in one tap (handy for pasting into WhatsApp), regenerate the last answer, or rate it with a thumbs up or down so we know what's working.",
       "Suggested follow-up questions now sit in their own titled list under the answer, each one a full-width row you can tap to ask — clearer than the small floating buttons they used to be.",
+    ],
+  },
+  {
+    version: "0.50.0",
+    date: "August 13, 2026",
+    highlights: [
+      "You can take a note without leaving UrgAns. Start a message with \"note\" — \"note Call the promoter about Friday\" — and it saves straight to your notes, first line as the title. There's a Take a note button under the prompt too, for when you'd rather have the full page and room to write.",
+      "If you're already looking at a release when you do it, the note is filed under that release. Otherwise it's just a note, and you can link it to something later.",
     ],
   },
   {
