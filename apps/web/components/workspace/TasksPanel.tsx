@@ -23,16 +23,22 @@ import { useSceneOverlay, type SceneName } from './useSceneOverlay';
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 
 // Mirrors AppShell's own gate for the identity card, which is what hosts the
-// "Collect metadata" nav item this pill defers to at wide widths. Read here
-// because the pill may only step aside where that card actually renders —
-// both flags default to false and are independent of METADATA above, so
-// without this check a metadata-on / identity-panel-off environment (the
-// DEFAULT combination) would hide the pill at `lg`+ with nothing replacing
-// it, making Metadata unreachable on desktop entirely.
+// "Collect metadata" and "Calendar" nav items these pills defer to at wide
+// widths. Read here because a pill may only step aside where that card
+// actually renders — this flag defaults to false and is independent of the
+// per-feature flags above, so without this check a metadata-on (or
+// calendar-on) / identity-panel-off environment (the DEFAULT combination)
+// would hide the pill at `lg`+ with nothing replacing it, making the feature
+// unreachable on desktop entirely.
 const IDENTITY_PANEL_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' &&
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
+// Where a pill retreats once the identity card's nav is its wide-width home.
+// Governs BOTH pills hosted there — Metadata (2026-08-12) and Calendar
+// (2026-08-13) — so the rule has exactly one definition; it was named
+// METADATA_PILL_HIDE_CLASS while Metadata was the only one.
+//
 // The identity card hides itself at `lg`-`xl` whenever the UrgAns rail is open
 // (see WorkspaceIdentityPanel's railIsCompeting), so with the assistant on
 // there is no width below `xl` where the card is GUARANTEED to be present.
@@ -41,10 +47,10 @@ const IDENTITY_PANEL_ENABLED =
 // when Chappi is on. Cost: a redundant second control at `lg`-`xl` while the
 // rail happens to be closed. That is strictly better than a viewport band
 // where the feature has no entry point at all.
-// Exported so WorkspaceSkeleton reserves the placeholder at exactly the same
+// Exported so WorkspaceSkeleton reserves the placeholders at exactly the same
 // breakpoints (the loading-skeleton-sync rule that file documents; it has
 // already drifted from this row once).
-export const METADATA_PILL_HIDE_CLASS = !IDENTITY_PANEL_ENABLED
+export const IDENTITY_NAV_PILL_HIDE_CLASS = !IDENTITY_PANEL_ENABLED
   ? ''
   : process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true'
     ? 'xl:hidden'
@@ -53,7 +59,10 @@ export const METADATA_PILL_HIDE_CLASS = !IDENTITY_PANEL_ENABLED
 // Content calendar entry point (URG-157): the workspace is the surface users
 // actually land on after login, so the scoped-release header carries the
 // calendar affordance alongside Files rather than hiding it on the release
-// detail page alone.
+// detail page alone. As of 2026-08-13 this flag also gates the identity
+// panel's "Calendar" nav item (WorkspaceIdentityPanel) — same rule as
+// METADATA above: the two surfaces must never disagree about whether the
+// feature exists, only about WHICH of them shows it at a given viewport.
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 
 // Files entry point (URG-182): same flag gates the assets API routes and the
@@ -387,14 +396,14 @@ export function TasksPanel({
               WorkspaceIdentityPanel) and two controls for one scene is noise.
               But that panel never renders on small viewports, so the pill has
               to survive there: this row is the only surface present at every
-              width. See METADATA_PILL_HIDE_CLASS for exactly where it
+              width. See IDENTITY_NAV_PILL_HIDE_CLASS for exactly where it
               retreats — it stays put entirely when the panel is flagged off. */}
           {METADATA_ENABLED && scopedRelease ? (
             <button
               type="button"
               onClick={() => toggleScene('metadata', scopedRelease.id)}
               aria-pressed={activeScene === 'metadata'}
-              className={`${pillClass('metadata')} ${METADATA_PILL_HIDE_CLASS}`}
+              className={`${pillClass('metadata')} ${IDENTITY_NAV_PILL_HIDE_CLASS}`}
             >
               <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
               Collect metadata
@@ -403,9 +412,9 @@ export function TasksPanel({
           {/* Playlist pitching: browse curator playlists and send this
               release's song, with each curator's answer shown beside it.
               Sits high in the row (founder call, 2026-08-10) — right after
-              Collect metadata and ahead of Calendar. Note that Metadata's pill
-              retreats at wide widths (see METADATA_PILL_HIDE_CLASS), so this is
-              effectively the first link in the row at those widths. */}
+              Collect metadata and ahead of Calendar. Note that BOTH of those
+              pills retreat at wide widths (see IDENTITY_NAV_PILL_HIDE_CLASS),
+              so this is effectively the first link in the row there. */}
           {PITCHING_ENABLED && scopedRelease ? (
             <button
               type="button"
@@ -422,13 +431,17 @@ export function TasksPanel({
               at narrower widths it already falls back to its own agenda list.
               (Until 2026-08-04 this was a nav Link to a full page, on the
               reasoning that the panel couldn't give the grid enough width; the
-              window can.) */}
+              window can.)
+              NARROW widths only as of 2026-08-13 (founder call), on exactly the
+              Metadata precedent above: the identity card's nav now carries
+              Calendar at `lg`+, and this pill survives below that because the
+              card doesn't render there. */}
           {CONTENT_CALENDAR_ENABLED && scopedRelease ? (
             <button
               type="button"
               onClick={() => toggleScene('calendar', scopedRelease.id)}
               aria-pressed={activeScene === 'calendar'}
-              className={pillClass('calendar')}
+              className={`${pillClass('calendar')} ${IDENTITY_NAV_PILL_HIDE_CLASS}`}
             >
               <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
               Calendar

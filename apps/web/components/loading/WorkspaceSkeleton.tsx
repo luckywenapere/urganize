@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useChappiStore } from '@/stores/useChappiStore';
-import { METADATA_PILL_HIDE_CLASS } from '@/components/workspace/TasksPanel';
+import { IDENTITY_NAV_PILL_HIDE_CLASS } from '@/components/workspace/TasksPanel';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownReleaseCount } from './known-counts';
 
@@ -18,10 +18,10 @@ const SCOPE_PARAM = 'release';
 // change width when content swaps in: New activity is always present;
 // Calendar / Files / Press kit appear per flag, in that order (2026-08-04 —
 // the release detail page and its "Overview" pill were removed). Metadata
-// moved to the identity panel's left-hand nav as "Collect metadata" at `lg`+
-// (2026-08-12 — see WorkspaceIdentityPanel), but the pill survives BELOW
-// `lg` (that panel never renders there), so it's still reserved here, just
-// viewport-restricted like its real counterpart.
+// (2026-08-12) and Calendar (2026-08-13) moved to the identity panel's
+// left-hand nav at `lg`+ (see WorkspaceIdentityPanel), but both pills survive
+// BELOW `lg` (that panel never renders there), so they're still reserved
+// here, just viewport-restricted like their real counterparts.
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
@@ -237,7 +237,10 @@ function TasksPanelSkeleton() {
     // Pitch leads the row (founder call, 2026-08-10) and carries no Beta tag,
     // so it reserves the same width as Files rather than a tagged pill's.
     ...(PITCHING_ENABLED ? ['w-16'] : []), // Pitch
-    ...(CONTENT_CALENDAR_ENABLED ? ['w-28'] : []), // Calendar + Beta tag
+    // Calendar + Beta tag — narrow widths only since 2026-08-13, same as
+    // Metadata below, so it carries the same hide class rather than a bare
+    // width.
+    ...(CONTENT_CALENDAR_ENABLED ? [`w-28 ${IDENTITY_NAV_PILL_HIDE_CLASS}`] : []),
     ...(FILES_ENABLED ? ['w-16'] : []), // Files
     ...(EPK_ENABLED ? ['w-24'] : []), // Press kit
     ...(NOTES_ENABLED ? ['w-20'] : []), // Notes
@@ -261,12 +264,12 @@ function TasksPanelSkeleton() {
           <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
           {/* Metadata — narrow widths only, carrying the SAME hide class the
               real pill computes (see TasksPanel.tsx's
-              METADATA_PILL_HIDE_CLASS: empty when the identity panel is
+              IDENTITY_NAV_PILL_HIDE_CLASS: empty when the identity panel is
               flagged off, else xl/lg depending on Chappi) so the reserved
               footprint matches at every breakpoint. */}
           {METADATA_ENABLED ? (
             <SkeletonBlock
-              className={`h-8 w-36 shrink-0 rounded-full ${METADATA_PILL_HIDE_CLASS}`}
+              className={`h-8 w-36 shrink-0 rounded-full ${IDENTITY_NAV_PILL_HIDE_CLASS}`}
             />
           ) : null}
           {pillWidths.map((width, index) => (

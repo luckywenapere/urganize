@@ -4,7 +4,13 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ClipboardList, PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
+import {
+  CalendarDays,
+  ClipboardList,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ShieldCheck,
+} from "lucide-react";
 import { useWorkspaceIdentityStore } from "@/stores/useWorkspaceIdentityStore";
 import { useReleaseStore } from "@/stores/useReleaseStore";
 import { useChappiStore } from "@/stores/useChappiStore";
@@ -29,6 +35,12 @@ const isBoolean = (value: unknown): value is boolean => typeof value === "boolea
 // Metadata unreachable on phones/tablets (2026-08-12).
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === "true";
 
+// Same flag TasksPanel's Calendar pill reads. Calendar joined this nav
+// 2026-08-13 (founder call) on exactly the Metadata precedent above: at `lg`+
+// the card is the entry point, and TasksPanel keeps the below-`lg` pill alive
+// because this card never renders on phones/tablets.
+const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === "true";
+
 // The card's nav (URG-229). Same three global surfaces the topbar exposes,
 // using the SAME hand-drawn marks (BrandIcons) so the two entry points read
 // as one system. Active matching mirrors AppTopbar's: exact for /dashboard so
@@ -39,6 +51,13 @@ type NavItem = {
   label: string;
   Icon: (props: { className?: string }) => React.ReactElement;
   isActive: (pathname: string) => boolean;
+  // Optional trailing stamp, right-aligned in the row and dropped entirely
+  // when the card is collapsed to an icon rail. Exists so a surface that
+  // carries a "Beta" tag on its TasksPanel pill keeps carrying it here — this
+  // card is the wide-width entry point for those surfaces, so dropping the tag
+  // would quietly downgrade the disclosure at exactly the width most people
+  // use.
+  badge?: string;
 };
 
 // Same flag AppTopbar reads for its Notes icon — the two entry points appear
@@ -48,18 +67,50 @@ const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === "true";
 // NavItem.Icon must always return a ReactElement (matching the BrandIcons
 // function components' signature); lucide-react's ForwardRefExoticComponent
 // types its call signature as `ReactElement | null`, so it can't be assigned
-// to that field directly — this thin wrapper closes the gap.
+// to that field directly — these thin wrappers close the gap.
 function MetadataIcon({ className }: { className?: string }) {
   return <ClipboardList className={className} />;
 }
+
+function AdminIcon({ className }: { className?: string }) {
+  return <ShieldCheck className={className} aria-hidden="true" />;
+}
+
+function CalendarIcon({ className }: { className?: string }) {
+  return <CalendarDays className={className} aria-hidden="true" />;
+}
+
+/**
+ * The two rows pinned to the BASE of the nav rather than sitting in the
+ * scrolling list above (founder call, 2026-08-13), in this order: Admin, then
+ * Settings below it. Both are account/operator surfaces rather than places
+ * work happens, so they belong out of the way of the release surfaces — the
+ * same reason the collapse control lives at the bottom of the card.
+ *
+ * Admin is additionally visibility-gated on the identity payload's isAdmin;
+ * every /admin route still runs its own verifyAdmin server-side.
+ */
+const ADMIN_ITEM: NavItem = {
+  href: "/admin",
+  label: "Admin",
+  Icon: AdminIcon,
+  isActive: (pathname: string) => pathname.startsWith("/admin"),
+};
+
+const SETTINGS_ITEM: NavItem = {
+  href: "/settings",
+  label: "Settings",
+  Icon: GearIcon,
+  isActive: (pathname: string) => pathname.startsWith("/settings"),
+};
 
 /**
  * Built per-render (not a module constant like the old NAV_ITEMS) because the
  * "Collect metadata" entry needs runtime state: it targets the release
  * currently scoped in the URL, so it can't be a static href like its
  * neighbours. Added here 2026-08-12 as this card's persistent home for the
- * feature — Metadata is release-scoped, so unlike Catalog/UrgAns/Notes/
- * Settings this item only appears once a release is scoped (?release=), the
+ * feature — Metadata is release-scoped, so unlike Catalog/UrgAns/Notes this
+ * item only appears once a release is scoped (?release=), the
  * same gate TasksPanel's below-`lg` pill uses (`METADATA_ENABLED &&
  * scopedRelease`) so the two can't disagree about when the feature exists.
  */
@@ -91,6 +142,26 @@ function buildNavItems(scopedReleaseId: string | null, activeScene: string | nul
           },
         ]
       : []),
+    // Calendar, directly below Collect metadata (founder call, 2026-08-13),
+    // which is the order the two carried in TasksPanel's pill row. Same
+    // release-scoped gate as Metadata above, and the same Beta stamp its pill
+    // carries. A plain href rather than TasksPanel's toggle button: the scene
+    // is derived from the URL, so navigating here opens it exactly as clicking
+    // the pill did (an open-from-closed push — see useSceneOverlay's history
+    // model). Note the calendar's month grid wants a wide centre column and
+    // falls back to its own agenda list when squeezed, so on a narrower laptop
+    // collapsing this card is what buys the grid its width back.
+    ...(CONTENT_CALENDAR_ENABLED && scopedReleaseId
+      ? [
+          {
+            href: `/dashboard?release=${scopedReleaseId}&scene=calendar`,
+            label: "Calendar",
+            Icon: CalendarIcon,
+            badge: "Beta",
+            isActive: (pathname: string) => pathname === "/dashboard" && activeScene === "calendar",
+          },
+        ]
+      : []),
     // Exact match, like its neighbours: usePathname excludes the query string,
     // so a ?release= / ?note= deep link still lights this up.
     ...(NOTES_ENABLED
@@ -103,12 +174,8 @@ function buildNavItems(scopedReleaseId: string | null, activeScene: string | nul
           },
         ]
       : []),
-    {
-      href: "/settings",
-      label: "Settings",
-      Icon: GearIcon,
-      isActive: (pathname: string) => pathname.startsWith("/settings"),
-    },
+    // Settings and Admin deliberately do NOT belong here — they're pinned to
+    // the base of the nav instead (see ADMIN_ITEM / SETTINGS_ITEM above).
   ];
 }
 
@@ -335,11 +402,12 @@ export function WorkspaceIdentityPanel() {
           an <a> can't contain other <a>s. Deliberately duplicates the topbar's
           Catalog/UrgAns icons (founder call): they stay because they're the
           only way to reach those surfaces below lg, where this card is hidden.
-          `min-h-0 overflow-y-auto` so a short viewport scrolls the nav rather
-          than overflowing the fixed-height card. */}
+          A flex column so Admin + Settings can pin to its base while the
+          release surfaces above them take the remaining height and scroll on a
+          short viewport rather than overflowing the fixed-height card. */}
         <nav
           aria-label="Workspace navigation"
-          className="min-h-0 flex-1 overflow-y-auto border-t border-stroke-subtle p-2"
+          className="flex min-h-0 flex-1 flex-col border-t border-stroke-subtle p-2"
         >
           {/* WorkspaceNavLinks needs useSearchParams (to find the currently
             scoped release for "Collect metadata"), and this panel is mounted
@@ -425,9 +493,25 @@ function WorkspaceNavLinks({
   );
 }
 
+/** Collapsed rows center a single icon; the label stays in the DOM as sr-only
+ * rather than being swapped for an aria-label, so the accessible name is
+ * identical in both states and can't drift. `title` gives sighted users the
+ * native tooltip that replaces the missing text. */
+const navRowClass = (active: boolean, collapsed: boolean) =>
+  `motion-focus mb-0.5 flex items-center rounded-lg py-2 text-sm transition-colors ${
+    collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
+  } ${
+    active
+      ? "bg-brand/10 text-brand"
+      : "text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+  }`;
+
 /** Plain render of the nav rows — no hooks of its own, so it doubles as the
  * Suspense fallback (called directly with a release-less item list) and the
- * resolved output (via WorkspaceNavLinks above). */
+ * resolved output (via WorkspaceNavLinks above). Renders the scrolling list of
+ * release surfaces plus the pinned Admin/Settings group at the base; the two
+ * are direct flex children of the <nav> above, so this component's fragment
+ * has to stay transparent (no wrapper element). */
 function WorkspaceNavList({
   navItems,
   pathname,
@@ -439,55 +523,53 @@ function WorkspaceNavList({
   isAdmin: boolean;
   collapsed: boolean;
 }) {
-  // Collapsed rows center a single icon; the label stays in the DOM as
-  // sr-only rather than being swapped for an aria-label, so the accessible
-  // name is identical in both states and can't drift. `title` gives sighted
-  // users the native tooltip that replaces the missing text.
-  const rowClass = (active: boolean) =>
-    `motion-focus mb-0.5 flex items-center rounded-lg py-2 text-sm transition-colors ${
-      collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
-    } ${
-      active
-        ? "bg-brand/10 text-brand"
-        : "text-content-secondary hover:bg-bg-hover hover:text-content-primary"
-    }`;
+  const renderRow = ({ href, label, Icon, isActive, badge }: NavItem) => {
+    const active = isActive(pathname || "");
+    return (
+      <Link
+        key={href}
+        href={href}
+        aria-current={active ? "page" : undefined}
+        title={collapsed ? label : undefined}
+        className={navRowClass(active, collapsed)}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        <span className={collapsed ? "sr-only" : undefined}>{label}</span>
+        {/* Same stamp shape TasksPanel's pills use. Dropped when collapsed —
+          the row is a 40px icon target there with no room for it, and the
+          label it qualifies is sr-only anyway. */}
+        {badge && !collapsed ? (
+          <span className="ml-auto shrink-0 rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+            {badge}
+          </span>
+        ) : null}
+      </Link>
+    );
+  };
 
   return (
     <>
-      {navItems.map(({ href, label, Icon, isActive }) => {
-        const active = isActive(pathname || "");
-        return (
-          <Link
-            key={href}
-            href={href}
-            aria-current={active ? "page" : undefined}
-            title={collapsed ? label : undefined}
-            className={rowClass(active)}
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            <span className={collapsed ? "sr-only" : undefined}>{label}</span>
-          </Link>
-        );
-      })}
+      {/* The release surfaces: they take the leftover height and scroll, so a
+        short viewport clips this list rather than pushing Admin/Settings off
+        the base of the card. */}
+      <div className="min-h-0 flex-1 overflow-y-auto">{navItems.map(renderRow)}</div>
 
-      {/* Admin is visibility-gated on the identity payload's isAdmin; every
-        /admin route still runs its own verifyAdmin server-side.
-        Deliberately NOT skeleton-reserved above (URG-232): isAdmin only
-        resolves post-hydration, so a placeholder row would flash for
-        every non-admin viewer just to save an admin one pop-in — the
-        same "pop-in beats vanishing" tradeoff ChappiPageSkeleton's doc
-        comment makes for the invite-teammates banner. */}
-      {isAdmin ? (
-        <Link
-          href="/admin"
-          aria-current={pathname?.startsWith("/admin") ? "page" : undefined}
-          title={collapsed ? "Admin" : undefined}
-          className={rowClass(Boolean(pathname?.startsWith("/admin")))}
-        >
-          <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className={collapsed ? "sr-only" : undefined}>Admin</span>
-        </Link>
-      ) : null}
+      {/* Pinned to the base, Admin above Settings (founder call, 2026-08-13).
+        Its own top divider separates the account/operator rows from the
+        release surfaces above, mirroring the collapse control's divider
+        below it.
+
+        Admin's row is deliberately NOT skeleton-reserved (URG-232): isAdmin
+        only resolves post-hydration, so a placeholder would flash for every
+        non-admin viewer just to save an admin one pop-in — the same "pop-in
+        beats vanishing" tradeoff ChappiPageSkeleton's doc comment makes for
+        the invite-teammates banner. Settings sits below it either way, so an
+        admin's Admin row appears above an already-placed Settings rather
+        than shifting it. */}
+      <div className="mt-2 shrink-0 border-t border-stroke-subtle pt-2">
+        {isAdmin ? renderRow(ADMIN_ITEM) : null}
+        {renderRow(SETTINGS_ITEM)}
+      </div>
     </>
   );
 }
