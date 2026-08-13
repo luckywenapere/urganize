@@ -4,10 +4,13 @@ import { useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 
 import { useAuthStore } from '@/lib/auth-store';
-import { panelClass } from './panelClass';
+import { SettingRow, settingRowButtonClass } from './SettingRow';
 
 // Post-completion check-in. Hidden entirely when the feature is off, so the
 // toggle can never promise something the app will not do.
+//
+// Became a ROW inside NotificationsSettingsSection (2026-08-13) — it was its
+// own full section for one button.
 const TASK_OUTCOMES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_OUTCOMES === 'true';
 
 export function TaskCheckInSection() {
@@ -34,36 +37,30 @@ export function TaskCheckInSection() {
   };
 
   return (
-    <section className={panelClass}>
-      <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
-        After tasks
-      </h2>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
-          <MessageCircle
-            className={`mt-0.5 h-4 w-4 shrink-0 ${isEnabled ? 'text-brand' : 'text-content-tertiary'}`}
-            aria-hidden="true"
-          />
-          <p className="max-w-[46ch] text-sm text-content-secondary">
-            {isEnabled
-              ? 'When you mark a task done, UrgAns asks how it went. One tap to answer, one tap to skip.'
-              : 'UrgAns will not ask how tasks went.'}
-          </p>
-        </div>
+    <SettingRow
+      icon={
+        <MessageCircle
+          className={`h-4 w-4 ${isEnabled ? 'text-brand' : 'text-content-tertiary'}`}
+          aria-hidden="true"
+        />
+      }
+      title="After tasks"
+      description={
+        isEnabled
+          ? 'When you mark a task done, UrgAns asks how it went. One tap to answer, one tap to skip.'
+          : 'UrgAns will not ask how tasks went.'
+      }
+      action={
         <button
           type="button"
           onClick={() => void handleToggle()}
           disabled={isWorking}
-          className={`shrink-0 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60 ${
-            isEnabled
-              ? 'border border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover'
-              : 'bg-brand text-content-inverse hover:bg-brand-hover'
-          }`}
+          className={settingRowButtonClass(isEnabled)}
         >
           {isWorking ? 'Working…' : isEnabled ? 'Turn off' : 'Turn on'}
         </button>
-      </div>
-      {error ? <p className="mt-3 text-sm text-status-error">{error}</p> : null}
-    </section>
+      }
+      error={error}
+    />
   );
 }

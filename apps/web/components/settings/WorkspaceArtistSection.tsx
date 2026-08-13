@@ -2,6 +2,7 @@
 
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { panelClass } from './panelClass';
+import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
 
 export type WorkspaceArtist = { id: string; name: string; slug: string };
 
@@ -35,6 +36,9 @@ export function WorkspaceArtistSection({
   return (
     <section className={panelClass}>
       <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Workspace artist</h2>
+      {/* States its scope explicitly (2026-08-13): the sibling editor under
+          Account edits the signed-in user's own profile name. Both used to say
+          just "Artist name" with the same placeholder. */}
       <p className="mb-4 text-sm text-content-secondary">
         The single artist this workspace works on. Renaming here updates
         every release&apos;s cached artist label.
@@ -64,16 +68,8 @@ export function WorkspaceArtistSection({
               maxLength={120}
             />
           </label>
-          {message && (
-            <p className="rounded-lg border border-brand/35 bg-brand-muted px-3 py-2 text-sm text-brand">
-              {message}
-            </p>
-          )}
-          {error && (
-            <p className="rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
-              {error}
-            </p>
-          )}
+          {message && <p className={feedbackSuccessClass}>{message}</p>}
+          {error && <p className={feedbackErrorClass}>{error}</p>}
           <button
             type="button"
             onClick={onSave}

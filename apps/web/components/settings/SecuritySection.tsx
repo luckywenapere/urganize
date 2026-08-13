@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
 import { panelClass } from './panelClass';
+import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
 
 export function SecuritySection() {
   const [newPassword, setNewPassword] = useState('');
@@ -63,8 +64,8 @@ export function SecuritySection() {
             className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
           />
         </label>
-        {error && <p className="text-sm text-status-error">{error}</p>}
-        {success && <p className="text-sm text-brand">{success}</p>}
+        {error && <p className={feedbackErrorClass}>{error}</p>}
+        {success && <p className={feedbackSuccessClass}>{success}</p>}
         <button
           type="button"
           onClick={() => void handleSave()}

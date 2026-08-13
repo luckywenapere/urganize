@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { formatFileSize } from '@/lib/asset-constants';
 import { panelClass } from './panelClass';
+import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
 
 export type WorkspaceLogo = { fileName: string | null; url: string };
 
@@ -48,7 +49,7 @@ export function WorkspaceLogoSection({
       {isLoading ? (
         <div className="flex items-center gap-4">
           <SkeletonBlock className="h-24 w-24" />
-          <SkeletonBlock className="h-10 w-32 rounded-none" />
+          <SkeletonBlock className="h-10 w-32 rounded-lg" />
         </div>
       ) : (
         <div className="space-y-3">
@@ -80,18 +81,13 @@ export function WorkspaceLogoSection({
               No logo yet. JPEG, PNG, or WebP up to {formatFileSize(sizeLimit)}.
             </p>
           )}
-          {message && (
-            <p className="rounded-none border border-brand/35 bg-brand-muted px-3 py-2 text-sm text-brand">
-              {message}
-            </p>
-          )}
-          {error && (
-            <p className="rounded-none border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
-              {error}
-            </p>
-          )}
+          {/* rounded-lg, matching WorkspaceIdentitySection (2026-08-13): these
+              two sections sit in the same two-column row, and this one had been
+              rendering sharp corners against its sibling's rounded ones. */}
+          {message && <p className={feedbackSuccessClass}>{message}</p>}
+          {error && <p className={feedbackErrorClass}>{error}</p>}
           <label
-            className={`inline-flex cursor-pointer items-center rounded-none bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover ${
+            className={`inline-flex cursor-pointer items-center rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover ${
               isSaving ? 'cursor-not-allowed opacity-60' : ''
             }`}
           >

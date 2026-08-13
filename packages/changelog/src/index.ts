@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.51.0",
+    date: "August 13, 2026",
+    highlights: [
+      "Settings is four tabs now — Account, Workspace, Team and Notifications — instead of one long scroll. Twelve sections used to sit stacked in a single column with nothing grouping them, so changing your password meant scrolling past your team, your logo and your releases to get there. Each tab holds only what belongs together, and the page finally has its name at the top.",
+      "Your three notification settings sit together in one place. Push, the after-a-task check-in and the weekly nudge were three separate blocks spread down the page, and now they read as the one set of choices they always were.",
+      "Every tab has its own link, so you can go straight to the part you want and Settings remembers where you were when you refresh.",
+      "The two places you can set an artist name no longer look identical. One is your own profile, one is the workspace's artist — they're in different tabs now and each says which it is.",
+    ],
+  },
+  {
     version: "0.50.2",
     date: "August 13, 2026",
     highlights: [
