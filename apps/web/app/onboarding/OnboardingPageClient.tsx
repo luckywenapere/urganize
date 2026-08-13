@@ -51,6 +51,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
+import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
@@ -326,7 +327,11 @@ export default function OnboardingPage() {
   const [isFinishing, setIsFinishing] = useState(false);
 
   // ---- hydration ---------------------------------------------------------
-  useEffect(() => {
+  // Runs before the first paint (see lib/use-isomorphic-layout-effect.ts) so
+  // the server-rendered step 1 is only ever visible to a user who actually
+  // belongs on step 1. Everything it touches is storage-guarded, so this
+  // cannot throw.
+  useIsomorphicLayoutEffect(() => {
     const loaded = loadOnboardingDraft();
     if (loaded.releaseType !== null && !AVAILABLE_RELEASE_TYPE_SET.has(loaded.releaseType)) {
       setDraft({ ...loaded, releaseType: null });
@@ -783,16 +788,16 @@ export default function OnboardingPage() {
     await finishToDashboard(token);
   };
 
-  // ---- loading shell -----------------------------------------------------
-  if (!hasHydrated) {
-    return (
-      <main className="min-h-screen bg-bg-base text-content-primary">
-        <div className="mx-auto flex min-h-screen w-full max-w-xl items-center justify-center px-4">
-          <p className="text-sm text-content-secondary">Loading…</p>
-        </div>
-      </main>
-    );
-  }
+  // No loading gate here, deliberately (bug report, 2026-08-12: a user on a
+  // weak mobile connection sat on a bare "Loading…" screen and could not sign
+  // up at all). This page used to render nothing but that word until the
+  // client bundle hydrated, which made the whole signup entrance dependent on
+  // ~10 JS chunks all arriving: one dropped request, a content blocker, or any
+  // throw during hydration left a permanent dead end with no error and no
+  // retry — there are no error boundaries in this app to catch it. Step 1 is a
+  // plain radio list over static template data and needs neither storage nor
+  // auth, so it is server-rendered and hydration only upgrades it. Restoring a
+  // saved draft happens pre-paint above, so returning users still skip it.
 
   // ---- render ------------------------------------------------------------
   return (
@@ -810,6 +815,16 @@ export default function OnboardingPage() {
             A few questions before we set up your workspace.
           </p>
         </div>
+
+        {/* Signing up needs JavaScript. Say so instead of leaving the user
+            tapping a Next button that silently does nothing. */}
+        <noscript>
+          <p className="mb-6 border border-status-warning/40 bg-bg-surface px-4 py-3 text-sm leading-relaxed text-content-secondary">
+            Signing up needs JavaScript switched on. If you are using a content
+            blocker or private-browsing restrictions, turn them off for
+            urganize.app and reload this page.
+          </p>
+        </noscript>
 
         {/* Progress bar — TOTAL_STEPS thin segments */}
         <div

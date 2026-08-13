@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.49.1",
+    date: "August 13, 2026",
+    highlights: [
+      "Signing up and signing in now survive a bad connection. Both pages used to arrive as a loading screen and only became themselves once the rest of the app had finished downloading, so on a weak mobile signal a single missing piece left you watching the word \"Loading\" for as long as you were willing to wait, with nothing to tap and nothing explaining why. The form is part of the page now, there from the moment it lands.",
+      "If a browser has JavaScript turned off — a content blocker, or private-browsing restrictions — both pages say so plainly instead of leaving you pressing a button that quietly does nothing.",
+    ],
+  },
+  {
     version: "0.49.0",
     date: "August 12, 2026",
     highlights: [
