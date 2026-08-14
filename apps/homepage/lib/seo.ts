@@ -3,6 +3,30 @@ import type { Metadata } from "next";
 const SITE_URL = "https://urganize.app";
 const SITE_NAME = "Urganize";
 
+// The landing page's title and description live here, not in the two files
+// that render them: app/layout.tsx needs them for the four JSON-LD schemas
+// and the root metadata defaults, app/page.tsx needs them for the home
+// page's own tags, and until 2026-08-14 both files carried their own copy of
+// each string. Two hardcoded copies of a search snippet is a drift hazard on
+// the one page brand queries land on.
+//
+// TITLE: names the audience rather than a generic "for Teams" — the searcher
+// should see themselves in the result. 56 characters, so Google renders it
+// whole instead of truncating mid-phrase.
+//
+// DESCRIPTION: written at ~156 characters on purpose. The previous one was
+// 106 characters and opened with "How", and Google was ignoring it entirely —
+// it substituted the CommunitySection paragraph from further down the page,
+// so the result for "urganize" described a group chat rather than release
+// management software. A full-length description that opens with the brand
+// and states concrete benefits is far likelier to be used verbatim; the
+// data-nosnippet attributes on that community copy close the other half of
+// the problem.
+export const LANDING_TITLE =
+  "Urganize | Music Release Management for Artist Managers";
+export const LANDING_DESCRIPTION =
+  "Urganize gives artist managers and small labels one home for every release. Plan the rollout, give every task an owner, and stop chasing status in WhatsApp.";
+
 // Absolute, canonical share image. Served as a static asset from public/
 // (NOT the app/opengraph-image.png file convention), so the URL is stable
 // across deploys and always resolves on the public domain. This is the
