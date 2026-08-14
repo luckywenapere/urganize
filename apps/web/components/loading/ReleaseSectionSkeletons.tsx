@@ -45,26 +45,31 @@ export function ShareLinkCardSkeleton() {
   );
 }
 
-// Matches MetadataSection's real field count and order exactly (ISRC, UPC,
-// Genre, Subgenre, Language, Label name, ℗ line, © line) so the resolved
-// form doesn't visibly grow past the placeholder grid.
+// Matches MetadataSection's real field count exactly — 8 fields, now ordered
+// easiest-first (Genre, Subgenre, Language, Label name, ISRC, UPC, ℗ line,
+// © line) — so the resolved form doesn't visibly grow past the placeholder
+// grid. Every field also carries a plain-English hint line under its input
+// (2026-08-13), which is why each row below reserves three blocks and the grid
+// gap matches the real form's `gap-4`.
 const METADATA_FIELD_COUNT = 8;
 
-/** The release-details distribution-metadata form: an 8-field 2-column
- * grid + an explicit-content checkbox row + a Save button. */
+/** The release-details distribution-metadata form: an 8-field 2-column grid
+ * (label + input + hint per field) + an explicit-content checkbox row + a
+ * Save button. */
 export function MetadataFieldsSkeleton() {
   return (
     <div
-      className="mt-4 grid grid-cols-1 gap-3 border border-stroke-default bg-bg-surface p-4 sm:grid-cols-2"
+      className="mt-4 grid grid-cols-1 gap-4 border border-stroke-default bg-bg-surface p-4 sm:grid-cols-2"
       aria-hidden="true"
     >
       {Array.from({ length: METADATA_FIELD_COUNT }).map((_, index) => (
         <div key={`field-${index}`}>
           <SkeletonBlock className="h-2.5 w-20" />
           <SkeletonBlock className="mt-1.5 h-9 w-full" />
+          <SkeletonBlock className="mt-1.5 h-2.5 w-4/5" />
         </div>
       ))}
-      <SkeletonBlock className="h-4 w-56 sm:col-span-2" />
+      <SkeletonBlock className="h-4 w-64 sm:col-span-2" />
       <SkeletonBlock className="h-9 w-32 sm:col-span-2" />
     </div>
   );

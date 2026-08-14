@@ -15,6 +15,15 @@ import {
 // the unguessable token in the URL is the only access control, resolved
 // server-side before this ever renders. Every field is re-validated by
 // app/api/credits/[token]/route.ts; nothing here is a trust boundary.
+//
+// Copy rewritten 2026-08-13 (founder feedback on the metadata surfaces: too
+// much cognitive load, not clear enough "for a 5th grader"). The rule for
+// anyone editing strings here: this form is filled in by producers, writers and
+// engineers, NOT by distribution admins — so every industry term (PRO, IPI,
+// split, master) is restated in ordinary words in a hint under its field, and
+// each section says out loud when it can be skipped entirely. The field set,
+// validation and submit flow are unchanged; only the words and the numbered
+// section headings are.
 
 const SURFACE = 'var(--credits-surface)';
 const STROKE = 'var(--credits-border)';
@@ -59,6 +68,26 @@ function SectionHeading({ children }: { children: ReactNode }) {
   );
 }
 
+/** One-line explanation under a field. The people filling this form in are
+ * producers and writers, not distribution admins, so every industry term
+ * (PRO, IPI, split) gets said again in ordinary words. */
+function Hint({ children }: { children: ReactNode }) {
+  return (
+    <span className="mt-1.5 block text-xs leading-snug" style={{ color: MUTED }}>
+      {children}
+    </span>
+  );
+}
+
+/** "Optional" said out loud, so silence never reads as "required". */
+function SectionNote({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-sm leading-relaxed" style={{ color: MUTED }}>
+      {children}
+    </p>
+  );
+}
+
 function TextField({
   label,
   value,
@@ -66,6 +95,7 @@ function TextField({
   placeholder,
   type = 'text',
   required,
+  hint,
 }: {
   label: string;
   value: string;
@@ -73,6 +103,7 @@ function TextField({
   placeholder?: string;
   type?: string;
   required?: boolean;
+  hint?: string;
 }) {
   return (
     <label className="block text-sm">
@@ -89,6 +120,7 @@ function TextField({
         className="mt-1.5 w-full border px-3 py-2 text-sm outline-none"
         style={inputStyle()}
       />
+      {hint ? <Hint>{hint}</Hint> : null}
     </label>
   );
 }
@@ -97,10 +129,12 @@ function SplitField({
   label,
   value,
   onChange,
+  hint,
 }: {
   label: string;
   value: number | null;
   onChange: (value: number | null) => void;
+  hint?: string;
 }) {
   return (
     <label className="block text-sm">
@@ -121,6 +155,7 @@ function SplitField({
         className="mt-1.5 w-full border px-3 py-2 text-sm outline-none"
         style={inputStyle()}
       />
+      {hint ? <Hint>{hint}</Hint> : null}
     </label>
   );
 }
@@ -130,11 +165,13 @@ function TextAreaField({
   value,
   onChange,
   placeholder,
+  hint,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  hint?: string;
 }) {
   return (
     <label className="block text-sm">
@@ -149,6 +186,7 @@ function TextAreaField({
         className="mt-1.5 w-full resize-none border px-3 py-2 text-sm outline-none"
         style={inputStyle()}
       />
+      {hint ? <Hint>{hint}</Hint> : null}
     </label>
   );
 }
@@ -177,10 +215,13 @@ export function CreditSubmissionForm({ token, releaseTitle }: CreditSubmissionFo
     event.preventDefault();
     if (isSubmitting) return;
 
-    if (!input.legalName.trim()) return setError('Legal name is required.');
-    if (input.roles.length === 0) return setError('Select at least one role.');
-    if (!input.email.trim()) return setError('Email is required.');
-    if (!input.confirmedAccurate) return setError('Please confirm this information is accurate.');
+    // Plain instructions, not field-name diagnostics: each one says what to do.
+    if (!input.legalName.trim()) return setError('Add your legal name at the top.');
+    if (input.roles.length === 0) return setError('Tick at least one thing you did on this song.');
+    if (!input.email.trim()) return setError('Add your email so the team can reach you.');
+    if (!input.confirmedAccurate) {
+      return setError('Tick the box at the bottom to confirm your details are correct.');
+    }
 
     setError('');
     setIsSubmitting(true);
@@ -210,7 +251,7 @@ export function CreditSubmissionForm({ token, releaseTitle }: CreditSubmissionFo
           Sent to the team behind <span style={{ color: BRAND }}>{releaseTitle || 'this release'}</span>.
         </p>
         <p className="mt-2 text-sm" style={{ color: MUTED }}>
-          Your credits have been recorded. You&rsquo;re done here.
+          That&rsquo;s it — nothing else to do. They will get in touch if anything is missing.
         </p>
         <button
           type="button"
@@ -221,7 +262,7 @@ export function CreditSubmissionForm({ token, releaseTitle }: CreditSubmissionFo
           className="mt-6 border px-4 py-2 text-sm"
           style={{ borderColor: STROKE, color: CREAM }}
         >
-          Submit another response
+          Fill it in for someone else
         </button>
       </div>
     );
@@ -230,16 +271,18 @@ export function CreditSubmissionForm({ token, releaseTitle }: CreditSubmissionFo
   return (
     <form onSubmit={handleSubmit} className="mt-10 space-y-10">
       <section className="space-y-4">
-        <SectionHeading>Who are you</SectionHeading>
+        <SectionHeading>1 · About you</SectionHeading>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TextField
             label="Legal name"
             required
+            hint="Your real name, the way it appears on your ID. This is what goes on the paperwork."
             value={input.legalName}
             onChange={(v) => setInput((c) => ({ ...c, legalName: v }))}
           />
           <TextField
             label="Stage / professional name"
+            hint="The name you are known by, if you have one."
             value={input.stageName || ''}
             onChange={(v) => setInput((c) => ({ ...c, stageName: v }))}
           />
@@ -247,8 +290,9 @@ export function CreditSubmissionForm({ token, releaseTitle }: CreditSubmissionFo
 
         <div>
           <span className="font-mono text-[11px] uppercase tracking-[0.1em]" style={labelStyle()}>
-            Role(s) on this release *
+            What did you do on this song? *
           </span>
+          <Hint>Tick everything that applies.</Hint>
           <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {RELEASE_CREDIT_ROLE_OPTIONS.map((role) => (
               <label key={role} className="flex items-center gap-2 text-sm" style={{ color: CREAM }}>
@@ -265,7 +309,8 @@ export function CreditSubmissionForm({ token, releaseTitle }: CreditSubmissionFo
         </div>
 
         <TextAreaField
-          label="What did you contribute?"
+          label="Tell them what you did"
+          hint="A sentence is plenty."
           placeholder="e.g. Wrote the hook and second verse, produced the beat…"
           value={input.contribution || ''}
           onChange={(v) => setInput((c) => ({ ...c, contribution: v }))}
@@ -276,17 +321,20 @@ export function CreditSubmissionForm({ token, releaseTitle }: CreditSubmissionFo
             label="Email"
             type="email"
             required
+            hint="So the team can reach you about this song."
             value={input.email}
             onChange={(v) => setInput((c) => ({ ...c, email: v }))}
           />
           <TextField
             label="Phone"
             type="tel"
+            hint="Optional."
             value={input.phone || ''}
             onChange={(v) => setInput((c) => ({ ...c, phone: v }))}
           />
           <TextField
             label="Country"
+            hint="Where you live."
             value={input.country || ''}
             onChange={(v) => setInput((c) => ({ ...c, country: v }))}
           />
@@ -294,32 +342,41 @@ export function CreditSubmissionForm({ token, releaseTitle }: CreditSubmissionFo
       </section>
 
       <section className="space-y-4">
-        <SectionHeading>Publishing</SectionHeading>
+        <SectionHeading>2 · Your share of the writing</SectionHeading>
+        <SectionNote>
+          Skip this whole part if you did not help write the song. Not sure about a number? Leave it
+          blank — the team can sort it out with you later.
+        </SectionNote>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <SplitField
-            label="Songwriter split %"
+            label="Your writing share (%)"
+            hint="How much of the writing is yours. Everyone's shares should add up to 100."
             value={input.songwriterSplit ?? null}
             onChange={(v) => setInput((c) => ({ ...c, songwriterSplit: v }))}
           />
           <TextField
-            label="PRO affiliation"
+            label="Royalty society (PRO)"
+            hint="Who collects your songwriting royalties. Leave blank if you have not signed up with one."
             placeholder="ASCAP, BMI, PRS, MCSN…"
             value={input.proAffiliation || ''}
             onChange={(v) => setInput((c) => ({ ...c, proAffiliation: v }))}
           />
           <TextField
-            label="IPI / CAE number"
+            label="Your society ID (IPI / CAE)"
+            hint="The number that society gave you. It is on your account page there."
             value={input.ipiNumber || ''}
             onChange={(v) => setInput((c) => ({ ...c, ipiNumber: v }))}
           />
           <TextField
             label="Publisher name"
+            hint="The company that looks after your songwriting. Write SELF if that is you."
             placeholder="Or write SELF if self-published"
             value={input.publisherName || ''}
             onChange={(v) => setInput((c) => ({ ...c, publisherName: v }))}
           />
           <TextField
-            label="Publisher IPI"
+            label="Publisher ID (IPI)"
+            hint="Your publisher's number, if you know it."
             value={input.publisherIpi || ''}
             onChange={(v) => setInput((c) => ({ ...c, publisherIpi: v }))}
           />
@@ -327,10 +384,14 @@ export function CreditSubmissionForm({ token, releaseTitle }: CreditSubmissionFo
       </section>
 
       <section className="space-y-4">
-        <SectionHeading>Master</SectionHeading>
+        <SectionHeading>3 · Your share of the recording</SectionHeading>
+        <SectionNote>
+          This is usually for producers. Skip it if it does not apply to you.
+        </SectionNote>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <SplitField
-            label="Master / producer split %"
+            label="Your recording share (%)"
+            hint="How much of the finished recording is yours. Also called the master share."
             value={input.masterSplit ?? null}
             onChange={(v) => setInput((c) => ({ ...c, masterSplit: v }))}
           />
@@ -338,7 +399,11 @@ export function CreditSubmissionForm({ token, releaseTitle }: CreditSubmissionFo
       </section>
 
       <section className="space-y-4">
-        <SectionHeading>Socials &amp; bio</SectionHeading>
+        <SectionHeading>4 · Extras — all optional</SectionHeading>
+        <SectionNote>
+          Handy if the team writes a press kit or tags you in a post. Skip the whole thing if you
+          would rather.
+        </SectionNote>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TextField
             label="Instagram handle"
@@ -353,6 +418,7 @@ export function CreditSubmissionForm({ token, releaseTitle }: CreditSubmissionFo
         </div>
         <TextAreaField
           label="Short bio"
+          hint="A line or two about you, written the way you want to be introduced."
           value={input.bio || ''}
           onChange={(v) => setInput((c) => ({ ...c, bio: v }))}
         />
@@ -366,7 +432,7 @@ export function CreditSubmissionForm({ token, releaseTitle }: CreditSubmissionFo
             onChange={(event) => setInput((c) => ({ ...c, confirmedAccurate: event.target.checked }))}
             className="mt-0.5 h-4 w-4"
           />
-          I confirm this information is accurate.
+          Everything I entered above is true and correct.
         </label>
 
         {error ? (
@@ -382,7 +448,7 @@ export function CreditSubmissionForm({ token, releaseTitle }: CreditSubmissionFo
           style={{ backgroundColor: BRAND, color: '#06321f' }}
         >
           {isSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-          {isSubmitting ? 'Submitting…' : 'Submit credits'}
+          {isSubmitting ? 'Sending…' : 'Send my credits'}
         </button>
       </section>
     </form>

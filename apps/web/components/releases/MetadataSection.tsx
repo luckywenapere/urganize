@@ -30,6 +30,15 @@ import { useSceneDataStore, type MetadataScenePayload } from '@/stores/useSceneD
 // release-level distribution fields, the collaborator credits share link, and
 // the submissions collected through it.
 //
+// Presented as three NUMBERED steps (2026-08-13, founder feedback: the page
+// "causes too much cognitive load and the copy and layout is not clear enough
+// for a 5th grader to understand what to do"). The steps are labels, not a
+// wizard — everything is still on one page, still optional, still doable in any
+// order, and no state/fetch logic changed. Two rules for anyone editing copy
+// here: name the thing in words a beginner knows before naming it in industry
+// terms (ISRC gets a hint, not just a label), and say what is optional out
+// loud rather than leaving silence to imply "required".
+//
 // NEXT_PUBLIC_ prefix so the value is inlined at build time for this client
 // component. The API routes guard the same flag server-side (404 when off).
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
@@ -91,6 +100,25 @@ function toFormState(metadata: ReleaseMetadataSnapshot | null): MetadataFormStat
 function formatPercent(value: number): string {
   const rounded = Math.round(value * 100) / 100;
   return `${rounded % 1 === 0 ? rounded : rounded.toFixed(2)}%`;
+}
+
+/** Splits have to add up to 100 — say so in words rather than leaving the
+ * reader to work out what "unclaimed" meant, or why 120% is a problem. */
+function describeSplitTotal(label: string, total: number): string {
+  const rounded = Math.round(total * 100) / 100;
+  if (rounded === 100) return `${label} add up to 100%. Nothing missing.`;
+  if (rounded > 100) {
+    return `${label} add up to ${formatPercent(total)} — that is ${formatPercent(
+      total - 100
+    )} too much. They should total 100%.`;
+  }
+  return `${label} add up to ${formatPercent(total)} — ${formatPercent(
+    100 - total
+  )} still missing. They should total 100%.`;
+}
+
+function splitTotalTone(total: number): string {
+  return Math.round(total * 100) / 100 === 100 ? 'text-content-secondary' : 'text-status-warning';
 }
 
 type MetadataSectionProps = {
@@ -286,7 +314,7 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
     if (isMutatingLink) return;
     if (typeof window !== 'undefined') {
       const confirmed = window.confirm(
-        'Regenerate the credits link? The old link stops working immediately — anyone still holding it will see nothing.'
+        'Make a new link? The old one stops working right away, so anyone you already sent it to will need the new one. Answers you have already collected are safe.'
       );
       if (!confirmed) return;
     }
@@ -369,17 +397,46 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
   const hasAnySongwriterSplit = submissions.some((item) => item.songwriterSplit !== null);
   const hasAnyMasterSplit = submissions.some((item) => item.masterSplit !== null);
 
+  // "N of 8 filled in" — the explicit checkbox is a yes/no, not a blank to
+  // fill, so it stays out of the count.
+  const filledFieldCount = useMemo(
+    () =>
+      [form.genre, form.subgenre, form.language, form.labelName, form.isrc, form.upc, form.pLine, form.cLine].filter(
+        (value) => value.trim() !== ''
+      ).length,
+    [form]
+  );
+
   if (!METADATA_ENABLED) return null;
 
   return (
     <div className="mt-8 space-y-8">
-      {/* Release details */}
+      {/* One plain sentence saying what this whole page is for, before the
+          three numbered steps below (founder feedback, 2026-08-13: the page
+          carried too much cognitive load — jargon copy, no ordering, nothing
+          saying fields are optional). */}
+      <p className="text-sm leading-relaxed text-content-secondary">
+        Everything a music store needs to list this song correctly — plus one link that collects
+        your collaborators&rsquo; details for you. Three steps, all optional, in any order.
+      </p>
+
+      {/* Step 1: release details */}
       <section>
-        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Release details
-        </h2>
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+            Step 1 · The song&rsquo;s details
+          </h2>
+          {!isLoading && !loadError ? (
+            <span
+              className={`text-[11px] ${filledFieldCount === 8 ? 'text-brand' : 'text-content-tertiary'}`}
+            >
+              {filledFieldCount} of 8 filled in
+            </span>
+          ) : null}
+        </div>
         <p className="mt-1 text-sm text-content-secondary">
-          The distribution metadata a DSP or aggregator asks for when this release ships.
+          Music stores like Spotify and Apple ask for these when a song goes out. Every field is
+          optional — fill in what you know now and come back for the rest.
         </p>
 
         {isLoading ? (
@@ -396,11 +453,14 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
             </button>
           </div>
         ) : (
-          <div className="mt-4 grid grid-cols-1 gap-3 border border-stroke-default bg-bg-surface p-4 sm:grid-cols-2">
-            <Field label="ISRC" value={form.isrc} onChange={(v) => editForm((f) => ({ ...f, isrc: v }))} />
-            <Field label="UPC" value={form.upc} onChange={(v) => editForm((f) => ({ ...f, upc: v }))} />
+          // Ordered easiest-first on purpose: the form opens on words a
+          // beginner already knows (genre, language) rather than on ISRC/UPC,
+          // which read as a wall of acronyms and used to be the first thing
+          // anyone saw.
+          <div className="mt-4 grid grid-cols-1 gap-4 border border-stroke-default bg-bg-surface p-4 sm:grid-cols-2">
             <Field
               label="Genre"
+              hint="The main style of the music, like Afrobeats or Hip-hop."
               value={form.genre}
               onChange={(v) => editForm((f) => ({ ...f, genre: v }))}
               labelAction={
@@ -437,27 +497,44 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
             />
             <Field
               label="Subgenre"
+              hint="A more specific style, like Amapiano or Drill. Leave blank if none fits."
               value={form.subgenre}
               onChange={(v) => editForm((f) => ({ ...f, subgenre: v }))}
             />
             <Field
               label="Language"
+              hint="The language of the lyrics, like English or Yoruba."
               value={form.language}
               onChange={(v) => editForm((f) => ({ ...f, language: v }))}
             />
             <Field
               label="Label name"
+              hint="The label putting this out. Use the artist's name if there's no label."
               value={form.labelName}
               onChange={(v) => editForm((f) => ({ ...f, labelName: v }))}
             />
             <Field
-              label="℗ line (recording)"
+              label="ISRC"
+              hint="The ID code for this one recording. Your distributor gives it to you — leave blank if you don't have it yet."
+              value={form.isrc}
+              onChange={(v) => editForm((f) => ({ ...f, isrc: v }))}
+            />
+            <Field
+              label="UPC"
+              hint="The barcode number for the whole release. Also from your distributor."
+              value={form.upc}
+              onChange={(v) => editForm((f) => ({ ...f, upc: v }))}
+            />
+            <Field
+              label="℗ line (who owns the recording)"
+              hint="The year, then whoever owns the recording."
               placeholder="℗ 2026 Some Label"
               value={form.pLine}
               onChange={(v) => editForm((f) => ({ ...f, pLine: v }))}
             />
             <Field
-              label="© line (composition/artwork)"
+              label="© line (who owns the words and artwork)"
+              hint="The year, then whoever owns the song itself."
               placeholder="© 2026 Some Label"
               value={form.cLine}
               onChange={(v) => editForm((f) => ({ ...f, cLine: v }))}
@@ -469,7 +546,7 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
                 onChange={(event) => editForm((f) => ({ ...f, explicit: event.target.checked }))}
                 className="h-4 w-4 accent-brand"
               />
-              This release contains explicit content
+              This song has explicit content (swearing or adult themes)
             </label>
             <div className="sm:col-span-2">
               <button
@@ -486,14 +563,15 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
         )}
       </section>
 
-      {/* Credits share link */}
+      {/* Step 2: credits share link */}
       <section>
         <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Collaborator credits
+          Step 2 · Collect everyone&rsquo;s credits
         </h2>
         <p className="mt-1 text-sm text-content-secondary">
-          Share one link with every collaborator — producers, co-writers, engineers — and their
-          publishing details land below as they submit.
+          Anyone who worked on this song — producers, writers, engineers — fills out one short form.
+          Copy the link and send it to them on WhatsApp, text, or email. They don&rsquo;t need an
+          account.
         </p>
 
         {isLoading ? (
@@ -512,7 +590,7 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
         ) : !link ? (
           <div className="mt-4 border border-stroke-default bg-bg-surface p-6 text-center">
             <p className="text-sm text-content-secondary">
-              Create a submission link to start collecting credits.
+              One link works for everyone who worked on this song.
             </p>
             <button
               type="button"
@@ -528,7 +606,7 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
               ) : (
                 <>
                   <ClipboardList className="h-3.5 w-3.5" />
-                  Create submission link
+                  Create the link
                 </>
               )}
             </button>
@@ -582,55 +660,38 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
               </div>
             </div>
             <p className="mt-3 text-xs text-content-tertiary">
-              Anyone with this link can submit credits — no account required. Regenerating kills the
-              old link immediately; every submission already collected stays.
+              Anyone with this link can fill out the form — no account needed. Need a fresh link?
+              Tap Regenerate: the old one stops working right away, and answers you already
+              collected are safe.
             </p>
           </div>
         )}
       </section>
 
-      {/* Submissions */}
+      {/* Step 3: submissions */}
       <section>
         <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Submissions {submissions.length > 0 ? `(${submissions.length})` : ''}
+          Step 3 · Their answers land here {submissions.length > 0 ? `(${submissions.length})` : ''}
         </h2>
 
         {submissions.length === 0 ? (
           <p className="mt-4 text-sm text-content-secondary">
             {link
-              ? 'Share the link above to start collecting credits.'
-              : 'Create a link above, then share it to start collecting credits.'}
+              ? 'Nothing yet. Once you share the link, each person’s answer shows up here on its own.'
+              : 'Create the link in step 2 first, then share it. Answers show up here as they come in.'}
           </p>
         ) : (
           <>
             {(hasAnySongwriterSplit || hasAnyMasterSplit) && (
               <div className="mt-4 flex flex-col gap-2 border border-stroke-default bg-bg-surface p-4 text-sm sm:flex-row sm:items-center sm:gap-6">
                 {hasAnySongwriterSplit && (
-                  <p
-                    className={
-                      Math.round(totalSongwriterSplit * 100) / 100 === 100
-                        ? 'text-content-secondary'
-                        : 'text-status-warning'
-                    }
-                  >
-                    Writer splits total {formatPercent(totalSongwriterSplit)}
-                    {Math.round(totalSongwriterSplit * 100) / 100 !== 100 && totalSongwriterSplit <= 100
-                      ? ` — ${formatPercent(100 - totalSongwriterSplit)} unclaimed`
-                      : ''}
+                  <p className={splitTotalTone(totalSongwriterSplit)}>
+                    {describeSplitTotal('Writing shares', totalSongwriterSplit)}
                   </p>
                 )}
                 {hasAnyMasterSplit && (
-                  <p
-                    className={
-                      Math.round(totalMasterSplit * 100) / 100 === 100
-                        ? 'text-content-secondary'
-                        : 'text-status-warning'
-                    }
-                  >
-                    Master splits total {formatPercent(totalMasterSplit)}
-                    {Math.round(totalMasterSplit * 100) / 100 !== 100 && totalMasterSplit <= 100
-                      ? ` — ${formatPercent(100 - totalMasterSplit)} unclaimed`
-                      : ''}
+                  <p className={splitTotalTone(totalMasterSplit)}>
+                    {describeSplitTotal('Recording shares', totalMasterSplit)}
                   </p>
                 )}
               </div>
@@ -659,24 +720,35 @@ function Field({
   onChange,
   placeholder,
   labelAction,
+  hint,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   labelAction?: React.ReactNode;
+  /** Plain-English explanation of what the field wants. Sits under the input
+   * and is wired up with aria-describedby, so a screen reader hears it too. */
+  hint?: string;
 }) {
   const inputId = useId();
+  const hintId = `${inputId}-hint`;
   const input = (
     <input
-      id={labelAction ? inputId : undefined}
+      id={inputId}
       type="text"
       value={value}
       placeholder={placeholder}
+      aria-describedby={hint ? hintId : undefined}
       onChange={(event) => onChange(event.target.value)}
       className="mt-1 w-full border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
     />
   );
+  const hintLine = hint ? (
+    <p id={hintId} className="mt-1 text-xs leading-snug text-content-tertiary">
+      {hint}
+    </p>
+  ) : null;
 
   // With a label action, the wrapper becomes a div and the label text an
   // explicit <label htmlFor> — a button must not nest inside a <label>, or
@@ -691,15 +763,22 @@ function Field({
           {labelAction}
         </div>
         {input}
+        {hintLine}
       </div>
     );
   }
 
   return (
-    <label className="block text-sm">
-      <span className="text-xs text-content-tertiary">{label}</span>
+    <div className="block text-sm">
+      {/* An explicit <label htmlFor> rather than a wrapping <label>: the hint
+          is a sibling paragraph, and wrapping it would make the hint text part
+          of the input's clickable label. */}
+      <label htmlFor={inputId} className="text-xs text-content-tertiary">
+        {label}
+      </label>
       {input}
-    </label>
+      {hintLine}
+    </div>
   );
 }
 

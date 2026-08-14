@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.51.3",
+    date: "August 14, 2026",
+    highlights: [
+      "Collecting metadata is three plain steps now: fill in the song's details, send one link to everyone who worked on it, then watch their answers land. The page used to open on three blocks of industry jargon at once with nothing saying what to do first, or that any of it could wait.",
+      "Every field explains itself in ordinary words. ISRC, UPC, the ℗ and © lines — each one now says what it is and where to get it, and the page tells you outright that everything is optional and shows how many you have filled in.",
+      "The form your collaborators fill in was rewritten for the people who actually fill it in. It opens by saying it takes about two minutes and only three things are required, each section says when you can skip it entirely, and terms like PRO, IPI and splits are explained in plain language right under the box.",
+    ],
+  },
+  {
     version: "0.51.2",
     date: "August 14, 2026",
     highlights: [
