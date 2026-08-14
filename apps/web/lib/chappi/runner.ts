@@ -10,10 +10,16 @@
 // tools/tool_calls. Plain fetch, no SDK dependency. Non-streaming this phase.
 
 import { getChappiModelConfig } from './config';
-import { getChappiToolSchemas } from './tools';
-import type { ChappiToolContext } from './tools';
+import { getChappiTool, getChappiToolSchemas } from './tools';
+import type { ChappiTool, ChappiToolContext } from './tools';
 import { executeToolCall } from './dispatch';
-import type { ChappiClientAction, ChappiMessage } from './types';
+import type {
+  ChappiClientAction,
+  ChappiMessage,
+  ChappiPendingConfirmation,
+  ChappiToolName,
+  ChappiToolResult,
+} from './types';
 
 // Cap on tool round-trips per user turn. A realistic request ("create a release
 // and add three tasks") needs a handful; the cap stops runaway token spend and
@@ -92,11 +98,51 @@ async function requestChatCompletion(params: {
   }
 }
 
+/**
+ * What the loop should do with one tool call. Pure and exported so the
+ * security-critical branch is unit-testable without a live gateway.
+ *
+ * The rule that matters: a gated tool NEVER reaches `execute` from inside the
+ * model loop. The most the model can achieve is 'propose', which paints a card
+ * the user has to click. That is what stops text living in workspace data (a
+ * release title, a note body) from talking the model into a deletion.
+ */
+export type ToolInvocationDecision =
+  | { action: 'execute' }
+  | { action: 'propose' }
+  | { action: 'refuse'; summary: string };
+
+export function resolveToolInvocation(
+  tool: ChappiTool | undefined,
+  hasPendingConfirmation: boolean
+): ToolInvocationDecision {
+  // Unknown tools fall through to dispatch, which owns the "Unknown tool" copy.
+  if (!tool?.confirm) return { action: 'execute' };
+  if (hasPendingConfirmation) {
+    return {
+      action: 'refuse',
+      summary:
+        'Another action is already waiting for the user to approve it. Ask them to approve or cancel that one first.',
+    };
+  }
+  return { action: 'propose' };
+}
+
+/** Fed back to the model in place of a result when it proposes a gated tool.
+ * Worded to close off the two failure modes that matter: claiming the action
+ * happened, and calling the tool again in a loop. */
+const PROPOSED_NOT_EXECUTED =
+  'PROPOSED, NOT EXECUTED. A confirmation card is now showing for the user. Tell them to approve or cancel it. Do not call this tool again, and do not say the action is done.';
+
 export async function runChappiAgent(params: {
   ctx: ChappiToolContext;
   system: string;
   messages: ChappiMessage[];
-}): Promise<{ reply: string; clientActions: ChappiClientAction[] }> {
+}): Promise<{
+  reply: string;
+  clientActions: ChappiClientAction[];
+  pendingConfirmation: ChappiPendingConfirmation | null;
+}> {
   const config = getChappiModelConfig();
   if (!config) throw new Error('Chappi model is not configured');
 
@@ -110,6 +156,9 @@ export async function runChappiAgent(params: {
 
   const clientActions: ChappiClientAction[] = [];
   let finalText = '';
+  // At most one card per turn: the client has a single slot for it, and two
+  // competing "are you sure?" asks would be incoherent.
+  let pendingConfirmation: ChappiPendingConfirmation | null = null;
 
   for (let round = 0; round < MAX_ROUNDS; round += 1) {
     const choice = await requestChatCompletion({
@@ -135,11 +184,45 @@ export async function runChappiAgent(params: {
     });
 
     for (const toolCall of toolCalls) {
-      const result = await executeToolCall(
-        params.ctx,
-        String(toolCall.function?.name || ''),
-        parseToolArguments(String(toolCall.function?.arguments || ''))
-      );
+      const toolName = String(toolCall.function?.name || '');
+      const toolArgs = parseToolArguments(String(toolCall.function?.arguments || ''));
+      const tool = getChappiTool(toolName);
+      const decision = resolveToolInvocation(tool, pendingConfirmation !== null);
+
+      let result: ChappiToolResult;
+      if (decision.action === 'refuse') {
+        result = { ok: false, summary: decision.summary };
+      } else if (decision.action === 'propose') {
+        // Gated: build the card and stop. Nothing is mutated on this path.
+        // A throw here must not take down the turn — mirror dispatch's
+        // normalize-into-a-failure discipline.
+        try {
+          const outcome = await tool!.confirm!(params.ctx, toolArgs);
+          if (outcome.ok) {
+            pendingConfirmation = {
+              toolName: toolName as ChappiToolName,
+              args: toolArgs,
+              title: outcome.title,
+              detail: outcome.detail,
+              confirmLabel: outcome.confirmLabel,
+            };
+            result = { ok: true, summary: PROPOSED_NOT_EXECUTED };
+          } else {
+            // The proposal itself was invalid (bad id, missing precondition).
+            // Relay it as an ordinary failure so the model can correct and retry.
+            result = { ok: false, summary: outcome.summary };
+          }
+        } catch (error) {
+          console.error(`[chappi] confirm builder for "${toolName}" failed:`, error);
+          result = {
+            ok: false,
+            summary: 'Could not prepare that action for confirmation. Nothing was changed.',
+          };
+        }
+      } else {
+        result = await executeToolCall(params.ctx, toolName, toolArgs);
+      }
+
       if (result.clientAction) clientActions.push(result.clientAction);
       conversation.push({
         role: 'tool',
@@ -172,5 +255,49 @@ export async function runChappiAgent(params: {
     }
   }
 
-  return { reply: finalText || 'Done.', clientActions };
+  return { reply: finalText || 'Done.', clientActions, pendingConfirmation };
+}
+
+/**
+ * Writes the closing line after the user approved a card and the action ran.
+ *
+ * Deliberately called with NO tools: the action is already done, and the model
+ * physically cannot start another one from here. Returns '' on any failure —
+ * the caller falls back to the tool's own summary, because the mutation
+ * happened and a model hiccup must never leave the user thinking it didn't.
+ */
+export async function closeConfirmedAction(params: {
+  system: string;
+  messages: ChappiMessage[];
+  toolName: string;
+  result: ChappiToolResult;
+}): Promise<string> {
+  const config = getChappiModelConfig();
+  if (!config) return '';
+
+  const outcome = params.result.ok
+    ? `It succeeded: ${params.result.summary}`
+    : `It failed: ${params.result.summary}`;
+
+  try {
+    const choice = await requestChatCompletion({
+      apiKey: config.apiKey,
+      baseURL: config.baseURL,
+      model: config.model,
+      messages: [
+        { role: 'system', content: params.system },
+        ...params.messages
+          .filter((m) => m.content.trim())
+          .map((m) => ({ role: m.role, content: m.content }) as OpenAiChatMessage),
+        {
+          role: 'user',
+          content: `[The user approved the pending "${params.toolName}" action on the confirmation card, and it has now run. ${outcome} Tell them the outcome in one or two sentences. Do not call any tools.]`,
+        },
+      ],
+    });
+    return String(choice.message?.content || '').trim();
+  } catch (error) {
+    console.error('[chappi] closing message after confirmation failed:', error);
+    return '';
+  }
 }

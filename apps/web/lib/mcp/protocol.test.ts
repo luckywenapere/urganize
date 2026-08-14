@@ -122,6 +122,12 @@ describe('toolResultToMcp', () => {
 });
 
 describe('MCP tool surface', () => {
+  // The count is the conscious-decision tripwire: a new Chappi tool joins MCP
+  // automatically unless it is excluded, so adding one fails this test until
+  // someone decides which it should be. It stayed at 11 through the 2026-08-14
+  // full-control expansion — every tool added there is excluded, because the
+  // gated ones have no confirmation UI over MCP and the rest reach REST routes
+  // that reject the MCP internal-actor bearer.
   it('exposes the eleven Chappi tools and excludes navigate', () => {
     const names = getMcpToolDescriptors().map((tool) => tool.name);
     expect(names).toHaveLength(11);
@@ -155,5 +161,10 @@ describe('MCP tool surface', () => {
     expect(isMcpToolName('list_releases')).toBe(true);
     expect(isMcpToolName('navigate')).toBe(false);
     expect(isMcpToolName('delete_everything')).toBe(false);
+    // Real, registered, and deliberately unreachable here: deletes are
+    // confirmation-gated and MCP has no way to show the card.
+    expect(isMcpToolName('delete_release')).toBe(false);
+    expect(isMcpToolName('delete_task')).toBe(false);
+    expect(isMcpToolName('delete_note')).toBe(false);
   });
 });

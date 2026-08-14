@@ -20,6 +20,7 @@ import {
   ThumbsUp,
   type LucideIcon,
 } from 'lucide-react';
+import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
 import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useAuthStore } from '@/lib/auth-store';
@@ -36,6 +37,7 @@ import type {
   ChappiClientAction,
   ChappiIntent,
   ChappiMessage,
+  ChappiPendingConfirmation,
   ChappiReply,
   ChappiResponse,
 } from '@/lib/chappi/types';
@@ -148,6 +150,8 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     reset,
     scopedReleaseId,
     setScopedReleaseId,
+    pendingConfirmation,
+    setPendingConfirmation,
   } = useChappiStore();
   // The release the conversation is pinned to (scope picker under the
   // composer). Falls back to null if the id no longer resolves (deleted
@@ -378,6 +382,13 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
 
       if (response.ok && data?.mode === 'agent') {
         appendAssistantReply(data.reply);
+        setPendingConfirmation(data.pendingConfirmation ?? null);
+        if (data.pendingConfirmation) {
+          captureAnalyticsEvent({
+            name: 'urgans_confirmation',
+            properties: { action: 'shown', tool: data.pendingConfirmation.toolName },
+          });
+        }
         executeClientActions(data.clientActions);
         return;
       }
@@ -395,10 +406,91 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     }
   };
 
+  /**
+   * The user approved a proposed action. This is the ONLY path that executes a
+   * confirmation-gated tool — the model cannot reach it.
+   *
+   * Deliberately no deterministic fallback: if this request fails we do not
+   * know whether the server ran the action, and quietly routing to the local
+   * intent-router would be a lie either way.
+   */
+  const handleApproveConfirmation = async () => {
+    if (!pendingConfirmation || isThinking) return;
+    const approved = pendingConfirmation;
+    captureAnalyticsEvent({
+      name: 'urgans_confirmation',
+      properties: { action: 'approved', tool: approved.toolName },
+    });
+    setPendingConfirmation(null);
+
+    const userMessage: ChappiMessage = {
+      id: nextMessageId('u'),
+      role: 'user',
+      content: 'Approve.',
+    };
+    const historyForApi = [...messages, userMessage];
+    appendMessage(userMessage);
+
+    setIsThinking(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        appendAssistantReply('You are signed out, so nothing ran. Sign in and try again.');
+        return;
+      }
+      const response = await fetch('/api/urgans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          messages: historyForApi,
+          releaseScope: scopedRelease
+            ? { id: scopedRelease.id, title: scopedRelease.title }
+            : undefined,
+          confirmedAction: { toolName: approved.toolName, args: approved.args },
+        }),
+        cache: 'no-store',
+      });
+      const data = (await response.json().catch(() => null)) as ChappiResponse | null;
+
+      if (response.ok && data?.mode === 'agent') {
+        appendAssistantReply(data.reply);
+        executeClientActions(data.clientActions);
+        return;
+      }
+      if (data?.mode === 'error') {
+        appendAssistantReply(data.error);
+        return;
+      }
+      appendAssistantReply('That did not go through. Nothing was changed.');
+    } catch {
+      appendAssistantReply(
+        'Something went wrong confirming that. Check your workspace — it may or may not have gone through.'
+      );
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
+  /** Cancel needs no round-trip: nothing was ever executed. Both turns are
+   * appended locally so the model sees the decision in later history. */
+  const handleCancelConfirmation = () => {
+    if (!pendingConfirmation) return;
+    captureAnalyticsEvent({
+      name: 'urgans_confirmation',
+      properties: { action: 'cancelled', tool: pendingConfirmation.toolName },
+    });
+    setPendingConfirmation(null);
+    appendMessage({ id: nextMessageId('u'), role: 'user', content: 'Cancel that.' });
+    appendAssistantReply('Cancelled — nothing was changed.');
+  };
+
   // Appends the user turn immediately (so it appears without waiting on the
   // round-trip), then sends the FULL prior history + this turn to the agent
   // — /api/urgans already accepts and expects multi-turn `messages`.
   const sendUserTurn = (text: string) => {
+    // Typing something else abandons any pending proposal. Nothing ran, and
+    // the model will re-propose if the user asks again.
+    if (pendingConfirmation) setPendingConfirmation(null);
     const userMessage: ChappiMessage = { id: nextMessageId('u'), role: 'user', content: text };
     const historyForApi = [...messages, userMessage];
     appendMessage(userMessage);
@@ -562,6 +654,9 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
             revealMessageId={revealMessageId}
             retryMessageId={canRetry ? lastMessage?.id ?? null : null}
             onRetry={handleRetry}
+            pendingConfirmation={pendingConfirmation}
+            onApproveConfirmation={() => void handleApproveConfirmation()}
+            onCancelConfirmation={handleCancelConfirmation}
           />
         </div>
       </div>
@@ -586,6 +681,10 @@ type TranscriptProps = {
    * last message, when retryable); null hides the action. */
   retryMessageId: string | null;
   onRetry: () => void;
+  /** A gated action the model proposed and nobody has approved yet. */
+  pendingConfirmation: ChappiPendingConfirmation | null;
+  onApproveConfirmation: () => void;
+  onCancelConfirmation: () => void;
 };
 
 /**
@@ -604,6 +703,9 @@ function Transcript({
   revealMessageId,
   retryMessageId,
   onRetry,
+  pendingConfirmation,
+  onApproveConfirmation,
+  onCancelConfirmation,
 }: TranscriptProps) {
   return (
     <div className="space-y-5 pb-2">
@@ -629,6 +731,19 @@ function Transcript({
           <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
           Thinking…
         </div>
+      ) : null}
+
+      {/* The permission gate. Sits below the reply that proposed it and above
+          Follow-ups, so it reads as this turn's outstanding question. Hidden
+          while a request is in flight — the card's own buttons own that
+          moment. Nothing has executed while this is on screen. */}
+      {pendingConfirmation && !isThinking ? (
+        <ChappiConfirmationCard
+          pending={pendingConfirmation}
+          onApprove={onApproveConfirmation}
+          onCancel={onCancelConfirmation}
+          isBusy={isThinking}
+        />
       ) : null}
 
       {/* Follow-ups — a titled list of full-width rows (the streamed-answer

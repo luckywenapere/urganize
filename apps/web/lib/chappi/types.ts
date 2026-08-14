@@ -74,11 +74,19 @@ export type ChappiReply = {
 
 // ── Phase 2 agent types ──────────────────────────────────────────────────
 
-/** Tool classification. No 'destructive' tier in this build — deletes are
- * deferred, so every mutating tool is reversible. */
+/**
+ * Tool classification. Deliberately NOT the confirmation gate: whether a tool
+ * needs the user's approval is driven by the presence of a `confirm` builder on
+ * the registry entry, not by this field. Two reasons — `approve_release_plan`
+ * and `invite_teammate` need approval without being destructive (a semantic
+ * 'destructive' kind would lie about them), and the card's copy is
+ * entity-specific ("Delete 'Midnight EP' and its 42 activities"), which only
+ * the tool itself can build. One mechanism, not two.
+ */
 export type ChappiToolKind = 'read' | 'mutate';
 
 export type ChappiToolName =
+  // core (pre-expansion)
   | 'list_releases'
   | 'get_release'
   | 'list_tasks'
@@ -90,7 +98,19 @@ export type ChappiToolName =
   | 'complete_task'
   | 'reopen_task'
   | 'generate_status_update'
-  | 'navigate';
+  | 'navigate'
+  // release + task lifecycle
+  | 'update_release'
+  | 'schedule_release'
+  | 'delete_release'
+  | 'delete_task'
+  | 'add_task_comment'
+  // notes
+  | 'list_notes'
+  | 'update_note'
+  | 'delete_note'
+  // team
+  | 'list_workspace_members';
 
 /**
  * A side effect the CLIENT must perform after the agent turn — the agent runs
@@ -125,16 +145,58 @@ export type ChappiReleaseScope = {
   title: string;
 };
 
+/**
+ * An action the model has PROPOSED but which has NOT run. The client renders it
+ * as a confirmation card; only the user's approval executes it.
+ *
+ * The security property this exists for: a gated tool is never executable from
+ * inside the model loop. Text living in workspace data (a release title, a note
+ * body) can therefore never talk the model into deleting something — the model
+ * can only ever get as far as showing this card, and a human has to click.
+ *
+ * `args` round-trips through the client. That is not an escalation: the browser
+ * already holds the user's real JWT and could call the REST route directly. The
+ * threat being defended against is the MODEL acting unilaterally, not the user.
+ */
+export type ChappiPendingConfirmation = {
+  toolName: ChappiToolName;
+  args: Record<string, unknown>;
+  /** Card headline, e.g. `Delete "Midnight EP"?` */
+  title: string;
+  /** Blast radius, spelled out. */
+  detail?: string;
+  /** Confirm button label, e.g. `Delete release`. */
+  confirmLabel: string;
+};
+
+/** What the client sends back when the user approves a pending confirmation. */
+export type ChappiConfirmedAction = {
+  toolName: string;
+  args: Record<string, unknown>;
+};
+
 /** Request body the client POSTs to /api/urgans. */
 export type ChappiRequestBody = {
   messages: ChappiMessage[];
   releaseScope?: ChappiReleaseScope | null;
+  /** Present only on the approve leg of a confirmation. The route runs exactly
+   * this one tool and never re-enters the model's tool loop for it. */
+  confirmedAction?: ChappiConfirmedAction | null;
 };
 
 /** Route response union. `deterministic` tells the client to run the local
  * intent-router (model not configured); `agent` carries the model's reply and
- * any client actions; `error` is a handled failure. */
+ * any client actions; `error` is a handled failure.
+ *
+ * `pendingConfirmation` sits at the top level rather than joining
+ * ChappiClientAction: client actions are fire-and-forget side effects executed
+ * in a loop, whereas this is stateful UI that waits for input. */
 export type ChappiResponse =
-  | { mode: 'agent'; reply: string; clientActions: ChappiClientAction[] }
+  | {
+      mode: 'agent';
+      reply: string;
+      clientActions: ChappiClientAction[];
+      pendingConfirmation?: ChappiPendingConfirmation | null;
+    }
   | { mode: 'deterministic' }
   | { mode: 'error'; error: string };

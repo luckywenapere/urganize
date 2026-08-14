@@ -1,7 +1,11 @@
 'use client';
 
 import { create } from 'zustand';
-import type { ChappiMessage, ChappiReply } from '@/lib/chappi/types';
+import type {
+  ChappiMessage,
+  ChappiPendingConfirmation,
+  ChappiReply,
+} from '@/lib/chappi/types';
 import { writePersistedState } from '@/lib/persisted-state';
 
 // CONVERSATION state is transient, NOT persisted — no DB table, no
@@ -10,6 +14,10 @@ import { writePersistedState } from '@/lib/persisted-state';
 // The one exception is `railOpen` below: pure UI-chrome state (is the side
 // rail showing), persisted like the dock's open state so a reload doesn't
 // snap the layout.
+//
+// `pendingConfirmation` is transient for the same reason and that is the
+// correct behaviour: a reload drops the card, and since nothing was executed,
+// dropping it is the safe outcome — the user simply asks again.
 
 // Side-rail open state — same lib/persisted-state pattern as ChappiDock's
 // DOCK_OPEN_KEY. Written by setRailOpen; hydrated once by AppShell in a
@@ -34,8 +42,14 @@ type ChappiStore = {
    * living here and reloads via localStorage; deliberately NOT part of
    * `reset` — closing a conversation shouldn't collapse the layout. */
   railOpen: boolean;
+  /** An action the model has PROPOSED and the user has not yet approved.
+   * Nothing has run while this is set. Cleared by `reset`, by
+   * `truncateFromMessage` (a regenerated reply must not leave a stale card
+   * behind), and by the client before every new user turn. */
+  pendingConfirmation: ChappiPendingConfirmation | null;
   setInput: (value: string) => void;
   setReply: (reply: ChappiReply | null) => void;
+  setPendingConfirmation: (pending: ChappiPendingConfirmation | null) => void;
   appendMessage: (message: ChappiMessage) => void;
   /** Removes `messageId` and everything after it — the retry action's
    * "regenerate the last reply" primitive: drop the reply, keep the user
@@ -56,8 +70,10 @@ export const useChappiStore = create<ChappiStore>((set) => ({
   messages: [],
   scopedReleaseId: null,
   railOpen: false,
+  pendingConfirmation: null,
   setInput: (value) => set({ input: value }),
   setReply: (reply) => set({ reply }),
+  setPendingConfirmation: (pending) => set({ pendingConfirmation: pending }),
   appendMessage: (message) =>
     set((current) => ({ messages: [...current.messages, message] })),
   truncateFromMessage: (messageId) =>
@@ -65,7 +81,8 @@ export const useChappiStore = create<ChappiStore>((set) => ({
       const index = current.messages.findIndex((message) => message.id === messageId);
       if (index === -1) return {};
       // Clear `reply` too: its suggestions belong to the reply being dropped.
-      return { messages: current.messages.slice(0, index), reply: null };
+      // Same for any pending card — the reply that proposed it is going away.
+      return { messages: current.messages.slice(0, index), reply: null, pendingConfirmation: null };
     }),
   setScopedReleaseId: (releaseId) => set({ scopedReleaseId: releaseId }),
   setRailOpen: (open) => {
@@ -73,5 +90,5 @@ export const useChappiStore = create<ChappiStore>((set) => ({
     // Actions only ever run client-side, so writing storage here is safe.
     writePersistedState(RAIL_OPEN_KEY, RAIL_OPEN_VERSION, open);
   },
-  reset: () => set({ input: '', reply: null, messages: [] }),
+  reset: () => set({ input: '', reply: null, messages: [], pendingConfirmation: null }),
 }));

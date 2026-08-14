@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.53.0",
+    date: "August 14, 2026",
+    highlights: [
+      "UrgAns can now run more of your workspace for you: rename a release, set or move its date, delete a release or an activity, comment on an activity, and find, edit, pin or delete your notes — just by asking.",
+      "Ask UrgAns to assign work to someone by name and it looks up the right teammate instead of guessing.",
+      "Anything that can't be undone now asks first. UrgAns shows a card spelling out exactly what will happen — including how many activities go with a release — and nothing runs until you approve it.",
+    ],
+  },
+  {
     version: "0.52.0",
     date: "August 14, 2026",
     highlights: [

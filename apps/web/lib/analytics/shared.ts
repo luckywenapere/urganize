@@ -118,6 +118,15 @@ export interface AnalyticsEventPropertiesMap {
   // assistant reply. Thumbs are the first structured feedback signal on
   // assistant quality — worth watching once the agent model is wired.
   urgans_reply_action: { action: 'copy' | 'retry' | 'thumbs_up' | 'thumbs_down' };
+  /** The permission gate in use (2026-08-14). `shown` fires when UrgAns
+   * proposes a gated action, the other two when the user decides. Watching the
+   * approve:cancel ratio per tool is how we find out whether the assistant is
+   * proposing the right things — a tool that is mostly cancelled is a tool
+   * being reached for wrongly. */
+  urgans_confirmation: {
+    action: 'shown' | 'approved' | 'cancelled';
+    tool: string;
+  };
   /** A crash reached a boundary and the user was shown a failure instead of the
    * thing they asked for. `scope` is 'route' for app/error.tsx, or the guarded
    * widget's name for a component boundary ('urgans-rail').

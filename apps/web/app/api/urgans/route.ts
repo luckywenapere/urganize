@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthenticatedAdmin } from '@/app/api/_shared/auth';
 import { isChappiEnabled, isChappiModelConfigured } from '@/lib/chappi/config';
-import { resolveChappiContext } from '@/lib/chappi/dispatch';
+import { executeToolCall, resolveChappiContext } from '@/lib/chappi/dispatch';
 import { buildChappiSystemPrompt } from '@/lib/chappi/system-prompt';
-import { runChappiAgent } from '@/lib/chappi/runner';
-import type { ChappiMessage, ChappiReleaseScope, ChappiResponse } from '@/lib/chappi/types';
+import { closeConfirmedAction, runChappiAgent } from '@/lib/chappi/runner';
+import { getChappiTool } from '@/lib/chappi/tools';
+import type {
+  ChappiConfirmedAction,
+  ChappiMessage,
+  ChappiReleaseScope,
+  ChappiResponse,
+} from '@/lib/chappi/types';
 
 // Same budget rationale as the plan routes: the agent's tool rounds +
 // model latency must fit inside Vercel's function ceiling, so the loop is
@@ -47,6 +53,27 @@ function parseReleaseScope(raw: unknown): ChappiReleaseScope | null {
   return { id: id.trim(), title: title.trim().slice(0, 200) };
 }
 
+/**
+ * The approve leg of a confirmation. Shape validation only — the tool itself
+ * re-validates every id server-side, exactly as it would have on the normal
+ * path, so nothing here is trusted beyond "this is the right shape".
+ */
+function parseConfirmedAction(raw: unknown): ChappiConfirmedAction | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const action = (raw as { confirmedAction?: unknown }).confirmedAction;
+  if (!action || typeof action !== 'object') return null;
+  const toolName = (action as { toolName?: unknown }).toolName;
+  const args = (action as { args?: unknown }).args;
+  if (typeof toolName !== 'string' || !toolName.trim() || toolName.length > 60) return null;
+  if (args !== undefined && (typeof args !== 'object' || args === null || Array.isArray(args))) {
+    return null;
+  }
+  return {
+    toolName: toolName.trim(),
+    args: (args as Record<string, unknown>) ?? {},
+  };
+}
+
 export async function POST(request: NextRequest) {
   if (!isChappiEnabled()) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
@@ -68,6 +95,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'A non-empty messages array is required.' }, { status: 400 });
   }
 
+  const confirmedAction = parseConfirmedAction(body);
+  // Only confirmation-gated tools may travel the approve path. Without this,
+  // it would be a second, unguarded way to invoke ANY tool by name — the model
+  // loop's own validation is bypassed here by design, so the gate has to be
+  // re-checked from the registry rather than trusted from the request.
+  if (confirmedAction && !getChappiTool(confirmedAction.toolName)?.confirm) {
+    return NextResponse.json(
+      { error: 'That action does not require confirmation.' },
+      { status: 400 }
+    );
+  }
+
   const authToken = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   const origin = new URL(request.url).origin;
 
@@ -83,12 +122,38 @@ export async function POST(request: NextRequest) {
     if (releaseScope) {
       system += `\n\nThe user has scoped this conversation to the release "${releaseScope.title}" (release id: ${releaseScope.id}). Unless they clearly name a different release, interpret questions and actions as being about this release and pass its id to tools. If the id doesn't resolve, say so instead of guessing.`;
     }
-    const { reply, clientActions } = await runChappiAgent({
+
+    if (confirmedAction) {
+      // The user clicked Approve. Run exactly this one tool — full per-tool
+      // validation (ownership, flags, dependency gates) still applies inside
+      // executeToolCall — then let the model write the closing line.
+      const result = await executeToolCall(ctx, confirmedAction.toolName, confirmedAction.args);
+      const closing = await closeConfirmedAction({
+        system,
+        messages: messages.slice(-MAX_MESSAGES),
+        toolName: confirmedAction.toolName,
+        result,
+      });
+      return NextResponse.json({
+        mode: 'agent',
+        // The action already ran; never let a model failure hide its outcome.
+        reply: closing || result.summary,
+        clientActions: result.ok ? (result.clientAction ? [result.clientAction] : [{ type: 'refresh' }]) : [],
+        pendingConfirmation: null,
+      } satisfies ChappiResponse);
+    }
+
+    const { reply, clientActions, pendingConfirmation } = await runChappiAgent({
       ctx,
       system,
       messages: messages.slice(-MAX_MESSAGES),
     });
-    return NextResponse.json({ mode: 'agent', reply, clientActions } satisfies ChappiResponse);
+    return NextResponse.json({
+      mode: 'agent',
+      reply,
+      clientActions,
+      pendingConfirmation,
+    } satisfies ChappiResponse);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'UrgAns failed.';
     const status = (error as { status?: number } | null)?.status;
