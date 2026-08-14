@@ -77,9 +77,19 @@ export default async function PublicCreditsPage({ params }: PageProps) {
           ) : null}
         </header>
 
+        {/* Plain-English framing (2026-08-13): the old copy led with
+            "distribution", which is the reason this form exists but not a word
+            the person filling it out thinks in. Say what it is for them (being
+            credited and paid), how long it takes, and who sees it. */}
         <p className="mt-6 max-w-[52ch] text-sm leading-relaxed" style={{ color: MUTED }}>
-          If you wrote, performed, produced, or otherwise worked on this release, add your details
-          below. This goes straight to the team assembling the release for distribution.
+          Did you work on this song? Add your details below so you get credited — and paid —
+          correctly. It takes about two minutes, and only the team behind this release sees your
+          answers.
+        </p>
+        <p className="mt-3 max-w-[52ch] text-sm leading-relaxed" style={{ color: MUTED }}>
+          Only three things are required:{' '}
+          <span style={{ color: CREAM }}>your name, what you did, and your email</span>. Skip
+          anything you are not sure about.
         </p>
 
         <CreditSubmissionForm token={token} releaseTitle={form.releaseTitle} />
