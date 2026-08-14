@@ -41,6 +41,17 @@ type PlanSceneProps = {
 const noticeClass =
   'flex items-start gap-2 rounded-lg border px-3 py-2 text-xs leading-5';
 
+// Warning notices carry text-content-primary, not the text-content-secondary
+// the neutral and brand notices use. Grey secondary on a same-hue amber tint
+// measured 4.40:1 on bg-base (the real ground here) and 4.04:1 on bg-overlay in
+// light mode, under AA's 4.5 for this 11px copy — and it cannot be fixed from
+// the warning token, since deepening the amber lowers it further. Dropping the
+// tint to /5 still failed on bg-overlay. Primary clears every ground in both
+// themes (12.5:1+). Semantics still come from the border, tint and icon color,
+// so the notice system is intact; a warning just reads a little stronger than
+// an info notice.
+const warningNoticeClass = `${noticeClass} border-status-warning/30 bg-status-warning/10 text-content-primary`;
+
 async function loadMembers(): Promise<WorkspaceMember[]> {
   try {
     const {
@@ -295,7 +306,7 @@ export function PlanScene({
         ) : null}
 
         {dateMoved ? (
-          <p className={`${noticeClass} border-status-warning/30 bg-status-warning/10 text-content-secondary`}>
+          <p className={warningNoticeClass}>
             <AlertTriangle
               className="mt-0.5 h-3.5 w-3.5 shrink-0 text-status-warning"
               aria-hidden="true"
@@ -318,7 +329,7 @@ export function PlanScene({
         ) : null}
 
         {!release.releaseDate ? (
-          <p className={`${noticeClass} border-status-warning/30 bg-status-warning/10 text-content-secondary`}>
+          <p className={warningNoticeClass}>
             <AlertTriangle
               className="mt-0.5 h-3.5 w-3.5 shrink-0 text-status-warning"
               aria-hidden="true"
