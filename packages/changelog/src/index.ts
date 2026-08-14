@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.53.1",
+    date: "August 14, 2026",
+    highlights: [
+      "Delete buttons look like delete buttons again. The red fill behind them was never actually being drawn, so anything asking you to confirm deleting a release or a note — or the card UrgAns shows before it does something it can't undo — came out as a thin outline with red writing inside it, far fainter than a warning should look.",
+      "Red warning text is easier to read across the app, in both the light and dark themes. The red sat too pale on the light background and too dull on the dark one, so error messages and delete warnings were among the hardest things on the page to read at exactly the moment they mattered most.",
+    ],
+  },
+  {
     version: "0.53.0",
     date: "August 14, 2026",
     highlights: [

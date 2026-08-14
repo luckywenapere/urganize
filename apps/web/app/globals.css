@@ -32,7 +32,17 @@
      --color-brand. This gives success its own legible, distinct hue. */
   --color-status-success: 74 159 106;
   --color-status-warning: 240 185 92;
-  --color-status-error: 240 106 106;
+  /* Lightened from #f06a6a (2026-08-14) — the mirror image of the light-mode
+     deepening documented in the html[data-theme='light'] block below, and for
+     the same reason: error is the one status color used as both the label and
+     a same-hue tint behind it, so each step of fill costs contrast. Here the
+     label is light on a dark ground, so the fix runs the other way. At
+     #f06a6a a /20 hover tint measured 4.06:1 over the lightest ground
+     (bg-hover/active, rgb(28,33,29)) and 4.26:1 over bg-surface, both under
+     AA's 4.5. #fa8a8a clears 4.5 in every ground/alpha combination here
+     (worst case 4.89:1, matching light mode's 4.86:1 margin). Ink on a solid
+     error fill improves too (6.28 -> 8.17). */
+  --color-status-error: 250 138 138;
   --color-status-info: 120 169 255;
 
   /* Skeleton shimmer tokens. Base mirrors bg-elevated so the loading state
@@ -101,7 +111,10 @@
 
   --status-success: #4a9f6a;
   --status-warning: #f0b95c;
-  --status-error: #f06a6a;
+  /* Mirrors --color-status-error above (this hex scale currently has zero
+     `var(--status-error)` consumers, but keeping the two in sync means a
+     future consumer can't pick up the pre-2026-08-14 value). */
+  --status-error: #fa8a8a;
   --status-info: #78a9ff;
 
   --space-1: 4px;
@@ -198,7 +211,18 @@ html[data-theme='light'] {
 
   --color-status-success: 20 100 58;
   --color-status-warning: 178 105 12;
-  --color-status-error: 197 51 51;
+  /* Deepened from #c53333 (2026-08-14). Error is the one status color that is
+     routinely used as BOTH the label and a same-hue tint behind that label
+     (`bg-status-error/10 text-status-error`, ~40 surfaces plus the danger
+     Button), and tinting a ground with the text's own hue pulls the two
+     together — so every step of fill costs contrast. At #c53333 the label
+     measured 4.29:1 on a /10 tint and 3.27:1 on a /20 tint over bg-overlay,
+     both under AA's 4.5 for 13px text. #961a1a clears 4.5 in every
+     ground/alpha combination in this theme (worst case 4.86:1) and lands at
+     0.073 relative luminance, in family with success (0.096) and info (0.126).
+     Dark mode needed the same fix in the opposite direction — see the
+     :root block above. */
+  --color-status-error: 150 26 26;
   --color-status-info: 43 94 199;
 
   --color-skeleton-base: 235 230 220;
@@ -234,7 +258,10 @@ html[data-theme='light'] {
 
   --status-success: #14643a;
   --status-warning: #b2690c;
-  --status-error: #c53333;
+  /* Mirrors --color-status-error above (this hex scale currently has zero
+     `var(--status-error)` consumers, but keeping the two in sync means a
+     future consumer can't pick up the pre-2026-08-14 value). */
+  --status-error: #961a1a;
   --status-info: #2b5ec7;
 
   --shadow-sm: 0 6px 16px rgba(26, 22, 17, 0.06);
