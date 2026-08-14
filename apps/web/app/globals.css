@@ -413,6 +413,27 @@ html[data-theme='light'] .cc-island {
   --credits-border: rgba(245, 240, 230, 0.12);
 }
 
+/* Public fan-capture island (2026-08-14). Third instance of the pattern above,
+   duplicated for the same reason .credits-island duplicates .epk-island: a
+   distinct public surface with its own lifetime, which happens to want the
+   same dark-locked Bible screen-mode treatment. Dark-locked matters more here
+   than anywhere: this page is the artist's shopfront, reached from a bio link,
+   and it has to look identical to every fan who taps it — a page that renders
+   cream for one visitor and ink for another reads as two different pages,
+   which is exactly the "is this really them" doubt the capture playbook's G1
+   rule exists to remove. */
+.capture-island {
+  color-scheme: dark;
+  --capture-ground: #0d120e;
+  --capture-surface: #181d19;
+  --capture-fill: #14643a;
+  --capture-accent: #7fd99a;
+  --capture-text: #f5f0e6;
+  --capture-text-muted: rgba(245, 240, 230, 0.64);
+  --capture-text-faint: rgba(245, 240, 230, 0.4);
+  --capture-border: rgba(245, 240, 230, 0.12);
+}
+
 html[data-theme='dark'] {
   --color-bg-base: 13 18 14;
   --color-bg-sidebar: 18 23 19;

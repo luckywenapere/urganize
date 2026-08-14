@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Newspaper, NotebookPen, Plus, Radio, Sparkles } from 'lucide-react';
+import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Mail, Newspaper, NotebookPen, Plus, Radio, Sparkles } from 'lucide-react';
 import {
   countStartedTasks,
   getTaskSectionLabel,
@@ -68,6 +68,11 @@ const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 // from the release detail page's side menu — invisible from the workspace
 // users actually land on. Same flag that gates the EPK page and API routes.
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
+
+// Fan capture entry point (2026-08-14): the third "thing you send outward",
+// so it joins Calendar and Press kit in the panel footer rather than the
+// header pill row — the same founder reasoning that moved Press kit there.
+const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 
 // Notes entry point: same flag AppTopbar and the identity panel read.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
@@ -208,7 +213,12 @@ export function TasksPanel({
   // Mirror WorkspaceView's flag gate: with the calendar flag off, a stale
   // `?scene=calendar` URL must not flip the leading pill to "Activities" for a
   // scene that isn't rendering (WorkspaceView passes no sceneContent then).
-  const activeScene = urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED ? null : urlScene;
+  // Same for `?scene=capture` behind its own flag.
+  const activeScene =
+    (urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED) ||
+    (urlScene === 'capture' && !CAPTURE_ENABLED)
+      ? null
+      : urlScene;
 
   /**
    * Pill classes, lit when that scene is the open one. `shrink-0
@@ -635,10 +645,16 @@ export function TasksPanel({
           `shrink-0 whitespace-nowrap` via pillClass, so a narrow phone would
           otherwise be forced onto a second line, and a footer that silently
           grew taller would push the activities list up. Measured 2026-08-14:
-          the two tagged pills come to 275px against the 343px a 375px phone
-          offers (viewport minus AppShell's `px-4`), so they fit today and a
-          third would scroll rather than reflow. */}
-      {(CONTENT_CALENDAR_ENABLED || EPK_ENABLED) && scopedRelease && !sceneContent ? (
+          two tagged pills came to 275px against the 343px a 375px phone offers
+          (viewport minus AppShell's `px-4`), and that note predicted a third
+          would scroll rather than reflow. Fan capture is that third pill, and
+          it does exactly that — the row scrolls on a phone and sits on one
+          line from `lg`. Scrolling is the designed outcome here, not a
+          regression, but it does mean the third pill is the last one that can
+          be added without the row needing a different shape. */}
+      {(CONTENT_CALENDAR_ENABLED || EPK_ENABLED || CAPTURE_ENABLED) &&
+      scopedRelease &&
+      !sceneContent ? (
         <div className="no-scrollbar flex shrink-0 items-center gap-2 overflow-x-auto pb-4 pt-3 lg:overflow-visible lg:pb-2">
           {CONTENT_CALENDAR_ENABLED ? (
             <button
@@ -666,6 +682,21 @@ export function TasksPanel({
               Press kit
               {/* Beta stamp, same tag as Calendar — the press kit generator
                   shipped 2026-07-31 and is still early. */}
+              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+                Beta
+              </span>
+            </button>
+          ) : null}
+          {CAPTURE_ENABLED ? (
+            <button
+              type="button"
+              onClick={() => toggleScene('capture', scopedRelease.id)}
+              aria-pressed={activeScene === 'capture'}
+              className={pillClass('capture')}
+            >
+              <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+              Fan capture
+              {/* Beta stamp, same tag as the two beside it. */}
               <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
                 Beta
               </span>

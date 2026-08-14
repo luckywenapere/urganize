@@ -11,7 +11,14 @@
 
 /** The release scenes. Canonical here (not in the URL hook) because both
  * the URL layer and the data layer need the list, and lib is the shared floor. */
-export type SceneName = 'metadata' | 'files' | 'epk' | 'calendar' | 'pitch' | 'plan';
+export type SceneName =
+  | 'metadata'
+  | 'files'
+  | 'epk'
+  | 'calendar'
+  | 'pitch'
+  | 'plan'
+  | 'capture';
 
 export const SCENE_NAMES: readonly SceneName[] = [
   'metadata',
@@ -20,12 +27,14 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'calendar',
   'pitch',
   'plan',
+  'capture',
 ];
 
 // Inlined at build time, same read every UI gate uses. The prefetch list must
 // respect it: with the flag off the calendar API routes 404, so prefetching
 // the scene burned one guaranteed-404 request per scoped release.
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
+const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 
 /** Prefetch order: most-likely-opened first, so a user who taps a pill mid-
  * prefetch is most likely to find their scene already warm.
@@ -35,14 +44,15 @@ const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDA
  * speedup, and it only exists for releases with no plan yet — prefetching it
  * would 404 on almost every release. It fetches its own draft directly.
  *
- * 'calendar' is present only when its feature flag is on, for the same
- * would-always-404 reason. */
+ * 'calendar' and 'capture' are present only when their feature flags are on,
+ * for the same would-always-404 reason. */
 export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
   'metadata',
   'files',
   'epk',
   ...(CONTENT_CALENDAR_ENABLED ? (['calendar'] as const) : []),
   'pitch',
+  ...(CAPTURE_ENABLED ? (['capture'] as const) : []),
 ];
 
 /** Within this window a cached scene is served with NO network call at all.
@@ -103,6 +113,12 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   // copy under live edits could overwrite newer text with older, so it never
   // goes to disk or memory — see SCENE_PREFETCH_ORDER.
   plan: false,
+  // Never to disk, for a reason unlike any other scene here: the payload
+  // carries fans' EMAIL ADDRESSES. localStorage is readable by any script that
+  // ever runs on this origin and survives sign-out on a shared machine, and
+  // "faster second open" is not worth putting other people's contact details
+  // there. Memory caching still applies, so tapping between scenes stays free.
+  capture: false,
 };
 
 /** How many releases' scenes to keep on disk. A manager works a couple of

@@ -23,6 +23,7 @@ import type { ReleaseCreditLink, ReleaseCreditSubmission } from '@/types/credits
 import type { ReleaseEpk } from '@/types/epk';
 import type { ContentCalendar } from '@/types/content-calendar';
 import type { SentPitch } from '@/types/pitching';
+import type { ReleaseCaptureLead, ReleaseCapturePage } from '@/types/capture';
 import type { Asset } from '@/components/releases/AssetSection';
 
 /**
@@ -52,6 +53,16 @@ export type FilesScenePayload = { assets: Asset[] };
 export type EpkScenePayload = { epk: ReleaseEpk | null };
 export type CalendarScenePayload = { calendars: ContentCalendar[] };
 export type PitchScenePayload = { pitches: SentPitch[] };
+export type CaptureScenePayload = {
+  page: ReleaseCapturePage | null;
+  /** The most recent leads, capped server-side (CAPTURE_LEADS_PAGE_SIZE). */
+  leads: ReleaseCaptureLead[];
+  /** The true total, which can exceed leads.length. */
+  leadCount: number;
+  /** Whether the public page will render an image, resolved server-side so the
+   * playbook checklist grades what a fan actually sees. */
+  hasGraphic: boolean;
+};
 
 export type ScenePayloadMap = {
   metadata: MetadataScenePayload;
@@ -59,6 +70,7 @@ export type ScenePayloadMap = {
   epk: EpkScenePayload;
   calendar: CalendarScenePayload;
   pitch: PitchScenePayload;
+  capture: CaptureScenePayload;
 };
 
 type SceneStateEntry = {
@@ -253,6 +265,17 @@ const FETCHERS: Record<CacheableSceneName, SceneFetcher> = {
     return {
       pitches: Array.isArray(data.pitches) ? (data.pitches as SentPitch[]) : [],
     } satisfies PitchScenePayload;
+  },
+  capture: async (releaseId, token, prefetch) => {
+    const data = await readJson(
+      await fetch(`/api/releases/${releaseId}/capture`, requestInit(token, prefetch))
+    );
+    return {
+      page: (data.page as ReleaseCapturePage | null) ?? null,
+      leads: Array.isArray(data.leads) ? (data.leads as ReleaseCaptureLead[]) : [],
+      leadCount: typeof data.leadCount === 'number' ? data.leadCount : 0,
+      hasGraphic: data.hasGraphic === true,
+    } satisfies CaptureScenePayload;
   },
 };
 

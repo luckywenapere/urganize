@@ -27,6 +27,7 @@ const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
+const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 // Notes' scoped-release link (TasksPanel, after Pitch) — added 2026-08-10;
 // this reservation was missing even though the real pill has rendered
@@ -293,18 +294,23 @@ function TasksPanelSkeleton() {
           </div>
         ))}
       </div>
-      {/* Footer pill placeholders — Calendar (2026-08-13) and Press kit
-          (2026-08-14); see the real block's comment in TasksPanel.tsx for the
-          full history of both moves out of the header pill row. A sibling
+      {/* Footer pill placeholders — Calendar (2026-08-13), Press kit and Fan
+          capture (both 2026-08-14); see the real block's comment in
+          TasksPanel.tsx for the full history of those moves out of the header
+          pill row. Widths are per-label ("Fan capture" + its Beta tag is the
+          widest of the three), not a uniform w-24: a placeholder row wider
+          than the real one scrolls where the real one doesn't and then shifts
+          every pill left when the labels arrive. A sibling
           AFTER the flex-1 body, matching the real row's wrapper classes
           exactly, so the reserved footprint sits pinned at the panel's base
           and doesn't shift when content resolves. */}
-      {CONTENT_CALENDAR_ENABLED || EPK_ENABLED ? (
+      {CONTENT_CALENDAR_ENABLED || EPK_ENABLED || CAPTURE_ENABLED ? (
         <div className="no-scrollbar flex shrink-0 items-center gap-2 overflow-x-auto pb-4 pt-3 lg:overflow-visible lg:pb-2">
           {CONTENT_CALENDAR_ENABLED ? (
             <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
           ) : null}
           {EPK_ENABLED ? <SkeletonBlock className="h-8 w-32 shrink-0 rounded-full" /> : null}
+          {CAPTURE_ENABLED ? <SkeletonBlock className="h-8 w-36 shrink-0 rounded-full" /> : null}
         </div>
       ) : null}
     </div>
