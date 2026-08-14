@@ -1146,14 +1146,29 @@ never got. Built flag-off; **not yet activated**.
   behaviour was never observed in a browser** — the Browser pane's approval gate cannot be answered
   in a non-interactive session, and Next refuses a second dev server for a directory that already has
   one. Worth one manual pass.
-- **Activation checklist:** (1) no migration; (2) design-partner review of both playbooks, then bump
-  to v0.2 in the md AND the ts (`id` and `version` are asserted to agree); (3) set
-  `NEXT_PUBLIC_FEATURE_EP_ALBUM_TEMPLATES=true` in Vercel `Web` **and redeploy** (`NEXT_PUBLIC_*` is
-  inlined at build time); (4) changelog entry + minor version bump across all 10 `package.json` files
-  (the EPK precedent: the ledger entry lands at flag-flip, not at merge); (5) verify end to end with a
-  real EP — create with the picker, set a date, confirm the activities carry
-  `metadata.template.template_id === 'ep_v0.1'` and that the lead-single drop renders as an event
-  milestone.
+- **Status: LIVE in production as of 2026-08-14 (v0.55.0)** — flag on, ledger entry and version bump
+  done. The playbooks went live still at **v0.1, before the design-partner review** (founder call);
+  that review can still bump them to v0.2, and the `.md` and `.ts` must move together since a test
+  asserts `id` and `version` agree.
+- **A `turbo-ignore` trap this flip walked into, worth knowing for every future `NEXT_PUBLIC_*`
+  flip:** setting the Vercel env var did nothing on its own. The accompanying version-bump commit
+  touched only `package.json` files and `packages/changelog` — which `apps/web` does not depend on —
+  so `npx turbo-ignore @urganize/web` skipped the web build. The marketing site rebuilt (it *does*
+  depend on the changelog package, so `/changelog` showed v0.55.0 immediately) while the product app
+  kept serving the pre-flag bundle, env var set but never inlined. **A flag flip needs a commit that
+  actually touches `apps/web`.** A same-commit "Redeploy" in the Vercel UI is not reliable either:
+  turbo-ignore diffs against the previous deployment of that project and finds nothing.
+- **How to check a flag's live state with no account:** `GET /onboarding` and count `"Coming soon"` in
+  the HTML — three means off (ep + album + music_video all gated), one means on (only music_video).
+  That page server-renders its type picker from `getAvailableReleaseTypes()`, so it is a genuine probe
+  of the deployed bundle. **Do not** try to prove it by grepping the client chunks for
+  `["single","ep","album"]`: that string is the static `DB_RELEASE_TYPES` const in `types/releases.ts`
+  and is present in both flag states — a false positive this session hit and had to walk back.
+- **Remaining verification:** the create-release modal's picker has still never been exercised
+  interactively (its behaviour is unobservable without an authenticated session). Worth one manual
+  pass: create a real EP, set a date, and confirm the activities carry
+  `metadata.template.template_id === 'ep_v0.1'`, the count is 90, and the lead-single drop renders as
+  an event milestone.
 
 ---
 
