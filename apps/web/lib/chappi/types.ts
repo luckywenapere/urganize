@@ -110,7 +110,12 @@ export type ChappiToolName =
   | 'update_note'
   | 'delete_note'
   // team
-  | 'list_workspace_members';
+  | 'list_workspace_members'
+  // rollout planner
+  | 'get_release_plan'
+  | 'generate_release_plan'
+  | 'approve_release_plan'
+  | 'discard_release_plan';
 
 /**
  * A side effect the CLIENT must perform after the agent turn — the agent runs

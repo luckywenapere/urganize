@@ -25,7 +25,8 @@ export const changelog: Release[] = [
     highlights: [
       "UrgAns can now run more of your workspace for you: rename a release, set or move its date, delete a release or an activity, comment on an activity, and find, edit, pin or delete your notes — just by asking.",
       "Ask UrgAns to assign work to someone by name and it looks up the right teammate instead of guessing.",
-      "Anything that can't be undone now asks first. UrgAns shows a card spelling out exactly what will happen — including how many activities go with a release — and nothing runs until you approve it.",
+      "Plan a rollout by talking it through: UrgAns asks what you're releasing, when, what's ready and what you're going for, then drafts the plan from the playbook — no form to fill in.",
+      "Anything that can't be undone now asks first. UrgAns shows a card spelling out exactly what will happen — including how many activities go with a release, or how many a plan is about to create — and nothing runs until you approve it.",
     ],
   },
   {

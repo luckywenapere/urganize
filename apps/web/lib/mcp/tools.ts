@@ -36,6 +36,11 @@ const EXCLUDED_TOOL_NAMES: ReadonlySet<ChappiToolName> = new Set<ChappiToolName>
   'delete_note',
   // Team
   'list_workspace_members',
+  // Rollout planner
+  'get_release_plan',
+  'generate_release_plan',
+  'approve_release_plan',
+  'discard_release_plan',
 ]);
 
 export const MCP_TOOLS: ChappiTool[] = CHAPPI_TOOLS.filter(
