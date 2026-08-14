@@ -20,10 +20,14 @@ import { MAX_CURATOR_DISPLAY_NAME_LENGTH } from '@/lib/pitching';
 //      the same link at the same time cannot both become curators. The row is
 //      the lock; there is no read-then-write window.
 //
-//   2. NO TEAM ACCOUNT CONVERSION. An account that owns releases or belongs to
-//      a team is refused. Flipping such an account to 'curator' would strand
-//      its releases behind a role that cannot see them, which is worse than
-//      making the person use a second address.
+//   2. A TEAM ACCOUNT IS NOT CONVERTED, IT GAINS A SIDE. Being a curator is the
+//      existence of a curator_profiles row, so an account that already runs
+//      releases keeps its team role untouched and simply becomes dual: inbox at
+//      /curator, workspace still at /dashboard. Only an account with no team
+//      footprint at all is written as role='curator', which means "curator-only,
+//      team side never activated" and is undone by POST /api/curator/activate-team.
+//      Flipping a footprinted account to 'curator' would strand its releases
+//      behind a role that cannot see them, so that write is what we skip.
 
 const INVITE_COLUMNS = 'id,code,expires_at,revoked_at,used_at';
 
@@ -105,19 +109,11 @@ export async function POST(
     return NextResponse.json({ ok: true, alreadyCurator: true });
   }
 
-  // Refuse to convert a team account. Checked before the invite is consumed so
-  // a refused attempt does not burn the link.
+  // Does this account already run releases? That decides whether the profiles
+  // row gets role='curator' below, not whether the join is allowed. Read before
+  // the invite is consumed so a failed check does not burn the link.
   const teamCheck = await hasTeamFootprint(adminClient, userId);
   if ('error' in teamCheck) return teamCheck.error;
-  if (teamCheck.hasFootprint) {
-    return NextResponse.json(
-      {
-        error:
-          'This account already runs releases. Sign out then use the link with a different email address.',
-      },
-      { status: 409 }
-    );
-  }
 
   const { data: invite, error: inviteError } = await adminClient
     .from(CURATOR_INVITES_TABLE)
@@ -162,29 +158,33 @@ export async function POST(
 
   const displayName = resolveDisplayName(payload.displayName, auth.user);
 
-  // The profiles row is written unconditionally, NOT with ignoreDuplicates: the
-  // OAuth callback may have just created a fallback row with role
-  // 'artist-manager', and that row has to become 'curator' or the account
-  // lands on the team dashboard instead of the curator surface.
-  const { error: profileError } = await adminClient.from('profiles').upsert(
-    {
-      id: userId,
-      name: displayName,
-      role: 'curator',
-      ...(auth.user.email ? { email: auth.user.email } : {}),
-    },
-    { onConflict: 'id' }
-  );
-
-  if (profileError) {
-    // The invite is already consumed at this point. Releasing it would open a
-    // race, so leave it used and let the admin mint another: a burnt code is
-    // cheaper than a link two people can claim.
-    console.error('[curator-join] profile upsert failed after consuming invite:', profileError.message);
-    return NextResponse.json(
-      { error: 'Could not finish setting up your account. Ask for a new link.' },
-      { status: 500 }
+  // An account that already runs releases keeps its team role: it is becoming a
+  // dual account, and it necessarily already has a profiles row. Only a fresh
+  // account is marked curator-only, and that write is unconditional (NOT
+  // ignoreDuplicates) because the OAuth callback may have just created a
+  // fallback row with role 'artist-manager', which has to become 'curator' or
+  // the account lands on the team dashboard instead of the curator surface.
+  if (!teamCheck.hasFootprint) {
+    const { error: profileError } = await adminClient.from('profiles').upsert(
+      {
+        id: userId,
+        name: displayName,
+        role: 'curator',
+        ...(auth.user.email ? { email: auth.user.email } : {}),
+      },
+      { onConflict: 'id' }
     );
+
+    if (profileError) {
+      // The invite is already consumed at this point. Releasing it would open a
+      // race, so leave it used and let the admin mint another: a burnt code is
+      // cheaper than a link two people can claim.
+      console.error('[curator-join] profile upsert failed after consuming invite:', profileError.message);
+      return NextResponse.json(
+        { error: 'Could not finish setting up your account. Ask for a new link.' },
+        { status: 500 }
+      );
+    }
   }
 
   const { error: curatorProfileError } = await adminClient.from(CURATOR_PROFILES_TABLE).insert({
@@ -225,6 +225,11 @@ function resolveDisplayName(value: unknown, user: { email?: string | null; user_
 /**
  * Does this account already look like a team account? Either check is enough:
  * owning a release, or holding a workspace membership that was not removed.
+ *
+ * A footprint means the account is in use on the team side, so its role is left
+ * alone. Its absence is the "unused account" signal that makes role='curator'
+ * safe to write: an organic signup has a lazily provisioned workspace after its
+ * first dashboard load, and an invited teammate always has a members row.
  */
 async function hasTeamFootprint(
   adminClient: NonNullable<ReturnType<typeof createAdminClient>>,

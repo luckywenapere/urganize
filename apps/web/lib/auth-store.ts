@@ -210,6 +210,30 @@ const getOrCreateProfile = async (authUser: User): Promise<Profile> => {
   return createdProfile;
 };
 
+const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
+
+/**
+ * Is this account also a playlist owner? The answer is the existence of a
+ * curator_profiles row, never profiles.role — role='curator' means only
+ * "curator-only, team side never activated", so a dual account reads as a
+ * normal team account there while still owning an inbox.
+ *
+ * Read through the user's own session (the "Curators view their profile" policy
+ * covers it), and only when the feature is on, so every other account pays
+ * nothing. On failure we fall back to the role, which is right for the accounts
+ * that predate dual capability.
+ */
+const loadCuratorCapability = async (authUser: User, profile: Profile): Promise<boolean> => {
+  if (!PITCHING_ENABLED) return false;
+  const { data, error } = await supabase
+    .from('curator_profiles')
+    .select('user_id')
+    .eq('user_id', authUser.id)
+    .maybeSingle();
+  if (error) return profile.role === 'curator';
+  return Boolean(data?.user_id);
+};
+
 const getScheduledDeletion = (metadata: Record<string, unknown> | undefined | null): string | null => {
   const value = metadata?.scheduled_deletion_at;
   return typeof value === 'string' ? value : null;
@@ -241,6 +265,11 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   needsOnboarding: boolean;
+  /** Whether this account also owns a playlist-curator profile. `null` while
+   * unknown — the probe runs inside checkAuth, so consumers must treat null as
+   * "still loading" and not as "no". Never persisted: it is cheap to re-read and
+   * a stale `true` would show a nav entry that 403s. */
+  hasCuratorProfile: boolean | null;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: (nextPath?: string) => Promise<void>;
@@ -266,6 +295,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: true,
       needsOnboarding: true,
+      hasCuratorProfile: null,
       error: null,
 
       clearError: () => set({ error: null }),
@@ -306,7 +336,7 @@ export const useAuthStore = create<AuthState>()(
 
             if (userError) {
               // If getUser fails, we are definitely not authenticated
-              set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, error: null });
+              set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, hasCuratorProfile: null, error: null });
               return;
             }
             
@@ -339,6 +369,12 @@ export const useAuthStore = create<AuthState>()(
                 });
                 authCheckedAt = Date.now();
 
+                // Best-effort, off the critical path: nothing waits on knowing
+                // whether this account also owns playlists.
+                void loadCuratorCapability(user, profile).then((hasCuratorProfile) => {
+                  set({ hasCuratorProfile });
+                });
+
                 // Side-effect: if the user landed in the app without active
                 // access (no paid sub, no live trial), bounce them to /locked.
                 // The check is best-effort; it does not block checkAuth itself.
@@ -347,7 +383,7 @@ export const useAuthStore = create<AuthState>()(
               }
             }
             
-            set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, error: null });
+            set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, hasCuratorProfile: null, error: null });
           } catch (error) {
             if (isAbortError(error)) {
               set((state) => ({ isLoading: false, error: state.error }));
@@ -718,6 +754,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             isLoading: false,
             needsOnboarding: true,
+            hasCuratorProfile: null,
             error: null
           });
         } catch (error) {
@@ -754,6 +791,7 @@ if (typeof window !== 'undefined') {
           isAuthenticated: false,
           isLoading: false,
           needsOnboarding: true,
+          hasCuratorProfile: null,
           error: null,
         });
         return;
@@ -777,6 +815,7 @@ if (typeof window !== 'undefined') {
         isAuthenticated: false,
         isLoading: false,
         needsOnboarding: true,
+        hasCuratorProfile: null,
         error: null,
       });
     } else if (event === 'SIGNED_IN') {

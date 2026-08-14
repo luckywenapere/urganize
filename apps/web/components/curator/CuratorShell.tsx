@@ -6,19 +6,25 @@
 // chrome should stay out of the way.
 //
 // It also holds the access rules in ONE place, so no page repeats them:
-//   flag off        -> the marketing site
-//   not signed in   -> /auth with a next back to here
-//   not a curator   -> that account's own home
+//   flag off           -> the marketing site
+//   not signed in      -> /auth with a next back to here
+//   no curator profile -> that account's own home
+//
+// The gate is the curator_profiles row (hasCuratorProfile), not profiles.role:
+// an account can own playlists AND run releases, and such a dual account has a
+// team role here. While the capability is still unknown (null) we wait rather
+// than bounce, or a dual account would be thrown out of its own inbox on load.
 //
 // AppShell adds /curator to its standalone-route list, so none of the team
 // chrome (topbar, identity card, UrgAns rail, dock) renders around this.
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@urganize/ui';
-import { Inbox, ListMusic, LogOut, UserCircle } from 'lucide-react';
+import { Inbox, ListMusic, LayoutGrid, LogOut, UserCircle } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
+import { supabase } from '@/lib/supabase/client';
 import { HOME_PATH } from '@/lib/home-path';
 
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
@@ -35,7 +41,12 @@ export function CuratorShell({ children }: { children: ReactNode }) {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthLoading = useAuthStore((state) => state.isLoading);
+  const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
+  const checkAuth = useAuthStore((state) => state.checkAuth);
   const logout = useAuthStore((state) => state.logout);
+
+  const [isActivating, setIsActivating] = useState(false);
+  const [activationError, setActivationError] = useState('');
 
   useEffect(() => {
     if (!PITCHING_ENABLED) {
@@ -47,14 +58,49 @@ export function CuratorShell({ children }: { children: ReactNode }) {
       router.replace(`/auth?next=${encodeURIComponent(pathname || '/curator')}`);
       return;
     }
-    if (user && user.role !== 'curator') {
+    if (hasCuratorProfile === false) {
       router.replace(HOME_PATH);
     }
-  }, [isAuthLoading, isAuthenticated, pathname, router, user]);
+  }, [hasCuratorProfile, isAuthLoading, isAuthenticated, pathname, router]);
 
   if (!PITCHING_ENABLED) return null;
 
-  const isCurator = isAuthenticated && user?.role === 'curator';
+  const isCurator = isAuthenticated && hasCuratorProfile === true;
+  // role 'curator' means the team side was never switched on. Everyone else here
+  // already has a workspace waiting, so they get a plain link to it.
+  const isCuratorOnly = isCurator && user?.role === 'curator';
+
+  // Turns the team side on for a playlist owner who also wants to run releases:
+  // clears the curator-only marker, then lands them in the workspace. The
+  // workspace itself is provisioned lazily by the first request that needs it.
+  const handleActivateTeam = async () => {
+    setActivationError('');
+    setIsActivating(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) throw new Error('Sign in again to set this up.');
+
+      const response = await fetch('/api/curator/activate-team', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not set up your workspace.');
+      }
+
+      // Force: the role just changed server-side, so the recency guard has to be
+      // skipped or the app would still route this account back here.
+      await checkAuth({ force: true });
+      router.push(HOME_PATH);
+    } catch (error) {
+      setActivationError(error instanceof Error ? error.message : 'Could not set up your workspace.');
+      setIsActivating(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-bg-base">
@@ -67,21 +113,52 @@ export function CuratorShell({ children }: { children: ReactNode }) {
             </span>
           </div>
           {isCurator ? (
-            <button
-              type="button"
-              onClick={() => void logout()}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-default px-3 text-xs font-semibold text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign out
-            </button>
+            <div className="flex items-center gap-2">
+              {isCuratorOnly ? (
+                <button
+                  type="button"
+                  onClick={() => void handleActivateTeam()}
+                  disabled={isActivating}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-brand bg-brand/10 px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/20 disabled:opacity-60"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  {isActivating ? 'Setting up…' : 'Run your releases'}
+                </button>
+              ) : (
+                <Link
+                  href={HOME_PATH}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-default px-3 text-xs font-semibold text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  Your workspace
+                </Link>
+              )}
+              <button
+                type="button"
+                onClick={() => void logout()}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-default px-3 text-xs font-semibold text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
+              </button>
+            </div>
           ) : null}
         </div>
+        {activationError ? (
+          <p
+            role="status"
+            className="mx-auto w-full max-w-3xl px-4 pb-2 text-xs text-status-error"
+          >
+            {activationError}
+          </p>
+        ) : null}
       </header>
 
       {/* pb clears the fixed tab row on small screens. */}
       <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-5 sm:pb-10">
-        {isCurator || isAuthLoading ? children : null}
+        {isCurator || isAuthLoading || (isAuthenticated && hasCuratorProfile === null)
+          ? children
+          : null}
       </main>
 
       {isCurator ? (

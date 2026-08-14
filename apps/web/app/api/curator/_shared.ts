@@ -65,12 +65,19 @@ export const curatorPhotoPathPrefix = (userId: string) => `curator/${userId}/pho
 /**
  * Auth gate for every curator route.
  *
- * Deliberately NOT requireActiveAuthenticatedUser: pitching is free, and a
- * curator has no subscription, so running them through the payment gate would
- * lock them out the moment that gate is switched back on. Curators are also
- * kept off requireAuthenticatedAdmin for the same reason.
+ * Being a curator is a CAPABILITY, not a role: it is the existence of a
+ * curator_profiles row, never profiles.role. That is what lets one account be
+ * both a playlist owner and a team running releases — profiles.role stays the
+ * team-side role, and 'curator' there now means only "curator-only, team side
+ * never activated". Do not reintroduce a role check here; it would lock every
+ * dual account out of its own inbox.
  *
- * Returns 403 (not 404) when the account is not a curator: the caller is
+ * Deliberately NOT requireActiveAuthenticatedUser: pitching is free, so
+ * running the curator side through the payment gate would lock playlist owners
+ * out the moment that gate is switched back on. A dual account's TEAM routes
+ * still hit the paywall normally — that half is not free.
+ *
+ * Returns 403 (not 404) when the account has no curator profile: the caller is
  * authenticated and the route exists, they simply are not this kind of user,
  * and the client uses that signal to redirect them to their own home.
  */
@@ -83,17 +90,17 @@ export async function requireCuratorUser(request: NextRequest) {
     return { error: NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 }) };
   }
 
-  const { data: profile, error } = await adminClient
-    .from('profiles')
-    .select('role')
-    .eq('id', auth.user.id)
+  const { data: curatorProfile, error } = await adminClient
+    .from(CURATOR_PROFILES_TABLE)
+    .select('user_id')
+    .eq('user_id', auth.user.id)
     .maybeSingle();
 
   if (error) {
     return { error: NextResponse.json({ error: error.message || 'Could not load your account.' }, { status: 500 }) };
   }
 
-  if (String(profile?.role || '') !== 'curator') {
+  if (!curatorProfile?.user_id) {
     return {
       error: NextResponse.json({ error: 'This is only for playlist owners.' }, { status: 403 }),
     };

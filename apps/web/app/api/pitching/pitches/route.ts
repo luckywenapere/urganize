@@ -73,6 +73,11 @@ export async function GET(request: NextRequest) {
  * either: at most ten pitches waiting per release, and at most one waiting pitch
  * per playlist (a unique partial index, so a race loses at the database rather
  * than slipping through).
+ *
+ * Pitching to your OWN playlist is allowed and needs no guard: a dual account
+ * (team + playlist owner) simply matches both of playlist_pitches' select
+ * policies on the same row, and every cap above still applies. It is also the
+ * cheapest way to try the round trip end to end.
  */
 export async function POST(request: NextRequest) {
   if (!isPitchingFeatureEnabled()) return flagOffResponse();
