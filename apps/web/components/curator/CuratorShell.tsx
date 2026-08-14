@@ -106,9 +106,14 @@ export function CuratorShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-bg-base">
       <header className="sticky top-0 z-30 border-b border-stroke-default bg-bg-base/95 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between gap-3 px-4">
+          {/* The eyebrow is the first thing to go below `sm`: with a dual
+              account the right side carries two pills, and logo + eyebrow +
+              both pills measures ~396px against the 343px a 375px phone
+              actually offers. The label is decoration; the two controls are
+              not. */}
           <div className="flex min-w-0 items-center gap-3">
             <Logo size="sm" />
-            <span className="truncate text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
+            <span className="hidden truncate text-[11px] uppercase tracking-[0.16em] text-content-tertiary sm:inline">
               Playlist owner
             </span>
           </div>

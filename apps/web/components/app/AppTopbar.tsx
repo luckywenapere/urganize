@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { Inbox, Plus } from 'lucide-react';
 import { Logo } from '@urganize/ui';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -12,6 +12,7 @@ import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
 import { CatalogIcon, ChappiIcon, NotesIcon } from '@/components/app/BrandIcons';
+import { useAuthStore } from '@/lib/auth-store';
 
 // Same flag ChappiPageClient reads. Inlined at build time (NEXT_PUBLIC_
 // prefix) so the icon only appears once Chappi's own dedicated page is
@@ -23,6 +24,15 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 // with the assistant, and burying them in that fragment would hide them
 // whenever the assistant is switched off.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
+
+// The crossing point into the playlist-owner side, for an account that holds
+// BOTH capabilities. Gated on the flag AND on the account actually owning a
+// curator profile, so a normal team never sees it. The identity card carries
+// the same link at `lg`+, but that card is `hidden lg:block` and hides again at
+// `lg`-`xl` while the UrgAns rail is open — so without this control (and the
+// MobileNavBar tab beside it) a dual account on a phone had NO way across and
+// had to open a second tab.
+const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 
 // When on, MobileNavBar (mounted by AppShell) carries these controls below
 // lg instead — the topbar hides its own copies there rather than showing
@@ -289,6 +299,11 @@ function ChappiTopbarAction() {
 export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
   const pathname = usePathname();
   const routeTitle = getRouteTitle(pathname);
+  // Tri-state: null means the capability probe is still in flight, so the
+  // control stays out rather than flashing in and out. Only ever true for an
+  // account that holds a curator_profiles row.
+  const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
+  const showCuratorLink = PITCHING_ENABLED && hasCuratorProfile === true;
 
   return (
     <header className="sticky top-0 z-30 border-b border-stroke-subtle bg-bg-base/88 backdrop-blur-xl">
@@ -302,8 +317,18 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           With NEXT_PUBLIC_FEATURE_MOBILE_NAV on, this math is moot below lg:
           the nav icons, Notes and the account trigger all move to
           MobileNavBar, leaving only the logo, the (now-visible) release
-          context and the bell up here — comfortably under budget. */}
-      <div className="flex min-h-16 items-center gap-2 px-3 sm:gap-3 sm:px-5 md:px-6 lg:px-8">
+          context and the bell up here — comfortably under budget.
+          A dual account (team + playlist owner) adds an EIGHTH control, which
+          spends the slack gap-2 bought and overflows 375px by 13px — measured,
+          with the scroll-lock padding cleared, since an open modal otherwise
+          fakes exactly this number. gap-1.5 returns ~2px per gap, which covers
+          it. Applied ONLY when that control is actually rendered, so the other
+          accounts keep the roomier spacing they already fit in. */}
+      <div
+        className={`flex min-h-16 items-center ${
+          showCuratorLink ? 'gap-1.5' : 'gap-2'
+        } px-3 sm:gap-3 sm:px-5 md:px-6 lg:px-8`}
+      >
         {/* Stage 2: the logo now lives in the topbar (the sidebar that
             previously hosted it is gone). Links back to /dashboard so the
             top-left "click the logo" affordance still gets users home from
@@ -403,6 +428,26 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             }`}
           >
             <NotesIcon className="h-[18px] w-[18px]" />
+          </Link>
+        ) : null}
+
+        {/* Playlist pitches — the crossing point for a dual account (team +
+            playlist owner). Like Notes it's a plain destination outside the
+            Catalog/UrgAns toggle pair, and it leaves the team app entirely
+            (/curator is a standalone route with its own shell), so it lights
+            up on a prefix match rather than an exact one. */}
+        {showCuratorLink ? (
+          <Link
+            href="/curator"
+            aria-label="Playlist pitches"
+            title="Playlist pitches"
+            className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
+              pathname?.startsWith('/curator')
+                ? 'bg-brand/10 text-brand'
+                : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
+            }`}
+          >
+            <Inbox className="h-[18px] w-[18px]" />
           </Link>
         ) : null}
 

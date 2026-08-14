@@ -3,14 +3,16 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { Inbox, Plus } from 'lucide-react';
 import { useChappiStore } from '@/stores/useChappiStore';
+import { useAuthStore } from '@/lib/auth-store';
 import { CatalogIcon, ChappiIcon, NotesIcon, ProfileIcon } from '@/components/app/BrandIcons';
 
 // Same flags AppTopbar reads — a tab only exists in the bar when its surface
 // exists at all.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
+const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 
 type MobileNavBarProps = {
   /** Opens the CreateReleaseModal AppShell owns — the same instance the
@@ -29,6 +31,14 @@ type MobileNavBarProps = {
  * account actions (Settings, sign out) already live there, and a menu on top
  * of a menu (WorkspaceMenu still exists at lg+) would be one tap for nothing.
  *
+ * A SIXTH slot, Pitches, appears only for a dual account (team + playlist
+ * owner) — a state currently held by a single partner. It earns the crowding
+ * because this bar is the only navigation a phone has: the topbar's own icons
+ * are `hidden lg:grid` under this flag and the identity card never renders
+ * below `lg`, so without it a dual account had to open a second tab to reach
+ * its own inbox. Six slots still clear a 375px bar (~62px each, and "Pitches"
+ * measures ~45px at 11px).
+ *
  * The bar shows on every route AppShell mounts it on, /dashboard/urgans
  * included — hiding it there would leave the assistant page with no way out
  * except the topbar logo, since this bar just became the only navigation on
@@ -46,6 +56,9 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
   const isUrgAns = pathname === '/dashboard/urgans';
   const isNotes = pathname === '/dashboard/notes';
   const isSettings = pathname?.startsWith('/settings') ?? false;
+  // Tri-state; null (probe in flight) keeps the tab out rather than letting it
+  // pop in and shift the other five mid-load.
+  const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
 
   const handleUrgAnsClick = () => {
     // Carry the drilled-in release as the assistant's scope, mirroring
@@ -120,6 +133,23 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
             >
               <NotesIcon className="h-5 w-5" />
               Notes
+            </Link>
+          </li>
+        ) : null}
+
+        {PITCHING_ENABLED && hasCuratorProfile === true ? (
+          <li className="flex-1">
+            <Link
+              href="/curator"
+              aria-current={pathname?.startsWith('/curator') ? 'page' : undefined}
+              className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
+                pathname?.startsWith('/curator')
+                  ? 'text-brand'
+                  : 'text-content-tertiary hover:text-content-secondary'
+              }`}
+            >
+              <Inbox className="h-5 w-5" />
+              Pitches
             </Link>
           </li>
         ) : null}
