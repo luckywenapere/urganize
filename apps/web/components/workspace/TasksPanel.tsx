@@ -55,9 +55,10 @@ export const METADATA_PILL_HIDE_CLASS = !IDENTITY_PANEL_ENABLED
 // actually land on after login, so the scoped-release header carries the
 // calendar affordance alongside Files rather than hiding it on the release
 // detail page alone. As of 2026-08-13 (founder correction, via screenshot)
-// the pill itself moved OUT of this header row into its own sticky footer
-// row below the activity list — see the sticky Calendar block further down —
-// so this flag now only gates that footer row, not a header pill.
+// the pill moved OUT of the header row into its own footer row below the
+// activity list, and as of 2026-08-14 that footer row is desktop-only — below
+// `lg` the pill is part of the single bottom dock. This flag gates the pill
+// itself (`outboundPills`), wherever it happens to render.
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 
 // Files entry point (URG-182): same flag gates the assets API routes and the
@@ -76,6 +77,18 @@ const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 // /api/pitching routes and the /api/curator routes.
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 
+// Same flag AppShell/MobileNavBar read. Below `lg` every pill collects into
+// one sticky dock at the base of this panel (see the dock block at the bottom
+// of the render), and how far up that dock has to sit depends on which fixed
+// surface already owns the screen's bottom edge — the nav bar when this is on,
+// the floating UrgAns/support launcher when it isn't. Precomputed to a class
+// so the dock's className stays a one-token swap, the same shape AppShell uses
+// for <main>'s bottom padding. Both rules live in globals.css.
+const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
+export const TASKS_PILL_DOCK_OFFSET_CLASS = MOBILE_NAV_ENABLED
+  ? 'tasks-pill-dock-nav'
+  : 'tasks-pill-dock';
+
 /**
  * The scene-pill row's neutral (never-lit) pill treatment — hoisted to
  * module scope and exported as the one source of truth. WorkspaceView's
@@ -84,10 +97,10 @@ const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
  * `shrink-0 whitespace-nowrap`) by the time this row grew to 9 pills on
  * mobile, which is how "Get your release recap" ended up wrapping across
  * three lines inside a fixed 32px pill (2026-08-10 bug fix). `shrink-0
- * whitespace-nowrap` matter here specifically because this row becomes a
- * horizontal scroller below `lg` (see the container below) — a flex child
- * without them compresses and wraps its own label instead of just
- * scrolling off-screen.
+ * whitespace-nowrap` still matter, for the same reason in a new container:
+ * below `lg` the pills wrap inside the bottom dock, and a flex child without
+ * them compresses and breaks its own label mid-phrase instead of moving whole
+ * onto the next row.
  */
 export const taskPanelPillClass =
   'motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover';
@@ -212,11 +225,11 @@ export function TasksPanel({
 
   /**
    * Pill classes, lit when that scene is the open one. `shrink-0
-   * whitespace-nowrap` (2026-08-10 bug fix): this row becomes a horizontal
-   * scroller below lg (see the container below), and without these a flex
-   * child is free to compress and wrap its own label instead of just
-   * scrolling off-screen — which is exactly how "Get your release recap"
-   * used to spill across three lines inside a fixed 32px pill.
+   * whitespace-nowrap` (2026-08-10 bug fix): the pills wrap inside the mobile
+   * dock below `lg`, and without these a flex child is free to compress and
+   * break its own label mid-phrase rather than moving whole onto the next row
+   * — which is exactly how "Get your release recap" used to spill across three
+   * lines inside a fixed 32px pill.
    */
   const pillClass = (scene: SceneName) =>
     `motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors ${
@@ -282,6 +295,181 @@ export function TasksPanel({
     writePersistedState(EXPANDED_STORAGE_KEY, EXPANDED_STORAGE_VERSION, next);
   };
 
+  /**
+   * Every pill this panel owns, built ONCE and rendered into two containers:
+   * the desktop header row (lg+) and the mobile dock at the panel's base
+   * (below lg). Exactly one container is displayed at any width — the other
+   * carries `hidden` / `lg:hidden`, and `display: none` takes it out of the
+   * accessibility tree and the tab order entirely — so a user (or a screen
+   * reader) never meets the same control twice. The duplication is in the DOM
+   * only, and it's what lets the mobile dock wrap ALL the pills into one
+   * continuous run of rows: two separate containers would wrap independently
+   * and leave a ragged seam between them.
+   */
+  const primaryPills = (
+    <>
+      {/* Toggles with the scene body below: "New activity" opens Quick
+          Create while the activity list is showing; once a scene (Calendar
+          / Files / Press kit) has taken this slot, the SAME
+          button position becomes "Activities" so there's always a way
+          back without hunting for the scene's own pill again. */}
+      {activeScene ? (
+        <button type="button" onClick={closeScene} className={neutralPillClass}>
+          <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
+          Activities
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() =>
+            openQuickCreate({
+              releaseId: scopedRelease?.id || undefined,
+              source: 'inline',
+            })
+          }
+          className={neutralPillClass}
+        >
+          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+          New activity
+        </button>
+      )}
+      {/* Plan pill, first while it exists. A release with no activities
+          has exactly one job, and this is it; once a plan is approved the
+          pill disappears, because from then on the activity list IS the
+          plan. Only shown while there is something to open (no activities
+          yet, or a draft already waiting) so it never becomes permanent
+          chrome. */}
+      {showPlanPill && scopedRelease ? (
+        <button
+          type="button"
+          onClick={() => toggleScene('plan', scopedRelease.id)}
+          aria-pressed={activeScene === 'plan'}
+          className={pillClass('plan')}
+        >
+          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+          Plan
+        </button>
+      ) : null}
+      {/* Metadata link (URG-108) — NARROW widths only as of 2026-08-12,
+          since the identity panel's "Collect metadata" nav item is now
+          this release's persistent entry point (see
+          WorkspaceIdentityPanel) and two controls for one scene is noise.
+          But that panel never renders on small viewports, so the pill has
+          to survive there: the mobile dock is the only surface present at
+          every width. See METADATA_PILL_HIDE_CLASS for exactly where it
+          retreats — it stays put entirely when the panel is flagged off.
+          (Inside the mobile dock that class is inert, since the dock is
+          already `lg:hidden`; it does its work in the desktop header row.) */}
+      {METADATA_ENABLED && scopedRelease ? (
+        <button
+          type="button"
+          onClick={() => toggleScene('metadata', scopedRelease.id)}
+          aria-pressed={activeScene === 'metadata'}
+          className={`${pillClass('metadata')} ${METADATA_PILL_HIDE_CLASS}`}
+        >
+          <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
+          Collect metadata
+        </button>
+      ) : null}
+      {/* Playlist pitching: browse curator playlists and send this
+          release's song, with each curator's answer shown beside it.
+          Sits high in the row (founder call, 2026-08-10) — right after
+          Collect metadata. Note that pill retreats at wide widths (see
+          METADATA_PILL_HIDE_CLASS), so this is effectively the first
+          link in the desktop row there. */}
+      {PITCHING_ENABLED && scopedRelease ? (
+        <button
+          type="button"
+          onClick={() => toggleScene('pitch', scopedRelease.id)}
+          aria-pressed={activeScene === 'pitch'}
+          className={pillClass('pitch')}
+        >
+          <Radio className="h-3.5 w-3.5" aria-hidden="true" />
+          Pitch
+        </button>
+      ) : null}
+      {/* Files link: its own scene (URG-165), not a segment nested under
+          the task list — files are a peer of tasks, not a child of them.
+          Only renders when a release is scoped (assets is release-scoped,
+          see /api/releases/{id}/assets). */}
+      {FILES_ENABLED && scopedRelease ? (
+        <button
+          type="button"
+          onClick={() => toggleScene('files', scopedRelease.id)}
+          aria-pressed={activeScene === 'files'}
+          className={pillClass('files')}
+        >
+          <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
+          Files
+        </button>
+      ) : null}
+      {/* Notes for this release. Deliberately a plain LINK, not a scene
+          toggle like its neighbours: notes are a global surface that
+          happens to filter by release, not a per-release panel body — so
+          this navigates to the notes page pre-filtered rather than
+          swapping this panel's contents. (Not a regression of the
+          2026-08-05 "scenes render inline, not as pages" call: that call
+          was about the four release scenes, which stay inline.) */}
+      {NOTES_ENABLED && scopedRelease ? (
+        <Link href={`/dashboard/notes?release=${scopedRelease.id}`} className={neutralPillClass}>
+          <NotebookPen className="h-3.5 w-3.5" aria-hidden="true" />
+          Notes
+        </Link>
+      ) : null}
+      {extraActions}
+    </>
+  );
+
+  /**
+   * Calendar and Press kit — the two things you send outward, which is why
+   * they sit together (Press kit joined Calendar 2026-08-14, founder call).
+   * On desktop they stay a footer row pinned to the panel's base; on mobile
+   * they're simply the tail of the one dock.
+   */
+  const outboundPills = (
+    <>
+      {CONTENT_CALENDAR_ENABLED ? (
+        <button
+          type="button"
+          onClick={() => scopedRelease && toggleScene('calendar', scopedRelease.id)}
+          aria-pressed={activeScene === 'calendar'}
+          className={pillClass('calendar')}
+        >
+          <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+          Calendar
+          {/* Beta stamp (2026-07-23): the content calendar ships as Beta. */}
+          <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+            Beta
+          </span>
+        </button>
+      ) : null}
+      {EPK_ENABLED ? (
+        <button
+          type="button"
+          onClick={() => scopedRelease && toggleScene('epk', scopedRelease.id)}
+          aria-pressed={activeScene === 'epk'}
+          className={pillClass('epk')}
+        >
+          <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
+          Press kit
+          {/* Beta stamp, same tag as Calendar — the press kit generator
+              shipped 2026-07-31 and is still early. */}
+          <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+            Beta
+          </span>
+        </button>
+      ) : null}
+    </>
+  );
+
+  /**
+   * Hidden once a scene is open: the "Activities" pill above is already the
+   * way back, and a Calendar entry while Calendar (or any scene) is showing
+   * is redundant chrome pointed at the thing already on screen.
+   */
+  const showOutboundPills =
+    (CONTENT_CALENDAR_ENABLED || EPK_ENABLED) && Boolean(scopedRelease) && !sceneContent;
+
   return (
     // `min-w-0` here is defensive: the panel is rendered both inside the
     // desktop two-pane grid (where the grid item carries min-w-0) AND as a
@@ -292,175 +480,27 @@ export function TasksPanel({
     // (see WorkspaceDesktopFocused) — on mobile, where it's an ordinary block
     // child in normal page flow, `flex: 1 1 0%` on a non-flex-item is inert.
     <aside id={id} className="flex min-h-0 min-w-0 flex-1 flex-col scroll-mt-20">
-      {/* Sticky header (2026-08-05, founder call): pulled out of the
-          scrolling body below so two things stop happening at once. (1) The
-          native scrollbar for the body no longer runs past this row — before,
-          both lived in one overflow-y-auto box, so the scrollbar's own width
-          reflowed this right-aligned row every time it appeared/disappeared
-          (a bucket opening, a scene swapping in). (2) The row now stays
-          visible the whole time instead of scrolling away with the list —
-          on desktop it already never scrolled (this sits outside the local
-          scroll box entirely); on mobile, where the page itself scrolls,
-          `sticky` keeps it docked just below the topbar (`top-16` = the
-          topbar's `min-h-16`; AppTopbar is `sticky top-0` in the same
-          document scroll, so this docks flush beneath it). `bg-bg-base`
-          matches the page background so scrolled content doesn't show
-          through as it passes underneath.
+      {/* Desktop header row (lg+ ONLY). Below `lg` these same pills render in
+          the sticky dock at the base of this panel instead — see the dock
+          block at the very bottom of this component — so this row is simply
+          `hidden` there, rather than the sticky-at-top row it was until
+          2026-08-14 (founder call: all the pills move to the bottom on mobile,
+          stacked, and stay in view).
 
-          `lg:static` (2026-08-05 bug fix): sticky is for MOBILE ONLY. On
-          desktop this panel lives inside WorkspaceDesktopFocused, whose grid
-          is `overflow-hidden` — and overflow:hidden makes that grid the
-          nearest scrollport for sticky purposes. This row sits at the very
-          top of that box in flow, so `sticky top-16` pushed it 64px DOWN
-          into the scrolling body (tasks slid behind the pills, an empty band
-          where the row belonged). At lg+ the row never needs sticky anyway —
-          it's outside the scroll box, always visible by construction — so it
-          goes back to static flow there. The lg boundary is exact: the only
-          two mounts are WorkspaceView's mobile branch (`lg:hidden`) and
-          WorkspaceDesktopFocused (inside `hidden lg:block`).
+          It needs no sticky treatment of its own: at lg+ this panel lives
+          inside WorkspaceDesktopFocused's viewport-locked, `overflow-hidden`
+          grid, so this row sits OUTSIDE the scrolling body and is always
+          visible by construction. That same overflow:hidden is why the old
+          `sticky top-16` had to carry an `lg:static` escape hatch — it made
+          the grid the nearest scrollport and pushed the row 64px DOWN into the
+          body. With the row desktop-only, both the sticky and the escape hatch
+          are gone, and so is the hazard.
 
-          Row shape below `lg` (2026-08-10 bug fix): the outer div used to be
-          `flex-wrap justify-end` around a SINGLE non-wrapping inner child, so
-          the outer `flex-wrap` was dead weight — with up to 9 pills the inner
-          row simply overflowed, and `justify-end` pushed the overflow off the
-          LEFT edge, where `body { overflow-x: hidden }` (globals.css) cropped
-          it silently instead of letting it scroll (the "lendar" pill in the
-          founder's screenshot was "Calendar" cropped this way). The inner div
-          is now the horizontal scroller itself — the standard mobile chip-row
-          pattern (PostHog's tabs, Linear's filters): one left-anchored line,
-          nothing wraps or shrinks (see `shrink-0 whitespace-nowrap` on every
-          pill class), hidden scrollbar, first pill fully visible at rest, and
-          a later pill peeking at the edge as the scroll affordance. At `lg+`
-          this reverts to the original static, right-aligned, wrapping row —
-          desktop never had either bug (see the width-budget note two scenes
-          up), so it must render exactly as before. */}
-      <div className="sticky top-16 z-10 flex shrink-0 items-center bg-bg-base pb-3 pt-1 lg:static lg:justify-end">
-        {/* -mx/px bleed matches <main>'s own gutter at each breakpoint
-            (AppShell.tsx: px-4 sm:px-5 md:px-6, lg:px-8) so the row's first
-            pill sits flush with the page content at rest, but the negative
-            margin still lets the LAST pill scroll flush to the true screen
-            edge rather than stopping short at the content gutter — the same
-            edge-bleed trick PostHog/Material chip rows use. Dead at lg+
-            (`lg:m-0 lg:w-auto lg:p-0`), where the row was never a scroller. */}
-        <div className="no-scrollbar flex w-full items-center gap-2 overflow-x-auto -mx-4 px-4 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:m-0 lg:w-auto lg:flex-wrap lg:justify-end lg:overflow-visible lg:p-0">
-          {/* Toggles with the scene body below: "New activity" opens Quick
-              Create while the activity list is showing; once a scene (Calendar
-              / Files / Press kit) has taken this slot, the SAME
-              button position becomes "Activities" so there's always a way
-              back without hunting for the scene's own pill again. */}
-          {activeScene ? (
-            <button type="button" onClick={closeScene} className={neutralPillClass}>
-              <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
-              Activities
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() =>
-                openQuickCreate({
-                  releaseId: scopedRelease?.id || undefined,
-                  source: 'inline',
-                })
-              }
-              className={neutralPillClass}
-            >
-              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-              New activity
-            </button>
-          )}
-          {/* Plan pill, first while it exists. A release with no activities
-              has exactly one job, and this is it; once a plan is approved the
-              pill disappears, because from then on the activity list IS the
-              plan. Only shown while there is something to open (no activities
-              yet, or a draft already waiting) so it never becomes permanent
-              chrome. */}
-          {showPlanPill && scopedRelease ? (
-            <button
-              type="button"
-              onClick={() => toggleScene('plan', scopedRelease.id)}
-              aria-pressed={activeScene === 'plan'}
-              className={pillClass('plan')}
-            >
-              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-              Plan
-            </button>
-          ) : null}
-          {/* Metadata link (URG-108) — NARROW widths only as of 2026-08-12,
-              since the identity panel's "Collect metadata" nav item is now
-              this release's persistent entry point (see
-              WorkspaceIdentityPanel) and two controls for one scene is noise.
-              But that panel never renders on small viewports, so the pill has
-              to survive there: this row is the only surface present at every
-              width. See METADATA_PILL_HIDE_CLASS for exactly where it
-              retreats — it stays put entirely when the panel is flagged off. */}
-          {METADATA_ENABLED && scopedRelease ? (
-            <button
-              type="button"
-              onClick={() => toggleScene('metadata', scopedRelease.id)}
-              aria-pressed={activeScene === 'metadata'}
-              className={`${pillClass('metadata')} ${METADATA_PILL_HIDE_CLASS}`}
-            >
-              <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
-              Collect metadata
-            </button>
-          ) : null}
-          {/* Playlist pitching: browse curator playlists and send this
-              release's song, with each curator's answer shown beside it.
-              Sits high in the row (founder call, 2026-08-10) — right after
-              Collect metadata. Note that pill retreats at wide widths (see
-              METADATA_PILL_HIDE_CLASS), so this is effectively the first
-              link in the row there. */}
-          {PITCHING_ENABLED && scopedRelease ? (
-            <button
-              type="button"
-              onClick={() => toggleScene('pitch', scopedRelease.id)}
-              aria-pressed={activeScene === 'pitch'}
-              className={pillClass('pitch')}
-            >
-              <Radio className="h-3.5 w-3.5" aria-hidden="true" />
-              Pitch
-            </button>
-          ) : null}
-          {/* Calendar is NOT a header pill (as of 2026-08-13, founder
-              correction via screenshot) — it opens from a sticky pill below
-              the activity list instead. See the sticky Calendar block further
-              down, right after the activity buckets. */}
-          {/* Files link: its own page (URG-165), not a segment nested under
-              the task list — files are a peer of tasks, not a child of them.
-              Only renders when a release is scoped (assets is release-scoped,
-              see /api/releases/{id}/assets). */}
-          {FILES_ENABLED && scopedRelease ? (
-            <button
-              type="button"
-              onClick={() => toggleScene('files', scopedRelease.id)}
-              aria-pressed={activeScene === 'files'}
-              className={pillClass('files')}
-            >
-              <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
-              Files
-            </button>
-          ) : null}
-          {/* Press kit is NOT a header pill (as of 2026-08-14, founder call) —
-              it sits beside Calendar in the panel footer instead. See the
-              footer block further down, after the activity buckets. */}
-          {/* Notes for this release. Deliberately a plain LINK, not a scene
-              toggle like its neighbours: notes are a global surface that
-              happens to filter by release, not a per-release panel body — so
-              this navigates to the notes page pre-filtered rather than
-              swapping this panel's contents. (Not a regression of the
-              2026-08-05 "scenes render inline, not as pages" call: that call
-              was about the four release scenes, which stay inline.) */}
-          {NOTES_ENABLED && scopedRelease ? (
-            <Link
-              href={`/dashboard/notes?release=${scopedRelease.id}`}
-              className={neutralPillClass}
-            >
-              <NotebookPen className="h-3.5 w-3.5" aria-hidden="true" />
-              Notes
-            </Link>
-          ) : null}
-          {extraActions}
-        </div>
+          Right-aligned and wrapping, exactly as it has rendered at lg+ since
+          2026-08-05 — desktop never had the mobile row's overflow bugs, so
+          nothing about its appearance changes here. */}
+      <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex">
+        {primaryPills}
       </div>
 
       {/* Scrollable body — desktop-only internal scroll box (`lg:` prefix).
@@ -484,8 +524,9 @@ export function TasksPanel({
           page.
 
           A release scene takes this slot when one is open, otherwise the
-          activity buckets do; the header row above stays put either way, so
-          the scene switcher never disappears (founder call, 2026-08-05). */}
+          activity buckets do; the pills stay put either way — the desktop
+          header row above, the mobile dock below — so the scene switcher never
+          disappears (founder call, 2026-08-05). */}
       <div className="min-h-0 flex-1 pb-4 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
       {sceneContent ? (
         sceneContent
@@ -605,74 +646,69 @@ export function TasksPanel({
       )}
       </div>
 
-      {/* Panel footer pills — Calendar, then Press kit beside it (the latter
-          joined 2026-08-14, founder call, moving out of the header row where
-          it had sat since URG-198).
+      {/* Desktop footer row (lg+ ONLY) — Calendar, then Press kit beside it
+          (the latter joined 2026-08-14, founder call, moving out of the header
+          row where it had sat since URG-198).
 
-          Calendar footer pill (founder call, 2026-08-13 — third placement,
-          corrected twice via screenshot: not the identity card's nav list,
-          not the card's footer, and not floating just under the collapsed
-          buckets either. The final arrow pointed at the BASE of the
-          activities column, so this is a footer of the PANEL, not an item in
-          the list: a sibling AFTER the flex-1 scroll body, which pins it to
-          the bottom of the panel on desktop (where the aside fills the
-          viewport-locked column) whether or not the task list overflows —
-          the list scrolls behind it, this row never moves.
-          Below `lg` the aside is ordinary page flow with no bounded height,
-          so "the panel's base" and "after the list" are the same place — it
-          renders under the activities, and the fixed MobileNavBar keeps
-          owning the viewport's bottom edge (no offset war; this row is in
-          flow, not fixed).
-          Hidden once a scene is open (`!sceneContent`): the header's
-          "Activities" pill is already the way back, and a Calendar entry
-          while Calendar (or any scene) is showing is redundant chrome. The
-          same reasoning covers Press kit, so both share the `!sceneContent`
-          gate on the wrapper below and keep their own flag checks inside —
-          the row renders when EITHER is enabled, never as an empty strip.
+          Calendar arrived here 2026-08-13 (founder call, third placement,
+          corrected twice via screenshot: not the identity card's nav list, not
+          the card's footer, and not floating just under the collapsed buckets
+          either). The final arrow pointed at the BASE of the activities
+          column, so this is a footer of the PANEL, not an item in the list: a
+          sibling AFTER the flex-1 scroll body, which pins it to the bottom of
+          the panel whether or not the task list overflows — the list scrolls
+          behind it, this row never moves.
 
-          The wrapper scrolls horizontally rather than wrapping (the same
-          treatment the header pill row uses below `lg`): each pill is
-          `shrink-0 whitespace-nowrap` via pillClass, so a narrow phone would
-          otherwise be forced onto a second line, and a footer that silently
-          grew taller would push the activities list up. Measured 2026-08-14:
-          the two tagged pills come to 275px against the 343px a 375px phone
-          offers (viewport minus AppShell's `px-4`), so they fit today and a
-          third would scroll rather than reflow. */}
-      {(CONTENT_CALENDAR_ENABLED || EPK_ENABLED) && scopedRelease && !sceneContent ? (
-        <div className="no-scrollbar flex shrink-0 items-center gap-2 overflow-x-auto pb-4 pt-3 lg:overflow-visible lg:pb-2">
-          {CONTENT_CALENDAR_ENABLED ? (
-            <button
-              type="button"
-              onClick={() => toggleScene('calendar', scopedRelease.id)}
-              aria-pressed={activeScene === 'calendar'}
-              className={pillClass('calendar')}
-            >
-              <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-              Calendar
-              {/* Beta stamp (2026-07-23): the content calendar ships as Beta. */}
-              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-                Beta
-              </span>
-            </button>
-          ) : null}
-          {EPK_ENABLED ? (
-            <button
-              type="button"
-              onClick={() => toggleScene('epk', scopedRelease.id)}
-              aria-pressed={activeScene === 'epk'}
-              className={pillClass('epk')}
-            >
-              <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
-              Press kit
-              {/* Beta stamp, same tag as Calendar — the press kit generator
-                  shipped 2026-07-31 and is still early. */}
-              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-                Beta
-              </span>
-            </button>
-          ) : null}
+          Below `lg` these two pills are no longer a row of their own; they are
+          the tail of the single dock further down (2026-08-14). That is why
+          this is `hidden lg:flex` and no longer carries the horizontal-scroller
+          treatment it needed on a phone: at lg+ the two tagged pills have never
+          come close to running out of room. */}
+      {showOutboundPills ? (
+        <div className="hidden shrink-0 items-center gap-2 pb-2 pt-3 lg:flex">
+          {outboundPills}
         </div>
       ) : null}
+
+      {/* Mobile pill dock (below `lg` ONLY) — founder call, 2026-08-14: "move
+          all the button pills to the bottom on mobile stacked on top each
+          other and all sticky". One block holds EVERY pill this panel owns
+          (the header row's and the footer row's alike, in that order), wrapping
+          onto as many rows as it needs, docked to the bottom of the screen
+          while the activity list scrolls behind it.
+
+          Why wrap rather than the horizontal scroller both rows used before:
+          scrolling hid pills off-screen — the failure mode that produced the
+          cropped "lendar" pill in the 2026-08-10 screenshot — and a bottom dock
+          is a destination, not a strip you drag. Wrapping keeps every entry
+          point visible at once, which is the whole point of collecting them
+          here. Pills stay `shrink-0 whitespace-nowrap` (see `pillClass`), so
+          they break BETWEEN pills and never inside a label.
+
+          `sticky` (not `fixed`): the dock is the last child in flow, so when
+          the page is scrolled to the very bottom it settles at its natural
+          place after the list rather than covering it. Nothing is ever
+          permanently hidden behind it, and no spacer padding is needed to
+          compensate — which a fixed bar would have required. On a short list
+          that fits the screen the dock simply sits under it, unstuck; that is
+          the standard sticky-footer trade and it reads fine.
+
+          The bottom offset clears whichever fixed surface already owns the
+          screen's edge (MobileNavBar, or the floating UrgAns/support
+          launcher) — see TASKS_PILL_DOCK_OFFSET_CLASS and the two rules in
+          globals.css. `z-20` puts it above the scrolling list but below the
+          nav bar (`z-30`) and every modal.
+
+          The -mx/px bleed matches <main>'s own gutter at each breakpoint
+          (AppShell.tsx: px-4 sm:px-5 md:px-6) so the dock's background reaches
+          the true screen edges while its pills stay aligned with the content
+          above — a docked toolbar, not a floating card. */}
+      <div
+        className={`sticky z-20 -mx-4 flex flex-wrap items-center gap-2 border-t border-stroke-subtle bg-bg-base px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
+      >
+        {primaryPills}
+        {showOutboundPills ? outboundPills : null}
+      </div>
     </aside>
   );
 }
