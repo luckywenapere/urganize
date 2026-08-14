@@ -41,6 +41,17 @@ const EXCLUDED_TOOL_NAMES: ReadonlySet<ChappiToolName> = new Set<ChappiToolName>
   'generate_release_plan',
   'approve_release_plan',
   'discard_release_plan',
+  // Distribution metadata
+  'get_release_metadata',
+  'update_release_metadata',
+  // Content calendar
+  'list_content_calendars',
+  'create_content_calendar',
+  'delete_content_calendar',
+  'list_content_posts',
+  'create_content_post',
+  'update_content_post',
+  'delete_content_post',
 ]);
 
 export const MCP_TOOLS: ChappiTool[] = CHAPPI_TOOLS.filter(

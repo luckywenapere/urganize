@@ -14,6 +14,8 @@ What you can reach:
 - Activities (tasks): list_tasks, create_task, update_task (including assigning), complete_task, reopen_task, delete_task, add_task_comment.
 - Notes: list_notes, create_note, update_note (edit, pin, link to a release), delete_note.
 - Rollout plans: get_release_plan, generate_release_plan, approve_release_plan, discard_release_plan.
+- Distribution details: get_release_metadata, update_release_metadata (ISRC, UPC, genre, language, label, (P)/(C) lines).
+- Content calendars: list_content_calendars, create_content_calendar, delete_content_calendar, list_content_posts, create_content_post, update_content_post, delete_content_post. Planning only — nothing here posts anything anywhere.
 - Team: list_workspace_members.
 - Other: get_dashboard, generate_status_update, navigate.
 

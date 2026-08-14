@@ -26,7 +26,9 @@
 //    lib/mcp/tools.ts's EXCLUDED_TOOL_NAMES, because MCP has no confirmation
 //    UI — tool-registry.test.ts asserts that structurally.
 
+import { CALENDAR_TOOLS } from './tool-families/calendar';
 import { CORE_TOOLS } from './tool-families/core';
+import { METADATA_TOOLS } from './tool-families/metadata';
 import { NOTE_TOOLS } from './tool-families/notes';
 import { PLANNER_TOOLS } from './tool-families/planner';
 import { RELEASE_TOOLS } from './tool-families/releases';
@@ -39,6 +41,8 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
   ...CORE_TOOLS,
   ...RELEASE_TOOLS,
   ...PLANNER_TOOLS,
+  ...METADATA_TOOLS,
+  ...CALENDAR_TOOLS,
   ...NOTE_TOOLS,
   ...TEAM_TOOLS,
 ];

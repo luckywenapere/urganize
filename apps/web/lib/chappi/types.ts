@@ -115,7 +115,18 @@ export type ChappiToolName =
   | 'get_release_plan'
   | 'generate_release_plan'
   | 'approve_release_plan'
-  | 'discard_release_plan';
+  | 'discard_release_plan'
+  // distribution metadata
+  | 'get_release_metadata'
+  | 'update_release_metadata'
+  // content calendar
+  | 'list_content_calendars'
+  | 'create_content_calendar'
+  | 'delete_content_calendar'
+  | 'list_content_posts'
+  | 'create_content_post'
+  | 'update_content_post'
+  | 'delete_content_post';
 
 /**
  * A side effect the CLIENT must perform after the agent turn — the agent runs
