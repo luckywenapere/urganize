@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.52.0",
+    date: "August 14, 2026",
+    highlights: [
+      "Settings now tells you what you are paying for. Billing sits at the top of the Account tab and says whether you are on a trial or a plan, how much of it is left, and the date it runs to. Paying used to finish on a screen with a Billing button that led to a page with no billing on it anywhere.",
+      "From there you can go straight to the plans to start, change or renew. If you are on a Label plan it puts you in touch with us instead, since those are arranged with you directly.",
+    ],
+  },
+  {
     version: "0.51.3",
     date: "August 14, 2026",
     highlights: [
