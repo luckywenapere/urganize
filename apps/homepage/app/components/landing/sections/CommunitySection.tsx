@@ -15,6 +15,19 @@ import { SectionShell } from "../SectionShell";
 // call, 2026-07-31): the platform is discovered on tap, not led with, and
 // the count is dropped rather than kept stale. Body copy avoids em dashes,
 // per house style.
+//
+// data-nosnippet on the heading and body (2026-08-14): Google was pulling
+// THIS paragraph as the search snippet for the query "urganize", so the
+// first thing a searcher read was "A group chat for artist managers... No
+// pitch and no spam", describing the community instead of the product. That
+// is the correct pitch for this section and the wrong pitch for the whole
+// company. data-nosnippet is Google's documented opt-out for a text range:
+// the copy still renders and still ranks the page, it just can't be quoted
+// in a result. Keep it on both elements — the attribute does not inherit
+// across the sibling boundary the way a wrapper would, and the heading is
+// snippet-eligible on its own. The paired half of this fix is the
+// full-length LANDING_DESCRIPTION in lib/seo.ts; removing either one lets
+// the group-chat snippet come back.
 export function CommunitySection() {
   return (
     <ScrollReveal>
@@ -30,11 +43,17 @@ export function CommunitySection() {
           {/* Deliberately smaller than the section-h2 scale (2026-08-13
               tone-down): this is the fallback offer after the final CTA,
               not a headline act competing with it. */}
-          <h2 className="text-balance text-[1.5rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[var(--marketing-text)] sm:text-[1.75rem]">
+          <h2
+            data-nosnippet
+            className="text-balance text-[1.5rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[var(--marketing-text)] sm:text-[1.75rem]"
+          >
             See how other managers run their releases.
           </h2>
 
-          <p className="mx-auto mt-6 max-w-[38rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
+          <p
+            data-nosnippet
+            className="mx-auto mt-6 max-w-[38rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]"
+          >
             A group chat for artist managers and small label teams running
             releases. No pitch and no spam. Just managers comparing notes on
             real rollouts.

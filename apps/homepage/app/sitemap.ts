@@ -52,11 +52,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
-    {
-      url: `${SITE_URL}/press`,
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
+    // /press was listed here until 2026-08-14 and should not come back: the
+    // route is a 308 redirect to /brand (the press kit was folded in), and
+    // /brand is one of the noindexed pages below. So the entry asked crawlers
+    // to index a URL that resolves to a page telling them not to — the exact
+    // contradiction the comment below warns about, arriving by redirect
+    // instead of directly.
+    //
     // Deliberately absent, and it must stay that way: /privacy, /team,
     // /community, /brand, /changelog, /terms and /subprocessors all emit
     // `noindex` (see lib/seo.ts) so the homepage's sitelinks stay commercial.

@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { MarketingFooter } from "./components/marketing/MarketingFooter";
 import { MarketingHeader } from "./components/marketing/MarketingHeader";
-import { buildPageMetadata } from "@/lib/seo";
+import {
+  buildPageMetadata,
+  LANDING_DESCRIPTION,
+  LANDING_TITLE,
+} from "@/lib/seo";
 import {
   CommunitySection,
   FinalCTASection,
@@ -14,12 +18,13 @@ import {
 
 // This title/description render verbatim (the home page sits at the same
 // route segment as the root layout, so layout.tsx's "%s | Urganize"
-// template does not apply here — write the full string, not just the page
-// name). metadataBase/keywords/robots are inherited from the root layout.
+// template does not apply here — the constant is the full string, not just
+// the page name). metadataBase/keywords/robots are inherited from the root
+// layout. Both strings come from lib/seo.ts so this page and the layout's
+// JSON-LD schemas cannot describe the product differently.
 export const metadata: Metadata = buildPageMetadata({
-  title: "Urganize | Music Release Management for Teams",
-  description:
-    "How labels and artist managers run releases with their team, so nothing slips through WhatsApp and notes.",
+  title: LANDING_TITLE,
+  description: LANDING_DESCRIPTION,
   path: "/",
 });
 
