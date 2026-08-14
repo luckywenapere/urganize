@@ -17,7 +17,7 @@ import {
   captureFeatureDiscoveryByName,
   createPostHogEvent,
 } from '@/lib/analytics';
-import { getTemplate, getTemplateLeadTimeDays } from '@/lib/release-templates/loader';
+import { getTemplateStats } from '@/lib/release-templates/loader';
 import { suggestReleaseDate, type ReleasePlanIntake } from '@/lib/release-planning';
 import {
   EMPTY_PLANNER_INTAKE_DRAFT,
@@ -48,8 +48,14 @@ import { INTAKE_STEPS, StepBody, TOTAL_STEPS, type StepIndex } from './intake-st
  * for twenty-five seconds.
  */
 
-const ACTIVE_TEMPLATE = getTemplate('single');
-const LEAD_TIME_DAYS = getTemplateLeadTimeDays(ACTIVE_TEMPLATE);
+/** Lead time of the playbook this intake's release type will actually use.
+ * Release type is question 1 and the date question comes later, so by the time
+ * the suggestion is shown the answer is known. Falls back to the single
+ * playbook's runway for a type whose playbook is switched off — which is also
+ * the plan that would be generated. */
+function leadTimeDaysFor(releaseType: PlannerIntakeDraft['releaseType']): number {
+  return getTemplateStats(releaseType || 'single').leadWeeks * 7;
+}
 
 type View = 'steps' | 'starting' | 'error';
 
@@ -164,9 +170,11 @@ export function PlannerIntakeModal() {
     setDraft((current) => ({ ...current, ...changes }));
   }, []);
 
+  const leadTimeDays = useMemo(() => leadTimeDaysFor(draft.releaseType), [draft.releaseType]);
+
   const suggestedDate = useMemo(
-    () => suggestReleaseDate(todayYmd(), draft.readyToday, LEAD_TIME_DAYS),
-    [draft.readyToday]
+    () => suggestReleaseDate(todayYmd(), draft.readyToday, leadTimeDays),
+    [draft.readyToday, leadTimeDays]
   );
 
   const canAdvance = useMemo(() => {
@@ -393,7 +401,7 @@ export function PlannerIntakeModal() {
               disabled={isBusy}
               knownArtistName={knownArtistName}
               suggestedDate={suggestedDate}
-              leadTimeDays={LEAD_TIME_DAYS}
+              leadTimeDays={leadTimeDays}
               fromNote={intakePayload.source === 'note'}
             />
           </div>

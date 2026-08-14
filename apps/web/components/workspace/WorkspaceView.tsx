@@ -363,7 +363,13 @@ export function WorkspaceView() {
   // wider shape structurally.
   const scopedReleaseSlim = useMemo<Pick<
     Release,
-    'id' | 'title' | 'artistName' | 'releaseDate' | 'templatePending' | 'status'
+    | 'id'
+    | 'title'
+    | 'artistName'
+    | 'releaseType'
+    | 'releaseDate'
+    | 'templatePending'
+    | 'status'
   > | null>(() => {
     if (!scopedReleaseId) return null;
     const found = releases.find((r) => r.id === scopedReleaseId);
@@ -372,6 +378,10 @@ export function WorkspaceView() {
       id: found.id,
       title: found.title,
       artistName: found.artistName,
+      // Feeds the per-playbook runway copy in SetReleaseDateCard and
+      // NewReleaseGuide, which would otherwise quote single's 8 weeks at an
+      // album's 17.
+      releaseType: found.releaseType,
       releaseDate: found.releaseDate,
       templatePending: found.templatePending,
       status: found.status,
@@ -557,6 +567,7 @@ export function WorkspaceView() {
         releaseId={scopedReleaseSlim.id}
         releaseTitle={scopedReleaseSlim.title}
         templatePending={scopedReleaseSlim.templatePending}
+        releaseType={scopedReleaseSlim.releaseType}
         onSaved={(message) => setToast({ message, tone: 'success' })}
         onAddActivity={() =>
           openQuickCreate({ releaseId: scopedReleaseSlim.id, source: 'inline' })
@@ -579,7 +590,10 @@ export function WorkspaceView() {
   // two banners over one empty list.
   const newReleaseGuideBanner =
     showNewReleaseGuide && !setReleaseDateBanner && !planBanner ? (
-      <NewReleaseGuide onDismiss={() => setShowNewReleaseGuide(false)} />
+      <NewReleaseGuide
+        onDismiss={() => setShowNewReleaseGuide(false)}
+        releaseType={scopedReleaseSlim?.releaseType}
+      />
     ) : null;
 
   const handleSelect = (releaseId: string) => {

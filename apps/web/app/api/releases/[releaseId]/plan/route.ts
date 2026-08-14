@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   PLAN_DRAFTS_TABLE,
   createAdminClient,
-  getPlannerTemplate,
+  getDraftTemplate,
   isReleasePlannerEnabled,
   loadOwnedRelease,
   loadPlanDraft,
@@ -96,7 +96,15 @@ export async function PUT(
     return NextResponse.json({ error: 'A JSON body with a doc is required.' }, { status: 400 });
   }
 
-  const template = getPlannerTemplate();
+  // Flag-BLIND, and read from the doc the client is saving rather than from the
+  // release row: the template is only here to supply the set of legitimate
+  // template task ids. An EP draft generated while the EP flag was on carries
+  // ep_v0.1 ids, and if the flag is rolled back mid-draft a flag-aware lookup
+  // would fall back to the single playbook, call every one of those ids forged,
+  // and 400 every autosave — losing the manager's edits.
+  const template = getDraftTemplate(
+    (body.doc as { release_type?: unknown } | null)?.release_type as string | null
+  );
   const parsed = parseDraftDoc(body.doc, {
     knownTemplateTaskIds: new Set(template.tasks.map((task) => task.id)),
   });

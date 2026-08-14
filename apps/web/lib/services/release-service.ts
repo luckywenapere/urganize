@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { normalizePipelineState } from '@/lib/release-execution';
-import { DEFAULT_RELEASE_TITLE, type ReleaseStatus } from '@/types/releases';
+import { DEFAULT_RELEASE_TITLE, isDbReleaseType, type ReleaseStatus } from '@/types/releases';
 import { loadCoverArtUrlMap, type ReleaseCoverInput } from '@/lib/cover-art';
 import { loadWorkspaceLogoFallbackUrl } from '@/lib/workspace-logo';
 import { readTemplatePending } from '@/lib/release-template-pending';
@@ -26,7 +26,7 @@ export class ReleaseService {
     const { data, error } = await this.adminClient
       .from('releases')
       .select(
-        'id,owner_user_id,title,artist_id,artist_name,release_date,description,status,state,readiness_score,metadata,artwork_asset_id,created_at,updated_at'
+        'id,owner_user_id,title,artist_id,artist_name,release_type,release_date,description,status,state,readiness_score,metadata,artwork_asset_id,created_at,updated_at'
       )
       .in('owner_user_id', ownerIds)
       .order('release_date', { ascending: true, nullsFirst: false });
@@ -74,6 +74,11 @@ export class ReleaseService {
         title: String(row.title || DEFAULT_RELEASE_TITLE),
         artistId: String(row.artist_id || ''),
         artistName: String(row.artist_name || 'Unknown artist'),
+        // Which playbook this release is planned from. Drives the per-type
+        // activity-count and runway copy in SetReleaseDateCard and
+        // NewReleaseGuide, which would otherwise quote the single template's
+        // numbers at an EP.
+        releaseType: isDbReleaseType(row.release_type) ? row.release_type : 'single',
         releaseDate: row.release_date ? String(row.release_date) : null,
         description: row.description ? String(row.description) : null,
         templatePending: readTemplatePending(row.metadata as Record<string, unknown> | null),

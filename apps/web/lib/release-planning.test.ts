@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { ALBUM_RELEASE_TEMPLATE } from './release-templates/album';
+import { EP_RELEASE_TEMPLATE } from './release-templates/ep';
 import { SINGLE_RELEASE_TEMPLATE } from './release-templates/single';
 import { getTemplateLeadTimeDays } from './release-templates/loader';
 import {
@@ -142,20 +144,27 @@ describe('derivePlanPhase', () => {
     expect(derivePlanPhase(offset)).toBe(phase);
   });
 
-  it('splits the single playbook into four phases that add up', () => {
+  // Every authored playbook, not just single: the planner drafts EP and album
+  // plans from their own templates, so each one has to split into four
+  // non-empty phases or the review scene renders an empty section for it.
+  it.each([
+    ['single', SINGLE_RELEASE_TEMPLATE],
+    ['ep', EP_RELEASE_TEMPLATE],
+    ['album', ALBUM_RELEASE_TEMPLATE],
+  ])('splits the %s playbook into four phases that add up', (_name, template) => {
     const counts: Record<PlanPhase, number> = {
       setup: 0,
       pre_release: 0,
       release_week: 0,
       post_release: 0,
     };
-    for (const task of SINGLE_RELEASE_TEMPLATE.tasks) {
+    for (const task of template.tasks) {
       counts[derivePlanPhase(task.offset_days)] += 1;
     }
 
     const total =
       counts.setup + counts.pre_release + counts.release_week + counts.post_release;
-    expect(total).toBe(SINGLE_RELEASE_TEMPLATE.tasks.length);
+    expect(total).toBe(template.tasks.length);
     // Every phase must have work in it, or the review scene renders an empty
     // section and the grouping is telling the manager nothing.
     for (const phase of Object.keys(counts) as PlanPhase[]) {
@@ -627,15 +636,60 @@ describe('buildPlannerMessages', () => {
     expect(user.content).toContain(OWNER);
   });
 
-  it('tells the model when an EP is being planned from the single playbook', () => {
+  // The guidance line has to describe the playbook the draft ACTUALLY came
+  // from. Telling the model to "stretch the asset work to cover more tracks"
+  // when it is already looking at the EP playbook would make it duplicate work
+  // that is in front of it; claiming the EP playbook when the flag is off would
+  // be a lie about the plan the manager is editing.
+  it('tells the model when an EP fell back to the single playbook', () => {
     const messages = buildPlannerMessages({
       release: { title: 'Nights', artistName: 'Tola', releaseDate: '2026-10-02' },
       intake: { ...baseIntake, release_type: 'ep' },
       tasks: [],
       members: [],
       todayYmd: '2026-08-10',
+      fallbackToSingle: true,
     });
     expect(messages[1].content).toContain('EP planned from the single playbook');
+  });
+
+  it('does not claim a single-playbook origin when the EP playbook was used', () => {
+    const messages = buildPlannerMessages({
+      release: { title: 'Nights', artistName: 'Tola', releaseDate: '2026-10-02' },
+      intake: { ...baseIntake, release_type: 'ep' },
+      tasks: [],
+      members: [],
+      todayYmd: '2026-08-10',
+      fallbackToSingle: false,
+    });
+    expect(messages[1].content).not.toContain('from the single playbook');
+    expect(messages[1].content).toContain('EP playbook');
+    expect(messages[1].content).toContain('lead single drop');
+  });
+
+  it('names both staggered singles for an album on its own playbook', () => {
+    const messages = buildPlannerMessages({
+      release: { title: 'Long Way', artistName: 'Tola', releaseDate: '2026-10-02' },
+      intake: { ...baseIntake, release_type: 'album' },
+      tasks: [],
+      members: [],
+      todayYmd: '2026-08-10',
+      fallbackToSingle: false,
+    });
+    expect(messages[1].content).toContain('album playbook');
+    expect(messages[1].content).toContain('staggered single drops');
+  });
+
+  it('never adds a format line for a single', () => {
+    const messages = buildPlannerMessages({
+      release: { title: 'Free', artistName: 'Tola', releaseDate: '2026-10-02' },
+      intake: baseIntake,
+      tasks: [],
+      members: [],
+      todayYmd: '2026-08-10',
+    });
+    expect(messages[1].content).not.toContain('playbook,');
+    expect(messages[1].content).not.toContain('from the single playbook');
   });
 
   it('scopes the prompt when regenerating one phase', () => {

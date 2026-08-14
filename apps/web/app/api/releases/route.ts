@@ -14,7 +14,7 @@ import {
 } from './_shared';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
 import { type ReleaseOption } from '@/lib/release-helpers';
-import { DEFAULT_RELEASE_TITLE } from '@/types/releases';
+import { DEFAULT_RELEASE_TITLE, isDbReleaseType, type DbReleaseType } from '@/types/releases';
 import { writeTemplatePending } from '@/lib/release-template-pending';
 import { writePlannerPending } from '@/lib/release-planner-pending';
 import { isReleasePlannerEnabled } from '@/lib/release-planning';
@@ -319,7 +319,23 @@ export async function POST(request: NextRequest) {
     const title = sanitizeTextField(trimString(body?.title), 140) || DEFAULT_RELEASE_TITLE;
     const releaseDateInput = trimString(body?.releaseDate);
     const description = sanitizeTextField(trimString(body?.description), 400);
-    const releaseType = trimString(body?.releaseType) || 'single';
+    // Validated against the DB enum, which is the difference between a clear
+    // 400 and the generic 500 an unknown value used to produce at the Postgres
+    // boundary. Deliberately NOT gated on whether that type's playbook is
+    // switched on: the planner intake offers EP and album regardless (it falls
+    // back to the single playbook), and 400ing that live flow would be a
+    // regression. Template availability is the loader's call, further down.
+    const releaseTypeInput = trimString(body?.releaseType);
+    let releaseType: DbReleaseType = 'single';
+    if (releaseTypeInput) {
+      if (!isDbReleaseType(releaseTypeInput)) {
+        return NextResponse.json(
+          { error: "Release type must be 'single', 'ep', or 'album'." },
+          { status: 400 }
+        );
+      }
+      releaseType = releaseTypeInput;
+    }
     const coverArtUrl = trimString(body?.coverArtUrl);
     const releaseSource = normalizeReleaseCreatedSource(body?.source);
     const releasePlan = trimString(body?.plan) === 'blank' ? 'blank' : 'template';
@@ -676,6 +692,10 @@ export async function POST(request: NextRequest) {
         title: String(releaseResult.data.title || title),
         artistId: artistIdToUse || '',
         artistName: String(releaseResult.data.artist_name || artistName),
+        // Echoed so an optimistic client row agrees with the stored row about
+        // which playbook this release follows — the per-type activity-count and
+        // runway copy reads it.
+        releaseType,
         releaseDate: releaseResult.data.release_date ? String(releaseResult.data.release_date) : null,
         // New releases have no artwork yet, so the workspace logo (when set)
         // stands in immediately — same fallback the list endpoints apply.

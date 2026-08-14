@@ -5,17 +5,8 @@ import { CalendarPlus, Loader2 } from 'lucide-react';
 import { Button } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
-import {
-  getTemplate,
-  getTemplateLeadTimeDays,
-  getTemplateSpanDays,
-} from '@/lib/release-templates/loader';
-import { DEFAULT_RELEASE_TITLE } from '@/types/releases';
-
-const TEMPLATE = getTemplate('single');
-const ACTIVITY_COUNT = TEMPLATE.tasks.length;
-const SPAN_WEEKS = Math.round(getTemplateSpanDays(TEMPLATE) / 7);
-const LEAD_WEEKS = Math.round(getTemplateLeadTimeDays(TEMPLATE) / 7);
+import { getTemplateStats } from '@/lib/release-templates/loader';
+import { DEFAULT_RELEASE_TITLE, type DbReleaseType } from '@/types/releases';
 
 function formatYmdLocal(date: Date): string {
   const year = date.getFullYear();
@@ -39,6 +30,10 @@ type SetReleaseDateCardProps = {
    * plan-waiting gets the full explainer, everything else gets one compact
    * row. */
   templatePending: boolean;
+  /** Which playbook this release follows, so the explainer quotes that
+   * playbook's real numbers. An EP plans 13 weeks of runway where a single
+   * plans 8, and this card is the screen for a plan-waiting release. */
+  releaseType?: DbReleaseType;
   onSaved: (message: string) => void;
   /** Opens the activity quick-create for this release. Only used by the
    * plan-waiting variant, where the card fills an empty view and would
@@ -72,9 +67,16 @@ export function SetReleaseDateCard({
   releaseId,
   releaseTitle,
   templatePending,
+  releaseType = 'single',
   onSaved,
   onAddActivity,
 }: SetReleaseDateCardProps) {
+  // Never throws, and falls back to the single playbook's numbers for a type
+  // whose playbook is switched off — which is also what would be instantiated.
+  const { activityCount, spanWeeks, leadWeeks } = useMemo(
+    () => getTemplateStats(releaseType),
+    [releaseType]
+  );
   const [releaseDate, setReleaseDate] = useState('');
   const [title, setTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -204,8 +206,8 @@ export function SetReleaseDateCard({
             Set your release date
           </h3>
           <p className="mt-1.5 text-sm leading-6 text-content-secondary">
-            Your rollout plan is ready to build — {ACTIVITY_COUNT} activities across ~
-            {SPAN_WEEKS} weeks, starting {LEAD_WEEKS} weeks before release day. Every one of
+            Your rollout plan is ready to build — {activityCount} activities across ~
+            {spanWeeks} weeks, starting {leadWeeks} weeks before release day. Every one of
             them is dated from your release date, so pick it and the whole plan appears.
           </p>
         </div>

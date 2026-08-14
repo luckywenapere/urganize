@@ -1,18 +1,15 @@
 'use client';
 
 import { Sparkles, X } from 'lucide-react';
-import {
-  getTemplate,
-  getTemplateLeadTimeDays,
-  getTemplateSpanDays,
-} from '@/lib/release-templates/loader';
-
-const TEMPLATE = getTemplate('single');
-const LEAD_WEEKS = Math.round(getTemplateLeadTimeDays(TEMPLATE) / 7);
-const SPAN_WEEKS = Math.round(getTemplateSpanDays(TEMPLATE) / 7);
+import { getTemplateStats } from '@/lib/release-templates/loader';
+import type { DbReleaseType } from '@/types/releases';
 
 type NewReleaseGuideProps = {
   onDismiss: () => void;
+  /** Which playbook the new release follows, so the runway numbers are that
+   * playbook's own. Defaults to single, which every release was before the
+   * type picker existed. */
+  releaseType?: DbReleaseType;
 };
 
 /**
@@ -26,7 +23,8 @@ type NewReleaseGuideProps = {
  *
  * No "assets" mention — file storage is flagged off (URG-182).
  */
-export function NewReleaseGuide({ onDismiss }: NewReleaseGuideProps) {
+export function NewReleaseGuide({ onDismiss, releaseType = 'single' }: NewReleaseGuideProps) {
+  const { spanWeeks, leadWeeks } = getTemplateStats(releaseType);
   return (
     <div
       role="status"
@@ -36,7 +34,7 @@ export function NewReleaseGuide({ onDismiss }: NewReleaseGuideProps) {
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-content-primary">Your release is set up</p>
         <p className="mt-1 text-sm leading-6 text-content-secondary">
-          This rollout plans ~{SPAN_WEEKS} weeks of work, starting {LEAD_WEEKS} weeks before
+          This rollout plans ~{spanWeeks} weeks of work, starting {leadWeeks} weeks before
           release. It&apos;s a starting point — edit any activity, add your own, or reassign
           them to your team. Invite artists, freelancers and team members any time from Settings.
         </p>
