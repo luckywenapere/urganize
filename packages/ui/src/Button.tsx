@@ -55,8 +55,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             'border border-transparent bg-transparent text-content-secondary hover:bg-white/[0.04] hover:text-content-primary':
               variant === 'ghost',
             
-            // Danger
-            'border border-status-error/20 bg-status-error/12 text-status-error hover:-translate-y-[1px] hover:bg-status-error/18':
+            // Danger — opacity steps must exist in Tailwind's scale (…/10, /15,
+            // /20, /25…). This was /12 and /18, which generate no rule at all,
+            // so the fill was silently transparent and the button rendered
+            // outline-only. Bare off-scale steps fail without any build error.
+            'border border-status-error/20 bg-status-error/10 text-status-error hover:-translate-y-[1px] hover:bg-status-error/20':
               variant === 'danger',
           },
           
