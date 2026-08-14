@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.54.1",
+    date: "August 14, 2026",
+    highlights: [
+      "Amber warning notices are much easier to read in the light theme. The amber was too pale against the cream background to read comfortably even on its own, so the notices that tell you a release has no date yet, or that an invite is about to expire, were harder to read than the ordinary text around them.",
+    ],
+  },
+  {
     version: "0.54.0",
     date: "August 14, 2026",
     highlights: [

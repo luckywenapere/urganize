@@ -210,7 +210,23 @@ html[data-theme='light'] {
   --color-stroke: 26 22 17;
 
   --color-status-success: 20 100 58;
-  --color-status-warning: 178 105 12;
+  /* Deepened from #b2690c (2026-08-14), the same fix as --color-status-error
+     below and for the same reason: warning is also used as both a label and a
+     same-hue tint behind that label (bg-status-warning/10 or /15 with
+     text-status-warning, 16 label usages across 13 surfaces). At #b2690c it
+     measured 3.43:1 as plain text and 2.91:1 on its own /15 tint over
+     bg-overlay, so it failed AA's 4.5 even with no tint at all - it was the
+     lightest of the four status colors by a wide margin (0.196 relative
+     luminance against success's 0.096). #7e480a clears 4.5 in every
+     ground/alpha combination warning actually uses (worst case 4.82:1) and
+     lands at 0.091, in family with success (0.096) and error (0.073). Dark
+     warning is untouched and already passes comfortably (9.60:1 on
+     bg-surface). NOT fixed by this: PlanScene's two notices pair a warning
+     tint with grey text-content-secondary rather than warning-colored text,
+     which sits at ~4.0:1 and CANNOT be corrected from here - darkening the
+     tint lowers it further. That one needs a text color change on those
+     notices. */
+  --color-status-warning: 126 72 10;
   /* Deepened from #c53333 (2026-08-14). Error is the one status color that is
      routinely used as BOTH the label and a same-hue tint behind that label
      (`bg-status-error/10 text-status-error`, ~40 surfaces plus the danger
@@ -257,7 +273,10 @@ html[data-theme='light'] {
   --border-focus: #247648;
 
   --status-success: #14643a;
-  --status-warning: #b2690c;
+  /* Mirrors --color-status-warning above (this hex scale has zero
+     var(--status-warning) consumers, but keeping the two in sync means a
+     future consumer can't pick up the pre-2026-08-14 value). */
+  --status-warning: #7e480a;
   /* Mirrors --color-status-error above (this hex scale currently has zero
      `var(--status-error)` consumers, but keeping the two in sync means a
      future consumer can't pick up the pre-2026-08-14 value). */
