@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import { Maximize2, MessageCircle, RotateCcw, X } from 'lucide-react';
 import { useChappiStore } from '@/stores/useChappiStore';
-import { ChappiBetaBadge } from './ChappiBetaBadge';
 import { ChappiConversation } from './ChappiConversation';
 import { isNativePlatform } from '@/lib/platform';
 import { openExternalUrl } from '@/lib/external-link';
@@ -93,7 +92,6 @@ export function ChappiSidePanel({ onNewRelease }: ChappiSidePanelProps) {
           <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
             <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
             UrgAns
-            <ChappiBetaBadge />
           </p>
           <div className="flex items-center gap-1">
             {messages.length > 0 ? (

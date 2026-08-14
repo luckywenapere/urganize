@@ -46,10 +46,9 @@ export function ChappiPageSkeleton() {
         <SkeletonBlock className="h-7 w-7" />
       </div>
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-2">
-        {/* Eyebrow row: "UrgAns" + the Beta badge pill. */}
+        {/* Eyebrow row: "UrgAns". */}
         <div className="flex items-center gap-2">
           <SkeletonBlock className="h-2.5 w-14" />
-          <SkeletonBlock className="h-4 w-9" />
         </div>
         <SkeletonBlock className="mt-3 h-8 w-64 sm:w-80" />
 

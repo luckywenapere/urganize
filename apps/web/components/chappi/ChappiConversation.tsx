@@ -20,7 +20,6 @@ import {
   ThumbsUp,
   type LucideIcon,
 } from 'lucide-react';
-import { ChappiBetaBadge } from '@/components/chappi/ChappiBetaBadge';
 import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useAuthStore } from '@/lib/auth-store';
@@ -493,7 +492,6 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         {isPanel ? null : (
           <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
             UrgAns
-            <ChappiBetaBadge />
           </p>
         )}
         <h1
