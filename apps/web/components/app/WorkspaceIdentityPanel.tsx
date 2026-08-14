@@ -120,20 +120,6 @@ function buildNavItems(
       Icon: ChappiIcon,
       isActive: (pathname: string) => pathname === "/dashboard/urgans",
     },
-    // Right after UrgAns (founder call on the old pill row carried over:
-    // Metadata was "FIRST among the scene links" — the surface reached for
-    // most). Active when the URL names this exact scene, not just /dashboard,
-    // since Catalog above already owns the bare scoped-release view.
-    ...(METADATA_ENABLED && scopedReleaseId
-      ? [
-          {
-            href: `/dashboard?release=${scopedReleaseId}&scene=metadata`,
-            label: "Collect metadata",
-            Icon: MetadataIcon,
-            isActive: (pathname: string) => pathname === "/dashboard" && activeScene === "metadata",
-          },
-        ]
-      : []),
     // Exact match, like its neighbours: usePathname excludes the query string,
     // so a ?release= / ?note= deep link still lights this up.
     ...(NOTES_ENABLED
@@ -143,6 +129,20 @@ function buildNavItems(
             label: "Notes",
             Icon: NotesIcon,
             isActive: (pathname: string) => pathname === "/dashboard/notes",
+          },
+        ]
+      : []),
+    // Fourth, after Notes (founder call, moved off its earlier "right after
+    // UrgAns" placement). Active when the URL names this exact scene, not
+    // just /dashboard, since Catalog above already owns the bare
+    // scoped-release view.
+    ...(METADATA_ENABLED && scopedReleaseId
+      ? [
+          {
+            href: `/dashboard?release=${scopedReleaseId}&scene=metadata`,
+            label: "Collect metadata",
+            Icon: MetadataIcon,
+            isActive: (pathname: string) => pathname === "/dashboard" && activeScene === "metadata",
           },
         ]
       : []),
