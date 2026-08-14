@@ -31,6 +31,7 @@ import { CORE_TOOLS } from './tool-families/core';
 import { METADATA_TOOLS } from './tool-families/metadata';
 import { NOTE_TOOLS } from './tool-families/notes';
 import { PLANNER_TOOLS } from './tool-families/planner';
+import { PROMO_TOOLS } from './tool-families/promo';
 import { RELEASE_TOOLS } from './tool-families/releases';
 import { TEAM_TOOLS } from './tool-families/team';
 import type { ChappiTool } from './tool-families/shared';
@@ -45,6 +46,7 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
   ...CALENDAR_TOOLS,
   ...NOTE_TOOLS,
   ...TEAM_TOOLS,
+  ...PROMO_TOOLS,
 ];
 
 const TOOLS_BY_NAME = new Map<string, ChappiTool>(CHAPPI_TOOLS.map((tool) => [tool.name, tool]));

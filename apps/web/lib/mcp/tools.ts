@@ -36,6 +36,18 @@ const EXCLUDED_TOOL_NAMES: ReadonlySet<ChappiToolName> = new Set<ChappiToolName>
   'delete_note',
   // Team
   'list_workspace_members',
+  'invite_teammate',
+  'remove_teammate',
+  // Promotion: pitching, press kit, recap
+  'list_pitch_playlists',
+  'list_pitches',
+  'pitch_song',
+  'get_epk',
+  'create_epk_link',
+  'revoke_epk_link',
+  'get_recap',
+  'generate_recap',
+  'delete_recap',
   // Rollout planner
   'get_release_plan',
   'generate_release_plan',

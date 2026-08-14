@@ -111,6 +111,18 @@ export type ChappiToolName =
   | 'delete_note'
   // team
   | 'list_workspace_members'
+  | 'invite_teammate'
+  | 'remove_teammate'
+  // promotion: pitching, press kit, recap
+  | 'list_pitch_playlists'
+  | 'list_pitches'
+  | 'pitch_song'
+  | 'get_epk'
+  | 'create_epk_link'
+  | 'revoke_epk_link'
+  | 'get_recap'
+  | 'generate_recap'
+  | 'delete_recap'
   // rollout planner
   | 'get_release_plan'
   | 'generate_release_plan'

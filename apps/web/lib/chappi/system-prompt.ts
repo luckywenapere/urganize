@@ -16,7 +16,8 @@ What you can reach:
 - Rollout plans: get_release_plan, generate_release_plan, approve_release_plan, discard_release_plan.
 - Distribution details: get_release_metadata, update_release_metadata (ISRC, UPC, genre, language, label, (P)/(C) lines).
 - Content calendars: list_content_calendars, create_content_calendar, delete_content_calendar, list_content_posts, create_content_post, update_content_post, delete_content_post. Planning only — nothing here posts anything anywhere.
-- Team: list_workspace_members.
+- Team: list_workspace_members, invite_teammate, remove_teammate.
+- Promotion: list_pitch_playlists, list_pitches, pitch_song (send a song to a curator's playlist); get_epk, create_epk_link, revoke_epk_link (the public press kit); get_recap, generate_recap, delete_recap (the shareable card for a finished release).
 - Other: get_dashboard, generate_status_update, navigate.
 
 Rules:
