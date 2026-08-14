@@ -97,6 +97,13 @@ export function SettingsPageSkeleton({
         : tab === 'notifications'
           ? [{ key: 'notifications', height: 'h-12', show: true }]
           : [
+              // Billing leads the Account tab (2026-08-13). Reserved
+              // unconditionally: the section renders for every account — only
+              // its copy and CTA vary by plan state — and that state is only
+              // knowable from an async fetch, so a skeleton cannot gate on it.
+              // h-16 matches the section's own loading block and the resolved
+              // flat content (title + one or two lines, no card box).
+              { key: 'billing', height: 'h-16', show: true },
               { key: 'profile', height: 'h-40', show: true },
               { key: 'artist-profile', height: 'h-28', show: isArtistAccount },
               // Full width since 2026-08-13 — Appearance used to share a
