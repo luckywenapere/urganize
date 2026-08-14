@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.54.2",
+    date: "August 14, 2026",
+    highlights: [
+      "Every group in your activities list now carries a slim progress bar showing how much of it is underway. Work you've started fills the bar, so you can read a release's momentum at a glance without opening a single group.",
+    ],
+  },
+  {
     version: "0.54.1",
     date: "August 14, 2026",
     highlights: [

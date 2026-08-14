@@ -500,6 +500,18 @@ export function groupTasksIntoSections(
   return grouped;
 }
 
+/**
+ * Statuses that count as "started" for the per-bucket progress bar in the
+ * Activities view. Mirrors the generate-status route's in-progress set
+ * (in_progress + in_review), plus done — a just-ticked task lingering in its
+ * source bucket via pendingCompletionIds must read as filled, not regressed.
+ */
+const STARTED_TASK_STATUSES = new Set<TaskStatus>(['in_progress', 'in_review', 'done']);
+
+export function countStartedTasks(tasks: Task[]): number {
+  return tasks.filter((task) => STARTED_TASK_STATUSES.has(task.status)).length;
+}
+
 export function formatNotificationTime(value: string): string {
   const timestamp = new Date(value);
   if (Number.isNaN(timestamp.getTime())) {
