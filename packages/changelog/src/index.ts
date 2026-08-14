@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.55.0",
+    date: "August 14, 2026",
+    highlights: [
+      "You can plan EPs and albums now, not just singles. Creating a release asks what you're putting out, and each one gets a playbook built for its shape rather than a single's plan stretched to fit.",
+      "The EP playbook runs 16 weeks and is built around a lead single that drops six weeks ahead of the EP, so the single's numbers are in hand when you pitch the EP to playlists.",
+      "The album playbook runs 21 weeks around two singles, at twelve weeks and six weeks out, with the album announcement landing alongside the second one.",
+      "Both cover the work a multi-track release actually needs: metadata and split sheets for every track, one content shoot that covers the whole record, and a track-by-track push after release day.",
+    ],
+  },
+  {
     version: "0.54.2",
     date: "August 14, 2026",
     highlights: [
