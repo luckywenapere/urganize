@@ -23,6 +23,7 @@ import { CURATOR_HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
 import type { CuratorInviteState } from '@/types/pitching';
+import type { CuratorInviteLookup } from '@/lib/curator-invite-server';
 
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 
@@ -40,6 +41,15 @@ type LoadState =
   | { kind: 'loading' }
   | { kind: 'invalid'; message: string }
   | { kind: 'ready'; state: InviteState };
+
+/** The server's answer, mapped onto the state this component already renders.
+ * 'loading' is now only ever reached when no server lookup was supplied. */
+const toLoadState = (lookup: CuratorInviteLookup | undefined): LoadState => {
+  if (!lookup) return { kind: 'loading' };
+  return lookup.kind === 'ready'
+    ? { kind: 'ready', state: lookup.state }
+    : { kind: 'invalid', message: lookup.message };
+};
 
 function readAndClearResumeCode(): string | null {
   if (typeof window === 'undefined') return null;
@@ -70,7 +80,14 @@ const stateMessage = (state: InviteState): string => {
   return 'This link no longer works. Ask for a new one.';
 };
 
-export function CuratorJoinPageClient() {
+export function CuratorJoinPageClient({
+  initialLookup,
+}: {
+  /** Resolved on the server by page.tsx, so the form (or the error) is in the
+   * HTML and needs no JS to appear. Optional only so the component stays
+   * renderable in isolation; the route always supplies it. */
+  initialLookup?: CuratorInviteLookup;
+}) {
   const router = useRouter();
   const params = useParams<{ code: string }>();
   const code = String(params?.code || '').trim();
@@ -78,7 +95,7 @@ export function CuratorJoinPageClient() {
   const { signup, loginWithGoogle, logout, user, isAuthenticated, isLoading: authLoading } =
     useAuthStore();
 
-  const [loadState, setLoadState] = useState<LoadState>({ kind: 'loading' });
+  const [loadState, setLoadState] = useState<LoadState>(() => toLoadState(initialLookup));
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -89,6 +106,18 @@ export function CuratorJoinPageClient() {
 
   const resumeStartedRef = useRef(false);
 
+  // Always false for the first paint so the server and the initial client render
+  // agree, then the mount effect applies the real answer — the same pattern
+  // WorkspaceIdentityPanel uses for its collapsed state. Needed here because the
+  // auth store PERSISTS `isAuthenticated`, so without this a returning signed-in
+  // visitor's first client render would pick the "Signed in as" branch while the
+  // server had rendered the sign-up form: a hydration mismatch. An invited
+  // stranger (the whole audience of this page) is unaffected either way.
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   // Flag off: the whole feature is dark, so this page is not a real page.
   useEffect(() => {
     if (!PITCHING_ENABLED) {
@@ -96,9 +125,15 @@ export function CuratorJoinPageClient() {
     }
   }, [router]);
 
-  // 1. How does the link stand?
+  // 1. How does the link stand? Normally page.tsx has already answered this on
+  // the server, and re-asking would spend a round trip to learn what is already
+  // on screen — so this only runs when no server lookup was supplied (the
+  // component rendered outside its route). Do NOT remove the guard to "keep it
+  // fresh": that reinstates the client round trip this page was fixed to avoid,
+  // and the invite is re-checked authoritatively by the POST anyway.
   useEffect(() => {
     if (!PITCHING_ENABLED) return;
+    if (initialLookup) return;
     if (!code) {
       setLoadState({ kind: 'invalid', message: 'This link is missing its code.' });
       return;
@@ -143,7 +178,7 @@ export function CuratorJoinPageClient() {
     return () => {
       cancelled = true;
     };
-  }, [code]);
+  }, [code, initialLookup]);
 
   // 2. Consume the invite. Used by every path into the join.
   const acceptInvite = useCallback(
@@ -288,6 +323,17 @@ export function CuratorJoinPageClient() {
             </p>
           </div>
 
+          {/* The form below is server-rendered but still needs JS to SUBMIT
+              (supabase-js owns sign-up and the Google redirect), so a browser
+              with scripting blocked has to be told rather than left tapping a
+              dead button. Same notice /auth and /onboarding carry. */}
+          <noscript>
+            <p className="mb-4 rounded-lg border border-stroke-default bg-bg-surface p-3 text-sm text-content-secondary">
+              JavaScript is switched off in this browser, so signing up will not
+              work. Turn it on, or open this link in another browser.
+            </p>
+          </noscript>
+
           <Card
             padding="lg"
             className="rounded-2xl border border-stroke-default bg-bg-surface"
@@ -345,7 +391,7 @@ export function CuratorJoinPageClient() {
                   </p>
                 </div>
 
-                {isAuthenticated && user ? (
+                {hasMounted && isAuthenticated && user ? (
                   <div className="space-y-3">
                     <div className="flex items-start gap-3 rounded-xl border border-stroke-default bg-bg-elevated px-3 py-3 text-sm">
                       <UserCircle className="mt-0.5 h-5 w-5 shrink-0 text-content-tertiary" />
@@ -374,7 +420,16 @@ export function CuratorJoinPageClient() {
                   </div>
                 ) : null}
 
-                {!isAuthenticated && !authLoading ? (
+                {/* Deliberately NOT gated on `!authLoading`. That flag is true on
+                    the very first render for everybody and is not persisted, so
+                    including it meant the server rendered no form at all and an
+                    invited stranger — who is essentially never signed in — got a
+                    skeleton until ~1MB of JS had hydrated. Same removal, for the
+                    same reason, that "The front door is server-rendered" made on
+                    /auth. The rare already-signed-in visitor sees this form for
+                    one frame before the branch above replaces it, which is a far
+                    better trade than everyone seeing nothing. */}
+                {!hasMounted || !isAuthenticated ? (
                   <div className="space-y-4">
                     <button
                       type="button"
