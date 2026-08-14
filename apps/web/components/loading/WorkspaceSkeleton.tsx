@@ -284,8 +284,11 @@ function TasksPanelSkeleton() {
             className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface"
           >
             <div className="flex items-center justify-between gap-3 px-4 py-3">
-              <SkeletonBlock className="h-3.5 w-24" />
-              <SkeletonBlock className="h-4 w-4 rounded-sm" />
+              <SkeletonBlock className="h-3.5 w-24 shrink-0" />
+              {/* Started-share bar placeholder — mirrors the real header's
+                  flex-1 Motion-pattern bar (TasksPanel, 2026-08-14). */}
+              <SkeletonBlock className="h-1.5 min-w-0 flex-1 rounded-full" />
+              <SkeletonBlock className="h-4 w-4 shrink-0 rounded-sm" />
             </div>
           </div>
         ))}

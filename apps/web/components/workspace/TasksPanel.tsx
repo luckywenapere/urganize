@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Newspaper, NotebookPen, Plus, Radio, Sparkles } from 'lucide-react';
 import {
+  countStartedTasks,
   getTaskSectionLabel,
   groupTasksIntoSections,
   type Task,
@@ -525,6 +526,12 @@ export function TasksPanel({
           // The all-empty case gets a single quiet line below the list.
           if (sectionTasks.length === 0) return null;
           const bodyId = `workspace-bucket-${sectionKey}`;
+          // In-progress share for the header bar: started work (in_progress /
+          // in_review, plus done for rows lingering here mid-completion) over
+          // the bucket's total. The Done bucket computes to 100% naturally.
+          const startedPercent = Math.round(
+            (countStartedTasks(sectionTasks) / sectionTasks.length) * 100
+          );
           return (
             <div
               key={sectionKey}
@@ -555,6 +562,16 @@ export function TasksPanel({
                     ({sectionTasks.length})
                   </span>
                 </span>
+                {/* Started-share bar (the Motion bar pattern: bg-stroke-strong
+                    track, never bg-bg-elevated — see WorkspaceView's tracker).
+                    aria-hidden like every Motion bar; the count above stays
+                    the accessible metric. */}
+                <div className="h-1.5 min-w-0 flex-1 rounded-full bg-stroke-strong" aria-hidden="true">
+                  <div
+                    className="h-full rounded-full bg-brand transition-[width] duration-300"
+                    style={{ width: `${startedPercent}%` }}
+                  />
+                </div>
                 <ChevronDown
                   className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${
                     isOpen ? '' : '-rotate-90'
