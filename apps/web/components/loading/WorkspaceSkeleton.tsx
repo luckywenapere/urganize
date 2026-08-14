@@ -223,9 +223,10 @@ function ReleaseCardSkeleton() {
  * column on desktop, or sit inert in mobile's plain document flow — same
  * "flex-1 is inert without a flex parent" property the real component
  * documents. Pill count mirrors the real header exactly: New activity
- * always, then one per enabled flag in order (Pitch / Files / Press kit /
- * Notes — see TasksPanel; Calendar left this row 2026-08-13, see the sticky
- * placeholder below), then the two AI action pills WorkspaceView appends.
+ * always, then one per enabled flag in order (Pitch / Files / Notes — see
+ * TasksPanel; Calendar left this row 2026-08-13 and Press kit 2026-08-14, see
+ * the footer placeholders below), then the two AI action pills WorkspaceView
+ * appends.
  * Widths approximate each label so the row's footprint matches ("Status
  * update", shortened 2026-08-10 to fit a chip row — see WorkspaceView).
  * No left label (2026-08-05, #218 — the real row is `justify-end` only).
@@ -239,7 +240,6 @@ function TasksPanelSkeleton() {
     // so it reserves the same width as Files rather than a tagged pill's.
     ...(PITCHING_ENABLED ? ['w-16'] : []), // Pitch
     ...(FILES_ENABLED ? ['w-16'] : []), // Files
-    ...(EPK_ENABLED ? ['w-24'] : []), // Press kit
     ...(NOTES_ENABLED ? ['w-20'] : []), // Notes
     ...(STATUS_UPDATE_ENABLED ? ['w-28'] : []), // Status update
     // The Plan pill is deliberately NOT reserved. Whether it renders depends on
@@ -290,15 +290,18 @@ function TasksPanelSkeleton() {
           </div>
         ))}
       </div>
-      {/* Calendar footer pill placeholder (2026-08-13 — see the real block's
-          comment in TasksPanel.tsx for the full history: Calendar left the
-          header pill row for a footer of the panel). A sibling AFTER the
-          flex-1 body, matching the real row's wrapper classes exactly, so
-          the reserved footprint sits pinned at the panel's base and doesn't
-          shift when content resolves. */}
-      {CONTENT_CALENDAR_ENABLED ? (
-        <div className="flex shrink-0 justify-start pb-4 pt-3 lg:pb-2">
-          <SkeletonBlock className="h-8 w-28 rounded-full" />
+      {/* Footer pill placeholders — Calendar (2026-08-13) and Press kit
+          (2026-08-14); see the real block's comment in TasksPanel.tsx for the
+          full history of both moves out of the header pill row. A sibling
+          AFTER the flex-1 body, matching the real row's wrapper classes
+          exactly, so the reserved footprint sits pinned at the panel's base
+          and doesn't shift when content resolves. */}
+      {CONTENT_CALENDAR_ENABLED || EPK_ENABLED ? (
+        <div className="no-scrollbar flex shrink-0 items-center gap-2 overflow-x-auto pb-4 pt-3 lg:overflow-visible lg:pb-2">
+          {CONTENT_CALENDAR_ENABLED ? (
+            <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
+          ) : null}
+          {EPK_ENABLED ? <SkeletonBlock className="h-8 w-32 shrink-0 rounded-full" /> : null}
         </div>
       ) : null}
     </div>

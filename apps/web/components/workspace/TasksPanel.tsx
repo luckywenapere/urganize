@@ -439,25 +439,9 @@ export function TasksPanel({
               Files
             </button>
           ) : null}
-          {/* Press kit link (URG-198): same shape as Calendar/Files above —
-              the workspace is where users land, so every release surface
-              gets its entry point here. */}
-          {EPK_ENABLED && scopedRelease ? (
-            <button
-              type="button"
-              onClick={() => toggleScene('epk', scopedRelease.id)}
-              aria-pressed={activeScene === 'epk'}
-              className={pillClass('epk')}
-            >
-              <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
-              Press kit
-              {/* Beta stamp, same tag as Calendar above — the press kit
-                  generator shipped 2026-07-31 and is still early. */}
-              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-                Beta
-              </span>
-            </button>
-          ) : null}
+          {/* Press kit is NOT a header pill (as of 2026-08-14, founder call) —
+              it sits beside Calendar in the panel footer instead. See the
+              footer block further down, after the activity buckets. */}
           {/* Notes for this release. Deliberately a plain LINK, not a scene
               toggle like its neighbours: notes are a global surface that
               happens to filter by release, not a per-release panel body — so
@@ -604,7 +588,11 @@ export function TasksPanel({
       )}
       </div>
 
-      {/* Calendar footer pill (founder call, 2026-08-13 — third placement,
+      {/* Panel footer pills — Calendar, then Press kit beside it (the latter
+          joined 2026-08-14, founder call, moving out of the header row where
+          it had sat since URG-198).
+
+          Calendar footer pill (founder call, 2026-08-13 — third placement,
           corrected twice via screenshot: not the identity card's nav list,
           not the card's footer, and not floating just under the collapsed
           buckets either. The final arrow pointed at the BASE of the
@@ -620,22 +608,52 @@ export function TasksPanel({
           flow, not fixed).
           Hidden once a scene is open (`!sceneContent`): the header's
           "Activities" pill is already the way back, and a Calendar entry
-          while Calendar (or any scene) is showing is redundant chrome. */}
-      {CONTENT_CALENDAR_ENABLED && scopedRelease && !sceneContent ? (
-        <div className="flex shrink-0 justify-start pb-4 pt-3 lg:pb-2">
-          <button
-            type="button"
-            onClick={() => toggleScene('calendar', scopedRelease.id)}
-            aria-pressed={activeScene === 'calendar'}
-            className={pillClass('calendar')}
-          >
-            <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-            Calendar
-            {/* Beta stamp (2026-07-23): the content calendar ships as Beta. */}
-            <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-              Beta
-            </span>
-          </button>
+          while Calendar (or any scene) is showing is redundant chrome. The
+          same reasoning covers Press kit, so both share the `!sceneContent`
+          gate on the wrapper below and keep their own flag checks inside —
+          the row renders when EITHER is enabled, never as an empty strip.
+
+          The wrapper scrolls horizontally rather than wrapping (the same
+          treatment the header pill row uses below `lg`): each pill is
+          `shrink-0 whitespace-nowrap` via pillClass, so a narrow phone would
+          otherwise be forced onto a second line, and a footer that silently
+          grew taller would push the activities list up. Measured 2026-08-14:
+          the two tagged pills come to 275px against the 343px a 375px phone
+          offers (viewport minus AppShell's `px-4`), so they fit today and a
+          third would scroll rather than reflow. */}
+      {(CONTENT_CALENDAR_ENABLED || EPK_ENABLED) && scopedRelease && !sceneContent ? (
+        <div className="no-scrollbar flex shrink-0 items-center gap-2 overflow-x-auto pb-4 pt-3 lg:overflow-visible lg:pb-2">
+          {CONTENT_CALENDAR_ENABLED ? (
+            <button
+              type="button"
+              onClick={() => toggleScene('calendar', scopedRelease.id)}
+              aria-pressed={activeScene === 'calendar'}
+              className={pillClass('calendar')}
+            >
+              <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+              Calendar
+              {/* Beta stamp (2026-07-23): the content calendar ships as Beta. */}
+              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+                Beta
+              </span>
+            </button>
+          ) : null}
+          {EPK_ENABLED ? (
+            <button
+              type="button"
+              onClick={() => toggleScene('epk', scopedRelease.id)}
+              aria-pressed={activeScene === 'epk'}
+              className={pillClass('epk')}
+            >
+              <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
+              Press kit
+              {/* Beta stamp, same tag as Calendar — the press kit generator
+                  shipped 2026-07-31 and is still early. */}
+              <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+                Beta
+              </span>
+            </button>
+          ) : null}
         </div>
       ) : null}
     </aside>

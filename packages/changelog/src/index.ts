@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.54.0",
+    date: "August 14, 2026",
+    highlights: [
+      "Press kits are back. Open a release and you can generate a shareable link again — one page with the artwork, the details and your promo shots, ready to send to a blog, a playlist or a radio show.",
+      "The Press kit button now sits beside Calendar at the bottom of your activities, so both of the things you send out live in the same place.",
+    ],
+  },
+  {
     version: "0.53.1",
     date: "August 14, 2026",
     highlights: [
