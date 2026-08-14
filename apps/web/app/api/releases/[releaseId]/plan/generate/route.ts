@@ -118,9 +118,17 @@ export async function POST(
 
   // --- Save the answers first -------------------------------------------------
 
+  // The intake's release type is also written to the ROW, not just into
+  // release_context. Intake Q1 is the manager's authoritative answer, and a
+  // release created from the modal or Chappi before being planned still says
+  // 'single' — leaving that stale would show "Single" on the public press kit
+  // for an album. Safe against double-instantiation: a planner release carries
+  // planner_pending, never template_pending, so the schedule route never builds
+  // a template plan for it. The value is already validated to the DB enum by
+  // parseReleasePlanIntake, so the write cannot fail on the enum.
   const contextSave = await adminClient
     .from(RELEASES_TABLE)
-    .update({ release_context: intake })
+    .update({ release_context: intake, release_type: intake.release_type })
     .eq('id', releaseId)
     .eq('owner_user_id', auth.user.id);
   if (contextSave.error) {
@@ -131,7 +139,7 @@ export async function POST(
 
   // --- The deterministic draft ------------------------------------------------
 
-  const template = getPlannerTemplate();
+  const { template, fallbackToSingle } = getPlannerTemplate(intake.release_type);
   let doc: ReleasePlanDraftDoc = buildDraftFromTemplate({
     template,
     intake,
@@ -159,6 +167,7 @@ export async function POST(
       tasks: toPromptTasks(doc.tasks),
       members: assignable.prompt,
       todayYmd: todayYmd(),
+      fallbackToSingle,
     });
 
     try {

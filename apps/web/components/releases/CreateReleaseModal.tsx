@@ -11,14 +11,31 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useFirstReleaseRequired } from './useFirstReleaseRequired';
-import { getTemplate, getTemplateLeadTimeDays } from '@/lib/release-templates/loader';
-import { DEFAULT_RELEASE_TITLE } from '@/types/releases';
+import {
+  getAvailableReleaseTypes,
+  getTemplate,
+  getTemplateLeadTimeDays,
+} from '@/lib/release-templates/loader';
+import { DEFAULT_RELEASE_TITLE, type DbReleaseType } from '@/types/releases';
 
-// The modal currently only creates 'single' releases (CreateReleaseBody on the
-// API also defaults releaseType to 'single'). When the modal grows a type
-// picker, look this up dynamically from the picked type instead.
-const ACTIVE_TEMPLATE = getTemplate('single');
-const LEAD_TIME_DAYS = getTemplateLeadTimeDays(ACTIVE_TEMPLATE);
+// The release types this modal can create: authored AND switched on AND
+// storable. getAvailableReleaseTypes is the loader's flag gate, so with
+// NEXT_PUBLIC_FEATURE_EP_ALBUM_TEMPLATES off this is just ['single'] and no
+// picker renders — exactly the behavior before the picker existed. music_video
+// is filtered out because the release_type DB enum cannot store it.
+//
+// Module scope is right here: NEXT_PUBLIC_* is inlined at build time, and the
+// onboarding step-0 picker derives its options the same way.
+const CREATABLE_RELEASE_TYPES = getAvailableReleaseTypes().filter(
+  (releaseType): releaseType is DbReleaseType => releaseType !== 'music_video'
+);
+const SHOW_TYPE_PICKER = CREATABLE_RELEASE_TYPES.length > 1;
+
+const RELEASE_TYPE_LABELS: Record<DbReleaseType, string> = {
+  single: 'Single',
+  ep: 'EP',
+  album: 'Album',
+};
 
 // With the planner on, choosing a rollout plan here does not create activities:
 // it creates the release, and the manager plans it with UrgAns next. Only the
@@ -122,6 +139,11 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
   // picking one advances to the title/date form. Resets on every open.
   const [plan, setPlan] = useState<ReleasePlanChoice | null>(null);
 
+  // Which playbook the release follows. Always sent, so the server never has to
+  // infer it; defaults to 'single', which is what every release created here
+  // was implicitly before the picker existed.
+  const [releaseType, setReleaseType] = useState<DbReleaseType>('single');
+
   // Portal mount-guard. The modal renders into document.body via createPortal
   // to escape AppShell's `lazy-fade` wrapper, which carries a `transform` —
   // any transformed ancestor turns `position: fixed` into "fixed relative to
@@ -136,6 +158,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
   useEffect(() => {
     if (open) {
       setPlan(null);
+      setReleaseType('single');
     }
   }, [open]);
 
@@ -217,6 +240,15 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
   // sooner than the template's lead time. The note frames the consequence in
   // the catch-up language commit 2 surfaces in the tasks panel — it doesn't
   // block submission; the user can proceed with any future date.
+  // Per playbook, not per app: an EP needs 13 weeks of runway and an album 17,
+  // so the same date that is comfortable for a single is heavily compressed for
+  // an album. Safe to call getTemplate here — the picker only ever offers types
+  // the loader resolved.
+  const leadTimeDays = useMemo(
+    () => getTemplateLeadTimeDays(getTemplate(releaseType)),
+    [releaseType]
+  );
+
   const compressedNote = useMemo(() => {
     if (!releaseDate) return null;
     const picked = new Date(`${releaseDate}T00:00:00`);
@@ -225,13 +257,13 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     today.setHours(0, 0, 0, 0);
     picked.setHours(0, 0, 0, 0);
     const daysOut = Math.round((picked.getTime() - today.getTime()) / 86400000);
-    if (daysOut >= LEAD_TIME_DAYS) return null;
-    const compressedWeeks = Math.max(1, Math.ceil((LEAD_TIME_DAYS - daysOut) / 7));
+    if (daysOut >= leadTimeDays) return null;
+    const compressedWeeks = Math.max(1, Math.ceil((leadTimeDays - daysOut) / 7));
     return {
       compressedWeeks,
       displayDate: formatYmdHuman(releaseDate),
     };
-  }, [releaseDate]);
+  }, [releaseDate, leadTimeDays]);
 
   if (!open || !isMounted) {
     return null;
@@ -297,6 +329,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
           // missing date as "not decided yet" (URG-230).
           title: title.trim() || undefined,
           releaseDate: releaseDate || undefined,
+          releaseType,
           source: 'dashboard',
           plan: plan || 'template',
         }),
@@ -477,6 +510,43 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
               (small phones). Header + footer stay pinned via `shrink-0` so the
               submit button is always reachable without scrolling the page. */}
           <div className={plan ? 'flex-1 space-y-4 overflow-y-auto p-4 sm:p-5' : 'hidden'}>
+              {/* Release type leads the form: it decides which playbook builds
+                  the plan, so it has to be answered before the date field's
+                  runway warning means anything. Renders only when more than one
+                  playbook is switched on — with the EP/album flag off there is
+                  nothing to choose and the release is a single, as before.
+                  Deliberately not part of step 1, which asks a different
+                  question (rollout plan vs blank); a blank EP is legitimate and
+                  should still stamp the row's type. */}
+              {SHOW_TYPE_PICKER ? (
+                <div role="radiogroup" aria-label="Release type">
+                  <span className="mb-2 block text-sm font-medium text-content-primary">
+                    Release type
+                  </span>
+                  <div className="flex gap-2">
+                    {CREATABLE_RELEASE_TYPES.map((option) => {
+                      const isSelected = option === releaseType;
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          onClick={() => setReleaseType(option)}
+                          className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                            isSelected
+                              ? 'border-brand bg-brand/10 text-content-primary'
+                              : 'border-stroke-default bg-bg-elevated text-content-secondary hover:text-content-primary'
+                          }`}
+                        >
+                          {RELEASE_TYPE_LABELS[option]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
               {/* Both fields optional (URG-230). "Optional" sits in the label
                   itself rather than as placeholder text, so it survives the
                   field being filled in and is read out by screen readers with

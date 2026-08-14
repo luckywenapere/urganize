@@ -7,6 +7,7 @@ import { useActivityStore } from '@/stores/useActivityStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
+import { isDbReleaseType } from '@/types/releases';
 
 type ReleaseStore = {
   releases: ExecutionRelease[];
@@ -203,7 +204,7 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       }),
     });
 
-    const payload = (await response.json().catch(() => ({}))) as { releaseId?: string; templatePending?: boolean; release?: { title?: string; artistId?: string; artistName?: string; releaseDate?: string | null }; error?: string };
+    const payload = (await response.json().catch(() => ({}))) as { releaseId?: string; templatePending?: boolean; release?: { title?: string; artistId?: string; artistName?: string; releaseType?: string; releaseDate?: string | null }; error?: string };
     if (!response.ok || !payload.releaseId) {
       set({ error: payload.error || 'Could not create release.' });
       return null;
@@ -214,6 +215,11 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       title: payload.release?.title || title,
       artistId: payload.release?.artistId || '',
       artistName: payload.release?.artistName || 'New Artist',
+      // This quick-create path sends no type, so the server stores 'single';
+      // read the echo anyway rather than assuming, so the two cannot drift.
+      releaseType: isDbReleaseType(payload.release?.releaseType)
+        ? payload.release.releaseType
+        : 'single',
       releaseDate: payload.release?.releaseDate || null,
       description: null,
       // Echoed from the create response (URG-230) so the optimistic row

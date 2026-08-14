@@ -21,6 +21,11 @@ type FirstReleaseWinProps = {
 // the moment.
 const SETTLE_TIMEOUT_MS = 5000;
 
+// Deliberately single-only, unlike SetReleaseDateCard and NewReleaseGuide which
+// now take a release type: this reveal is gated on NEXT_PUBLIC_FEATURE_FIRST_WIN,
+// which must not be enabled alongside the release planner, and it celebrates a
+// user's FIRST release — created before any type picker has had a reason to
+// appear. Give it a release type only if either of those changes.
 const TEMPLATE_SPAN_WEEKS = (() => {
   const template = getTemplate('single');
   return template ? Math.round(getTemplateSpanDays(template) / 7) : 11;

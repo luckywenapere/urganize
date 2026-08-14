@@ -6,7 +6,7 @@ import {
   PLAN_DRAFTS_TABLE,
   classifyPlannerFailure,
   createAdminClient,
-  getPlannerTemplate,
+  getDraftTemplate,
   isReleasePlannerEnabled,
   loadOwnedRelease,
   loadPlanDraft,
@@ -85,8 +85,15 @@ export async function POST(
     return NextResponse.json({ error: 'This plan was already approved.' }, { status: 409 });
   }
 
-  const template = getPlannerTemplate();
+  // Flag-BLIND, from the STORED draft's own release type: resetPhaseToTemplate
+  // re-materializes rows by template_task_id, so it has to use the very
+  // playbook this draft was built from. A flag rollback mid-draft must not
+  // silently start rewriting an EP draft's phase from the single playbook.
+  const template = getDraftTemplate(existing.draft.doc.release_type);
   const intake = existing.draft.doc.intake;
+  // The prompt should only claim a plan "started from the single playbook" when
+  // that is actually what happened.
+  const fallbackToSingle = template.release_type !== existing.draft.doc.release_type;
 
   // Start the phase from the playbook again rather than layering a second
   // redraft on top of the first, so repeated attempts stay comparable. Rows
@@ -118,6 +125,7 @@ export async function POST(
     members: assignable.prompt,
     todayYmd: todayYmd(),
     phase: targetPhase,
+    fallbackToSingle,
   });
 
   let delta: PlannerAiDelta;

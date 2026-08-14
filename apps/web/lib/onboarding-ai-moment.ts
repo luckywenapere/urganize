@@ -8,25 +8,28 @@
 // ------------------------------
 // The task returned here must exist in the user's post-signup release. The
 // release-creation path (apps/web/app/api/releases/route.ts POST) calls
-// instantiateTemplate with the single template (apps/web/lib/release-templates/single.ts)
-// when release_type === 'single'. Every task ID returned below is pulled from
-// that template by ID — so a future template edit that drops one of these
-// IDs becomes a TypeScript-friendly bug we'd catch in the unit-test/build
-// pass via `findTask` returning undefined.
+// instantiateTemplate with the playbook for the chosen release_type, so the
+// stage->task mapping is PER TYPE: STAGE_TO_TASK_ID has one entry per playbook,
+// and every id in it is looked up in that same playbook. A template edit that
+// drops one of these ids makes `findTask` throw, which the unit tests catch.
 //
-// For release_type other than 'single' the EP/album/music_video templates
-// don't exist yet (loader.ts has those slots set to null), so the resulting
-// release will have zero template tasks. The AI Moment still shows a
-// single-template task in that case — it's the only playbook we have. The
-// user's post-signup release will therefore start empty, and the AI Moment's
-// promise won't be honored end-to-end. This matches the existing v1
-// behavior (CLAUDE.md "Templates needed for v1: 1. Single — done; EP/album/MV
-// — pending"); Phase 2 surfaces it explicitly via the note in `releaseTypeNote`
-// below rather than hiding the limitation.
+// Which playbook a type resolves to is the loader's call, and it is flag-aware:
+// with NEXT_PUBLIC_FEATURE_EP_ALBUM_TEMPLATES off, an EP release instantiates
+// nothing, so the AI Moment falls back to the single playbook AND keeps the
+// caveat in `releaseTypeNote` explaining the task list will start empty. With
+// the flag on, an EP release really does get the EP playbook, the suggested
+// task really is in it, and the caveat is dropped. music_video has no playbook
+// at all (and no DB enum value), so it always takes the fallback path.
 
+import { ALBUM_RELEASE_TEMPLATE } from './release-templates/album';
+import { EP_RELEASE_TEMPLATE } from './release-templates/ep';
 import { SINGLE_RELEASE_TEMPLATE } from './release-templates/single';
-import type { TemplateTask } from './release-templates/types';
+import { getTemplate } from './release-templates/loader';
+import type { Template, TemplateTask } from './release-templates/types';
 import type { OnboardingDraft, OnboardingStage } from './onboarding-draft';
+
+/** Release types with their own stage mapping. Others fall back to single. */
+type MappedReleaseType = 'single' | 'ep' | 'album';
 
 export interface OnboardingAiMoment {
   // Identity of the template task being suggested. The title here is the
@@ -47,35 +50,105 @@ export interface OnboardingAiMoment {
   releaseTypeNote: string | null;
 }
 
-// The mapping. Each stage points at one task ID from SINGLE_RELEASE_TEMPLATE.
-// If you edit single.ts and drop one of these IDs, getOnboardingAiMoment
-// throws — that's intentional: the AI Moment must reference a real task.
-const STAGE_TO_TASK_ID: Record<OnboardingStage, string> = {
-  // Earliest concrete gate. They're still composing — finishing the master
-  // is what unblocks every downstream task. Not a date task (so the user
-  // isn't told to "finalize the release date" they already entered).
-  just_starting: 'w8_lock_master',
-  // Tracks recorded. The next bottleneck is getting the metadata right —
-  // ISRC, splits, credits — because every later step (distributor upload,
-  // editorial pitching) needs it locked. Distinct from the cover-art branch
-  // that `preparing` takes.
-  recorded: 'w7_write_song_metadata',
-  // Pre-release prep mode. Briefing the designer kicks off the cover-art
-  // pipeline — the asset every other channel (distributor, socials, press)
-  // pulls from later. Earlier than distribution, so the two prep stages
-  // (preparing / date_set) don't collide on the same entry task.
-  preparing: 'w7_brief_designer',
-  // Date is locked. The distributor upload is the central pre-release gate —
-  // every DSP delivery downstream waits on it, and metadata errors only
-  // surface after submission. Explicitly NOT "finalize release date".
-  date_set: 'w6_upload_to_distributor',
-  // Actively promoting. The teaser cadence is the marketing-ramp entry —
-  // concrete, recurring, can start today.
-  promoting: 'w4_teaser_rollout',
-  // Track is out. First action that creates value is establishing the
-  // baseline numbers.
-  post_release: 'w0_compile_first_week_stats',
+// The mapping, one entry per playbook. Each stage points at one task ID from
+// THAT playbook. If you edit a template and drop one of these IDs,
+// getOnboardingAiMoment throws — that's intentional: the AI Moment must
+// reference a real task.
+//
+// The six stages mean the same thing in every playbook (lock the music, get the
+// metadata right, start the artwork, deliver to the distributor, run the teaser
+// cadence, read the first-week numbers), so each column is the same six
+// semantic gates expressed in that playbook's own ids and week numbering.
+const STAGE_TO_TASK_ID: Record<MappedReleaseType, Record<OnboardingStage, string>> = {
+  single: {
+    // Earliest concrete gate. They're still composing — finishing the master
+    // is what unblocks every downstream task. Not a date task (so the user
+    // isn't told to "finalize the release date" they already entered).
+    just_starting: 'w8_lock_master',
+    // Tracks recorded. The next bottleneck is getting the metadata right —
+    // ISRC, splits, credits — because every later step (distributor upload,
+    // editorial pitching) needs it locked. Distinct from the cover-art branch
+    // that `preparing` takes.
+    recorded: 'w7_write_song_metadata',
+    // Pre-release prep mode. Briefing the designer kicks off the cover-art
+    // pipeline — the asset every other channel (distributor, socials, press)
+    // pulls from later. Earlier than distribution, so the two prep stages
+    // (preparing / date_set) don't collide on the same entry task.
+    preparing: 'w7_brief_designer',
+    // Date is locked. The distributor upload is the central pre-release gate —
+    // every DSP delivery downstream waits on it, and metadata errors only
+    // surface after submission. Explicitly NOT "finalize release date".
+    date_set: 'w6_upload_to_distributor',
+    // Actively promoting. The teaser cadence is the marketing-ramp entry —
+    // concrete, recurring, can start today.
+    promoting: 'w4_teaser_rollout',
+    // Track is out. First action that creates value is establishing the
+    // baseline numbers.
+    post_release: 'w0_compile_first_week_stats',
+  },
+  ep: {
+    // On a multi-track project the gate is every master, not one.
+    just_starting: 'w13_lock_all_masters',
+    // Metadata covers the whole tracklist here, which is why it is the
+    // bottleneck it is.
+    recorded: 'w12_write_ep_metadata',
+    // The EP cover, not the lead single's — it is the asset every channel
+    // pulls from for the release itself.
+    preparing: 'w11_brief_designer_ep_art',
+    date_set: 'w5_upload_ep_to_distributor',
+    promoting: 'w3_ep_teaser_rollout',
+    post_release: 'w0_compile_first_week_stats',
+  },
+  album: {
+    just_starting: 'w17_lock_all_masters',
+    recorded: 'w16_write_album_metadata',
+    preparing: 'w16_brief_designer_album_art',
+    date_set: 'w7_upload_album_to_distributor',
+    promoting: 'w3_album_teaser_rollout',
+    post_release: 'w0_compile_first_week_stats',
+  },
 };
+
+const TEMPLATE_BY_MAPPED_TYPE: Record<MappedReleaseType, Template> = {
+  single: SINGLE_RELEASE_TEMPLATE,
+  ep: EP_RELEASE_TEMPLATE,
+  album: ALBUM_RELEASE_TEMPLATE,
+};
+
+/**
+ * Which playbook the AI Moment should quote, and whether that is the one the
+ * user's release will actually be built from.
+ *
+ * `usedFallback` is what drives the caveat: it is true when the chosen type has
+ * no live playbook, in which case the release really will start empty and we say
+ * so rather than promising a task the dashboard will not show.
+ */
+function resolveMomentTemplate(draft: OnboardingDraft): {
+  template: Template;
+  mappedType: MappedReleaseType;
+  usedFallback: boolean;
+} {
+  const releaseType = draft.releaseType;
+  if (releaseType === 'ep' || releaseType === 'album') {
+    try {
+      // Flag-aware on purpose: this has to agree with what release creation
+      // will actually instantiate.
+      getTemplate(releaseType);
+      return {
+        template: TEMPLATE_BY_MAPPED_TYPE[releaseType],
+        mappedType: releaseType,
+        usedFallback: false,
+      };
+    } catch {
+      // TemplateNotAvailableError — the playbook is switched off.
+    }
+  }
+  return {
+    template: SINGLE_RELEASE_TEMPLATE,
+    mappedType: 'single',
+    usedFallback: releaseType !== 'single' && releaseType !== null,
+  };
+}
 
 // Sentence stub that follows "Because '<title>' releases on <date>, " — or,
 // if either field is missing, the standalone version of the same idea.
@@ -119,15 +192,16 @@ const WHY_BY_STAGE: Record<OnboardingStage, { withSpecifics: string; generic: st
   },
 };
 
-const findTask = (taskId: string): TemplateTask => {
-  const task = SINGLE_RELEASE_TEMPLATE.tasks.find((entry) => entry.id === taskId);
+const findTask = (taskId: string, template: Template): TemplateTask => {
+  const task = template.tasks.find((entry) => entry.id === taskId);
   if (!task) {
-    // Build-time signal: the mapping references an ID single.ts no longer has.
-    // Throwing here keeps the AI Moment honest — better to fail loudly than
-    // show a placeholder.
+    // Build-time signal: the mapping references an ID the template no longer
+    // has. Throwing here keeps the AI Moment honest — better to fail loudly
+    // than show a placeholder.
     throw new Error(
-      `Onboarding AI Moment: template task '${taskId}' is missing from the single template. ` +
-        `Either restore the task in apps/web/lib/release-templates/single.ts or update the ` +
+      `Onboarding AI Moment: template task '${taskId}' is missing from the ` +
+        `${template.release_type} template (${template.id}). Either restore the task in ` +
+        `apps/web/lib/release-templates/${template.release_type}.ts or update the ` +
         `mapping in apps/web/lib/onboarding-ai-moment.ts.`
     );
   }
@@ -155,12 +229,17 @@ const formatReleaseDate = (isoDate: string): string => {
   }
 };
 
-const buildReleaseTypeNote = (draft: OnboardingDraft): string | null => {
-  // Templates only exist for 'single' at v1. Acknowledge the gap so the user
-  // is not promised tasks the dashboard won't actually show.
-  if (draft.releaseType === 'single') return null;
-  if (draft.releaseType === null) return null;
-  return 'This entry task comes from our single-release playbook. The EP, album, and music-video playbooks are next. Your release will be created, and you can build the task list manually until the matching template lands.';
+const buildReleaseTypeNote = (
+  draft: OnboardingDraft,
+  usedFallback: boolean
+): string | null => {
+  // Only caveat when the chosen type has no live playbook — then the release
+  // really will start empty and the user should not be promised tasks the
+  // dashboard won't show. When the EP or album playbook IS live, the suggested
+  // task is genuinely in their release and there is nothing to apologize for.
+  if (!usedFallback) return null;
+  const label = draft.releaseType === 'music_video' ? 'music-video' : draft.releaseType;
+  return `This entry task comes from our single-release playbook — the ${label} playbook is coming. Your release will be created, and you can build the task list manually until the matching template lands.`;
 };
 
 export function getOnboardingAiMoment(draft: OnboardingDraft): OnboardingAiMoment | null {
@@ -168,8 +247,9 @@ export function getOnboardingAiMoment(draft: OnboardingDraft): OnboardingAiMomen
   // suppressed and the page should keep the user on the stage step.
   if (!draft.stage) return null;
 
-  const taskId = STAGE_TO_TASK_ID[draft.stage];
-  const task = findTask(taskId);
+  const { template, mappedType, usedFallback } = resolveMomentTemplate(draft);
+  const taskId = STAGE_TO_TASK_ID[mappedType][draft.stage];
+  const task = findTask(taskId, template);
 
   const trimmedTitle = draft.title.trim();
   const formattedDate = formatReleaseDate(draft.releaseDate);
@@ -187,6 +267,6 @@ export function getOnboardingAiMoment(draft: OnboardingDraft): OnboardingAiMomen
     },
     why,
     progressPercent: 0,
-    releaseTypeNote: buildReleaseTypeNote(draft),
+    releaseTypeNote: buildReleaseTypeNote(draft, usedFallback),
   };
 }

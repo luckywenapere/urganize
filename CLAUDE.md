@@ -357,13 +357,13 @@ These are real but not blockers:
 
 ## Hand-crafted release templates
 
-The hand-crafted templates are the heart of v1. Template infrastructure (types, loader, instantiator) and the single template are built and wired into release creation as of 2026-05-26. EP, album, and music video templates remain to be authored.
+The hand-crafted templates are the heart of v1. Template infrastructure (types, loader, instantiator) and the single template are built and wired into release creation as of 2026-05-26. **EP and album playbooks were authored 2026-08-14 as v0.1 drafts behind `NEXT_PUBLIC_FEATURE_EP_ALBUM_TEMPLATES` (default off) — see "EP and album playbooks" in Working notes.** Music video remains to be authored (and has no DB enum value).
 
 **Templates needed for v1:**
 
 1. **Single release** — `single_v0.3`, signed off by two design partners (2026-05-26). 64 tasks across 11 weeks (8 pre-release + 3 post-release). Markdown source at `apps/web/lib/release-templates/single-v0.3.md`; encoded as TypeScript at `single.ts`. Use as the base for other templates.
-2. **EP release** — extends single template with multi-track logic and lead-single staggering.
-3. **Album release** — extends EP template with 2–3 staggered singles and a longer rollout.
+2. **EP release** — `ep_v0.1` (2026-08-14, DRAFT, flag-gated). 90 tasks across 16 weeks (13 pre-release + 3 post-release), built around a lead single dropping at offset −42. Multi-track logic + lead-single staggering, as this list always called for. Source `ep-v0.1.md`, encoded at `ep.ts`. **Not yet design-partner reviewed** — that review is what takes it to v0.2.
+3. **Album release** — `album_v0.1` (2026-08-14, DRAFT, flag-gated). 113 tasks across 21 weeks (17 pre-release + 4 post-release), built around two staggered singles at −84 and −42. Source `album-v0.1.md`, encoded at `album.ts`. Same review caveat.
 4. **Music video release** — different shape entirely; can be standalone or attached to an audio release.
 
 **Where templates should live in code:**
@@ -476,7 +476,7 @@ This section is for state that changes during the v1 build. Keep it current.
 - Failure handling: template instantiation runs inside a try/catch that logs and continues. A release can exist without tasks if instantiation fails — `TemplateNotAvailableError` for unbuilt release types, `TemplateInstantiationError` for DB / template / date issues. Recoverable beats partial rollback for v1.
 - Modal change: release date is now required (HTML `required` + `canSubmit` guard + API 400 before format check). Closes the silent-no-tasks path that `missing_release_date` would have opened.
 - Task assignment: every instantiated task is assigned to the release owner via `assigned_to_user_id`. Required for the dashboard query (`TaskService.getTasksForUser` filters by `.eq('assigned_to_user_id', userId)`) to surface them. Per-task reassignment happens via the task drawer. Earlier null-assignee build (Step 3b spec) caused tasks to be inserted but invisible — fixed before pushing.
-- v2 carry-overs: (1) the create-release modal does not capture release type — every release is implicitly `'single'`. Once EP/album/music_video templates land, the modal needs a type picker. (2) Silent template failures only log to server console — no in-product surface yet. (3) `createDefaultReleaseTasks` dead-code removal pending.
+- v2 carry-overs: (1) ~~the create-release modal does not capture release type~~ **resolved 2026-08-14: the modal has a Single/EP/Album picker, rendered only when more than one playbook is switched on (so it is invisible with the EP/album flag off, which is the default). `POST /api/releases` now validates the value against the DB enum instead of letting an unknown string 500 at the Postgres boundary.** (2) Silent template failures only log to server console — no in-product surface yet. (3) `createDefaultReleaseTasks` dead-code removal pending.
 
 ---
 
@@ -1069,6 +1069,91 @@ The rebuild of v1 scope item 2, replacing the never-activated "Tailor plan" buil
 - **Deleted with this work:** the tailor-plan route directory, `TailorPlanModal.tsx`, `lib/release-tailoring.ts`, the dead `lib/release-plan.ts` (zero importers — a legacy free-generation parser, the very shape this file forbids), and the tailor-plan entry in `lib/schema-fallback-guard.test.ts`'s baseline (a sanctioned ratchet-down; the new route group adds none). Six comments citing "the tailor-plan precedent" now cite the plan/EPK one.
 - **Tests:** `lib/release-planning.test.ts` and `lib/release-planning-server.test.ts` (79 cases) cover intake parsing, phase boundaries against the live template, the readiness date ladder, both delta gates, the regenerate merge semantics that protect hand edits, and approval's date math, dependency translation, metadata shape and assignee fallback. `lib/scene-cache.test.ts`'s "prefetches every scene" invariant became "every **cacheable** scene", plus a test pinning the plan scene out of the cache in both halves.
 - **Activation checklist:** (1) apply `20260810110000_release_plan_drafts.sql`; (2) optionally route the gateway and set `AI_PLANNER_MODEL` (the planner works without it, untailored); (3) set `NEXT_PUBLIC_FEATURE_RELEASE_PLANNER=true` in Vercel `Web`; (4) changelog entry + minor version bump across all 10 `package.json` files (the EPK precedent: the ledger entry lands at flag-flip, not at merge); (5) verify end to end with a real release, including that approved tasks complete, block and reopen exactly like template ones.
+
+---
+
+## EP and album playbooks (2026-08-14)
+
+Completion of v1 scope item 2, **not a scope expansion**: the six-feature list always called for a
+template per release type, and EP/album were the two the "Templates needed for v1" list named and
+never got. Built flag-off; **not yet activated**.
+
+- **What it is:** `ep_v0.1` (90 tasks, 13 weeks pre + 3 post, one lead single dropping at −42) and
+  `album_v0.1` (113 tasks, 17 weeks pre + 4 post, two staggered singles at −84 and −42), each with a
+  markdown source of truth beside its TS encoding, the `single-v0.3.md` / `single.ts` pattern. With
+  them registered, the onboarding step-0 picker enables EP and Album, the create-release modal grows a
+  type picker, and the planner drafts EP and album plans from their own playbook.
+- **Flag:** `NEXT_PUBLIC_FEATURE_EP_ALBUM_TEMPLATES`, default `false`. **No migration needed** — the
+  `release_type` DB enum has always accepted `'ep'` and `'album'`.
+- **Why a flag for a feature that is just data:** these are v0.1 DRAFTS. `single` went v0.1 → v0.3
+  through two design partners before it was trusted, and these have had no such pass. The flag buys
+  that review without holding the plumbing hostage.
+
+**Five things worth knowing before editing this:**
+
+1. **The loader is the ONE gate, and that is load-bearing.** `resolveTemplateSlot` in
+   `lib/release-templates/loader.ts` is the only place the flag is consulted; `getTemplate` and
+   `getAvailableReleaseTypes` route through it, and every consumer derives from those. So the
+   onboarding picker, the modal picker, the create route's instantiation, the schedule route's 207
+   path and the planner cannot disagree about whether EP and album exist. Flag off is
+   behaviourally identical to before this work. Do not add a second flag read anywhere else.
+2. **`getAuthoredTemplate` is flag-BLIND on purpose — do not "fix" it to use the gate.** A plan draft
+   generated while the flag was on carries `ep_v0.1` task ids. If the flag is rolled back mid-draft
+   and the autosave route resolved the template through the gate, it would fall back to the single
+   playbook, judge every one of those ids forged, and 400 every save — losing the manager's edits.
+   Hence `getDraftTemplate` (plan `_shared.ts`) for EXISTING drafts, keyed off the draft's own
+   `release_type`, versus `getPlannerTemplate` for NEW ones. The regenerate-phase route reads the
+   STORED draft's type, not the request's, because `resetPhaseToTemplate` re-materializes rows by
+   `template_task_id`.
+3. **The API validates against the DB enum, NOT against template availability.** `PlannerIntakeModal`
+   already POSTs `releaseType: 'ep'` today whenever the planner flag is on, because the intake offers
+   all three formats and falls back to the single playbook. A flag-aware allow-list would 400 that
+   live flow. So `POST /api/releases` checks `DB_RELEASE_TYPES` (`types/releases.ts`) and template
+   availability stays the loader's business. This also turns the old generic 500 on a garbage value
+   into a 400.
+4. **`plan/generate` now writes `releases.release_type` from the intake**, closing a real gap: a
+   release created from the modal or Chappi and later planned as an album kept saying `single`, which
+   the public press kit renders. Safe because a planner release carries `planner_pending`, never
+   `template_pending`, so the schedule route cannot double-instantiate off the corrected type.
+5. **The prompt guidance branches on provenance, and must keep doing so.** Telling the model to
+   "stretch the asset work to cover more tracks" is right when an EP fell back to the single playbook
+   and wrong when it is already looking at the EP playbook, where that work exists — it would
+   duplicate what is in front of it. `buildGuidance` takes `fallbackToSingle` for exactly this, and
+   both callers compute it rather than assuming.
+
+- **Copy is per-playbook now.** `getTemplateStats(releaseType)` (never throws; falls back to single's
+  numbers for a gated-off type, which is also what would be instantiated) feeds `SetReleaseDateCard`
+  and `NewReleaseGuide`, which otherwise told an album owner their plan was 64 activities over 11
+  weeks. `Release.releaseType` was added to carry it — `lib/services/release-service.ts` now selects
+  the column. `FirstReleaseWin` deliberately stays single-only (its flag must not run alongside the
+  planner, and it celebrates a first release, created before any picker has reason to appear).
+- **`onboarding-ai-moment.ts` has a per-playbook stage map.** The six onboarding stages mean the same
+  thing in every playbook, so each column is the same six gates in that playbook's own ids. The
+  "playbooks are next" caveat now renders only when the chosen type really did fall back — otherwise
+  it apologizes for a task that IS in the user's release.
+- **Tests:** `lib/release-templates/templates.test.ts` machine-enforces the authoring constraints for
+  all three playbooks (unique ids, resolvable `depends_on`, offsets inside the planner's −120…+60
+  window, ≤`MAX_DRAFT_TASKS`, at least one task in each of the four `derivePlanPhase` phases, an
+  event milestone on release day) plus the staggered-single invariants; `loader.test.ts` pins both
+  flag states and the flag-blind accessor. `release-planning.test.ts`'s phase-coverage test is now
+  parameterized over all three. 574 tests green.
+- **Verified:** `pnpm test`, `pnpm lint` (0 errors, 57 warnings = unchanged baseline, confirmed by
+  running lint against a stashed tree), `pnpm build`. Flag OFF and flag ON both checked against a
+  real server render through a throwaway harness page: off → `available: ['single']` and EP/album
+  stats falling back to 64/8/11; on → `['single','ep','album']` with EP 90/13/16 and album 113/17/21,
+  and all three copy variants rendering their own numbers in the HTML. The modal picker was confirmed
+  compiled into the flag-on client chunk (radiogroup + all three labels) but **its interactive
+  behaviour was never observed in a browser** — the Browser pane's approval gate cannot be answered
+  in a non-interactive session, and Next refuses a second dev server for a directory that already has
+  one. Worth one manual pass.
+- **Activation checklist:** (1) no migration; (2) design-partner review of both playbooks, then bump
+  to v0.2 in the md AND the ts (`id` and `version` are asserted to agree); (3) set
+  `NEXT_PUBLIC_FEATURE_EP_ALBUM_TEMPLATES=true` in Vercel `Web` **and redeploy** (`NEXT_PUBLIC_*` is
+  inlined at build time); (4) changelog entry + minor version bump across all 10 `package.json` files
+  (the EPK precedent: the ledger entry lands at flag-flip, not at merge); (5) verify end to end with a
+  real EP — create with the picker, set a date, confirm the activities carry
+  `metadata.template.template_id === 'ep_v0.1'` and that the lead-single drop renders as an event
+  milestone.
 
 ---
 

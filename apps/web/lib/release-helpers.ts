@@ -4,6 +4,8 @@
  * can keep working after the pre-save feature is deleted.
  */
 
+import type { DbReleaseType } from '@/types/releases';
+
 export interface ReleaseOption {
   id: string;
   /** FK to artists.id. Empty string when the legacy lookup path returned a
@@ -13,6 +15,10 @@ export interface ReleaseOption {
   artistId: string;
   artistName: string;
   title: string;
+  /** Which playbook the release follows. Optional because most producers of
+   * this shape are selector reads that do not need it; the create response
+   * sets it so an optimistic client row does not have to guess. */
+  releaseType?: DbReleaseType;
   releaseDate: string | null;
   coverArtUrl: string | null;
   createdAt: string;

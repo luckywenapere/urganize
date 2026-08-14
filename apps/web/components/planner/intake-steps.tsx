@@ -15,7 +15,14 @@ import {
   type ReadyItem,
 } from '@/lib/release-planning';
 import type { PlannerIntakeDraft } from '@/lib/planner-intake-draft';
+import {
+  getTemplateStats,
+  isEpAlbumTemplatesEnabled,
+} from '@/lib/release-templates/loader';
 import { PlannerCheckboxGroup, PlannerRadioGroup } from './PlannerOptionGroup';
+
+/** Whether an EP or album plan really comes from its own playbook right now. */
+const EP_ALBUM_PLAYBOOKS_LIVE = isEpAlbumTemplatesEnabled();
 
 /**
  * The seven questions, one per screen.
@@ -92,10 +99,30 @@ function ReleaseTypeStep({ draft, patch, disabled }: StepBodyProps) {
         onChange={(releaseType) => patch({ releaseType })}
         disabled={disabled}
       />
+      {/* The helper text has to tell the truth about which playbook this plan
+          will come from, and that depends on whether the EP/album playbooks are
+          switched on. Same loader gate the planner route uses, so the copy and
+          the plan cannot disagree. */}
       {draft.releaseType === 'ep' || draft.releaseType === 'album' ? (
         <p className={helperClass}>
-          {draft.releaseType === 'ep' ? 'EPs' : 'Albums'} start from the single playbook for now.
-          UrgAns stretches it to cover more tracks.
+          {EP_ALBUM_PLAYBOOKS_LIVE ? (
+            draft.releaseType === 'ep' ? (
+              <>
+                The EP playbook plans {getTemplateStats('ep').spanWeeks} weeks around a lead single
+                that drops ahead of the EP. UrgAns tailors it to your dates.
+              </>
+            ) : (
+              <>
+                The album playbook plans {getTemplateStats('album').spanWeeks} weeks around two
+                staggered singles. UrgAns tailors it to your dates.
+              </>
+            )
+          ) : (
+            <>
+              {draft.releaseType === 'ep' ? 'EPs' : 'Albums'} start from the single playbook for now.
+              UrgAns stretches it to cover more tracks.
+            </>
+          )}
         </p>
       ) : null}
     </>

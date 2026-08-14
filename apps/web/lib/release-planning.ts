@@ -1027,7 +1027,10 @@ function buildSystemPrompt(scope: { phaseLabel?: string }): string {
   ].join('\n');
 }
 
-function buildGuidance(intake: ReleasePlanIntake): string {
+function buildGuidance(
+  intake: ReleasePlanIntake,
+  options?: { fallbackToSingle?: boolean }
+): string {
   const lines = [
     'Guidance for common cases:',
     '- No budget: drop the optional paid promotion tasks and say so in the rationale.',
@@ -1037,9 +1040,26 @@ function buildGuidance(intake: ReleasePlanIntake): string {
   ];
 
   if (intake.release_type !== 'single') {
-    lines.push(
-      `- This is ${intake.release_type === 'ep' ? 'an EP' : 'an album'} planned from the single playbook. Stretch the asset and content work to cover more tracks, and mention a lead single in the why lines where it fits. Do not try to invent per-track tasks: there is no operation for adding them.`
-    );
+    const formatLabel = intake.release_type === 'ep' ? 'an EP' : 'an album';
+    if (options?.fallbackToSingle) {
+      // No playbook for this format is switched on, so the draft really did
+      // come from the single one and the model should compensate for that.
+      lines.push(
+        `- This is ${formatLabel} planned from the single playbook. Stretch the asset and content work to cover more tracks, and mention a lead single in the why lines where it fits. Do not try to invent per-track tasks: there is no operation for adding them.`
+      );
+    } else {
+      // The draft came from the format's own playbook, which already carries
+      // the multi-track work and the staggered single drops. Telling the model
+      // to "stretch the asset work to cover more tracks" here would make it
+      // duplicate what is already in front of it.
+      const singles =
+        intake.release_type === 'ep'
+          ? 'The lead single drop and its runway are already in the plan'
+          : 'Both staggered single drops and their runways are already in the plan';
+      lines.push(
+        `- This is ${formatLabel} planned from the ${intake.release_type === 'ep' ? 'EP' : 'album'} playbook, so the multi-track work is already there. ${singles} — adjust their dates to this release's context rather than restating them, and do not try to invent per-track tasks: there is no operation for adding them.`
+      );
+    }
   }
 
   return lines.join('\n');
@@ -1057,8 +1077,12 @@ export function buildPlannerMessages(params: {
   members: PlannerPromptMember[];
   todayYmd: string;
   phase?: PlanPhase;
+  /** True when this draft came from the single playbook despite being an EP or
+   * album — i.e. that format's playbook exists but is switched off. Changes one
+   * guidance line, so the prompt never claims a provenance it does not have. */
+  fallbackToSingle?: boolean;
 }): Array<{ role: 'system' | 'user'; content: string }> {
-  const { release, intake, tasks, members, todayYmd, phase } = params;
+  const { release, intake, tasks, members, todayYmd, phase, fallbackToSingle } = params;
 
   const system = buildSystemPrompt({
     phaseLabel: phase ? PLAN_PHASE_LABELS[phase] : undefined,
@@ -1074,7 +1098,7 @@ export function buildPlannerMessages(params: {
     'What the manager told us:',
     ...describeIntake(intake),
     '',
-    buildGuidance(intake),
+    buildGuidance(intake, { fallbackToSingle }),
     '',
     'Team available for assignment (use member_user_id verbatim):',
     JSON.stringify(members, null, 2),
