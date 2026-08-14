@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.51.2",
+    date: "August 14, 2026",
+    highlights: [
+      "The Calendar button under your activities now sits on the left, lined up with the lists above it, instead of floating in the middle of the column.",
+    ],
+  },
+  {
     version: "0.51.1",
     date: "August 13, 2026",
     highlights: [

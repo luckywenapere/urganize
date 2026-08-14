@@ -297,7 +297,7 @@ function TasksPanelSkeleton() {
           the reserved footprint sits pinned at the panel's base and doesn't
           shift when content resolves. */}
       {CONTENT_CALENDAR_ENABLED ? (
-        <div className="flex shrink-0 justify-center pb-4 pt-3 lg:pb-2">
+        <div className="flex shrink-0 justify-start pb-4 pt-3 lg:pb-2">
           <SkeletonBlock className="h-8 w-28 rounded-full" />
         </div>
       ) : null}

@@ -622,7 +622,7 @@ export function TasksPanel({
           "Activities" pill is already the way back, and a Calendar entry
           while Calendar (or any scene) is showing is redundant chrome. */}
       {CONTENT_CALENDAR_ENABLED && scopedRelease && !sceneContent ? (
-        <div className="flex shrink-0 justify-center pb-4 pt-3 lg:pb-2">
+        <div className="flex shrink-0 justify-start pb-4 pt-3 lg:pb-2">
           <button
             type="button"
             onClick={() => toggleScene('calendar', scopedRelease.id)}
