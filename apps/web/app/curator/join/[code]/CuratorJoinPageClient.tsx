@@ -175,8 +175,11 @@ export function CuratorJoinPageClient() {
   );
 
   const finish = useCallback(async () => {
-    // The role changed server-side, so refresh the profile before navigating.
-    // Without this the shell still reads the old role and bounces.
+    // The account gained a curator profile server-side (and, for a brand-new
+    // account, the curator-only role), so refresh before navigating. Without
+    // this the shell still reads the pre-join account and bounces. An account
+    // that already runs releases keeps its team role and simply becomes dual:
+    // it lands here now, and its home is still the workspace.
     try {
       await useAuthStore.getState().checkAuth({ force: true });
     } catch {

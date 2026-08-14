@@ -161,6 +161,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   // monogram has the user's initial yet — and that gracefully falls back
   // to "U" when userName is empty. We collapse the two previous branches
   // (showWorkspaceSidebar / showWorkspaceSidebarSkeleton) into one.
+  // Curator-ONLY: role='curator' means the team side was never switched on, so
+  // there is no workspace to put chrome around. A dual account (playlist owner
+  // who also runs releases) carries a team role and gets the full app — it
+  // reaches its inbox through the identity card's "Playlist pitches" entry.
   const isCuratorAccount = user?.role === 'curator';
   const showWorkspaceChrome =
     (isAuthenticated || isAuthLoading) &&
@@ -201,7 +205,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [checkAuth, isAuthenticated, user]);
 
-  // A curator has no team, so every dashboard and settings route is a dead end
+  // A curator-only account has no team, so every dashboard and settings route is a dead end
   // for them: the APIs behind those pages return 403 and the pages would render
   // permanent empty states. Send them to their own surface instead. Handled
   // here rather than per page so a stale link, a back button or an installed

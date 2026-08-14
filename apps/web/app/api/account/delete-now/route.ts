@@ -75,6 +75,19 @@ async function removeUserStorageObjects(supabaseAdmin: SupabaseClient, userId: s
     collectPath(RELEASE_ASSETS_BUCKET, row.logo_storage_path);
   }
 
+  // A curator profile photo also lives in release-assets (under curator/<id>/),
+  // and its row cascade-deletes with the auth user. Enumerated unconditionally,
+  // regardless of the pitching flag: an account that joined while the feature
+  // was on must still be cleaned up if it is later switched off.
+  const curatorProfileResult = await supabaseAdmin
+    .from('curator_profiles')
+    .select('photo_path')
+    .eq('user_id', userId);
+  logQueryError('curator profile photo', curatorProfileResult.error);
+  for (const row of curatorProfileResult.data ?? []) {
+    collectPath(RELEASE_ASSETS_BUCKET, row.photo_path);
+  }
+
   for (const [bucket, paths] of pathsByBucket) {
     const removeResult = await supabaseAdmin.storage.from(bucket).remove([...paths]);
     if (removeResult.error) {

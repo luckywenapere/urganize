@@ -60,8 +60,9 @@ export async function GET(request: NextRequest) {
     );
   }
   if (!data) {
-    // requireCuratorUser passed, so profiles.role is 'curator' but the
-    // curator_profiles row is missing. That means the join route half-finished.
+    // requireCuratorUser reads the same row this select just missed, so reaching
+    // here means it was deleted between the two — a race, not a state a real
+    // account sits in. Kept as a defensive branch rather than a 500.
     return NextResponse.json({ error: 'Your profile is not set up yet.' }, { status: 404 });
   }
 

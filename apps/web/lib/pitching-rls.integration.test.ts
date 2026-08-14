@@ -24,8 +24,12 @@
  *    which is simply "no sign-in".
  *      TEAM A   — a manager who owns a release, a task, an asset and a note
  *      TEAM B   — a second, unrelated manager
- *      CURATOR 1 — profiles.role = 'curator', owns a playlist
- *      CURATOR 2 — profiles.role = 'curator', owns a different playlist
+ *      CURATOR 1 — has a curator_profiles row, owns a playlist
+ *      CURATOR 2 — has a curator_profiles row, owns a different playlist
+ *    Curator-ness is that row, not profiles.role: an account can own playlists
+ *    AND run releases. Seed these two as curator-ONLY (join with a fresh email
+ *    that has never touched the team side) so the isolation assertions below
+ *    stay about two genuinely separate tenants.
  * 3. Seed one pitch: from TEAM A's release, to CURATOR 1's playlist. The easiest
  *    honest way is through the product with the flag on: mint an invite at
  *    /admin/curator-invites, join as each curator, add a playlist, then pitch

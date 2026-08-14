@@ -4,7 +4,8 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ClipboardList, PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
+import { ClipboardList, Inbox, PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
+import { useAuthStore } from "@/lib/auth-store";
 import { useWorkspaceIdentityStore } from "@/stores/useWorkspaceIdentityStore";
 import { useReleaseStore } from "@/stores/useReleaseStore";
 import { useChappiStore } from "@/stores/useChappiStore";
@@ -45,6 +46,12 @@ type NavItem = {
 // and disappear together.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === "true";
 
+// One account can be both a team running releases and a playlist owner, so this
+// card is where a dual account crosses back to its pitch inbox. Shown only when
+// the account actually owns a curator profile (auth store's hasCuratorProfile);
+// the /curator shell enforces the same thing for anyone who types the URL.
+const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === "true";
+
 // NavItem.Icon must always return a ReactElement (matching the BrandIcons
 // function components' signature); lucide-react's ForwardRefExoticComponent
 // types its call signature as `ReactElement | null`, so it can't be assigned
@@ -55,6 +62,10 @@ function MetadataIcon({ className }: { className?: string }) {
 
 function AdminIcon({ className }: { className?: string }) {
   return <ShieldCheck className={className} aria-hidden="true" />;
+}
+
+function PitchesIcon({ className }: { className?: string }) {
+  return <Inbox className={className} aria-hidden="true" />;
 }
 
 /**
@@ -91,7 +102,11 @@ const SETTINGS_ITEM: NavItem = {
  * same gate TasksPanel's below-`lg` pill uses (`METADATA_ENABLED &&
  * scopedRelease`) so the two can't disagree about when the feature exists.
  */
-function buildNavItems(scopedReleaseId: string | null, activeScene: string | null): NavItem[] {
+function buildNavItems(
+  scopedReleaseId: string | null,
+  activeScene: string | null,
+  hasCuratorProfile: boolean
+): NavItem[] {
   return [
     {
       href: "/dashboard",
@@ -131,6 +146,20 @@ function buildNavItems(scopedReleaseId: string | null, activeScene: string | nul
           },
         ]
       : []),
+    // The crossing point for an account that is also a playlist owner. Last in
+    // the scrolling list because it leaves this workspace entirely: /curator is
+    // a standalone route (AppShell drops all team chrome there), so it is a
+    // neighbour of the release surfaces rather than one of them.
+    ...(PITCHING_ENABLED && hasCuratorProfile
+      ? [
+          {
+            href: "/curator",
+            label: "Playlist pitches",
+            Icon: PitchesIcon,
+            isActive: (pathname: string) => pathname.startsWith("/curator"),
+          },
+        ]
+      : []),
     // Settings and Admin deliberately do NOT belong here — they're pinned to
     // the base of the nav instead (see ADMIN_ITEM / SETTINGS_ITEM above).
   ];
@@ -163,6 +192,10 @@ export function WorkspaceIdentityPanel() {
   const memberCount = useWorkspaceIdentityStore((state) => state.memberCount);
   const logo = useWorkspaceIdentityStore((state) => state.logo);
   const isAdmin = useWorkspaceIdentityStore((state) => state.isAdmin);
+  // null while the capability probe is in flight; treated as "no" for rendering,
+  // so the row pops in rather than reserving space for an account that will
+  // never have it (the same tradeoff Admin's row makes below).
+  const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
   const hydrated = useWorkspaceIdentityStore((state) => state.hydrated);
   const load = useWorkspaceIdentityStore((state) => state.load);
   const releases = useReleaseStore((state) => state.releases);
@@ -377,14 +410,19 @@ export function WorkspaceIdentityPanel() {
           <Suspense
             fallback={
               <WorkspaceNavList
-                navItems={buildNavItems(null, null)}
+                navItems={buildNavItems(null, null, hasCuratorProfile === true)}
                 pathname={pathname}
                 isAdmin={isAdmin}
                 collapsed={collapsed}
               />
             }
           >
-            <WorkspaceNavLinks pathname={pathname} isAdmin={isAdmin} collapsed={collapsed} />
+            <WorkspaceNavLinks
+              pathname={pathname}
+              isAdmin={isAdmin}
+              collapsed={collapsed}
+              hasCuratorProfile={hasCuratorProfile === true}
+            />
           </Suspense>
         </nav>
 
@@ -428,10 +466,12 @@ function WorkspaceNavLinks({
   pathname,
   isAdmin,
   collapsed,
+  hasCuratorProfile,
 }: {
   pathname: string | null;
   isAdmin: boolean;
   collapsed: boolean;
+  hasCuratorProfile: boolean;
 }) {
   const searchParams = useSearchParams();
   // Same `?release=` / `?scene=` params useReleaseScope / useSceneOverlay own
@@ -439,7 +479,7 @@ function WorkspaceNavLinks({
   // needs them to build one nav href, not to read or write scene state.
   const scopedReleaseId = searchParams.get("release");
   const activeScene = searchParams.get("scene");
-  const navItems = buildNavItems(scopedReleaseId, activeScene);
+  const navItems = buildNavItems(scopedReleaseId, activeScene, hasCuratorProfile);
   return (
     <WorkspaceNavList
       navItems={navItems}

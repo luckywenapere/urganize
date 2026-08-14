@@ -638,7 +638,7 @@ async function syncOrganizationMembersIntoWorkspace(
     .upsert(inviteRows, { onConflict: 'workspace_id,email' });
 }
 
-/** Thrown when a curator account reaches a team-provisioning path. */
+/** Thrown when a curator-ONLY account reaches a team-provisioning path. */
 export class CuratorAccountError extends Error {
   constructor() {
     super('Playlist owner accounts cannot create releases.');
@@ -650,10 +650,16 @@ export async function ensureOwnedWorkspace(
   adminClient: SupabaseClient,
   owner: DatabaseUser
 ): Promise<WorkspaceRow> {
-  // A curator must never get a team of their own. loadWorkspaceAccessContext
-  // bails before it reaches here, but this function is also called directly by
-  // the release-creation and workspace-logo routes, so the guard belongs at the
-  // provisioning step itself rather than at each caller.
+  // A curator-ONLY account must never get a team of their own by accident.
+  // loadWorkspaceAccessContext bails before it reaches here, but this function is
+  // also called directly by the release-creation and workspace-logo routes, so
+  // the guard belongs at the provisioning step itself rather than at each caller.
+  //
+  // role='curator' is the "team side never switched on" marker, not "is a
+  // playlist owner" — a playlist owner who ALSO wants releases clears it through
+  // POST /api/curator/activate-team, and from then on provisions a workspace here
+  // like anybody else. Asking for the team product is what earns a workspace; a
+  // stray API call is not.
   if ((await loadAccountRole(adminClient, owner.id)) === 'curator') {
     throw new CuratorAccountError();
   }
@@ -694,11 +700,34 @@ export async function ensureOwnedWorkspace(
       .select('id,owner_id,name,created_at,updated_at')
       .maybeSingle();
 
-    if (insertResult.error || !insertResult.data) {
+    if (insertResult.data) {
+      workspace = insertResult.data as WorkspaceRow;
+    } else if ((insertResult.error as { code?: string } | null)?.code === '23505') {
+      // Another request for this same user won the race to create the
+      // one-per-owner workspace (workspaces has a unique index on owner_id).
+      // This is the COMMON path, not an edge case: the select above and this
+      // insert are not atomic, and a brand-new account's first page load fires
+      // several workspace-aware requests at once (command-center, workspace
+      // identity, notifications), so whichever ones lose used to throw a raw
+      // PostgREST error object — which, not being an Error instance, surfaced
+      // to the user as a bare "Internal Server Error" on the very first screen
+      // of a new account. Re-read the winner's row instead. Same
+      // 23505-falls-back-to-the-winner shape the EPK generate route uses.
+      const racedResult = await adminClient
+        .from(WORKSPACES_TABLE)
+        .select('id,owner_id,name,created_at,updated_at')
+        .eq('owner_id', owner.id)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (racedResult.error || !racedResult.data) {
+        throw racedResult.error || new Error('Could not create workspace.');
+      }
+      workspace = racedResult.data as WorkspaceRow;
+    } else {
       throw insertResult.error || new Error('Could not create workspace.');
     }
-
-    workspace = insertResult.data as WorkspaceRow;
   }
 
   await adminClient.from(WORKSPACE_MEMBERS_TABLE).upsert(
@@ -988,12 +1017,14 @@ export async function loadWorkspaceAccessContext(
   //      membership isn't intact (first-ever load, or a corrupted/missing
   //      owner row — the cases the old unconditional upsert was silently
   //      self-healing) pays the write path, then the context is re-resolved.
-  //   0. A curator gets an empty context and, crucially, never reaches the
-  //      provision-on-miss step below. Without this bail, the first
-  //      workspace-aware request a curator made would silently hand them a
-  //      team of their own, which the whole account type is defined against.
-  //      The role read rides in the same Promise.all so its latency hides
-  //      behind the resolve on the steady state.
+  //   0. A curator-ONLY account (role='curator', i.e. the team side was never
+  //      switched on) gets an empty context and, crucially, never reaches the
+  //      provision-on-miss step below. Without this bail, its first
+  //      workspace-aware request would silently hand it a team it never asked
+  //      for. A DUAL account — a playlist owner who did ask, via POST
+  //      /api/curator/activate-team — carries a team role here and provisions
+  //      normally. The role read rides in the same Promise.all so its latency
+  //      hides behind the resolve on the steady state.
   const [activatedInvites, initialResolved, accountRole] = await Promise.all([
     activatePendingWorkspaceInvitesForUser(adminClient, user),
     resolveWorkspaceAccessContext(adminClient, user),

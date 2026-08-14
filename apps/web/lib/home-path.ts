@@ -25,20 +25,26 @@
 // every entry point moves together, so a future reversal is this line.
 export const HOME_PATH = '/dashboard';
 
-/** Where a curator lands. Their surface has no team chrome at all. */
+/** Where a curator-only account lands. That surface has no team chrome at all. */
 export const CURATOR_HOME_PATH = '/curator';
 
 /**
  * The post-auth destination for a given account.
  *
- * Curators (the playlist-pitching account type) have no team and cannot open
- * any dashboard route, so sending them to HOME_PATH would bounce them straight
+ * role='curator' means the account is curator-ONLY: it has no team and cannot
+ * open any dashboard route, so sending it to HOME_PATH would bounce it straight
  * back out. Every other role resolves to HOME_PATH exactly as before.
+ *
+ * A DUAL account — a playlist owner who also runs releases — carries a team role
+ * and therefore lands on the workspace, which is the founder call: the team
+ * product is the bigger surface, and its pitch inbox is one tap away from the
+ * identity card. Do not switch this to a curator_profiles lookup; the capability
+ * is not the question here, "does this account have a team yet" is.
  *
  * Use this at any entry point a curator can actually arrive through: login, the
  * OAuth callback, and the root redirect. The remaining HOME_PATH importers
  * (onboarding completion, invite acceptance, paywall unlock, promo redemption,
- * post-checkout) are team-only flows a curator never reaches.
+ * post-checkout) are team-only flows a curator-only account never reaches.
  */
 export function resolveHomePath(role?: string | null): string {
   return String(role || '').trim().toLowerCase() === 'curator' ? CURATOR_HOME_PATH : HOME_PATH;

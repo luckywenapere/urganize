@@ -58,12 +58,21 @@ export async function requireActiveAuthenticatedUser(request: NextRequest) {
 }
 
 /**
- * Team-route containment for curator accounts (the playlist-pitching user
- * type). A curator is not a member of any team and must never read releases,
- * tasks, files or team data, so the boundary lives HERE — in the one gate every
+ * Team-route containment for curator-ONLY accounts (the playlist-pitching user
+ * type). Such an account belongs to no team and must never read releases, tasks,
+ * files or team data, so the boundary lives HERE — in the one gate every
  * protected team route already passes through — rather than as a check each
  * route has to remember. Curator routes use requireCuratorUser
  * (app/api/curator/_shared.ts) and never reach this.
+ *
+ * The test is role='curator', and that is deliberately NOT the same question as
+ * "is this a playlist owner". Owning playlists is a capability (a
+ * curator_profiles row) and can coexist with running releases; role='curator'
+ * means only that the team side was never switched on
+ * (POST /api/curator/activate-team clears it). So a DUAL account passes straight
+ * through here and uses the team product normally, paywall included — its team
+ * half is not free. Do not switch this to a curator_profiles lookup; that would
+ * lock every dual account out of its own workspace.
  *
  * Row-level security already stops a curator reading those tables directly, but
  * these routes run with the service-role client, which bypasses RLS. This is
