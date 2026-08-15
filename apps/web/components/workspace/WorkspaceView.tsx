@@ -656,8 +656,32 @@ export function WorkspaceView() {
   // full-screen minimum pushed every page 125px past the viewport — a
   // permanent scrollbar even when three releases fit comfortably. The app
   // shell paints the background; this main sizes to its content.
+  // `flex min-h-full flex-col` below lg (2026-08-14) is the height chain that
+  // lets TasksPanel's mobile pill dock actually reach the bottom of the screen.
+  // `position: sticky` alone can't do it: it only pins once the containing
+  // block overflows the viewport, and every activity bucket starts COLLAPSED —
+  // so on a normal load the dock would sit right under a short list, floating
+  // mid-screen. That is the exact failure the founder rejected by screenshot
+  // when the Calendar pill was tried as a sticky element inside this list
+  // (2026-08-13, attempt 3), and `position: fixed` is not an escape: the
+  // `.lazy-fade` class on AppShell's `.app-layout` carries a non-`none`
+  // transform, which makes it the containing block for fixed descendants (and
+  // only outside `prefers-reduced-motion`, so it would break for some users and
+  // not others).
+  //
+  // So the height is propagated instead, with no magic numbers: AppShell's
+  // <main> is a stretched flex item inside a `min-h-screen` column, so it has a
+  // definite height, `min-h-full` resolves against it, and `flex-1` carries the
+  // remainder down through the wrapper -> the mobile branch -> TasksPanel's
+  // aside (whose own `flex-1` was inert below lg until now) -> its scrolling
+  // body. The dock, as the aside's last child, lands on the viewport floor when
+  // content is short and stays sticky when it isn't.
+  //
+  // `min-h-` (not `h-`) is load-bearing: a hard height would clip a long
+  // activity list instead of letting the page grow. At lg+ every one of these
+  // reverts to the block layout the desktop views have always assumed.
   return (
-    <main className="bg-bg-base text-content-primary">
+    <main className="flex min-h-full flex-col bg-bg-base text-content-primary lg:block">
       {/* Mobile gutter comes from AppShell's <main> (px-4). Layering another
           px-4 here on mobile compounded to 32px each side, eating content
           area on phones where TasksPanel fills the screen full-width. The
@@ -693,8 +717,15 @@ export function WorkspaceView() {
           the release grid 48px of width it needed to reach 4 columns. Dropping
           it at lg+ lines the grid area up with the same content edge the topbar
           uses. Keep WorkspaceSkeleton's wrapper identical (URG-228). */}
+      {/* `flex min-h-0 flex-1 flex-col lg:block` — link two of the height chain
+          described above <main>; inert at lg+.
+          The bottom padding drops to 0 below lg while a release is scoped
+          (2026-08-14): the mobile pill dock is the last thing in that view and
+          already sits above AppShell's own bottom clearance, so this padding
+          would only push the dock up off the floor — by 24px on a phone and 96px
+          at `sm`, where it would visibly float. The catalog view keeps it. */}
       <div
-        className={`min-w-0 pt-6 sm:px-6 lg:px-0 lg:pt-0 ${isDesktopFocusedMode ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
+        className={`flex min-h-0 min-w-0 flex-1 flex-col pt-6 sm:px-6 lg:block lg:px-0 lg:pt-0 ${isDesktopFocusedMode ? 'pb-0 lg:pb-0' : 'pb-6 sm:pb-24'}`}
       >
           {/* Screen-reader-only live region. Polite mode waits for the SR to be
               idle, atomic="true" re-reads the whole message. Mirrors the visible
@@ -721,9 +752,12 @@ export function WorkspaceView() {
               shows back header + TasksPanel for the scoped release (Files and
               Calendar are now their own pages, linked from TasksPanel's header
               — see URG-165). Behavior matches the pre-centered-focus
-              implementation — this block is intentionally unchanged.
+              implementation.
               ==================================================================== */}
-          <div className="lg:hidden">
+          {/* Final link of the height chain (see <main> above): this column
+              stretches to the viewport floor so TasksPanel's aside — and with
+              it the pill dock at the aside's base — has somewhere to reach. */}
+          <div className="flex min-h-0 flex-1 flex-col lg:hidden">
             {scopedReleaseId && scopedReleaseSlim ? (
               <>
                 <div className="mb-4 flex items-center gap-3">

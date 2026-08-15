@@ -1713,6 +1713,40 @@ body:focus-within .keyboard-hint,
   }
 }
 
+/* ── TasksPanel's mobile pill dock (2026-08-14, founder call) ────────────
+   Below lg every scoped-release pill collects into ONE wrapping block at the
+   base of the tasks panel — no top row, no separate footer row — stuck to the
+   bottom of the viewport while the activity list scrolls behind it. At lg+ the
+   dock is `hidden` and the desktop header/footer rows render instead, so these
+   offsets never apply there and need no desktop reset.
+
+   The offset clears whatever fixed surface already owns the screen's bottom
+   edge, which is why there are two of them and why TasksPanel picks between
+   them from NEXT_PUBLIC_FEATURE_MOBILE_NAV (the same precomputed-class pattern
+   AppShell uses for <main>'s bottom padding):
+     - flag ON  → deliberately EQUAL to .mobile-nav-clearance, the padding
+       AppShell's <main> already reserves for the bar. Equal is the point: the
+       dock's pinned position and its resting position (the base of a panel
+       that ends exactly at that padding) then coincide, so it does not shift
+       when the list is scrolled to the very end. It clears the 4rem bar with
+       1rem of air. Keep it in lockstep with .mobile-nav-clearance above, not
+       merely with the bar's height.
+     - flag OFF → the floating ChappiDock / SupportChat launcher, which sits at
+       `bottom-5` (1.25rem) and stands ~2.6rem tall, so its top edge is ~3.85rem
+       up. No safe-area term here on purpose: that launcher is itself
+       safe-area-agnostic, so matching it keeps the gap constant. This one
+       cannot also match its resting position, because <main>'s flag-off
+       clearance is 7rem below md but 2.5rem above it; the 2.5rem case is the
+       compromise, where the pinned dock overlaps the last ~2rem of the list at
+       maximum scroll. Not a production configuration (the bar is on in prod). */
+.tasks-pill-dock {
+  bottom: 4.5rem;
+}
+
+.tasks-pill-dock-nav {
+  bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+}
+
 @media (max-width: 768px) {
   :root {
     --text-base: 15px;
