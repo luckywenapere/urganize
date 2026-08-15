@@ -315,8 +315,13 @@ function TasksPanelSkeleton() {
       <div className="min-h-0 flex-1 space-y-3 pb-4 lg:overflow-hidden">
         {/* Collapsed bucket-header rows — every real bucket starts closed
             (founder call, 2026-06-11 default), so this is what the panel
-            actually shows on first paint, not an arbitrary placeholder. */}
-        {Array.from({ length: 3 }).map((_, index) => (
+            actually shows on first paint, not an arbitrary placeholder.
+            FIVE of them since 2026-08-15: the five time buckets always render
+            once a release has any activity, empty or not (see
+            ALWAYS_VISIBLE_SECTIONS in TasksPanel). Three was right when only
+            occupied buckets appeared; it now under-reserves the common case
+            and the list would grow as data lands. */}
+        {Array.from({ length: 5 }).map((_, index) => (
           <div
             key={`bucket-${index}`}
             className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface"
