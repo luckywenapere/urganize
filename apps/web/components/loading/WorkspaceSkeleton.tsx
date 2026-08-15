@@ -30,6 +30,7 @@ const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
+const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 // Notes' scoped-release link (TasksPanel) — added 2026-08-10; this
 // reservation was missing even though the real pill has rendered behind the
@@ -286,14 +287,18 @@ function TasksPanelSkeleton() {
   const extraActionPillBlocks = STATUS_UPDATE_ENABLED ? (
     <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
   ) : null;
-  // Calendar / Press kit — the panel's outbound pair. A desktop-only footer
-  // row at lg+, the tail of the mobile dock below it. Calendar reserves less
-  // than Press kit now that it carries no Beta tag (founder call, 2026-08-15);
-  // Press kit keeps its own, so it stays the wider of the two.
+  // Calendar / Press kit / Fan capture — the panel's outbound group. A
+  // desktop-only footer row at lg+, the tail of the mobile dock below it.
+  // Calendar reserves less than the other two now that it carries no Beta tag
+  // (founder call, 2026-08-15); Fan capture is the widest, being the longest
+  // label AND carrying a Beta tag. Widths are per-label rather than uniform: a
+  // placeholder wider than the real pill shifts every neighbour left when the
+  // labels arrive.
   const outboundPillBlocks = (
     <>
       {CONTENT_CALENDAR_ENABLED ? <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" /> : null}
       {EPK_ENABLED ? <SkeletonBlock className="h-8 w-32 shrink-0 rounded-full" /> : null}
+      {CAPTURE_ENABLED ? <SkeletonBlock className="h-8 w-36 shrink-0 rounded-full" /> : null}
     </>
   );
   return (
@@ -326,13 +331,14 @@ function TasksPanelSkeleton() {
           </div>
         ))}
       </div>
-      {/* Desktop footer placeholders — Calendar (2026-08-13) and Press kit
-          (2026-08-14); see the real block's comment in TasksPanel.tsx for the
-          full history of both moves out of the header pill row. A sibling
+      {/* Desktop footer placeholders — Calendar (2026-08-13), Press kit and
+          Fan capture (both 2026-08-14); see the real block's comment in
+          TasksPanel.tsx for the full history of those moves out of the header
+          pill row. A sibling
           AFTER the flex-1 body, matching the real row's wrapper classes
           exactly, so the reserved footprint sits pinned at the panel's base
           and doesn't shift when content resolves. */}
-      {CONTENT_CALENDAR_ENABLED || EPK_ENABLED ? (
+      {CONTENT_CALENDAR_ENABLED || EPK_ENABLED || CAPTURE_ENABLED ? (
         <div className="hidden shrink-0 items-center gap-2 pb-2 pt-3 lg:flex">
           {outboundPillBlocks}
         </div>

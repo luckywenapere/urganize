@@ -66,6 +66,7 @@ const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'tru
 // used to render the calendar island shell around a permanently failing fetch
 // (its API routes 404 when off) instead of the normal activity list.
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
+const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 
 // Dynamic for the same reason AppShell already loads it that way — a static
 // import here defeated that, dragging the ~460-line modal into the /dashboard
@@ -119,7 +120,11 @@ export function WorkspaceView() {
   // Flag-gate the calendar scene at the one place the URL is resolved: with
   // the flag off the param is treated as no-scene, matching the pill (which
   // never renders) and the API routes (which 404).
-  const activeScene = urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED ? null : urlScene;
+  const activeScene =
+    (urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED) ||
+    (urlScene === 'capture' && !CAPTURE_ENABLED)
+      ? null
+      : urlScene;
   // Which of the two always-in-the-DOM layout branches (mobile drill-down /
   // desktop focused) should receive side-effectful children — see the hook.
   const isDesktopViewport = useIsDesktopViewport();

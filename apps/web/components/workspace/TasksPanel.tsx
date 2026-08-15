@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Newspaper, NotebookPen, Plus, Radio, Sparkles } from 'lucide-react';
+import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Mail, Newspaper, NotebookPen, Plus, Radio, Sparkles } from 'lucide-react';
 import {
   countStartedTasks,
   getTaskSectionLabel,
@@ -69,6 +69,11 @@ const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 // from the release detail page's side menu — invisible from the workspace
 // users actually land on. Same flag that gates the EPK page and API routes.
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
+
+// Fan capture entry point (2026-08-14): the third "thing you send outward",
+// so it joins Calendar and Press kit in the panel footer rather than the
+// header pill row — the same founder reasoning that moved Press kit there.
+const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 
 // Notes entry point: same flag AppTopbar and the identity panel read.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
@@ -221,7 +226,12 @@ export function TasksPanel({
   // Mirror WorkspaceView's flag gate: with the calendar flag off, a stale
   // `?scene=calendar` URL must not flip the leading pill to "Activities" for a
   // scene that isn't rendering (WorkspaceView passes no sceneContent then).
-  const activeScene = urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED ? null : urlScene;
+  // Same for `?scene=capture` behind its own flag.
+  const activeScene =
+    (urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED) ||
+    (urlScene === 'capture' && !CAPTURE_ENABLED)
+      ? null
+      : urlScene;
 
   /**
    * Pill classes, lit when that scene is the open one. `shrink-0
@@ -442,10 +452,15 @@ export function TasksPanel({
     ) : null;
 
   /**
-   * Calendar and Press kit — the two things you send outward, which is why
-   * they sit together (Press kit joined Calendar 2026-08-14, founder call).
-   * On desktop they stay a footer row pinned to the panel's base; on mobile
-   * they're simply the tail of the one dock.
+   * Calendar, Press kit and Fan capture — the things you send outward, which
+   * is why they sit together (Press kit joined Calendar 2026-08-14, founder
+   * call; Fan capture joined them the same day). On desktop they stay a footer
+   * row pinned to the panel's base; on mobile they're simply the tail of the
+   * one dock.
+   *
+   * Defined ONCE and rendered into both containers, so a pill can never exist
+   * at one width and not the other — the failure mode CLAUDE.md records
+   * Metadata and the curator crossing each hitting.
    */
   const outboundPills = (
     <>
@@ -479,6 +494,21 @@ export function TasksPanel({
           </span>
         </button>
       ) : null}
+      {CAPTURE_ENABLED ? (
+        <button
+          type="button"
+          onClick={() => scopedRelease && toggleScene('capture', scopedRelease.id)}
+          aria-pressed={activeScene === 'capture'}
+          className={pillClass('capture')}
+        >
+          <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+          Fan capture
+          {/* Beta stamp, same tag as Press kit — this one is brand new. */}
+          <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+            Beta
+          </span>
+        </button>
+      ) : null}
     </>
   );
 
@@ -488,7 +518,9 @@ export function TasksPanel({
    * is redundant chrome pointed at the thing already on screen.
    */
   const showOutboundPills =
-    (CONTENT_CALENDAR_ENABLED || EPK_ENABLED) && Boolean(scopedRelease) && !sceneContent;
+    (CONTENT_CALENDAR_ENABLED || EPK_ENABLED || CAPTURE_ENABLED) &&
+    Boolean(scopedRelease) &&
+    !sceneContent;
 
   return (
     // `min-w-0` here is defensive: the panel is rendered both inside the

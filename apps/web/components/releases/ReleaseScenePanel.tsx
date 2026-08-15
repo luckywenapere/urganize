@@ -7,6 +7,7 @@ import type { SceneName } from '@/components/workspace/useSceneOverlay';
 import { captureFeatureDiscoveryByName } from '@/lib/analytics';
 import { MetadataSection } from '@/components/releases/MetadataSection';
 import { EpkSection } from '@/components/releases/EpkSection';
+import { CaptureSection } from '@/components/releases/CaptureSection';
 import { AssetSection } from '@/components/releases/AssetSection';
 import { CalendarScene } from '@/components/content-calendar/CalendarScene';
 import { PitchScene } from '@/components/pitching/PitchScene';
@@ -46,6 +47,7 @@ const SCENE_LABELS: Record<SceneName, string> = {
   calendar: 'Content calendar',
   pitch: 'Playlist pitches',
   plan: 'Plan',
+  capture: 'Fan capture',
 };
 
 type ReleaseScenePanelProps = {
@@ -180,6 +182,7 @@ export function ReleaseScenePanel({
       {scene === 'files' ? <AssetSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'epk' ? <EpkSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'pitch' ? <PitchScene release={release} onToast={onToast} /> : null}
+      {scene === 'capture' ? <CaptureSection releaseId={release.id} onToast={onToast} /> : null}
     </section>
   );
 }

@@ -46,6 +46,13 @@ describe('persist policy', () => {
     expect(shouldPersistScene('files')).toBe(false);
   });
 
+  it('never persists the capture scene — its payload carries fans’ emails', () => {
+    // Different reason from `files` (expiring credentials) and worth pinning
+    // separately: this one is other people's contact details, and localStorage
+    // outlives sign-out on a shared machine.
+    expect(shouldPersistScene('capture')).toBe(false);
+  });
+
   it('persists the three credential-free scenes', () => {
     expect(shouldPersistScene('metadata')).toBe(true);
     expect(shouldPersistScene('epk')).toBe(true);
@@ -65,9 +72,11 @@ describe('persist policy', () => {
     // calendar joins the list only when its flag is on — with it off, its API
     // routes 404, so prefetching would burn a guaranteed-404 per release.
     const contentCalendarEnabled = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
+    const captureEnabled = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
     const cacheable = [...SCENE_NAMES]
       .filter(isCacheableScene)
-      .filter((scene) => scene !== 'calendar' || contentCalendarEnabled);
+      .filter((scene) => scene !== 'calendar' || contentCalendarEnabled)
+      .filter((scene) => scene !== 'capture' || captureEnabled);
     expect([...SCENE_PREFETCH_ORDER].sort()).toEqual([...cacheable].sort());
     expect(new Set(SCENE_PREFETCH_ORDER).size).toBe(SCENE_PREFETCH_ORDER.length);
   });
