@@ -10,7 +10,7 @@ import {
   type TaskRequirement,
 } from '@/lib/execution-types';
 import { getTaskCompletionBlocker } from '@/lib/release-execution';
-import { type TaskPriority } from '@/lib/tasks';
+import { type TaskPriority, type TaskStatus } from '@/lib/tasks';
 // Read at completion time via getState() — no subscription, no render
 // coupling. The auth store does not import this one, so there is no cycle.
 import { useAuthStore } from '@/lib/auth-store';
@@ -62,11 +62,18 @@ type TaskStore = {
   error: string;
   /**
    * Task ids whose status flipped to `done` but whose row should keep its
-   * original time-based bucket for ~1.5s before sliding into Done. Used by
+   * original group for ~1.5s before sliding into Done. Used by
    * `groupTasksIntoSections` as a render-time override. Cleared when the in-
    * place beat ends, or earlier by `undoCompletion`.
+   *
+   * The VALUE is the task's status immediately before the tick, because since
+   * 2026-08-15 groups are status-first: a task completed out of "In Progress"
+   * has to stay in In Progress for the beat, and `done` alone cannot say where
+   * it came from. Every status is a non-empty string, so the many
+   * `if (pendingCompletionIds[id])` truthiness checks around this store read
+   * exactly as they did when the value was `true`.
    */
-  pendingCompletionIds: Record<string, true>;
+  pendingCompletionIds: Record<string, TaskStatus>;
   /** Latest completion eligible for an Undo toast. Null when no toast active. */
   completionToast: CompletionToastState | null;
   /** Open post-completion check-in, or null. See OutcomePromptState. */
@@ -441,7 +448,12 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       tasks: state.tasks.map((candidate) =>
         candidate.id === taskId ? optimisticDone : candidate
       ),
-      pendingCompletionIds: { ...state.pendingCompletionIds, [taskId]: true },
+      // The value is the PRE-tick status so the row holds its own group for
+      // the beat (see the field's doc comment) — not `true`.
+      pendingCompletionIds: {
+        ...state.pendingCompletionIds,
+        [taskId]: taskBeforeComplete.status,
+      },
       completionToast: toastSnapshot ?? state.completionToast,
       outcomePrompt: outcomeSnapshot ?? state.outcomePrompt,
       error: '',

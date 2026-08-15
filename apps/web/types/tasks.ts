@@ -3,14 +3,33 @@ import { WorkspaceMember } from './auth';
 
 export type TaskViewMode = 'kanban' | 'list';
 export type TaskSortKey = 'due_date' | 'priority' | 'assignee' | 'status' | 'created_at';
+/**
+ * Activity groups in the workspace panel. Two families in one union:
+ *
+ *  - STATUS groups (in_progress, blocked, in_review, backlog, locked, done,
+ *    cancelled) — one per TaskStatus except 'todo'.
+ *  - TIME groups (overdue, catch_up, today, week, upcoming, no_due_date) —
+ *    where a 'todo' activity lands, by due date.
+ *
+ * Status wins (founder call, 2026-08-15): an activity carries exactly one
+ * group, and anything that isn't 'todo' is grouped by what state it's in
+ * rather than when it's due. 'done' already worked this way; the other six
+ * statuses joined it. See getTaskSectionKey.
+ */
 export type TaskSectionKey =
+  | 'in_progress'
+  | 'blocked'
+  | 'in_review'
   | 'overdue'
   | 'catch_up'
   | 'today'
   | 'week'
   | 'upcoming'
   | 'no_due_date'
-  | 'done';
+  | 'backlog'
+  | 'locked'
+  | 'done'
+  | 'cancelled';
 export type TaskCreateSource = 'quick_create' | 'inline' | 'detail_panel' | 'onboarding';
 export type TaskRequirementType = 'file_upload' | 'field_completion' | 'approval' | 'external_action';
 
