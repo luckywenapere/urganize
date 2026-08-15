@@ -31,10 +31,11 @@ const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDA
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
-// Notes' scoped-release link (TasksPanel, after Pitch) — added 2026-08-10;
-// this reservation was missing even though the real pill has rendered
-// behind the flag since Notes shipped, an existing skeleton/real mismatch
-// found while fixing the mobile pill-row overflow bug.
+// Notes' scoped-release link (TasksPanel) — added 2026-08-10; this
+// reservation was missing even though the real pill has rendered behind the
+// flag since Notes shipped, an existing skeleton/real mismatch found while
+// fixing the mobile pill-row overflow bug. DESKTOP ONLY since 2026-08-15, so
+// it is reserved in the header row and deliberately not in the mobile dock.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 
 // Same flag AppTopbar/ChappiDock read. The UrgAns side rail renders itself
@@ -230,11 +231,11 @@ function ReleaseCardSkeleton() {
  * flex-1 scrolling body, then the sticky mobile pill dock) so it can stretch to fill the locked focused
  * column on desktop, or sit inert in mobile's plain document flow — same
  * "flex-1 is inert without a flex parent" property the real component
- * documents. Pill count mirrors the real header exactly: New activity
- * always, then one per enabled flag in order (Pitch / Files / Notes — see
- * TasksPanel; Calendar left this row 2026-08-13 and Press kit 2026-08-14, see
- * the footer placeholders below), then the two AI action pills WorkspaceView
- * appends.
+ * documents. Pill count mirrors the real containers exactly: New activity
+ * always, then one per enabled flag in order (Pitch / Files — see TasksPanel;
+ * Calendar left this row 2026-08-13 and Press kit 2026-08-14, see the outbound
+ * placeholders below), then Notes on DESKTOP ONLY (2026-08-15), then the AI
+ * action pill WorkspaceView appends — which both containers carry.
  * Widths approximate each label so the row's footprint matches ("Status
  * update", shortened 2026-08-10 to fit a chip row — see WorkspaceView).
  * No left label (2026-08-05, #218 — the real row is `justify-end` only).
@@ -248,17 +249,15 @@ function TasksPanelSkeleton() {
     // so it reserves the same width as Files rather than a tagged pill's.
     ...(PITCHING_ENABLED ? ['w-16'] : []), // Pitch
     ...(FILES_ENABLED ? ['w-16'] : []), // Files
-    ...(NOTES_ENABLED ? ['w-20'] : []), // Notes
-    ...(STATUS_UPDATE_ENABLED ? ['w-28'] : []), // Status update
     // The Plan pill is deliberately NOT reserved. Whether it renders depends on
     // the release's activity count and whether a draft exists — data this
     // skeleton is showing precisely because it does not have it yet. Guessing
     // would make the row jump for every release that has a plan already, which
     // is most of them. Same trade the recap pill documents above.
   ];
-  // The primary pills (New activity, Metadata, then one per enabled flag),
-  // reserved once and rendered into both containers below — exactly as the
-  // real component builds `primaryPills` once and feeds it to the desktop
+  // The pills both layouts share (New activity, Metadata, then one per enabled
+  // flag), reserved once and rendered into both containers below — exactly as
+  // the real component builds `primaryPills` once and feeds it to the desktop
   // header row and the mobile dock. Only one of the two is ever displayed.
   const primaryPillBlocks = (
     <>
@@ -275,11 +274,25 @@ function TasksPanelSkeleton() {
       ))}
     </>
   );
+  // Notes is DESKTOP ONLY (founder call, 2026-08-15), mirroring the real
+  // `notesPill` — reserved in the header row and nowhere else.
+  const notesPillBlock = NOTES_ENABLED ? (
+    <SkeletonBlock className="h-8 w-20 shrink-0 rounded-full" />
+  ) : null;
+  // WorkspaceView's `extraActions` (Status update), which BOTH containers
+  // render — so this is reserved in both, after Notes on desktop to match the
+  // real Files -> Notes -> AI actions order. The recap pill stays unreserved
+  // for the reason given above.
+  const extraActionPillBlocks = STATUS_UPDATE_ENABLED ? (
+    <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
+  ) : null;
   // Calendar / Press kit — the panel's outbound pair. A desktop-only footer
-  // row at lg+, the tail of the mobile dock below it.
+  // row at lg+, the tail of the mobile dock below it. Calendar reserves less
+  // than Press kit now that it carries no Beta tag (founder call, 2026-08-15);
+  // Press kit keeps its own, so it stays the wider of the two.
   const outboundPillBlocks = (
     <>
-      {CONTENT_CALENDAR_ENABLED ? <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" /> : null}
+      {CONTENT_CALENDAR_ENABLED ? <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" /> : null}
       {EPK_ENABLED ? <SkeletonBlock className="h-8 w-32 shrink-0 rounded-full" /> : null}
     </>
   );
@@ -291,6 +304,8 @@ function TasksPanelSkeleton() {
           base; see TasksPanel.tsx's header comment). */}
       <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex">
         {primaryPillBlocks}
+        {notesPillBlock}
+        {extraActionPillBlocks}
       </div>
       <div className="min-h-0 flex-1 space-y-3 pb-4 lg:overflow-hidden">
         {/* Collapsed bucket-header rows — every real bucket starts closed
@@ -331,6 +346,7 @@ function TasksPanelSkeleton() {
         className={`sticky z-20 -mx-4 flex flex-wrap items-center gap-2 border-t border-stroke-subtle bg-bg-base px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
         {primaryPillBlocks}
+        {extraActionPillBlocks}
         {outboundPillBlocks}
       </div>
     </div>

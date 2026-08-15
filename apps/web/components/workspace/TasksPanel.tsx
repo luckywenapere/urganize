@@ -296,15 +296,19 @@ export function TasksPanel({
   };
 
   /**
-   * Every pill this panel owns, built ONCE and rendered into two containers:
-   * the desktop header row (lg+) and the mobile dock at the panel's base
-   * (below lg). Exactly one container is displayed at any width — the other
-   * carries `hidden` / `lg:hidden`, and `display: none` takes it out of the
-   * accessibility tree and the tab order entirely — so a user (or a screen
-   * reader) never meets the same control twice. The duplication is in the DOM
-   * only, and it's what lets the mobile dock wrap ALL the pills into one
-   * continuous run of rows: two separate containers would wrap independently
-   * and leave a ragged seam between them.
+   * The pills both layouts share, built ONCE and rendered into two
+   * containers: the desktop header row (lg+) and the mobile dock at the
+   * panel's base (below lg). Exactly one container is displayed at any width —
+   * the other carries `hidden` / `lg:hidden`, and `display: none` takes it out
+   * of the accessibility tree and the tab order entirely — so a user (or a
+   * screen reader) never meets the same control twice. The duplication is in
+   * the DOM only, and it's what lets the mobile dock wrap ALL the pills into
+   * one continuous run of rows: two separate containers would wrap
+   * independently and leave a ragged seam between them.
+   *
+   * `notesPill` (desktop only) and `extraActions` are rendered by each
+   * container instead of living in here, so the desktop row keeps its Files →
+   * Notes → AI actions order while the dock simply never receives Notes.
    */
   const primaryPills = (
     <>
@@ -403,22 +407,39 @@ export function TasksPanel({
           Files
         </button>
       ) : null}
-      {/* Notes for this release. Deliberately a plain LINK, not a scene
-          toggle like its neighbours: notes are a global surface that
-          happens to filter by release, not a per-release panel body — so
-          this navigates to the notes page pre-filtered rather than
-          swapping this panel's contents. (Not a regression of the
-          2026-08-05 "scenes render inline, not as pages" call: that call
-          was about the four release scenes, which stay inline.) */}
-      {NOTES_ENABLED && scopedRelease ? (
-        <Link href={`/dashboard/notes?release=${scopedRelease.id}`} className={neutralPillClass}>
-          <NotebookPen className="h-3.5 w-3.5" aria-hidden="true" />
-          Notes
-        </Link>
-      ) : null}
-      {extraActions}
     </>
   );
+
+  /**
+   * Notes for this release — DESKTOP ONLY (founder call, 2026-08-15: notes
+   * should not be one of the mobile pills), which is why it is its own
+   * variable rather than part of `primaryPills` above: it is rendered into the
+   * desktop header row and simply never handed to the mobile dock. Kept as a
+   * placement decision in JSX rather than a `hidden lg:inline-flex` class,
+   * which would rest on Tailwind's internal ordering of two competing base
+   * `display` utilities.
+   *
+   * Nothing becomes unreachable: below `lg` Notes has its own tab in
+   * `MobileNavBar`, and with that bar flagged off `AppTopbar` renders its nav
+   * icons (Notes among them) at every width instead — so the surface has an
+   * entry point on a phone in either flag state. What the phone loses is the
+   * `?release=` PRE-FILTER those two entry points don't carry; filtering to
+   * this release is then a tap inside the notes page rather than on the way in.
+   *
+   * Deliberately a plain LINK, not a scene toggle like its neighbours: notes
+   * are a global surface that happens to filter by release, not a per-release
+   * panel body — so this navigates to the notes page pre-filtered rather than
+   * swapping this panel's contents. (Not a regression of the 2026-08-05
+   * "scenes render inline, not as pages" call: that call was about the four
+   * release scenes, which stay inline.)
+   */
+  const notesPill =
+    NOTES_ENABLED && scopedRelease ? (
+      <Link href={`/dashboard/notes?release=${scopedRelease.id}`} className={neutralPillClass}>
+        <NotebookPen className="h-3.5 w-3.5" aria-hidden="true" />
+        Notes
+      </Link>
+    ) : null;
 
   /**
    * Calendar and Press kit — the two things you send outward, which is why
@@ -437,10 +458,9 @@ export function TasksPanel({
         >
           <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
           Calendar
-          {/* Beta stamp (2026-07-23): the content calendar ships as Beta. */}
-          <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-            Beta
-          </span>
+          {/* No Beta stamp (founder call, 2026-08-15 — dropped completely, so
+              the scene's own header lost its stamp too; see CalendarScene).
+              Press kit below keeps its own. */}
         </button>
       ) : null}
       {EPK_ENABLED ? (
@@ -501,6 +521,8 @@ export function TasksPanel({
           nothing about its appearance changes here. */}
       <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex">
         {primaryPills}
+        {notesPill}
+        {extraActions}
       </div>
 
       {/* Scrollable body — desktop-only internal scroll box (`lg:` prefix).
@@ -707,6 +729,7 @@ export function TasksPanel({
         className={`sticky z-20 -mx-4 flex flex-wrap items-center gap-2 border-t border-stroke-subtle bg-bg-base px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
         {primaryPills}
+        {extraActions}
         {showOutboundPills ? outboundPills : null}
       </div>
     </aside>
