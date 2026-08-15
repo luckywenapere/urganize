@@ -460,16 +460,15 @@ export function CalendarScene({ release, onToast }: CalendarSceneProps) {
             <p className="font-[family-name:var(--font-cc-mono)] text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cc-accent)]">
               {formatArtistName(release.artistName)}
             </p>
+            {/* No Beta stamp beside the title (founder call, 2026-08-15 —
+                dropped completely, here and on the workspace's Calendar pill).
+                The row keeps its flex wrapper rather than collapsing back to a
+                bare <h1>: it is the heading row of this island, and a future
+                sibling belongs beside the title, not under it. */}
             <div className="mt-1 flex items-center gap-3">
               <h1 className="font-[family-name:var(--font-cc-display)] text-3xl font-medium tracking-tight text-[var(--cc-text)]">
                 {release.title}
               </h1>
-              {/* The content calendar ships as Beta (founder call, 2026-07-23)
-                  — same stamp on the workspace's Calendar pill. Mono type to
-                  match the island's metadata voice. */}
-              <span className="shrink-0 border border-[var(--cc-accent)] px-1.5 py-0.5 font-[family-name:var(--font-cc-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--cc-accent)]">
-                Beta
-              </span>
             </div>
           </div>
 
