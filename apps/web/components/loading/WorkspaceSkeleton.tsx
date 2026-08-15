@@ -2,7 +2,10 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useChappiStore } from '@/stores/useChappiStore';
-import { METADATA_PILL_HIDE_CLASS } from '@/components/workspace/TasksPanel';
+import {
+  METADATA_PILL_HIDE_CLASS,
+  TASKS_PILL_DOCK_OFFSET_CLASS,
+} from '@/components/workspace/TasksPanel';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownReleaseCount } from './known-counts';
 
@@ -29,10 +32,11 @@ const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
-// Notes' scoped-release link (TasksPanel, after Pitch) — added 2026-08-10;
-// this reservation was missing even though the real pill has rendered
-// behind the flag since Notes shipped, an existing skeleton/real mismatch
-// found while fixing the mobile pill-row overflow bug.
+// Notes' scoped-release link (TasksPanel) — added 2026-08-10; this
+// reservation was missing even though the real pill has rendered behind the
+// flag since Notes shipped, an existing skeleton/real mismatch found while
+// fixing the mobile pill-row overflow bug. DESKTOP ONLY since 2026-08-15, so
+// it is reserved in the header row and deliberately not in the mobile dock.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 
 // Same flag AppTopbar/ChappiDock read. The UrgAns side rail renders itself
@@ -79,8 +83,9 @@ const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 
  *    viewport-locked 3-column rail/center/rail frame (`WorkspaceDesktopFocused`)
  *    — the page never scrolls there, so this skeleton reserves the same
  *    `h-[calc(100dvh-9.25rem-1px)]` height instead of a shorter unbounded stack
- *  - the tasks panel's header row (sticky on mobile, right-aligned pills, no
- *    left label) and its bucket-list body (`TasksPanel`)
+ *  - the tasks panel's pills — a right-aligned header row at lg+, one sticky
+ *    wrapping dock at the panel's base below it — and its bucket-list body
+ *    (`TasksPanel`)
  *
  * Large content regions (art squares, the task list area) stay static dim
  * boxes rather than shimmering — same convention as `ReleaseDetailSkeleton`
@@ -108,16 +113,20 @@ export function WorkspaceSkeleton() {
   const isFocused = Boolean(searchParams.get(SCOPE_PARAM)) || knownCount === 1;
 
   return (
-    <main className="bg-bg-base text-content-primary" aria-hidden="true">
-      {/* lg:pt-0 (URG-224 + URG-226), lg:px-0 (URG-231) and the focused-only
-          lg:pb-0 all mirror WorkspaceView's own wrapper exactly — see that
-          file's comments for why only ITS pt-6/px-6 (not <main>'s shared
-          pt-5/px-8) drop at lg+. This class string must stay byte-identical
-          to WorkspaceView's or the skeleton shifts when data resolves. */}
+    <main
+      className="flex min-h-full flex-col bg-bg-base text-content-primary lg:block"
+      aria-hidden="true"
+    >
+      {/* lg:pt-0 (URG-224 + URG-226), lg:px-0 (URG-231), the focused-only
+          pb-0 and the below-lg flex/min-h chain (2026-08-14, the mobile pill
+          dock — see WorkspaceView's comment above its own <main>) all mirror
+          WorkspaceView's wrapper exactly. These class strings must stay
+          byte-identical to WorkspaceView's or the skeleton shifts when data
+          resolves. */}
       <div
-        className={`min-w-0 pt-6 sm:px-6 lg:px-0 lg:pt-0 ${isFocused ? 'pb-6 sm:pb-24 lg:pb-0' : 'pb-6 sm:pb-24'}`}
+        className={`flex min-h-0 min-w-0 flex-1 flex-col pt-6 sm:px-6 lg:block lg:px-0 lg:pt-0 ${isFocused ? 'pb-0 lg:pb-0' : 'pb-6 sm:pb-24'}`}
       >
-          <section className="lg:hidden">
+          <section className="flex min-h-0 flex-1 flex-col lg:hidden">
             {isFocused ? (
               <MobileFocusedSkeleton />
             ) : (
@@ -218,16 +227,16 @@ function ReleaseCardSkeleton() {
   );
 }
 
-/** Tasks header row + collapsed bucket-row placeholders. Structurally mirrors
- * TasksPanel's real `<aside>` (flex column, sticky-on-mobile header, a
- * flex-1 scrolling body) so it can stretch to fill the locked focused
+/** Tasks pills + collapsed bucket-row placeholders. Structurally mirrors
+ * TasksPanel's real `<aside>` (flex column, desktop-only header row, a
+ * flex-1 scrolling body, then the sticky mobile pill dock) so it can stretch to fill the locked focused
  * column on desktop, or sit inert in mobile's plain document flow — same
  * "flex-1 is inert without a flex parent" property the real component
- * documents. Pill count mirrors the real header exactly: New activity
- * always, then one per enabled flag in order (Pitch / Files / Notes — see
- * TasksPanel; Calendar left this row 2026-08-13 and Press kit 2026-08-14, see
- * the footer placeholders below), then the two AI action pills WorkspaceView
- * appends.
+ * documents. Pill count mirrors the real containers exactly: New activity
+ * always, then one per enabled flag in order (Pitch / Files — see TasksPanel;
+ * Calendar left this row 2026-08-13 and Press kit 2026-08-14, see the outbound
+ * placeholders below), then Notes on DESKTOP ONLY (2026-08-15), then the AI
+ * action pill WorkspaceView appends — which both containers carry.
  * Widths approximate each label so the row's footprint matches ("Status
  * update", shortened 2026-08-10 to fit a chip row — see WorkspaceView).
  * No left label (2026-08-05, #218 — the real row is `justify-end` only).
@@ -241,39 +250,67 @@ function TasksPanelSkeleton() {
     // so it reserves the same width as Files rather than a tagged pill's.
     ...(PITCHING_ENABLED ? ['w-16'] : []), // Pitch
     ...(FILES_ENABLED ? ['w-16'] : []), // Files
-    ...(NOTES_ENABLED ? ['w-20'] : []), // Notes
-    ...(STATUS_UPDATE_ENABLED ? ['w-28'] : []), // Status update
     // The Plan pill is deliberately NOT reserved. Whether it renders depends on
     // the release's activity count and whether a draft exists — data this
     // skeleton is showing precisely because it does not have it yet. Guessing
     // would make the row jump for every release that has a plan already, which
     // is most of them. Same trade the recap pill documents above.
   ];
+  // The pills both layouts share (New activity, Metadata, then one per enabled
+  // flag), reserved once and rendered into both containers below — exactly as
+  // the real component builds `primaryPills` once and feeds it to the desktop
+  // header row and the mobile dock. Only one of the two is ever displayed.
+  const primaryPillBlocks = (
+    <>
+      <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
+      {/* Metadata — narrow widths only, carrying the SAME hide class the
+          real pill computes (see TasksPanel.tsx's METADATA_PILL_HIDE_CLASS:
+          empty when the identity panel is flagged off, else xl/lg depending
+          on Chappi) so the reserved footprint matches at every breakpoint. */}
+      {METADATA_ENABLED ? (
+        <SkeletonBlock className={`h-8 w-36 shrink-0 rounded-full ${METADATA_PILL_HIDE_CLASS}`} />
+      ) : null}
+      {pillWidths.map((width, index) => (
+        <SkeletonBlock key={`pill-${index}`} className={`h-8 ${width} shrink-0 rounded-full`} />
+      ))}
+    </>
+  );
+  // Notes is DESKTOP ONLY (founder call, 2026-08-15), mirroring the real
+  // `notesPill` — reserved in the header row and nowhere else.
+  const notesPillBlock = NOTES_ENABLED ? (
+    <SkeletonBlock className="h-8 w-20 shrink-0 rounded-full" />
+  ) : null;
+  // WorkspaceView's `extraActions` (Status update), which BOTH containers
+  // render — so this is reserved in both, after Notes on desktop to match the
+  // real Files -> Notes -> AI actions order. The recap pill stays unreserved
+  // for the reason given above.
+  const extraActionPillBlocks = STATUS_UPDATE_ENABLED ? (
+    <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
+  ) : null;
+  // Calendar / Press kit / Fan capture — the panel's outbound group. A
+  // desktop-only footer row at lg+, the tail of the mobile dock below it.
+  // Calendar reserves less than the other two now that it carries no Beta tag
+  // (founder call, 2026-08-15); Fan capture is the widest, being the longest
+  // label AND carrying a Beta tag. Widths are per-label rather than uniform: a
+  // placeholder wider than the real pill shifts every neighbour left when the
+  // labels arrive.
+  const outboundPillBlocks = (
+    <>
+      {CONTENT_CALENDAR_ENABLED ? <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" /> : null}
+      {EPK_ENABLED ? <SkeletonBlock className="h-8 w-32 shrink-0 rounded-full" /> : null}
+      {CAPTURE_ENABLED ? <SkeletonBlock className="h-8 w-36 shrink-0 rounded-full" /> : null}
+    </>
+  );
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {/* Sticky on mobile only (`lg:static`), same as the real row — see
-          TasksPanel.tsx's header comment for why sticky must not apply
-          inside the desktop locked column. Below `lg` the real row scrolls
-          horizontally rather than wrapping (2026-08-10); the skeleton copies
-          that shape too so its footprint matches at every width, even though
-          a placeholder row never actually needs to be dragged. */}
-      <div className="sticky top-16 z-10 flex shrink-0 items-center bg-bg-base pb-3 pt-1 lg:static lg:justify-end">
-        <div className="no-scrollbar flex w-full items-center gap-2 overflow-x-auto -mx-4 px-4 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:m-0 lg:w-auto lg:flex-wrap lg:justify-end lg:overflow-visible lg:p-0">
-          <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
-          {/* Metadata — narrow widths only, carrying the SAME hide class the
-              real pill computes (see TasksPanel.tsx's
-              METADATA_PILL_HIDE_CLASS: empty when the identity panel is
-              flagged off, else xl/lg depending on Chappi) so the reserved
-              footprint matches at every breakpoint. */}
-          {METADATA_ENABLED ? (
-            <SkeletonBlock
-              className={`h-8 w-36 shrink-0 rounded-full ${METADATA_PILL_HIDE_CLASS}`}
-            />
-          ) : null}
-          {pillWidths.map((width, index) => (
-            <SkeletonBlock key={`pill-${index}`} className={`h-8 ${width} shrink-0 rounded-full`} />
-          ))}
-        </div>
+      {/* Desktop header row — `hidden lg:flex`, matching the real row's
+          wrapper classes byte-for-byte (2026-08-14: the row stopped being
+          sticky-on-mobile when every pill moved to the dock at the panel's
+          base; see TasksPanel.tsx's header comment). */}
+      <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex">
+        {primaryPillBlocks}
+        {notesPillBlock}
+        {extraActionPillBlocks}
       </div>
       <div className="min-h-0 flex-1 space-y-3 pb-4 lg:overflow-hidden">
         {/* Collapsed bucket-header rows — every real bucket starts closed
@@ -294,25 +331,30 @@ function TasksPanelSkeleton() {
           </div>
         ))}
       </div>
-      {/* Footer pill placeholders — Calendar (2026-08-13), Press kit and Fan
-          capture (both 2026-08-14); see the real block's comment in
+      {/* Desktop footer placeholders — Calendar (2026-08-13), Press kit and
+          Fan capture (both 2026-08-14); see the real block's comment in
           TasksPanel.tsx for the full history of those moves out of the header
-          pill row. Widths are per-label ("Fan capture" + its Beta tag is the
-          widest of the three), not a uniform w-24: a placeholder row wider
-          than the real one scrolls where the real one doesn't and then shifts
-          every pill left when the labels arrive. A sibling
+          pill row. A sibling
           AFTER the flex-1 body, matching the real row's wrapper classes
           exactly, so the reserved footprint sits pinned at the panel's base
           and doesn't shift when content resolves. */}
       {CONTENT_CALENDAR_ENABLED || EPK_ENABLED || CAPTURE_ENABLED ? (
-        <div className="no-scrollbar flex shrink-0 items-center gap-2 overflow-x-auto pb-4 pt-3 lg:overflow-visible lg:pb-2">
-          {CONTENT_CALENDAR_ENABLED ? (
-            <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
-          ) : null}
-          {EPK_ENABLED ? <SkeletonBlock className="h-8 w-32 shrink-0 rounded-full" /> : null}
-          {CAPTURE_ENABLED ? <SkeletonBlock className="h-8 w-36 shrink-0 rounded-full" /> : null}
+        <div className="hidden shrink-0 items-center gap-2 pb-2 pt-3 lg:flex">
+          {outboundPillBlocks}
         </div>
       ) : null}
+      {/* Mobile pill dock (below `lg`) — every pill in one wrapping block
+          stuck to the bottom of the screen (2026-08-14, founder call). Same
+          wrapper classes as the real dock, including the offset class it
+          computes from NEXT_PUBLIC_FEATURE_MOBILE_NAV, so the reserved
+          footprint sits exactly where the real one lands. */}
+      <div
+        className={`sticky z-20 -mx-4 flex flex-wrap items-center gap-2 border-t border-stroke-subtle bg-bg-base px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
+      >
+        {primaryPillBlocks}
+        {extraActionPillBlocks}
+        {outboundPillBlocks}
+      </div>
     </div>
   );
 }
@@ -326,7 +368,11 @@ function TasksPanelSkeleton() {
  */
 function MobileFocusedSkeleton() {
   return (
-    <div className="space-y-4">
+    // `flex min-h-0 flex-1 flex-col` carries the height chain the real mobile
+    // branch has (its back header / Motion strip / TasksPanel are direct flex
+    // children of the section) so the panel skeleton's pill dock reserves the
+    // viewport floor, exactly where the real one lands.
+    <div className="flex min-h-0 flex-1 flex-col space-y-4">
       <div className="flex items-center gap-3">
         <SkeletonBlock className="h-10 w-10 shrink-0" />
         <div className="min-w-0 flex-1 space-y-1.5">
