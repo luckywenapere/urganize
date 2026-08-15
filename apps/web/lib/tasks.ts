@@ -297,27 +297,68 @@ export function sortTasksByPosition(tasks: Task[]): Task[] {
 }
 
 /**
- * Bucketing rule:
- *   Completion overrides time placement. A task with `status === 'done'` routes
- *   to the terminal `'done'` section regardless of its due date. The lone
- *   exception is the in-place beat after a tick: when an id is in
- *   `pendingCompletionIds`, the task keeps its time-based section so the row
- *   stays visible in its source bucket for ~1.5s before sliding into Done.
- *   The store sets and clears that override; this function is otherwise pure.
+ * Every status EXCEPT 'todo' maps to a group of its own. 'todo' is the only
+ * status that falls through to the time buckets below, which is what makes
+ * "status wins" work: an activity is grouped by the state it's in, and only
+ * un-started work is grouped by when it's due.
+ */
+const STATUS_SECTIONS: Partial<Record<TaskStatus, TaskSectionKey>> = {
+  in_progress: 'in_progress',
+  blocked: 'blocked',
+  in_review: 'in_review',
+  backlog: 'backlog',
+  locked: 'locked',
+  done: 'done',
+  cancelled: 'cancelled',
+};
+
+/**
+ * Bucketing rule (status wins, founder call 2026-08-15):
+ *   A task's STATUS decides its section unless the status is 'todo', in which
+ *   case its due date does (overdue / catch_up / today / week / upcoming /
+ *   no_due_date). 'done' behaved this way already; the other six statuses
+ *   joined it, so In Progress / Blocked / In Review / Backlog / Locked /
+ *   Cancelled are now peer sections of "Due this week" rather than being
+ *   scattered through the time buckets with nothing marking them.
+ *
+ *   The lone exception is the in-place beat after a tick: while an id is in
+ *   `pendingCompletionIds`, the task is placed by its PRE-completion status
+ *   (the value the store recorded there) so the row stays put for ~1.5s before
+ *   sliding into Done. Passing a Set — or the legacy `true` — falls back to
+ *   time placement, which is the old behaviour and still correct for a task
+ *   that was 'todo'. The store sets and clears that override; this function is
+ *   otherwise pure.
  */
 export function getTaskSectionKey(
   task: Task,
   now: Date = new Date(),
-  pendingCompletionIds?: ReadonlySet<string> | Record<string, true>
+  pendingCompletionIds?: ReadonlySet<string> | Record<string, TaskStatus | true>
 ): TaskSectionKey {
-  const isPending = pendingCompletionIds
-    ? pendingCompletionIds instanceof Set
-      ? pendingCompletionIds.has(task.id)
-      : Object.prototype.hasOwnProperty.call(pendingCompletionIds, task.id)
-    : false;
+  // `instanceof Set` does NOT narrow the union: `ReadonlySet` is an interface,
+  // not a class, so TS can't exclude it from the else branch and refuses to
+  // index it. The original code sidestepped this with `hasOwnProperty`; this
+  // one needs the VALUE, so the record branch is cast explicitly. Keep the
+  // cast if you touch this — the runtime check above it is the real guard.
+  const pendingValue: TaskStatus | true | undefined = !pendingCompletionIds
+    ? undefined
+    : pendingCompletionIds instanceof Set
+      ? pendingCompletionIds.has(task.id) || undefined
+      : (pendingCompletionIds as Record<string, TaskStatus | true>)[task.id];
+  const isPending = Boolean(pendingValue);
 
-  if (task.status === 'done' && !isPending) {
-    return 'done';
+  if (isPending) {
+    // Mid-beat: place by where the row WAS, not where it just went.
+    const previousStatus = typeof pendingValue === 'string' ? pendingValue : undefined;
+    const previousSection = previousStatus ? STATUS_SECTIONS[previousStatus] : undefined;
+    if (previousSection && previousSection !== 'done') {
+      return previousSection;
+    }
+    // Unknown previous status (or it was 'todo') → fall through to time placement.
+  } else {
+    const statusSection = STATUS_SECTIONS[task.status];
+    if (statusSection) {
+      return statusSection;
+    }
   }
 
   if (!task.dueDate) {
@@ -362,6 +403,18 @@ export function getTaskSectionKey(
 
 export function getTaskSectionLabel(section: TaskSectionKey): string {
   switch (section) {
+    case 'in_progress':
+      return 'In Progress';
+    case 'blocked':
+      return 'Blocked';
+    case 'in_review':
+      return 'In Review';
+    case 'backlog':
+      return 'Backlog';
+    case 'locked':
+      return 'Locked';
+    case 'cancelled':
+      return 'Cancelled';
     case 'overdue':
       return 'Overdue';
     case 'catch_up':
@@ -383,6 +436,18 @@ export function getTaskSectionLabel(section: TaskSectionKey): string {
 
 export function getTaskSectionDescription(section: TaskSectionKey): string {
   switch (section) {
+    case 'in_progress':
+      return 'Work that is underway right now.';
+    case 'blocked':
+      return 'Stalled on something else. Clear the blocker to get these moving.';
+    case 'in_review':
+      return 'Finished and waiting on a check before it can be called done.';
+    case 'backlog':
+      return 'Parked for now. Nothing here is scheduled.';
+    case 'locked':
+      return 'Waiting on an earlier activity to finish first.';
+    case 'cancelled':
+      return 'Dropped from this release. Kept for the record.';
     case 'overdue':
       return 'Hard deadlines that already slipped. Clear these first so the release does not drift.';
     case 'catch_up':
@@ -476,19 +541,25 @@ export function formatMilestoneDate(dueDate: string | null): string {
 
 export function createEmptyMyTasksSections(): Record<TaskSectionKey, Task[]> {
   return {
+    in_progress: [],
+    blocked: [],
+    in_review: [],
     overdue: [],
     catch_up: [],
     today: [],
     week: [],
     upcoming: [],
     no_due_date: [],
+    backlog: [],
+    locked: [],
     done: [],
+    cancelled: [],
   };
 }
 
 export function groupTasksIntoSections(
   tasks: Task[],
-  pendingCompletionIds?: ReadonlySet<string> | Record<string, true>
+  pendingCompletionIds?: ReadonlySet<string> | Record<string, TaskStatus | true>
 ): Record<TaskSectionKey, Task[]> {
   const grouped = createEmptyMyTasksSections();
   const now = new Date();
@@ -498,18 +569,6 @@ export function groupTasksIntoSections(
   }
 
   return grouped;
-}
-
-/**
- * Statuses that count as "started" for the per-bucket progress bar in the
- * Activities view. Mirrors the generate-status route's in-progress set
- * (in_progress + in_review), plus done — a just-ticked task lingering in its
- * source bucket via pendingCompletionIds must read as filled, not regressed.
- */
-const STARTED_TASK_STATUSES = new Set<TaskStatus>(['in_progress', 'in_review', 'done']);
-
-export function countStartedTasks(tasks: Task[]): number {
-  return tasks.filter((task) => STARTED_TASK_STATUSES.has(task.status)).length;
 }
 
 export function formatNotificationTime(value: string): string {

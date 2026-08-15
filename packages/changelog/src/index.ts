@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.55.2",
+    date: "August 15, 2026",
+    highlights: [
+      "Your activities are grouped by what state they're in, not only by when they're due. In Progress, Blocked, In Review, Backlog and Locked each get their own group now, so the work you've actually started is visible at a glance instead of sitting unmarked among everything else.",
+      "Every group's bar shows how much of the release sits in that state, so you can read the shape of a release — how much is underway, how much is waiting, how much is done — without opening anything.",
+      "Groups with nothing in them stay hidden, so the list only shows the states your release is actually in.",
+    ],
+  },
+  {
     version: "0.55.1",
     date: "August 15, 2026",
     highlights: [
