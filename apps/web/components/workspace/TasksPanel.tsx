@@ -130,6 +130,27 @@ const sectionOrder: TaskSectionKey[] = [
 // the signal at a glance; opening a bucket is a deliberate act, and once the
 // user opens or closes one it stays that way (persisted to localStorage)
 // until they change it again.
+// The five time buckets always render once a release has ANY activity, even
+// when empty (founder call, 2026-08-15) — the progress bars are the point, and
+// a bar you only see once work lands in that window can't be read as a row of
+// how the release is spread across time.
+//
+// This narrows the 2026-07-23 "empty buckets don't render" call rather than
+// reversing it wholesale: Catch Up and Done stay conditional. Catch Up only
+// applies to compressed-runway plans, so on a normal release it would be a
+// permanently empty row explaining nothing, and Done is terminal — it fills up
+// as you work, and an empty one on a fresh release is noise.
+//
+// A release with NO activities at all still shows only the empty state below;
+// five empty headers above "Add your first activity" is worse than none.
+const ALWAYS_VISIBLE_SECTIONS = new Set<TaskSectionKey>([
+  'overdue',
+  'today',
+  'week',
+  'upcoming',
+  'no_due_date',
+]);
+
 const DEFAULT_EXPANDED: Record<TaskSectionKey, boolean> = {
   overdue: false,
   catch_up: false,
@@ -278,6 +299,12 @@ export function TasksPanel({
     () => groupTasksIntoSections(tasks, pendingCompletionIds),
     [tasks, pendingCompletionIds]
   );
+
+  // Read from `tasks` rather than the grouped sections: every task lands in
+  // exactly one bucket, so a non-empty list means a non-empty section, and
+  // this stays true if a bucket is ever added. Gates the always-visible
+  // empty buckets — a release with nothing in it shows the empty state alone.
+  const hasAnyTasks = tasks.length > 0;
 
   // Per-bucket open/closed state. Starts from the all-collapsed defaults so
   // the server-rendered HTML matches, then hydrates from localStorage on
@@ -615,66 +642,91 @@ export function TasksPanel({
           const sectionTasks = sections[sectionKey];
           const isOpen = expanded[sectionKey];
           const isDoneBucket = sectionKey === 'done';
-          // Empty buckets don't render at all (founder call, 2026-07-23,
-          // extending what Done already did): a bucket appears the moment a
-          // task moves into it and disappears when its last task leaves.
-          // The all-empty case gets a single quiet line below the list.
-          if (sectionTasks.length === 0) return null;
+          const isEmpty = sectionTasks.length === 0;
+          // An empty bucket renders only when it's one of the five time
+          // buckets AND the release has activities somewhere (see
+          // ALWAYS_VISIBLE_SECTIONS). Catch Up / Done keep the 2026-07-23
+          // behaviour: they appear when a task moves in, and vanish when the
+          // last one leaves.
+          if (isEmpty && (!hasAnyTasks || !ALWAYS_VISIBLE_SECTIONS.has(sectionKey))) {
+            return null;
+          }
           const bodyId = `workspace-bucket-${sectionKey}`;
           // In-progress share for the header bar: started work (in_progress /
           // in_review, plus done for rows lingering here mid-completion) over
           // the bucket's total. The Done bucket computes to 100% naturally.
-          const startedPercent = Math.round(
-            (countStartedTasks(sectionTasks) / sectionTasks.length) * 100
+          // Guarded because an empty bucket renders now — 0/0 is NaN.
+          const startedPercent = isEmpty
+            ? 0
+            : Math.round((countStartedTasks(sectionTasks) / sectionTasks.length) * 100);
+          // Label + bar, shared by the interactive and the empty row so the
+          // two can't drift apart. An empty bucket dims its label — including
+          // Overdue, whose red would otherwise shout about nothing being late.
+          const headerInner = (
+            <>
+              <span
+                className={`text-sm font-semibold ${
+                  isEmpty
+                    ? 'text-content-tertiary'
+                    : sectionKey === 'overdue'
+                      ? 'text-status-error'
+                      : isDoneBucket
+                        ? 'text-content-secondary'
+                        : 'text-content-primary'
+                }`}
+              >
+                {getTaskSectionLabel(sectionKey)}
+                <span className="ml-2 font-normal text-content-tertiary">
+                  ({sectionTasks.length})
+                </span>
+              </span>
+              {/* Started-share bar (the Motion bar pattern: bg-stroke-strong
+                  track, never bg-bg-elevated — see WorkspaceView's tracker).
+                  aria-hidden like every Motion bar; the count above stays
+                  the accessible metric. */}
+              <div className="h-1.5 min-w-0 flex-1 rounded-full bg-stroke-strong" aria-hidden="true">
+                <div
+                  className="h-full rounded-full bg-brand transition-[width] duration-300"
+                  style={{ width: `${startedPercent}%` }}
+                />
+              </div>
+            </>
           );
           return (
             <div
               key={sectionKey}
               className={`overflow-hidden rounded-xl border border-stroke-default ${
-                isDoneBucket ? 'bg-bg-surface/60' : 'bg-bg-surface'
+                isDoneBucket || isEmpty ? 'bg-bg-surface/60' : 'bg-bg-surface'
               }`}
             >
-              <button
-                type="button"
-                onClick={() => toggleBucket(sectionKey)}
-                aria-expanded={isOpen}
-                aria-controls={bodyId}
-                className={`motion-focus flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover ${
-                  isOpen ? 'border-b border-stroke-subtle' : ''
-                }`}
-              >
-                <span
-                  className={`text-sm font-semibold ${
-                    sectionKey === 'overdue'
-                      ? 'text-status-error'
-                      : isDoneBucket
-                        ? 'text-content-secondary'
-                        : 'text-content-primary'
+              {isEmpty ? (
+                // Not a button: there is nothing to expand, so a control that
+                // looks pressable and does nothing would be worse than a
+                // static row. No chevron either, for the same reason — the
+                // empty bar IS the information.
+                <div className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
+                  {headerInner}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => toggleBucket(sectionKey)}
+                  aria-expanded={isOpen}
+                  aria-controls={bodyId}
+                  className={`motion-focus flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover ${
+                    isOpen ? 'border-b border-stroke-subtle' : ''
                   }`}
                 >
-                  {getTaskSectionLabel(sectionKey)}
-                  <span className="ml-2 font-normal text-content-tertiary">
-                    ({sectionTasks.length})
-                  </span>
-                </span>
-                {/* Started-share bar (the Motion bar pattern: bg-stroke-strong
-                    track, never bg-bg-elevated — see WorkspaceView's tracker).
-                    aria-hidden like every Motion bar; the count above stays
-                    the accessible metric. */}
-                <div className="h-1.5 min-w-0 flex-1 rounded-full bg-stroke-strong" aria-hidden="true">
-                  <div
-                    className="h-full rounded-full bg-brand transition-[width] duration-300"
-                    style={{ width: `${startedPercent}%` }}
+                  {headerInner}
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${
+                      isOpen ? '' : '-rotate-90'
+                    }`}
+                    aria-hidden="true"
                   />
-                </div>
-                <ChevronDown
-                  className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${
-                    isOpen ? '' : '-rotate-90'
-                  }`}
-                  aria-hidden="true"
-                />
-              </button>
-              {isOpen ? (
+                </button>
+              )}
+              {isOpen && !isEmpty ? (
                 <div id={bodyId}>
                   {sectionTasks.map((task) => {
                     const isLeaving = Boolean(pendingCompletionIds[task.id]);

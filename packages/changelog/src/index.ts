@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.55.1",
+    date: "August 15, 2026",
+    highlights: [
+      "Your activities list now shows all five time groups — Overdue, Due today, Due this week, Upcoming and No due date — from the moment a release has work in it, so you can read at a glance how the release is spread across the weeks ahead instead of only seeing the groups that happen to be occupied.",
+    ],
+  },
+  {
     version: "0.55.0",
     date: "August 14, 2026",
     highlights: [
