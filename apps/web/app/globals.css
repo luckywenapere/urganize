@@ -1768,16 +1768,42 @@ body:focus-within .keyboard-hint,
     position: fixed;
     z-index: 20;
     top: calc(max(var(--app-visual-top, 0px), calc(4rem + 1px)) + 0.75rem);
-    bottom: calc(var(--app-keyboard-inset, 0px) + 0.75rem);
+    /* AN EXPLICIT HEIGHT, NOT `bottom` + `height: auto`. Both place the box
+       identically, but only this one keeps the height DEFINITE, and the
+       column's whole interior depends on that: the transcript is a
+       `min-h-0 flex-1` child and the composer is the `shrink-0` sibling
+       below it, so an indefinite height collapses the transcript to nothing
+       and stacks the composer at the top of an otherwise empty box. Safari
+       does exactly that — a top/bottom pair resolves the used height but
+       leaves the specified height `auto`, which does not feed a percentage
+       or flex chain. Chromium happens to resolve it, so this looked correct
+       in every local measurement and was wrong on the device.
+       Term by term: the visible band, less however much of the topbar is
+       still on screen (zero once the page has panned past it), less the
+       0.75rem of air at each end. */
+    height: calc(
+      var(--app-viewport-height, 100dvh) -
+        max(0px, calc(4rem + 1px - var(--app-visual-top, 0px))) - 1.5rem
+    );
     left: 1rem;
     right: 1rem;
-    height: auto;
     min-height: 0;
   }
 
   :root[data-keyboard-open='true'] .chappi-main-padding-nav,
   :root[data-keyboard-open='true'] .chappi-main-padding {
     padding-bottom: 1rem;
+  }
+
+  /* A conversation that hasn't started yet centres its greeting, composer
+     and chips in the column — correct on a full screen, wrong once a
+     keyboard owns half of it, because centring parks the composer in the
+     middle of the band with a gap beneath it. Bottom-anchor it instead,
+     which is what the dock panel does by default. `overflow-y-auto` covers
+     the short-viewport case where greeting plus chips no longer fit. */
+  :root[data-keyboard-open='true'] .chappi-empty-state {
+    justify-content: flex-end;
+    overflow-y: auto;
   }
 }
 

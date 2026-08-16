@@ -575,7 +575,14 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   if (!hasMessages) {
     return (
       <div
-        className={`flex h-full min-h-0 flex-col items-center px-2 text-center ${
+        // chappi-empty-state is a hook for globals.css: on the page variant
+        // this column CENTERS its greeting/input/chips, which is right on a
+        // full screen and wrong the moment a keyboard takes half of it —
+        // centering then parks the composer mid-band with a gap beneath it,
+        // the very complaint the pinning fixes everywhere else. With the
+        // keyboard up it bottom-anchors instead, matching what the dock
+        // panel already does by default.
+        className={`chappi-empty-state flex h-full min-h-0 flex-col items-center px-2 text-center ${
           // The dock panel bottom-anchors its empty state (founder call,
           // 2026-07-23) — greeting, input, and chips sit right above the
           // footer like a chat, not suspended at the top of the panel.
