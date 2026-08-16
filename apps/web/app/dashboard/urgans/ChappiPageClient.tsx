@@ -15,6 +15,7 @@ import { FirstReleaseWin } from '@/components/workspace/FirstReleaseWin';
 import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { isNativePlatform } from '@/lib/platform';
 import { openExternalUrl } from '@/lib/external-link';
+import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 
 // Same flag AppTopbar reads for the nav icon — if a direct link is followed
 // while the flag is off, bounce to the workspace instead of 404ing (the
@@ -47,6 +48,10 @@ export default function ChappiPageClient() {
     title: string | null;
     resume: () => void;
   } | null>(null);
+  // Mid-sentence is the one moment the human-fallback row is certainly not
+  // what the user wants, and on a phone it is a whole row of the little
+  // space the keyboard leaves. It comes back the instant they stop typing.
+  const keyboardOpen = useKeyboardOpen();
 
   // Fire immediately rather than behind authLoading — see the same pattern in
   // WorkspaceView: the store reads its own token from getSession() (local), so
@@ -141,7 +146,7 @@ export default function ChappiPageClient() {
             would need to shrink to fit it — the column already reserves this
             row via .chappi-shell-height-nav). Desktop keeps the rail's own
             footer link; this row only exists below lg. */}
-        {MOBILE_NAV_ENABLED ? (
+        {MOBILE_NAV_ENABLED && !keyboardOpen ? (
           <a
             href={WHATSAPP_URL}
             target="_blank"
