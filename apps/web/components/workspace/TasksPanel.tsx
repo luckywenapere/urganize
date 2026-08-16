@@ -511,11 +511,9 @@ export function TasksPanel({
         >
           <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
           Press kit
-          {/* Beta stamp, same tag as Calendar — the press kit generator
-              shipped 2026-07-31 and is still early. */}
-          <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-            Beta
-          </span>
+          {/* No Beta stamp (founder call, 2026-08-16) — same call Calendar
+              got on 2026-08-15. Neither scene's own header carries one
+              either, so the label is the whole pill. */}
         </button>
       ) : null}
       {CAPTURE_ENABLED ? (
@@ -527,10 +525,8 @@ export function TasksPanel({
         >
           <Mail className="h-3.5 w-3.5" aria-hidden="true" />
           Fan capture
-          {/* Beta stamp, same tag as Press kit — this one is brand new. */}
-          <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-            Beta
-          </span>
+          {/* No Beta stamp (founder call, 2026-08-16), same as Press kit
+              above. No pill in this row carries one now. */}
         </button>
       ) : null}
     </>
