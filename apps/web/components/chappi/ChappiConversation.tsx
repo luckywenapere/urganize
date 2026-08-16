@@ -526,42 +526,45 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // One input, two positions: centered mid-screen on the empty landing
   // (PostHog-home style), pinned at the bottom once a conversation exists —
   // the Claude-desktop shape (founder call, 2026-07-23).
+  //
+  // ONE ROW, not two (2026-08-16). The release scope picker used to sit on
+  // its own line under the text field, which made the composer ~66px tall —
+  // real estate a phone with the keyboard up cannot spare, and visually a
+  // stacked box rather than a single control. It is now a leading chip in
+  // the same row, the shape every mature mobile assistant composer has
+  // settled on: context control, field, send. The dropdown still opens
+  // upward from it, and it still renders nothing while the user has no
+  // releases (in which case this is simply field + send).
   const inputForm = (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className="rounded-2xl border border-stroke-default bg-bg-surface px-3 py-2 transition-colors focus-within:border-brand">
-        <div className="flex items-center gap-2">
-          <input
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="Ask UrgAns or type a command…"
-            aria-label="Message UrgAns"
-            disabled={isThinking}
-            className="min-w-0 flex-1 bg-transparent text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none disabled:opacity-60 sm:text-sm"
-          />
-          <button
-            type="submit"
-            aria-label="Send"
-            disabled={!input.trim() || isThinking}
-            className="motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
-          >
-            {isThinking ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <ArrowUp className="h-4 w-4" aria-hidden="true" />
-            )}
-          </button>
-        </div>
-        {/* Scope row — Linear-style release context picker (founder call,
-            2026-07-23): pick which release this conversation is about. Sits
-            inside the composer, under the text line; hidden while the user
-            has no releases (the picker renders null). */}
-        <div className="mt-1 flex justify-start">
-          <ChappiScopePicker
-            releases={releases}
-            scopedReleaseId={scopedReleaseId}
-            onSelect={setScopedReleaseId}
-          />
-        </div>
+      <div className="flex items-center gap-1 rounded-full border border-stroke-default bg-bg-surface p-1.5 transition-colors focus-within:border-brand/70 focus-within:bg-bg-elevated">
+        <ChappiScopePicker
+          releases={releases}
+          scopedReleaseId={scopedReleaseId}
+          onSelect={setScopedReleaseId}
+        />
+        <input
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          placeholder="Ask UrgAns…"
+          aria-label="Message UrgAns"
+          disabled={isThinking}
+          // 16px below sm is deliberate: anything smaller makes iOS zoom the
+          // page on focus, which is its own kind of layout jump.
+          className="min-w-0 flex-1 bg-transparent px-2 text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none disabled:opacity-60 sm:text-sm"
+        />
+        <button
+          type="submit"
+          aria-label="Send"
+          disabled={!input.trim() || isThinking}
+          className="motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
+        >
+          {isThinking ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <ArrowUp className="h-4 w-4" aria-hidden="true" />
+          )}
+        </button>
       </div>
     </form>
   );

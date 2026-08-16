@@ -1725,6 +1725,74 @@ body:focus-within .keyboard-hint,
   }
 }
 
+/* ── Keyboard-aware assistant column ─────────────────────────────────────
+   Published by KeyboardViewportBridge (mounted in AppShell): `<html>` gains
+   `data-keyboard-open` and `--app-viewport-height` while the on-screen
+   keyboard is up, and both are REMOVED when it closes — so everything above
+   is exactly what renders the rest of the time.
+
+   Why the height is re-derived rather than adjusted: on iOS the keyboard does
+   NOT shrink the layout viewport, so `100dvh` keeps its full value and the
+   rules above size the column as if the bottom third of the screen were
+   still visible. The composer then floats mid-screen with a band of dead
+   space beneath it and the keyboard beneath that — the exact complaint this
+   answers. `--app-viewport-height` is the measured visible region, so the
+   calc lands the composer directly on top of the keyboard.
+
+   The chrome subtracted here is deliberately the SHORT form (topbar 4rem +
+   main pt-5 1.25rem + a 1rem bottom gap + the 1px topbar border) for both
+   variants: MobileNavBar hides itself while the keyboard is open, so its
+   4rem + safe-area reservation is space nobody is using. The matching
+   <main> padding is collapsed just below. Safe-area drops out too — the
+   home indicator is behind the keyboard.
+
+   Scoped below lg/md to match each variant's own mobile branch; a hardware
+   keyboard never triggers this, and neither does any desktop viewport. */
+@media (max-width: 1023px) {
+  :root[data-keyboard-open='true'] .chappi-shell-height-nav {
+    height: calc(var(--app-viewport-height, 100dvh) - 6.25rem - 1px);
+    min-height: 0;
+  }
+
+  :root[data-keyboard-open='true'] .chappi-main-padding-nav {
+    padding-bottom: 1rem;
+  }
+}
+
+@media (max-width: 767px) {
+  :root[data-keyboard-open='true'] .chappi-shell-height {
+    height: calc(var(--app-viewport-height, 100dvh) - 6.25rem - 1px);
+    min-height: 0;
+  }
+}
+
+/* Shrinking the column is only half the fix. The shell's 100vh floor does
+   NOT shrink for the keyboard on iOS, so the document stays a full screen
+   tall while only the top of it is visible — leaving it scrollable by
+   exactly the keyboard's height, into the empty band the column just
+   vacated. Dropping the floor to the visible height clamps the scroll to
+   zero, which also stops the browser's own scroll-the-input-into-view from
+   dragging the composer off the top. These are floors, not heights: any
+   page with more content than this still grows and scrolls normally. */
+:root[data-keyboard-open='true'] .app-layout,
+:root[data-keyboard-open='true'] .app-shell-frame {
+  min-height: var(--app-viewport-height, 100vh);
+}
+
+/* The floating dock panel (the below-lg assistant surface when the mobile
+   tab bar is off) has the same problem in its `fixed` form: `bottom: 1.25rem`
+   is measured from the LAYOUT viewport's bottom edge, which on iOS is behind
+   the keyboard. Lifting it by the measured inset puts the same 1.25rem of air
+   between the panel and the keyboard that it has above the screen edge the
+   rest of the time; the max-height re-derives against the visible region so
+   the panel's own header can't be pushed off the top. */
+@media (max-width: 1023px) {
+  :root[data-keyboard-open='true'] .chappi-dock-panel {
+    bottom: calc(1.25rem + var(--app-keyboard-inset, 0px));
+    max-height: calc(var(--app-viewport-height, 100vh) - 6rem);
+  }
+}
+
 /* Lifts a fixed bottom-anchored surface (toasts, the flag-off-Chappi
    SupportChat pill) above the bar. Pair with an lg:bottom-* utility for the
    value to restore once the bar disappears. */

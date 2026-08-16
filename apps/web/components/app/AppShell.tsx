@@ -17,6 +17,7 @@ import { ToastProvider } from '@/components/shared/ToastProvider';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
 import { CapacitorPushBridge } from '@/components/providers/CapacitorPushBridge';
+import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
 import { registerPushServiceWorker } from '@/lib/push';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { CURATOR_HOME_PATH } from '@/lib/home-path';
@@ -341,6 +342,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <ToastProvider>
     <CapacitorAuthBridge />
     <CapacitorPushBridge />
+    {/* Publishes on-screen-keyboard state to CSS — see globals.css's
+        keyboard-aware assistant column block. Renders nothing. */}
+    <KeyboardViewportBridge />
     {/* Records every route change so back affordances (Settings' back
         button) can return to the exact previous page. */}
     <NavigationTracker />
@@ -362,7 +366,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         // block — the prior route-keyed system here (.app-layout-fluid vs
         // .app-layout-centered) was the bug.
         <div className="app-layout lazy-fade lazy-fade-in">
-          <div className="mx-auto flex min-h-screen w-full max-w-[1440px] flex-col">
+          {/* app-shell-frame is a hook, not a style: it lets globals.css drop
+              this 100vh floor while the on-screen keyboard is up, so the
+              document cannot be scrolled by the keyboard's height into the
+              empty band underneath. See the keyboard-aware block there. */}
+          <div className="app-shell-frame mx-auto flex min-h-screen w-full max-w-[1440px] flex-col">
             <AppTopbar onNewRelease={openCreateRelease} userName={workspaceUserName} />
             {/* <main> + the UrgAns side rail share a flex row so the rail is
                 a layout-flow column (content narrows; nothing is covered) on

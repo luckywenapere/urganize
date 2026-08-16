@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Inbox, Plus } from 'lucide-react';
+import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
 import { CatalogIcon, ChappiIcon, NotesIcon, ProfileIcon } from '@/components/app/BrandIcons';
@@ -171,48 +171,8 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
   );
 }
 
-// How far the viewport has to shrink before we call it "the keyboard is
-// open" rather than a rotation or a browser chrome change. 150px comfortably
-// clears both without needing a device/UA check.
-const KEYBOARD_SHRINK_THRESHOLD_PX = 150;
-
-/**
- * True while the on-screen keyboard is covering enough of the viewport that a
- * fixed bottom bar would sit on top of it. Tracks window.visualViewport where
- * available (the accurate signal for Android's `resizes-content` shrink) and
- * falls back to window.resize. The baseline resets on an orientation/width
- * change so rotating the device doesn't get mistaken for a keyboard.
- */
-function useKeyboardOpen(): boolean {
-  const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    let baselineHeight = window.visualViewport?.height ?? window.innerHeight;
-    let baselineWidth = window.innerWidth;
-
-    const check = () => {
-      const currentWidth = window.innerWidth;
-      if (currentWidth !== baselineWidth) {
-        // Orientation or window resize, not a keyboard — re-baseline instead
-        // of reading it as a shrink.
-        baselineWidth = currentWidth;
-        baselineHeight = window.visualViewport?.height ?? window.innerHeight;
-        setIsOpen(false);
-        return;
-      }
-      const currentHeight = window.visualViewport?.height ?? window.innerHeight;
-      setIsOpen(baselineHeight - currentHeight > KEYBOARD_SHRINK_THRESHOLD_PX);
-    };
-
-    window.addEventListener('resize', check);
-    window.visualViewport?.addEventListener('resize', check);
-    return () => {
-      window.removeEventListener('resize', check);
-      window.visualViewport?.removeEventListener('resize', check);
-    };
-  }, []);
-
-  return isOpen;
-}
+// The keyboard signal moved to lib/keyboard-viewport.ts (2026-08-16): the
+// assistant page's viewport-locked column needs the same answer, and the
+// local hook this file used to carry only detected Android's
+// `resizes-content` shrink — on iOS the layout viewport never moves, so the
+// keyboard went undetected here. The shared module measures both.

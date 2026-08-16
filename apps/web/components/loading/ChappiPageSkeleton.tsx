@@ -52,8 +52,9 @@ export function ChappiPageSkeleton() {
         </div>
         <SkeletonBlock className="mt-3 h-8 w-64 sm:w-80" />
 
-        {/* Input bar — same width cap as the real form (max-w-2xl). */}
-        <div className="mt-6 h-11 w-full max-w-2xl border border-stroke-default bg-bg-surface" />
+        {/* Input bar — same width cap, radius and height as the real form
+            (max-w-2xl, rounded-full, p-1.5 around a 36px send button). */}
+        <div className="mt-6 h-12 w-full max-w-2xl rounded-full border border-stroke-default bg-bg-surface" />
 
         {/* Quick-action chips row. */}
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
