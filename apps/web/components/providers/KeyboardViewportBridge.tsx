@@ -20,13 +20,17 @@ import { useKeyboardViewport } from '@/lib/keyboard-viewport';
  *    surface has to be lifted to clear the keyboard, which is NOT the same
  *    question: `fixed` anchors to the layout viewport, and on iOS that
  *    viewport's bottom is behind the keyboard.
+ *  - `--app-visual-top` — how far the visible region has been panned down
+ *    the layout viewport. iOS pans when it cannot scroll the document far
+ *    enough to reveal the focused field, and a `fixed` box that ignores it
+ *    renders above the screen. Zero on Android and in the common iOS case.
  *
  * Both are REMOVED when the keyboard closes rather than reset to a resting
  * value, so every layout falls back to its ordinary `100dvh` rule and the
  * keyboard-closed rendering is byte-identical to before this existed.
  */
 export function KeyboardViewportBridge() {
-  const { open, viewportHeightPx, insetPx } = useKeyboardViewport();
+  const { open, viewportHeightPx, insetPx, offsetTopPx } = useKeyboardViewport();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -34,12 +38,14 @@ export function KeyboardViewportBridge() {
       root.dataset.keyboardOpen = 'true';
       root.style.setProperty('--app-viewport-height', `${viewportHeightPx}px`);
       root.style.setProperty('--app-keyboard-inset', `${insetPx}px`);
+      root.style.setProperty('--app-visual-top', `${offsetTopPx}px`);
     } else {
       delete root.dataset.keyboardOpen;
       root.style.removeProperty('--app-viewport-height');
       root.style.removeProperty('--app-keyboard-inset');
+      root.style.removeProperty('--app-visual-top');
     }
-  }, [open, viewportHeightPx, insetPx]);
+  }, [open, viewportHeightPx, insetPx, offsetTopPx]);
 
   // Unmount (sign-out, a route that drops the shell) must not strand the
   // attribute — a stale "keyboard is open" would shrink the next page.

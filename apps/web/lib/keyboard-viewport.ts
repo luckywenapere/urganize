@@ -30,12 +30,20 @@ export type KeyboardViewportState = {
   /** Visual viewport height in px — 0 before the first client measurement. */
   viewportHeightPx: number;
   /**
-   * How much of the LAYOUT viewport's bottom the keyboard covers, in px.
-   * ~0 on Android (the layout viewport shrinks instead), the keyboard's own
-   * height on iOS. This is what a `position: fixed; bottom: 0` surface has
-   * to be lifted by, since `fixed` anchors to the layout viewport.
+   * How much of the LAYOUT viewport's bottom is not visible, in px. ~0 on
+   * Android (the layout viewport shrinks instead); on iOS it is the keyboard
+   * minus however far the page has already been panned. This is what a
+   * `position: fixed; bottom: 0` surface has to be lifted by, since `fixed`
+   * anchors to the layout viewport, not to what the user can see.
    */
   insetPx: number;
+  /**
+   * How far the visible region has been panned down the layout viewport, in
+   * px. Non-zero only on iOS, and only when it could not scroll the document
+   * far enough to reveal the focused field. A `position: fixed` box has to
+   * add this to its `top` or it renders above the visible region entirely.
+   */
+  offsetTopPx: number;
 };
 
 // How far the viewport has to shrink before we call it "the keyboard is
@@ -49,7 +57,12 @@ const KEYBOARD_SHRINK_THRESHOLD_PX = 150;
 // past it is a keyboard.
 const KEYBOARD_OVERLAP_THRESHOLD_PX = 120;
 
-const INITIAL_STATE: KeyboardViewportState = { open: false, viewportHeightPx: 0, insetPx: 0 };
+const INITIAL_STATE: KeyboardViewportState = {
+  open: false,
+  viewportHeightPx: 0,
+  insetPx: 0,
+  offsetTopPx: 0,
+};
 
 // Snapshot identity must be stable between reads or useSyncExternalStore
 // loops — a new object is minted only when a value actually changed.
@@ -63,34 +76,43 @@ function readViewportHeight(): number {
   return Math.round(window.visualViewport?.height ?? window.innerHeight);
 }
 
-/** How much of the layout viewport the visual viewport stops short of. */
-function readOverlap(): number {
-  const viewport = window.visualViewport;
-  if (!viewport) return 0;
-  const layoutHeight = document.documentElement.clientHeight || window.innerHeight;
-  return Math.max(0, Math.round(layoutHeight - viewport.height - viewport.offsetTop));
+function readLayoutHeight(): number {
+  return document.documentElement.clientHeight || window.innerHeight;
 }
 
 function measure(): KeyboardViewportState {
+  const viewport = window.visualViewport;
   const width = window.innerWidth;
   const height = readViewportHeight();
+  const offsetTop = viewport ? Math.max(0, Math.round(viewport.offsetTop)) : 0;
 
   if (width !== baselineWidth) {
     // Orientation or window resize, not a keyboard — re-baseline instead of
     // reading it as a shrink.
     baselineWidth = width;
     baselineHeight = height;
-    return { open: false, viewportHeightPx: height, insetPx: 0 };
+    return { open: false, viewportHeightPx: height, insetPx: 0, offsetTopPx: 0 };
   }
   // The viewport only ever grows back to (or past) its resting height when
   // nothing is covering it, so the tallest height seen is the baseline.
   if (height > baselineHeight) baselineHeight = height;
 
-  const inset = readOverlap();
+  // DETECTION IS SCROLL-INDEPENDENT ON PURPOSE. It compares heights only —
+  // never `offsetTop`. When iOS cannot scroll the document far enough to
+  // reveal the focused field it PANS the visual viewport instead, and an
+  // offset-adjusted overlap collapses to ~0 at full pan. Reading that as
+  // "keyboard closed" made the column snap back to full height, which
+  // re-hid the field, which made iOS pan again — an oscillation that showed
+  // up as MORE dead space, not less. Heights don't move when the page pans.
   const shrank = baselineHeight - height > KEYBOARD_SHRINK_THRESHOLD_PX;
-  const covered = inset > KEYBOARD_OVERLAP_THRESHOLD_PX;
+  const covered = readLayoutHeight() - height > KEYBOARD_OVERLAP_THRESHOLD_PX;
   const open = shrank || covered;
-  return { open, viewportHeightPx: height, insetPx: open ? inset : 0 };
+  if (!open) return { open, viewportHeightPx: height, insetPx: 0, offsetTopPx: 0 };
+
+  // Both of these DO account for the pan — they are screen coordinates for a
+  // `position: fixed` box, which anchors to the layout viewport.
+  const inset = Math.max(0, readLayoutHeight() - height - offsetTop);
+  return { open, viewportHeightPx: height, insetPx: inset, offsetTopPx: offsetTop };
 }
 
 function handleViewportChange() {
@@ -98,7 +120,8 @@ function handleViewportChange() {
   if (
     next.open === snapshot.open &&
     next.viewportHeightPx === snapshot.viewportHeightPx &&
-    next.insetPx === snapshot.insetPx
+    next.insetPx === snapshot.insetPx &&
+    next.offsetTopPx === snapshot.offsetTopPx
   ) {
     return;
   }
