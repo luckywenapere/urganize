@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.56.1",
+    date: "August 16, 2026",
+    highlights: [
+      "The message box in UrgAns now sits right on top of the keyboard on your phone. It used to float in the middle of the screen with a band of empty space underneath it, which was worst on iPhone.",
+      "The box is a single line now. The release you're talking about sits beside what you're typing instead of taking a row of its own, so more of the screen is your conversation.",
+      "Your conversation reads from the top of the screen downwards, the way other assistants do, instead of starting at the bottom and growing up.",
+    ],
+  },
+  {
     version: "0.56.0",
     date: "August 16, 2026",
     highlights: [
