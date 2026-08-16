@@ -9,6 +9,7 @@ import { MetadataSection } from '@/components/releases/MetadataSection';
 import { EpkSection } from '@/components/releases/EpkSection';
 import { CaptureSection } from '@/components/releases/CaptureSection';
 import { AssetSection } from '@/components/releases/AssetSection';
+import { SongSection } from '@/components/releases/SongSection';
 import { CalendarScene } from '@/components/content-calendar/CalendarScene';
 import { PitchScene } from '@/components/pitching/PitchScene';
 import { PlanScene } from '@/components/planner/PlanScene';
@@ -48,6 +49,7 @@ const SCENE_LABELS: Record<SceneName, string> = {
   pitch: 'Playlist pitches',
   plan: 'Plan',
   capture: 'Fan capture',
+  song: 'Song',
 };
 
 type ReleaseScenePanelProps = {
@@ -179,6 +181,7 @@ export function ReleaseScenePanel({
           navigation did not. The sections carry an `mt-8` top margin of their
           own, which sits fine under the divider above. */}
       {scene === 'metadata' ? <MetadataSection releaseId={release.id} onToast={onToast} /> : null}
+      {scene === 'song' ? <SongSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'files' ? <AssetSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'epk' ? <EpkSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'pitch' ? <PitchScene release={release} onToast={onToast} /> : null}

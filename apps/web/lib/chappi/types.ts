@@ -23,7 +23,8 @@ export type ChappiChipIntent =
   | 'add_task'
   | 'todays_focus'
   | 'generate_status'
-  | 'take_note';
+  | 'take_note'
+  | 'upload_song';
 
 /**
  * `create_note` is intent-only, never a chip: it carries the note's text, so
@@ -128,6 +129,9 @@ export type ChappiToolName =
   | 'generate_release_plan'
   | 'approve_release_plan'
   | 'discard_release_plan'
+  // the song itself
+  | 'get_song'
+  | 'upload_song'
   // distribution metadata
   | 'get_release_metadata'
   | 'update_release_metadata'
@@ -149,6 +153,17 @@ export type ChappiClientAction =
   | { type: 'navigate'; href: string }
   | { type: 'open_create_release' }
   | { type: 'open_quick_create'; releaseId?: string | null }
+  /**
+   * Put a song file picker in the transcript, scoped to this release.
+   *
+   * The one client action that expects a follow-up from the USER rather than
+   * being a fire-and-forget side effect. It has to be: a model turn is text, so
+   * no tool can be handed a file, and `input.click()` only opens a dialog
+   * inside a user gesture — a tool result is a network response, not a gesture.
+   * So the assistant resolves the release and the browser does the upload,
+   * through the same signed-URL flow the workspace scene uses.
+   */
+  | { type: 'open_song_upload'; releaseId: string }
   | { type: 'refresh' };
 
 /** Normalized outcome of a single tool execution, fed back to the model. */

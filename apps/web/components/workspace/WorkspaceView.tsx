@@ -68,6 +68,10 @@ const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'tru
 // (its API routes 404 when off) instead of the normal activity list.
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
+// Same flag TasksPanel reads for its Song pill, gated here for the same reason
+// the two above are: a stale `?scene=song` bookmark must resolve to the normal
+// activity list, not to a scene whose API routes 404.
+const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
 
 // Team logins (2026-08-16). Gates ONLY the compulsory post-create step here;
 // the mint endpoint behind it is the pre-existing, ungated invite-link route.
@@ -127,7 +131,8 @@ export function WorkspaceView() {
   // never renders) and the API routes (which 404).
   const activeScene =
     (urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED) ||
-    (urlScene === 'capture' && !CAPTURE_ENABLED)
+    (urlScene === 'capture' && !CAPTURE_ENABLED) ||
+    (urlScene === 'song' && !SONG_UPLOAD_ENABLED)
       ? null
       : urlScene;
   // Which of the two always-in-the-DOM layout branches (mobile drill-down /

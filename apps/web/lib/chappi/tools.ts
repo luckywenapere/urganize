@@ -33,6 +33,7 @@ import { NOTE_TOOLS } from './tool-families/notes';
 import { PLANNER_TOOLS } from './tool-families/planner';
 import { PROMO_TOOLS } from './tool-families/promo';
 import { RELEASE_TOOLS } from './tool-families/releases';
+import { SONG_TOOLS } from './tool-families/song';
 import { TEAM_TOOLS } from './tool-families/team';
 import type { ChappiTool } from './tool-families/shared';
 
@@ -44,6 +45,7 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
   ...PLANNER_TOOLS,
   ...METADATA_TOOLS,
   ...CALENDAR_TOOLS,
+  ...SONG_TOOLS,
   ...NOTE_TOOLS,
   ...TEAM_TOOLS,
   ...PROMO_TOOLS,

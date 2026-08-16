@@ -1,0 +1,105 @@
+import { NextRequest, NextResponse } from 'next/server';
+import {
+  createAdminClient,
+  ensureReleaseOwnership,
+  isSongFeatureEnabled,
+  notFoundResponse,
+  requireActiveAuthenticatedUser,
+} from '../_shared';
+import {
+  ASSET_UPLOAD_URL_TTL_SECONDS,
+  RELEASE_ASSETS_BUCKET,
+  buildStoragePath,
+  validateAssetUpload,
+} from '@/lib/asset-helpers';
+import { SONG_CATEGORY } from '@/lib/song';
+
+/**
+ * Step 1 of the song upload: mint a signed Supabase Storage URL the browser
+ * PUTs the file to directly.
+ *
+ * The category is fixed to 'audio' here rather than accepted from the body —
+ * this endpoint exists to put a song on a release, and taking a category would
+ * make it a second, unflagged door into the whole asset cabinet.
+ */
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ releaseId: string }> }
+) {
+  if (!isSongFeatureEnabled()) return notFoundResponse();
+
+  const auth = await requireActiveAuthenticatedUser(request);
+  if ('error' in auth) return auth.error;
+
+  const { releaseId } = await context.params;
+  if (!releaseId) {
+    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+  }
+
+  const adminClient = createAdminClient(auth.supabaseUrl);
+  if (!adminClient) {
+    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
+  }
+
+  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  if ('error' in ownership) return ownership.error;
+
+  const body = (await request.json().catch(() => null)) as {
+    file_name?: unknown;
+    mime_type?: unknown;
+    file_size?: unknown;
+  } | null;
+  if (!body) {
+    return NextResponse.json({ error: 'JSON body is required.' }, { status: 400 });
+  }
+
+  const fileName = typeof body.file_name === 'string' ? body.file_name.trim() : '';
+  if (!fileName) {
+    return NextResponse.json({ error: 'file_name is required.' }, { status: 400 });
+  }
+
+  const mimeType = typeof body.mime_type === 'string' ? body.mime_type.trim() : '';
+  if (!mimeType) {
+    return NextResponse.json({ error: 'mime_type is required.' }, { status: 400 });
+  }
+
+  const fileSize = Number(body.file_size);
+  if (!Number.isFinite(fileSize) || fileSize <= 0) {
+    return NextResponse.json(
+      { error: 'file_size is required and must be a positive number.' },
+      { status: 400 }
+    );
+  }
+
+  const validation = validateAssetUpload({
+    category: SONG_CATEGORY,
+    mime_type: mimeType,
+    file_size: fileSize,
+    file_name: fileName,
+  });
+  if (!validation.ok) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
+  }
+
+  // UUID-prefixed under `<releaseId>/audio/`, so two uploads of "master.wav"
+  // never collide and the record call's release-prefix check has something to
+  // verify against.
+  const storagePath = buildStoragePath(releaseId, SONG_CATEGORY, fileName);
+
+  const { data, error } = await adminClient.storage
+    .from(RELEASE_ASSETS_BUCKET)
+    .createSignedUploadUrl(storagePath);
+
+  if (error || !data?.signedUrl) {
+    return NextResponse.json(
+      { error: error?.message || 'Could not create the upload URL.' },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    upload_url: data.signedUrl,
+    storage_path: storagePath,
+    expires_in: ASSET_UPLOAD_URL_TTL_SECONDS,
+  });
+}

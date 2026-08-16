@@ -24,6 +24,7 @@ import type { ReleaseEpk } from '@/types/epk';
 import type { ContentCalendar } from '@/types/content-calendar';
 import type { SentPitch } from '@/types/pitching';
 import type { ReleaseCaptureLead, ReleaseCapturePage } from '@/types/capture';
+import type { ReleaseSong } from '@/types/song';
 import type { Asset } from '@/components/releases/AssetSection';
 
 /**
@@ -64,9 +65,14 @@ export type CaptureScenePayload = {
   hasGraphic: boolean;
 };
 
+/** Newest first, so `songs[0]` is "the current song" without anything having
+ * to store which one that is. */
+export type SongScenePayload = { songs: ReleaseSong[] };
+
 export type ScenePayloadMap = {
   metadata: MetadataScenePayload;
   files: FilesScenePayload;
+  song: SongScenePayload;
   epk: EpkScenePayload;
   calendar: CalendarScenePayload;
   pitch: PitchScenePayload;
@@ -237,6 +243,14 @@ const FETCHERS: Record<CacheableSceneName, SceneFetcher> = {
     return {
       assets: Array.isArray(data.assets) ? (data.assets as Asset[]) : [],
     } satisfies FilesScenePayload;
+  },
+  song: async (releaseId, token, prefetch) => {
+    const data = await readJson(
+      await fetch(`/api/releases/${releaseId}/song`, requestInit(token, prefetch))
+    );
+    return {
+      songs: Array.isArray(data.songs) ? (data.songs as ReleaseSong[]) : [],
+    } satisfies SongScenePayload;
   },
   epk: async (releaseId, token, prefetch) => {
     const data = await readJson(

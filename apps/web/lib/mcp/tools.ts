@@ -53,6 +53,14 @@ const EXCLUDED_TOOL_NAMES: ReadonlySet<ChappiToolName> = new Set<ChappiToolName>
   'generate_release_plan',
   'approve_release_plan',
   'discard_release_plan',
+  // The song. `upload_song` is excluded for `navigate`'s exact reason — it
+  // returns a clientAction that puts a file picker in a browser, and an MCP
+  // client has no browser to put one in, so exposing it would advertise a
+  // capability that silently does nothing. `get_song` is excluded for the
+  // other reason on this list: it reaches a REST route that does not accept
+  // the MCP internal-actor bearer, so it would 401 rather than work.
+  'get_song',
+  'upload_song',
   // Distribution metadata
   'get_release_metadata',
   'update_release_metadata',

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Mail, Newspaper, NotebookPen, Plus, Radio, Sparkles } from 'lucide-react';
+import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Mail, Music, Newspaper, NotebookPen, Plus, Radio, Sparkles } from 'lucide-react';
 import {
   getTaskSectionLabel,
   groupTasksIntoSections,
@@ -63,6 +63,13 @@ const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDA
 // Files entry point (URG-182): same flag gates the assets API routes and the
 // release detail page's Asset section.
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
+
+// Song entry point. Deliberately its OWN flag rather than FILES above: the
+// founder switched the general file cabinet off, and the song is a different
+// ask ("attach the master to this release") that happens to share the same
+// storage underneath. Same flag gates the /song API routes, the `?scene=song`
+// URL param in WorkspaceView, and UrgAns's upload card.
+const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
 
 // Press kit entry point (URG-198): the EPK shipped (URG-196) reachable only
 // from the release detail page's side menu — invisible from the workspace
@@ -407,6 +414,23 @@ export function TasksPanel({
         >
           <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
           Collect metadata
+        </button>
+      ) : null}
+      {/* Song: the master itself. Placed ahead of Pitch and Press kit
+          because it is the thing both of those are ABOUT — you cannot
+          sensibly pitch a release whose audio nobody has uploaded. It sits
+          after Collect metadata rather than before it so the founder's
+          "Metadata first" call at narrow widths is untouched; that pill
+          retreats at wide widths, where this becomes the leading link. */}
+      {SONG_UPLOAD_ENABLED && scopedRelease ? (
+        <button
+          type="button"
+          onClick={() => toggleScene('song', scopedRelease.id)}
+          aria-pressed={activeScene === 'song'}
+          className={pillClass('song')}
+        >
+          <Music className="h-3.5 w-3.5" aria-hidden="true" />
+          Song
         </button>
       ) : null}
       {/* Playlist pitching: browse curator playlists and send this

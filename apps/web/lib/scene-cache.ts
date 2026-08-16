@@ -18,7 +18,8 @@ export type SceneName =
   | 'calendar'
   | 'pitch'
   | 'plan'
-  | 'capture';
+  | 'capture'
+  | 'song';
 
 export const SCENE_NAMES: readonly SceneName[] = [
   'metadata',
@@ -28,6 +29,7 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'pitch',
   'plan',
   'capture',
+  'song',
 ];
 
 // Inlined at build time, same read every UI gate uses. The prefetch list must
@@ -35,6 +37,7 @@ export const SCENE_NAMES: readonly SceneName[] = [
 // the scene burned one guaranteed-404 request per scoped release.
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
+const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
 
 /** Prefetch order: most-likely-opened first, so a user who taps a pill mid-
  * prefetch is most likely to find their scene already warm.
@@ -48,6 +51,7 @@ const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
  * for the same would-always-404 reason. */
 export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
   'metadata',
+  ...(SONG_UPLOAD_ENABLED ? (['song'] as const) : []),
   'files',
   'epk',
   ...(CONTENT_CALENDAR_ENABLED ? (['calendar'] as const) : []),
@@ -78,6 +82,10 @@ export const SCENE_PERSIST_MAX_AGE_MS = 24 * 60 * 60 * 1000;
  */
 export const SCENE_HARD_EXPIRY_MS: Partial<Record<SceneName, number>> = {
   files: 45 * 60 * 1000,
+  // Same reason as files, one step more visible: the song scene's payload
+  // carries a signed URL that an <audio> element is pointed at, so a stale
+  // paint is a play button that 403s rather than merely a dead download.
+  song: 45 * 60 * 1000,
 };
 
 /**
@@ -119,6 +127,9 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   // "faster second open" is not worth putting other people's contact details
   // there. Memory caching still applies, so tapping between scenes stays free.
   capture: false,
+  // Signed Storage URLs again (see files): a persisted one survives a browser
+  // restart and would be guaranteed expired by the next visit.
+  song: false,
 };
 
 /** How many releases' scenes to keep on disk. A manager works a couple of
