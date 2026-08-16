@@ -408,12 +408,7 @@ export function TaskDetailView({
             <section className="rounded-[24px] border border-stroke-default bg-bg-elevated/50 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-content-primary">
-                    Attachments
-                    <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-                      Beta
-                    </span>
-                  </h3>
+                  <h3 className="text-sm font-semibold text-content-primary">Attachments</h3>
                   <p className="mt-1 text-xs text-content-secondary">Upload files for briefs, decks, or assets.</p>
                 </div>
                 <label className="inline-flex min-h-10 items-center rounded-[16px] bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover">
