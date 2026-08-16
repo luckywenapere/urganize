@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@urganize/ui';
 
 /**
@@ -51,15 +51,13 @@ export function PlanReleaseCard({
 
   return (
     <div className="rounded-xl border border-brand/30 bg-brand/5 p-5 sm:p-6">
-      <span className="grid h-11 w-11 place-items-center rounded-xl bg-brand/10 text-brand">
-        {isGenerating ? (
+      {isGenerating ? (
+        <span className="mb-4 grid h-11 w-11 place-items-center rounded-xl bg-brand/10 text-brand">
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-        ) : (
-          <Sparkles className="h-5 w-5" aria-hidden="true" />
-        )}
-      </span>
+        </span>
+      ) : null}
 
-      <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.16em] text-brand">
+      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-brand">
         UrgAns planner
       </p>
       <h3 className="mt-1 font-display text-xl font-semibold leading-tight text-content-primary">
@@ -72,7 +70,6 @@ export function PlanReleaseCard({
         onClick={state === 'fresh' ? onPlan : onReview}
         className="mt-5 h-11 w-full justify-center sm:w-auto"
       >
-        <Sparkles className="h-4 w-4" aria-hidden="true" />
         {copy.cta}
       </Button>
 
