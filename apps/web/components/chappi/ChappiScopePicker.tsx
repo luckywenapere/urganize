@@ -38,8 +38,9 @@ function ScopeThumb({ release }: { release: ExecutionRelease }) {
 }
 
 /**
- * Release scope picker under the Chappi prompt box (founder call,
- * 2026-07-23) — the Linear-style context selector: pick the release the
+ * Release scope picker inside the Chappi composer (founder call,
+ * 2026-07-23; moved from its own row under the field to a leading chip in
+ * the field's row, 2026-08-16) — the Linear-style context selector: pick the release the
  * conversation is about, so instructions like "add a task" or "how's it
  * going" land on the right release without naming it every time. Opens
  * UPWARD (the composer is pinned at the bottom of the surface). "All
@@ -87,7 +88,10 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
   };
 
   return (
-    <div ref={rootRef} className="relative">
+    // shrink-0: this is a leading chip inside the composer's single-row pill
+    // (2026-08-16), so it must hold its size rather than be squeezed by a
+    // long typed message. The label carries its own cap instead.
+    <div ref={rootRef} className="relative shrink-0">
       <button
         ref={triggerRef}
         type="button"
@@ -95,14 +99,25 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={scoped ? `Conversation scoped to ${scoped.title}` : 'Choose a release for this conversation'}
-        className="motion-focus inline-flex max-w-full items-center gap-1.5 rounded-full px-2 py-1 text-xs text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary"
+        className="motion-focus inline-flex max-w-full items-center gap-1.5 rounded-full bg-bg-elevated px-2 py-1.5 text-xs text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary"
       >
         {scoped ? (
           <ScopeThumb release={scoped} />
         ) : (
           <Disc3 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         )}
-        <span className={`truncate ${scoped ? 'font-medium text-content-secondary' : ''}`}>
+        {/* Capped rather than free-flowing: a long release title would
+            otherwise leave a phone's composer with no room to type in. The
+            phone cap is measured, not guessed — 4.5rem is what keeps the
+            unscoped "All releases" label unclipped at 12px while leaving a
+            375px composer ~155px of typing room. The cover thumbnail beside
+            it carries the recognition a truncated title loses; the full
+            title stays in the aria-label and the dropdown. */}
+        <span
+          className={`max-w-[4.5rem] truncate sm:max-w-[10rem] ${
+            scoped ? 'font-medium text-content-secondary' : ''
+          }`}
+        >
           {scoped ? scoped.title : 'All releases'}
         </span>
         <ChevronDown

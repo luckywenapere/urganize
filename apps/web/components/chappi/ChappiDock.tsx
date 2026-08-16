@@ -147,7 +147,11 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
     <div
       role="dialog"
       aria-label="UrgAns assistant"
-      className="fixed bottom-5 right-5 z-[130] flex h-[560px] max-h-[calc(100vh-6rem)] w-[380px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface shadow-2xl md:bottom-6 md:right-6 lg:hidden"
+      // chappi-dock-panel is a hook for globals.css's keyboard-aware block:
+      // `fixed` anchors to the LAYOUT viewport, whose bottom sits behind the
+      // on-screen keyboard on iOS, so the panel needs lifting and shortening
+      // while the keyboard is up. Same fix the assistant page's column gets.
+      className="chappi-dock-panel fixed bottom-5 right-5 z-[130] flex h-[560px] max-h-[calc(100vh-6rem)] w-[380px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface shadow-2xl md:bottom-6 md:right-6 lg:hidden"
     >
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-stroke-subtle px-3 py-2">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
