@@ -14,6 +14,7 @@ import type { Release } from '@/types/releases';
 import { supabase } from '@/lib/supabase/client';
 import { Toast } from '@/components/shared/Toast';
 import { NewReleaseGuide } from '@/components/releases/NewReleaseGuide';
+import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { SetReleaseDateCard } from '@/components/releases/SetReleaseDateCard';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
@@ -67,6 +68,10 @@ const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'tru
 // (its API routes 404 when off) instead of the normal activity list.
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
+
+// Team logins (2026-08-16). Gates ONLY the compulsory post-create step here;
+// the mint endpoint behind it is the pre-existing, ungated invite-link route.
+const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'true';
 
 // Dynamic for the same reason AppShell already loads it that way — a static
 // import here defeated that, dragging the ~460-line modal into the /dashboard
@@ -149,6 +154,16 @@ export function WorkspaceView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   // Set to the new release's id when a first-release "win" reveal should show.
   const [winReleaseId, setWinReleaseId] = useState<string | null>(null);
+
+  // The compulsory post-create "get your team in" step (2026-08-16). Holds the
+  // deferred continuation of the create flow — `resume` is whatever the flow
+  // would have done next — so the step runs first without any of the branch
+  // logic below having to know it exists.
+  const [accessStep, setAccessStep] = useState<{
+    releaseId: string;
+    title: string | null;
+    resume: () => void;
+  } | null>(null);
 
   // AI actions + toast, ported verbatim from the removed release detail page
   // (2026-08-04) — this is now the only surface a scoped release renders on.
@@ -907,27 +922,60 @@ export function WorkspaceView() {
           // list. The planner card is the honest version of that moment.
           const plannerPending = result?.plannerPending === true;
 
-          if (FIRST_WIN_ENABLED && releases.length === 0 && !plannerPending) {
-            setWinReleaseId(releaseId);
-          } else if (plannerPending) {
-            // Straight into the intake: planning is the whole point of having
-            // chosen a rollout plan, and the release has nothing else in it.
-            router.push(`/dashboard?release=${releaseId}`);
-            openIntake({ source: 'empty_state', releaseId });
-          } else {
-            // ?new=1 triggers the one-time dismissible getting-started guide
-            // (NewReleaseGuide) — only for TEMPLATE creations; its copy
-            // describes the rollout plan a blank release doesn't have. Lands
-            // on the workspace scoped to the new release (2026-08-04 — the
-            // release detail page was removed; this IS the activity view now).
-            router.push(
-              plan === 'template'
-                ? `/dashboard?release=${releaseId}&new=1`
-                : `/dashboard?release=${releaseId}`
-            );
+          // Everything this flow did before team logins existed, deferred into
+          // one closure so the access step can run FIRST and then hand control
+          // back untouched. Nothing below this line changed behaviour — the
+          // three branches are verbatim.
+          const resume = () => {
+            if (FIRST_WIN_ENABLED && releases.length === 0 && !plannerPending) {
+              setWinReleaseId(releaseId);
+            } else if (plannerPending) {
+              // Straight into the intake: planning is the whole point of having
+              // chosen a rollout plan, and the release has nothing else in it.
+              router.push(`/dashboard?release=${releaseId}`);
+              openIntake({ source: 'empty_state', releaseId });
+            } else {
+              // ?new=1 triggers the one-time dismissible getting-started guide
+              // (NewReleaseGuide) — only for TEMPLATE creations; its copy
+              // describes the rollout plan a blank release doesn't have. Lands
+              // on the workspace scoped to the new release (2026-08-04 — the
+              // release detail page was removed; this IS the activity view now).
+              router.push(
+                plan === 'template'
+                  ? `/dashboard?release=${releaseId}&new=1`
+                  : `/dashboard?release=${releaseId}`
+              );
+            }
+          };
+
+          // The compulsory "get your team in" step (founder request,
+          // 2026-08-16) goes BEFORE any of it, including the first-win reveal
+          // and the planner intake: a login the manager can send is the first
+          // thing a new release should produce. It generates the link itself
+          // and calls resume() on its single exit, so with the flag off this
+          // whole block is one boolean and the original path runs unchanged.
+          if (TEAM_LOGINS_ENABLED) {
+            setAccessStep({ releaseId, title: result?.title ?? null, resume });
+            return;
           }
+          resume();
         }}
       />
+
+      {/* Rendered before FirstReleaseWin so that when both are staged, the
+          access step is what the user sees — it clears itself and then calls
+          resume(), which is what stages the reveal. */}
+      {accessStep ? (
+        <ReleaseAccessStep
+          releaseId={accessStep.releaseId}
+          releaseTitle={accessStep.title}
+          onDone={() => {
+            const { resume } = accessStep;
+            setAccessStep(null);
+            resume();
+          }}
+        />
+      ) : null}
 
       {winReleaseId ? (
         <FirstReleaseWin

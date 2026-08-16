@@ -12,6 +12,7 @@ import { ChappiPageSkeleton } from '@/components/loading/ChappiPageSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { useFirstReleaseRequired } from '@/components/releases/useFirstReleaseRequired';
 import { FirstReleaseWin } from '@/components/workspace/FirstReleaseWin';
+import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { isNativePlatform } from '@/lib/platform';
 import { openExternalUrl } from '@/lib/external-link';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
@@ -24,6 +25,7 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 // Same flag WorkspaceView reads for the "first win" reveal — Chappi's
 // "New release" card can plausibly create a user's very first release too.
 const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
+const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'true';
 
 // When on, MobileNavBar carries this page's below-lg navigation, so the
 // column has one row of chrome subtracted less: see
@@ -40,6 +42,12 @@ export default function ChappiPageClient() {
   const { releases, isInitialLoading, loadCommandCenter } = useReleaseStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [winReleaseId, setWinReleaseId] = useState<string | null>(null);
+  // See WorkspaceView for the shape and why the continuation is deferred.
+  const [accessStep, setAccessStep] = useState<{
+    releaseId: string;
+    title: string | null;
+    resume: () => void;
+  } | null>(null);
   // Mid-sentence is the one moment the human-fallback row is certainly not
   // what the user wants, and on a phone it is a whole row of the little
   // space the keyboard leaves. It comes back the instant they stop typing.
@@ -160,24 +168,49 @@ export default function ChappiPageClient() {
       <CreateReleaseModal
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onCreated={(releaseId, plan) => {
+        onCreated={(releaseId, plan, result) => {
           setIsCreateModalOpen(false);
           void loadCommandCenter();
-          if (FIRST_WIN_ENABLED && releases.length === 0) {
-            setWinReleaseId(releaseId);
-          } else {
-            // Same one-time getting-started guide as the workspace's create
-            // flow — template creations only (see WorkspaceView's onCreated).
-            // Lands on the workspace scoped to the new release (2026-08-04 —
-            // the release detail page was removed).
-            router.push(
-              plan === 'template'
-                ? `/dashboard?release=${releaseId}&new=1`
-                : `/dashboard?release=${releaseId}`
-            );
+          // Deferred continuation, mirroring WorkspaceView's onCreated: the
+          // compulsory team-login step runs first, then hands back to the
+          // original branches unchanged.
+          const resume = () => {
+            if (FIRST_WIN_ENABLED && releases.length === 0) {
+              setWinReleaseId(releaseId);
+            } else {
+              // Same one-time getting-started guide as the workspace's create
+              // flow — template creations only (see WorkspaceView's onCreated).
+              // Lands on the workspace scoped to the new release (2026-08-04 —
+              // the release detail page was removed).
+              router.push(
+                plan === 'template'
+                  ? `/dashboard?release=${releaseId}&new=1`
+                  : `/dashboard?release=${releaseId}`
+              );
+            }
+          };
+          // Creating a release from the assistant is still creating a release,
+          // so it gets the same compulsory step. Skipping it here would make
+          // the step's presence depend on which button you happened to use.
+          if (TEAM_LOGINS_ENABLED) {
+            setAccessStep({ releaseId, title: result?.title ?? null, resume });
+            return;
           }
+          resume();
         }}
       />
+
+      {accessStep ? (
+        <ReleaseAccessStep
+          releaseId={accessStep.releaseId}
+          releaseTitle={accessStep.title}
+          onDone={() => {
+            const { resume } = accessStep;
+            setAccessStep(null);
+            resume();
+          }}
+        />
+      ) : null}
 
       {winReleaseId ? (
         <FirstReleaseWin
