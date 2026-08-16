@@ -500,8 +500,15 @@ export default function InviteAcceptPage() {
                         disabled={isSubmitting || isGoogleRedirecting}
                         required
                       />
+                      {/* Explicit about WHOSE password this is (2026-08-16).
+                          Team logins are shared over WhatsApp, so the person
+                          opening one may be expecting a password to have been
+                          sent to them; saying they choose it here is what
+                          stops them waiting for a message that never comes —
+                          and no password ever travels through a chat. */}
                       <Input
-                        label="Password"
+                        label="Choose your password"
+                        hint="You're setting this yourself — nobody else sees it. At least 6 characters."
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}

@@ -2,6 +2,7 @@
 
 import type { WorkspaceMember } from '@/types/auth';
 import { TeammatesSection } from '../TeammatesSection';
+import { TeamLoginsSection } from '@/components/team/TeamLoginsSection';
 
 type TeamTabProps = {
   teammates: WorkspaceMember[];
@@ -22,6 +23,11 @@ type TeamTabProps = {
  * internally. It keeps its `id="teammates"` anchor so old `#teammates` links
  * stay valid targets even though the page client now redirects them to
  * `?tab=team`.
+ *
+ * Team logins (2026-08-16) sits BELOW it, and the order is the point: who is
+ * already here, then the keys you hand to whoever isn't. That section is
+ * manager-only and flag-gated, so it renders nothing for most accounts and
+ * this tab stays exactly as it was.
  */
 export function TeamTab({
   teammates,
@@ -37,6 +43,7 @@ export function TeamTab({
         onTeammatesChange={onTeammatesChange}
         onRefetch={onRefetch}
       />
+      <TeamLoginsSection />
     </div>
   );
 }

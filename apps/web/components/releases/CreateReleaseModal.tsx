@@ -70,7 +70,13 @@ type CreateReleaseModalProps = {
   onCreated: (
     releaseId: string,
     plan: ReleasePlanChoice,
-    result?: { plannerPending: boolean }
+    result?: {
+      plannerPending: boolean;
+      /** The title as typed, or null when the user left it blank and the
+       * route defaulted it. Callers use it for copy that names the release
+       * without waiting on the store resync. */
+      title?: string | null;
+    }
   ) => void;
 };
 
@@ -345,6 +351,10 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
         throw new Error('Release created, but no release id was returned.');
       }
 
+      // Captured BEFORE the reset below, so callers get the name the user
+      // typed rather than the cleared field.
+      const createdTitle = title.trim();
+
       setTitle('');
       setReleaseDate('');
       setErrors({});
@@ -355,6 +365,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
       void useReleaseStore.getState().loadCommandCenter({ force: true });
       onCreated(releaseId, plan || 'template', {
         plannerPending: payload.plannerPending === true,
+        title: createdTitle || null,
       });
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Could not create release.');
