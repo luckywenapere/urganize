@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.56.0",
+    date: "August 16, 2026",
+    highlights: [
+      "Creating a release now hands you a login to send to your team. You don't have to go looking for it — the moment the release is set up, the link is there to copy straight into WhatsApp or an email.",
+      "A new Team logins section in Settings lets you create as many logins as you need, one per person, and label each one so you know who you sent it to.",
+      "Nobody has to be sent a password. Whoever opens your link chooses their own on the way in, so there's never a password sitting in a chat you'd have to go back and delete.",
+      "You can revoke any login you've handed out. It stops working immediately, and anyone who already joined keeps their access.",
+    ],
+  },
+  {
     version: "0.55.2",
     date: "August 15, 2026",
     highlights: [
