@@ -15,6 +15,7 @@ import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { NavigationTracker } from '@/components/app/NavigationTracker';
 import { ToastProvider } from '@/components/shared/ToastProvider';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { ChunkRecoveryBridge } from '@/components/providers/ChunkRecoveryBridge';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
 import { CapacitorPushBridge } from '@/components/providers/CapacitorPushBridge';
 import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
@@ -340,6 +341,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     // provider is available for any future "save succeeded" / "upload failed"
     // moments that currently render inline toast boxes.
     <ToastProvider>
+    {/* Reloads a tab left holding a previous deployment's chunk URLs, which
+        otherwise presents as "the page scrolls but nothing is clickable"
+        after a Back navigation. Renders nothing — see lib/chunk-recovery.ts. */}
+    <ChunkRecoveryBridge />
     <CapacitorAuthBridge />
     <CapacitorPushBridge />
     {/* Publishes on-screen-keyboard state to CSS — see globals.css's
