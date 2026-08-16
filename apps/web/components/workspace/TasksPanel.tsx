@@ -1,8 +1,25 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import Link from 'next/link';
-import { CalendarDays, ChevronDown, ClipboardList, FolderOpen, ListChecks, Mail, Music, Newspaper, NotebookPen, Plus, Radio, Sparkles } from 'lucide-react';
+import {
+  CalendarDays,
+  ChevronDown,
+  ClipboardList,
+  FolderOpen,
+  ListChecks,
+  Mail,
+  Menu,
+  Music,
+  Newspaper,
+  NotebookPen,
+  PartyPopper,
+  Plus,
+  Radio,
+  Search,
+  Sparkles,
+  type LucideProps,
+} from 'lucide-react';
 import {
   getTaskSectionLabel,
   groupTasksIntoSections,
@@ -41,6 +58,11 @@ const IDENTITY_PANEL_ENABLED =
 // when Chappi is on. Cost: a redundant second control at `lg`-`xl` while the
 // rail happens to be closed. That is strictly better than a viewport band
 // where the feature has no entry point at all.
+//
+// Only takes effect at `lg`+ (both values are min-width breakpoints), so
+// reusing the same Metadata button below `lg` — in the new mobile top-tabs
+// row — is always safe: within the range that row renders, this class hasn't
+// started hiding anything yet.
 // Exported so WorkspaceSkeleton reserves the placeholder at exactly the same
 // breakpoints (the loading-skeleton-sync rule that file documents; it has
 // already drifted from this row once).
@@ -50,14 +72,12 @@ export const METADATA_PILL_HIDE_CLASS = !IDENTITY_PANEL_ENABLED
     ? 'xl:hidden'
     : 'lg:hidden';
 
-// Content calendar entry point (URG-157): the workspace is the surface users
-// actually land on after login, so the scoped-release header carries the
-// calendar affordance alongside Files rather than hiding it on the release
-// detail page alone. As of 2026-08-13 (founder correction, via screenshot)
-// the pill moved OUT of the header row into its own footer row below the
-// activity list, and as of 2026-08-14 that footer row is desktop-only — below
-// `lg` the pill is part of the single bottom dock. This flag gates the pill
-// itself (`outboundPills`), wherever it happens to render.
+// Content calendar entry point (URG-157). Same flag that gates the calendar
+// API routes. On mobile this is now one of the top TABS (see the "outbound"
+// mobile row below) rather than a folded-menu item or a dock pill — moved
+// there 2026-08-16 (founder request, screenshot reference) alongside Press
+// kit, Recap and Metadata, the four things worth a permanent, always-visible
+// entry point.
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 
 // Files entry point (URG-182): same flag gates the assets API routes and the
@@ -76,9 +96,9 @@ const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'tru
 // users actually land on. Same flag that gates the EPK page and API routes.
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 
-// Fan capture entry point (2026-08-14): the third "thing you send outward",
-// so it joins Calendar and Press kit in the panel footer rather than the
-// header pill row — the same founder reasoning that moved Press kit there.
+// Fan capture entry point (2026-08-14). On mobile this lives in the folded
+// "more" menu rather than the top tabs — see the 2026-08-16 mobile redesign
+// note below for why it isn't one of the four permanent tabs.
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 
 // Notes entry point: same flag AppTopbar and the identity panel read.
@@ -88,13 +108,14 @@ const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 // /api/pitching routes and the /api/curator routes.
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 
-// Same flag AppShell/MobileNavBar read. Below `lg` every pill collects into
-// one sticky dock at the base of this panel (see the dock block at the bottom
-// of the render), and how far up that dock has to sit depends on which fixed
-// surface already owns the screen's bottom edge — the nav bar when this is on,
-// the floating UrgAns/support launcher when it isn't. Precomputed to a class
-// so the dock's className stays a one-token swap, the same shape AppShell uses
-// for <main>'s bottom padding. Both rules live in globals.css.
+// Same flag AppShell/MobileNavBar read. Below `lg` the panel now shows two
+// rows (top tabs, then the standalone-pills-plus-menu dock at the base — see
+// the 2026-08-16 mobile redesign note), and how far up the dock has to sit
+// still depends on which fixed surface already owns the screen's bottom
+// edge — the nav bar when this is on, the floating UrgAns/support launcher
+// when it isn't. Precomputed to a class so the dock's className stays a
+// one-token swap, the same shape AppShell uses for <main>'s bottom padding.
+// Both rules live in globals.css.
 const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
 export const TASKS_PILL_DOCK_OFFSET_CLASS = MOBILE_NAV_ENABLED
   ? 'tasks-pill-dock-nav'
@@ -103,18 +124,31 @@ export const TASKS_PILL_DOCK_OFFSET_CLASS = MOBILE_NAV_ENABLED
 /**
  * The scene-pill row's neutral (never-lit) pill treatment — hoisted to
  * module scope and exported as the one source of truth. WorkspaceView's
- * `extraActions` pills (Status update / Release recap) used to hand-roll a
- * byte-for-byte copy of this string; that copy had already drifted (missing
- * `shrink-0 whitespace-nowrap`) by the time this row grew to 9 pills on
- * mobile, which is how "Get your release recap" ended up wrapping across
- * three lines inside a fixed 32px pill (2026-08-10 bug fix). `shrink-0
- * whitespace-nowrap` still matter, for the same reason in a new container:
- * below `lg` the pills wrap inside the bottom dock, and a flex child without
- * them compresses and breaks its own label mid-phrase instead of moving whole
- * onto the next row.
+ * Status update / Release recap actions render through this same class
+ * (via `statusUpdateAction`/`recapAction` below) rather than a hand-rolled
+ * copy — that copy had already drifted once (missing `shrink-0
+ * whitespace-nowrap`), which is how "Get your release recap" ended up
+ * wrapping across three lines inside a fixed 32px pill (2026-08-10 bug fix).
+ * `shrink-0 whitespace-nowrap` still matter for the same reason in every new
+ * container this pill can land in: a flex child without them compresses and
+ * breaks its own label mid-phrase instead of moving whole onto the next row.
  */
 export const taskPanelPillClass =
   'motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover';
+
+/**
+ * A flag-gated AI action ported from the removed release detail page
+ * (Status update, Release recap). Structured rather than pre-rendered
+ * ReactNode: this component places each one in a different spot at each
+ * width (the desktop header row, the mobile top tabs, or the mobile folded
+ * "more" menu), and the folded menu's search needs a real label to filter
+ * against — a rendered `<button>` blob can't be introspected for its text.
+ */
+export type TaskPanelAction = {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+};
 
 // Live work first, then the un-started pipeline by date, then the parked and
 // terminal states (founder call, 2026-08-15 — status groups joined the time
@@ -185,12 +219,17 @@ type TasksPanelProps = {
   /** Optional DOM id, used by the parent to smooth-scroll into view when the
    * layout is stacked (below lg) and a release card is tapped. */
   id?: string;
-  /** Extra pills appended to the header row after the nav links — the
-   * flag-gated AI actions (Tailor plan / Generate status update) that used
-   * to live only on the now-removed release detail page (2026-08-04). Kept
-   * as a slot rather than owned here so this component stays presentational;
-   * WorkspaceView owns the modals/state. */
-  extraActions?: ReactNode;
+  /**
+   * The Status update AI action, ported from the removed release detail
+   * page. Structured (see `TaskPanelAction`) so this component can render it
+   * in the right place at each width — see the type's own doc comment.
+   * `null`/undefined when the feature is off or no release is scoped.
+   */
+  statusUpdateAction?: TaskPanelAction | null;
+  /** The Release recap action, alongside `statusUpdateAction` above. `null`
+   * when the flag is off, no release is scoped, or the release isn't
+   * recap-eligible yet (WorkspaceView owns that eligibility check). */
+  recapAction?: TaskPanelAction | null;
   /**
    * When set, replaces the activity buckets with this content while keeping the
    * header row of pills above it (2026-08-05, founder call). That row is the
@@ -229,11 +268,24 @@ type TasksPanelProps = {
   showPlanPill?: boolean;
 };
 
+/** One entry in the mobile "more" menu — the folded pills that don't earn a
+ * permanent spot on a phone (see the 2026-08-16 redesign note below). Data,
+ * not JSX: the menu's search filters on `label`, which a pre-rendered button
+ * can't be introspected for. */
+type MoreMenuAction = {
+  key: string;
+  label: string;
+  icon: ComponentType<LucideProps>;
+  onClick: () => void;
+  disabled?: boolean;
+};
+
 export function TasksPanel({
   tasks,
   scopedRelease,
   id,
-  extraActions,
+  statusUpdateAction,
+  recapAction,
   sceneContent,
   activitiesBanner,
   bannerReplacesEmptyState = false,
@@ -261,11 +313,10 @@ export function TasksPanel({
 
   /**
    * Pill classes, lit when that scene is the open one. `shrink-0
-   * whitespace-nowrap` (2026-08-10 bug fix): the pills wrap inside the mobile
-   * dock below `lg`, and without these a flex child is free to compress and
-   * break its own label mid-phrase rather than moving whole onto the next row
-   * — which is exactly how "Get your release recap" used to spill across three
-   * lines inside a fixed 32px pill.
+   * whitespace-nowrap` (2026-08-10 bug fix): a flex child is free to
+   * compress and break its own label mid-phrase rather than moving whole onto
+   * the next row without these — which is exactly how "Get your release
+   * recap" used to spill across three lines inside a fixed 32px pill.
    */
   const pillClass = (scene: SceneName) =>
     `motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors ${
@@ -277,8 +328,8 @@ export function TasksPanel({
   // Shared with the New activity / Activities toggle below — same neutral
   // (never-lit) treatment regardless of which of the two states it's in.
   // Hoisted to module scope as the exported `taskPanelPillClass` (above the
-  // component) so WorkspaceView's extraActions pills use the real thing
-  // instead of a hand-rolled copy.
+  // component) so WorkspaceView's Status update / Recap actions use the real
+  // thing instead of a hand-rolled copy.
   const neutralPillClass = taskPanelPillClass;
 
   /** Open the scene, or close it if it's the one already showing. */
@@ -336,143 +387,145 @@ export function TasksPanel({
     writePersistedState(EXPANDED_STORAGE_KEY, EXPANDED_STORAGE_VERSION, next);
   };
 
+  // The mobile "more" menu (2026-08-16 redesign, below) — collapsed by
+  // default, so nothing here is reserved in the skeleton (the Plan-pill
+  // precedent: data this component doesn't have yet gets no guessed width).
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [moreMenuQuery, setMoreMenuQuery] = useState('');
+  const moreMenuListId = useId();
+
+  const toggleMoreMenu = () => {
+    setIsMoreMenuOpen((open) => {
+      const next = !open;
+      // Fresh state on every open, not just on close: a query left over from
+      // a previous look at the menu should not silently filter the next one.
+      if (!next) setMoreMenuQuery('');
+      return next;
+    });
+  };
+
   /**
-   * The pills both layouts share, built ONCE and rendered into two
-   * containers: the desktop header row (lg+) and the mobile dock at the
-   * panel's base (below lg). Exactly one container is displayed at any width —
-   * the other carries `hidden` / `lg:hidden`, and `display: none` takes it out
-   * of the accessibility tree and the tab order entirely — so a user (or a
-   * screen reader) never meets the same control twice. The duplication is in
-   * the DOM only, and it's what lets the mobile dock wrap ALL the pills into
-   * one continuous run of rows: two separate containers would wrap
-   * independently and leave a ragged seam between them.
-   *
-   * `notesPill` (desktop only) and `extraActions` are rendered by each
-   * container instead of living in here, so the desktop row keeps its Files →
-   * Notes → AI actions order while the dock simply never receives Notes.
+   * Toggles with the scene body below: "New activity" opens Quick Create
+   * while the activity list is showing; once a scene (Calendar / Files /
+   * Press kit / Song / …) has taken this slot, the SAME button position
+   * becomes "Activities" so there's always a way back without hunting for
+   * the scene's own pill again. Rendered in three places on this component's
+   * two mounts — the desktop header row, and (mobile) the standalone row at
+   * the panel's base — the same JSX value can appear in each without
+   * conflict, since each is a distinct render tree.
    */
-  const primaryPills = (
-    <>
-      {/* Toggles with the scene body below: "New activity" opens Quick
-          Create while the activity list is showing; once a scene (Calendar
-          / Files / Press kit) has taken this slot, the SAME
-          button position becomes "Activities" so there's always a way
-          back without hunting for the scene's own pill again. */}
-      {activeScene ? (
-        <button type="button" onClick={closeScene} className={neutralPillClass}>
-          <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
-          Activities
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={() =>
-            openQuickCreate({
-              releaseId: scopedRelease?.id || undefined,
-              source: 'inline',
-            })
-          }
-          className={neutralPillClass}
-        >
-          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-          New activity
-        </button>
-      )}
-      {/* Plan pill, first while it exists. A release with no activities
-          has exactly one job, and this is it; once a plan is approved the
-          pill disappears, because from then on the activity list IS the
-          plan. Only shown while there is something to open (no activities
-          yet, or a draft already waiting) so it never becomes permanent
-          chrome. */}
-      {showPlanPill && scopedRelease ? (
-        <button
-          type="button"
-          onClick={() => toggleScene('plan', scopedRelease.id)}
-          aria-pressed={activeScene === 'plan'}
-          className={pillClass('plan')}
-        >
-          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          Plan
-        </button>
-      ) : null}
-      {/* Metadata link (URG-108) — NARROW widths only as of 2026-08-12,
-          since the identity panel's "Collect metadata" nav item is now
-          this release's persistent entry point (see
-          WorkspaceIdentityPanel) and two controls for one scene is noise.
-          But that panel never renders on small viewports, so the pill has
-          to survive there: the mobile dock is the only surface present at
-          every width. See METADATA_PILL_HIDE_CLASS for exactly where it
-          retreats — it stays put entirely when the panel is flagged off.
-          (Inside the mobile dock that class is inert, since the dock is
-          already `lg:hidden`; it does its work in the desktop header row.) */}
-      {METADATA_ENABLED && scopedRelease ? (
-        <button
-          type="button"
-          onClick={() => toggleScene('metadata', scopedRelease.id)}
-          aria-pressed={activeScene === 'metadata'}
-          className={`${pillClass('metadata')} ${METADATA_PILL_HIDE_CLASS}`}
-        >
-          <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
-          Collect metadata
-        </button>
-      ) : null}
-      {/* Song: the master itself. Placed ahead of Pitch and Press kit
-          because it is the thing both of those are ABOUT — you cannot
-          sensibly pitch a release whose audio nobody has uploaded. It sits
-          after Collect metadata rather than before it so the founder's
-          "Metadata first" call at narrow widths is untouched; that pill
-          retreats at wide widths, where this becomes the leading link. */}
-      {SONG_UPLOAD_ENABLED && scopedRelease ? (
-        <button
-          type="button"
-          onClick={() => toggleScene('song', scopedRelease.id)}
-          aria-pressed={activeScene === 'song'}
-          className={pillClass('song')}
-        >
-          <Music className="h-3.5 w-3.5" aria-hidden="true" />
-          Song
-        </button>
-      ) : null}
-      {/* Playlist pitching: browse curator playlists and send this
-          release's song, with each curator's answer shown beside it.
-          Sits high in the row (founder call, 2026-08-10) — right after
-          Collect metadata. Note that pill retreats at wide widths (see
-          METADATA_PILL_HIDE_CLASS), so this is effectively the first
-          link in the desktop row there. */}
-      {PITCHING_ENABLED && scopedRelease ? (
-        <button
-          type="button"
-          onClick={() => toggleScene('pitch', scopedRelease.id)}
-          aria-pressed={activeScene === 'pitch'}
-          className={pillClass('pitch')}
-        >
-          <Radio className="h-3.5 w-3.5" aria-hidden="true" />
-          Pitch
-        </button>
-      ) : null}
-      {/* Files link: its own scene (URG-165), not a segment nested under
-          the task list — files are a peer of tasks, not a child of them.
-          Only renders when a release is scoped (assets is release-scoped,
-          see /api/releases/{id}/assets). */}
-      {FILES_ENABLED && scopedRelease ? (
-        <button
-          type="button"
-          onClick={() => toggleScene('files', scopedRelease.id)}
-          aria-pressed={activeScene === 'files'}
-          className={pillClass('files')}
-        >
-          <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
-          Files
-        </button>
-      ) : null}
-    </>
+  const activitiesToggleButton = activeScene ? (
+    <button type="button" onClick={closeScene} className={neutralPillClass}>
+      <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
+      Activities
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={() =>
+        openQuickCreate({
+          releaseId: scopedRelease?.id || undefined,
+          source: 'inline',
+        })
+      }
+      className={neutralPillClass}
+    >
+      <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+      New activity
+    </button>
   );
+
+  // Plan: first while it exists. A release with no activities has exactly
+  // one job, and this is it; once a plan is approved the pill disappears,
+  // because from then on the activity list IS the plan. Only shown while
+  // there is something to open (no activities yet, or a draft already
+  // waiting) so it never becomes permanent chrome. Desktop header row only —
+  // on mobile it lives in the folded "more" menu (see below).
+  const planButton =
+    showPlanPill && scopedRelease ? (
+      <button
+        type="button"
+        onClick={() => toggleScene('plan', scopedRelease.id)}
+        aria-pressed={activeScene === 'plan'}
+        className={pillClass('plan')}
+      >
+        <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+        Plan
+      </button>
+    ) : null;
+
+  // Metadata (URG-108). Desktop: NARROW widths only, since the identity
+  // panel's "Collect metadata" nav item is this release's persistent entry
+  // point at wide widths (WorkspaceIdentityPanel) and two controls for one
+  // scene is noise — see METADATA_PILL_HIDE_CLASS above for exactly where it
+  // retreats. Mobile (2026-08-16): one of the four permanent top tabs, where
+  // that hide class is always inert (it only ever fires at/above `lg`).
+  const metadataButton =
+    METADATA_ENABLED && scopedRelease ? (
+      <button
+        type="button"
+        onClick={() => toggleScene('metadata', scopedRelease.id)}
+        aria-pressed={activeScene === 'metadata'}
+        className={`${pillClass('metadata')} ${METADATA_PILL_HIDE_CLASS}`}
+      >
+        <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
+        Collect metadata
+      </button>
+    ) : null;
+
+  // Song: the master itself. Desktop header row only — on mobile it lives in
+  // the folded "more" menu.
+  const songButton =
+    SONG_UPLOAD_ENABLED && scopedRelease ? (
+      <button
+        type="button"
+        onClick={() => toggleScene('song', scopedRelease.id)}
+        aria-pressed={activeScene === 'song'}
+        className={pillClass('song')}
+      >
+        <Music className="h-3.5 w-3.5" aria-hidden="true" />
+        Song
+      </button>
+    ) : null;
+
+  // Playlist pitching: browse curator playlists and send this release's
+  // song, with each curator's answer shown beside it. On mobile it stays a
+  // permanent, standalone pill (2026-08-16, founder request) — pitching is
+  // frequent enough to earn its own spot rather than the folded menu.
+  const pitchButton =
+    PITCHING_ENABLED && scopedRelease ? (
+      <button
+        type="button"
+        onClick={() => toggleScene('pitch', scopedRelease.id)}
+        aria-pressed={activeScene === 'pitch'}
+        className={pillClass('pitch')}
+      >
+        <Radio className="h-3.5 w-3.5" aria-hidden="true" />
+        Pitch
+      </button>
+    ) : null;
+
+  // Files link: its own scene (URG-165), not a segment nested under the task
+  // list — files are a peer of tasks, not a child of them. Desktop header row
+  // only — on mobile it lives in the folded "more" menu.
+  const filesButton =
+    FILES_ENABLED && scopedRelease ? (
+      <button
+        type="button"
+        onClick={() => toggleScene('files', scopedRelease.id)}
+        aria-pressed={activeScene === 'files'}
+        className={pillClass('files')}
+      >
+        <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
+        Files
+      </button>
+    ) : null;
 
   /**
    * Notes for this release — DESKTOP ONLY (founder call, 2026-08-15: notes
    * should not be one of the mobile pills), which is why it is its own
-   * variable rather than part of `primaryPills` above: it is rendered into the
-   * desktop header row and simply never handed to the mobile dock. Kept as a
+   * variable rather than composed alongside the buttons above: it is rendered
+   * into the desktop header row and simply never handed to mobile. Kept as a
    * placement decision in JSX rather than a `hidden lg:inline-flex` class,
    * which would rest on Tailwind's internal ordering of two competing base
    * `display` utilities.
@@ -499,72 +552,173 @@ export function TasksPanel({
       </Link>
     ) : null;
 
-  /**
-   * Calendar, Press kit and Fan capture — the things you send outward, which
-   * is why they sit together (Press kit joined Calendar 2026-08-14, founder
-   * call; Fan capture joined them the same day). On desktop they stay a footer
-   * row pinned to the panel's base; on mobile they're simply the tail of the
-   * one dock.
-   *
-   * Defined ONCE and rendered into both containers, so a pill can never exist
-   * at one width and not the other — the failure mode CLAUDE.md records
-   * Metadata and the curator crossing each hitting.
-   */
+  // Calendar, Press kit — the desktop footer row's outbound pair. Fan
+  // capture used to sit alongside them here; on mobile it moved to the
+  // folded "more" menu (2026-08-16), so it's built separately below rather
+  // than as a third member of this pair.
+  const calendarButton = CONTENT_CALENDAR_ENABLED ? (
+    <button
+      type="button"
+      onClick={() => scopedRelease && toggleScene('calendar', scopedRelease.id)}
+      aria-pressed={activeScene === 'calendar'}
+      className={pillClass('calendar')}
+    >
+      <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+      Calendar
+    </button>
+  ) : null;
+
+  const epkButton = EPK_ENABLED ? (
+    <button
+      type="button"
+      onClick={() => scopedRelease && toggleScene('epk', scopedRelease.id)}
+      aria-pressed={activeScene === 'epk'}
+      className={pillClass('epk')}
+    >
+      <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
+      Press kit
+    </button>
+  ) : null;
+
+  const captureButton = CAPTURE_ENABLED ? (
+    <button
+      type="button"
+      onClick={() => scopedRelease && toggleScene('capture', scopedRelease.id)}
+      aria-pressed={activeScene === 'capture'}
+      className={pillClass('capture')}
+    >
+      <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+      Fan capture
+    </button>
+  ) : null;
+
   const outboundPills = (
     <>
-      {CONTENT_CALENDAR_ENABLED ? (
-        <button
-          type="button"
-          onClick={() => scopedRelease && toggleScene('calendar', scopedRelease.id)}
-          aria-pressed={activeScene === 'calendar'}
-          className={pillClass('calendar')}
-        >
-          <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-          Calendar
-          {/* No Beta stamp (founder call, 2026-08-15 — dropped completely, so
-              the scene's own header lost its stamp too; see CalendarScene).
-              Press kit below keeps its own. */}
-        </button>
-      ) : null}
-      {EPK_ENABLED ? (
-        <button
-          type="button"
-          onClick={() => scopedRelease && toggleScene('epk', scopedRelease.id)}
-          aria-pressed={activeScene === 'epk'}
-          className={pillClass('epk')}
-        >
-          <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
-          Press kit
-          {/* No Beta stamp (founder call, 2026-08-16) — same call Calendar
-              got on 2026-08-15. Neither scene's own header carries one
-              either, so the label is the whole pill. */}
-        </button>
-      ) : null}
-      {CAPTURE_ENABLED ? (
-        <button
-          type="button"
-          onClick={() => scopedRelease && toggleScene('capture', scopedRelease.id)}
-          aria-pressed={activeScene === 'capture'}
-          className={pillClass('capture')}
-        >
-          <Mail className="h-3.5 w-3.5" aria-hidden="true" />
-          Fan capture
-          {/* No Beta stamp (founder call, 2026-08-16), same as Press kit
-              above. No pill in this row carries one now. */}
-        </button>
-      ) : null}
+      {calendarButton}
+      {epkButton}
+      {captureButton}
     </>
   );
 
   /**
    * Hidden once a scene is open: the "Activities" pill above is already the
    * way back, and a Calendar entry while Calendar (or any scene) is showing
-   * is redundant chrome pointed at the thing already on screen.
+   * is redundant chrome pointed at the thing already on screen. Desktop
+   * footer row only — the mobile top tabs and folded menu below deliberately
+   * do NOT carry this restriction (see their own comments for why).
    */
   const showOutboundPills =
     (CONTENT_CALENDAR_ENABLED || EPK_ENABLED || CAPTURE_ENABLED) &&
     Boolean(scopedRelease) &&
     !sceneContent;
+
+  // Status update / Release recap, rendered through the shared pill class
+  // wherever they're needed (desktop row, mobile top tabs, mobile folded
+  // menu) — see TaskPanelAction's own doc comment for why these arrive as
+  // data rather than pre-rendered nodes.
+  const statusUpdateButton = statusUpdateAction ? (
+    <button
+      type="button"
+      onClick={statusUpdateAction.onClick}
+      disabled={statusUpdateAction.disabled}
+      className={`${neutralPillClass} disabled:opacity-60`}
+    >
+      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+      {statusUpdateAction.label}
+    </button>
+  ) : null;
+
+  const recapButton = recapAction ? (
+    <button type="button" onClick={recapAction.onClick} className={neutralPillClass}>
+      <PartyPopper className="h-3.5 w-3.5" aria-hidden="true" />
+      {recapAction.label}
+    </button>
+  ) : null;
+
+  /**
+   * Mobile top tabs (2026-08-16, founder request via screenshot reference) —
+   * the four things worth a permanent, always-visible entry point on a
+   * phone: Press kit, Recap, Calendar, Collect metadata. Unlike the desktop
+   * footer's outbound pair, these do NOT hide while a scene is open — the
+   * whole point of a tab strip is that every tab stays reachable and the
+   * active one is highlighted, matching the reference (all tabs visible,
+   * "Logs" lit). Recap has no "active" concept (it opens a modal, not a
+   * scene) and so never lights up, same as it always has.
+   */
+  const hasMobileTopTabs = Boolean(
+    scopedRelease && (epkButton || recapButton || calendarButton || metadataButton)
+  );
+
+  // The folded "more" menu (2026-08-16) — everything that used to fill out
+  // the mobile dock but isn't one of the four top tabs or the two permanent
+  // standalone pills (New activity/Activities, Pitch). Data, not JSX, so the
+  // search box above the list can filter on a real label. Order mirrors the
+  // rough priority the desktop row already implies: Plan first (it's the
+  // one thing a plan-less release needs), then Song and Files, then the AI
+  // actions, then Fan capture.
+  // Deliberately NOT memoized: each entry's onClick closes over `toggleScene`,
+  // which itself closes over the current `activeScene` — memoizing this array
+  // risks serving a stale closure (tap "Song" after switching scenes without
+  // this array's own deps changing, and it would toggle against a scene that
+  // is no longer the open one). The array is five items at most, so recomputing
+  // it every render costs nothing worth guarding against.
+  const moreMenuActionsRaw: (MoreMenuAction | null)[] = [
+    showPlanPill && scopedRelease
+      ? {
+          key: 'plan',
+          label: 'Plan',
+          icon: Sparkles,
+          onClick: () => toggleScene('plan', scopedRelease.id),
+        }
+      : null,
+    SONG_UPLOAD_ENABLED && scopedRelease
+      ? {
+          key: 'song',
+          label: 'Song',
+          icon: Music,
+          onClick: () => toggleScene('song', scopedRelease.id),
+        }
+      : null,
+    FILES_ENABLED && scopedRelease
+      ? {
+          key: 'files',
+          label: 'Files',
+          icon: FolderOpen,
+          onClick: () => toggleScene('files', scopedRelease.id),
+        }
+      : null,
+    statusUpdateAction
+      ? {
+          key: 'status-update',
+          label: statusUpdateAction.label,
+          icon: Sparkles,
+          onClick: statusUpdateAction.onClick,
+          disabled: statusUpdateAction.disabled,
+        }
+      : null,
+    CAPTURE_ENABLED && scopedRelease
+      ? {
+          key: 'capture',
+          label: 'Fan capture',
+          icon: Mail,
+          onClick: () => toggleScene('capture', scopedRelease.id),
+        }
+      : null,
+  ];
+  const moreMenuActions = moreMenuActionsRaw.filter(
+    (item): item is MoreMenuAction => item !== null
+  );
+
+  const query = moreMenuQuery.trim().toLowerCase();
+  const filteredMoreMenuActions = query
+    ? moreMenuActions.filter((action) => action.label.toLowerCase().includes(query))
+    : moreMenuActions;
+
+  const handleMoreMenuSelect = (action: MoreMenuAction) => {
+    action.onClick();
+    setIsMoreMenuOpen(false);
+    setMoreMenuQuery('');
+  };
 
   return (
     // `min-w-0` here is defensive: the panel is rendered both inside the
@@ -576,30 +730,52 @@ export function TasksPanel({
     // (see WorkspaceDesktopFocused) — on mobile, where it's an ordinary block
     // child in normal page flow, `flex: 1 1 0%` on a non-flex-item is inert.
     <aside id={id} className="flex min-h-0 min-w-0 flex-1 flex-col scroll-mt-20">
-      {/* Desktop header row (lg+ ONLY). Below `lg` these same pills render in
-          the sticky dock at the base of this panel instead — see the dock
-          block at the very bottom of this component — so this row is simply
-          `hidden` there, rather than the sticky-at-top row it was until
-          2026-08-14 (founder call: all the pills move to the bottom on mobile,
-          stacked, and stay in view).
+      {/* Desktop header row (lg+ ONLY). Below `lg` these buttons render
+          across two mobile-only rows instead — the top tabs, and the
+          standalone-pills-plus-menu dock at the base — see those blocks
+          further down.
 
           It needs no sticky treatment of its own: at lg+ this panel lives
           inside WorkspaceDesktopFocused's viewport-locked, `overflow-hidden`
           grid, so this row sits OUTSIDE the scrolling body and is always
-          visible by construction. That same overflow:hidden is why the old
-          `sticky top-16` had to carry an `lg:static` escape hatch — it made
-          the grid the nearest scrollport and pushed the row 64px DOWN into the
-          body. With the row desktop-only, both the sticky and the escape hatch
-          are gone, and so is the hazard.
+          visible by construction.
 
           Right-aligned and wrapping, exactly as it has rendered at lg+ since
-          2026-08-05 — desktop never had the mobile row's overflow bugs, so
-          nothing about its appearance changes here. */}
+          2026-08-05. */}
       <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex">
-        {primaryPills}
+        {activitiesToggleButton}
+        {planButton}
+        {metadataButton}
+        {songButton}
+        {pitchButton}
+        {filesButton}
         {notesPill}
-        {extraActions}
+        {statusUpdateButton}
+        {recapButton}
       </div>
+
+      {/* Mobile top tabs (below `lg` ONLY) — 2026-08-16, founder request via
+          screenshot reference (a Vercel-style tab strip: every tab stays
+          visible, the active one lit). The permanent, high-visibility half
+          of the phone layout — everything you'd send outward or need on
+          every visit. Order matches the reference: Press kit, Recap,
+          Calendar, then Collect metadata.
+
+          Horizontally scrollable with the same gutter-matching bleed the old
+          dock used (`-mx-4 px-4` stepping up at sm/md): four pills including
+          the long "Collect metadata" label do not reliably fit a 375px
+          screen, and a strip that scrolls beats one that wraps for a tab
+          bar — wrapping would make the "always visible, tap to switch" read
+          of a tab bar collapse into something that looks like the pill dock
+          underneath it. */}
+      {hasMobileTopTabs ? (
+        <div className="-mx-4 flex shrink-0 gap-2 overflow-x-auto px-4 pb-3 pt-1 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden">
+          {epkButton}
+          {recapButton}
+          {calendarButton}
+          {metadataButton}
+        </div>
+      ) : null}
 
       {/* Scrollable body — desktop-only internal scroll box (`lg:` prefix).
           On desktop this box gets a real bounded height from the ancestor
@@ -623,8 +799,8 @@ export function TasksPanel({
 
           A release scene takes this slot when one is open, otherwise the
           activity buckets do; the pills stay put either way — the desktop
-          header row above, the mobile dock below — so the scene switcher never
-          disappears (founder call, 2026-08-05). */}
+          header row above, the mobile rows above and below — so the scene
+          switcher never disappears (founder call, 2026-08-05). */}
       <div className="min-h-0 flex-1 pb-4 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
       {sceneContent ? (
         sceneContent
@@ -757,69 +933,110 @@ export function TasksPanel({
       )}
       </div>
 
-      {/* Desktop footer row (lg+ ONLY) — Calendar, then Press kit beside it
-          (the latter joined 2026-08-14, founder call, moving out of the header
-          row where it had sat since URG-198).
-
-          Calendar arrived here 2026-08-13 (founder call, third placement,
-          corrected twice via screenshot: not the identity card's nav list, not
-          the card's footer, and not floating just under the collapsed buckets
-          either). The final arrow pointed at the BASE of the activities
-          column, so this is a footer of the PANEL, not an item in the list: a
-          sibling AFTER the flex-1 scroll body, which pins it to the bottom of
-          the panel whether or not the task list overflows — the list scrolls
-          behind it, this row never moves.
-
-          Below `lg` these two pills are no longer a row of their own; they are
-          the tail of the single dock further down (2026-08-14). That is why
-          this is `hidden lg:flex` and no longer carries the horizontal-scroller
-          treatment it needed on a phone: at lg+ the two tagged pills have never
-          come close to running out of room. */}
+      {/* Desktop footer row (lg+ ONLY) — Calendar, then Press kit beside it.
+          A sibling AFTER the flex-1 scroll body, which pins it to the bottom
+          of the panel whether or not the task list overflows — the list
+          scrolls behind it, this row never moves. Mobile has its own,
+          differently-organized rows above and below instead (2026-08-16). */}
       {showOutboundPills ? (
         <div className="hidden shrink-0 items-center gap-2 pb-2 pt-3 lg:flex">
           {outboundPills}
         </div>
       ) : null}
 
-      {/* Mobile pill dock (below `lg` ONLY) — founder call, 2026-08-14: "move
-          all the button pills to the bottom on mobile stacked on top each
-          other and all sticky". One block holds EVERY pill this panel owns
-          (the header row's and the footer row's alike, in that order), wrapping
-          onto as many rows as it needs, docked to the bottom of the screen
-          while the activity list scrolls behind it.
+      {/* Mobile base dock (below `lg` ONLY) — redesigned 2026-08-16 (founder
+          request, screenshot reference) from "every pill in one wrapping
+          block" into two zones:
+            1. A standalone row: the two things worth a permanent pill of
+               their own even after the top-tabs split above — New
+               activity/Activities (the way back from any scene, so it can
+               never be folded away) and Pitch.
+            2. A folded "more" menu, entered via the search or hamburger
+               icon buttons at the trailing end of that row, holding
+               everything else this panel used to put in the old dock: Plan
+               (while it exists), Song, Files, Status update, Fan capture.
+               Filterable by the search box inside it.
 
-          Why wrap rather than the horizontal scroller both rows used before:
-          scrolling hid pills off-screen — the failure mode that produced the
-          cropped "lendar" pill in the 2026-08-10 screenshot — and a bottom dock
-          is a destination, not a strip you drag. Wrapping keeps every entry
-          point visible at once, which is the whole point of collecting them
-          here. Pills stay `shrink-0 whitespace-nowrap` (see `pillClass`), so
-          they break BETWEEN pills and never inside a label.
+          `sticky` (not `fixed`) for the same reason the old dock used it:
+          this is the last child in flow, so a short list leaves it sitting
+          under the content rather than covering it, with no compensating
+          spacer padding needed.
 
-          `sticky` (not `fixed`): the dock is the last child in flow, so when
-          the page is scrolled to the very bottom it settles at its natural
-          place after the list rather than covering it. Nothing is ever
-          permanently hidden behind it, and no spacer padding is needed to
-          compensate — which a fixed bar would have required. On a short list
-          that fits the screen the dock simply sits under it, unstuck; that is
-          the standard sticky-footer trade and it reads fine.
-
-          The bottom offset clears whichever fixed surface already owns the
-          screen's edge (MobileNavBar, or the floating UrgAns/support
-          launcher) — see TASKS_PILL_DOCK_OFFSET_CLASS and the two rules in
-          globals.css. `z-20` puts it above the scrolling list but below the
-          nav bar (`z-30`) and every modal.
-
-          The -mx/px bleed matches <main>'s own gutter at each breakpoint
-          (AppShell.tsx: px-4 sm:px-5 md:px-6) so the dock's background reaches
-          the true screen edges while its pills stay aligned with the content
-          above — a docked toolbar, not a floating card. */}
+          The bottom offset still clears whichever fixed surface already
+          owns the screen's edge — see TASKS_PILL_DOCK_OFFSET_CLASS. The
+          -mx/px bleed still matches <main>'s own gutter at each breakpoint. */}
       <div
-        className={`sticky z-20 -mx-4 flex flex-wrap items-center gap-2 border-t border-stroke-subtle bg-bg-base px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
+        className={`sticky z-20 -mx-4 flex flex-col gap-2 border-t border-stroke-subtle bg-bg-base px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
-        {primaryPills}
-        {extraActions}
-        {showOutboundPills ? outboundPills : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {activitiesToggleButton}
+          {pitchButton}
+          {moreMenuActions.length > 0 ? (
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleMoreMenu}
+                aria-expanded={isMoreMenuOpen}
+                aria-controls={moreMenuListId}
+                aria-label="Search the menu"
+                className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+              >
+                <Search className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={toggleMoreMenu}
+                aria-expanded={isMoreMenuOpen}
+                aria-controls={moreMenuListId}
+                aria-label="More"
+                className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+              >
+                <Menu className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        {isMoreMenuOpen ? (
+          <div id={moreMenuListId} className="border-t border-stroke-subtle pt-2">
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-content-tertiary"
+                aria-hidden="true"
+              />
+              <input
+                type="text"
+                value={moreMenuQuery}
+                onChange={(event) => setMoreMenuQuery(event.target.value)}
+                placeholder="Search…"
+                autoFocus
+                className="motion-focus h-9 w-full rounded-full border border-stroke-default bg-bg-surface pl-9 pr-3 text-sm text-content-primary placeholder:text-content-tertiary"
+              />
+            </div>
+            <ul className="mt-1 max-h-60 overflow-y-auto">
+              {filteredMoreMenuActions.length === 0 ? (
+                <li className="py-3 text-center text-xs text-content-tertiary">No matches.</li>
+              ) : (
+                filteredMoreMenuActions.map((action) => (
+                  <li key={action.key}>
+                    <button
+                      type="button"
+                      onClick={() => handleMoreMenuSelect(action)}
+                      disabled={action.disabled}
+                      className="motion-focus flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm text-content-primary transition-colors hover:bg-bg-hover disabled:opacity-60"
+                    >
+                      <action.icon
+                        className="h-4 w-4 shrink-0 text-content-tertiary"
+                        aria-hidden="true"
+                      />
+                      {action.label}
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </aside>
   );

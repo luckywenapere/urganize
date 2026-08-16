@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { AlertCircle, ArrowLeft, PartyPopper, Sparkles } from 'lucide-react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -21,7 +21,7 @@ import { FirstReleaseWin } from './FirstReleaseWin';
 import { useFirstReleaseRequired } from '@/components/releases/useFirstReleaseRequired';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
-import { TasksPanel, taskPanelPillClass } from './TasksPanel';
+import { TasksPanel } from './TasksPanel';
 import { useSceneOverlay } from './useSceneOverlay';
 import { useScenePrefetch } from './useScenePrefetch';
 import { useIsDesktopViewport } from './useIsDesktopViewport';
@@ -521,40 +521,27 @@ export function WorkspaceView() {
     return scopedTasks.length > 0 && scopedTasks.every((task) => task.status === 'done');
   }, [scopedReleaseSlim, scopedTasks]);
 
-  // The two AI action pills, ported from the removed release detail page —
-  // only meaningful (and only rendered) when a release is scoped, so both
-  // TasksPanel mounts get this via `extraActions` only in that case.
-  //
-  // Both now use `taskPanelPillClass` (TasksPanel's own neutral-pill class,
-  // exported) instead of a hand-rolled copy: the copy had already drifted
-  // (missing `shrink-0 whitespace-nowrap`) by the time this row grew to 9
-  // pills on mobile, which combined with the two longest labels here to
-  // wrap "Get your release recap" across three lines inside a fixed 32px
-  // pill (2026-08-10 bug fix). Labels also shortened to match how a chip
-  // row is supposed to read — one or two words, not a sentence; the icon
-  // already carries the rest of the meaning (Sparkles = AI action,
-  // PartyPopper = celebration).
-  const taskPanelExtraActions = scopedReleaseId ? (
-    <>
-      {STATUS_UPDATE_ENABLED ? (
-        <button
-          type="button"
-          onClick={() => void generateStatus()}
-          disabled={isGeneratingStatus}
-          className={`${taskPanelPillClass} disabled:opacity-60`}
-        >
-          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          {isGeneratingStatus ? 'Generating…' : 'Status update'}
-        </button>
-      ) : null}
-      {RELEASE_RECAP_ENABLED && isRecapEligible ? (
-        <button type="button" onClick={() => setIsRecapOpen(true)} className={taskPanelPillClass}>
-          <PartyPopper className="h-3.5 w-3.5" aria-hidden="true" />
-          Release recap
-        </button>
-      ) : null}
-    </>
-  ) : null;
+  // The two AI actions, ported from the removed release detail page — only
+  // meaningful when a release is scoped. Structured (see TaskPanelAction)
+  // rather than pre-rendered JSX: TasksPanel now places each one in a
+  // different spot depending on width (desktop header row, mobile top
+  // tabs, or the mobile folded "more" menu — 2026-08-16 redesign), and the
+  // folded menu's search needs a real label to filter against. Labels stay
+  // short — one or two words, not a sentence — matching how a chip row (or a
+  // menu row) is supposed to read.
+  const statusUpdateAction =
+    scopedReleaseId && STATUS_UPDATE_ENABLED
+      ? {
+          label: isGeneratingStatus ? 'Generating…' : 'Status update',
+          onClick: () => void generateStatus(),
+          disabled: isGeneratingStatus,
+        }
+      : null;
+
+  const recapAction =
+    scopedReleaseId && RELEASE_RECAP_ENABLED && isRecapEligible
+      ? { label: 'Release recap', onClick: () => setIsRecapOpen(true) }
+      : null;
 
   // The Plan pill only exists while there is something to open: no activities
   // yet, or a draft already waiting. Once a plan is approved it disappears,
@@ -853,7 +840,8 @@ export function WorkspaceView() {
                   id={TASKS_PANEL_ID}
                   tasks={scopedTasks}
                   scopedRelease={scopedReleaseSlim}
-                  extraActions={taskPanelExtraActions}
+                  statusUpdateAction={statusUpdateAction}
+                  recapAction={recapAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
                   activitiesBanner={planBanner ?? setReleaseDateBanner}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
@@ -894,7 +882,8 @@ export function WorkspaceView() {
                 onClose={isSingleRelease ? undefined : handleClose}
                 hideRails={hideRailsForLayout}
                 banner={newReleaseGuideBanner}
-                panelExtraActions={taskPanelExtraActions}
+                panelStatusUpdateAction={statusUpdateAction}
+                panelRecapAction={recapAction}
                 panelSceneContent={isDesktopViewport ? scenePanel : undefined}
                 panelActivitiesBanner={planBanner ?? setReleaseDateBanner}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
