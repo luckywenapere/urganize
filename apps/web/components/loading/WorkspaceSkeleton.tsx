@@ -289,16 +289,18 @@ function TasksPanelSkeleton() {
   ) : null;
   // Calendar / Press kit / Fan capture — the panel's outbound group. A
   // desktop-only footer row at lg+, the tail of the mobile dock below it.
-  // Calendar reserves less than the other two now that it carries no Beta tag
-  // (founder call, 2026-08-15); Fan capture is the widest, being the longest
-  // label AND carrying a Beta tag. Widths are per-label rather than uniform: a
-  // placeholder wider than the real pill shifts every neighbour left when the
-  // labels arrive.
+  // NO pill in this row carries a Beta tag any more (Calendar lost its stamp
+  // 2026-08-15, the other two on 2026-08-16), so each width is now just its
+  // label: px-3 + a 14px icon + gap-1.5 + the text at 12px semibold. That puts
+  // Calendar and Press kit level, with Fan capture one step up as the longest
+  // label. Widths are per-label rather than uniform, and each rounds DOWN to
+  // the nearest step: a placeholder wider than the real pill shifts every
+  // neighbour left when the labels arrive.
   const outboundPillBlocks = (
     <>
       {CONTENT_CALENDAR_ENABLED ? <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" /> : null}
-      {EPK_ENABLED ? <SkeletonBlock className="h-8 w-32 shrink-0 rounded-full" /> : null}
-      {CAPTURE_ENABLED ? <SkeletonBlock className="h-8 w-36 shrink-0 rounded-full" /> : null}
+      {EPK_ENABLED ? <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" /> : null}
+      {CAPTURE_ENABLED ? <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" /> : null}
     </>
   );
   return (
