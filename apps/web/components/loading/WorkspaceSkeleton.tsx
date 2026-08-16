@@ -354,17 +354,49 @@ function TasksPanelSkeleton() {
           {outboundPillBlocks}
         </div>
       ) : null}
-      {/* Mobile pill dock (below `lg`) — every pill in one wrapping block
-          stuck to the bottom of the screen (2026-08-14, founder call). Same
-          wrapper classes as the real dock, including the offset class it
-          computes from NEXT_PUBLIC_FEATURE_MOBILE_NAV, so the reserved
-          footprint sits exactly where the real one lands. */}
+      {/* Mobile top tabs (below `lg`) — 2026-08-16 redesign: Press kit,
+          Calendar, Metadata (the flag-known three of the four permanent
+          tabs — see below for why Recap is the fourth and unreserved).
+          Widths match the desktop outbound/primary placeholders for the
+          same labels, and the wrapper's scroll/bleed classes match the real
+          row byte-for-byte so the reserved footprint sits exactly where the
+          real one lands. */}
+      {EPK_ENABLED || CONTENT_CALENDAR_ENABLED || METADATA_ENABLED ? (
+        <div className="-mx-4 flex shrink-0 gap-2 overflow-x-auto px-4 pb-3 pt-1 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden">
+          {EPK_ENABLED ? <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" /> : null}
+          {/* Recap is NOT reserved here, for the same reason the AI pills
+              section above gives: its eligibility depends on release/task
+              data this skeleton renders before it has, and reserving it
+              unconditionally would shift every other tab left for the
+              common case of an unfinished release. */}
+          {CONTENT_CALENDAR_ENABLED ? (
+            <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" />
+          ) : null}
+          {METADATA_ENABLED ? (
+            <SkeletonBlock className="h-8 w-36 shrink-0 rounded-full" />
+          ) : null}
+        </div>
+      ) : null}
+      {/* Mobile base dock (below `lg`) — 2026-08-16 redesign: New activity and
+          Pitch as the two permanent standalone pills, plus two icon-button
+          placeholders for the search/menu controls that reveal the folded
+          "more" menu (Plan / Song / Files / Status update / Fan capture).
+          The icon buttons are reserved whenever any FLAG-known folded item
+          exists — Plan itself is excluded from that check the same way it's
+          excluded from `pillWidths` above: whether it renders depends on
+          release/draft data this skeleton doesn't have yet, and the other
+          four are enough to decide whether the controls belong here at all. */}
       <div
-        className={`sticky z-20 -mx-4 flex flex-wrap items-center gap-2 border-t border-stroke-subtle bg-bg-base px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
+        className={`sticky z-20 -mx-4 flex items-center gap-2 border-t border-stroke-subtle bg-bg-base px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
-        {primaryPillBlocks}
-        {extraActionPillBlocks}
-        {outboundPillBlocks}
+        <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
+        {PITCHING_ENABLED ? <SkeletonBlock className="h-8 w-16 shrink-0 rounded-full" /> : null}
+        {SONG_UPLOAD_ENABLED || FILES_ENABLED || STATUS_UPDATE_ENABLED || CAPTURE_ENABLED ? (
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
+            <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/lib/tasks';
 import { WorkspaceReleaseCard } from './WorkspaceReleaseCard';
-import { TasksPanel } from './TasksPanel';
+import { TasksPanel, type TaskPanelAction } from './TasksPanel';
 import type { ReleaseCardData } from './ReleasesColumn';
 
 // URG-214: when the workspace identity card is on, it occupies a 240px
@@ -45,9 +45,10 @@ type WorkspaceDesktopFocusedProps = {
    * one-time NewReleaseGuide after a template creation (2026-08-04, ported
    * from the removed release detail page). */
   banner?: ReactNode;
-  /** Forwarded verbatim to TasksPanel's `extraActions` — the flag-gated AI
-   * action pills (Tailor plan / Generate status update). */
-  panelExtraActions?: ReactNode;
+  /** Forwarded verbatim to TasksPanel's `statusUpdateAction` / `recapAction` —
+   * the flag-gated AI actions ported from the removed release detail page. */
+  panelStatusUpdateAction?: TaskPanelAction | null;
+  panelRecapAction?: TaskPanelAction | null;
   /** Forwarded verbatim to TasksPanel's `sceneContent` — a release scene
    * (Metadata / Calendar / Files / Press kit) that replaces the activity
    * buckets in this centre column while it's open (2026-08-05). */
@@ -88,7 +89,8 @@ export function WorkspaceDesktopFocused({
   onClose,
   hideRails = false,
   banner,
-  panelExtraActions,
+  panelStatusUpdateAction,
+  panelRecapAction,
   panelSceneContent,
   panelActivitiesBanner,
   panelBannerReplacesEmptyState,
@@ -193,7 +195,8 @@ export function WorkspaceDesktopFocused({
           <TasksPanel
             tasks={scopedTasks}
             scopedRelease={scopedRelease}
-            extraActions={panelExtraActions}
+            statusUpdateAction={panelStatusUpdateAction}
+            recapAction={panelRecapAction}
             sceneContent={panelSceneContent}
             activitiesBanner={panelActivitiesBanner}
             bannerReplacesEmptyState={panelBannerReplacesEmptyState}
