@@ -67,26 +67,34 @@ export const SALES_CONTACT_EMAIL = 'contact@urganize.app';
 // both the paywall display and the marketing pricing page move together —
 // no drift.
 //
-// Pricing rationale (per product brief; repriced 2026-07-15, URG billing
-// audit — supersedes the 2026-07-14 note below):
-//   - Monthly NGN: ₦150,000 (raised from ₦15,000 — a full retier, not an
-//     incremental bump. The prior 2026-07-14 pass to ₦17,000 only ever
-//     updated this display constant; the live Paystack Plan objects behind
-//     PAYSTACK_PLAN_MONTHLY_* were never recreated, so every renewal since
-//     has actually kept billing ₦15,000/$25. This reprice closes that gap
-//     in the same motion — new Plan objects at the new price, old ones left
-//     untouched so any real existing subscriber keeps renewing at their
-//     original rate (see apps/web/lib/billing-plans.ts).
-//   - Annual NGN: ₦1,500,000 (10× monthly — the exact ratio the old
-//     ₦150,000/yr annual tier had vs its ₦15,000/mo monthly base, i.e.
-//     "2 months free," applied literally to the new monthly figure).
-//     Known, accepted state: this now exceeds Label (₦800,000/yr) in
-//     Naira — Label is intentionally untouched by this pass, so the
-//     Monthly→Annual→Label ladder is inverted in NGN until Label is
-//     repriced separately. Fine in USD (Annual $1,000 < Label $1,250).
-//   - Monthly USD: $100 (raised from $25, same full-retier rationale).
-//   - Annual USD: $1,000 (10× monthly, same ratio as NGN).
-//   - Label: untouched this pass — ₦800,000 / $1,250/yr, unchanged.
+// Pricing rationale (repriced 2026-08-16, founder call — NGN legs only;
+// supersedes the 2026-07-15 retier described below):
+//   - Monthly NGN: ₦3,500 (down from ₦150,000).
+//   - Annual NGN: ₦35,000 (10× monthly — the same "2 months free" ratio
+//     every prior tier has held, applied to the new monthly figure).
+//   - USD legs are DELIBERATELY UNTOUCHED this pass ($100/mo, $1,000/yr):
+//     the founder repriced Naira only. Note the two currencies no longer
+//     correspond even loosely (₦3,500 ≈ $2.30 at any realistic rate), so
+//     the /locked currency toggle now shows two prices that are not the
+//     same offer. This is display-only for the moment — USD checkout has
+//     never worked (the Paystack account only offers NGN in plan creation,
+//     so there are no PAYSTACK_PLAN_*_USD env vars and a USD start-checkout
+//     500s with "plan not configured"). Reprice or hide the USD leg before
+//     USD billing is ever switched on.
+//   - Label: untouched — ₦800,000 / $1,250/yr, and contactSales so no
+//     figure is displayed either way.
+//
+// OPERATIONAL FOLLOW-UP REQUIRED — this file is the DISPLAY price only.
+// The live Paystack Plan objects behind PAYSTACK_PLAN_MONTHLY_NGN /
+// PAYSTACK_PLAN_ANNUAL_NGN still bill ₦150,000 / ₦1,500,000. Until two new
+// Plan objects are created at the new prices and those env vars repointed
+// in Vercel, checkout will advertise ₦3,500 and charge ₦150,000. This
+// exact gap has bitten twice before (the 2026-07-14 pass shipped the
+// constants and never created the Plans; the 2026-07-15 pass closed it).
+//
+// Historical (2026-07-15 full retier, now superseded): Monthly went
+// ₦17,000→₦150,000 / $26→$100 and Annual ₦170,000→₦1,500,000 / $260→$1,000,
+// with new NGN Plan objects created 2026-07-20 (URG-162).
 //
 // Minor units (kobo / cents) are pre-computed here so callers never
 // multiply by 100 at the call site — that's where unit-mismatch bugs hide.
@@ -97,7 +105,7 @@ export const BILLING_PLANS: Record<BillingPlanId, BillingPlanDefinition> = {
     description: 'Billed every month. Cancel anytime from settings.',
     interval: 'monthly',
     prices: {
-      NGN: { currency: 'NGN', amount: 150_000, minorUnit: 150_000_00 },
+      NGN: { currency: 'NGN', amount: 3_500, minorUnit: 3_500_00 },
       USD: { currency: 'USD', amount: 100, minorUnit: 100_00 },
     },
   },
@@ -107,7 +115,7 @@ export const BILLING_PLANS: Record<BillingPlanId, BillingPlanDefinition> = {
     description: 'Billed once a year. ~2 months free vs monthly.',
     interval: 'annually',
     prices: {
-      NGN: { currency: 'NGN', amount: 1_500_000, minorUnit: 1_500_000_00 },
+      NGN: { currency: 'NGN', amount: 35_000, minorUnit: 35_000_00 },
       USD: { currency: 'USD', amount: 1_000, minorUnit: 1_000_00 },
     },
   },
