@@ -21,6 +21,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
+import { ChappiSongUploadCard } from '@/components/chappi/ChappiSongUploadCard';
+import { useSceneDataStore } from '@/stores/useSceneDataStore';
+import type { ReleaseSong } from '@/types/song';
 import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useAuthStore } from '@/lib/auth-store';
@@ -163,6 +166,22 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const [isThinking, setIsThinking] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // The release whose song the transcript is currently offering to upload, or
+  // null. Component state rather than the store, unlike pendingConfirmation:
+  // nothing has been proposed and nothing is waiting on a server round trip —
+  // it is just a file picker sitting in the log, and a reload dropping it costs
+  // the user one re-ask.
+  //
+  // It also survives subsequent turns, which pendingConfirmation deliberately
+  // does not. A permission card must never outlive the reply that proposed it;
+  // this card is not destructive, and clearing it the moment someone types
+  // "which formats do you take?" would take the picker away mid-question.
+  const [songUploadReleaseId, setSongUploadReleaseId] = useState<string | null>(null);
+  const songUploadRelease = songUploadReleaseId
+    ? releases.find((release) => release.id === songUploadReleaseId) ?? null
+    : null;
+  const invalidateScene = useSceneDataStore((state) => state.invalidate);
+
   // Which assistant message (if any) gets the word-by-word reveal. Only a
   // reply that ARRIVES while this instance is mounted animates: the transcript
   // is shared store state carried across surfaces (dock ↔ rail ↔ page), so a
@@ -179,6 +198,15 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     // A new user turn clears the reveal (the previous reply has finished
     // animating; keeping the id would replay it if the node ever remounts).
     setRevealMessageId(lastMessage?.role === 'assistant' ? lastMessageId : null);
+  }
+
+  // "New chat" empties the transcript, and a picker with no conversation
+  // around it is orphaned chrome. Render-time prev-guard rather than an effect,
+  // the same convention the reveal above uses.
+  const [prevMessageCount, setPrevMessageCount] = useState(messages.length);
+  if (messages.length !== prevMessageCount) {
+    setPrevMessageCount(messages.length);
+    if (messages.length === 0 && songUploadReleaseId) setSongUploadReleaseId(null);
   }
 
   const hasMessages = messages.length > 0;
@@ -213,6 +241,20 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       scopedRelease
         ? `Opening a new note for ${scopedRelease.title}.`
         : 'Opening a new note.'
+    );
+  };
+
+  // A song upload has finished: record it as a turn, drop the card, and drop
+  // the cached Song scene so the workspace shows the new file when it is next
+  // opened rather than the list from before the upload.
+  const handleSongUploaded = (song: ReleaseSong) => {
+    setSongUploadReleaseId(null);
+    invalidateScene(song.releaseId, 'song');
+    const releaseTitle = releases.find((item) => item.id === song.releaseId)?.title;
+    appendAssistantReply(
+      releaseTitle
+        ? `Uploaded "${song.fileName}" to ${releaseTitle}.`
+        : `Uploaded "${song.fileName}".`
     );
   };
 
@@ -333,6 +375,23 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       case 'take_note':
         openBlankNote();
         return;
+      case 'upload_song': {
+        // No model in this path, so the scope picker IS the release context —
+        // the same way add_task already treats it. With nothing scoped there is
+        // no release to attach a file to, and guessing would be worse than
+        // asking.
+        if (!scopedRelease) {
+          appendAssistantReply(
+            'Which release is the song for? Pick it below the prompt and ask me again.'
+          );
+          return;
+        }
+        setSongUploadReleaseId(scopedRelease.id);
+        appendAssistantReply(
+          `Choose the song file for ${scopedRelease.title} in the card below.`
+        );
+        return;
+      }
       case 'help':
       default: {
         const helpReply = buildHelpReply();
@@ -353,6 +412,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       else if (action.type === 'open_create_release') onNewRelease();
       else if (action.type === 'open_quick_create')
         openQuickCreate({ releaseId: action.releaseId ?? undefined, source: 'quick_create' });
+      else if (action.type === 'open_song_upload') setSongUploadReleaseId(action.releaseId);
       else if (action.type === 'refresh') void loadCommandCenter({ force: true });
     }
   };
@@ -672,6 +732,13 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
             pendingConfirmation={pendingConfirmation}
             onApproveConfirmation={() => void handleApproveConfirmation()}
             onCancelConfirmation={handleCancelConfirmation}
+            songUpload={
+              songUploadRelease
+                ? { releaseId: songUploadRelease.id, releaseTitle: songUploadRelease.title }
+                : null
+            }
+            onSongUploaded={handleSongUploaded}
+            onDismissSongUpload={() => setSongUploadReleaseId(null)}
           />
         </div>
       </div>
@@ -700,6 +767,10 @@ type TranscriptProps = {
   pendingConfirmation: ChappiPendingConfirmation | null;
   onApproveConfirmation: () => void;
   onCancelConfirmation: () => void;
+  /** A song file picker the assistant put in the log; null when there isn't one. */
+  songUpload: { releaseId: string; releaseTitle: string } | null;
+  onSongUploaded: (song: ReleaseSong) => void;
+  onDismissSongUpload: () => void;
 };
 
 /**
@@ -721,6 +792,9 @@ function Transcript({
   pendingConfirmation,
   onApproveConfirmation,
   onCancelConfirmation,
+  songUpload,
+  onSongUploaded,
+  onDismissSongUpload,
 }: TranscriptProps) {
   return (
     <div className="space-y-5 pb-2">
@@ -758,6 +832,22 @@ function Transcript({
           onApprove={onApproveConfirmation}
           onCancel={onCancelConfirmation}
           isBusy={isThinking}
+        />
+      ) : null}
+
+      {/* The song picker. Below the reply that offered it, like the permission
+          card above — but NOT hidden while a request is in flight: an upload
+          runs entirely in the browser, so the user can keep talking to the
+          assistant while their master goes up. Keyed by release so switching
+          the card to a different one resets its internal upload state instead
+          of carrying the previous release's error across. */}
+      {songUpload ? (
+        <ChappiSongUploadCard
+          key={songUpload.releaseId}
+          releaseId={songUpload.releaseId}
+          releaseTitle={songUpload.releaseTitle}
+          onUploaded={onSongUploaded}
+          onDismiss={onDismissSongUpload}
         />
       ) : null}
 

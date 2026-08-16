@@ -32,6 +32,8 @@ const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
+// The Song pill sits between Metadata and Pitch in the real row.
+const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
 // Notes' scoped-release link (TasksPanel) — added 2026-08-10; this
 // reservation was missing even though the real pill has rendered behind the
 // flag since Notes shipped, an existing skeleton/real mismatch found while
@@ -246,6 +248,9 @@ function ReleaseCardSkeleton() {
  * loading-skeleton-sync rule this file otherwise follows). */
 function TasksPanelSkeleton() {
   const pillWidths = [
+    // Song comes before Pitch in the real row — you cannot pitch a release
+    // whose audio nobody has uploaded.
+    ...(SONG_UPLOAD_ENABLED ? ['w-20'] : []), // Song
     // Pitch leads the row (founder call, 2026-08-10) and carries no Beta tag,
     // so it reserves the same width as Files rather than a tagged pill's.
     ...(PITCHING_ENABLED ? ['w-16'] : []), // Pitch

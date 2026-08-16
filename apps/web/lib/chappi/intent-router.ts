@@ -14,6 +14,29 @@ const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'tru
 // and the typed shortcut appear only where the feature itself does.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 
+// Same flag the Song scene, its pill and the /song API routes read. The chip
+// and the typed shortcut appear only where the feature itself does — and they
+// matter more here than most: production runs with no model configured for
+// long stretches, so this router IS the assistant, and "upload the song" has
+// to reach the picker without one.
+const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
+
+/**
+ * "upload the song", "attach the master", "replace the audio".
+ *
+ * Keyword-matched in both word orders rather than anchored like the note
+ * prefix: this intent carries no content, only a verb and a noun, and the two
+ * arrive in either order ("upload the master" / "song upload"). It must be
+ * checked BEFORE the release branch below, which already claims 'song' and
+ * 'track' for "start a new release" — and AFTER the task branch, so "add a task
+ * to upload the master" stays an activity.
+ */
+const SONG_NOUNS = 'song|master|audio|track|mp3|wav|flac';
+const SONG_UPLOAD_PHRASES = [
+  new RegExp(`\\b(upload|attach|re-?upload|replace)\\b[\\s\\S]{0,24}\\b(${SONG_NOUNS})\\b`, 'i'),
+  new RegExp(`\\b(${SONG_NOUNS})\\b[\\s\\S]{0,16}\\b(upload|attached?)\\b`, 'i'),
+];
+
 /**
  * "note <text>" — quick capture, the one intent that carries content.
  *
@@ -57,6 +80,9 @@ export const CHAPPI_CHIPS: ChappiChip[] = [
     ? PLANNER_CHIPS
     : [{ id: 'new-release', label: 'New release', intent: 'new_release' as const }]),
   { id: 'add-task', label: 'Add activity', intent: 'add_task' },
+  ...(SONG_UPLOAD_ENABLED
+    ? [{ id: 'upload-song', label: 'Upload the song', intent: 'upload_song' as const }]
+    : []),
   ...(NOTES_ENABLED
     ? [{ id: 'take-note', label: 'Take a note', intent: 'take_note' as const }]
     : []),
@@ -87,6 +113,11 @@ export function resolveIntent(raw: string): ChappiIntent {
   if (has('task', 'to-do', 'todo', 'checklist item')) {
     return { kind: 'add_task' };
   }
+  // Before the planner/release branches, which already claim 'song' and
+  // 'track' — "upload the song" is not "start a new release".
+  if (SONG_UPLOAD_ENABLED && SONG_UPLOAD_PHRASES.some((pattern) => pattern.test(raw))) {
+    return { kind: 'upload_song' };
+  }
   // Before the 'release' branch, and only when the planner exists: "plan my
   // release" contains both words, and planning is the more specific verb.
   if (PLANNER_ENABLED && has('plan', 'rollout', 'roll out', 'campaign')) {
@@ -114,6 +145,7 @@ export function buildHelpReply(): ChappiReply {
     suggestions: [
       PLANNER_ENABLED ? 'Plan a release' : 'Create a new release',
       'Add an activity',
+      ...(SONG_UPLOAD_ENABLED ? ['Upload the song'] : []),
       ...(NOTES_ENABLED ? ['Note Call the promoter about Friday'] : []),
       'What should I focus on today?',
       'Generate a status update',
