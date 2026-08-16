@@ -53,6 +53,19 @@ export default function ChappiPageClient() {
   // space the keyboard leaves. It comes back the instant they stop typing.
   const keyboardOpen = useKeyboardOpen();
 
+  // iOS scrolls the document to reveal a focused field BEFORE the layout has
+  // had a chance to react, and this page's own contract is that it never
+  // scrolls at all — so whatever offset that left behind is pure dead space
+  // once the column pins itself to the visible region. Undoing it here
+  // rather than in the shared bridge on purpose: on an ordinary long page a
+  // forced scroll-to-top mid-typing would be sabotage, not a fix. `instant`
+  // overrides globals.css's `scroll-behavior: smooth`, which would otherwise
+  // animate this in front of the user.
+  useEffect(() => {
+    if (!keyboardOpen) return;
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [keyboardOpen]);
+
   // Fire immediately rather than behind authLoading — see the same pattern in
   // WorkspaceView: the store reads its own token from getSession() (local), so
   // waiting on the auth store's GoTrue round trip only delays real data.
