@@ -19,6 +19,7 @@ import { UndoCompletionToast } from '@/components/tasks/UndoCompletionToast';
 import { type ReleaseOption } from '@/lib/release-helpers';
 import { isTypingTarget, type TaskCreateSource, type TaskDetail, type WorkspaceMember } from '@/lib/tasks';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { supabase } from '@/lib/supabase/client';
 
 type TaskDetailPayload = {
@@ -761,13 +762,16 @@ function TaskDetailModal() {
   const state = useContext(TaskDetailRenderContext);
   const isOpen = Boolean(state?.isOpen);
 
+  // Shared ref-counted lock, NOT a hand-rolled save/restore of
+  // body.style.overflow (2026-08-16). This modal is the one that stacks by
+  // design — TaskOutcomeSheet mounts above it on completion, and that sheet
+  // takes the shared lock — so the hand-rolled version hit exactly the bug
+  // lib/body-scroll-lock.ts was written to eliminate: the sheet captured
+  // 'hidden' as its "original", and whichever closed second wrote 'hidden'
+  // back permanently. The page then could not scroll until a full reload.
   useEffect(() => {
     if (!isOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
+    return lockBodyScroll();
   }, [isOpen]);
 
   if (!state || !state.isOpen) {

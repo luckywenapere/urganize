@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@urganize/ui';
+import { lockBodyScroll } from '@/lib/body-scroll-lock';
 
 type NoteDeleteDialogProps = {
   open: boolean;
@@ -51,21 +52,13 @@ export function NoteDeleteDialog({ open, noteTitle, onClose, onConfirm }: NoteDe
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isDeleting, onClose, open]);
 
+  // Shared ref-counted lock (2026-08-16) — a hand-rolled save/restore here
+  // captured another open modal's 'hidden' as its "original" and wrote it
+  // back on close, leaving the page unscrollable until a full reload. See
+  // lib/body-scroll-lock.ts, which exists for exactly this.
   useEffect(() => {
     if (!open) return;
-
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    const originalOverflow = document.body.style.overflow;
-    const originalPaddingRight = document.body.style.paddingRight;
-    document.body.style.overflow = 'hidden';
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      document.body.style.paddingRight = originalPaddingRight;
-    };
+    return lockBodyScroll();
   }, [open]);
 
   if (!open || !isMounted) {
