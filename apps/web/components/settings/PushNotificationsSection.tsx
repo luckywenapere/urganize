@@ -106,14 +106,6 @@ export function PushNotificationsSection() {
         />
       }
       title="Push notifications"
-      titleBadge={
-        /* Push is Beta (founder call, 2026-07-23); the badge sits on this row
-           rather than the section heading, where it would wrongly label the
-           other two toggles beta as well. */
-        <span className="rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
-          Beta
-        </span>
-      }
       description={copy[status] || 'On for this device.'}
       action={
         status !== 'blocked' ? (

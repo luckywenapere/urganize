@@ -7,9 +7,6 @@ type SettingRowProps = {
    * its own lit/unlit color, the way the three notification toggles do. */
   icon: ReactNode;
   title: string;
-  /** Small pill after the title (e.g. "Beta"). Row-level, not section-level:
-   * one row being beta says nothing about its neighbours. */
-  titleBadge?: ReactNode;
   description: string;
   /** The toggle button. Kept as a slot so each row owns its own async state
    * and copy rather than this shell trying to model every toggle. */
@@ -31,14 +28,7 @@ type SettingRowProps = {
  * only addition is a real title per row — the section kicker used to carry it,
  * and a row needs its own name once three of them sit together.
  */
-export function SettingRow({
-  icon,
-  title,
-  titleBadge,
-  description,
-  action,
-  error,
-}: SettingRowProps) {
+export function SettingRow({ icon, title, description, action, error }: SettingRowProps) {
   return (
     <div className="py-4 first:pt-0 last:pb-0">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
@@ -47,10 +37,7 @@ export function SettingRow({
             {icon}
           </span>
           <div className="min-w-0">
-            <p className="flex items-center gap-2 text-sm font-semibold text-content-primary">
-              {title}
-              {titleBadge}
-            </p>
+            <p className="text-sm font-semibold text-content-primary">{title}</p>
             <p className="mt-1 max-w-[46ch] text-sm text-content-secondary">{description}</p>
           </div>
         </div>
