@@ -177,10 +177,7 @@ export function PlanScene({
 
   const header = (
     <div className="flex items-center justify-between gap-3 border-b border-stroke-subtle pb-3">
-      <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-content-primary">
-        <Sparkles className="h-4 w-4 text-brand" aria-hidden="true" />
-        Plan
-      </h2>
+      <h2 className="font-display text-lg font-semibold text-content-primary">Plan</h2>
       <button
         type="button"
         onClick={onClose}
@@ -219,7 +216,6 @@ export function PlanScene({
         <div className="mt-6 rounded-xl border border-stroke-default bg-bg-surface p-5 text-center">
           <p className="text-sm text-content-secondary">No draft plan here yet.</p>
           <Button type="button" onClick={onStartIntake} className="mt-4">
-            <Sparkles className="h-4 w-4" aria-hidden="true" />
             Plan this release with UrgAns
           </Button>
         </div>
