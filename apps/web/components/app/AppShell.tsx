@@ -368,10 +368,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         // .app-layout-centered) was the bug.
         <div className="app-layout lazy-fade lazy-fade-in">
           {/* app-shell-frame is a hook, not a style: it lets globals.css drop
-              this 100vh floor while the on-screen keyboard is up, so the
-              document cannot be scrolled by the keyboard's height into the
-              empty band underneath. See the keyboard-aware block there. */}
-          <div className="app-shell-frame mx-auto flex min-h-screen w-full max-w-[1440px] flex-col">
+              this floor while the on-screen keyboard is up, so the document
+              cannot be scrolled by the keyboard's height into the empty band
+              underneath. See the keyboard-aware block there.
+              min-h-dvh, NOT min-h-screen: on mobile Safari, min-h-screen's
+              static 100vh is the LARGE viewport (address bar collapsed),
+              which is taller than the actual visible viewport the moment the
+              address bar is showing. That mismatch alone made a "locked,
+              never-scrolls" route (e.g. /dashboard/urgans, sized in dvh)
+              scrollable by exactly the address bar's height — one swipe was
+              enough to shift the whole page and reveal it. 100dvh tracks the
+              real visible viewport instead, so there is no residual slack. */}
+          <div className="app-shell-frame mx-auto flex min-h-dvh w-full max-w-[1440px] flex-col">
             <AppTopbar onNewRelease={openCreateRelease} userName={workspaceUserName} />
             {/* <main> + the UrgAns side rail share a flex row so the rail is
                 a layout-flow column (content narrows; nothing is covered) on
