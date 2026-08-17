@@ -34,6 +34,7 @@ const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 // The Song pill sits between Metadata and Pitch in the real row.
 const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
+const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 // Notes' scoped-release link (TasksPanel) — added 2026-08-10; this
 // reservation was missing even though the real pill has rendered behind the
 // flag since Notes shipped, an existing skeleton/real mismatch found while
@@ -248,6 +249,8 @@ function ReleaseCardSkeleton() {
  * loading-skeleton-sync rule this file otherwise follows). */
 function TasksPanelSkeleton() {
   const pillWidths = [
+    // Cover art comes right after Metadata in the real row, before Song.
+    ...(COVER_ART_ENABLED ? ['w-24'] : []), // Cover art
     // Song comes before Pitch in the real row — you cannot pitch a release
     // whose audio nobody has uploaded.
     ...(SONG_UPLOAD_ENABLED ? ['w-20'] : []), // Song
@@ -388,14 +391,15 @@ function TasksPanelSkeleton() {
           FLAG-known folded item exists — Plan itself is excluded from that
           check the same way it's excluded from `pillWidths` above: whether it
           renders depends on release/draft data this skeleton doesn't have
-          yet, and the other five are enough to decide whether the controls
+          yet, and the other six are enough to decide whether the controls
           belong here at all. */}
       <div
         className={`sticky z-20 -mx-4 flex items-center gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
         <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
         {PITCHING_ENABLED ? <SkeletonBlock className="h-8 w-16 shrink-0 rounded-full" /> : null}
-        {SONG_UPLOAD_ENABLED ||
+        {COVER_ART_ENABLED ||
+        SONG_UPLOAD_ENABLED ||
         FILES_ENABLED ||
         STATUS_UPDATE_ENABLED ||
         EPK_ENABLED ||

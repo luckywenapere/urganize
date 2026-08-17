@@ -262,8 +262,16 @@ export async function POST(
   const assetRow = insertResult.data as AssetRow;
 
   // Promote a first cover_art upload to be the release's artwork. Subsequent
-  // cover_art uploads don't overwrite an existing artwork — that decision
-  // belongs to the user via a future "set as cover" action.
+  // cover_art uploads through THIS general Files route don't overwrite an
+  // existing artwork on purpose — a multi-category file manager silently
+  // swapping the release's identity image would surprise the user.
+  //
+  // The "future set as cover action" this comment used to defer to now
+  // exists: the dedicated Cover Art scene (NEXT_PUBLIC_FEATURE_COVER_ART,
+  // see app/api/releases/[releaseId]/cover-art/route.ts) DOES replace on
+  // every upload — that scene's whole purpose is "the image I just chose is
+  // now the cover", so the conservative behavior this route keeps is
+  // deliberately NOT extended there.
   if (category === 'cover_art') {
     const releaseResult = await adminClient
       .from(RELEASES_TABLE)

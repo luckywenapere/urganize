@@ -19,7 +19,8 @@ export type SceneName =
   | 'pitch'
   | 'plan'
   | 'capture'
-  | 'song';
+  | 'song'
+  | 'coverart';
 
 export const SCENE_NAMES: readonly SceneName[] = [
   'metadata',
@@ -30,6 +31,7 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'plan',
   'capture',
   'song',
+  'coverart',
 ];
 
 // Inlined at build time, same read every UI gate uses. The prefetch list must
@@ -38,6 +40,7 @@ export const SCENE_NAMES: readonly SceneName[] = [
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
+const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 
 /** Prefetch order: most-likely-opened first, so a user who taps a pill mid-
  * prefetch is most likely to find their scene already warm.
@@ -51,6 +54,7 @@ const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'tru
  * for the same would-always-404 reason. */
 export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
   'metadata',
+  ...(COVER_ART_ENABLED ? (['coverart'] as const) : []),
   ...(SONG_UPLOAD_ENABLED ? (['song'] as const) : []),
   'files',
   'epk',
@@ -86,6 +90,9 @@ export const SCENE_HARD_EXPIRY_MS: Partial<Record<SceneName, number>> = {
   // carries a signed URL that an <audio> element is pointed at, so a stale
   // paint is a play button that 403s rather than merely a dead download.
   song: 45 * 60 * 1000,
+  // Same reason again: an <img> pointed at an expired signed URL renders a
+  // broken-image icon where the cover art should be.
+  coverart: 45 * 60 * 1000,
 };
 
 /**
@@ -130,6 +137,7 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   // Signed Storage URLs again (see files): a persisted one survives a browser
   // restart and would be guaranteed expired by the next visit.
   song: false,
+  coverart: false,
 };
 
 /** How many releases' scenes to keep on disk. A manager works a couple of
