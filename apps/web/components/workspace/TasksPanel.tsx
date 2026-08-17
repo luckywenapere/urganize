@@ -636,26 +636,35 @@ export function TasksPanel({
   ) : null;
 
   /**
-   * Mobile top tabs (2026-08-16, founder request via screenshot reference) —
-   * the four things worth a permanent, always-visible entry point on a
-   * phone: Press kit, Recap, Calendar, Collect metadata. Unlike the desktop
-   * footer's outbound pair, these do NOT hide while a scene is open — the
-   * whole point of a tab strip is that every tab stays reachable and the
-   * active one is highlighted, matching the reference (all tabs visible,
-   * "Logs" lit). Recap has no "active" concept (it opens a modal, not a
-   * scene) and so never lights up, same as it always has.
+   * Mobile top tabs (2026-08-16, founder request via screenshot reference;
+   * Press kit moved out to the folded "more" menu and Recap moved to the end
+   * 2026-08-17, a same-day founder correction). The permanent,
+   * always-visible entry points on a phone: Calendar, Collect metadata, then
+   * Recap last. Unlike the desktop footer's outbound pair, these do NOT hide
+   * while a scene is open — the whole point of a tab strip is that every tab
+   * stays reachable and the active one is highlighted, matching the
+   * reference (all tabs visible, "Logs" lit). Recap has no "active" concept
+   * (it opens a modal, not a scene) and so never lights up, same as it
+   * always has — placing it last keeps the scene-toggle tabs, which DO
+   * light up, together at the front.
+   *
+   * Press kit is NOT part of this check any more — it's a folded-menu item
+   * now (see moreMenuActionsRaw below), which is why `epkButton` doesn't
+   * appear here even though the variable still exists (desktop's footer row
+   * still uses it, unchanged).
    */
   const hasMobileTopTabs = Boolean(
-    scopedRelease && (epkButton || recapButton || calendarButton || metadataButton)
+    scopedRelease && (calendarButton || metadataButton || recapButton)
   );
 
-  // The folded "more" menu (2026-08-16) — everything that used to fill out
-  // the mobile dock but isn't one of the four top tabs or the two permanent
-  // standalone pills (New activity/Activities, Pitch). Data, not JSX, so the
-  // search box above the list can filter on a real label. Order mirrors the
-  // rough priority the desktop row already implies: Plan first (it's the
-  // one thing a plan-less release needs), then Song and Files, then the AI
-  // actions, then Fan capture.
+  // The folded "more" menu (2026-08-16, Press kit added 2026-08-17) —
+  // everything that isn't a top tab or one of the two permanent standalone
+  // pills (New activity/Activities, Pitch). Data, not JSX, so the search box
+  // above the list can filter on a real label. Order mirrors the rough
+  // priority the desktop row already implies: Plan first (it's the one thing
+  // a plan-less release needs), then Song and Files, then the AI actions,
+  // then Press kit and Fan capture together at the end — the two "send this
+  // outward" items, same pairing the desktop footer row keeps them in.
   // Deliberately NOT memoized: each entry's onClick closes over `toggleScene`,
   // which itself closes over the current `activeScene` — memoizing this array
   // risks serving a stale closure (tap "Song" after switching scenes without
@@ -694,6 +703,14 @@ export function TasksPanel({
           icon: Sparkles,
           onClick: statusUpdateAction.onClick,
           disabled: statusUpdateAction.disabled,
+        }
+      : null,
+    EPK_ENABLED && scopedRelease
+      ? {
+          key: 'epk',
+          label: 'Press kit',
+          icon: Newspaper,
+          onClick: () => toggleScene('epk', scopedRelease.id),
         }
       : null,
     CAPTURE_ENABLED && scopedRelease
@@ -756,24 +773,26 @@ export function TasksPanel({
 
       {/* Mobile top tabs (below `lg` ONLY) — 2026-08-16, founder request via
           screenshot reference (a Vercel-style tab strip: every tab stays
-          visible, the active one lit). The permanent, high-visibility half
-          of the phone layout — everything you'd send outward or need on
-          every visit. Order matches the reference: Press kit, Recap,
-          Calendar, then Collect metadata.
+          visible, the active one lit). Corrected same-day, 2026-08-17: Press
+          kit moved out to the folded "more" menu (it isn't reached often
+          enough to earn a permanent tab, and the row read as crowded), and
+          Recap moved to the last position — Calendar and Collect metadata
+          are both scene toggles that light up when open, so they stay
+          together at the front; Recap opens a modal and never lights up,
+          so it reads better trailing the two that do.
 
           Horizontally scrollable with the same gutter-matching bleed the old
-          dock used (`-mx-4 px-4` stepping up at sm/md): four pills including
-          the long "Collect metadata" label do not reliably fit a 375px
-          screen, and a strip that scrolls beats one that wraps for a tab
-          bar — wrapping would make the "always visible, tap to switch" read
-          of a tab bar collapse into something that looks like the pill dock
-          underneath it. */}
+          dock used (`-mx-4 px-4` stepping up at sm/md): even three pills
+          including the long "Collect metadata" label don't reliably fit a
+          375px screen, and a strip that scrolls beats one that wraps for a
+          tab bar — wrapping would make the "always visible, tap to switch"
+          read of a tab bar collapse into something that looks like the pill
+          dock underneath it. */}
       {hasMobileTopTabs ? (
         <div className="-mx-4 flex shrink-0 gap-2 overflow-x-auto px-4 pb-3 pt-1 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden">
-          {epkButton}
-          {recapButton}
           {calendarButton}
           {metadataButton}
+          {recapButton}
         </div>
       ) : null}
 
@@ -962,11 +981,18 @@ export function TasksPanel({
           under the content rather than covering it, with no compensating
           spacer padding needed.
 
+          No border/background of its own (founder call, 2026-08-17,
+          correcting the first pass): the row used to carry a top border
+          plus `bg-bg-base`, which read as a boxed rectangle sitting under
+          the pills rather than the pills just floating on the page — the
+          same borderless, backgroundless treatment the top tabs row above
+          already uses.
+
           The bottom offset still clears whichever fixed surface already
           owns the screen's edge — see TASKS_PILL_DOCK_OFFSET_CLASS. The
           -mx/px bleed still matches <main>'s own gutter at each breakpoint. */}
       <div
-        className={`sticky z-20 -mx-4 flex flex-col gap-2 border-t border-stroke-subtle bg-bg-base px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
+        className={`sticky z-20 -mx-4 flex flex-col gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
         <div className="flex flex-wrap items-center gap-2">
           {activitiesToggleButton}
@@ -1004,13 +1030,22 @@ export function TasksPanel({
                 className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-content-tertiary"
                 aria-hidden="true"
               />
+              {/*
+                No `autoFocus`, deliberately: tapping either trigger button
+                used to focus this field the instant the panel opened, which
+                on iOS Safari means an unwanted page zoom on tap — a field
+                under 16px triggers it on focus, and this one was 14px. Both
+                buttons now just open the menu; the user taps into the field
+                themselves to search. `text-base` (16px) is kept as a second,
+                independent guard: even a manual tap into this field can never
+                trigger the zoom now, regardless of what focuses it.
+              */}
               <input
                 type="text"
                 value={moreMenuQuery}
                 onChange={(event) => setMoreMenuQuery(event.target.value)}
                 placeholder="Search…"
-                autoFocus
-                className="motion-focus h-9 w-full rounded-full border border-stroke-default bg-bg-surface pl-9 pr-3 text-sm text-content-primary placeholder:text-content-tertiary"
+                className="motion-focus h-9 w-full rounded-full border border-stroke-default bg-bg-surface pl-9 pr-3 text-base text-content-primary placeholder:text-content-tertiary"
               />
             </div>
             <ul className="mt-1 max-h-60 overflow-y-auto">
