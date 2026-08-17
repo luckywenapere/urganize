@@ -294,6 +294,10 @@ function ChappiTopbarAction() {
   );
 }
 
+// Mobile topbar layout (centered logo, no New release button, no
+// notifications bell below lg) landed in the previous deploy — this
+// comment exists only to produce a diff on apps/web and force a fresh
+// Vercel build/deploy of the Web project.
 export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
   const pathname = usePathname();
   const routeTitle = getRouteTitle(pathname);
