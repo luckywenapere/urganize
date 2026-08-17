@@ -11,12 +11,15 @@ const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true'
  * auth/the command-center fetch are in flight (same inline-swap rationale
  * as `WorkspaceSkeleton` — no route-segment `loading.tsx` file).
  *
- * Mirrors the CURRENT Chappi home: a Perplexity-style bottom-anchored empty
- * state (one plain question → input bar → quick-action chips, chips shown
- * lg+ only) inside the SAME definite-height wrapper ChappiPageClient uses,
- * so the resolved page lands exactly where the skeleton stood. The
- * conversation store is ephemeral (a reload always starts empty), so the
- * empty state is effectively the only shape a fresh load resolves to.
+ * Mirrors the CURRENT Chappi home: a Perplexity-style empty state, centered
+ * vertically on the whole page (one plain question → input bar →
+ * quick-action chips, chips shown lg+ only) inside the SAME definite-height
+ * wrapper ChappiPageClient uses, so the resolved page lands exactly where
+ * the skeleton stood. The conversation store is ephemeral (a reload always
+ * starts empty), so the empty state is effectively the only shape a fresh
+ * load resolves to. This skeleton only ever represents the `page` variant
+ * (ChappiPageClient) — the dock/rail `panel` variant has no loading state of
+ * its own to mirror and keeps its own bottom-anchored empty state.
  *
  * Reserves the collapse-button row too (desktop only, `hidden lg:flex` —
  * matching the real page's row exactly): unlike the invite banner below,
@@ -38,7 +41,7 @@ export function ChappiPageSkeleton() {
       <div className="hidden h-7 shrink-0 justify-end lg:flex">
         <SkeletonBlock className="h-7 w-7" />
       </div>
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-end px-2 pb-2 pt-4">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-2">
         {/* The single question line. */}
         <SkeletonBlock className="h-6 w-64 sm:w-80" />
 

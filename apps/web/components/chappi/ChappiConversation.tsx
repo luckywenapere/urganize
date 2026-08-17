@@ -49,8 +49,8 @@ type ChappiConversationProps = {
   onNewRelease: () => void;
   /**
    * Layout variant.
-   * - 'page' (default): the full /dashboard/urgans surface — bottom-anchored
-   *   empty state, header row with New conversation.
+   * - 'page' (default): the full /dashboard/urgans surface — vertically
+   *   centered empty state, header row with New conversation.
    * - 'panel': the floating ChappiDock — compact bottom-anchored empty state
    *   and NO internal header (the dock's own header owns title/reset/expand/
    *   close), sized for a ~380px column.
@@ -111,12 +111,12 @@ function nextMessageId(role: 'u' | 'a'): string {
  * conversation never pushes releases/tasks down the page.
  *
  * Two states, switched on `messages.length`:
- *  - Empty: a Perplexity-style bottom-anchored landing — one plain question
- *    sits right above the input, which sits at the base of the screen. The
- *    quick-action buttons (New release or the three planner chips, plus Add
- *    activity) render BELOW the box, but only at lg+ — a phone gets the
- *    question and the box and nothing else, so the whole ask fits above the
- *    keyboard with no scrolling.
+ *  - Empty: a Perplexity-style landing — one plain question sits right above
+ *    the input. On the `page` variant the whole block centers vertically on
+ *    the full screen; the compact `panel` variant (dock/rail) bottom-anchors
+ *    instead. The quick-action buttons (New release or the three planner
+ *    chips, plus Add activity) render BELOW the box, but only at lg+ — a
+ *    phone gets the question and the box and nothing else.
  *  - Active: a scrolling transcript of every turn, chip-triggered or typed,
  *    with the input pinned at the bottom.
  *
@@ -573,9 +573,9 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     void submitPrompt(lastUserTurn.content, history);
   };
 
-  // One input, two positions: bottom-anchored on the empty landing
-  // (Perplexity-style), pinned at the bottom once a conversation exists —
-  // the same bottom-of-screen shape both states share.
+  // One input, two positions: vertically centered on the empty landing
+  // (Perplexity-style, page variant — the panel variant bottom-anchors),
+  // pinned at the bottom once a conversation exists.
   //
   // ONE ROW, not two (2026-08-16). The release scope picker used to sit on
   // its own line under the text field, which made the composer ~66px tall —
@@ -619,25 +619,33 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     </form>
   );
 
-  // Empty landing: bottom-anchored, Perplexity-style — one plain question
-  // sits right above the input, and the input sits at the base of the
-  // screen, the same shape every mainstream AI chat box has settled on
-  // (ChatGPT, Claude, Perplexity's "What do you want to know?"). No
-  // greeting, no eyebrow, no centered mid-screen float. Quick-action chips
-  // render below the box, but ONLY at lg+: on a phone they were the
-  // "recommends" cluttering a screen that already has a keyboard eating
-  // half of it, so below lg the box and its one question are the entire
-  // surface.
+  // Empty landing: one plain question sits right above the input — the same
+  // shape every mainstream AI chat box has settled on (ChatGPT, Claude,
+  // Perplexity's "What do you want to know?"). No greeting, no eyebrow.
+  // Quick-action chips render below the box, but ONLY at lg+: on a phone
+  // they were the "recommends" cluttering a screen that already has a
+  // keyboard eating half of it, so below lg the box and its one question
+  // are the entire surface.
+  //
+  // Vertical position differs by surface: the full page (`page` variant)
+  // centers the whole block on the ENTIRE screen — the Perplexity-homepage
+  // shape, and what a phone screenshot showed missing when this still
+  // bottom-anchored on that surface. The compact dock/rail panel
+  // (`panel` variant) keeps bottom-anchoring, since it has its own footer
+  // to sit just above and a full vertical center would look adrift in a
+  // ~380px-tall box.
   if (!hasMessages) {
     return (
       <div
-        // chappi-empty-state is a hook for globals.css: this column always
-        // bottom-anchors (question, input, chips sit right above whatever's
-        // below — the footer on the dock/rail, or simply the bottom of the
-        // viewport on the full page), matching what the dock panel already
-        // did by default. overflow-y-auto covers the short-viewport case
-        // where the question plus chips no longer fit.
-        className="chappi-empty-state flex h-full min-h-0 flex-col items-center justify-end overflow-y-auto px-2 pb-2 pt-4 text-center"
+        // chappi-empty-state is a hook for globals.css: on the page variant
+        // this column CENTERS its question/input/chips, which is right on a
+        // full screen and wrong the moment a keyboard takes half of it —
+        // centering then parks the composer mid-band with a gap beneath it.
+        // With the keyboard up it bottom-anchors instead, matching what the
+        // dock panel already does by default.
+        className={`chappi-empty-state flex h-full min-h-0 flex-col items-center px-2 text-center ${
+          isPanel ? 'justify-end overflow-y-auto pb-2 pt-4' : 'justify-center'
+        }`}
       >
         <h1
           className={`font-display font-semibold tracking-tight text-content-primary ${
