@@ -1761,6 +1761,21 @@ body:focus-within .keyboard-hint,
   }
 }
 
+/* The UrgAns page-variant empty state's two flex spacers (see
+   ChappiConversation.tsx): unequal growth biases the question/composer/chips
+   block toward the lower two-thirds of the column, matching the actual
+   Gemini/Perplexity home shape rather than a dead-center 50/50 split.
+   Classes, not inline styles, so the keyboard-open override further down
+   this file (inside the keyboard-aware block below) can collapse them back
+   to zero. */
+.chappi-empty-spacer-top {
+  flex-grow: 2;
+}
+
+.chappi-empty-spacer-bottom {
+  flex-grow: 1;
+}
+
 /* ── Keyboard-aware assistant column ─────────────────────────────────────
    Published by KeyboardViewportBridge (mounted in AppShell): `<html>` gains
    `data-keyboard-open`, `--app-viewport-height`, `--app-keyboard-inset` and
@@ -1831,17 +1846,26 @@ body:focus-within .keyboard-hint,
     padding-bottom: 1rem;
   }
 
-  /* The page variant's empty state centers its question, composer and chips
-     in the column — correct on a full screen, wrong once a keyboard owns
-     half of it, because centering parks the composer in the middle of the
-     band with a gap beneath it. Bottom-anchor it instead, which is what the
-     dock panel does by default (and always did — the panel variant is
-     unaffected by this rule since it's already justify-end). `overflow-y-
-     auto` covers the short-viewport case where the question plus chips no
-     longer fit. */
+  /* The page variant's empty state sits in the lower two-thirds of the
+     column (see the two chappi-empty-spacer-* rules below) — correct on a
+     full screen, wrong once a keyboard owns half of it, because the top
+     spacer alone can then push the composer below the fold. Bottom-anchor
+     it instead, which is what the dock panel does by default (and always
+     did — the panel variant is unaffected by this rule since it has no
+     spacers and is already justify-end). `overflow-y-auto` covers the
+     short-viewport case where the question plus chips no longer fit.
+     Collapsing BOTH spacers to zero is required, not optional: an inline
+     `flexGrow` style would win over `justify-content: flex-end` alone,
+     since flex-grow children always claim the container's leftover space
+     regardless of justify-content. */
   :root[data-keyboard-open='true'] .chappi-empty-state {
     justify-content: flex-end;
     overflow-y: auto;
+  }
+
+  :root[data-keyboard-open='true'] .chappi-empty-spacer-top,
+  :root[data-keyboard-open='true'] .chappi-empty-spacer-bottom {
+    flex-grow: 0;
   }
 }
 
