@@ -621,58 +621,71 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
 
   // Empty landing: one plain question sits right above the input — the same
   // shape every mainstream AI chat box has settled on (ChatGPT, Claude,
-  // Perplexity's "What do you want to know?"). No greeting, no eyebrow.
-  // Quick-action chips render below the box, but ONLY at lg+: on a phone
-  // they were the "recommends" cluttering a screen that already has a
-  // keyboard eating half of it, so below lg the box and its one question
-  // are the entire surface.
+  // Gemini's "Any new ideas to explore?", Perplexity's "What do you want to
+  // know?"). No greeting, no eyebrow. Quick-action chips render below the
+  // box, but ONLY at lg+: on a phone they were the "recommends" cluttering a
+  // screen that already has a keyboard eating half of it, so below lg the
+  // box and its one question are the entire surface.
   //
   // Vertical position differs by surface: the full page (`page` variant)
-  // centers the whole block on the ENTIRE screen — the Perplexity-homepage
-  // shape, and what a phone screenshot showed missing when this still
-  // bottom-anchored on that surface. The compact dock/rail panel
-  // (`panel` variant) keeps bottom-anchoring, since it has its own footer
-  // to sit just above and a full vertical center would look adrift in a
-  // ~380px-tall box.
+  // sits in the lower two-thirds of the screen — the actual Gemini/
+  // Perplexity home shape (confirmed against a Gemini screenshot: the
+  // question sits well below dead-center, with a shorter gap beneath the
+  // input than above the question). A dead-center 50/50 split, tried first,
+  // read as floating in the middle rather than landing where a chat box
+  // actually sits. Two unequal flex spacers (2 above the block, 1 below)
+  // produce that ~2/3-down bias without hand-tuned pixel offsets. The
+  // compact dock/rail panel (`panel` variant) keeps bottom-anchoring
+  // instead — it has its own footer to sit just above, and spacer ratios
+  // tuned for a full screen would look wrong in a ~380px-tall box.
   if (!hasMessages) {
+    // The chips row is shared by both branches below (`hidden lg:flex`): the
+    // side rail also mounts variant="panel" at lg+ (ChappiSidePanel), so
+    // "chips visible at lg+" must not become "chips visible on the page
+    // variant only" — that would silently drop them from the rail.
+    const chipsRow = (
+      <div className="mt-4 hidden flex-wrap items-center justify-center gap-2 lg:flex">
+        {CHAPPI_CHIPS.map((chip) => {
+          const Icon = CHIP_ICONS[chip.id] ?? DEFAULT_CHIP_ICON;
+          return (
+            <button
+              key={chip.id}
+              type="button"
+              onClick={() => handleChipClick(chip)}
+              title={CHIP_DESCRIPTIONS[chip.id]}
+              className="motion-focus motion-press inline-flex items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
+            >
+              <Icon className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+              {chip.label}
+            </button>
+          );
+        })}
+      </div>
+    );
+    if (isPanel) {
+      return (
+        <div className="chappi-empty-state flex h-full min-h-0 flex-col items-center justify-end overflow-y-auto px-2 pb-2 pt-4 text-center">
+          <h1 className="font-display text-base font-semibold tracking-tight text-content-primary">
+            What do you want to get done today?
+          </h1>
+          <div className="mt-3 w-full max-w-2xl">{inputForm}</div>
+          {chipsRow}
+        </div>
+      );
+    }
     return (
-      <div
-        // chappi-empty-state is a hook for globals.css: on the page variant
-        // this column CENTERS its question/input/chips, which is right on a
-        // full screen and wrong the moment a keyboard takes half of it —
-        // centering then parks the composer mid-band with a gap beneath it.
-        // With the keyboard up it bottom-anchors instead, matching what the
-        // dock panel already does by default.
-        className={`chappi-empty-state flex h-full min-h-0 flex-col items-center px-2 text-center ${
-          isPanel ? 'justify-end overflow-y-auto pb-2 pt-4' : 'justify-center'
-        }`}
-      >
-        <h1
-          className={`font-display font-semibold tracking-tight text-content-primary ${
-            isPanel ? 'text-base' : 'text-xl sm:text-2xl'
-          }`}
-        >
+      <div className="chappi-empty-state flex h-full min-h-0 flex-col items-center px-2 text-center">
+        {/* Unequal spacers, not justify-center: see the comment above. The
+            growth values are CSS classes, not inline styles, so globals.css's
+            keyboard-open override can collapse them (an inline style would
+            beat any stylesheet rule short of !important). */}
+        <div aria-hidden="true" className="chappi-empty-spacer-top min-h-0 shrink-0" />
+        <h1 className="font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
           What do you want to get done today?
         </h1>
-        <div className={`w-full max-w-2xl ${isPanel ? 'mt-3' : 'mt-4'}`}>{inputForm}</div>
-
-        <div className="mt-4 hidden flex-wrap items-center justify-center gap-2 lg:flex">
-          {CHAPPI_CHIPS.map((chip) => {
-            const Icon = CHIP_ICONS[chip.id] ?? DEFAULT_CHIP_ICON;
-            return (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => handleChipClick(chip)}
-                title={CHIP_DESCRIPTIONS[chip.id]}
-                className="motion-focus motion-press inline-flex items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
-              >
-                <Icon className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
-                {chip.label}
-              </button>
-            );
-          })}
-        </div>
+        <div className="mt-4 w-full max-w-2xl">{inputForm}</div>
+        {chipsRow}
+        <div aria-hidden="true" className="chappi-empty-spacer-bottom min-h-0 shrink-0" />
       </div>
     );
   }
