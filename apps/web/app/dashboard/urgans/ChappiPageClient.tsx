@@ -112,8 +112,8 @@ export default function ChappiPageClient() {
           AppShell's .chappi-main-padding term-for-term. The invite banner
           lives INSIDE the locked column — as a sibling above it, its height
           overflowed the calc and re-introduced page scroll. Floor keeps
-          short viewports usable; the empty state bottom-anchors within the
-          definite height. */}
+          short viewports usable; the empty state centers vertically within
+          the definite height. */}
       <div className={`${MOBILE_NAV_ENABLED ? 'chappi-shell-height-nav' : 'chappi-shell-height'} flex flex-col`}>
         {/* Collapse — the mirror image of ChappiSidePanel's expand button.
             Desktop-only (the split view it returns to doesn't exist below

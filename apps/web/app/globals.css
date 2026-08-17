@@ -1831,9 +1831,18 @@ body:focus-within .keyboard-hint,
     padding-bottom: 1rem;
   }
 
-  /* .chappi-empty-state already bottom-anchors and auto-overflows by
-     default (it always did, matching the dock panel), so no keyboard-open
-     override is needed here any more. */
+  /* The page variant's empty state centers its question, composer and chips
+     in the column — correct on a full screen, wrong once a keyboard owns
+     half of it, because centering parks the composer in the middle of the
+     band with a gap beneath it. Bottom-anchor it instead, which is what the
+     dock panel does by default (and always did — the panel variant is
+     unaffected by this rule since it's already justify-end). `overflow-y-
+     auto` covers the short-viewport case where the question plus chips no
+     longer fit. */
+  :root[data-keyboard-open='true'] .chappi-empty-state {
+    justify-content: flex-end;
+    overflow-y: auto;
+  }
 }
 
 @media (min-width: 640px) and (max-width: 767px) {
