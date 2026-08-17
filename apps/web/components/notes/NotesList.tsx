@@ -126,7 +126,7 @@ export function NotesList({
             description={
               isFiltering
                 ? 'Notes you link to this release show up here. Start one now, or clear the filter to see everything.'
-                : 'Notes are for mid-call, mid-DM capture. Start typing now, link it to a release later.'
+                : undefined
             }
             action={
               <div className="flex flex-wrap items-center justify-center gap-2">
