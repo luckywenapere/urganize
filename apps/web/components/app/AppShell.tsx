@@ -35,10 +35,6 @@ const PREFETCHED_ROUTES = ['/dashboard', '/dashboard/urgans', '/settings'];
 // next/dynamic moves each into its own async chunk that loads after hydration.
 // ssr:false is safe: all render nothing on the server today. (HelpMenu moved
 // into AppTopbar's right cluster 2026-07-23 and rides its bundle now.)
-const SupportChat = dynamic(
-  () => import('@/components/support/SupportChat').then((m) => m.SupportChat),
-  { ssr: false }
-);
 const ChappiDock = dynamic(
   () => import('@/components/chappi/ChappiDock').then((m) => m.ChappiDock),
   { ssr: false }
@@ -80,9 +76,9 @@ const WhatsNewModal = dynamic(
 const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === 'true';
 
 // When the assistant flag is on, the UrgAns side rail rides beside <main> at
-// lg+ and the floating dock takes the bottom-right corner below lg; the
-// WhatsApp founder line moves into their footers. With the flag off, the
-// standalone SupportChat pill renders exactly as before.
+// lg+ and the floating dock takes the bottom-right corner below lg. With the
+// flag off there is no launcher at all — the founder WhatsApp chat feature
+// was removed outright rather than kept as a flag-off fallback.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 // Bottom tab bar, below lg only — see MobileNavBar.tsx. Moves the topbar's
@@ -408,13 +404,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="app-layout lazy-fade lazy-fade-in">{children}</div>
       )}
       {/* HelpMenu moved into AppTopbar's right cluster (2026-07-23). */}
-      {/* Same reasoning as the side columns above. The dock is the one that
-          carries the WhatsApp founder link, so losing it silently is a real
-          cost — but strictly less than losing the entire application because a
-          floating widget threw. */}
-      {showHelpMenu ? (
+      {/* Same reasoning as the side columns above: losing the dock silently is
+          a real cost — but strictly less than losing the entire application
+          because a floating widget threw. */}
+      {showHelpMenu && CHAPPI_ENABLED ? (
         <ErrorBoundary name="support-launcher" onError={reportBoundaryError}>
-          {CHAPPI_ENABLED ? <ChappiDock onNewRelease={openCreateRelease} /> : <SupportChat />}
+          <ChappiDock onNewRelease={openCreateRelease} />
         </ErrorBoundary>
       ) : null}
       {MOBILE_NAV_ENABLED && showWorkspaceChrome && !requiresArtistNameGate ? (

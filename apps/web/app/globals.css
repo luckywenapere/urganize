@@ -1824,16 +1824,9 @@ body:focus-within .keyboard-hint,
     padding-bottom: 1rem;
   }
 
-  /* A conversation that hasn't started yet centres its greeting, composer
-     and chips in the column — correct on a full screen, wrong once a
-     keyboard owns half of it, because centring parks the composer in the
-     middle of the band with a gap beneath it. Bottom-anchor it instead,
-     which is what the dock panel does by default. `overflow-y-auto` covers
-     the short-viewport case where greeting plus chips no longer fit. */
-  :root[data-keyboard-open='true'] .chappi-empty-state {
-    justify-content: flex-end;
-    overflow-y: auto;
-  }
+  /* .chappi-empty-state already bottom-anchors and auto-overflows by
+     default (it always did, matching the dock panel), so no keyboard-open
+     override is needed here any more. */
 }
 
 @media (min-width: 640px) and (max-width: 767px) {
@@ -1880,9 +1873,8 @@ body:focus-within .keyboard-hint,
   }
 }
 
-/* Lifts a fixed bottom-anchored surface (toasts, the flag-off-Chappi
-   SupportChat pill) above the bar. Pair with an lg:bottom-* utility for the
-   value to restore once the bar disappears. */
+/* Lifts a fixed bottom-anchored surface (toasts) above the bar. Pair with an
+   lg:bottom-* utility for the value to restore once the bar disappears. */
 @media (max-width: 1023px) {
   .mobile-nav-raise {
     bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
@@ -1907,7 +1899,7 @@ body:focus-within .keyboard-hint,
        when the list is scrolled to the very end. It clears the 4rem bar with
        1rem of air. Keep it in lockstep with .mobile-nav-clearance above, not
        merely with the bar's height.
-     - flag OFF → the floating ChappiDock / SupportChat launcher, which sits at
+     - flag OFF → the floating ChappiDock launcher, which sits at
        `bottom-5` (1.25rem) and stands ~2.6rem tall, so its top edge is ~3.85rem
        up. No safe-area term here on purpose: that launcher is itself
        safe-area-agnostic, so matching it keeps the gap constant. This one

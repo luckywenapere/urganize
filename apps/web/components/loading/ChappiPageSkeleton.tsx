@@ -3,9 +3,7 @@
 import { SkeletonBlock } from './SkeletonBlock';
 
 // Mirrors ChappiPageClient's own flag read — keep both in sync (CLAUDE.md's
-// loading-skeleton rule). The mobile nav bar's WhatsApp footer row is a flex
-// child of the SAME shrink-to-fit column this skeleton already renders as
-// aria-hidden filler; it doesn't change this skeleton's own shape.
+// loading-skeleton rule).
 const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
 
 /**
@@ -13,23 +11,18 @@ const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true'
  * auth/the command-center fetch are in flight (same inline-swap rationale
  * as `WorkspaceSkeleton` — no route-segment `loading.tsx` file).
  *
- * Mirrors the CURRENT Chappi home: the PostHog-style vertically centered
- * empty state (eyebrow → greeting → input bar → quick-action chips) inside
- * the SAME definite-height wrapper ChappiPageClient uses, so the resolved
- * page lands exactly where the skeleton stood. The conversation store is
- * ephemeral (a reload always starts empty), so the empty state is
- * effectively the only shape a fresh load resolves to. Re-synced 2026-08-06
- * (URG-232): the real component's subline was removed at some point after
- * this file was last touched (#214) and the skeleton kept reserving a
- * phantom two-line block for it, pushing the input down and causing a jump
- * on resolve — deleted here to match.
+ * Mirrors the CURRENT Chappi home: a Perplexity-style bottom-anchored empty
+ * state (one plain question → input bar → quick-action chips, chips shown
+ * lg+ only) inside the SAME definite-height wrapper ChappiPageClient uses,
+ * so the resolved page lands exactly where the skeleton stood. The
+ * conversation store is ephemeral (a reload always starts empty), so the
+ * empty state is effectively the only shape a fresh load resolves to.
  *
  * Reserves the collapse-button row too (desktop only, `hidden lg:flex` —
  * matching the real page's row exactly): unlike the invite banner below,
  * that row is unconditional at lg+, so its absence would leave the
- * centered empty state sitting slightly lower than where the real content
- * settles once ChappiConversation's own centered empty state mounts under
- * it.
+ * empty state sitting slightly lower than where the real content settles
+ * once ChappiConversation's own empty state mounts under it.
  *
  * Deliberately NOT reserved: the invite-teammates banner — it's
  * manager-gated and dismissal-persisted, so the skeleton can't know whether
@@ -45,19 +38,16 @@ export function ChappiPageSkeleton() {
       <div className="hidden h-7 shrink-0 justify-end lg:flex">
         <SkeletonBlock className="h-7 w-7" />
       </div>
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-2">
-        {/* Eyebrow row: "UrgAns". */}
-        <div className="flex items-center gap-2">
-          <SkeletonBlock className="h-2.5 w-14" />
-        </div>
-        <SkeletonBlock className="mt-3 h-8 w-64 sm:w-80" />
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-end px-2 pb-2 pt-4">
+        {/* The single question line. */}
+        <SkeletonBlock className="h-6 w-64 sm:w-80" />
 
         {/* Input bar — same width cap, radius and height as the real form
             (max-w-2xl, rounded-full, p-1.5 around a 36px send button). */}
-        <div className="mt-6 h-12 w-full max-w-2xl rounded-full border border-stroke-default bg-bg-surface" />
+        <div className="mt-4 h-12 w-full max-w-2xl rounded-full border border-stroke-default bg-bg-surface" />
 
-        {/* Quick-action chips row. */}
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        {/* Quick-action chips row — lg+ only, matching the real component. */}
+        <div className="mt-4 hidden flex-wrap items-center justify-center gap-2 lg:flex">
           {Array.from({ length: 4 }).map((_, index) => (
             <SkeletonBlock key={`chappi-chip-${index}`} className="h-7 w-24" />
           ))}

@@ -26,7 +26,6 @@ import { useSceneDataStore } from '@/stores/useSceneDataStore';
 import type { ReleaseSong } from '@/types/song';
 import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { captureAnalyticsEvent } from '@/lib/analytics';
-import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -50,10 +49,10 @@ type ChappiConversationProps = {
   onNewRelease: () => void;
   /**
    * Layout variant.
-   * - 'page' (default): the full /dashboard/urgans surface — centered
-   *   PostHog-style empty state, header row with greeting + New conversation.
-   * - 'panel': the floating ChappiDock — compact top-aligned empty state and
-   *   NO internal header (the dock's own header owns title/reset/expand/
+   * - 'page' (default): the full /dashboard/urgans surface — bottom-anchored
+   *   empty state, header row with New conversation.
+   * - 'panel': the floating ChappiDock — compact bottom-anchored empty state
+   *   and NO internal header (the dock's own header owns title/reset/expand/
    *   close), sized for a ~380px column.
    */
   variant?: 'page' | 'panel';
@@ -74,7 +73,7 @@ const CHIP_ICONS: Record<string, LucideIcon> = {
 };
 
 // Hover tooltip (title attr) for each quick-action button — the "clicks"
-// this page exists to preserve, kept compact per the PostHog-style landing.
+// this page exists to preserve, only ever shown at lg+.
 const CHIP_DESCRIPTIONS: Record<string, string> = {
   'new-release': 'Start a new release with a rollout plan',
   'plan-single-6w': 'Answer a few questions and get a draft rollout plan',
@@ -88,13 +87,6 @@ const CHIP_DESCRIPTIONS: Record<string, string> = {
  * nextMessageId is: the clock must not be read during render. */
 function ymdWeeksFromNow(weeks: number): string {
   return new Date(Date.now() + weeks * 7 * 86_400_000).toISOString().slice(0, 10);
-}
-
-function greetingPrefix(now: Date): string {
-  const hour = now.getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
 }
 
 async function getAccessToken(): Promise<string> {
@@ -119,9 +111,12 @@ function nextMessageId(role: 'u' | 'a'): string {
  * conversation never pushes releases/tasks down the page.
  *
  * Two states, switched on `messages.length`:
- *  - Empty: PostHog-home-style landing — centered greeting, the input
- *    mid-screen, and the quick-action buttons (the "clicks" — New release
- *    or the three planner chips, plus Add activity) directly BELOW the box.
+ *  - Empty: a Perplexity-style bottom-anchored landing — one plain question
+ *    sits right above the input, which sits at the base of the screen. The
+ *    quick-action buttons (New release or the three planner chips, plus Add
+ *    activity) render BELOW the box, but only at lg+ — a phone gets the
+ *    question and the box and nothing else, so the whole ask fits above the
+ *    keyboard with no scrolling.
  *  - Active: a scrolling transcript of every turn, chip-triggered or typed,
  *    with the input pinned at the bottom.
  *
@@ -134,7 +129,6 @@ function nextMessageId(role: 'u' | 'a'): string {
 export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiConversationProps) {
   const isPanel = variant === 'panel';
   const router = useRouter();
-  const { user } = useAuthStore();
   const todaysDirective = useReleaseStore((state) => state.todaysDirective);
   const releases = useReleaseStore((state) => state.releases);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
@@ -210,10 +204,6 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   }
 
   const hasMessages = messages.length > 0;
-  const firstName = user?.name ? user.name.split(' ')[0] : null;
-  const greeting = firstName
-    ? `${greetingPrefix(new Date())}, ${firstName}`
-    : greetingPrefix(new Date());
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -583,9 +573,9 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     void submitPrompt(lastUserTurn.content, history);
   };
 
-  // One input, two positions: centered mid-screen on the empty landing
-  // (PostHog-home style), pinned at the bottom once a conversation exists —
-  // the Claude-desktop shape (founder call, 2026-07-23).
+  // One input, two positions: bottom-anchored on the empty landing
+  // (Perplexity-style), pinned at the bottom once a conversation exists —
+  // the same bottom-of-screen shape both states share.
   //
   // ONE ROW, not two (2026-08-16). The release scope picker used to sit on
   // its own line under the text field, which made the composer ~66px tall —
@@ -629,43 +619,36 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     </form>
   );
 
-  // Empty landing: centered greeting → input → quick actions BELOW the box
-  // (compact icon+label buttons, screenshot-style). No header row, no
-  // bottom-pinned input — the whole surface is one centered column.
+  // Empty landing: bottom-anchored, Perplexity-style — one plain question
+  // sits right above the input, and the input sits at the base of the
+  // screen, the same shape every mainstream AI chat box has settled on
+  // (ChatGPT, Claude, Perplexity's "What do you want to know?"). No
+  // greeting, no eyebrow, no centered mid-screen float. Quick-action chips
+  // render below the box, but ONLY at lg+: on a phone they were the
+  // "recommends" cluttering a screen that already has a keyboard eating
+  // half of it, so below lg the box and its one question are the entire
+  // surface.
   if (!hasMessages) {
     return (
       <div
-        // chappi-empty-state is a hook for globals.css: on the page variant
-        // this column CENTERS its greeting/input/chips, which is right on a
-        // full screen and wrong the moment a keyboard takes half of it —
-        // centering then parks the composer mid-band with a gap beneath it,
-        // the very complaint the pinning fixes everywhere else. With the
-        // keyboard up it bottom-anchors instead, matching what the dock
-        // panel already does by default.
-        className={`chappi-empty-state flex h-full min-h-0 flex-col items-center px-2 text-center ${
-          // The dock panel bottom-anchors its empty state (founder call,
-          // 2026-07-23) — greeting, input, and chips sit right above the
-          // footer like a chat, not suspended at the top of the panel.
-          isPanel ? 'justify-end overflow-y-auto pb-2 pt-4' : 'justify-center'
-        }`}
+        // chappi-empty-state is a hook for globals.css: this column always
+        // bottom-anchors (question, input, chips sit right above whatever's
+        // below — the footer on the dock/rail, or simply the bottom of the
+        // viewport on the full page), matching what the dock panel already
+        // did by default. overflow-y-auto covers the short-viewport case
+        // where the question plus chips no longer fit.
+        className="chappi-empty-state flex h-full min-h-0 flex-col items-center justify-end overflow-y-auto px-2 pb-2 pt-4 text-center"
       >
-        {/* The dock's own header already says "UrgAns"; the page shows the
-            eyebrow itself. */}
-        {isPanel ? null : (
-          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
-            UrgAns
-          </p>
-        )}
         <h1
           className={`font-display font-semibold tracking-tight text-content-primary ${
-            isPanel ? 'text-lg' : 'mt-3 text-3xl sm:text-4xl'
+            isPanel ? 'text-base' : 'text-xl sm:text-2xl'
           }`}
         >
-          {greeting}
+          What do you want to get done today?
         </h1>
-        <div className={`w-full max-w-2xl ${isPanel ? 'mt-4' : 'mt-6'}`}>{inputForm}</div>
+        <div className={`w-full max-w-2xl ${isPanel ? 'mt-3' : 'mt-4'}`}>{inputForm}</div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        <div className="mt-4 hidden flex-wrap items-center justify-center gap-2 lg:flex">
           {CHAPPI_CHIPS.map((chip) => {
             const Icon = CHIP_ICONS[chip.id] ?? DEFAULT_CHIP_ICON;
             return (

@@ -13,8 +13,6 @@ import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { useFirstReleaseRequired } from '@/components/releases/useFirstReleaseRequired';
 import { FirstReleaseWin } from '@/components/workspace/FirstReleaseWin';
 import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
-import { isNativePlatform } from '@/lib/platform';
-import { openExternalUrl } from '@/lib/external-link';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 
 // Same flag AppTopbar reads for the nav icon — if a direct link is followed
@@ -30,11 +28,9 @@ const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'tru
 // When on, MobileNavBar carries this page's below-lg navigation, so the
 // column has one row of chrome subtracted less: see
 // .chappi-shell-height-nav in globals.css (kept in sync with
-// ChappiPageSkeleton). The WhatsApp founder link the floating dock's panel
-// used to carry gets a footer row below lg instead — the dock retires on
-// this route entirely once the flag is on.
+// ChappiPageSkeleton). The dock retires on this route entirely once the
+// flag is on.
 const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
-const WHATSAPP_URL = 'https://wa.me/2347067367057';
 
 export default function ChappiPageClient() {
   const router = useRouter();
@@ -48,9 +44,6 @@ export default function ChappiPageClient() {
     title: string | null;
     resume: () => void;
   } | null>(null);
-  // Mid-sentence is the one moment the human-fallback row is certainly not
-  // what the user wants, and on a phone it is a whole row of the little
-  // space the keyboard leaves. It comes back the instant they stop typing.
   const keyboardOpen = useKeyboardOpen();
 
   // iOS scrolls the document to reveal a focused field BEFORE the layout has
@@ -119,7 +112,7 @@ export default function ChappiPageClient() {
           AppShell's .chappi-main-padding term-for-term. The invite banner
           lives INSIDE the locked column — as a sibling above it, its height
           overflowed the calc and re-introduced page scroll. Floor keeps
-          short viewports usable; the empty state centers within the
+          short viewports usable; the empty state bottom-anchors within the
           definite height. */}
       <div className={`${MOBILE_NAV_ENABLED ? 'chappi-shell-height-nav' : 'chappi-shell-height'} flex flex-col`}>
         {/* Collapse — the mirror image of ChappiSidePanel's expand button.
@@ -152,30 +145,6 @@ export default function ChappiPageClient() {
         <div className="min-h-0 flex-1">
           <ChappiConversation onNewRelease={() => setIsCreateModalOpen(true)} />
         </div>
-        {/* Human fallback, moved down from the ChappiDock panel the mobile bar
-            replaces — same URL, same accessible name. A flex child of the
-            locked column, so it costs no extra calc term (unlike the dock's
-            panel footer, this doesn't sit inside a fixed-height box that
-            would need to shrink to fit it — the column already reserves this
-            row via .chappi-shell-height-nav). Desktop keeps the rail's own
-            footer link; this row only exists below lg. */}
-        {MOBILE_NAV_ENABLED && !keyboardOpen ? (
-          <a
-            href={WHATSAPP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Chat with the founder — report a bug or contact support"
-            onClick={(event) => {
-              if (isNativePlatform()) {
-                event.preventDefault();
-                void openExternalUrl(WHATSAPP_URL);
-              }
-            }}
-            className="flex shrink-0 items-center justify-center gap-1.5 border-t border-stroke-subtle px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary lg:hidden"
-          >
-            Chat with the founder
-          </a>
-        ) : null}
       </div>
 
       <CreateReleaseModal
