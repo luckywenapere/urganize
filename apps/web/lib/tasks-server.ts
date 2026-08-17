@@ -357,6 +357,7 @@ const TASK_STATUS_SET = new Set<TaskStatus>([
   'backlog',
   'todo',
   'in_progress',
+  'blocked',
   'in_review',
   'done',
   'cancelled',
