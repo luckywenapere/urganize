@@ -72,6 +72,8 @@ const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 // the two above are: a stale `?scene=song` bookmark must resolve to the normal
 // activity list, not to a scene whose API routes 404.
 const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
+// Same reason again, for the Cover art pill/scene.
+const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 
 // Team logins (2026-08-16). Gates ONLY the compulsory post-create step here;
 // the mint endpoint behind it is the pre-existing, ungated invite-link route.
@@ -132,7 +134,8 @@ export function WorkspaceView() {
   const activeScene =
     (urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED) ||
     (urlScene === 'capture' && !CAPTURE_ENABLED) ||
-    (urlScene === 'song' && !SONG_UPLOAD_ENABLED)
+    (urlScene === 'song' && !SONG_UPLOAD_ENABLED) ||
+    (urlScene === 'coverart' && !COVER_ART_ENABLED)
       ? null
       : urlScene;
   // Which of the two always-in-the-DOM layout branches (mobile drill-down /

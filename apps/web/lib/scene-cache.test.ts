@@ -74,11 +74,13 @@ describe('persist policy', () => {
     const contentCalendarEnabled = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
     const captureEnabled = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
     const songUploadEnabled = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
+    const coverArtEnabled = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
     const cacheable = [...SCENE_NAMES]
       .filter(isCacheableScene)
       .filter((scene) => scene !== 'calendar' || contentCalendarEnabled)
       .filter((scene) => scene !== 'capture' || captureEnabled)
-      .filter((scene) => scene !== 'song' || songUploadEnabled);
+      .filter((scene) => scene !== 'song' || songUploadEnabled)
+      .filter((scene) => scene !== 'coverart' || coverArtEnabled);
     expect([...SCENE_PREFETCH_ORDER].sort()).toEqual([...cacheable].sort());
     expect(new Set(SCENE_PREFETCH_ORDER).size).toBe(SCENE_PREFETCH_ORDER.length);
   });

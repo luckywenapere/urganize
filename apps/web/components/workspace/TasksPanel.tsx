@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ClipboardList,
   FolderOpen,
+  Image as ImageIcon,
   ListChecks,
   Mail,
   Menu,
@@ -90,6 +91,12 @@ const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 // storage underneath. Same flag gates the /song API routes, the `?scene=song`
 // URL param in WorkspaceView, and UrgAns's upload card.
 const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
+
+// Cover art entry point. Its own flag, same reasoning as Song above: the
+// general file cabinet is off, and "update this release's cover image" is a
+// different, more central ask than "bring the file manager back" — even
+// though both share the same assets table and release-assets bucket.
+const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 
 // Press kit entry point (URG-198): the EPK shipped (URG-196) reachable only
 // from the release detail page's side menu — invisible from the workspace
@@ -304,10 +311,15 @@ export function TasksPanel({
   // Mirror WorkspaceView's flag gate: with the calendar flag off, a stale
   // `?scene=calendar` URL must not flip the leading pill to "Activities" for a
   // scene that isn't rendering (WorkspaceView passes no sceneContent then).
-  // Same for `?scene=capture` behind its own flag.
+  // Same for `?scene=capture`/`?scene=song`/`?scene=coverart` behind their own
+  // flags — 'song' and 'coverart' were missing from this specific mirror
+  // until 'coverart' was added, a small pre-existing gap now closed alongside
+  // it (WorkspaceView's own copy of this gate already covered all four).
   const activeScene =
     (urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED) ||
-    (urlScene === 'capture' && !CAPTURE_ENABLED)
+    (urlScene === 'capture' && !CAPTURE_ENABLED) ||
+    (urlScene === 'song' && !SONG_UPLOAD_ENABLED) ||
+    (urlScene === 'coverart' && !COVER_ART_ENABLED)
       ? null
       : urlScene;
 
@@ -470,6 +482,23 @@ export function TasksPanel({
       >
         <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
         Collect metadata
+      </button>
+    ) : null;
+
+  // Cover art: the release's visual identity — shown on its workspace card,
+  // its press kit, and anywhere else the release is displayed. Desktop
+  // header row only — on mobile it lives in the folded "more" menu, right
+  // beside Song (both are the release's core identity assets).
+  const coverArtButton =
+    COVER_ART_ENABLED && scopedRelease ? (
+      <button
+        type="button"
+        onClick={() => toggleScene('coverart', scopedRelease.id)}
+        aria-pressed={activeScene === 'coverart'}
+        className={pillClass('coverart')}
+      >
+        <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />
+        Cover art
       </button>
     ) : null;
 
@@ -662,14 +691,15 @@ export function TasksPanel({
   // pills (New activity/Activities, Pitch). Data, not JSX, so the search box
   // above the list can filter on a real label. Order mirrors the rough
   // priority the desktop row already implies: Plan first (it's the one thing
-  // a plan-less release needs), then Song and Files, then the AI actions,
-  // then Press kit and Fan capture together at the end — the two "send this
-  // outward" items, same pairing the desktop footer row keeps them in.
+  // a plan-less release needs), then Cover art, Song and Files — the
+  // release's core identity assets — then the AI actions, then Press kit and
+  // Fan capture together at the end — the two "send this outward" items,
+  // same pairing the desktop footer row keeps them in.
   // Deliberately NOT memoized: each entry's onClick closes over `toggleScene`,
   // which itself closes over the current `activeScene` — memoizing this array
   // risks serving a stale closure (tap "Song" after switching scenes without
   // this array's own deps changing, and it would toggle against a scene that
-  // is no longer the open one). The array is five items at most, so recomputing
+  // is no longer the open one). The array is six items at most, so recomputing
   // it every render costs nothing worth guarding against.
   const moreMenuActionsRaw: (MoreMenuAction | null)[] = [
     showPlanPill && scopedRelease
@@ -678,6 +708,14 @@ export function TasksPanel({
           label: 'Plan',
           icon: Sparkles,
           onClick: () => toggleScene('plan', scopedRelease.id),
+        }
+      : null,
+    COVER_ART_ENABLED && scopedRelease
+      ? {
+          key: 'coverart',
+          label: 'Cover art',
+          icon: ImageIcon,
+          onClick: () => toggleScene('coverart', scopedRelease.id),
         }
       : null,
     SONG_UPLOAD_ENABLED && scopedRelease
@@ -763,6 +801,7 @@ export function TasksPanel({
         {activitiesToggleButton}
         {planButton}
         {metadataButton}
+        {coverArtButton}
         {songButton}
         {pitchButton}
         {filesButton}
