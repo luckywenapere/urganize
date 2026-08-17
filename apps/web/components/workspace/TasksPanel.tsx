@@ -999,13 +999,19 @@ export function TasksPanel({
           {pitchButton}
           {moreMenuActions.length > 0 ? (
             <div className="ml-auto flex shrink-0 items-center gap-2">
+              {/* touch-manipulation on both: disables the browser's own
+                  double-tap-to-zoom gesture on these specific buttons
+                  (independent of the input font-size fix below — this
+                  guards against the tap itself zooming the page, not just
+                  a focused field zooming it), while leaving pinch-zoom
+                  available everywhere else for accessibility. */}
               <button
                 type="button"
                 onClick={toggleMoreMenu}
                 aria-expanded={isMoreMenuOpen}
                 aria-controls={moreMenuListId}
                 aria-label="Search the menu"
-                className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+                className="motion-focus motion-press grid h-8 w-8 shrink-0 touch-manipulation place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
               >
                 <Search className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
@@ -1015,7 +1021,7 @@ export function TasksPanel({
                 aria-expanded={isMoreMenuOpen}
                 aria-controls={moreMenuListId}
                 aria-label="More"
-                className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+                className="motion-focus motion-press grid h-8 w-8 shrink-0 touch-manipulation place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
               >
                 <Menu className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
@@ -1034,10 +1040,16 @@ export function TasksPanel({
                 No `autoFocus`, deliberately: tapping either trigger button
                 used to focus this field the instant the panel opened, which
                 on iOS Safari means an unwanted page zoom on tap — a field
-                under 16px triggers it on focus, and this one was 14px. Both
-                buttons now just open the menu; the user taps into the field
-                themselves to search. `text-base` (16px) is kept as a second,
-                independent guard: even a manual tap into this field can never
+                under 16px triggers it on focus. Both buttons now just open
+                the menu; the user taps into the field themselves to search.
+
+                `text-lg`, NOT `text-base` — the fix originally shipped as
+                `text-base`, and the zoom kept happening because this
+                project's own type scale (packages/config/tailwind/preset.js)
+                redefines `base` to 14px, not Tailwind's stock 16px. `lg` is
+                the first step in THIS preset that actually clears iOS's
+                threshold. Kept as a second, independent guard beyond removing
+                `autoFocus`: even a manual tap into this field can never
                 trigger the zoom now, regardless of what focuses it.
               */}
               <input
@@ -1045,7 +1057,7 @@ export function TasksPanel({
                 value={moreMenuQuery}
                 onChange={(event) => setMoreMenuQuery(event.target.value)}
                 placeholder="Search…"
-                className="motion-focus h-9 w-full rounded-full border border-stroke-default bg-bg-surface pl-9 pr-3 text-base text-content-primary placeholder:text-content-tertiary"
+                className="motion-focus h-9 w-full rounded-full border border-stroke-default bg-bg-surface pl-9 pr-3 text-lg text-content-primary placeholder:text-content-tertiary"
               />
             </div>
             <ul className="mt-1 max-h-60 overflow-y-auto">
