@@ -1428,8 +1428,35 @@ html[data-theme='dark'] .btn-secondary:hover:not(:disabled) {
   padding: 0 var(--space-6);
 }
 
+/* dvh, not vh (2026-08-17): `100vh` on mobile is the LARGE viewport (browser
+   chrome collapsed), so this floor held the DOCUMENT taller than the visible
+   screen by exactly the chrome's height whenever that chrome was showing. On a
+   route sized in `dvh` and designed never to scroll (/dashboard/urgans), that
+   slack was the whole bug: one swipe slid the locked column — and the composer
+   pinned to its bottom edge — up the screen. PR #325 diagnosed this exact
+   mechanism but converted only .app-shell-frame; the frame's height is
+   content-driven, so this floor and .app-layout's below kept setting the
+   document height over its head and the defect survived.
+
+   KEEP THIS AND .app-layout'S FLOOR IN LOCKSTEP. They are independent, and
+   either one left at `100vh` re-creates 100% of the defect on its own —
+   .app-layout's own floor makes it a full 100vh tall regardless of body's, and
+   body's own floor holds the document 100vh tall regardless of .app-layout's
+   (`html` height is auto). A partial conversion here is indistinguishable from
+   doing nothing.
+
+   NO `100vh` FALLBACK LINE, deliberately, and don't add one back: the
+   production minifier collapses two declarations of the same property on one
+   rule down to the last, so `min-height: 100vh; min-height: 100dvh;` compiles
+   to just the dvh line (verified in .next's compiled CSS) — it reads like a
+   progressive-enhancement fallback in source and is not one. A real one needs
+   @supports. It also isn't worth having: pre-dvh Safari is < 15.4, and this app
+   already hard-fails below iOS 15.4 regardless (Next 16's framework chunk uses
+   Object.hasOwn), so that branch is unreachable. Chrome 93-107 can run the app
+   without dvh and simply gets no floor here, which is invisible — body's
+   background propagates to the canvas, so nothing goes unpainted. */
 .app-body {
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* .app-layout is the bare full-width chrome wrapper that AppShell puts around
@@ -1444,7 +1471,10 @@ html[data-theme='dark'] .btn-secondary:hover:not(:disabled) {
  * Single source of truth lives in AppShell. */
 .app-layout {
   width: 100%;
-  min-height: 100vh;
+  /* dvh, not vh — see the long note on .app-body above, including why there is
+     no `100vh` fallback line. This floor and that one must BOTH be dvh; either
+     one left at 100vh reproduces the whole defect by itself. */
+  min-height: 100dvh;
   margin: 0 auto;
   position: relative;
   z-index: 1;
@@ -1681,12 +1711,22 @@ body:focus-within .keyboard-hint,
    main pt-5 (1.25rem) + main's chappi-main-padding (1rem + safe-area). */
 .chappi-shell-height {
   height: calc(100dvh - 6.25rem - env(safe-area-inset-bottom, 0px) - 1px);
-  min-height: 24rem;
 }
 
+/* The 24rem floor is DESKTOP-ONLY (2026-08-17). Below this breakpoint it was
+   actively harmful: it binds whenever the calc drops under 384px (here, a
+   viewport under ~485px — reachable in landscape and on small phones), and when
+   it binds the column is TALLER than the space <main> allots, so the document
+   grows, the page scrolls, and the composer pinned to the column's bottom edge
+   drifts up — the exact defect the dvh floors above were fixed to kill. At
+   desktop widths the calc never approaches 384px, so the floor is inert there
+   and kept only as a guard. Trade-off below the breakpoint: a very short
+   viewport now squeezes the transcript instead of overflowing the column. That
+   is the right way round — the composer staying put is the point. */
 @media (min-width: 768px) {
   .chappi-shell-height {
     height: calc(100dvh - 7.75rem - 1px);
+    min-height: 24rem;
   }
 }
 
@@ -1752,12 +1792,15 @@ body:focus-within .keyboard-hint,
    chappi-main-padding-nav (1rem + 4rem + safe-area) = 10.25rem. */
 .chappi-shell-height-nav {
   height: calc(100dvh - 10.25rem - env(safe-area-inset-bottom, 0px) - 1px);
-  min-height: 24rem;
 }
 
+/* Desktop-only floor, same reasoning as .chappi-shell-height above — and it
+   bites sooner in this variant, since the nav bar costs another 4rem: the floor
+   binds under a ~549px viewport, which small phones reach in portrait. */
 @media (min-width: 1024px) {
   .chappi-shell-height-nav {
     height: calc(100dvh - 7.75rem - 1px);
+    min-height: 24rem;
   }
 }
 
@@ -1858,18 +1901,32 @@ body:focus-within .keyboard-hint,
   }
 }
 
-/* Pinning the column takes it out of flow, so the page has almost nothing
-   left in it — but `min-height: 100vh` would still hold the document a full
-   LARGE viewport tall (on iOS that is taller than the screen even with no
-   keyboard, which is why there is always a little scroll to give away).
-   Dropping the floor to the visible height leaves nothing to scroll, so the
-   browser stops trying to drag the page around under the keyboard. These
-   are floors, not heights: any page with more content than this still grows
-   and scrolls exactly as before. */
+/* Pinning the column takes it out of flow, so the page has almost nothing left
+   in it — but the base floors would still hold the document a full viewport
+   tall, and `dvh` is deliberately BLIND to the on-screen keyboard (it tracks
+   browser chrome, not the keyboard — see KeyboardViewportBridge). Dropping the
+   floor to the MEASURED visible height leaves nothing to scroll, so the browser
+   stops trying to drag the page around under the keyboard. That is something no
+   length unit can express, which is why this override still earns its keep.
+
+   This comment used to say `min-height: 100vh` meant "there is always a little
+   scroll to give away" even with no keyboard. That was true, and it was the
+   bug: as of 2026-08-17 the base floors on .app-body / .app-layout are `dvh`,
+   so the keyboard-closed case has no slack left to give. Do not reintroduce a
+   `vh` floor anywhere in this chain on the strength of the old wording.
+
+   The var() fallback is `100dvh`, not `100vh`, on purpose: if the attribute
+   were ever set while --app-viewport-height was missing, a `100vh` fallback
+   would RAISE the floor back above the new base and invert this rule's whole
+   purpose. Dead code today (the bridge sets and clears both together), but the
+   trap is free to remove.
+
+   These are floors, not heights: any page with more content than this still
+   grows and scrolls exactly as before. */
 :root[data-keyboard-open='true'] .app-layout,
 :root[data-keyboard-open='true'] .app-shell-frame,
 :root[data-keyboard-open='true'] .app-body {
-  min-height: var(--app-viewport-height, 100vh);
+  min-height: var(--app-viewport-height, 100dvh);
 }
 
 /* The floating dock panel (the below-lg assistant surface when the mobile
