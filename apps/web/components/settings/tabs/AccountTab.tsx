@@ -5,6 +5,7 @@ import { ProfileSection } from '../ProfileSection';
 import { ArtistProfileSection } from '../ArtistProfileSection';
 import { AppearanceSection } from '../AppearanceSection';
 import { SecuritySection } from '../SecuritySection';
+import { AdminSection } from '../AdminSection';
 import { SessionSection } from '../SessionSection';
 import { DeleteAccountSection } from '../DeleteAccountSection';
 
@@ -30,6 +31,14 @@ import { DeleteAccountSection } from '../DeleteAccountSection';
  * payment callback's "Billing" button pushes a plain `/settings` — which lands
  * on this tab, so first position is what makes that button honest without the
  * callback needing to know about tabs at all.
+ *
+ * AdminSection (2026-08-17) sits before Session/Delete rather than with the
+ * personal-account controls above it: it renders nothing for non-admin
+ * accounts and is rare even for admins, so it belongs with this tab's other
+ * low-frequency tail items, not because it shares their high-consequence
+ * nature. It exists here specifically because this is the ONLY mobile
+ * surface Admin is reachable from — the desktop identity card's own Admin
+ * link is `hidden lg:block` with no mobile equivalent anywhere else.
  */
 export function AccountTab() {
   return (
@@ -39,6 +48,7 @@ export function AccountTab() {
       <ArtistProfileSection />
       <AppearanceSection />
       <SecuritySection />
+      <AdminSection />
       <SessionSection />
       <DeleteAccountSection />
     </div>
