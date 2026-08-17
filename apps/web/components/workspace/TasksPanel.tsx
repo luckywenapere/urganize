@@ -995,8 +995,13 @@ export function TasksPanel({
         className={`sticky z-20 -mx-4 flex flex-col gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
         <div className="flex flex-wrap items-center gap-2">
-          {activitiesToggleButton}
-          {pitchButton}
+          {/* New activity/Activities and Pitch step aside while the more
+              menu is open — with the expanded search+list panel now sharing
+              this same row's vertical space, leaving both pills in place
+              visually collided with it and read as low-contrast clutter
+              rather than a menu. They return the moment it closes. */}
+          {isMoreMenuOpen ? null : activitiesToggleButton}
+          {isMoreMenuOpen ? null : pitchButton}
           {moreMenuActions.length > 0 ? (
             <div className="ml-auto flex shrink-0 items-center gap-2">
               {/* touch-manipulation on both: disables the browser's own
@@ -1030,7 +1035,10 @@ export function TasksPanel({
         </div>
 
         {isMoreMenuOpen ? (
-          <div id={moreMenuListId} className="border-t border-stroke-subtle pt-2">
+          <div
+            id={moreMenuListId}
+            className="rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
+          >
             <div className="relative">
               <Search
                 className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-content-tertiary"
@@ -1057,7 +1065,7 @@ export function TasksPanel({
                 value={moreMenuQuery}
                 onChange={(event) => setMoreMenuQuery(event.target.value)}
                 placeholder="Search…"
-                className="motion-focus h-9 w-full rounded-full border border-stroke-default bg-bg-surface pl-9 pr-3 text-lg text-content-primary placeholder:text-content-tertiary"
+                className="motion-focus h-9 w-full rounded-full border border-stroke-default bg-bg-elevated pl-9 pr-3 text-lg text-content-primary placeholder:text-content-tertiary"
               />
             </div>
             <ul className="mt-1 max-h-60 overflow-y-auto">
