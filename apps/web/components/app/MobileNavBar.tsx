@@ -6,6 +6,7 @@ import { Inbox, Plus } from 'lucide-react';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
+import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { CatalogIcon, ChappiIcon, NotesIcon, ProfileIcon } from '@/components/app/BrandIcons';
 
 // Same flags AppTopbar reads — a tab only exists in the bar when its surface
@@ -26,10 +27,19 @@ type MobileNavBarProps = {
  * actually reaches on a phone, and stands in for the ChappiDock launcher
  * (which retires on this same viewport range — see ChappiDock.tsx).
  *
- * Five slots: Home (Catalog) · UrgAns · New release (center, filled) · Notes
- * · You. "You" is a direct Link to /settings rather than a menu — the
- * account actions (Settings, sign out) already live there, and a menu on top
- * of a menu (WorkspaceMenu still exists at lg+) would be one tap for nothing.
+ * Five slots: Home (Catalog) · UrgAns · New release/New activity (center,
+ * filled) · Notes · You. "You" is a direct Link to /settings rather than a
+ * menu — the account actions (Settings, sign out) already live there, and a
+ * menu on top of a menu (WorkspaceMenu still exists at lg+) would be one tap
+ * for nothing.
+ *
+ * The center button is contextual as of 2026-08-17: when a release is
+ * scoped (`/dashboard?release=<id>`), it opens the task quick-create modal
+ * for that release instead of "New release" — the same action TasksPanel's
+ * former mobile "New activity" pill performed, which this button now
+ * supersedes on mobile (that pill is gone; see TasksPanel.tsx's base-dock
+ * comment). Everywhere else — catalog view, or any other route — it keeps
+ * opening "New release" exactly as before. See `handleFabClick` below.
  *
  * A SIXTH slot, Pitches, appears only for a dual account (team + playlist
  * owner) — a state currently held by a single partner. It earns the crowding
@@ -51,6 +61,7 @@ type MobileNavBarProps = {
 export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
   const pathname = usePathname();
   const keyboardOpen = useKeyboardOpen();
+  const { openQuickCreate } = useTaskUI();
 
   const isHome = pathname === '/dashboard';
   const isUrgAns = pathname === '/dashboard/urgans';
@@ -71,6 +82,30 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
     if (releaseId) {
       useChappiStore.getState().setScopedReleaseId(releaseId);
     }
+  };
+
+  // Center "+" button (2026-08-17): "New activity" when a release is scoped,
+  // "New release" everywhere else. Reads `?release=` fresh at click time —
+  // the same deliberate `handleUrgAnsClick` pattern above, and for the same
+  // reason: staying Suspense-free by not subscribing via `useSearchParams()`.
+  // This also guarantees the ACTION is always correct regardless of whether
+  // this component re-rendered since the URL last changed (scoping a release
+  // via `router.replace` on the same `/dashboard` pathname doesn't itself
+  // trigger a re-render here) — unlike a label, a wrong button action would
+  // be a real bug, so it can't be allowed to go stale. The aria-label/title
+  // stay "New release" rather than trying to mirror this dynamically for the
+  // same reason: a render-time read of the same URL could lag on exactly
+  // that transition, and a label that's sometimes wrong is worse than one
+  // that's honestly generic.
+  const handleFabClick = () => {
+    if (typeof window !== 'undefined' && isHome) {
+      const releaseId = new URLSearchParams(window.location.search).get('release');
+      if (releaseId) {
+        openQuickCreate({ releaseId, source: 'inline' });
+        return;
+      }
+    }
+    onNewRelease();
   };
 
   return (
@@ -113,7 +148,7 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
         <li className="flex-1">
           <button
             type="button"
-            onClick={onNewRelease}
+            onClick={handleFabClick}
             aria-label="New release"
             title="New release"
             className="motion-focus motion-press mx-auto grid h-12 w-12 place-items-center self-center rounded-full border border-brand/25 bg-brand text-content-inverse shadow-[0_18px_36px_-28px_rgb(var(--color-brand)/0.55)] hover:bg-brand-hover"
