@@ -267,6 +267,45 @@ export function PlanScene({
     <section aria-label={`${release.title} plan`} className="min-w-0">
       {header}
 
+      {/* Mobile-only, always-visible approve bar (2026-08-17 fix): the
+          desktop-only footer bar further down (still `sticky bottom-0`
+          inside TasksPanel's own bounded scroll column at lg+, where that
+          works correctly) required scrolling past every phase — up to ~113
+          tasks on an album plan — before it ever came into view on mobile,
+          since a sticky element only sticks once scrolled to its rest
+          position. And once scrolled to, `bottom: 0` put it directly behind
+          the fixed MobileNavBar / TasksPanel mobile dock that already own
+          the screen's bottom edge there — a fully hidden CTA on the surface
+          most users open this scene from. Placed right under the header
+          instead, so it's on screen the instant the scene opens, with no
+          scroll needed at all. `sticky top-16` (not `top-0`) keeps it
+          visible while scrolling too: below `lg` TasksPanel's own scroll
+          body has no bounded height, so this sticks relative to the actual
+          document scroll — the same scroll box AppTopbar's own
+          `sticky top-0 z-30` uses, and `top-0` here would stick this bar
+          directly BEHIND that topbar rather than under it. `lg:hidden` —
+          desktop keeps the original bottom bar below, unchanged. */}
+      <div className="sticky top-16 z-20 mt-4 flex items-center justify-between gap-3 border-b border-stroke-default bg-bg-base py-3 lg:hidden">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
+          {activeCount} {activeCount === 1 ? 'task' : 'tasks'} ready
+        </p>
+        <Button
+          type="button"
+          onClick={() => void handleApprove()}
+          disabled={draft.isApproving || activeCount === 0 || !release.releaseDate}
+          className="h-10 shrink-0 justify-center px-4"
+        >
+          {draft.isApproving ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              Scheduling
+            </>
+          ) : (
+            'Approve plan'
+          )}
+        </Button>
+      </div>
+
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
           {summary}
@@ -356,9 +395,11 @@ export function PlanScene({
         ))}
       </div>
 
-      {/* Sticky rather than fixed: it stays in reading order and cannot float
-          over another surface, because the scene is ordinary layout content. */}
-      <div className="sticky bottom-0 mt-4 flex flex-col-reverse gap-3 border-t border-stroke-default bg-bg-base py-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Desktop footer — unchanged. Sticky within TasksPanel's own bounded
+          scroll column at lg+, which is where sticky-to-bottom already works
+          correctly (see the mobile bar right under the header above for why
+          it doesn't below lg). */}
+      <div className="mt-4 hidden items-center justify-between gap-3 border-t border-stroke-default bg-bg-base py-3 lg:sticky lg:bottom-0 lg:flex">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
           {activeCount} {activeCount === 1 ? 'task' : 'tasks'} ready
         </p>
@@ -366,7 +407,7 @@ export function PlanScene({
           type="button"
           onClick={() => void handleApprove()}
           disabled={draft.isApproving || activeCount === 0 || !release.releaseDate}
-          className="h-11 w-full justify-center sm:h-9 sm:w-auto"
+          className="h-9 justify-center"
         >
           {draft.isApproving ? (
             <>

@@ -6,6 +6,9 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
+import { ShareLoginActions } from '@/components/team/ShareLoginActions';
+import { supabase } from '@/lib/supabase/client';
+import { errorMessage } from '@/lib/errors';
 import {
   TaskDependenciesSection,
   type DependencyTaskSummary,
@@ -137,6 +140,19 @@ export function TaskDetailView({
   const [selectedAssignee, setSelectedAssignee] = useState<WorkspaceMember | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
 
+  // Invite-a-teammate-by-email, right from the task drawer (founder request,
+  // 2026-08-17): a manager who's assigning work and realizes the person isn't
+  // on the roster yet shouldn't have to abandon the task and go to Settings.
+  // Reuses the same POST /api/workspace/members/invite call and the same
+  // Copy/WhatsApp/Email share prompt (ShareLoginActions) TeammatesSection and
+  // the Team-logins flow already use, so the result is identical wherever it
+  // was started from.
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState('');
+  const [inviteError, setInviteError] = useState('');
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+
   // The release this activity belongs to, for the header. The fetched detail
   // carries `task.release`; the optimistic store-seeded task may not, so fall
   // back to resolving `releaseId` against the release store.
@@ -166,6 +182,18 @@ export function TaskDetailView({
     setAssigneeQuery(task.assignee?.name || '');
   }, [task]);
 
+  // Keyed on the task's id, not the whole `task` object: an unrelated field
+  // save (status, due date, ...) gives the parent a new `task` reference for
+  // the SAME task, and that must not wipe an invite the user is mid-typing.
+  // Only actually switching which task is open should reset this.
+  useEffect(() => {
+    setInviteEmail('');
+    setIsInviting(false);
+    setInviteMessage('');
+    setInviteError('');
+    setInviteUrl(null);
+  }, [task?.id]);
+
   // Escape closes the pop-up. Typing-target guard prevents Escape from
   // closing the modal while the user is mid-edit in a textarea/input.
   useEffect(() => {
@@ -177,6 +205,54 @@ export function TaskDetailView({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onBack]);
+
+  const handleInviteTeammate = async () => {
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+      setInviteError('Enter a valid email.');
+      return;
+    }
+
+    setIsInviting(true);
+    setInviteError('');
+    setInviteMessage('');
+    setInviteUrl(null);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Session expired. Please sign in again.');
+
+      const response = await fetch('/api/workspace/members/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        // 'team-member' — the same role a manager would pick for someone
+        // being assigned work, not one of the artist/viewer roles that need
+        // an extra picker this compact a control has no room for.
+        body: JSON.stringify({ email, role: 'team-member' }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        inviteUrl?: string | null;
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not invite teammate.');
+      }
+
+      setInviteEmail('');
+      if (payload.inviteUrl) {
+        setInviteUrl(payload.inviteUrl);
+        setInviteMessage('Invite link created — share it with your teammate.');
+      } else {
+        setInviteMessage('Already a member of this workspace.');
+      }
+    } catch (err) {
+      setInviteError(errorMessage(err, 'Could not invite teammate.'));
+    } finally {
+      setIsInviting(false);
+    }
+  };
 
   const due = task ? getRelativeDueLabel(task) : { label: 'No due date', isOverdue: false };
 
@@ -346,6 +422,69 @@ export function TaskDetailView({
                     void onSavePatch({ assignedToUserId: member?.userId || null });
                   }}
                 />
+              </div>
+            </div>
+
+            {/* Invite a teammate directly from this task, without leaving
+                for Settings. Same result the moment you'd get there: a
+                link the teammate opens to choose their own password —
+                see the Team logins Working note in CLAUDE.md. */}
+            <div className={PROPERTY_ROW_CLASS}>
+              <span className={PROPERTY_LABEL_CLASS}>Invite</span>
+              <div className="md:max-w-[300px]">
+                {inviteUrl ? (
+                  <div className="space-y-2 rounded-[14px] border border-stroke-default bg-bg-elevated/60 p-3">
+                    <p className="text-xs text-content-secondary">{inviteMessage}</p>
+                    <ShareLoginActions
+                      url={inviteUrl}
+                      releaseTitle={releaseTitle}
+                      variant="inline"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInviteUrl(null);
+                        setInviteMessage('');
+                      }}
+                      className="motion-focus text-[11px] font-medium text-content-tertiary underline-offset-2 hover:text-content-primary hover:underline"
+                    >
+                      Invite someone else
+                    </button>
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void handleInviteTeammate();
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <label className="flex-1">
+                      <span className="sr-only">Teammate&apos;s email</span>
+                      <input
+                        type="email"
+                        value={inviteEmail}
+                        onChange={(event) => setInviteEmail(event.target.value)}
+                        placeholder="teammate@email.com"
+                        className={PROPERTY_CONTROL_CLASS.replace('md:max-w-[300px]', '')}
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={isInviting || !inviteEmail.trim()}
+                      className="motion-focus motion-press h-9 shrink-0 rounded-lg border border-stroke-default bg-bg-surface px-3 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isInviting ? 'Inviting…' : 'Invite'}
+                    </button>
+                  </form>
+                )}
+                {inviteError ? (
+                  <p role="alert" className="mt-1 text-xs text-status-error">
+                    {inviteError}
+                  </p>
+                ) : !inviteUrl && inviteMessage ? (
+                  <p className="mt-1 text-xs text-content-secondary">{inviteMessage}</p>
+                ) : null}
               </div>
             </div>
 
