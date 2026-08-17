@@ -1,0 +1,23 @@
+-- =============================================================================
+-- Add 'blocked' to the task_status enum
+-- =============================================================================
+--
+-- The 'blocked' status has been a valid TaskStatus in application code since
+-- TASK_STATUS_OPTIONS was defined (apps/web/types/tasks.ts) and is a real
+-- section in the workspace's activity grouping (TaskSectionKey, 'Status wins'
+-- founder call 2026-08-15) — but the database enum was never updated to
+-- match. Setting an activity's status to 'blocked' hit Postgres error 22P02
+-- ("invalid input value for enum task_status") whose message contains the
+-- substring "task_status", which apps/web/lib/tasks-server.ts's
+-- isTaskSchemaMissingError() treats as a signal the tables/enum are entirely
+-- missing — so the user saw "Task management tables are missing" instead of
+-- the real cause.
+--
+-- ADD VALUE IF NOT EXISTS is idempotent and safe to re-apply. It is
+-- intentionally not wrapped in a transaction block: ALTER TYPE ... ADD VALUE
+-- cannot be used in the same transaction that adds it, and bare execution
+-- avoids that constraint entirely (precedent: 20260810140000_notification_
+-- type_due_tiers.sql).
+-- =============================================================================
+
+alter type public.task_status add value if not exists 'blocked';
