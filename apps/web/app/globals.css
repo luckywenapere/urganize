@@ -521,8 +521,8 @@ html {
      horizontally (tab rows, pill strips, calendar grids — anything using
      Tailwind's `overflow-x-auto`) opt back into horizontal panning below;
      without that override this would also break them. */
-  overflow-x: hidden;
   overscroll-behavior-x: none;
+  overflow-x: hidden;
   touch-action: pan-y;
 }
 
