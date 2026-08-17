@@ -104,13 +104,11 @@ function ContextTitle() {
   // beside the kicker + title. This IS the focused release card now
   // (founder call, 2026-07-23): the card left the page body entirely so the
   // activities fill that space; its picture and name live here instead.
-  // Hidden below sm (founder call, 2026-07-23): on phones the drill-down's
-  // own back header already names the release, and the topbar needs the
-  // room for its controls. That room constraint no longer holds once
-  // MobileNavBar has moved those controls to the bottom, so this shows at
-  // every width when the flag is on.
+  // Hidden below lg: the topbar's centered slot is now spent on the
+  // centered logo below that breakpoint (see AppTopbar's mobile logo), and
+  // the drill-down's own back header already names the release on phones.
   return (
-    <div className={`${MOBILE_NAV_ENABLED ? 'flex' : 'hidden sm:flex'} min-w-0 items-center gap-3`}>
+    <div className={`${MOBILE_NAV_ENABLED ? 'hidden lg:flex' : 'hidden sm:flex'} min-w-0 items-center gap-3`}>
       <div className="hidden h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-stroke-subtle bg-bg-elevated sm:block">
         {release.coverArtUrl ? (
           <Image
@@ -325,18 +323,32 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           it. Applied ONLY when that control is actually rendered, so the other
           accounts keep the roomier spacing they already fit in. */}
       <div
-        className={`flex min-h-16 items-center ${
+        className={`relative flex min-h-16 items-center ${
           showCuratorLink ? 'gap-1.5' : 'gap-2'
         } px-3 sm:gap-3 sm:px-5 md:px-6 lg:px-8`}
       >
-        {/* Stage 2: the logo now lives in the topbar (the sidebar that
-            previously hosted it is gone). Links back to /dashboard so the
-            top-left "click the logo" affordance still gets users home from
-            any inner route. No text label — the mark itself is the brand. */}
+        {/* Mobile: logo is centered in the bar (founder request) rather than
+            anchored top-left — with the New release CTA and notifications
+            bell both gone from this row below lg, a left-anchored logo would
+            just sit alone off-center. Absolutely positioned so it doesn't
+            take part in the flex flow the rest of this row uses; the parent
+            div's own `relative` is its containing block. */}
         <Link
           href="/dashboard"
           aria-label="Urganize home"
-          className="motion-focus shrink-0 transition-opacity hover:opacity-80"
+          className="motion-focus absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity hover:opacity-80 lg:hidden"
+        >
+          <Logo size="sm" priority className="opacity-90" />
+        </Link>
+
+        {/* Desktop: logo anchored left, as before. Links back to /dashboard
+            so the top-left "click the logo" affordance still gets users home
+            from any inner route. No text label — the mark itself is the
+            brand. */}
+        <Link
+          href="/dashboard"
+          aria-label="Urganize home"
+          className="motion-focus hidden shrink-0 transition-opacity hover:opacity-80 lg:inline-flex"
         >
           <Logo size="sm" priority className="opacity-90" />
         </Link>
@@ -454,8 +466,13 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
         {/* Phase 1 notifications surface — gated internally on
             NEXT_PUBLIC_FEATURE_WORKSPACE so prod can keep the topbar exactly
             as it was until the bell is flipped on. Sits left of WorkspaceMenu
-            so the account monogram remains the rightmost control. */}
-        <NotificationsBell />
+            so the account monogram remains the rightmost control. Hidden
+            below lg (founder request) — the mobile bar has no room for it
+            once the logo takes the centered slot, and MobileNavBar has no
+            notifications tab to move it to. */}
+        <div className="hidden lg:block">
+          <NotificationsBell />
+        </div>
 
         {/* Help "?" — moved up from the bottom-left corner (2026-07-23);
             same quiet mono launcher, now among the rest of the nav. */}

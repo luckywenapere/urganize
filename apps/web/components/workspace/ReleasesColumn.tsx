@@ -5,6 +5,12 @@ import type { Release } from '@/types/releases';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { WorkspaceReleaseCard } from './WorkspaceReleaseCard';
 
+// MobileNavBar's center "+" (NEXT_PUBLIC_FEATURE_MOBILE_NAV) already opens
+// the same create-release flow, so the full-width button this component
+// used to render below `sm` was retired to avoid a double CTA — see the
+// identical reasoning on AppTopbar's own "New release" button.
+const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
+
 export type ReleaseCardData = {
   release: Pick<Release, 'id' | 'title' | 'artistName' | 'status' | 'releaseDate'>;
   tasksDone: number;
@@ -32,15 +38,18 @@ export function ReleasesColumn({
   return (
     <section className="space-y-3">
       {/* Mobile-only full-width "New release". AppTopbar's New release button
-          is `hidden sm:inline-flex`; this fills the gap below 640px. */}
-      <button
-        type="button"
-        onClick={onCreateRelease}
-        className="motion-focus motion-press flex h-11 w-full items-center justify-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:hidden"
-      >
-        <Plus className="h-4 w-4" />
-        New release
-      </button>
+          is `hidden sm:inline-flex`; this fills the gap below 640px. Hidden
+          when MobileNavBar is on — its center "+" already covers this. */}
+      {!MOBILE_NAV_ENABLED ? (
+        <button
+          type="button"
+          onClick={onCreateRelease}
+          className="motion-focus motion-press flex h-11 w-full items-center justify-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover sm:hidden"
+        >
+          <Plus className="h-4 w-4" />
+          New release
+        </button>
+      ) : null}
 
       {releases.length === 0 ? (
         <EmptyState
