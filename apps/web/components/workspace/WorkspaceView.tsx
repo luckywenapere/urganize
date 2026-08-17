@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
@@ -208,10 +208,19 @@ export function WorkspaceView() {
   // Deliberately not applied at 2+: the moment there is a choice to make, the
   // catalog is how you make it.
   const isSingleRelease = releases.length === 1;
+  // Guards the auto-scope effect below so it only ever fires once per
+  // mount. Without this, an explicit "back to catalog" tap (which clears
+  // `scopedReleaseId`) immediately re-triggered this same effect and
+  // re-scoped straight back into the only release — the back button
+  // rendered but was never actually able to do anything. One auto-scope on
+  // arrival is the intended convenience; re-fighting a deliberate exit is
+  // the bug that made the workspace un-leavable for single-release accounts.
+  const hasAutoScopedRef = useRef(false);
   useEffect(() => {
     // Wait for the first load: `releases` is empty until it lands, and acting
     // on that would look like zero releases rather than one.
-    if (isInitialLoading || !isSingleRelease || scopedReleaseId) return;
+    if (isInitialLoading || !isSingleRelease || scopedReleaseId || hasAutoScopedRef.current) return;
+    hasAutoScopedRef.current = true;
     // `replace`, the hook's default — an auto-scope the user never asked for
     // must not become a history entry they have to press Back through, and
     // Back from here should leave the workspace, not restore a catalog this
@@ -655,7 +664,16 @@ export function WorkspaceView() {
   // paint, so without it a single-release workspace flashes the one-card
   // catalog on the way to its activities — the exact view this is meant to
   // never show. Staying on the skeleton reads as "still settling" instead.
-  if (authLoading || isInitialLoading || (isSingleRelease && !scopedReleaseId)) {
+  // Gated on `!hasAutoScopedRef.current` (not just `isSingleRelease &&
+  // !scopedReleaseId`): once the one auto-scope has already happened, a null
+  // scope means the user deliberately backed out via the catalog button, not
+  // that the initial auto-scope hasn't landed yet — that case must render
+  // the real catalog, not an eternal skeleton.
+  if (
+    authLoading ||
+    isInitialLoading ||
+    (isSingleRelease && !scopedReleaseId && !hasAutoScopedRef.current)
+  ) {
     return <WorkspaceSkeleton />;
   }
 
@@ -773,19 +791,19 @@ export function WorkspaceView() {
             {scopedReleaseId && scopedReleaseSlim ? (
               <>
                 <div className="mb-4 flex items-center gap-3">
-                  {/* No way back to a catalog that has nothing to choose from
-                      — see isSingleRelease. Returns the moment a second
-                      release exists. */}
-                  {isSingleRelease ? null : (
-                    <button
-                      type="button"
-                      onClick={handleMobileBack}
-                      aria-label="Back to releases"
-                      className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-                    >
-                      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                  )}
+                  {/* Always rendered: even with one release, the user must be
+                      able to get back to the catalog (e.g. to fix a blank
+                      "Untitled release" or start a fresh one). The prior
+                      isSingleRelease-gated hide left single-release
+                      workspaces with no way out at all. */}
+                  <button
+                    type="button"
+                    onClick={handleMobileBack}
+                    aria-label="Back to releases"
+                    className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+                  >
+                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                  </button>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
                       {scopedReleaseSlim.artistName || 'Unassigned artist'}
@@ -879,7 +897,7 @@ export function WorkspaceView() {
                 scopedTasks={scopedTasks}
                 scopedRelease={scopedReleaseSlim}
                 onSelect={handleSelect}
-                onClose={isSingleRelease ? undefined : handleClose}
+                onClose={handleClose}
                 hideRails={hideRailsForLayout}
                 banner={newReleaseGuideBanner}
                 panelStatusUpdateAction={statusUpdateAction}
