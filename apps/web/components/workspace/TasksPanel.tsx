@@ -421,10 +421,14 @@ export function TasksPanel({
    * while the activity list is showing; once a scene (Calendar / Files /
    * Press kit / Song / …) has taken this slot, the SAME button position
    * becomes "Activities" so there's always a way back without hunting for
-   * the scene's own pill again. Rendered in three places on this component's
-   * two mounts — the desktop header row, and (mobile) the standalone row at
-   * the panel's base — the same JSX value can appear in each without
-   * conflict, since each is a distinct render tree.
+   * the scene's own pill again.
+   *
+   * Desktop header row ONLY as of 2026-08-17 — mobile dropped this entirely
+   * (see the base-dock comment further down): the center "+" in
+   * `MobileNavBar` now opens Quick Create directly when a release is scoped,
+   * so a dedicated mobile pill for that action is redundant, and closing a
+   * scene on mobile works by re-tapping its own top-tab/folded-menu entry
+   * (every scene entry point is already a toggle).
    */
   const activitiesToggleButton = activeScene ? (
     <button type="button" onClick={closeScene} className={neutralPillClass}>
@@ -470,8 +474,9 @@ export function TasksPanel({
   // panel's "Collect metadata" nav item is this release's persistent entry
   // point at wide widths (WorkspaceIdentityPanel) and two controls for one
   // scene is noise — see METADATA_PILL_HIDE_CLASS above for exactly where it
-  // retreats. Mobile (2026-08-16): one of the four permanent top tabs, where
-  // that hide class is always inert (it only ever fires at/above `lg`).
+  // retreats. Mobile (2026-08-16): one of the three permanent top tabs
+  // (Calendar / Metadata / Pitch as of 2026-08-17), where that hide class is
+  // always inert (it only ever fires at/above `lg`).
   const metadataButton =
     METADATA_ENABLED && scopedRelease ? (
       <button
@@ -518,9 +523,12 @@ export function TasksPanel({
     ) : null;
 
   // Playlist pitching: browse curator playlists and send this release's
-  // song, with each curator's answer shown beside it. On mobile it stays a
-  // permanent, standalone pill (2026-08-16, founder request) — pitching is
-  // frequent enough to earn its own spot rather than the folded menu.
+  // song, with each curator's answer shown beside it. Mobile (2026-08-17):
+  // one of the three top tabs, alongside Calendar and Collect metadata —
+  // pitching is frequent enough to earn a permanent, always-visible spot
+  // rather than the folded menu (it was its own standalone pill until this
+  // date, when Recap took that row's other slot instead — see the top-tabs
+  // and base-dock comments further down).
   const pitchButton =
     PITCHING_ENABLED && scopedRelease ? (
       <button
@@ -665,42 +673,45 @@ export function TasksPanel({
   ) : null;
 
   /**
-   * Mobile top tabs (2026-08-16, founder request via screenshot reference;
-   * Press kit moved out to the folded "more" menu and Recap moved to the end
-   * 2026-08-17, a same-day founder correction). The permanent,
-   * always-visible entry points on a phone: Calendar, Collect metadata, then
-   * Recap last. Unlike the desktop footer's outbound pair, these do NOT hide
-   * while a scene is open — the whole point of a tab strip is that every tab
-   * stays reachable and the active one is highlighted, matching the
-   * reference (all tabs visible, "Logs" lit). Recap has no "active" concept
-   * (it opens a modal, not a scene) and so never lights up, same as it
-   * always has — placing it last keeps the scene-toggle tabs, which DO
-   * light up, together at the front.
+   * Mobile top tabs (2026-08-16, founder request via screenshot reference).
+   * The permanent, always-visible entry points on a phone: Calendar,
+   * Collect metadata, Pitch. Unlike the desktop footer's outbound pair,
+   * these do NOT hide while a scene is open — the whole point of a tab strip
+   * is that every tab stays reachable and the active one is highlighted,
+   * matching the reference (all tabs visible, "Logs" lit).
    *
-   * Press kit is NOT part of this check any more — it's a folded-menu item
-   * now (see moreMenuActionsRaw below), which is why `epkButton` doesn't
-   * appear here even though the variable still exists (desktop's footer row
-   * still uses it, unchanged).
+   * All three are scene toggles (Pitch included, as of 2026-08-17 — it was a
+   * standalone base-dock pill before that date) and all three light up via
+   * `aria-pressed` when their scene is open.
+   *
+   * Press kit and Recap are NOT part of this row. Press kit moved to the
+   * folded "more" menu 2026-08-17 (which is why `epkButton` doesn't appear
+   * here even though the variable still exists — desktop's footer row still
+   * uses it, unchanged). Recap joined it there the same day: it opens a
+   * modal rather than a scene, so it never lit up here anyway, and the
+   * folded menu is where the other non-scene AI action (Status update)
+   * already lives.
    */
   const hasMobileTopTabs = Boolean(
-    scopedRelease && (calendarButton || metadataButton || recapButton)
+    scopedRelease && (calendarButton || metadataButton || pitchButton)
   );
 
-  // The folded "more" menu (2026-08-16, Press kit added 2026-08-17) —
-  // everything that isn't a top tab or one of the two permanent standalone
-  // pills (New activity/Activities, Pitch). Data, not JSX, so the search box
-  // above the list can filter on a real label. Order mirrors the rough
-  // priority the desktop row already implies: Plan first (it's the one thing
-  // a plan-less release needs), then Cover art, Song and Files — the
-  // release's core identity assets — then the AI actions, then Press kit and
-  // Fan capture together at the end — the two "send this outward" items,
-  // same pairing the desktop footer row keeps them in.
+  // The folded "more" menu (2026-08-16; Press kit and Recap added
+  // 2026-08-17) — everything that isn't a top tab or, on mobile, in the
+  // panel's own scroll body. Data, not JSX, so the search box above the list
+  // can filter on a real label. Order mirrors the rough priority the desktop
+  // row already implies: Plan first (it's the one thing a plan-less release
+  // needs), then Cover art, Song and Files — the release's core identity
+  // assets — then the two AI actions from the removed release detail page
+  // (Status update, Recap) grouped together, then Press kit and Fan capture
+  // together at the end — the two "send this outward" items, same pairing
+  // the desktop footer row keeps them in.
   // Deliberately NOT memoized: each entry's onClick closes over `toggleScene`,
   // which itself closes over the current `activeScene` — memoizing this array
   // risks serving a stale closure (tap "Song" after switching scenes without
   // this array's own deps changing, and it would toggle against a scene that
-  // is no longer the open one). The array is six items at most, so recomputing
-  // it every render costs nothing worth guarding against.
+  // is no longer the open one). The array is eight items at most, so
+  // recomputing it every render costs nothing worth guarding against.
   const moreMenuActionsRaw: (MoreMenuAction | null)[] = [
     showPlanPill && scopedRelease
       ? {
@@ -741,6 +752,19 @@ export function TasksPanel({
           icon: Sparkles,
           onClick: statusUpdateAction.onClick,
           disabled: statusUpdateAction.disabled,
+        }
+      : null,
+    // Recap moved here 2026-08-17 from the mobile top tabs — it opens a
+    // modal, not a scene, so it never lit up like its former neighbours
+    // there anyway, and this groups it with the other AI action (Status
+    // update) from the removed release detail page.
+    recapAction
+      ? {
+          key: 'recap',
+          label: recapAction.label,
+          icon: PartyPopper,
+          onClick: recapAction.onClick,
+          disabled: recapAction.disabled,
         }
       : null,
     EPK_ENABLED && scopedRelease
@@ -812,13 +836,15 @@ export function TasksPanel({
 
       {/* Mobile top tabs (below `lg` ONLY) — 2026-08-16, founder request via
           screenshot reference (a Vercel-style tab strip: every tab stays
-          visible, the active one lit). Corrected same-day, 2026-08-17: Press
-          kit moved out to the folded "more" menu (it isn't reached often
-          enough to earn a permanent tab, and the row read as crowded), and
-          Recap moved to the last position — Calendar and Collect metadata
-          are both scene toggles that light up when open, so they stay
-          together at the front; Recap opens a modal and never lights up,
-          so it reads better trailing the two that do.
+          visible, the active one lit). Corrected 2026-08-17: Press kit moved
+          out to the folded "more" menu (it isn't reached often enough to
+          earn a permanent tab, and the row read as crowded), and — later the
+          same day — Recap swapped places with Pitch: Recap moved into the
+          folded menu (it opens a modal, not a scene, so it never lit up like
+          its neighbours here), and Pitch moved up from the standalone
+          base-dock row into this strip instead, since it IS a scene toggle
+          like Calendar and Collect metadata and reads naturally alongside
+          them.
 
           Horizontally scrollable with the same gutter-matching bleed the old
           dock used (`-mx-4 px-4` stepping up at sm/md): even three pills
@@ -831,7 +857,7 @@ export function TasksPanel({
         <div className="-mx-4 flex shrink-0 gap-2 overflow-x-auto px-4 pb-3 pt-1 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden">
           {calendarButton}
           {metadataButton}
-          {recapButton}
+          {pitchButton}
         </div>
       ) : null}
 
@@ -1004,16 +1030,23 @@ export function TasksPanel({
 
       {/* Mobile base dock (below `lg` ONLY) — redesigned 2026-08-16 (founder
           request, screenshot reference) from "every pill in one wrapping
-          block" into two zones:
-            1. A standalone row: the two things worth a permanent pill of
-               their own even after the top-tabs split above — New
-               activity/Activities (the way back from any scene, so it can
-               never be folded away) and Pitch.
-            2. A folded "more" menu, entered via the search or hamburger
-               icon buttons at the trailing end of that row, holding
-               everything else this panel used to put in the old dock: Plan
-               (while it exists), Song, Files, Status update, Fan capture.
-               Filterable by the search box inside it.
+          block" into a folded "more" menu, entered via the search or
+          hamburger icon buttons, holding everything else this panel used to
+          put in the old dock: Plan (while it exists), Cover art, Song,
+          Files, Status update, Recap, Press kit, Fan capture. Filterable by
+          the search box inside it.
+
+          The row used to also carry two permanent standalone pills — New
+          activity/Activities and Pitch — removed 2026-08-17: Pitch moved up
+          into the top-tabs strip above (it's a scene toggle like Calendar
+          and Collect metadata, so it belongs there now), and New activity
+          was retired outright — the center "+" in `MobileNavBar` opens
+          Quick Create directly when a release is scoped, so a second,
+          release-scoped entry point for the same action here was redundant.
+          Losing "Activities" (the same button's back-from-a-scene state)
+          costs nothing functionally: every scene's own entry point, top tab
+          or folded-menu item alike, is already a toggle — re-tapping it
+          closes the scene just as well.
 
           `sticky` (not `fixed`) for the same reason the old dock used it:
           this is the last child in flow, so a short list leaves it sitting
@@ -1034,13 +1067,6 @@ export function TasksPanel({
         className={`sticky z-20 -mx-4 flex flex-col gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
         <div className="flex flex-wrap items-center gap-2">
-          {/* New activity/Activities and Pitch step aside while the more
-              menu is open — with the expanded search+list panel now sharing
-              this same row's vertical space, leaving both pills in place
-              visually collided with it and read as low-contrast clutter
-              rather than a menu. They return the moment it closes. */}
-          {isMoreMenuOpen ? null : activitiesToggleButton}
-          {isMoreMenuOpen ? null : pitchButton}
           {moreMenuActions.length > 0 ? (
             <div className="ml-auto flex shrink-0 items-center gap-2">
               {/* touch-manipulation on both: disables the browser's own
