@@ -11,17 +11,20 @@ const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true'
  * auth/the command-center fetch are in flight (same inline-swap rationale
  * as `WorkspaceSkeleton` — no route-segment `loading.tsx` file).
  *
- * Mirrors the CURRENT Chappi home: a Gemini/Perplexity-style empty state
- * sitting in the lower two-thirds of the page (one plain question → input
- * bar → quick-action chips, chips shown lg+ only) via the same unequal
- * `chappi-empty-spacer-top`/`-bottom` classes ChappiConversation uses,
- * inside the SAME definite-height wrapper ChappiPageClient uses, so the
- * resolved page lands exactly where the skeleton stood. The conversation
- * store is ephemeral (a reload always starts empty), so the empty state is
+ * Mirrors the CURRENT Chappi home: a Gemini-style empty state built as TWO
+ * regions — the question centered in a `flex-1` region, the input bar (plus
+ * the lg+ chips row) pinned below it as a `shrink-0` sibling — inside the
+ * SAME definite-height wrapper ChappiPageClient uses, so the resolved page
+ * lands exactly where the skeleton stood. The conversation store is
+ * ephemeral (a reload always starts empty), so the empty state is
  * effectively the only shape a fresh load resolves to. This skeleton only
  * ever represents the `page` variant (ChappiPageClient) — the dock/rail
  * `panel` variant has no loading state of its own to mirror and keeps its
  * own bottom-anchored empty state.
+ *
+ * This file hand-copies that markup rather than sharing a component with
+ * ChappiConversation, so the two only stay aligned if edited together —
+ * if the composer moves there, move it here in the same commit.
  *
  * Reserves the collapse-button row too (desktop only, `hidden lg:flex` —
  * matching the real page's row exactly): unlike the invite banner below,
@@ -43,24 +46,25 @@ export function ChappiPageSkeleton() {
       <div className="hidden h-7 shrink-0 justify-end lg:flex">
         <SkeletonBlock className="h-7 w-7" />
       </div>
-      <div className="flex min-h-0 flex-1 flex-col items-center px-2">
-        <div aria-hidden="true" className="chappi-empty-spacer-top min-h-0 shrink-0" />
-
-        {/* The single question line. */}
-        <SkeletonBlock className="h-6 w-64 sm:w-80" />
-
-        {/* Input bar — same width cap, radius and height as the real form
-            (max-w-2xl, rounded-full, p-1.5 around a 36px send button). */}
-        <div className="mt-4 h-12 w-full max-w-2xl rounded-full border border-stroke-default bg-bg-surface" />
-
-        {/* Quick-action chips row — lg+ only, matching the real component. */}
-        <div className="mt-4 hidden flex-wrap items-center justify-center gap-2 lg:flex">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <SkeletonBlock key={`chappi-chip-${index}`} className="h-7 w-24" />
-          ))}
+      <div className="flex min-h-0 flex-1 flex-col px-2">
+        {/* The single question line, centered in the space the composer
+            leaves — mirrors ChappiConversation's own flex-1 region. */}
+        <div className="flex min-h-0 flex-1 items-center justify-center">
+          <SkeletonBlock className="h-6 w-64 sm:w-80" />
         </div>
 
-        <div aria-hidden="true" className="chappi-empty-spacer-bottom min-h-0 shrink-0" />
+        <div className="mt-3 shrink-0">
+          {/* Input bar — same width cap, radius and height as the real form
+              (max-w-2xl, rounded-full, p-1.5 around a 36px send button). */}
+          <div className="mx-auto h-12 w-full max-w-2xl rounded-full border border-stroke-default bg-bg-surface" />
+
+          {/* Quick-action chips row — lg+ only, matching the real component. */}
+          <div className="mt-4 hidden flex-wrap items-center justify-center gap-2 lg:flex">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <SkeletonBlock key={`chappi-chip-${index}`} className="h-7 w-24" />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

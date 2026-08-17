@@ -619,25 +619,31 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     </form>
   );
 
-  // Empty landing: one plain question sits right above the input — the same
-  // shape every mainstream AI chat box has settled on (ChatGPT, Claude,
-  // Gemini's "Any new ideas to explore?", Perplexity's "What do you want to
-  // know?"). No greeting, no eyebrow. Quick-action chips render below the
-  // box, but ONLY at lg+: on a phone they were the "recommends" cluttering a
-  // screen that already has a keyboard eating half of it, so below lg the
-  // box and its one question are the entire surface.
+  // Empty landing: one plain question plus the composer — the same shape
+  // every mainstream AI chat box has settled on (ChatGPT, Claude, Gemini's
+  // "Any new ideas to explore?", Perplexity's "What do you want to know?").
+  // No greeting, no eyebrow. Quick-action chips render below the box, but
+  // ONLY at lg+: on a phone they were the "recommends" cluttering a screen
+  // that already has a keyboard eating half of it, so below lg the box and
+  // its one question are the entire surface.
   //
-  // Vertical position differs by surface: the full page (`page` variant)
-  // sits in the lower two-thirds of the screen — the actual Gemini/
-  // Perplexity home shape (confirmed against a Gemini screenshot: the
-  // question sits well below dead-center, with a shorter gap beneath the
-  // input than above the question). A dead-center 50/50 split, tried first,
-  // read as floating in the middle rather than landing where a chat box
-  // actually sits. Two unequal flex spacers (2 above the block, 1 below)
-  // produce that ~2/3-down bias without hand-tuned pixel offsets. The
-  // compact dock/rail panel (`panel` variant) keeps bottom-anchoring
-  // instead — it has its own footer to sit just above, and spacer ratios
-  // tuned for a full screen would look wrong in a ~380px-tall box.
+  // THE QUESTION AND THE COMPOSER ARE TWO INDEPENDENT REGIONS ON THE PAGE
+  // VARIANT, and that is the entire point — do not merge them back into one
+  // positioned block. Three attempts (2026-08-17) did exactly that and all
+  // three were rejected: bottom-anchoring the pair dragged the question down
+  // with it, dead-centering the pair left the composer floating mid-screen,
+  // and biasing the pair ~2/3 down with unequal flex spacers still left a
+  // dead band beneath it. Measured against the Gemini reference, the two are
+  // simply not adjacent: the composer is pinned hard to the bottom edge and
+  // the question is centered in the space ABOVE it, with a large gap
+  // between. So: a `flex-1` region owns the question, a `shrink-0` sibling
+  // owns the composer. This is the same structure the active-conversation
+  // branch below already uses, which is also why the composer no longer
+  // jumps when the first message is sent.
+  //
+  // The compact dock/rail panel (`panel` variant) keeps bottom-anchoring the
+  // pair instead — it has its own footer to sit just above, and a full-height
+  // split would strand the question at the top of a ~380px box.
   if (!hasMessages) {
     // The chips row is shared by both branches below (`hidden lg:flex`): the
     // side rail also mounts variant="panel" at lg+ (ChappiSidePanel), so
@@ -664,7 +670,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     );
     if (isPanel) {
       return (
-        <div className="chappi-empty-state flex h-full min-h-0 flex-col items-center justify-end overflow-y-auto px-2 pb-2 pt-4 text-center">
+        <div className="flex h-full min-h-0 flex-col items-center justify-end overflow-y-auto px-2 pb-2 pt-4 text-center">
           <h1 className="font-display text-base font-semibold tracking-tight text-content-primary">
             What do you want to get done today?
           </h1>
@@ -673,19 +679,22 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         </div>
       );
     }
+    // Two independent regions, NOT one positioned block — this is the whole
+    // fix, and reverting it to a single block with any `justify-*` puts the
+    // composer back in mid-air. No `items-center` on the container either:
+    // it would size both regions to their content width instead of letting
+    // them stretch, which is why the old markup needed `w-full` to undo it.
     return (
-      <div className="chappi-empty-state flex h-full min-h-0 flex-col items-center px-2 text-center">
-        {/* Unequal spacers, not justify-center: see the comment above. The
-            growth values are CSS classes, not inline styles, so globals.css's
-            keyboard-open override can collapse them (an inline style would
-            beat any stylesheet rule short of !important). */}
-        <div aria-hidden="true" className="chappi-empty-spacer-top min-h-0 shrink-0" />
-        <h1 className="font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
-          What do you want to get done today?
-        </h1>
-        <div className="mt-4 w-full max-w-2xl">{inputForm}</div>
-        {chipsRow}
-        <div aria-hidden="true" className="chappi-empty-spacer-bottom min-h-0 shrink-0" />
+      <div className="flex h-full min-h-0 flex-col px-2 text-center">
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto">
+          <h1 className="font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
+            What do you want to get done today?
+          </h1>
+        </div>
+        <div className="mt-3 shrink-0">
+          <div className="mx-auto w-full max-w-2xl">{inputForm}</div>
+          {chipsRow}
+        </div>
       </div>
     );
   }
