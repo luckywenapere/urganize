@@ -8,6 +8,7 @@ import { installAccessRedirect } from './access-redirect';
 import { isAllowlistedEmail } from './paywall-allowlist';
 import { isNativePlatform } from './platform';
 import { resetSceneData } from '@/stores/useSceneDataStore';
+import { resetSceneMemory } from '@/lib/scene-memory';
 
 // Custom URL scheme registered in the native shell's Info.plist /
 // AndroidManifest.xml (apps/mobile) — see docs/mobile/auth-setup.md. Google
@@ -810,6 +811,12 @@ if (typeof window !== 'undefined') {
       // disk) is what stops account B, signing in on the same device, from
       // seeing a frame of account A's metadata or files.
       resetSceneData();
+      // Which scene each release was last showing (lib/scene-memory.ts) is
+      // separate from the cached scene DATA above, but the same rule
+      // applies: logging out and back in — even in the same tab, same or
+      // different account — must always start every release at Activities,
+      // never resume whatever was open in the session that just ended.
+      resetSceneMemory();
       useAuthStore.setState({
         user: null,
         isAuthenticated: false,

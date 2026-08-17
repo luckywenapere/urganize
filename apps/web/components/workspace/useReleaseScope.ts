@@ -2,7 +2,18 @@
 
 import { useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { clearSceneScopedParams } from './useSceneOverlay';
+import { clearSceneScopedParams, SCENE_NAMES, type SceneName } from './useSceneOverlay';
+import { recallScene, rememberScene } from '@/lib/scene-memory';
+
+/** The `?scene=` param, owned by useSceneOverlay — read here so the outgoing
+ * release's current scene can be captured before it's overwritten below (see
+ * SCENE_PARAM in that file; kept as a literal for the same reason
+ * RELEASE_PARAM is kept as a literal there — two otherwise-independent
+ * sibling hooks, not a real import cycle). */
+const SCENE_PARAM = 'scene';
+
+const isSceneName = (value: string | null): value is SceneName =>
+  Boolean(value) && (SCENE_NAMES as readonly string[]).includes(value as string);
 
 /**
  * URL param that scopes the task list to a single release.
@@ -51,6 +62,7 @@ export function useReleaseScope(): ReleaseScope {
   const setScope = useCallback(
     (releaseId: string | null, options?: SetScopeOptions) => {
       const params = new URLSearchParams(searchParams.toString());
+      const previousReleaseId = params.get(SCOPE_PARAM);
 
       // Changing which release is scoped invalidates any scene-internal params
       // left over from the previous one (the content calendar's tab + month —
@@ -58,8 +70,30 @@ export function useReleaseScope(): ReleaseScope {
       // survive into release B and trip B's "that calendar no longer exists"
       // warning as a false positive. Only clears on an actual change, so
       // re-scoping to the same release still resumes its calendar view.
-      if (params.get(SCOPE_PARAM) !== releaseId) {
+      if (previousReleaseId !== releaseId) {
+        // Remember what the release we're LEAVING was showing (its `scene`
+        // param, or none = Activities) before it's touched below — see
+        // lib/scene-memory.ts. This and useSceneOverlay.openScene's matching
+        // hook are the two "release is changing" choke points, the same pair
+        // SCENE_SCOPED_PARAMS already uses.
+        if (previousReleaseId) {
+          const outgoingScene = params.get(SCENE_PARAM);
+          rememberScene(previousReleaseId, isSceneName(outgoingScene) ? outgoingScene : null);
+        }
+
         clearSceneScopedParams(params);
+
+        // Resume whatever the release we're ENTERING last showed this
+        // session. A release never visited this session (or a fresh login,
+        // which wipes all of it — see resetSceneMemory) starts at
+        // Activities, matching a plain release-card click's existing
+        // default.
+        const resumedScene = releaseId ? recallScene(releaseId) : null;
+        if (resumedScene) {
+          params.set(SCENE_PARAM, resumedScene);
+        } else {
+          params.delete(SCENE_PARAM);
+        }
       }
 
       if (releaseId) {
