@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { rememberScene } from '@/lib/scene-memory';
 
 /**
  * URL param naming which release "scene" is open as an overlay window over the
@@ -87,13 +88,25 @@ export function useSceneOverlay(): SceneOverlay {
   const openScene = useCallback(
     (scene: SceneName, releaseId: string) => {
       const params = new URLSearchParams(searchParams.toString());
+      const previousReleaseId = params.get(RELEASE_PARAM);
 
       // Opening a scene for a DIFFERENT release than the URL currently scopes
       // must drop the previous release's scene-internal params — see
       // SCENE_SCOPED_PARAMS. Clears ALL of them, not just the incoming scene's,
       // so residue can't survive an intermediate hop (open Metadata for B while
       // A's calendar params linger, then open B's calendar).
-      if (params.get(RELEASE_PARAM) !== releaseId) {
+      if (previousReleaseId !== releaseId) {
+        // A release change too — remember what the OUTGOING release was
+        // showing before its scene is overwritten below (see
+        // lib/scene-memory.ts and the matching hook in
+        // useReleaseScope.setScope, the two "release is changing" choke
+        // points). No restore-lookup needed for the incoming release here:
+        // `scene` (the argument) is about to overwrite whatever it last had
+        // regardless.
+        if (previousReleaseId) {
+          const outgoingScene = params.get(SCENE_PARAM);
+          rememberScene(previousReleaseId, isSceneName(outgoingScene) ? outgoingScene : null);
+        }
         clearSceneScopedParams(params);
       }
 
