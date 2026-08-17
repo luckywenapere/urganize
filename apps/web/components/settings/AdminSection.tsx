@@ -17,6 +17,11 @@ import { panelClass } from './panelClass';
  * with — see that store's field comment for why it's never cached (a stale
  * `true` would render a link that 403s on the server-side `verifyAdmin`
  * re-check every /admin route already does).
+ *
+ * (Comment-only touch, 2026-08-17: this file's last real edit was in the PR
+ * above; this line exists only to give a fresh commit a real diff inside
+ * apps/web, verifying the deploy pipeline after a GitHub webhook outage that
+ * had been silently dropping pushes to Vercel — see the commit message.)
  */
 export function AdminSection() {
   const isAdmin = useWorkspaceIdentityStore((state) => state.isAdmin);
