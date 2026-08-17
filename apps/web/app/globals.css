@@ -506,23 +506,30 @@ html {
      (wheel / trackpad / touch / keys) — the mobile-app feel. Inner scroll
      regions keep their own scrollbars untouched. */
   scrollbar-width: none;
-  /* Found 2026-08-17: `body` alone had `overflow-x: hidden` below, but that
-     only clips paint — it does nothing to stop a touch drag from panning the
-     whole document sideways. On mobile Safari/Chrome and the Capacitor
-     webview, any horizontal swipe (even one that starts on a non-scrolling
-     row, like a tab strip whose pills all fit on screen) was free to rubber-
-     band or edge-swipe-navigate the entire page, which read as the app
-     sliding to reveal a sliver of itself off-canvas. `overflow-x: hidden`
-     here (missing until now — only `body` had it) plus `overscroll-behavior-x`
-     stop the elastic/navigation chaining at the document boundary; `touch-
-     action: pan-y` is the actual fix, since it tells the browser at the
-     gesture-recognition level (not just the paint level) that the root only
-     accepts vertical panning. Elements that intentionally scroll
+  /* Found 2026-08-17, corrected same day: this rule originally also set
+     `overflow-x: hidden` here, on the theory that `body` alone having it
+     "only clips paint" and doesn't stop a touch drag from panning the whole
+     document sideways. That part is true, but the fix broke something
+     bigger: giving the ROOT element an explicit `overflow` value is the
+     textbook WebKit/Safari trigger for `position: sticky` failing entirely
+     on descendants — the workspace's mobile pill dock (and the folded "more"
+     menu panel inside it) stopped sticking to the screen the moment this
+     shipped, reported live within hours. `body` already had `overflow-x:
+     hidden` before this rule ever existed, and sticky worked fine with only
+     that — the regression tracks exactly to `<html>` gaining its own
+     `overflow-x` on top of it, not to the pre-existing `body` rule.
+     `overflow-x: hidden` is now GONE from this rule for that reason.
+     `overscroll-behavior-x: none` and `touch-action: pan-y` remain — neither
+     one touches the CSS overflow/scrolling-box model the way `overflow-x`
+     does (they only govern touch-gesture recognition and scroll-chaining at
+     a boundary), so they carry no sticky-positioning risk, and `touch-action:
+     pan-y` was already the mechanism the original comment called "the actual
+     fix" for the swipe-drift bug — `overflow-x: hidden` here was always the
+     redundant, riskier half of that fix. Elements that intentionally scroll
      horizontally (tab rows, pill strips, calendar grids — anything using
-     Tailwind's `overflow-x-auto`) opt back into horizontal panning below;
-     without that override this would also break them. */
+     Tailwind's `overflow-x-auto`) still opt back into horizontal panning
+     below. */
   overscroll-behavior-x: none;
-  overflow-x: hidden;
   touch-action: pan-y;
 }
 
