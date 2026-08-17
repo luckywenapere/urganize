@@ -4,13 +4,6 @@ import { useRouter } from 'next/navigation';
 import { Maximize2, MessageCircle, RotateCcw, X } from 'lucide-react';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { ChappiConversation } from './ChappiConversation';
-import { isNativePlatform } from '@/lib/platform';
-import { openExternalUrl } from '@/lib/external-link';
-
-// Direct line to the founder — same number SupportChat uses. With the rail
-// replacing the floating dock at lg+, the human-support entry lives in this
-// footer on desktop (AI-first front door, human fallback one tap deeper).
-const WHATSAPP_URL = 'https://wa.me/2347067367057';
 
 // Same fixed width the outer animating column resolves to when open — kept
 // as a module const so the outer (animated `width`) and inner (static) card
@@ -135,24 +128,6 @@ export function ChappiSidePanel({ onNewRelease }: ChappiSidePanelProps) {
         <div className="min-h-0 flex-1 px-3 pb-3 pt-2">
           <ChappiConversation variant="panel" onNewRelease={onNewRelease} />
         </div>
-
-        {/* Human fallback — mirrors the dock's footer so desktop (where the
-            dock is hidden and this rail replaces it) keeps a support entry. */}
-        <a
-          href={WHATSAPP_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Chat with the founder — report a bug or contact support"
-          onClick={(event) => {
-            if (isNativePlatform()) {
-              event.preventDefault();
-              void openExternalUrl(WHATSAPP_URL);
-            }
-          }}
-          className="flex shrink-0 items-center justify-center gap-1.5 border-t border-stroke-subtle px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
-        >
-          Chat with the founder
-        </a>
       </div>
     </aside>
   );

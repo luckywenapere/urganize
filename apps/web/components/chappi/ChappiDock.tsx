@@ -6,19 +6,10 @@ import { Maximize2, MessageCircle, RotateCcw, X } from 'lucide-react';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { ChappiConversation } from './ChappiConversation';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
-import { isNativePlatform } from '@/lib/platform';
-import { openExternalUrl } from '@/lib/external-link';
-
-// Direct line to the founder — same number SupportChat uses. When the
-// assistant flag is on, the standalone WhatsApp pill is replaced by this dock
-// and the human-support entry lives in the panel footer instead (AI-first
-// front door, human fallback one tap deeper).
-const WHATSAPP_URL = 'https://wa.me/2347067367057';
 
 // When on, MobileNavBar's UrgAns tab replaces this dock's whole reason to
 // exist below lg (the dock has no lg+ UI to begin with — the side rail owns
-// that range). The founder link moves to a footer row on the assistant page
-// itself; see ChappiPageClient.tsx.
+// that range).
 const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
 
 // Open-state persistence — same SSR-safe pattern as TasksPanel's bucket
@@ -39,9 +30,8 @@ type ChappiDockProps = {
  * At lg+ the side rail (ChappiSidePanel, mounted app-wide by AppShell) owns
  * the assistant instead — URG-210 retired this dock's desktop role, which
  * also retired its old catalog-only `?chat=1` special-casing. Closed: an
- * "Ask UrgAns" launcher pill (the corner SupportChat's WhatsApp pill
- * occupied — that link now lives in this panel's footer). Open: a fixed
- * panel hosting ChappiConversation in its compact `panel` variant.
+ * "Ask UrgAns" launcher pill. Open: a fixed panel hosting ChappiConversation
+ * in its compact `panel` variant.
  *
  * The conversation is the SAME global useChappiStore the /dashboard/urgans
  * page and the side rail read — expand mid-conversation and the full page
@@ -199,24 +189,6 @@ export function ChappiDock({ onNewRelease }: ChappiDockProps) {
       <div className="min-h-0 flex-1 px-3 pb-3 pt-2">
         <ChappiConversation variant="panel" onNewRelease={onNewRelease} />
       </div>
-
-      {/* Human fallback — the WhatsApp founder line the standalone pill used
-          to carry. Same URL, same accessible name semantics. */}
-      <a
-        href={WHATSAPP_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Chat with the founder — report a bug or contact support"
-        onClick={(event) => {
-          if (isNativePlatform()) {
-            event.preventDefault();
-            void openExternalUrl(WHATSAPP_URL);
-          }
-        }}
-        className="flex shrink-0 items-center justify-center gap-1.5 border-t border-stroke-subtle px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
-      >
-        Chat with the founder
-      </a>
     </div>
   );
 }

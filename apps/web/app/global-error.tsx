@@ -1,6 +1,12 @@
 'use client';
 
-import { SUPPORT_WHATSAPP_URL } from '@/lib/support-contact';
+// The product's one support channel: a WhatsApp deep link to the founder.
+// Inlined rather than imported (lib/support-contact.ts was removed along with
+// the recurring "Chat with the founder" UI feature) — this page's own rule 2
+// below is "only a plain string constant is imported", and this crash-fallback
+// escape hatch is deliberately kept: it's the last-resort contact when the
+// whole app has failed to start, not the removed feature.
+const SUPPORT_WHATSAPP_URL = 'https://wa.me/2347067367057';
 
 // The last line of defence: a crash in the root layout itself, which app/error.tsx
 // cannot catch because it renders inside that layout. Next replaces the entire

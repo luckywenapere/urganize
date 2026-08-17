@@ -18,8 +18,9 @@
 --      lookup-or-create regression has appeared.
 --   3. All four legacy readers of profiles.artist_name documented in Phase 0
 --      #6 have been retired or repointed:
---        a. components/support/SupportChat.tsx — drop the user.artist_name
---           attribute from the Tawk.to attributes payload (Lines 102/111).
+--        a. components/support/SupportChat.tsx — RESOLVED: this component and
+--           the whole "Chat with the founder" feature were removed outright
+--           (see CLAUDE.md), so this reader no longer exists.
 --        b. app/api/admin/pricing-validation/route.ts — drop the
 --           profile.artist_name projection from the admin survey (Lines 43,
 --           58, 71).
