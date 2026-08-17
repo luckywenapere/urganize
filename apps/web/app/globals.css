@@ -506,6 +506,24 @@ html {
      (wheel / trackpad / touch / keys) — the mobile-app feel. Inner scroll
      regions keep their own scrollbars untouched. */
   scrollbar-width: none;
+  /* Found 2026-08-17: `body` alone had `overflow-x: hidden` below, but that
+     only clips paint — it does nothing to stop a touch drag from panning the
+     whole document sideways. On mobile Safari/Chrome and the Capacitor
+     webview, any horizontal swipe (even one that starts on a non-scrolling
+     row, like a tab strip whose pills all fit on screen) was free to rubber-
+     band or edge-swipe-navigate the entire page, which read as the app
+     sliding to reveal a sliver of itself off-canvas. `overflow-x: hidden`
+     here (missing until now — only `body` had it) plus `overscroll-behavior-x`
+     stop the elastic/navigation chaining at the document boundary; `touch-
+     action: pan-y` is the actual fix, since it tells the browser at the
+     gesture-recognition level (not just the paint level) that the root only
+     accepts vertical panning. Elements that intentionally scroll
+     horizontally (tab rows, pill strips, calendar grids — anything using
+     Tailwind's `overflow-x-auto`) opt back into horizontal panning below;
+     without that override this would also break them. */
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
 }
 
 html::-webkit-scrollbar {
@@ -520,6 +538,17 @@ body {
   background: var(--bg-base);
   letter-spacing: -0.01em;
   overflow-x: hidden;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
+}
+
+/* Opt back into horizontal touch panning for the app's intentional
+   horizontal scrollers (settings tabs, workspace scene pills, admin nav,
+   calendar tabs, etc.) — see the note on `html` above. `touch-action` on a
+   descendant wins over the ancestor for touches starting inside it, so this
+   does not reopen the whole-document swipe the rule above closes. */
+.overflow-x-auto {
+  touch-action: pan-x;
 }
 
 html[data-theme='dark'] body {
