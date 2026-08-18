@@ -8,6 +8,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { RAIL_OPEN_KEY, RAIL_OPEN_VERSION, useChappiStore } from '@/stores/useChappiStore';
 import { readPersistedState } from '@/lib/persisted-state';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
+import { AndroidAppBanner } from '@/components/app/AndroidAppBanner';
 import { AppTopbar } from '@/components/app/AppTopbar';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
@@ -99,6 +100,12 @@ const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'tru
 const IDENTITY_PANEL_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' &&
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
+
+// Soft, dismissible prompt steering Android browser visitors toward the
+// native app (docs/mobile/*.md) instead of mobile web. Shown app-wide,
+// independent of auth/route state — deliberately never inside the native
+// shell itself (AndroidAppBanner's own isAndroidBrowser() check excludes it).
+const ANDROID_APP_BANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_ANDROID_APP_BANNER === 'true';
 
 // Once-per-session arming for the side rail: landing on the assistant page
 // (the post-auth front door when the flag is on — see lib/home-path.ts)
@@ -337,6 +344,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     // provider is available for any future "save succeeded" / "upload failed"
     // moments that currently render inline toast boxes.
     <ToastProvider>
+    {ANDROID_APP_BANNER_ENABLED ? (
+      <ErrorBoundary name="android-app-banner" onError={reportBoundaryError}>
+        <AndroidAppBanner />
+      </ErrorBoundary>
+    ) : null}
     {/* Reloads a tab left holding a previous deployment's chunk URLs, which
         otherwise presents as "the page scrolls but nothing is clickable"
         after a Back navigation. Renders nothing — see lib/chunk-recovery.ts. */}
