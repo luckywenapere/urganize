@@ -76,6 +76,12 @@ type CreateReleaseModalProps = {
        * route defaulted it. Callers use it for copy that names the release
        * without waiting on the store resync. */
       title?: string | null;
+      /** The playbook picked in this modal's type picker, or null when the
+       * picker never rendered (single-playbook environments, where the row's
+       * 'single' is a default, not an answer). Callers hand it to the planner
+       * intake as a prefill so its own type question isn't asked twice —
+       * prefill only what was actually asked. */
+      releaseType?: DbReleaseType | null;
     }
   ) => void;
 };
@@ -366,6 +372,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
       onCreated(releaseId, plan || 'template', {
         plannerPending: payload.plannerPending === true,
         title: createdTitle || null,
+        releaseType: SHOW_TYPE_PICKER ? releaseType : null,
       });
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Could not create release.');

@@ -16,6 +16,7 @@ import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { NavigationTracker } from '@/components/app/NavigationTracker';
 import { ToastProvider } from '@/components/shared/ToastProvider';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { usePlannerStore } from '@/stores/usePlannerStore';
 import { ChunkRecoveryBridge } from '@/components/providers/ChunkRecoveryBridge';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
 import { CapacitorPushBridge } from '@/components/providers/CapacitorPushBridge';
@@ -438,12 +439,28 @@ export function AppShell({ children }: { children: ReactNode }) {
       <CreateReleaseModal
         open={isCreateReleaseOpen}
         onClose={closeCreateRelease}
-        onCreated={() => {
+        onCreated={(releaseId, _plan, result) => {
           // Stay on whatever page the user was on (no forced redirect); just
           // close and refresh the release store so the new release shows up.
           // loadCommandCenter refreshes quietly when data already exists.
           closeCreateRelease();
           void useReleaseStore.getState().loadCommandCenter();
+          // One exception to "stay put": a rollout-plan creation continues
+          // straight into the planner intake (mounted right below), the same
+          // settled call the workspace's create flow makes — planning is the
+          // whole point of having chosen a rollout plan. No navigation here:
+          // dismissing the intake leaves the user where they were, and
+          // submitting it navigates to the plan scene itself. The type picked
+          // in the modal rides along so the intake doesn't ask it again.
+          if (PLANNER_ENABLED && result?.plannerPending) {
+            usePlannerStore.getState().openIntake({
+              source: 'empty_state',
+              releaseId,
+              ...(result.releaseType
+                ? { prefill: { releaseType: result.releaseType } }
+                : {}),
+            });
+          }
         }}
       />
       {PLANNER_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (

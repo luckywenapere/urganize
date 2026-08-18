@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.56.3",
+    date: "August 18, 2026",
+    highlights: [
+      "Creating a release with a rollout plan no longer asks twice whether it's a single, EP or album. You answer once in the create window, and the planner walkthrough carries that answer forward — it now starts at the artist question, six questions instead of seven.",
+      "Choosing a rollout plan now takes you straight into the planning questions no matter where you created the release from — the workspace, UrgAns, or the new-release button in the bar — instead of only from the workspace.",
+    ],
+  },
+  {
     version: "0.56.2",
     date: "August 18, 2026",
     highlights: [

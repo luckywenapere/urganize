@@ -26,7 +26,13 @@ import {
   savePlannerIntakeDraft,
   type PlannerIntakeDraft,
 } from '@/lib/planner-intake-draft';
-import { INTAKE_STEPS, StepBody, TOTAL_STEPS, type StepIndex } from './intake-steps';
+import {
+  INTAKE_STEPS,
+  StepBody,
+  TOTAL_STEPS,
+  getStepKicker,
+  type StepIndex,
+} from './intake-steps';
 
 /**
  * The guided intake: one question per screen, seven at most, then UrgAns
@@ -87,6 +93,14 @@ export function PlannerIntakeModal() {
   const open = Boolean(intakePayload);
   const isBusy = view === 'starting';
 
+  // When the release type arrived as a prefill — the create modal's picker or
+  // an UrgAns chip preset already asked — the intake starts past question 1
+  // and never shows it: asking again is the double-ask this exists to avoid,
+  // and re-answering differently would silently overwrite the row's type at
+  // generate time. No prefill (Plan card, note) → the intake is the one ask.
+  const firstStep: StepIndex = intakePayload?.prefill?.releaseType ? 1 : 0;
+  const visibleSteps = TOTAL_STEPS - firstStep;
+
   // The artist this release is for. The identity card knows it; the profile is
   // the fallback for a workspace that has not named one yet.
   const knownArtistName = identityArtist || profile?.artist_name || '';
@@ -119,7 +133,8 @@ export function PlannerIntakeModal() {
     };
 
     setDraft(next);
-    setStep(0);
+    // A prefilled release type skips its question entirely — see firstStep.
+    setStep(prefill.releaseType ? 1 : 0);
     setView('steps');
     setError('');
     setHydrated(true);
@@ -212,7 +227,8 @@ export function PlannerIntakeModal() {
   const goBack = () => {
     if (isBusy) return;
     setError('');
-    setStep((current) => (current > 0 ? ((current - 1) as StepIndex) : current));
+    // Floors at firstStep, not 0 — Back must never reach a skipped question.
+    setStep((current) => (current > firstStep ? ((current - 1) as StepIndex) : current));
   };
 
   const submit = async () => {
@@ -353,7 +369,7 @@ export function PlannerIntakeModal() {
                 UrgAns planner
               </p>
               <p className="mt-1 font-mono text-[11px] text-content-tertiary">
-                {stepMeta.kicker}
+                {getStepKicker(step, firstStep)}
               </p>
             </div>
             <IconButton
@@ -369,14 +385,14 @@ export function PlannerIntakeModal() {
 
           <div
             className="mt-4 flex items-center gap-1.5"
-            aria-label={`Question ${step + 1} of ${TOTAL_STEPS}`}
+            aria-label={getStepKicker(step, firstStep)}
           >
-            {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
+            {Array.from({ length: visibleSteps }).map((_, index) => (
               <span
                 key={index}
                 aria-hidden="true"
                 className={`h-1 flex-1 rounded-full transition-colors duration-base ease-standard ${
-                  index <= step ? 'bg-brand' : 'bg-stroke-strong'
+                  index <= step - firstStep ? 'bg-brand' : 'bg-stroke-strong'
                 }`}
               />
             ))}
@@ -407,7 +423,7 @@ export function PlannerIntakeModal() {
           </div>
 
           <p aria-live="polite" role="status" className="sr-only">
-            {`Question ${step + 1} of ${TOTAL_STEPS}: ${stepMeta.title}`}
+            {`${getStepKicker(step, firstStep)}: ${stepMeta.title}`}
           </p>
 
           {error ? (
@@ -419,7 +435,7 @@ export function PlannerIntakeModal() {
 
         <div className="shrink-0 border-t border-stroke-subtle p-4 sm:p-5">
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-            {step > 0 ? (
+            {step > firstStep ? (
               <button
                 type="button"
                 onClick={goBack}

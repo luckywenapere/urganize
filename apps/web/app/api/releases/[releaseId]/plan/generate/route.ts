@@ -122,10 +122,13 @@ export async function POST(
   // --- Save the answers first -------------------------------------------------
 
   // The intake's release type is also written to the ROW, not just into
-  // release_context. Intake Q1 is the manager's authoritative answer, and a
-  // release created from the modal or Chappi before being planned still says
-  // 'single' — leaving that stale would show "Single" on the public press kit
-  // for an album. Safe against double-instantiation: a planner release carries
+  // release_context. The intake's answer is the manager's authoritative one,
+  // and a release created from Chappi (whose create_release collects no type)
+  // still says 'single' — leaving that stale would show "Single" on the public
+  // press kit for an album. A release created from the modal's type picker
+  // agrees by construction: that picker's answer is prefilled into the intake
+  // and its question skipped, so this write can't downgrade it (2026-08-18,
+  // the double-ask fix). Safe against double-instantiation: a planner release carries
   // planner_pending, never template_pending, so the schedule route never builds
   // a template plan for it. The value is already validated to the DB enum by
   // parseReleasePlanIntake, so the write cannot fail on the enum.
