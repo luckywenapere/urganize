@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 
-const VIDEO_ID = "nfOjPlmDpFw";
-const START_SECONDS = 10;
+const VIDEO_ID = "8yDIA3rtC20";
+const START_SECONDS = 0;
 
 // Click-to-play facade: a static thumbnail instead of an eagerly-loaded
 // iframe. The real YouTube embed pulls in its full player bundle (plus
