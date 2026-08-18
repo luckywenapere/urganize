@@ -36,18 +36,27 @@ export type StepIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export const TOTAL_STEPS = 7;
 
-export const INTAKE_STEPS: Record<StepIndex, { title: string; kicker: string }> = {
-  0: { title: 'What are you releasing?', kicker: `Question 1 of ${TOTAL_STEPS}` },
-  1: { title: "Who's the artist?", kicker: `Question 2 of ${TOTAL_STEPS}` },
-  2: { title: 'When does it drop?', kicker: `Question 3 of ${TOTAL_STEPS}` },
-  3: { title: "What's already done?", kicker: `Question 4 of ${TOTAL_STEPS}` },
-  4: { title: 'What matters most this time?', kicker: `Question 5 of ${TOTAL_STEPS}` },
-  5: { title: "What's the promo budget?", kicker: `Question 6 of ${TOTAL_STEPS}` },
-  6: {
-    title: 'Anything else UrgAns should know?',
-    kicker: `Question 7 of ${TOTAL_STEPS}`,
-  },
+export const INTAKE_STEPS: Record<StepIndex, { title: string }> = {
+  0: { title: 'What are you releasing?' },
+  1: { title: "Who's the artist?" },
+  2: { title: 'When does it drop?' },
+  3: { title: "What's already done?" },
+  4: { title: 'What matters most this time?' },
+  5: { title: "What's the promo budget?" },
+  6: { title: 'Anything else UrgAns should know?' },
 };
+
+/**
+ * "Question N of M", computed rather than baked into INTAKE_STEPS: when the
+ * release type arrives as a prefill (the create modal's picker already asked),
+ * the intake starts at step 1 and only six questions are ever shown — the
+ * numbering has to agree with what the user actually gets asked, so it shifts
+ * by the first visible step. (Same idea as the onboarding wizard's
+ * flag-conditional TOTAL_STEPS.)
+ */
+export function getStepKicker(step: StepIndex, firstStep: StepIndex): string {
+  return `Question ${step + 1 - firstStep} of ${TOTAL_STEPS - firstStep}`;
+}
 
 const helperClass = 'mt-3 text-xs leading-5 text-content-secondary';
 const inputClass =
