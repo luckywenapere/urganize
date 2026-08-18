@@ -141,7 +141,16 @@ export async function POST(req: NextRequest) {
     .eq('user_id', user.id)
     .eq('status', 'active');
 
-  await supabaseAdmin.from('payments').delete().eq('user_id', user.id).neq('plan', 'trial_claim');
+  // The two trial-ledger sentinels survive account deletion on purpose:
+  // they're what stops delete-and-resignup from reclaiming a free trial
+  // ('trial_claim' from the retired card-on-file flow; 'trial_card' from the
+  // live card-before-trial flow — see lib/trial-card.ts).
+  await supabaseAdmin
+    .from('payments')
+    .delete()
+    .eq('user_id', user.id)
+    .neq('plan', 'trial_claim')
+    .neq('plan', 'trial_card');
   await supabaseAdmin.from('subscriptions').delete().eq('user_id', user.id);
 
   // Must run before the releases delete: the asset / task_attachment rows

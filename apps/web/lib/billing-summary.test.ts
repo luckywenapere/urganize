@@ -10,6 +10,7 @@ import {
 const base: BillingSnapshot = {
   accountStatus: 'unpaid',
   plan: null,
+  rawStatus: null,
   trialEndsAt: null,
   trialDaysLeft: 0,
   expiresAt: null,
@@ -36,6 +37,7 @@ describe('describePlanName', () => {
 
   it('returns null rather than leaking a raw enum for anything unrecognised', () => {
     expect(describePlanName('trial_claim')).toBeNull();
+    expect(describePlanName('trial_card')).toBeNull();
     expect(describePlanName('')).toBeNull();
     expect(describePlanName(null)).toBeNull();
   });
@@ -99,6 +101,46 @@ describe('summarizeBilling', () => {
     expect(result.cta).toBe('plans');
   });
 
+  it('a plain no-card trial offers no cancel control — there is nothing to cancel', () => {
+    const result = summarizeBilling(
+      snapshot({ accountStatus: 'trial', trialDaysLeft: 12, rawStatus: null })
+    );
+    expect(result.secondaryCta).toBeNull();
+    expect(result.details.join(' ')).not.toContain('starts when your trial ends');
+  });
+
+  it('a card-backed trial (rawStatus trialing) names the upcoming plan and offers cancel', () => {
+    const result = summarizeBilling(
+      snapshot({
+        accountStatus: 'trial',
+        trialDaysLeft: 27,
+        trialEndsAt: '2026-09-15T00:00:00.000Z',
+        rawStatus: 'trialing',
+        plan: 'monthly',
+      })
+    );
+    expect(result.details).toContain('Monthly plan starts when your trial ends.');
+    expect(result.secondaryCta).toBe('cancelTrial');
+    // Still no price — the never-print-a-price rule holds here too. (Digits
+    // are fine: the countdown and the end date legitimately carry numbers.)
+    expect([result.title, ...result.details].join(' ')).not.toMatch(/[₦$]/);
+  });
+
+  it('a cancelled card-trial reads as paid with honest copy, not a bare "Active until"', () => {
+    // resolveSnapshot path 1 treats cancelled + not-expired as paid; the copy
+    // is the one case renewal IS knowable: it will not happen.
+    const result = summarizeBilling(
+      snapshot({
+        accountStatus: 'paid',
+        plan: 'monthly',
+        rawStatus: 'cancelled',
+        expiresAt: '2026-09-15T00:00:00.000Z',
+      })
+    );
+    expect(result.details[0]).toContain('Cancelled — access until ');
+    expect(result.secondaryCta).toBeNull();
+  });
+
   it('says a day, singular, on the last day', () => {
     const result = summarizeBilling(snapshot({ accountStatus: 'trial', trialDaysLeft: 1 }));
     expect(result.details[0]).toBe('1 day left.');
@@ -155,7 +197,34 @@ describe('summarizeBilling', () => {
     const result = summarizeBilling(snapshot({ accountStatus: 'unpaid', trialUsed: false }));
     expect(result.title).toBe('No plan yet');
     expect(result.details[0]).toContain('28-day free trial');
+    expect(result.details[0]).toContain('no card needed');
     expect(result.cta).toBe('plans');
+  });
+
+  it('drops the now-false "no card needed" when the card-trial flag is on', () => {
+    const result = summarizeBilling(snapshot({ accountStatus: 'unpaid', trialUsed: false }), {
+      cardTrialEnabled: true,
+    });
+    expect(result.details[0]).toBe('You have a 28-day free trial available.');
+    expect(result.details[0]).not.toContain('no card needed');
+  });
+
+  it('flag-off copy is byte-identical to the pre-feature copy', () => {
+    expect(summarizeBilling(snapshot({ accountStatus: 'unpaid' })).details[0]).toBe(
+      'You have a 28-day free trial available, no card needed.'
+    );
+    expect(
+      summarizeBilling(snapshot({ accountStatus: 'unpaid' }), { cardTrialEnabled: false }).details[0]
+    ).toBe('You have a 28-day free trial available, no card needed.');
+  });
+
+  it('every non-trialing shape defaults secondaryCta to null', () => {
+    for (const status of ['paid', 'expired', 'unpaid'] as const) {
+      expect(summarizeBilling(snapshot({ accountStatus: status })).secondaryCta).toBeNull();
+    }
+    expect(
+      summarizeBilling(snapshot({ allowlisted: true, accountStatus: 'paid' })).secondaryCta
+    ).toBeNull();
   });
 
   it('does not re-offer a trial that has already been used', () => {

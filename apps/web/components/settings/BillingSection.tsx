@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import { SALES_CONTACT_EMAIL } from '@urganize/pricing';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import {
+  formatBillingDate,
   summarizeBilling,
   type BillingAccountStatus,
   type BillingSnapshot,
 } from '@/lib/billing-summary';
 import { errorMessage } from '@/lib/errors';
+import { isCardTrialEnabled } from '@/lib/trial-card';
 import { feedbackErrorClass } from './feedback';
 import { getAccessToken } from './getAccessToken';
 import { panelClass } from './panelClass';
@@ -54,6 +56,11 @@ export function BillingSection() {
   const [snapshot, setSnapshot] = useState<BillingSnapshot | null>(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  // Cancel-trial (card-backed trials only): a two-step inline confirm — the
+  // first click reveals the consequence line + Confirm/Keep, never a modal.
+  const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState('');
 
   const load = useCallback(async () => {
     setError('');
@@ -90,12 +97,15 @@ export function BillingSection() {
       setSnapshot({
         accountStatus: (payload.accountStatus as BillingAccountStatus) || 'unpaid',
         plan: typeof payload.plan === 'string' ? payload.plan : null,
+        rawStatus: typeof payload.rawStatus === 'string' ? payload.rawStatus : null,
         trialEndsAt: typeof payload.trialEndsAt === 'string' ? payload.trialEndsAt : null,
         trialDaysLeft: typeof payload.trialDaysLeft === 'number' ? payload.trialDaysLeft : 0,
         expiresAt: typeof payload.expiresAt === 'string' ? payload.expiresAt : null,
         trialUsed: Boolean(payload.trialUsed),
         allowlisted: Boolean(payload.allowlisted),
       });
+      setIsConfirmingCancel(false);
+      setCancelError('');
     } catch (caught) {
       setError(errorMessage(caught, 'Could not load your billing details.'));
     } finally {
@@ -105,6 +115,29 @@ export function BillingSection() {
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  const handleCancelTrial = useCallback(async () => {
+    setCancelError('');
+    setIsCancelling(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Sign in again and retry.');
+      const response = await fetch('/api/billing/cancel-trial', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not cancel the upcoming charge.');
+      }
+      // Re-load so the section flips to "Cancelled — access until <date>".
+      await load();
+    } catch (caught) {
+      setCancelError(errorMessage(caught, 'Could not cancel the upcoming charge.'));
+    } finally {
+      setIsCancelling(false);
+    }
   }, [load]);
 
   const heading = (
@@ -140,9 +173,12 @@ export function BillingSection() {
 
   if (!snapshot) return null;
 
-  const { title, details, cta } = summarizeBilling(snapshot);
+  const { title, details, cta, secondaryCta } = summarizeBilling(snapshot, {
+    cardTrialEnabled: isCardTrialEnabled(),
+  });
   const ctaClass =
     'shrink-0 rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover';
+  const accessUntil = formatBillingDate(snapshot.trialEndsAt) || formatBillingDate(snapshot.expiresAt);
 
   return (
     <section className={panelClass}>
@@ -178,6 +214,53 @@ export function BillingSection() {
           </button>
         ) : null}
       </div>
+
+      {secondaryCta === 'cancelTrial' ? (
+        // Card-backed trial only: stop the charge Paystack has scheduled for
+        // trial end. Two-step inline confirm (never a modal) — the first click
+        // reveals the consequence line, and Keep backs out.
+        <div className="mt-4">
+          {isConfirmingCancel ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-content-secondary">
+                {accessUntil
+                  ? `Your access continues until ${accessUntil}, then your card won't be charged.`
+                  : "Your access continues to the end of the trial, then your card won't be charged."}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={isCancelling}
+                  onClick={() => void handleCancelTrial()}
+                  className="rounded-lg border border-status-error/40 bg-bg-surface px-4 py-2 text-sm font-medium text-status-error hover:bg-status-error/10 disabled:opacity-60"
+                >
+                  {isCancelling ? 'Cancelling…' : 'Confirm cancel'}
+                </button>
+                <button
+                  type="button"
+                  disabled={isCancelling}
+                  onClick={() => {
+                    setIsConfirmingCancel(false);
+                    setCancelError('');
+                  }}
+                  className={ctaClass}
+                >
+                  Keep my trial
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsConfirmingCancel(true)}
+              className="text-sm text-content-tertiary underline hover:text-content-secondary"
+            >
+              Cancel trial
+            </button>
+          )}
+          {cancelError ? <div className={`${feedbackErrorClass} mt-2`}>{cancelError}</div> : null}
+        </div>
+      ) : null}
     </section>
   );
 }

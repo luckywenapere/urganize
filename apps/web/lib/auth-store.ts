@@ -6,6 +6,7 @@ import { supabase, type Profile, handleSupabaseError } from './supabase/client';
 import { errorMessage } from "@/lib/errors";
 import { installAccessRedirect } from './access-redirect';
 import { isAllowlistedEmail } from './paywall-allowlist';
+import { isCardTrialEnabled } from './trial-card';
 import { isNativePlatform } from './platform';
 import { resetSceneData } from '@/stores/useSceneDataStore';
 import { resetSceneMemory } from '@/lib/scene-memory';
@@ -23,7 +24,20 @@ if (typeof window !== 'undefined') {
   installAccessRedirect();
 }
 
-const SAFE_AUTH_PATHS = ['/locked', '/auth', '/onboarding', '/invite'];
+// /payment is here because /payment/callback polls while the Paystack webhook
+// may still be in flight — bouncing a user off it mid-poll would eat their
+// confirmation screen. /redeem matches access-redirect.ts's SAFE_PATHS (the
+// two lists used to differ by that one entry). /start-trial is the
+// card-before-trial page itself.
+const SAFE_AUTH_PATHS = [
+  '/locked',
+  '/auth',
+  '/onboarding',
+  '/invite',
+  '/redeem',
+  '/payment',
+  '/start-trial',
+];
 
 const isOnSafeAuthPath = (): boolean => {
   if (typeof window === 'undefined') return true;
@@ -40,11 +54,18 @@ const isOnSafeAuthPath = (): boolean => {
 // return to restore the paywall.
 const PAYWALL_LOGIN_BOUNCE_ENABLED: boolean = false;
 
+// Card-before-trial (NEXT_PUBLIC_FEATURE_CARD_TRIAL): independent of the
+// paywall bounce above. When on, a NEW signup (post-cutoff, unpaid, trial
+// never used, not a curator, not an invited teammate — the server computes
+// all of that as `cardTrialRequired`, see /api/subscription-status) is sent
+// to /start-trial instead of the app. Existing accounts are untouched.
+const CARD_TRIAL_BOUNCE_ENABLED = isCardTrialEnabled();
+
 const ensureActiveAccessOrRedirect = async (
   accessToken: string,
   email: string | null | undefined
 ): Promise<void> => {
-  if (!PAYWALL_LOGIN_BOUNCE_ENABLED) return;
+  if (!PAYWALL_LOGIN_BOUNCE_ENABLED && !CARD_TRIAL_BOUNCE_ENABLED) return;
   if (typeof window === 'undefined') return;
   if (isOnSafeAuthPath()) return;
   // Fast path — allowlisted emails never see the locked page. The server
@@ -65,7 +86,20 @@ const ensureActiveAccessOrRedirect = async (
       hasAccess?: boolean;
       accountStatus?: string;
       trialUsed?: boolean;
+      cardTrialRequired?: boolean;
     };
+
+    // Card gate first — it targets exactly the accounts the /locked bounce
+    // would call 'unpaid', and /start-trial (not /locked) is where a
+    // never-trialed new signup belongs. The predicate is entirely
+    // server-derived and fails open (see lib/trial-card.ts).
+    if (CARD_TRIAL_BOUNCE_ENABLED && payload.cardTrialRequired === true) {
+      window.location.replace('/start-trial');
+      return;
+    }
+
+    // Everything below is the original paywall bounce, still off.
+    if (!PAYWALL_LOGIN_BOUNCE_ENABLED) return;
     if (payload.hasAccess) return;
     const reason =
       payload.accountStatus === 'expired'

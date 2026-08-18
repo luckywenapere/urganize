@@ -4,11 +4,20 @@ import { createClient } from '@supabase/supabase-js';
 import { getPlanExpiry } from '@/lib/billing';
 import {
   advancePeriodEnd,
+  getPaystackPlanCode,
+  getPlanMinorUnit,
   identifyPlanByCode,
   isRecurringPlan,
   type RecurringPlanId,
 } from '@/lib/billing-plans';
 import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
+import {
+  TRIAL_CARD_PLAN,
+  buildDelayedSubscriptionPayload,
+  computeTrialEnd,
+  extractReusableAuthorization,
+  isCardTrialPlan,
+} from '@/lib/trial-card';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Paystack webhook — recurring billing edition.
@@ -203,6 +212,304 @@ async function applyRenewal(
   invalidateSubscriptionSnapshot(userId);
 }
 
+// ─── card-before-trial (NEXT_PUBLIC_FEATURE_CARD_TRIAL) ─────────────────────
+//
+// The ₦100 card-verification charge reserved by /api/trial/start-checkout.
+// Order of operations is load-bearing:
+//   1. Idempotency: a row no longer 'pending' was already handled — ack and
+//      never re-create the subscription or re-refund.
+//   2. Claim via compare-and-set (status='success' WHERE status='pending' with
+//      .select()). Keeps the repo's flip-first shape while making everything
+//      downstream at-most-once: two concurrent deliveries would otherwise BOTH
+//      create a delayed Paystack subscription = double charge on day 28.
+//   3-4. Validate the selected plan + the reusable authorization. Failures
+//      here mark the row 'failed' (with a reason), refund, and leave
+//      trial_used untouched so the user can retry with another card.
+//   5. Create the Paystack subscription with start_date = trial end — this is
+//      what bills the card when the trial lapses. Failure → same fail path.
+//   6-7. subscriptions row (status 'trialing' → snapshot path 2 grants trial
+//      access) + profile trial fields (service-role required — the protective
+//      trigger blocks self-writes). NOT is_subscribed / paid_at: nothing has
+//      been bought yet.
+//   9. Refund LAST, log-only: a refund hiccup must never fail a flow whose
+//      trial is already live.
+//
+// Deliberately NO feature-flag check here: money already moved, so in-flight
+// events must process even after a flag-off rollback.
+
+type TrialCardPaymentRow = {
+  id: string;
+  user_id: string;
+  plan: string;
+  status: string;
+  amount: number;
+  paystack_response: Record<string, unknown> | null;
+};
+
+const PAYSTACK_SUBSCRIPTION_URL = 'https://api.paystack.co/subscription';
+const PAYSTACK_REFUND_URL = 'https://api.paystack.co/refund';
+
+async function refundTrialCardCharge(
+  reference: string,
+  secretKey: string
+): Promise<{ ok: boolean; message: string }> {
+  try {
+    const response = await fetch(PAYSTACK_REFUND_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ transaction: reference }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as {
+      status?: boolean;
+      message?: string;
+    };
+    if (!response.ok || !payload?.status) {
+      const message = payload?.message || `refund HTTP ${response.status}`;
+      console.error('[trial-card] refund failed (log-only):', reference, message);
+      return { ok: false, message };
+    }
+    return { ok: true, message: payload.message || 'refund initiated' };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'refund request failed';
+    console.error('[trial-card] refund failed (log-only):', reference, message);
+    return { ok: false, message };
+  }
+}
+
+async function failTrialCardCharge(
+  admin: AdminClient,
+  payment: TrialCardPaymentRow,
+  reference: string,
+  secretKey: string,
+  reason: string,
+  detail?: string
+) {
+  const refund = await refundTrialCardCharge(reference, secretKey);
+  const { error } = await admin
+    .from('payments')
+    .update({
+      status: 'failed',
+      paystack_response: {
+        ...(payment.paystack_response || {}),
+        failure_reason: reason,
+        failure_detail: detail || null,
+        refund,
+      },
+    })
+    .eq('id', payment.id);
+  if (error) {
+    console.error('[trial-card] failed-state update error:', error.message);
+  }
+  console.warn('[trial-card] charge failed:', { reference, reason, detail });
+  return ack({ event: 'charge.success', reference, matched: 'trial_card', failed: reason });
+}
+
+async function handleTrialCardCharge(
+  admin: AdminClient,
+  payment: TrialCardPaymentRow,
+  payload: PaystackWebhookPayload,
+  reference: string,
+  now: Date
+) {
+  // 1. Idempotency — success AND failed rows are terminal for this reference.
+  if (payment.status !== 'pending') {
+    return ack({ event: 'charge.success', reference, matched: 'trial_card', skipped: payment.status });
+  }
+
+  const secretKey = process.env.PAYSTACK_SECRET_KEY || '';
+
+  // 2. Claim (compare-and-set). Zero rows back = a concurrent delivery won the
+  // race — ack and do nothing. A DB error leaves the row 'pending' so
+  // Paystack's retry reprocesses cleanly.
+  const claim = await admin
+    .from('payments')
+    .update({ status: 'success' })
+    .eq('id', payment.id)
+    .eq('status', 'pending')
+    .select('id');
+  if (claim.error) {
+    console.error('[trial-card] claim update error:', claim.error.message);
+    return ack({ event: 'charge.success', reference, matched: 'trial_card', error: 'claim_failed' });
+  }
+  if (!claim.data || claim.data.length === 0) {
+    return ack({ event: 'charge.success', reference, matched: 'trial_card', skipped: 'claimed_elsewhere' });
+  }
+
+  // 3. Resolve the plan the user picked at checkout time (server-written into
+  // the jsonb by start-checkout — the trusted source).
+  const selectedPlan = payment.paystack_response?.selected_plan;
+  const planCode = isCardTrialPlan(selectedPlan)
+    ? getPaystackPlanCode(selectedPlan, 'NGN')
+    : null;
+  if (!isCardTrialPlan(selectedPlan) || !planCode) {
+    return failTrialCardCharge(
+      admin,
+      payment,
+      reference,
+      secretKey,
+      'plan_unresolvable',
+      `selected_plan=${String(selectedPlan)}`
+    );
+  }
+
+  // 4. The card must be reusable — otherwise it cannot be billed at trial end
+  // and the whole promise of this flow is void. The user is refunded and can
+  // retry with a different card (trial_used is only ever set on success).
+  const authorization = extractReusableAuthorization(payload.data?.authorization);
+  const customerCode = payload.data?.customer?.customer_code || null;
+  if (!authorization || !customerCode) {
+    return failTrialCardCharge(
+      admin,
+      payment,
+      reference,
+      secretKey,
+      'card_not_reusable'
+    );
+  }
+
+  // 5. Create the delayed Paystack subscription — start_date = trial end is
+  // Paystack's documented free-trial mechanism. On day 28 it charges the saved
+  // card; that charge.success arrives with a fresh reference, matches our
+  // subscriptions row by paystack_subscription_code, and the existing renewal
+  // path flips the account to paid. Trial→paid conversion is zero new code.
+  const trialEnd = computeTrialEnd(now);
+  let subscriptionCode: string | null = null;
+  let emailToken: string | null = null;
+  try {
+    const response = await fetch(PAYSTACK_SUBSCRIPTION_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(
+        buildDelayedSubscriptionPayload({
+          customerCode,
+          planCode,
+          authorizationCode: authorization.authorizationCode,
+          startDate: trialEnd,
+        })
+      ),
+    });
+    const subPayload = (await response.json().catch(() => ({}))) as {
+      status?: boolean;
+      message?: string;
+      data?: { subscription_code?: string; email_token?: string };
+    };
+    if (!response.ok || !subPayload?.status || !subPayload.data?.subscription_code) {
+      return failTrialCardCharge(
+        admin,
+        payment,
+        reference,
+        secretKey,
+        'subscription_create_failed',
+        subPayload?.message || `HTTP ${response.status}`
+      );
+    }
+    subscriptionCode = subPayload.data.subscription_code;
+    emailToken = subPayload.data.email_token || null;
+  } catch (error) {
+    return failTrialCardCharge(
+      admin,
+      payment,
+      reference,
+      secretKey,
+      'subscription_create_failed',
+      error instanceof Error ? error.message : 'request failed'
+    );
+  }
+
+  const userId = payment.user_id;
+
+  // 6. The trialing subscriptions row — snapshot path 2 ('trialing' + not
+  // expired) grants trial access. amount records what WILL be charged at
+  // trial end. Errors past this point log CRITICAL and continue: the remote
+  // Paystack subscription already exists, so bailing here helps nobody — the
+  // profile trial fields below are a redundant access path, and the founder
+  // reconciles from the log + the jsonb audit trail.
+  const { error: subError } = await admin
+    .from('subscriptions')
+    .upsert(
+      {
+        user_id: userId,
+        plan: selectedPlan,
+        status: 'trialing',
+        amount: getPlanMinorUnit(selectedPlan, 'NGN'),
+        paystack_reference: reference,
+        paystack_customer_code: customerCode,
+        paystack_subscription_code: subscriptionCode,
+        started_at: now.toISOString(),
+        expires_at: trialEnd.toISOString(),
+        updated_at: now.toISOString(),
+      },
+      { onConflict: 'user_id' }
+    );
+  if (subError) {
+    console.error('[trial-card] CRITICAL subscription upsert error (remote subscription exists, reconcile manually):', {
+      reference,
+      subscription_code: subscriptionCode,
+      message: subError.message,
+    });
+  }
+
+  // 7. Profile trial fields — the same three columns /api/trial/start writes.
+  // NOT is_subscribed / paid_at: nothing has been bought yet.
+  const { error: profileError } = await admin
+    .from('profiles')
+    .update({
+      trial_used: true,
+      trial_started_at: now.toISOString(),
+      trial_ends_at: trialEnd.toISOString(),
+      updated_at: now.toISOString(),
+    })
+    .eq('id', userId);
+  if (profileError) {
+    console.error('[trial-card] CRITICAL profile trial-fields update error:', {
+      reference,
+      message: profileError.message,
+    });
+  }
+
+  // 8.
+  invalidateSubscriptionSnapshot(userId);
+
+  // 9. Refund the verification charge — last and log-only.
+  const refund = await refundTrialCardCharge(reference, secretKey);
+
+  // 10. Audit trail: everything the cancel route and support need lives on the
+  // payments row's jsonb (no new columns). email_token is what
+  // POST /subscription/disable requires; the raw authorization (incl.
+  // signature) is kept verbatim for future card-dedupe work.
+  const { error: auditError } = await admin
+    .from('payments')
+    .update({
+      paystack_response: {
+        ...(payment.paystack_response || {}),
+        authorization: authorization.raw,
+        customer_code: customerCode,
+        subscription_code: subscriptionCode,
+        email_token: emailToken,
+        trial_ends_at: trialEnd.toISOString(),
+        refund,
+      },
+    })
+    .eq('id', payment.id);
+  if (auditError) {
+    console.error('[trial-card] audit-trail update error:', auditError.message);
+  }
+
+  return ack({
+    event: 'charge.success',
+    reference,
+    matched: 'trial_card',
+    plan: selectedPlan,
+    trial_ends_at: trialEnd.toISOString(),
+  });
+}
+
 // ─── event handlers ──────────────────────────────────────────────────────────
 
 async function handleChargeSuccess(payload: PaystackWebhookPayload) {
@@ -230,7 +537,7 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
   //    source of truth here.
   const { data: payment, error: paymentLookupError } = await admin
     .from('payments')
-    .select('id,user_id,plan,status,amount')
+    .select('id,user_id,plan,status,amount,paystack_response')
     .eq('reference', reference)
     .maybeSingle();
 
@@ -242,6 +549,13 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
   if (payment?.user_id && payment.plan) {
     const userId = payment.user_id;
     const planString = String(payment.plan);
+
+    // Card-verification charge for the card-before-trial flow. MUST divert
+    // before the generic flip/crediting below: the ₦100 card check is not a
+    // purchase, and letting it fall through would mark the user subscribed.
+    if (planString === TRIAL_CARD_PLAN) {
+      return handleTrialCardCharge(admin, payment as TrialCardPaymentRow, payload, reference, now);
+    }
 
     // Flip the reserved row to success (idempotent — re-deliveries hit this).
     if (payment.status !== 'success') {

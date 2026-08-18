@@ -17,6 +17,10 @@ export type BillingAccountStatus = 'unpaid' | 'trial' | 'paid' | 'expired';
 export type BillingSnapshot = {
   accountStatus: BillingAccountStatus;
   plan: string | null;
+  /** subscriptions.status verbatim (or the allowlist sentinel). 'trialing'
+   * marks a card-backed trial — a delayed Paystack subscription exists and
+   * will charge at trial end unless cancelled. */
+  rawStatus: string | null;
   trialEndsAt: string | null;
   trialDaysLeft: number;
   expiresAt: string | null;
@@ -32,6 +36,15 @@ export type BillingSummary = {
   /** Zero or more factual lines under the title, in render order. */
   details: string[];
   cta: BillingCta | null;
+  /** A quieter second action beside the main CTA. 'cancelTrial' renders the
+   * card-backed trial's cancel control (POST /api/billing/cancel-trial). */
+  secondaryCta: 'cancelTrial' | null;
+};
+
+export type BillingSummaryOptions = {
+  /** NEXT_PUBLIC_FEATURE_CARD_TRIAL, resolved by the caller — this module
+   * stays pure/env-free so it can be tested without stubbing env. */
+  cardTrialEnabled?: boolean;
 };
 
 /**
@@ -87,7 +100,10 @@ export function isContactSalesPlan(plan: string | null): boolean {
  * currently OFF in code (`requireActiveAccount` early-returns — CLAUDE.md,
  * Resolved blocker #1), so "you will lose access" would not be true today.
  */
-export function summarizeBilling(snapshot: BillingSnapshot): BillingSummary {
+export function summarizeBilling(
+  snapshot: BillingSnapshot,
+  options: BillingSummaryOptions = {}
+): BillingSummary {
   // Allowlist first, and unconditionally: an allowlisted account reads back
   // from the API as paid with `plan: 'allowlist'`, so any status-first ordering
   // would show it a plan it does not have and a CTA to change it.
@@ -96,6 +112,7 @@ export function summarizeBilling(snapshot: BillingSnapshot): BillingSummary {
       title: 'Complimentary access',
       details: ['This account has the full app without a subscription.'],
       cta: null,
+      secondaryCta: null,
     };
   }
 
@@ -111,7 +128,20 @@ export function summarizeBilling(snapshot: BillingSnapshot): BillingSummary {
         : `${snapshot.trialDaysLeft} day${snapshot.trialDaysLeft === 1 ? '' : 's'} left.`,
     ];
     if (trialEnds) details.push(`Ends ${trialEnds}.`);
-    return { title: 'Free trial', details, cta: 'plans' };
+    // Card-backed trial (rawStatus 'trialing'): a delayed Paystack
+    // subscription exists and will charge at trial end, so say which plan
+    // starts and offer the cancel control. A plain no-card trial (rawStatus
+    // null — the profile-only path) has nothing to cancel.
+    const isCardBacked = snapshot.rawStatus === 'trialing';
+    if (isCardBacked && planName) {
+      details.push(`${planName} plan starts when your trial ends.`);
+    }
+    return {
+      title: 'Free trial',
+      details,
+      cta: 'plans',
+      secondaryCta: isCardBacked ? 'cancelTrial' : null,
+    };
   }
 
   if (snapshot.accountStatus === 'paid') {
@@ -119,12 +149,23 @@ export function summarizeBilling(snapshot: BillingSnapshot): BillingSummary {
     // "Active until", never "Renews": this timestamp is when access lapses, and
     // whether it renews depends on the Paystack subscription still being live —
     // which this snapshot does not tell us. The honest phrasing is the one that
-    // stays true either way.
-    if (expires) details.push(`Active until ${expires}.`);
+    // stays true either way. A CANCELLED subscription is the one case we do
+    // know: it will not renew, so say so instead of a bare "Active until"
+    // (covers both a cancelled card-trial — which reads as paid via snapshot
+    // path 1 — and an ordinarily cancelled subscriber running out the period
+    // they paid for).
+    if (expires) {
+      details.push(
+        snapshot.rawStatus === 'cancelled'
+          ? `Cancelled — access until ${expires}.`
+          : `Active until ${expires}.`
+      );
+    }
     return {
       title: planName ? `${planName} plan` : 'Active plan',
       details,
       cta: salesLed ? 'contact' : 'change',
+      secondaryCta: null,
     };
   }
 
@@ -135,6 +176,7 @@ export function summarizeBilling(snapshot: BillingSnapshot): BillingSummary {
       title: planName ? `${planName} plan ended` : 'Plan ended',
       details,
       cta: salesLed ? 'contact' : 'plans',
+      secondaryCta: null,
     };
   }
 
@@ -143,8 +185,11 @@ export function summarizeBilling(snapshot: BillingSnapshot): BillingSummary {
     details: [
       snapshot.trialUsed
         ? 'Your free trial has finished.'
-        : 'You have a 28-day free trial available, no card needed.',
+        : options.cardTrialEnabled
+          ? 'You have a 28-day free trial available.'
+          : 'You have a 28-day free trial available, no card needed.',
     ],
     cta: 'plans',
+    secondaryCta: null,
   };
 }

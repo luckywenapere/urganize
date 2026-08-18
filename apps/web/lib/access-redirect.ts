@@ -10,7 +10,14 @@
 // Imported (for side effects) from apps/web/lib/auth-store.ts so the
 // interceptor installs as soon as any client-side code touches auth.
 
-const SAFE_PATHS = new Set(['/locked', '/auth', '/onboarding', '/invite', '/redeem']);
+const SAFE_PATHS = new Set([
+  '/locked',
+  '/auth',
+  '/onboarding',
+  '/invite',
+  '/redeem',
+  '/start-trial',
+]);
 
 const isSafePath = (pathname: string): boolean => {
   if (SAFE_PATHS.has(pathname)) return true;
