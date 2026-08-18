@@ -17,7 +17,11 @@
 // Approval is confirmation-gated: it writes ~60 real task rows in one batch and
 // cannot be undone from the assistant.
 
-import { parseReleasePlanIntake, type ReleasePlanIntake } from '@/lib/release-planning';
+import {
+  isReleasePlannerEnabled,
+  parseReleasePlanIntake,
+  type ReleasePlanIntake,
+} from '@/lib/release-planning';
 import {
   apiError,
   argString,
@@ -134,11 +138,20 @@ export const PLANNER_TOOLS: ChappiTool[] = [
     name: 'generate_release_plan',
     kind: 'mutate',
     description:
-      "Build a draft rollout plan from the hand-crafted playbook, tailored to the seven intake answers. Collect all seven in conversation first and read them back before calling this. It does NOT create any activities — the plan stays a draft until it is approved.",
+      "Build a draft rollout plan from the hand-crafted playbook, tailored to the seven intake answers. Collect all seven in conversation first and read them back before calling this. Omit releaseId to create the release and draft its plan in one call — the usual case for a brand-new release. It does NOT create any activities — the plan stays a draft until it is approved.",
     inputSchema: {
       type: 'object',
       properties: {
-        releaseId: { type: 'string' },
+        releaseId: {
+          type: 'string',
+          description:
+            'Only for an existing release that has no activities yet. Omit to create the release and draft its plan in one call.',
+        },
+        title: {
+          type: 'string',
+          description:
+            'Title for the new release, when the user named one. Ignored when releaseId is passed.',
+        },
         release_type: {
           type: 'string',
           enum: ['single', 'ep', 'album'],
@@ -182,17 +195,50 @@ export const PLANNER_TOOLS: ChappiTool[] = [
             'Only true when a draft already exists AND the user agreed to discard it and start over.',
         },
       },
-      required: ['releaseId', 'release_type', 'artist_name', 'ready_today', 'goal', 'budget'],
+      required: ['release_type', 'artist_name', 'ready_today', 'goal', 'budget'],
     },
     execute: async (ctx, args) => {
-      const releaseId = argString(args, 'releaseId');
-      if (!releaseId) return fail('releaseId is required.');
+      let releaseId = argString(args, 'releaseId');
 
+      // Validate BEFORE any write: a bad answer must never orphan a release.
       const parsed = buildPlanIntake(args);
       if (!parsed.ok) {
         // Verbatim: the validator's message names the offending field, which
         // is what lets the model re-ask one question instead of all seven.
         return fail(`That answer doesn't work: ${parsed.error}`);
+      }
+
+      // No releaseId means the rollout is for a release that does not exist
+      // yet — the usual case when the user asks UrgAns to create one. Create
+      // it here, mirroring what PlannerIntakeModal does for the chip and note
+      // entry points; without this the model can only target an EXISTING
+      // release, which already has its activities and gets refused.
+      let createdHere = false;
+      if (!releaseId) {
+        // Guard BEFORE creating: with the flag off the plan routes 404, so
+        // creating first would strand a release — and worse, the create route
+        // would instantiate the full template plan.
+        if (!isReleasePlannerEnabled()) return fail(PLANNER_OFF);
+
+        // `plan` is deliberately omitted (default 'template'), NOT the
+        // modal's 'blank': with the planner on that means plannerPending —
+        // no tasks, plus the planner_pending marker — so if the generate
+        // below fails, the workspace still routes the manager into the
+        // planner instead of leaving a bare unexplained release. The flag
+        // guard above is what makes the default safe.
+        const created = await callInternalApi(ctx, '/api/releases', {
+          method: 'POST',
+          body: {
+            title: argString(args, 'title') || undefined,
+            releaseDate: parsed.intake.release_date ?? undefined,
+            releaseType: parsed.intake.release_type,
+            source: 'chappi',
+          },
+        });
+        if (!created.ok) return fail(apiError(created, 'Could not create the release.'));
+        releaseId = String(created.body.releaseId || '');
+        if (!releaseId) return fail('Could not create the release.');
+        createdHere = true;
       }
 
       const res = await callInternalApi(ctx, `/api/releases/${releaseId}/plan/generate`, {
@@ -206,6 +252,20 @@ export const PLANNER_TOOLS: ChappiTool[] = [
             'There is already a draft plan for this release. Ask whether to start over before generating again.'
           );
         }
+        if (res.body.code === 'tasks_exist') {
+          return fail(
+            'This release already has its activities, so it cannot be re-planned. To plan a NEW release, call generate_release_plan again without a releaseId.'
+          );
+        }
+        if (createdHere) {
+          // The release exists now even though the draft does not. Hand the
+          // id back so the retry targets it instead of minting a duplicate.
+          return {
+            ok: false,
+            summary: `The release was created — it exists now — but the plan could not be drafted: ${apiError(res, 'Could not build the plan.')} Retry by calling generate_release_plan again WITH releaseId ${releaseId}; do not create another release.`,
+            data: { releaseId },
+          };
+        }
         return fail(apiError(res, 'Could not build the plan.'));
       }
 
@@ -217,8 +277,8 @@ export const PLANNER_TOOLS: ChappiTool[] = [
         .join(', ');
       return {
         ok: true,
-        summary: `Drafted ${summary.totalTasks} activities (${phaseLine}). Nothing is scheduled yet — it needs approving.`,
-        data: summary,
+        summary: `${createdHere ? 'Created the release and drafted' : 'Drafted'} ${summary.totalTasks} activities (${phaseLine}). Nothing is scheduled yet — it needs approving.`,
+        data: { releaseId, ...summary },
         // Open the review scene so they can read the plan before approving.
         clientAction: { type: 'navigate', href: `/dashboard?release=${releaseId}&scene=plan` },
       };
