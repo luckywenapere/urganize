@@ -679,19 +679,27 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         </div>
       );
     }
-    // Two independent regions, NOT one positioned block — this is the whole
-    // fix, and reverting it to a single block with any `justify-*` puts the
-    // composer back in mid-air. No `items-center` on the container either:
-    // it would size both regions to their content width instead of letting
-    // them stretch, which is why the old markup needed `w-full` to undo it.
+    // Two independent regions below lg, NOT one positioned block — that part
+    // of the fix stands: a phone still gets the composer pinned hard to the
+    // bottom edge with the question centered in the space above it (see the
+    // history above for why). At lg+ (2026-08-18, founder call: the desktop
+    // page read as "the box is stuck at the bottom" against the Gemini/
+    // Perplexity/ChatGPT reference, where the question+box pair sits as ONE
+    // group vertically centered on the page, not split into two flex regions
+    // that shove the composer to the container's bottom edge), the header
+    // region drops its `flex-1` growth (`lg:flex-none`) so it no longer
+    // consumes all the leftover height, and the outer column gains
+    // `lg:justify-center` so the now content-sized header+footer pair centers
+    // as a group instead. Below lg none of the `lg:` classes apply, so mobile
+    // is byte-for-byte the same layout as before.
     return (
-      <div className="flex h-full min-h-0 flex-col px-2 text-center">
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto">
+      <div className="flex h-full min-h-0 flex-col px-2 text-center lg:justify-center">
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto lg:flex-none lg:overflow-visible">
           <h1 className="font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
             What do you want to get done today?
           </h1>
         </div>
-        <div className="mt-3 shrink-0">
+        <div className="mt-3 shrink-0 lg:mt-6">
           <div className="mx-auto w-full max-w-2xl">{inputForm}</div>
           {chipsRow}
         </div>
