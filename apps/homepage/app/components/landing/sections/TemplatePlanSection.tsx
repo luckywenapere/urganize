@@ -33,9 +33,14 @@ export function TemplatePlanSection() {
             Every release starts with a plan. Yours has 64 activities.
           </h2>
 
+          {/* "Edit or delete", never "reorder" or a bare "change anything":
+              reordering has no UI (CLAUDE.md — the endpoint was deleted
+              2026-07-10), and the honesty rule bans advertising it. Edit
+              and delete both ship (task drawer + UrgAns delete_task). */}
           <p className={`mx-auto mt-8 max-w-[40rem] ${mutedLeadClass}`}>
             Create a release and the full 11-week rollout appears, written by
-            real managers. Every activity has an owner. Change anything.
+            real managers. Every activity has an owner. Edit or delete any of
+            them.
           </p>
         </div>
 
@@ -69,7 +74,7 @@ export function TemplatePlanSection() {
           <ThemedProductShot
             light="/images/product/workspace-tasks.png"
             dark="/images/product/workspace-tasks-dark.png"
-            alt="A release open in Urganize: the progress bar at 1 of 64, the upcoming activities listed with a due date on every row, and the UrgAns assistant docked alongside them."
+            alt="A release open in Urganize: the progress bar at 1 of 64, the upcoming activities listed with a due date on every row and the UrgAns assistant docked alongside them."
             width={1920}
             height={970}
             sizes="(min-width: 1024px) 928px, 100vw"

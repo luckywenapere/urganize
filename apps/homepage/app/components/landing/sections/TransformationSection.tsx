@@ -16,8 +16,9 @@ import { centeredHeadlineClass } from "./shared";
 // status (Tamuno). See content/testimonials.ts for the sign-off log.
 //
 // ATTRIBUTION SAFEGUARD (read before touching this file): each row's LEFT
-// cell is Urganize's own words about the pre-Urganize workflow (lifted
-// verbatim from the already-approved /why-urganize comparison copy). It
+// cell is Urganize's own words about the pre-Urganize workflow (owned by
+// content/testimonials.ts — see the provenance note there; /why-urganize
+// mirrors two of the rows). It
 // must never carry quote marks, a name, or a <figcaption> — that would
 // misattribute Urganize's words to the testimonial person. The asymmetry
 // between the two cells (plain muted text on the left; <figure> + curly
@@ -35,8 +36,13 @@ export function TransformationSection() {
           <p className="mono-label text-[var(--marketing-text-subtle)]">
             What changed
           </p>
+          {/* Executive repositioning (2026-08-19): the buyer this page
+              addresses is the executive; the quoted people are the ones who
+              run the releases day to day — which is exactly whose word an
+              executive wants before buying. Roles render verbatim from
+              testimonials.ts and are immutable. */}
           <h2 className={`mt-6 ${centeredHeadlineClass}`}>
-            Managers who made the move, in their words.
+            The people who run releases, in their own words.
           </h2>
         </div>
 
