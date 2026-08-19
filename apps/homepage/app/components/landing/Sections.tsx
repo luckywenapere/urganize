@@ -13,8 +13,8 @@
 // TestimonialSection needs to switch to TransformationSection.
 // MirrorSection and AskAISection were REMOVED 2026-08-13 (landing-page
 // tone-down, founder call) — files deleted, rebuild from git history if
-// either is ever wanted back.
-export { CommunitySection } from "./sections/CommunitySection";
+// either is ever wanted back. CommunitySection was REMOVED 2026-08-19
+// (founder call: nobody clicked it) — same deal, git history has it.
 export { FinalCTASection } from "./sections/FinalCTASection";
 export { HeroSection } from "./sections/HeroSection";
 export { TemplatePlanSection } from "./sections/TemplatePlanSection";
