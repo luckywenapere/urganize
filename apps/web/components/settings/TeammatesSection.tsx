@@ -120,6 +120,7 @@ export function TeammatesSection({
       });
       const payload = (await response.json().catch(() => ({}))) as {
         inviteUrl?: string | null;
+        emailSent?: boolean;
         error?: string;
       };
       if (!response.ok) {
@@ -130,7 +131,15 @@ export function TeammatesSection({
       setInviteRole('viewer');
       if (payload.inviteUrl) {
         setInviteUrl(payload.inviteUrl);
-        setTeammateMessage('Invite link created — share it with your teammate.');
+        // The link is shown either way. When the email went out it's a
+        // backup; when it didn't, it's the only delivery mechanism — so the
+        // copy has to say which, or a manager walks away thinking their
+        // teammate was contacted when they weren't.
+        setTeammateMessage(
+          payload.emailSent
+            ? 'Invite sent by email. You can also share this link directly.'
+            : 'Invite link created — share it with your teammate.'
+        );
       } else {
         setTeammateMessage('Already a member of this workspace.');
       }

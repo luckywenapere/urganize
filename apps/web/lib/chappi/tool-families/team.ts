@@ -2,11 +2,13 @@
 // it to Ada" into a real user id instead of guessing one, which the task PATCH
 // route would reject anyway.
 //
-// Both writes are confirmation-gated, for different reasons: inviting sends an
-// email to a real person and cannot be unsent, and removing someone takes their
+// Both writes are confirmation-gated, for different reasons: inviting reaches
+// a real person (by email when delivery is configured, otherwise as a link the
+// user then sends) and cannot be taken back, and removing someone takes their
 // access away immediately. Neither is a delete, which is why the gate keys off
 // the `confirm` builder rather than a "destructive" classification.
 
+import { isEmailConfigured } from '@/lib/email';
 import { apiError, argString, callInternalApi, fail, type ChappiTool } from './shared';
 
 export const TEAM_TOOLS: ChappiTool[] = [
@@ -66,14 +68,20 @@ export const TEAM_TOOLS: ChappiTool[] = [
         return { ok: false, summary: `"${email}" does not look like an email address.` };
       }
       const role = argString(args, 'role') || 'member';
+      const access = role === 'guest' ? 'read-only access' : `${role} access`;
+      // Only promise an email when this deployment can actually send one.
+      // Before transactional email was wired this card claimed "they will get
+      // an email" unconditionally while the route only logged the link to the
+      // server — a manager would believe someone had been contacted when
+      // nobody had. The copy now tracks the real capability.
+      const canEmail = isEmailConfigured();
       return {
         ok: true,
         title: `Invite ${email} to the workspace?`,
-        detail:
-          role === 'guest'
-            ? 'They will get an email with a join link, and read-only access once they accept.'
-            : `They will get an email with a join link, and ${role} access once they accept.`,
-        confirmLabel: 'Send invite',
+        detail: canEmail
+          ? `They will get an email with a join link, and ${access} once they accept.`
+          : `This creates a single-use join link for you to send them — email delivery is not set up, so nothing is sent automatically. They get ${access} once they accept.`,
+        confirmLabel: canEmail ? 'Send invite' : 'Create invite link',
       };
     },
     execute: async (ctx, args) => {
@@ -84,7 +92,19 @@ export const TEAM_TOOLS: ChappiTool[] = [
         body: { email, role: argString(args, 'role') || undefined },
       });
       if (!res.ok) return fail(apiError(res, 'Could not send the invite.'));
-      return { ok: true, summary: `Invited ${email}.` };
+      // Report the delivery outcome, not the intent — the send can fail
+      // (provider outage, unverified sender) long after the card was shown,
+      // and the link is the fallback in that case.
+      const payload = res.body as { inviteUrl?: string | null; emailSent?: boolean };
+      if (payload.emailSent) {
+        return { ok: true, summary: `Invited ${email} — the invite email is on its way.` };
+      }
+      return {
+        ok: true,
+        summary: payload.inviteUrl
+          ? `Created an invite for ${email}. Nothing was emailed, so send them this link: ${payload.inviteUrl}`
+          : `Invited ${email}.`,
+      };
     },
   },
   {
