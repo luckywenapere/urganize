@@ -11,15 +11,16 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Features",
   description:
-    "What Urganize does: a rollout plan for every release, activities your team owns, a press kit you can send as one link, and UrgAns, the assistant in your workspace.",
+    "What Urganize does: a rollout plan for every release, activities your team owns and a press kit you send as one link. Plus UrgAns, the assistant in your workspace.",
   path: "/features",
 });
 
 // Every claim on this page must describe the product as it ships today.
 // The honesty rule from /pricing applies here: we don't advertise what
-// isn't built (no credits, no pre-save, no stages). The Assistant row
-// below describes UrgAns's live deterministic commands only — no
-// conversational-AI framing until a capable model is actually wired.
+// isn't built (no credits, no pre-save, no stages). The Assistant row's
+// conversational framing became truthful on 2026-08-13, when UrgAns went
+// live in production with a wired tool-calling model — AI verbs must still
+// only describe what UrgAns actually does in prod today.
 //
 // 2026-08-05 (URG-218): same conversion fix as /why-urganize. This page
 // had no CTA until the very bottom (~7 screens down) and ran SIX identical
@@ -32,11 +33,13 @@ const features = [
   {
     kicker: "The plan",
     title: "A rollout plan, not a blank page.",
-    body: "Create a release and Urganize lays out the whole 11-week rollout. 64 activities, from locking the master to pulling your first-week numbers. Real managers wrote it and tested it. Change anything before you save it.",
+    body: "Create a release and Urganize lays out the whole 11-week rollout. 64 activities, from locking the master to pulling your first-week numbers. Real managers wrote it and tested it. Edit or delete any activity.",
     points: [
       "8 weeks before the drop, 3 weeks after",
       "Every activity dated around your release day",
-      "Edit, reorder, or delete anything. It's your plan",
+      // Never "reorder" — reordering has no UI (CLAUDE.md: the endpoint
+      // was deleted 2026-07-10) and the honesty rule bans advertising it.
+      "Edit or delete anything. It's your plan",
     ],
     // Real screenshot of the current release view (light and dark retaken
     // together 2026-08-01, same release and scroll position in both). Same
@@ -46,7 +49,7 @@ const features = [
     image: {
       src: "/images/product/workspace-tasks.png",
       darkSrc: "/images/product/workspace-tasks-dark.png",
-      alt: "A release open in Urganize: the progress bar at 1 of 64, the upcoming activities with owners and due dates on every row, and the UrgAns assistant docked alongside them.",
+      alt: "A release open in Urganize: the progress bar at 1 of 64, the upcoming activities with owners and due dates on every row and the UrgAns assistant docked alongside them.",
     },
   },
 ] as const;
@@ -57,8 +60,8 @@ const features = [
 const compactFeatures = [
   {
     kicker: "Activities",
-    title: "Owned, dated, and in order.",
-    body: "Every activity has an owner, a due date, and a priority, and a blocked activity unlocks the moment the step it's waiting on is done.",
+    title: "Owned, dated and in order.",
+    body: "Every activity has an owner, a due date and a priority. A blocked activity unlocks the moment the step it's waiting on is done.",
   },
   {
     kicker: "Press kit",
@@ -78,7 +81,7 @@ const compactFeatures = [
   {
     kicker: "Visibility",
     title: "Know where every release stands.",
-    body: "One workspace shows every release you have going: progress, what's overdue, and what's due this week. No meeting needed.",
+    body: "One workspace shows every release you have going: progress, what's overdue and what's due this week. No meeting needed.",
   },
 ] as const;
 
@@ -106,9 +109,13 @@ export default function FeaturesPage() {
                 Nothing it doesn&apos;t.
               </span>
             </h1>
+            {/* Executive repositioning (2026-08-19): the old subhead
+                addressed the artist ("your music") and used the banned
+                "live in one place" container metaphor. "Workspace" is the
+                one allowed place-word. */}
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              Urganize gives your music the release it deserves. The plan, the
-              work, and the status all live in one place.
+              Urganize runs the plan, the work and the status for every
+              release in one workspace.
             </p>
             {/* CTA moved into the hero (2026-08-05, URG-218): the page
                 previously had no ask until the very bottom, ~7 screens

@@ -53,7 +53,7 @@ export function PricingPageClient() {
             </h1>
 
             <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
-              Urganize gives your music the release it deserves. Right now we
+              Urganize is the AI workspace for music executives. Right now we
               set up every team personally. You show us your roster. We show
               you the product. We take it from there.
             </p>
@@ -67,7 +67,15 @@ export function PricingPageClient() {
                 <RiArrowRightLine className="size-4" aria-hidden="true" />
               </a>
               <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-[var(--marketing-text-subtle)]">
-                Built for artist managers and small labels running more than one artist.
+                Built for music executives working with ambitious artists.
+              </p>
+              {/* Mirrors the homepage FinalCTA's Founding Member line — the
+                  two pages must never disagree about the offer. Every claim
+                  is founder-supplied (2026-08 brief); update or remove the
+                  moment it stops being true. */}
+              <p className="mt-3 text-sm leading-6 text-[var(--marketing-text-muted)]">
+                Founding Members: capped at 10 teams, price locked for life.
+                Still open.
               </p>
             </div>
           </div>
@@ -92,7 +100,7 @@ export function PricingPageClient() {
                 {
                   step: "03",
                   title: "You start planning",
-                  body: "If it fits, we set your team up ourselves. Releases, rollout plans, and activities, ready to go.",
+                  body: "If it fits, we set your team up ourselves. Releases, rollout plans and activities, ready to go.",
                 },
               ] as const
             ).map((item) => (

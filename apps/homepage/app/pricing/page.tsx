@@ -10,7 +10,7 @@ import { PricingPageClient } from "./PricingPageClient";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing",
   description:
-    "We set up every team personally. Book a demo with the founders and see Urganize running your own releases. Built for artist managers and small labels.",
+    "We set up every team personally. Book a demo with the founders and see Urganize running your own releases. Built for music executives and their teams.",
   path: "/pricing",
 });
 
