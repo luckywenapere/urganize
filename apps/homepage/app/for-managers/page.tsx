@@ -12,7 +12,7 @@ import { TESTIMONIALS } from "@/content/testimonials";
 export const metadata: Metadata = buildPageMetadata({
   title: "Urganize for artist managers",
   description:
-    "Urganize is built for artist managers running more than one release at once. A rollout plan, activities with owners, a press kit, and status in one place.",
+    "Urganize for artist managers running more than one release at once. A rollout plan, owners on every activity and a press kit you send as one link.",
   path: "/for-managers",
 });
 
@@ -32,11 +32,13 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "You don't start from a blank page for artist number three.",
-    body: "Create a release and Urganize lays out the whole rollout. 64 activities across 11 weeks, from locking the master to pulling your first-week numbers. Every artist gets the same starting plan, and you can change anything before you save it.",
+    body: "Create a release and Urganize lays out the whole rollout. 64 activities across 11 weeks, from locking the master to pulling your first-week numbers. Every artist gets the same starting plan and you can edit or delete any activity.",
     points: [
       "One template, shaped for each release",
       "Every activity dated around that release day",
-      "Edit, reorder, or delete anything before you save it",
+      // Never "reorder" — reordering has no UI (CLAUDE.md: the endpoint
+      // was deleted 2026-07-10) and the honesty rule bans advertising it.
+      "Edit or delete anything. It's your plan",
     ],
   },
 ] as const;
@@ -48,17 +50,17 @@ const compactBlocks = [
   {
     kicker: "Ownership",
     title: "Hand work off without babysitting it.",
-    body: "Every activity has an owner, a due date, and a priority, and nothing starts before the step it needs is done.",
+    body: "Every activity has an owner, a due date and a priority. Nothing starts before the step it needs is done.",
   },
   {
     kicker: "Press kit",
     title: "One link, ready whenever press asks.",
-    body: "Urganize builds a press kit from the release, keeps it up to date, and works the same for any artist you run.",
+    body: "Urganize builds a press kit from the release, keeps it up to date and works the same for any artist you run.",
   },
   {
     kicker: "Status",
     title: "Answer \"where's that release?\" without scrolling WhatsApp.",
-    body: "One workspace shows every release you run: progress, what's overdue, what's due this week, and which artist it belongs to.",
+    body: "One workspace shows every release you run: progress, what's overdue, what's due this week and which artist it belongs to.",
   },
 ] as const;
 
@@ -88,7 +90,7 @@ export default function ForManagersPage() {
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
               One artist and one release? A group chat and a Drive folder hold
-              up fine. Add a second release, a third artist, and a team, and
+              up fine. Add a second release, a third artist and a team, and
               keeping it all moving becomes the real job. Urganize is built
               for that part.
             </p>
@@ -167,7 +169,7 @@ export default function ForManagersPage() {
                 Everything else
               </p>
               <h2 className={`mt-5 max-w-[40rem] ${headlineClass}`}>
-                Hand-offs, the press kit, and status come with it.
+                Hand-offs, the press kit and status come with it.
               </h2>
 
               <div className="mt-10 divide-y divide-[color:var(--marketing-border)]">

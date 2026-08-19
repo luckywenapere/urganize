@@ -10,7 +10,7 @@ import { SALES_CONTACT_EMAIL } from "@urganize/pricing";
 export const metadata: Metadata = buildPageMetadata({
   title: "Urganize for labels",
   description:
-    "Urganize for labels and management companies running a roster. The founders set you up, templates match how your label works, and every release lives in one system.",
+    "Urganize for labels and management companies running a roster. The founders set you up, templates match how your label works and every release runs the same way.",
   path: "/for-labels",
 });
 
@@ -25,7 +25,7 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "Every artist's rollout, the same system.",
-    body: "Each release gets the full rollout: 64 activities across 11 weeks, from locking the master to pulling your first-week numbers. Run it the same way for every artist on the roster, and change anything before you save it.",
+    body: "Each release gets the full rollout: 64 activities across 11 weeks, from locking the master to pulling your first-week numbers. Run it the same way for every artist on the roster and edit or delete any activity.",
     points: [
       "One template, shaped for each release",
       "Every activity dated around that release day",
@@ -35,7 +35,7 @@ const valueBlocks = [
   {
     kicker: "Ownership",
     title: "Assign across a bigger team without losing track.",
-    body: "Every activity has an owner, a due date, and a priority. A roster has a lot of moving parts, so activities wait for each other in the right order. Nothing starts before the step it needs is done.",
+    body: "Every activity has an owner, a due date and a priority. A roster has a lot of moving parts, so activities wait for each other in the right order. Nothing starts before the step it needs is done.",
     points: [
       "Assign anyone on your team to any activity",
       "Blocked activities show exactly what's blocking them",
@@ -45,7 +45,7 @@ const valueBlocks = [
   {
     kicker: "Press kit",
     title: "One link per release, across the whole roster.",
-    body: "Urganize builds a press kit from any release: cover art, details, and photos. It updates itself when the release changes. Send one link to press, curators, and bookers. It works the same for every artist.",
+    body: "Urganize builds a press kit from any release: cover art, details and photos. It updates itself when the release changes. Send one link to press, curators and bookers. It works the same for every artist.",
     points: [
       "Built for you from the release",
       "Always up to date. No rebuilding by hand",
@@ -57,7 +57,7 @@ const valueBlocks = [
     title: "See the whole roster's status without asking.",
     body: "One workspace shows every release you have going: progress, what's overdue, what's due this week. You stop needing a meeting just to share status.",
     points: [
-      "Every release and activity in one place",
+      "Every release and activity in one workspace",
       "Overdue and due-today shown first",
       "See one release on its own when that's all you need",
     ],
@@ -102,7 +102,7 @@ export default function ForLabelsPage() {
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
               A roster means many release calendars, many rollouts moving at
-              once, and a pile of chats holding it all together.
+              once and a pile of chats holding it all together.
               Urganize gives every release the same system, and the founders
               help you set it up.
             </p>
