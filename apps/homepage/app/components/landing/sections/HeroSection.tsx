@@ -12,26 +12,29 @@ export function HeroSection() {
       containerClassName={wideContainerClass}
     >
       <div className="mx-auto flex max-w-[64rem] flex-col items-center text-center">
+        {/* Executive repositioning (2026-08-19): the eyebrow carries the
+            locked category claim as a plain noun; the h1 spends its words
+            on the buyer's outcome. "AI workspace" is a category label here
+            — AI verbs only ever describe shipped UrgAns behavior (see
+            ThreeFeaturesSection). */}
         <p className="hero-fade-in mono-label text-[var(--marketing-text-subtle)]">
-          For labels and artist managers
+          The AI workspace for music executives
         </p>
 
         <div className="mt-8 flex flex-col items-center gap-8 sm:gap-10">
-          {/* Identity-first h1 (2026-08-13 tone-down): the old 13-word
-              pain-hook ("Stop running your artists' releases out of
-              WhatsApp threads...") said what to stop, not what this is.
-              The product identity now leads; the WhatsApp pain is demoted
-              to the subhead where it still triggers recognition. */}
+          {/* Outcome-first h1: the old "One home for every release" was a
+              container metaphor, banned under the 2026-08 positioning.
+              The accent stays on "every release" — the unit of work. */}
           <h1 className="hero-fade-in hero-delay-1 mx-auto max-w-[16ch] text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.4rem] lg:text-[5.6rem]">
-            One home for{" "}
+            Run{" "}
             <span className="italic text-[var(--marketing-accent)]">
               every release
             </span>{" "}
-            you run.
+            to plan.
           </h1>
 
           <p className="hero-fade-in hero-delay-2 mx-auto block w-full max-w-[44rem] text-balance text-center text-lg leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
-            Urganize plans the rollout, gives every activity an owner, and
+            Urganize plans the rollout, gives every activity an owner and
             shows you where each release stands. No more scrolling WhatsApp
             to find out.
           </p>

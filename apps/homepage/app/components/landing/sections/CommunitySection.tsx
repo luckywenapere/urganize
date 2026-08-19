@@ -47,7 +47,7 @@ export function CommunitySection() {
             data-nosnippet
             className="text-balance text-[1.5rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[var(--marketing-text)] sm:text-[1.75rem]"
           >
-            See how other managers run their releases.
+            See how other teams run their releases.
           </h2>
 
           <p

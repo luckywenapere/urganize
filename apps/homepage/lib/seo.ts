@@ -11,8 +11,11 @@ const SITE_NAME = "Urganize";
 // the one page brand queries land on.
 //
 // TITLE: names the audience rather than a generic "for Teams" — the searcher
-// should see themselves in the result. 56 characters, so Google renders it
-// whole instead of truncating mid-phrase.
+// should see themselves in the result. Kept ≤60 characters (currently 51),
+// so Google renders it whole instead of truncating mid-phrase. Query intent
+// lives in the title ("label teams" is what buyers actually search); the
+// locked positioning line ("AI workspace for music executives") lives in
+// the description.
 //
 // DESCRIPTION: written at ~156 characters on purpose. The previous one was
 // 106 characters and opened with "How", and Google was ignoring it entirely —
@@ -23,9 +26,9 @@ const SITE_NAME = "Urganize";
 // data-nosnippet attributes on that community copy close the other half of
 // the problem.
 export const LANDING_TITLE =
-  "Urganize | Music Release Management for Artist Managers";
+  "Urganize | Music Release Workspace for Label Teams";
 export const LANDING_DESCRIPTION =
-  "Urganize gives artist managers and small labels one home for every release. Plan the rollout, give every task an owner, and stop chasing status in WhatsApp.";
+  "Urganize is the AI workspace for music executives. Run each release on an 11-week plan, put an owner on every task and see status without chasing anyone.";
 
 // Absolute, canonical share image. Served as a static asset from public/
 // (NOT the app/opengraph-image.png file convention), so the URL is stable
@@ -42,13 +45,16 @@ export const LANDING_DESCRIPTION =
 // Bump this string every time public/opengraph-image.png changes so the
 // URL is new to every platform and the very next fetch pulls fresh bytes,
 // instead of depending on a manual re-scrape request or an unknown TTL.
-const SHARE_IMAGE_VERSION = "2026-07-18";
+const SHARE_IMAGE_VERSION = "2026-08-19";
 
 const SHARE_IMAGE = {
   url: `${SITE_URL}/opengraph-image.png?v=${SHARE_IMAGE_VERSION}`,
   width: 1200,
   height: 630,
-  alt: "Every artist. Every release. One home. Urganize.",
+  // Alt mirrors the text baked into the PNG (regenerated 2026-08-19 for the
+  // executive repositioning — the old card said "One home", a banned
+  // container metaphor). If the card's tagline changes, change both.
+  alt: "Every artist. Every release. On plan. The AI workspace for music executives. Urganize.",
 };
 
 // Shared per-page metadata shape (canonical + OG + Twitter) so every

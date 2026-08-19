@@ -94,14 +94,21 @@ export const TESTIMONIALS: Record<TestimonialId, Testimonial> = {
   },
 };
 
-// Urganize's OWN description of the pre-Urganize workflow, lifted verbatim
-// from the already-approved comparison copy on /why-urganize (the "them"
-// side of each row there). These are NOT the quoted person's words and must
-// never be styled or written as if they were: no quote marks, no name, no
-// implication a testimonial person said this. Kept as a separate export
-// (not a `before` field on Testimonial) on purpose — a shared object
-// invites a future edit to "tidy" the quote to match its pairing, which is
-// exactly the drift this file exists to prevent.
+// Urganize's OWN description of the pre-Urganize workflow. These are NOT
+// the quoted person's words and must never be styled or written as if they
+// were: no quote marks, no name, no implication a testimonial person said
+// this. Kept as a separate export (not a `before` field on Testimonial) on
+// purpose — a shared object invites a future edit to "tidy" the quote to
+// match its pairing, which is exactly the drift this file exists to prevent.
+//
+// PROVENANCE CORRECTION (2026-08-19): this comment used to claim every
+// `before` was verbatim from /why-urganize's `comparisons[].them`. That
+// stopped being true when that page was refolded on 2026-08-05 — after the
+// fold only Antoine's matched `comparisons[0].them` and Adenaiye's matched
+// `compactComparisons[0].them`; Tamuno's matched nothing. These strings are
+// now first-class house copy owned HERE; /why-urganize MIRRORS the Antoine
+// and Adenaiye rows (keep those byte-identical when either file changes)
+// and Tamuno's row is standalone.
 export interface TransformationPair {
   testimonialId: TestimonialId;
   kicker: string;
@@ -123,7 +130,7 @@ export const transformationPairs: readonly TransformationPair[] = [
     testimonialId: "antoine",
     kicker: "The plan",
     before:
-      "The plan sits in a pinned message, a spreadsheet someone made once, and your head. Every new release starts from zero, plus whatever you remember from the last one.",
+      "The plan sits in a pinned message, a spreadsheet someone made once and your head. Every new release starts from zero, plus whatever you remember from the last one.",
   },
   {
     testimonialId: "adenaiye",

@@ -4,13 +4,14 @@ import Image from 'next/image';
 
 // Variant / eyebrow are retained for backwards compatibility with existing
 // call sites — the render below ignores them. Linear-style restraint: the
-// brand mark + the title line, no mock layout decoys.
+// brand mark + the title line, no mock layout decoys. There is deliberately
+// no description/sub-line prop: load screens say one short thing, nothing
+// more (founder call, 2026-08-19).
 type LoadingScreenVariant = 'shell' | 'dashboard' | 'detail' | 'form';
 
 type LoadingScreenProps = {
   eyebrow?: string;
   title?: string;
-  description?: string;
   variant?: LoadingScreenVariant;
   asPage?: boolean;
 };
@@ -26,8 +27,8 @@ type LoadingScreenProps = {
  * the app's global `prefers-reduced-motion` clamp (animation-duration to
  * 1ms) already collapses it to static for users who ask for less motion,
  * so no extra handling is needed here. Decorative — `alt=""` and
- * `aria-hidden`; the title/description text below carries the accessible
- * name via the container's `role="status"`.
+ * `aria-hidden`; the title text below carries the accessible name via the
+ * container's `role="status"`.
  */
 export function LoadingMark({ size = 48 }: { size?: number }) {
   return (
@@ -45,7 +46,6 @@ export function LoadingMark({ size = 48 }: { size?: number }) {
 
 export function LoadingScreen({
   title = 'Loading',
-  description,
   asPage = true,
 }: LoadingScreenProps) {
   const content = (
@@ -57,9 +57,6 @@ export function LoadingScreen({
       <div className="flex flex-col items-center gap-3 text-center">
         <LoadingMark />
         <p className="text-sm text-content-secondary">{title}</p>
-        {description ? (
-          <p className="max-w-xs text-xs text-content-tertiary">{description}</p>
-        ) : null}
       </div>
     </div>
   );

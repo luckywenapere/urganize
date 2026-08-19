@@ -15,14 +15,17 @@ import { Analytics } from "@vercel/analytics/next";
 
 const SITE_URL = "https://urganize.app";
 const LEGAL_NAME = "The Urganization Ltd";
+// Executive repositioning (2026-08-19): label/exec-shaped terms lead;
+// "artist manager software" stays — managers remain a real search segment
+// and the ecosystem entry point, they're just no longer the hero.
 const LANDING_KEYWORDS = [
   "music release management",
-  "artist manager software",
-  "music project management",
-  "label management tool",
+  "label management software",
+  "record label software",
+  "music release planning",
   "release rollout plan",
-  "music release checklist",
-  "artist team software",
+  "artist manager software",
+  "A&R software",
 ] as const;
 
 // Typography

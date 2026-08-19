@@ -154,7 +154,6 @@ function PaymentCallbackContent() {
         <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 text-center">
           <LoadingMark />
           <p className="text-sm text-content-secondary">Verifying payment</p>
-          <p className="text-xs text-content-tertiary">Confirming with Paystack — this usually takes a few seconds.</p>
         </div>
       )}
 
@@ -243,7 +242,6 @@ export default function PaymentCallbackPage() {
                 variant="shell"
                 eyebrow="Billing"
                 title="Checking payment status"
-                description="Confirming your payment and updating access."
                 asPage={false}
               />
             </div>
