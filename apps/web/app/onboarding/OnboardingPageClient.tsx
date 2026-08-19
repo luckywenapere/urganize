@@ -27,7 +27,12 @@
 // Hand-off (after step 5):
 //   1. supabase.auth.signUp via useAuthStore.signup — reuses existing flow.
 //   2. POST /api/trial/start — grant 28-day trial so the next call passes the
-//      paywall (otherwise POST /api/releases 402s).
+//      paywall (otherwise POST /api/releases 402s). SKIPPED when
+//      NEXT_PUBLIC_FEATURE_CARD_TRIAL is on: the trial then starts on
+//      /start-trial after a card is added, and this route 404s under the flag
+//      (404 is not in the tolerated {400, 409} set, so an unconditional call
+//      would throw). The release POST below still works pre-trial because the
+//      server paywall is off (see app/api/_shared/paywall.ts).
 //   3. POST /api/releases — same path the in-app modal uses. The step-4
 //      planning preference maps to the route's `plan` field: template tasks
 //      get instantiated via apps/web/lib/release-templates/instantiate.ts,
@@ -40,7 +45,10 @@
 //      FirstTimeOnboardingGate, a legacy dashboard takeover; that gate is
 //      deleted and THIS route is the only onboarding flow — see URG-191.)
 //   5a. Workspace flag ON  → advance to step 6 (invite).
-//   5b. Workspace flag OFF → router.replace(HOME_PATH).
+//   5b. Workspace flag OFF → finishToDashboard.
+//   6. finishToDashboard routes to /start-trial instead of HOME_PATH when the
+//      card-trial flag is on — the card+trial page is the first thing after
+//      onboarding, for every exit (send invites, skip, workspace-off).
 //
 // Invite step: each row { email, role } maps to one POST to
 // /api/workspace/members/invite (the same endpoint Settings → Teammates uses).
@@ -71,6 +79,7 @@ import {
 } from '@/lib/onboarding-draft';
 import { getOnboardingAiMoment } from '@/lib/onboarding-ai-moment';
 import { getAvailableReleaseTypes } from '@/lib/release-templates/loader';
+import { isCardTrialEnabled } from '@/lib/trial-card';
 
 // ---------------------------------------------------------------------------
 // Module-level constants
@@ -79,6 +88,11 @@ import { getAvailableReleaseTypes } from '@/lib/release-templates/loader';
 // Workspace flag — the invite step exists only when the workspace consolidation
 // is active. Same pattern app/dashboard/DashboardPageClient.tsx uses.
 const WORKSPACE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
+
+// Card-before-trial flag — when on, the no-card trial grant is skipped in the
+// hand-off and finishToDashboard lands on /start-trial instead of the
+// dashboard (see the Hand-off comment above).
+const CARD_TRIAL_ENABLED = isCardTrialEnabled();
 
 // Single source of truth for selectable release types: the template registry.
 // See apps/web/lib/release-templates/loader.ts. EP/album/music_video become
@@ -470,7 +484,10 @@ export default function OnboardingPage() {
     if (persisted) {
       clearOnboardingDraft();
     }
-    router.replace(HOME_PATH);
+    // Card-before-trial: the card+trial page is the first thing after
+    // onboarding — one line covers every exit into this tail (send invites,
+    // skip, workspace-off, invite-token fallbacks).
+    router.replace(CARD_TRIAL_ENABLED ? '/start-trial' : HOME_PATH);
   };
 
   // Trial → release → onboarding-complete chain. Runs the same SQL writes
@@ -481,14 +498,20 @@ export default function OnboardingPage() {
     // 1. Start the 28-day trial so the next call passes the paywall.
     // 400/409 are tolerable: a trial was already used / paid status, in
     // which case we let /api/releases be the arbiter.
-    setProgressMessage('Starting your trial...');
-    const trialResponse = await fetch('/api/trial/start', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!trialResponse.ok && trialResponse.status !== 400 && trialResponse.status !== 409) {
-      const trialPayload = (await trialResponse.json().catch(() => ({}))) as { error?: string };
-      throw new Error(trialPayload.error || 'Could not start your trial.');
+    // Card-trial flag ON: skipped entirely — the trial starts on /start-trial
+    // after a card is added, and /api/trial/start 404s under the flag (404
+    // isn't tolerated below, so calling it would throw). The release POST
+    // still works pre-trial because the server paywall is off.
+    if (!CARD_TRIAL_ENABLED) {
+      setProgressMessage('Starting your trial...');
+      const trialResponse = await fetch('/api/trial/start', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!trialResponse.ok && trialResponse.status !== 400 && trialResponse.status !== 409) {
+        const trialPayload = (await trialResponse.json().catch(() => ({}))) as { error?: string };
+        throw new Error(trialPayload.error || 'Could not start your trial.');
+      }
     }
 
     // 2. Create the real release. The step-4 planning preference decides the

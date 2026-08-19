@@ -1731,7 +1731,31 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-17 (the UrgAns composer stopped drifting after eight PRs
+*Last updated: 2026-08-18 (card before the free trial, built flag-off — see
+"Card before the free trial" above. New signups now add a card before reaching
+the app: onboarding lands them on `/start-trial`, Paystack takes a ₦100 card
+check that the webhook refunds, and a Paystack subscription with
+`start_date` = trial end charges the saved card when the 28 days lapse.
+Deliberately NOT recorded as a scope expansion — payments and the trial are
+both pre-existing v1 machinery, and this only moves WHEN the card is
+collected. Six things a later change will be tempted to undo, all in that
+section: the webhook branch diverts BEFORE the generic status flip (a card
+check is not a purchase) and claims its row by compare-and-set, because two
+concurrent deliveries would otherwise create two delayed subscriptions and
+double-charge on day 28; trial→paid conversion is the EXISTING renewal path
+and needs no new code; the signup cutoff is load-bearing rather than
+bookkeeping, since the paywall has been off since 2026-07-23 and plenty of
+established accounts match the naive "unpaid and never trialed" predicate;
+invited teammates are exempted by an active non-owner membership row, not by
+role; `/start-trial` deliberately does not gate on `cardTrialRequired`, or a
+flag-on/cutoff-unset deploy would silently no-op the feature; and
+`/api/trial/start` 404s under the flag, without which the card is one POST
+away from being bypassed. The cancel path closes the deleted 2026-06-05 card
+flow's worst gap — that one could never stop the scheduled charge. **Before
+flipping the flag, mint NGN Paystack Plans at the current ₦3,500/₦35,000
+prices and repoint the plan env vars** — the ones in use still bill
+₦150,000/₦1,500,000, and that is what a converting trial would charge.
+Previously, 2026-08-17: the UrgAns composer stopped drifting after eight PRs
 — see "The UrgAns composer drifted for eight PRs: two `100vh` document floors"
 above. The composer is not and never was `sticky`; it is a plain in-flow flex
 child whose only claim to the bottom edge is that the document cannot scroll,
@@ -1777,6 +1801,134 @@ since the FAB only exists in `MobileNavBar`, which never renders at `lg`+.
 Previously, the same day: cover art built flag-off — see "Cover art" above. Each release gains a dedicated "Cover art" scene — upload, replace, remove — closing the "future 'set as cover' action" the general Files route's own comment had deferred since Phase 3. Not a scope expansion: v1 scope item 4 names artwork outright, and no migration was needed since `releases.artwork_asset_id` and the `cover_art` asset category already existed. Its own flag, separate from Files, mirroring Song upload's reasoning exactly. Three things a later change will be tempted to undo: uploading REPLACES the current cover art (opposite of Song's keep-every-version model, because a release has exactly one identity image), deleting the old asset first (storage then row) rather than leaving an untethered duplicate the general Files scene would then show with no way to tell which is real; the scene reads `releases.artwork_asset_id` directly and never the legacy `artwork_url`/workspace-logo fallback those OTHER surfaces use, so "no cover art yet" here is honest rather than borrowed from a fallback chain; and a successful upload/removal force-refreshes the workspace command center so the catalog grid updates without a reload, unlike the general Files scene's cover_art uploads which never did. The founder's own phrasing offered "the side menu" as one placement option; it was deliberately NOT reintroduced, since a per-release side menu (`ReleaseSideNav.tsx`) was already tried and killed in URG-200 — this uses the established scene-pill pattern instead. Previously, the same day: the workspace's mobile pill dock — and the folded "more" menu panel inside it — stopped sticking to the screen entirely, reported the same day an unrelated PR, "Lock document to vertical panning to stop swipe-induced page drift" (#318), gave `<html>` its own `overflow-x: hidden` for the first time. `<body>` already had that property and stickiness worked fine, so the regression tracks to the ROOT element specifically — the textbook WebKit/Safari trigger for `position: sticky` breaking on descendants is exactly an ancestor, root included, carrying an explicit non-`visible` `overflow`. Fixed by dropping `overflow-x: hidden` from the `html` rule in `globals.css`; the other two properties that PR added (`overscroll-behavior-x: none`, `touch-action: pan-y`) stay, since neither touches the CSS overflow/scrolling-box model — only `overflow-x` does — and `touch-action: pan-y` was already the mechanism that PR's own comment called "the actual fix" for the swipe-drift bug, making `overflow-x: hidden` on `html` the redundant, riskier half of it all along. **If the swipe-drift bug ever reappears, do not reach for `overflow-x: hidden` on `html` again without re-testing sticky positioning on a real phone — the two trade off against each other through this exact property.** See the new fifth correction bullet under "Mobile scene navigation: top tabs + a folded more menu" above. Previously, the same day: the mobile menu zoom fix from earlier was itself WRONG and needed a second correction — see the same section, now updated in place. The first pass bumped the search input from `text-sm` to `text-base`, believing that hit Tailwind's stock 16px zoom-safe threshold; it does not, because THIS project's own type scale (`packages/config/tailwind/preset.js`) redefines `text-base` to 14px, so the zoom kept happening exactly as reported. Fixed for real with `text-lg` (verified against the actual compiled CSS, not just the class name: `.text-lg{font-size:16px}` vs `.text-base{font-size:14px}`), plus `touch-manipulation` added to both trigger buttons as an independent guard against Safari's separate double-tap-to-zoom gesture. **The generalizable lesson: whenever a fix here depends on a Tailwind size utility hitting a specific pixel value, check this preset's `fontSize` table first and verify against compiled output — its whole scale sits below Tailwind's defaults, not just at this one step, and the class name alone will lie to you.** Previously, the same day: three same-day corrections to the mobile scene nav rework, from the founder's own live use on a real phone: (1) the search input's `autoFocus` was zooming the whole page on iOS Safari the instant the hamburger was tapped (the fix that then needed the second correction above); (2) the standalone pill row at the panel's base carried a `border-t` + `bg-bg-base` that read as a boxed rectangle under the pills — dropped, matching the borderless top-tabs row; (3) Press kit moved out of the top tabs into the folded menu (paired with Fan capture at the end), and Release recap moved to the last position in the top tabs, trailing the two scene-toggle tabs that actually light up. No new flag, no migration — same pure repositioning as the original pass. Previously, 2026-08-16: mobile scene navigation reworked into top tabs + a folded "more" menu. Founder request via screenshot reference: below `lg`, the old "every pill in one wrapping dock" layout is gone, replaced by a persistent top-tab strip, a standalone row (New activity/Activities, Pitch), and a folded, filterable "more" menu reached via a search or hamburger icon-button. Desktop is untouched — same pills, same order, same rows. The two AI actions (Status update, Recap) changed from a single pre-rendered `extraActions` ReactNode blob into structured `TaskPanelAction` objects, specifically so the folded menu's search can filter on a real label. Previously, the same day: song upload built flag-off — see "Song upload" above. Each release gains a Song scene for its audio master, and UrgAns can start that upload from the conversation. Deliberately NOT recorded as a scope expansion, and that section says why: v1 scope item 4 names *masters* outright, and a song is an `assets` row with `category: 'audio'` — no new table, no new object, no migration. Four things a later change will be tempted to undo: the flag is separate from `NEXT_PUBLIC_FEATURE_FILES` on purpose even though they share one storage model, and the two were probe-verified independent; no tool can ever be handed a file, so `upload_song` hands the BROWSER a picker instead, and `input.click()` needing a user gesture is what makes the card the mechanism rather than a workaround; `open_song_upload` is the first client action that waits on the user, and unlike a confirmation card it deliberately survives later turns; and recording a song never replaces one, because the alternative destroys a file silently and invisibly with the files flag off. Previously, the same day: v0.56.0 — team logins SHIPPED: migration applied, ledger entry and version bump done across all 10 `package.json` files. Also carries a **measured partial correction to the `turbo-ignore` trap** recorded under the EP/album flip — read it before trusting any future `NEXT_PUBLIC_*` flip. A version-bump-only commit DOES rebuild `apps/web`, because `apps/web/package.json` is part of the `@urganize/web` package and bumping its `version` marks the package changed; the half that genuinely fails is a same-commit Redeploy or an env-var change with no new commit, where turbo-ignore sees a zero-file diff. Verify by running turbo-ignore yourself with `--fallback` set to the commit Vercel last deployed for that project. Previously, the same day: team logins built flag-off — see "Team logins" above. Creating a release now opens a compulsory step that generates a sign-in link for it, and Settings → Team gained a section that generates them without limit, copies each to WhatsApp or email, and revokes any of them. Deliberately NOT recorded as a scope expansion, and that section says why: workspace invite links have shipped since 2026-07-23 and what was missing was only the ability to list and revoke them — the table's own header has said "no UI for that yet, but the column is ready" for a month. Four things a later change will be tempted to undo: a login is a LINK and never a password, so the recipient chooses their own on /invite/accept rather than receiving one through a chat log; the mint POST stays UNGATED while list and revoke are flagged, because Settings → Teammates already calls it; "compulsory" means always-shown with one exit, and that exit stays enabled when generation FAILS, because a step that can trap a user on a dropped connection is a bug rather than discipline; and the create flow's three original branches were deferred into a resume() closure, not rewritten, which is what preserves the first-win reveal's "releases still empty at this point" assumption. Previously, 2026-08-14: fan email capture built flag-off — the tenth sanctioned scope expansion, see "Fan email capture" above. Per release, one public page trades a link for an email; the hand-crafted conversion playbook in `lib/capture-playbook` is the actual product here and is graded deterministically, with no AI in it. Three things recorded there that a later change will be tempted to undo: the link is paid out on the same screen and the destination is deliberately absent from the page's HTML so the exchange cannot be skipped; exactly three rules are blockers and a test pins the set; and the scene never touches localStorage because its payload is other people's email addresses. Verified in both flag states — the flag-off run is the one that matters and it took two attempts, because `pkill -f "next start"` matches its own command line and killed the shell before the env file was rewritten, so the first "flag off" build was silently another flag-on build. Previously: the curator invite page is server-rendered — the SAME weak-connection dead end, for the third time, and this one cost a real invited curator his sign-up: he could not open his link on Nigerian mobile data and reported it as his own connection. See "Third instance: the curator invite page" under "The front door is server-rendered". The generalizable lesson is recorded on that section's sibling-audit bullet: **the 2026-08-13 sweep's scope was the auth tree, which is exactly how a front door sitting behind an off flag escaped it — when a flag-gated surface is switched ON, re-audit its entry points before a user does it for you.** Two specifics worth carrying: `authLoading` is true on the first render for everybody and was AGAIN the reason nothing rendered server-side despite already being documented as a trap, and `force-dynamic` is right on this page though it was deliberately rejected on `/auth`, because this answer depends on a row that changes. Also on 2026-08-14: the press kit is back on — v0.54.0. `NEXT_PUBLIC_FEATURE_EPK` returns to `true` after an unrecorded spell switched off (that doc gap is now flagged in the EPK section rather than back-filled with a guessed reason), and its pill moved out of the header row to sit beside Calendar in the tasks-panel footer. No code was rebuilt; the whole feature had stayed in place behind the flag. The flag was flipped in Vercel and verified live the same day, so the press kit is reachable in production; the EPK section records the 401-vs-404 probe used to confirm it, which beats trusting a bundle string. Previously, the same day: the two portals are reachable from each other at every width — see "Crossing between the two portals" in the playlist-pitching Working-notes section. The dual-capability account shipped the day before had exactly one app→curator entry point, the identity card, and three independently-correct viewport gates compounded — the card's `hidden lg:block`, its rail-open self-hide, and the topbar's `hidden lg:grid` under the production-only `NEXT_PUBLIC_FEATURE_MOBILE_NAV` — into a band with NO crossing at all: our curator partner was opening a second browser tab on his phone. The crossing now has three homes, one per viewport band, all on one shared gate. Two lessons recorded there: check the flag COMBINATION production actually runs rather than each gate alone (the mistake URG-229 already corrected once for Metadata, repeated with one more gate in the stack), and clear a modal's scroll lock before trusting any width measurement — the first reading of the resulting 13px topbar overflow was a phantom produced by exactly `padding-right: 13px`, the same trap the Settings-tabs section documents. Also on 2026-08-14: Settings gains a billing section, v0.52.0 — see "Settings gains a billing section" above. The payment callback's "Billing" button pushed `/settings`, which had no billing section at any revision; it now leads the Account tab. Three decisions recorded there: it shows the plan NAME and never a price, because the list price in `@urganize/pricing` is not necessarily what a grandfathered account pays; it says "Active until" rather than "Renews", because renewal is not knowable from the snapshot; and it carries no iOS branch, because `/locked` already owns the Apple policy and the CTA is an in-app route. Also fixed the long-standing "Settings (profile, teammates, subscription)" error in the post-UI-cut inventory, and removed the section's card box after measuring that `bg-bg-surface` on `bg-bg-elevated` is the same colour in light mode. Previously, on 2026-08-13: playlist pitching's curator account type became a dual capability rather than an exclusive role, so a playlist owner can now also run releases under the same email; see "Dual-capability accounts" in the playlist-pitching Working-notes section. Also: Settings became four tabs, v0.51.0 — see "Settings became four tabs" above. Twelve sections in one flat column with no grouping and no page title became `/settings?tab=<account|workspace|team|notifications>`; the three notification toggles merged into one section of rows; the two identically-labelled artist-name editors were split across tabs and retitled; the page component went 612 to 202 lines with its state lifted into two hooks. Two traps recorded there: the tab param must stay DERIVED from `useSearchParams` (a post-mount read would desync on Back/Forward, and the /auth front-door trap does not apply for the reasons in the hook header), and Motivation’s deliberate lack of a feature flag is what guarantees the Notifications tab is never empty. Earlier the same day: the two front-door pages, `/auth` and `/onboarding`, are server-rendered now — see "The front door is server-rendered" above; a real user on a weak mobile connection could not sign up at all, because both pages' entire server HTML was a loading screen. Two traps recorded there for anyone editing those files: re-adding `useSearchParams()` to `AuthPageClient` silently returns `/auth` to serving a spinner as its HTML, and the pre-paint session gate is three coupled pieces — inline script, CSS, and the attribute clearing — that have to move together. Also corrected the Deploy Configuration section's redirect direction, which had been backwards since it was written: `www.urganize.app` 308s to the bare apex, verified live, not the reverse. Previously 2026-08-12: a completeness pass on mobile push notifications caught and fixed three real bugs before this ever shipped — see the three notes added inline above: the deadline-reminders toggle silently killing the pre-existing `task_overdue` notification, doubled curly quotes in every default due-date push body, and the motivational-nudges opt-out hidden behind the wrong feature flag — plus confirmed live which of the two new migrations is actually applied. Also: the identity card's nav + Metadata's viewport-split entry point, URG-229 — that entry corrects the "Identity card gains a nav" section, which described the pill's retreat as a flat `lg:hidden` when the shipped code computes it from two other flags; see `METADATA_PILL_HIDE_CLASS`. Previously 2026-08-10: mobile push notifications + editable presets built flag-off, extending the previously-undocumented Web Push stack — now backfilled above — to the native Android/iOS shell; UrgAns release planner rebuilt flag-off, superseding the tailor-plan build; playlist pitching built flag-off, and Resolved blocker #1 corrected: the paywall has been OFF in code since 2026-07-23. The release recap card, Notes and task outcomes from 2026-08-09 are also still flag-off; genre prediction from 2026-08-08 and the native mobile app entry from 2026-08-07 are otherwise still current).*
 
 ---
+
+## Card before the free trial (2026-08-18)
+
+Founder request: "find a service for users to put in their card details before
+accessing the free trial. it should be the first thing after they are
+onboarded on the app" — reference screenshots of Intercom's Early Stage
+checkout (card required, "Due today $0", trial converts automatically).
+
+**Not a scope expansion.** Payments and the 28-day trial are both pre-existing
+v1 machinery; this changes WHEN the card is collected, not what is sold. It
+also finally uses a state the schema has always allowed and nothing ever wrote
+(`subscriptions.status = 'trialing'`), and reads the `PaystackAuthorization`
+type the webhook has declared-but-never-read since it was written.
+
+**Service: Paystack** (already integrated). Verified against Paystack's own
+docs before building: there is **no ₦0 card-save** — regulators require a real
+2FA-authenticated charge, with a documented ₦50 tokenization minimum — and
+`POST /subscription` accepts **`start_date`**, which is Paystack's documented
+free-trial mechanism (first debit delayed to trial end). Stripe, which the
+reference screenshots use, does **not** onboard Nigerian businesses; Stripe
+acquired Paystack in 2020, so Paystack *is* the Stripe network here. So the
+Intercom UX is reproducible in full except the literal "$0 today": we take a
+**₦100 card check and refund it automatically**.
+
+**Founder decisions (all four asked before building):** Paystack · auto-refund
+the ₦100 · keep 28 days (terms, the /pricing FAQ and /locked all say 28) ·
+**new signups only**. The two paywall kill-switches stay OFF — this ships as
+product friction on the signup path, not a restored paywall.
+
+- **Flag:** `NEXT_PUBLIC_FEATURE_CARD_TRIAL`, default `false`. Registered in
+  `turbo.json` + `.env.example`. **No migration** — `subscriptions.status`
+  already allows `'trialing'`, `payments.plan` is free text, `payments.status`
+  already allows `'failed'`, and `profiles.created_at` already exists.
+- **The flow:** onboarding → `/start-trial` (pick Monthly/Annual, NGN only) →
+  `POST /api/trial/start-checkout` reserves a `payments` row with the
+  `trial_card` sentinel and sends the user to Paystack (`channels:['card']`,
+  **no `plan` param** — a plan param would charge full price immediately) →
+  `charge.success` → the webhook's `handleTrialCardCharge` → `/payment/callback`
+  says the trial started → dashboard.
+
+**Six things worth knowing before editing this feature:**
+
+1. **The webhook branch diverts BEFORE the generic status flip**, because a
+   ₦100 card check is not a purchase — falling through would mark the user
+   subscribed. Its order is load-bearing: idempotency check → **compare-and-set
+   claim** (`status='success' WHERE status='pending'` with `.select()`) →
+   validate plan + reusable authorization → create the delayed subscription →
+   `subscriptions` + profile trial fields → **refund last, log-only**. The CAS
+   is what makes everything downstream at-most-once: two concurrent deliveries
+   would otherwise both create a delayed subscription, i.e. a **double charge on
+   day 28**.
+2. **Trial→paid conversion is ZERO new code.** On day 28 Paystack charges the
+   saved card; that `charge.success` has a fresh reference, so it misses the
+   payments lookup and lands in the existing renewal path, which matches by
+   `paystack_subscription_code` and flips the row to `active`. Do not add a
+   second conversion path.
+3. **The signup cutoff (`TRIAL_CARD_SIGNUP_CUTOFF`) is not optional
+   bookkeeping.** The paywall has been off since 2026-07-23, so plenty of
+   EXISTING accounts sit at exactly `unpaid` + `trial_used: false` — the naive
+   predicate. Without the cutoff, flipping this flag would wall established
+   users. Unset ⇒ the login-time bounce is inert (and logs a warning).
+4. **Invited teammates are exempted by an active non-owner `workspace_members`
+   row**, not by role: an existing account that accepts an invite keeps its old
+   role, and owner rows exist for everyone via the lazy workspace bootstrap
+   (hence `role != 'owner'`). Teammates have their own `unpaid` snapshot and
+   must never be asked to pay for a workspace they were invited into.
+   `resolveCardTrialRequirement` fails OPEN on every unknown — the
+   `isFirstReleaseRequired` doctrine.
+5. **`/start-trial` deliberately does NOT gate on `cardTrialRequired`.** That
+   field drives only the login-time bounce. Gating the page on it too would
+   make a flag-on / cutoff-unset deploy bounce brand-new signups straight back
+   to the dashboard, silently no-opping the whole feature.
+6. **`POST /api/trial/start` 404s under the flag** — otherwise the card is one
+   POST away from being bypassed. Onboarding's call is wrapped in the flag
+   (404 is not in its tolerated {400, 409} set, so an unconditional call would
+   throw) and `/locked`'s trial button routes to `/start-trial` instead.
+   `/api/promo/redeem` writes the trial fields directly and stays card-free by
+   design.
+
+- **The cancel path closes the deleted flow's worst gap.** The 2026-06-05
+  card-on-file flow (never live) had no refund and **no way to stop the
+  scheduled charge** — the card was billed at `start_date` even if the user
+  quit. `POST /api/billing/cancel-trial` disables the Paystack subscription
+  using the `email_token` stashed on the payments row, sets `cancelled` and
+  **keeps `expires_at`**, so access runs to trial end and then lapses.
+  Deliberately NOT flag-gated and deliberately open-route: an in-flight trial
+  must stay cancellable after a rollback, and a just-lapsed user must still be
+  able to stop an imminent charge.
+- **The `trial_card` sentinel survives account deletion**, joining
+  `trial_claim` in the `delete-now` carve-out — that is what stops
+  delete-and-resignup from reclaiming a free trial.
+- **Verified:** `vitest run` (741 passing, 24 env-gated skips; ~54 new across
+  `lib/trial-card.test.ts` and the billing-summary additions), `eslint .`
+  (3 errors / 63 warnings vs a measured 3/61 baseline — the 3 errors are the
+  pre-existing `WorkspaceView.tsx` ones, and the 2 new warnings are the
+  documented React-19 `set-state-in-effect` downgrade on the iOS-detect and
+  fetch-on-mount effects, the same pair `LockedPageClient` already carries),
+  and `next build` green in **both** flag states with `/auth`, `/settings` and
+  `/start-trial` all still `○ Static`. Runtime probes proved the gate rather
+  than assuming it: flag OFF → `/api/trial/start-checkout` **404** while
+  `/api/trial/start` **401**; flag ON → **inverted**; the ungated
+  `/api/billing/start-checkout` 401s either way.
+- **Not verified:** nothing has run against a real Supabase or Paystack — no
+  real card, no webhook delivery, no refund, no delayed subscription, no
+  cancel, and none of the redirects against a real session. The owner UI needs
+  an authenticated session this environment cannot mint.
+- **Activation checklist:** (1) **THE blocker — mint NGN Paystack Plans at the
+  CURRENT prices (₦3,500 / ₦35,000) and repoint `PAYSTACK_PLAN_MONTHLY_NGN` /
+  `PAYSTACK_PLAN_ANNUAL_NGN`.** The plans those vars point at still bill
+  ₦150,000 / ₦1,500,000 (the documented 2026-08-16 reprice gap), and that is
+  exactly what a converting trial would charge on day 28. (2) Set
+  `NEXT_PUBLIC_FEATURE_CARD_TRIAL=true` **and** `TRIAL_CARD_SIGNUP_CUTOFF` to
+  the flip moment in Vercel `Web`, and make sure the deploy actually rebuilds
+  `apps/web`. (3) Changelog entry + minor version bump across all 10
+  `package.json` files (the EPK precedent: the ledger entry lands at
+  flag-flip, not at merge). (4) Probe production: unauthenticated
+  `/api/trial/start` → 404 and `/api/trial/start-checkout` → 401 proves the
+  flag is live in the deployed bundle. (5) End-to-end with a real card and a
+  throwaway email; in Paystack confirm the subscription exists with
+  `start_date` ≈ +28 days **at the new amount** and that the ₦100 was
+  refunded; then cancel from Settings → Billing and confirm Paystack shows it
+  disabled while access continues. (6) Sign in as a pre-existing account and
+  as a teammate — neither should be redirected anywhere.
+- **Known limit (founder-accepted):** with the server paywall off, this is
+  client-side product friction on the signup path, not an API gate — the same
+  posture every free-era account already has. Restoring the real paywall later
+  additionally requires solving teammate subscription inheritance, which is a
+  documented landmine and out of scope here.
 
 ## Cover art (2026-08-17)
 

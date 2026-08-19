@@ -21,6 +21,7 @@ import { errorMessage } from '@/lib/errors';
 import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
 import { isIOSApp, isNativePlatform } from '@/lib/platform';
 import { openExternalUrl } from '@/lib/external-link';
+import { isCardTrialEnabled } from '@/lib/trial-card';
 
 // Recurring billing /locked page.
 //
@@ -38,6 +39,11 @@ import { openExternalUrl } from '@/lib/external-link';
 //
 // The 28-day no-card trial is preserved verbatim — it's a separate path
 // that doesn't touch Paystack.
+//
+// Card-before-trial (NEXT_PUBLIC_FEATURE_CARD_TRIAL): with the flag on, the
+// trial button routes to /start-trial (card required) instead of POSTing
+// /api/trial/start — which 404s under the flag to close the no-card bypass.
+const CARD_TRIAL_ENABLED = isCardTrialEnabled();
 
 type AccessSnapshot = {
   accountStatus: AccountStatus;
@@ -375,7 +381,11 @@ export default function LockedPage() {
                     variant="secondary"
                     className="w-full"
                     disabled={isStartingTrial}
-                    onClick={handleStartTrial}
+                    onClick={
+                      CARD_TRIAL_ENABLED
+                        ? () => router.push('/start-trial')
+                        : handleStartTrial
+                    }
                   >
                     {isStartingTrial ? 'Starting trial…' : 'Start 28-day free trial'}
                   </Button>

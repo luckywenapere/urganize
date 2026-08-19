@@ -4,6 +4,9 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { HOME_PATH } from '@/lib/home-path';
+import { supabase } from '@/lib/supabase/client';
+import { formatBillingDate } from '@/lib/billing-summary';
+import { TRIAL_CARD_PLAN, TRIAL_DAYS } from '@/lib/trial-card';
 import { isBillingPlanId, getPlan } from '@urganize/pricing';
 import { LoadingMark, LoadingScreen } from '@urganize/ui';
 
@@ -12,11 +15,18 @@ import { LoadingMark, LoadingScreen } from '@urganize/ui';
 // User lands here after Paystack's hosted checkout via the callback_url
 // we pass in start-checkout. We poll /api/payments/verify until either:
 //   - status='success' (webhook fired and credited) → push to /dashboard
+//   - status='failed' (terminal — today only the card-trial webhook branch
+//     writes it, e.g. a non-reusable card) → failure state immediately
 //   - status='pending' for too long → show "Hang on, we're still finalizing"
-//   - status='failed' / row missing → show the failure state with a retry
+//   - row missing → show the failure state with a retry
 //
 // The webhook is the authoritative path. This page just confirms that
 // the credit completed before we let the user back into the app.
+//
+// Card-before-trial: the same page also lands the ₦100 card-verification
+// charge (payments.plan === TRIAL_CARD_PLAN). Same polling, different copy —
+// "trial started" instead of "subscription active", and the failure state
+// points back at /start-trial instead of the plans page.
 
 type PaymentStatus = 'verifying' | 'success' | 'failed';
 
@@ -38,6 +48,7 @@ function PaymentCallbackContent() {
 
   const [status, setStatus] = useState<PaymentStatus>('verifying');
   const [result, setResult] = useState<VerifyResponse>({});
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!reference) {
@@ -63,6 +74,43 @@ function PaymentCallbackContent() {
           setStatus('success');
           setResult(payload);
           await checkAuth({ force: true });
+          if (payload.plan === TRIAL_CARD_PLAN) {
+            // Render the "first charge on <date>" line from the authoritative
+            // trial end. Best-effort: without it the line just doesn't show.
+            try {
+              const { data: sessionData } = await supabase.auth.getSession();
+              const token = sessionData.session?.access_token;
+              if (token) {
+                const statusRes = await fetch('/api/subscription-status', {
+                  headers: { Authorization: `Bearer ${token}` },
+                  cache: 'no-store',
+                });
+                const statusPayload = (await statusRes.json().catch(() => ({}))) as {
+                  trialEndsAt?: string | null;
+                };
+                if (!cancelled && statusRes.ok && typeof statusPayload.trialEndsAt === 'string') {
+                  setTrialEndsAt(statusPayload.trialEndsAt);
+                }
+              }
+            } catch {
+              // Non-fatal — the trial is live either way.
+            }
+          }
+          return;
+        }
+
+        if (res.ok && payload.status === 'failed') {
+          // Terminal: today only the card-trial webhook branch writes
+          // 'failed' (e.g. a card whose authorization isn't reusable), so
+          // this is a no-op for the ordinary subscription flow.
+          setStatus('failed');
+          setResult({
+            ...payload,
+            error:
+              payload.plan === TRIAL_CARD_PLAN
+                ? "That card couldn't be saved for future billing. The ₦100 check is refunded automatically. Try a different card."
+                : 'The payment did not complete. Try again from the plans page.',
+          });
           return;
         }
 
@@ -94,7 +142,11 @@ function PaymentCallbackContent() {
     };
   }, [checkAuth, reference]);
 
+  const isTrialCard = result.plan === TRIAL_CARD_PLAN;
+  // 'trial_card' is not a billing plan id, so the plan line naturally stays
+  // hidden for the trial variant.
   const planLabel = isBillingPlanId(result.plan) ? getPlan(result.plan).label : null;
+  const trialEndCopy = trialEndsAt ? formatBillingDate(trialEndsAt) : null;
 
   return (
     <div className="w-full max-w-md rounded-3xl border border-stroke-subtle bg-bg-surface/95 p-6 shadow-[0_12px_32px_rgb(var(--shadow-ink)/calc(0.18*var(--shadow-alpha-scale)))] backdrop-blur-sm">
@@ -111,7 +163,17 @@ function PaymentCallbackContent() {
           <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-brand-muted text-2xl text-brand">
             ✓
           </div>
-          <p className="text-xl font-semibold text-content-primary">Subscription active</p>
+          <p className="text-xl font-semibold text-content-primary">
+            {isTrialCard ? `Your ${TRIAL_DAYS}-day free trial has started` : 'Subscription active'}
+          </p>
+          {isTrialCard ? (
+            <p className="mt-2 text-sm text-content-secondary">
+              Your card is saved and the ₦100 check is being refunded.
+              {trialEndCopy
+                ? ` First charge on ${trialEndCopy} unless you cancel.`
+                : ' You won’t be charged until your trial ends.'}
+            </p>
+          ) : null}
           {planLabel ? (
             <p className="mt-2 text-sm text-content-secondary">
               Plan: <span className="font-semibold text-content-primary">{planLabel}</span>
@@ -156,10 +218,10 @@ function PaymentCallbackContent() {
             </button>
             <button
               type="button"
-              onClick={() => router.push('/locked')}
+              onClick={() => router.push(isTrialCard ? '/start-trial' : '/locked')}
               className="min-h-11 rounded-full border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary hover:bg-bg-hover"
             >
-              Back to plans
+              {isTrialCard ? 'Back to trial setup' : 'Back to plans'}
             </button>
           </div>
         </div>

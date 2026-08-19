@@ -137,6 +137,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isAuthRoute =
     pathname?.startsWith('/auth') ||
     pathname === '/locked' ||
+    pathname === '/start-trial' ||
     pathname?.startsWith('/onboarding') ||
     pathname?.startsWith('/invite');
   const isDashboardRoute = pathname?.startsWith('/dashboard');
