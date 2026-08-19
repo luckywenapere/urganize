@@ -17,6 +17,6 @@ export default function HomePage() {
     router.replace(isAuthenticated ? HOME_PATH : '/auth');
   }, [isAuthenticated, isLoading, router]);
 
-  return <LoadingScreen variant="shell" title="Opening Urganize" description="Checking your session and routing you to the right workspace." />;
+  return <LoadingScreen variant="shell" title="Opening Urganize" />;
 }
 

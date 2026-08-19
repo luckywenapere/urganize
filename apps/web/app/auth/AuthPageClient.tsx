@@ -298,11 +298,7 @@ export default function AuthPage() {
   // during a login attempt.
   if (hasMounted && isAuthenticated && !isLoading && !isGoogleLoading) {
     return (
-      <LoadingScreen
-        variant="shell"
-        title="Opening Urganize"
-        description="Checking your session…"
-      />
+      <LoadingScreen variant="shell" title="Opening Urganize" />
     );
   }
 
@@ -314,12 +310,7 @@ export default function AuthPage() {
           swaps in its own identical loader once it takes over. Both halves of
           the swap are the same component, so they cannot drift apart. */}
       <div className="auth-session-loader">
-        <LoadingScreen
-          variant="shell"
-          title="Opening Urganize"
-          description="Checking your session…"
-          asPage={false}
-        />
+        <LoadingScreen variant="shell" title="Opening Urganize" asPage={false} />
       </div>
 
       <div className="auth-form-shell relative min-h-screen overflow-hidden bg-bg-base p-4">
