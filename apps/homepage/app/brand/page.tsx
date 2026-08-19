@@ -8,7 +8,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Brand",
   description:
-    "How Urganize looks, how it speaks, and what it stands for. Voice, colors, and logos you can download.",
+    "How Urganize looks, how it speaks and what it stands for. Voice, colors and logos you can download.",
   path: "/brand",
   // Kept out of search so the homepage's sitelinks stay commercial
   // (Features / Pricing / For managers / For labels). The page stays public
@@ -19,7 +19,7 @@ export const metadata: Metadata = buildPageMetadata({
 const VOICE_PILLARS = [
   {
     title: "Plain-spoken, no jargon",
-    body: "We say “the plan, the activities, and the press kit for your release,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
+    body: "We say “the plan, the activities and the press kit for your release,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
     say: "One link, and the press kit is live.",
     avoid: "Holistic asset-lifecycle management.",
   },
@@ -120,7 +120,7 @@ export default function BrandPage() {
             Brand
           </h1>
           <p className={`mt-4 max-w-[38rem] ${bodyText}`}>
-            How Urganize looks, how it speaks, and what it stands for, plus the logos and
+            How Urganize looks, how it speaks and what it stands for, plus the logos and
             images that represent us. Using anything here? Use it exactly as it is, and{" "}
             <a
               href="mailto:contact@urganize.app?subject=Urganize%20-%20Brand"
@@ -141,26 +141,29 @@ export default function BrandPage() {
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Mission</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
                   The music industry runs on chaos: knowledge stuck in people’s heads, scattered
-                  group chats, spreadsheets, and one overworked person holding every release
-                  together. Urganize gives your music the release it deserves. The plan, the work,
-                  and the status all live in one place.
+                  group chats, spreadsheets and one overworked person holding every release
+                  together. Urganize ends that. Every release runs to plan, with the work and the
+                  status in one workspace.
                 </p>
               </div>
 
               <div>
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Positioning</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  The system music industry teams run their releases on. How your music gets the release it deserves.
+                  Urganize is the AI workspace for music executives working with ambitious
+                  artists. Every release run to plan.
                 </p>
               </div>
 
               <div>
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Who it’s for</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Urganize is built for artist managers and small labels running more than one
-                  artist. A roster means many release calendars, many rollouts moving at once, and
-                  a pile of chats holding it together. This is the system for that. Labels running
-                  a bigger roster get the Label plan, with the founders working alongside them.
+                  Urganize is built for music executives: label heads, A&amp;R and the people
+                  running operations for ambitious artists. A roster means many release calendars,
+                  many rollouts moving at once and a pile of chats holding it together. Urganize
+                  is the workspace for that. Artists are not the customer — they feel the results.
+                  Labels running a bigger roster get the Label plan, with the founders working
+                  alongside them.
                 </p>
               </div>
 
@@ -182,10 +185,10 @@ export default function BrandPage() {
               <div className="border border-[color:var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
                 <p className={sectionEyebrow}>Boilerplate · copy / paste</p>
                 <p className="mt-2 text-[var(--marketing-text)]">
-                  Urganize gives your music the release it deserves: a rollout plan written by
-                  real managers, activities with owners and due dates, and a press kit you can send as
-                  one link. It is built for artist managers and small labels running more than one
-                  artist. Labels running a bigger roster get the Label plan, with the founders
+                  Urganize is the AI workspace for music executives working with ambitious
+                  artists. Every release runs on a rollout plan written by real managers, with an
+                  owner and a due date on every activity and a press kit you can send as one
+                  link. Labels running a bigger roster get the Label plan, with the founders
                   working alongside them.
                 </p>
               </div>

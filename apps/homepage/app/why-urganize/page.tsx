@@ -11,7 +11,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Why Urganize over WhatsApp and Google Drive",
   description:
-    "WhatsApp and Google Drive work for one artist and one release. Running more than one? Urganize gives you a real rollout plan, activities with owners, a press kit, and status in one place.",
+    "WhatsApp and Google Drive work for one artist and one release. Running more than one? Urganize gives you a real rollout plan, owners on every activity and status you can see without asking.",
   path: "/why-urganize",
 });
 
@@ -33,8 +33,11 @@ const comparisons = [
   {
     kicker: "The plan",
     title: "A rollout, not a pinned message.",
-    them: "The plan sits in a pinned message, a spreadsheet someone made once, and your head. Every new release starts from zero, plus whatever you remember from the last one.",
-    us: "Create a release and Urganize lays out the whole 11-week rollout. 64 activities, from locking the master to pulling your first-week numbers. Real managers wrote it, and you can change anything before you save it.",
+    // `them` is byte-identical to transformationPairs[0].before in
+    // content/testimonials.ts — that file owns the string, this page
+    // mirrors it. Change both together or not at all.
+    them: "The plan sits in a pinned message, a spreadsheet someone made once and your head. Every new release starts from zero, plus whatever you remember from the last one.",
+    us: "Create a release and Urganize lays out the whole 11-week rollout. 64 activities, from locking the master to pulling your first-week numbers. Real managers wrote it and tested it. Edit or delete any activity.",
   },
 ] as const;
 
@@ -52,12 +55,12 @@ const compactComparisons = [
   {
     kicker: "Press kit",
     them: "The press kit is a doc full of dead links you rebuild from scratch every time someone asks.",
-    us: "Urganize builds one from your release, keeps it current, and you can turn it off anytime.",
+    us: "Urganize builds one from your release, keeps it current and lets you turn it off anytime.",
   },
   {
     kicker: "Status",
     them: "Finding out where a release stands means scrolling weeks of chat, for every release you run.",
-    us: "One workspace shows progress, what's overdue, and what's due this week, for everything you have going.",
+    us: "One workspace shows progress, what's overdue and what's due this week, for everything you have going.",
   },
 ] as const;
 
@@ -87,7 +90,7 @@ export default function WhyUrganizePage() {
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
               For one artist and one release, a group chat and a Drive folder
-              really do work. Add a second release, a third artist, and a
+              really do work. Add a second release, a third artist and a
               team passing work around. The system that got you here starts
               to drop things.
             </p>
@@ -160,7 +163,7 @@ export default function WhyUrganizePage() {
                 Everything else
               </p>
               <h2 className={`mt-5 max-w-[40rem] ${headlineClass}`}>
-                Ownership, your press kit, and status change too.
+                Ownership, your press kit and status change too.
               </h2>
 
               <div className="mt-10 divide-y divide-[color:var(--marketing-border)]">
@@ -195,13 +198,15 @@ export default function WhyUrganizePage() {
               <h2 className={`mt-6 ${headlineClass}`}>
                 Keep WhatsApp. Keep Drive.
               </h2>
+              {/* "Workspace" is the one allowed place-word; describing
+                  WHATSAPP and DRIVE as places is fine — the ban is on
+                  framing Urganize as a container (2026-08 positioning). */}
               <p className="mx-auto mt-6 max-w-[38rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
                 This isn&apos;t about deleting apps. WhatsApp is still where
                 you talk, and Drive is still where your raw files live.
-                Urganize doesn&apos;t replace either one. It&apos;s the one
-                place where the plan lives, the work happens, and the team
-                sees status. The plan never has to live in a chat thread
-                again.
+                Urganize doesn&apos;t replace either one. It&apos;s the
+                workspace where the plan, the work and the status come
+                together. The plan never has to sit in a chat thread again.
               </p>
             </div>
           </SectionShell>
@@ -211,7 +216,7 @@ export default function WhyUrganizePage() {
         <ScrollReveal>
           <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
             <div className="text-center">
-              <h2 className={headlineClass}>Give your releases a home.</h2>
+              <h2 className={headlineClass}>Put every release on a plan.</h2>
               <div className="mt-10 flex w-full flex-col items-center gap-3">
                 <WaitlistForm source="why_urganize_cta" />
                 <ProofLine id="tamuno" className="mt-2" />
