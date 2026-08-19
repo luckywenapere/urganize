@@ -7,7 +7,6 @@ import {
   LANDING_TITLE,
 } from "@/lib/seo";
 import {
-  CommunitySection,
   FinalCTASection,
   HeroSection,
   TemplatePlanSection,
@@ -43,13 +42,17 @@ export default function Home() {
               and AskAISection was cut because it sent visitors off-site to
               three AI chatbots one scroll before the final CTA. Rebuild both
               from git history if either beat is ever wanted back. */}
+          {/* CommunitySection was REMOVED 2026-08-19 (founder call: nobody
+              clicked it) — the page now ends on the final waitlist CTA, the
+              journey's one terminal ask. The /community page and the
+              footer's Community link survive; only the landing beat is
+              gone. Rebuild from git history if it's ever wanted back. */}
           <HeroSection />
           <TransformationSection />
           <WorkspaceShotSection />
           <TemplatePlanSection />
           <ThreeFeaturesSection />
           <FinalCTASection />
-          <CommunitySection />
         </main>
 
         <MarketingFooter />

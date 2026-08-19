@@ -17,14 +17,13 @@ const SITE_NAME = "Urganize";
 // locked positioning line ("AI workspace for music executives") lives in
 // the description.
 //
-// DESCRIPTION: written at ~156 characters on purpose. The previous one was
+// DESCRIPTION: written at ~150-160 characters on purpose. A shorter one was
 // 106 characters and opened with "How", and Google was ignoring it entirely —
-// it substituted the CommunitySection paragraph from further down the page,
-// so the result for "urganize" described a group chat rather than release
-// management software. A full-length description that opens with the brand
-// and states concrete benefits is far likelier to be used verbatim; the
-// data-nosnippet attributes on that community copy close the other half of
-// the problem.
+// it substituted the landing CommunitySection's group-chat paragraph, so the
+// result for "urganize" described a group chat rather than release software.
+// That section was removed from the landing page on 2026-08-19, but KEEP the
+// description full-length: a short or weak one invites Google to substitute
+// any other page text (the /community page still carries group-chat copy).
 export const LANDING_TITLE =
   "Urganize | Music Release Workspace for Label Teams";
 export const LANDING_DESCRIPTION =

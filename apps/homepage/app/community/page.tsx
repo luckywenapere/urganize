@@ -4,10 +4,11 @@ import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/community";
 
-// The invite link lives in lib/community.ts (2026-07-31) so this page and
-// the landing CommunitySection can't drift from each other. Same link as
-// the in-app "Community" entry in apps/web/components/app/HelpMenu.tsx and
-// the community.urganize.app host redirect in next.config.ts — this page
+// The invite link lives in lib/community.ts (2026-07-31). The landing
+// CommunitySection was removed 2026-08-19, so this page is now the ONLY
+// marketing surface for the group. Same link as the in-app "Community"
+// entry in apps/web/components/app/HelpMenu.tsx and the
+// community.urganize.app host redirect in next.config.ts — this page
 // is the front door for both.
 //
 // Retitled from "The Release Room" 2026-07-31 (founder call): it works
