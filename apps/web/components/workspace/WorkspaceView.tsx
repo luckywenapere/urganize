@@ -947,8 +947,16 @@ export function WorkspaceView() {
             } else if (plannerPending) {
               // Straight into the intake: planning is the whole point of having
               // chosen a rollout plan, and the release has nothing else in it.
+              // The type picked in the modal rides along as a prefill so the
+              // intake's own type question isn't asked a second time.
               router.push(`/dashboard?release=${releaseId}`);
-              openIntake({ source: 'empty_state', releaseId });
+              openIntake({
+                source: 'empty_state',
+                releaseId,
+                ...(result?.releaseType
+                  ? { prefill: { releaseType: result.releaseType } }
+                  : {}),
+              });
             } else {
               // ?new=1 triggers the one-time dismissible getting-started guide
               // (NewReleaseGuide) — only for TEMPLATE creations; its copy

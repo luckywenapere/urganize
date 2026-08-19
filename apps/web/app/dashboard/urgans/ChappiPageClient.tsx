@@ -10,6 +10,7 @@ import { ChappiConversation } from '@/components/chappi/ChappiConversation';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { ChappiPageSkeleton } from '@/components/loading/ChappiPageSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
+import { usePlannerStore } from '@/stores/usePlannerStore';
 import { useFirstReleaseRequired } from '@/components/releases/useFirstReleaseRequired';
 import { FirstReleaseWin } from '@/components/workspace/FirstReleaseWin';
 import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
@@ -153,12 +154,29 @@ export default function ChappiPageClient() {
         onCreated={(releaseId, plan, result) => {
           setIsCreateModalOpen(false);
           void loadCommandCenter();
+          const plannerPending = result?.plannerPending === true;
           // Deferred continuation, mirroring WorkspaceView's onCreated: the
           // compulsory team-login step runs first, then hands back to the
           // original branches unchanged.
           const resume = () => {
-            if (FIRST_WIN_ENABLED && releases.length === 0) {
+            if (FIRST_WIN_ENABLED && releases.length === 0 && !plannerPending) {
               setWinReleaseId(releaseId);
+            } else if (plannerPending) {
+              // Straight into the intake, same as the workspace's create flow:
+              // planning is the whole point of having chosen a rollout plan.
+              // Previously this path pushed ?new=1 and the user had to find
+              // the Plan card themselves — where the intake then re-asked the
+              // release type the modal had already collected. The prefill is
+              // what stops that double-ask. (The intake modal is mounted
+              // app-wide by AppShell, so it survives this navigation.)
+              router.push(`/dashboard?release=${releaseId}`);
+              usePlannerStore.getState().openIntake({
+                source: 'empty_state',
+                releaseId,
+                ...(result?.releaseType
+                  ? { prefill: { releaseType: result.releaseType } }
+                  : {}),
+              });
             } else {
               // Same one-time getting-started guide as the workspace's create
               // flow — template creations only (see WorkspaceView's onCreated).
