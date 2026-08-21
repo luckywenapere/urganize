@@ -20,12 +20,27 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "0.58.0",
+    version: "0.59.0",
     date: "August 21, 2026",
     highlights: [
       "The sign-in page got a clean new look: your logo up top and two simple buttons — Continue with Google or Continue with Email.",
       "Signing in with email is now one step at a time. Type just your email and continue: if you have an account, the password field appears right there; if you're new, you go straight into sign-up with your email already filled in.",
       "Stuck at the door? A \"Having trouble signing in? Contact us\" link at the base of the page opens a chat with us.",
+    ],
+  },
+  {
+    version: "0.58.1",
+    date: "August 21, 2026",
+    highlights: [
+      "Tapping the UrgAns icon while already on the assistant page now takes you back to your workspace — before, it did nothing.",
+      "On phones, switching between UrgAns and Home no longer loses the release you had pinned in the assistant.",
+    ],
+  },
+  {
+    version: "0.58.0",
+    date: "August 21, 2026",
+    highlights: [
+      "New members now get a welcome note from Lucky in their inbox when they finish setting up — with a direct line to him on WhatsApp if anything feels confusing.",
     ],
   },
   {

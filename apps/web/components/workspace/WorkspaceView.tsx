@@ -351,17 +351,34 @@ export function WorkspaceView() {
   }, [toast]);
 
   // Live-sync the assistant's scoped release to the catalog's open release
-  // WHILE the rail is open. The deps array IS the transition detector:
-  // opening the rail fires this immediately (including `null` = "All
-  // releases"); changing/clearing the catalog selection while open fires it
-  // again; a manual pick inside ChappiScopePicker only touches the store
-  // (no dep here changes), so it holds until the next catalog transition.
-  // Runs below lg too if railOpen lingers there — harmless, and consistent
-  // with the mobile "carry once at navigation" behavior in AppTopbar.
+  // WHILE the rail is VISIBLE beside it. The deps array IS the transition
+  // detector: the rail appearing fires this immediately (including `null` =
+  // "All releases"); changing/clearing the catalog selection while it is open
+  // fires it again; a manual pick inside ChappiScopePicker only touches the
+  // store (no dep here changes), so it holds until the next catalog
+  // transition.
+  //
+  // `isDesktopViewport` is load-bearing, not defensive (2026-08-19 fix). This
+  // used to run below lg as well, waved off as "harmless if railOpen lingers
+  // there" — but `railOpen` is not a lingering edge case on a phone: AppShell
+  // arms it once per session on the first chrome-bearing page with no viewport
+  // check, and persists it. So on mobile this fired on every WorkspaceView
+  // mount, and the rail it was supposedly mirroring is `hidden lg:block` — it
+  // was never on screen. Switching UrgAns -> Home therefore wiped the release
+  // the user had pinned in the assistant's own picker (to `null` on a
+  // multi-release account, or to the auto-scoped release on a single-release
+  // one), and switching back showed the wrong working context.
+  //
+  // Below lg the coupling is deliberately ONE-WAY and event-driven instead:
+  // MobileNavBar's UrgAns tab (and AppTopbar's icon, flag-off) carry the
+  // drilled-in release across at the moment of navigation, and both are
+  // careful to do it ONLY when a release is actually scoped precisely so a
+  // bare navigate cannot clobber the picker's choice. This effect was the one
+  // thing bypassing that rule.
   useEffect(() => {
-    if (!CHAPPI_ENABLED || !isRailOpen) return;
+    if (!CHAPPI_ENABLED || !isRailOpen || !isDesktopViewport) return;
     useChappiStore.getState().setScopedReleaseId(scopedReleaseId);
-  }, [isRailOpen, scopedReleaseId]);
+  }, [isDesktopViewport, isRailOpen, scopedReleaseId]);
 
   // ExecutionTask extends Task by intersection; assignable without cast.
   const taskList: Task[] = tasks;
