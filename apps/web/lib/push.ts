@@ -15,6 +15,12 @@ export type PushStatus =
   | 'enabled' // permission granted AND a live subscription exists
   | 'disabled'; // supported but not (yet) subscribed on this device
 
+/** The raw browser permission, narrowed to the three states that matter.
+ * Distinct from PushStatus on purpose: status answers "is this device
+ * receiving pushes", this answers "are we still ALLOWED to ask" — and only
+ * 'default' means yes. lib/push-prompt.ts turns the pair into a decision. */
+export type PushPermissionState = 'default' | 'granted' | 'denied';
+
 export function isPushSupported(): boolean {
   return (
     typeof window !== 'undefined' &&
@@ -23,6 +29,16 @@ export function isPushSupported(): boolean {
     'Notification' in window &&
     Boolean(VAPID_PUBLIC_KEY)
   );
+}
+
+/** Reads Notification.permission without prompting. Returns 'denied' when
+ * the API is absent so callers can treat "cannot ask" uniformly — the
+ * unsupported case is already caught by isPushSupported/getPushStatus before
+ * this value is ever consulted. */
+export function getNotificationPermission(): PushPermissionState {
+  if (typeof window === 'undefined' || !('Notification' in window)) return 'denied';
+  const permission = Notification.permission;
+  return permission === 'granted' || permission === 'denied' ? permission : 'default';
 }
 
 /** Registers the service worker. Safe to call on every app load — no

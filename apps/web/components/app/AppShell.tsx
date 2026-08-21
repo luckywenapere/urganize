@@ -70,6 +70,13 @@ const WhatsNewModal = dynamic(
   () => import('@/components/app/WhatsNewModal').then((m) => m.WhatsNewModal),
   { ssr: false }
 );
+// The first-login push ask. Dynamic + flag-gated for the same reason the
+// planner modal is: while the flag is off its chunk is never requested, and
+// this one pulls in the Web Push + Capacitor push clients behind it.
+const PushPermissionPrompt = dynamic(
+  () => import('@/components/app/PushPermissionPrompt').then((m) => m.PushPermissionPrompt),
+  { ssr: false }
+);
 // NOTE: the release scenes (Metadata / Calendar / Files / Press kit) are NOT
 // mounted here. They were briefly overlay windows mounted app-wide from this
 // file (2026-08-04), but the founder corrected that to an inline panel that
@@ -107,6 +114,14 @@ const IDENTITY_PANEL_ENABLED =
 // independent of auth/route state — deliberately never inside the native
 // shell itself (AndroidAppBanner's own isAndroidBrowser() check excludes it).
 const ANDROID_APP_BANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_ANDROID_APP_BANNER === 'true';
+
+// First-login soft ask for notification permission (2026-08-21). Push itself
+// has been live and configured since 2026-07-23; the only way in was a row in
+// Settings, so an audit found ONE registered browser and ZERO devices against
+// ~40 deadline notifications a day going nowhere but the in-app bell. See
+// PushPermissionPrompt.tsx for why the ask is a card and why its BUTTON, not
+// this mount, is what opens the OS prompt.
+const PUSH_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PUSH_PROMPT === 'true';
 
 // Once-per-session arming for the side rail: landing on the assistant page
 // (the post-auth front door when the flag is on — see lib/home-path.ts)
@@ -471,6 +486,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           entries this device hasn't seen yet, once per release, on signed-in
           app surfaces only. */}
       {isAuthenticated && !isAuthLoading && showWorkspaceChrome ? <WhatsNewModal /> : null}
+      {/* Same gate as What's new: signed in, auth RESOLVED, and only on a
+          route that renders chrome. showWorkspaceChrome already excludes a
+          curator-only account, which has no releases or tasks to be notified
+          about. */}
+      {PUSH_PROMPT_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
+        <PushPermissionPrompt />
+      ) : null}
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
       {/* FirstTimeOnboardingGate was mounted here until 2026-07-29 (URG-191).
           It was a SECOND, legacy onboarding implementation — a 5-step

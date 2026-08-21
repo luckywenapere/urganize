@@ -17,6 +17,7 @@ import { Capacitor } from '@capacitor/core';
 import { isNativePlatform } from '@/lib/platform';
 import { supabase } from '@/lib/supabase/client';
 import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import type { PushPermissionState } from '@/lib/push';
 
 const TOKEN_STORAGE_KEY = 'urganize.native-push.token';
 const TOKEN_STORAGE_VERSION = 1;
@@ -87,6 +88,23 @@ async function unregisterToken(token: string): Promise<void> {
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify({ token }),
   }).catch(() => {});
+}
+
+/** Native counterpart to lib/push.ts's getNotificationPermission. Capacitor
+ * reports two flavours of "not asked yet" ('prompt' and
+ * 'prompt-with-rationale'); both collapse to 'default' because both mean the
+ * OS will still show a prompt if we request one. */
+export async function getNativePushPermission(): Promise<PushPermissionState> {
+  if (!isNativePushAvailable()) return 'denied';
+  try {
+    const { PushNotifications } = await import('@capacitor/push-notifications');
+    const permission = await PushNotifications.checkPermissions();
+    if (permission.receive === 'granted') return 'granted';
+    if (permission.receive === 'denied') return 'denied';
+    return 'default';
+  } catch {
+    return 'denied';
+  }
 }
 
 export async function getNativePushStatus(): Promise<NativePushStatus> {
