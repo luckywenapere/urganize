@@ -1,0 +1,180 @@
+// Billing/conversion events (NEXT_PUBLIC_FEATURE_HARD_PAYWALL) — pure logic.
+//
+// Two jobs. The event names below are the conversion funnel the founder reads
+// (trial started -> wall hit -> talked to us -> paid), and the same rows are the
+// dedupe ledger the notification paths check so nobody is emailed twice for one
+// moment and no teammate can spam an owner. The table is billing_events; the
+// I/O half is lib/billing-events-server.ts.
+//
+// Everything here is pure so the decisions are unit-testable without a
+// database: whether a wall view is a first hit or a return visit, whether a
+// notify-admin click is allowed, and whose subscription a team checkout should
+// credit.
+
+/** Every billing moment worth recording. `type` is free text in the schema (a
+ * new moment needs no migration), but this union is what the app writes and
+ * what the admin panel and dedupe checks read. */
+export const BILLING_EVENT_TYPES = [
+  /** A team's 14 days began (workspace provisioned, or the backfill). */
+  'trial_started',
+  /** An admin added days. */
+  'trial_extended',
+  /** The daily sweep saw a team enter its last 3 days. */
+  'trial_ending_soon',
+  /** Someone on this team saw the wall for the first time. */
+  'paywall_hit',
+  /** A walled team came back and looked again — renewed interest. */
+  'paywall_return_visit',
+  /** They chose the invoice/walkthrough path instead of card checkout. */
+  'talk_to_us_clicked',
+  /** A non-owner asked their admin to activate the plan. */
+  'notify_admin_sent',
+  /** Checkout was initialized (they reached Paystack). */
+  'checkout_started',
+  /** Payment landed and access was granted. */
+  'checkout_completed',
+  'comped',
+  'uncomped',
+  'founding_assigned',
+  'custom_price_set',
+  /** Settled outside checkout: invoice, bank transfer, an agreement. */
+  'manually_marked_paid',
+] as const;
+
+export type BillingEventType = (typeof BILLING_EVENT_TYPES)[number];
+
+export function isBillingEventType(value: unknown): value is BillingEventType {
+  return (
+    typeof value === 'string' &&
+    (BILLING_EVENT_TYPES as readonly string[]).includes(value)
+  );
+}
+
+/** What the wall UI is allowed to report. Deliberately NOT the full event
+ * union: the client says what happened ("someone looked at the wall") and the
+ * server decides which event that is, so a client cannot forge a
+ * `checkout_completed` or a `comped`. */
+export type BillingTrackRequest = 'paywall_view' | 'talk_to_us';
+
+export function isBillingTrackRequest(value: unknown): value is BillingTrackRequest {
+  return value === 'paywall_view' || value === 'talk_to_us';
+}
+
+/** Same UTC day? Return visits are deduped per day so one person reloading the
+ * wall does not produce a dozen "renewed interest" emails. UTC because the
+ * server has no reliable team timezone, and the founder reads these in
+ * aggregate rather than to the hour. */
+function isSameUtcDay(a: Date, b: Date): boolean {
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
+}
+
+/**
+ * Decide what a wall interaction should be recorded as.
+ *
+ * 'paywall_view' becomes the FIRST 'paywall_hit' for a team, and every view
+ * after that a 'paywall_return_visit' — the distinction the founder cares
+ * about, since a team coming back to the wall days later is a live sales
+ * signal. Return visits collapse to one per UTC day.
+ *
+ * 'talk_to_us' always records: a second click means they tried again, which is
+ * information, and there is no email storm risk (one click, one intent).
+ *
+ * Returns null when nothing should be written (a same-day repeat view).
+ */
+export function resolveTrackOutcome(input: {
+  requested: BillingTrackRequest;
+  hasPriorPaywallHit: boolean;
+  lastReturnVisitAt: string | null;
+  now?: Date;
+}): BillingEventType | null {
+  if (input.requested === 'talk_to_us') return 'talk_to_us_clicked';
+
+  if (!input.hasPriorPaywallHit) return 'paywall_hit';
+
+  const now = input.now ?? new Date();
+  const lastMs = input.lastReturnVisitAt ? Date.parse(input.lastReturnVisitAt) : Number.NaN;
+  if (Number.isFinite(lastMs) && isSameUtcDay(new Date(lastMs), now)) {
+    return null;
+  }
+  return 'paywall_return_visit';
+}
+
+/** A teammate may nudge their admin once a day, and a team may produce at most
+ * this many nudges a day however many people are on it. Both bounds protect the
+ * owner's inbox on a large team without ever refusing the first, real ask. */
+export const NOTIFY_ADMIN_PER_ACTOR_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+export const NOTIFY_ADMIN_MAX_PER_TEAM_PER_DAY = 5;
+
+/**
+ * Should this "Notify my admin" click send an email?
+ *
+ * `alreadySent` is the honest answer for a repeat click by the same person:
+ * the UI says "Your admin has been notified" rather than pretending to send
+ * again or showing an error, because from their point of view it worked.
+ * A team over its daily cap is also reported as alreadySent — the owner has
+ * certainly heard by then, and telling the fifth teammate their click failed
+ * would be confusing and useless.
+ */
+export function resolveNotifyAdminDecision(input: {
+  lastSameActorSentAt: string | null;
+  workspaceSentTodayCount: number;
+  now?: Date;
+}): { allowed: boolean; alreadySent: boolean } {
+  const now = input.now ?? new Date();
+
+  const lastMs = input.lastSameActorSentAt ? Date.parse(input.lastSameActorSentAt) : Number.NaN;
+  if (Number.isFinite(lastMs) && now.getTime() - lastMs < NOTIFY_ADMIN_PER_ACTOR_COOLDOWN_MS) {
+    return { allowed: false, alreadySent: true };
+  }
+
+  if (input.workspaceSentTodayCount >= NOTIFY_ADMIN_MAX_PER_TEAM_PER_DAY) {
+    return { allowed: false, alreadySent: true };
+  }
+
+  return { allowed: true, alreadySent: false };
+}
+
+/**
+ * Whose subscription does a team checkout credit?
+ *
+ * The team's OWNER, always — even when an admin is the one paying. That is what
+ * keeps the untouched Paystack webhook correct: it credits
+ * `payments.user_id` / `metadata.user_id`, and access is resolved from the
+ * owner's snapshot, so crediting the clicking admin instead would take the
+ * money and leave the team walled.
+ *
+ * Members and guests cannot start a team checkout (the wall shows them the
+ * notify-admin path instead). With the flag off, or with no workspace context,
+ * the requester pays for themselves exactly as before.
+ */
+export function resolveCheckoutSubject(input: {
+  flagOn: boolean;
+  requesterId: string;
+  workspace: { ownerId: string } | null;
+  membershipRole: string | null;
+  membershipStatus: string | null;
+}): { subjectUserId: string } | { error: string } {
+  if (!input.flagOn || !input.workspace) {
+    return { subjectUserId: input.requesterId };
+  }
+
+  if (input.workspace.ownerId === input.requesterId) {
+    return { subjectUserId: input.workspace.ownerId };
+  }
+
+  const status = String(input.membershipStatus ?? '').trim().toLowerCase();
+  if (status !== 'active') {
+    return { error: 'You are not an active member of this team.' };
+  }
+
+  const role = String(input.membershipRole ?? '').trim().toLowerCase();
+  if (role !== 'owner' && role !== 'admin') {
+    return { error: 'Only a team owner or admin can activate the plan.' };
+  }
+
+  return { subjectUserId: input.workspace.ownerId };
+}
