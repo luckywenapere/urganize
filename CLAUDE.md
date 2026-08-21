@@ -1947,6 +1947,16 @@ now coincides with Label's stored ₦800,000; harmless, since Label is
   passed — it masked a real type error here. Check the exit code. Also note
   `pkill -f "next start"` matches its own command line and kills the shell; use
   a PID file (the capture-feature trap, hit again).
+- **The trial stamp is flag-gated, and that is a deploy-safety requirement.**
+  `ensureOwnedWorkspace` writes `trial_started_at` / `trial_ends_at` only when
+  the flag is on, because those columns do not exist until the migration is
+  applied and that is a manual step AFTER this code deploys. Writing them
+  unconditionally meant every new account's provisioning INSERT referenced
+  columns the live database lacked: swallowed on the
+  `loadWorkspaceAccessContext` path (`isTaskSchemaMissingError` matches `42703`
+  and `PGRST204`) but silently leaving the account with no team, and worse on
+  the routes that call it directly. Flag off, that INSERT is byte-for-byte what
+  it was before this feature. Do not "simplify" the gate away.
 - **Activation checklist:** (1) apply
   `20260821120000_team_trial_hard_paywall.sql` — **this starts every existing
   team's 14 days**; (2) review `/admin/teams`, assign Founding Member rates, comp
@@ -1955,11 +1965,17 @@ now coincides with Label's stored ₦800,000; harmless, since Label is
   `PAYSTACK_PLAN_ANNUAL_NGN`** — the Plans in use still bill ₦150,000/₦1,500,000,
   so flipping first overcharges the first team to pay by ~2x (this gap has now
   come up four times); (4) set `BILLING_ALERTS_EMAIL`; (5) flip the flag with a
-  deploy that rebuilds `apps/web`; (6) changelog entry + version bump across all
-  10 `package.json` files (the EPK precedent: the ledger entry lands at
-  flag-flip, not at merge); (7) verify live — pill at ≤10 days, wall on all
-  routes with owner vs member variants, checkout crediting the owner, the five
-  alert types arriving, comp/extend restoring access.
+  deploy that rebuilds `apps/web`; (6) **re-run the migration's backfill
+  statement** (`update public.workspaces set trial_started_at = coalesce(...),
+  trial_ends_at = now() + interval '14 days' where trial_ends_at is null`) — it
+  is idempotent, and any team created between step 1 and step 5 is unstamped
+  because the stamp is flag-gated. Such a team fails OPEN (an unstamped row
+  reads as an active trial, never a wall), so this is tidying rather than a
+  rescue, and `/admin/teams` shows exactly who needs it; (7) changelog entry +
+  version bump across all 10 `package.json` files (the EPK precedent: the ledger
+  entry lands at flag-flip, not at merge); (8) verify live — pill at ≤10 days,
+  wall on all routes with owner vs member variants, checkout crediting the
+  owner, the five alert types arriving, comp/extend restoring access.
 - **Out of scope, flagged for a founder copy pass:** `/terms` and the homepage
   `/signup` still say "28-day free trial".
 - **Not verified:** nothing has run against a real Supabase, Paystack or Resend
