@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.57.0",
+    date: "August 21, 2026",
+    highlights: [
+      "Teammate invites now arrive by email. Invite someone with their address from Settings or UrgAns and the join link lands in their inbox — the copyable link is still there as a backup for sharing over WhatsApp or chat.",
+    ],
+  },
+  {
     version: "0.56.3",
     date: "August 18, 2026",
     highlights: [
