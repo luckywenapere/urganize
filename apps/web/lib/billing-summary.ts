@@ -45,6 +45,17 @@ export type BillingSummaryOptions = {
   /** NEXT_PUBLIC_FEATURE_CARD_TRIAL, resolved by the caller — this module
    * stays pure/env-free so it can be tested without stubbing env. */
   cardTrialEnabled?: boolean;
+  /** Team access, when NEXT_PUBLIC_FEATURE_HARD_PAYWALL is on. Present means
+   * billing is a TEAM question: the copy then talks about the team's trial and,
+   * for a member, says plainly that activating is not theirs to do. Absent
+   * leaves every string below exactly as it was. */
+  team?: {
+    state: string;
+    trialDaysLeft: number;
+    trialEndsAt: string | null;
+    isOwnerOrAdmin: boolean;
+    teamName: string | null;
+  };
 };
 
 /**
@@ -112,6 +123,57 @@ export function summarizeBilling(
       title: 'Complimentary access',
       details: ['This account has the full app without a subscription.'],
       cta: null,
+      secondaryCta: null,
+    };
+  }
+
+  // Team trial (hard paywall). Takes precedence over the per-user trial copy
+  // below, because under this flag the team's dates are what actually govern
+  // access and the profile's may be unset entirely.
+  const team = options.team;
+  if (team && (team.state === 'trial' || team.state === 'grace')) {
+    const teamTrialEnds = formatBillingDate(team.trialEndsAt);
+    const details =
+      team.state === 'grace'
+        ? ['Your trial has just ended.']
+        : [
+            team.trialDaysLeft <= 0
+              ? 'Ends today.'
+              : `${team.trialDaysLeft} day${team.trialDaysLeft === 1 ? '' : 's'} left.`,
+          ];
+    if (teamTrialEnds && team.state === 'trial') details.push(`Ends ${teamTrialEnds}.`);
+    details.push(
+      team.isOwnerOrAdmin
+        ? 'One plan covers everyone on your team.'
+        : 'Your team admin activates the plan for everyone.'
+    );
+    return {
+      title: 'Free trial',
+      details,
+      cta: team.isOwnerOrAdmin ? 'plans' : null,
+      secondaryCta: null,
+    };
+  }
+
+  if (team && team.state === 'comped') {
+    return {
+      title: 'Complimentary access',
+      details: ['Your team has the full app without a subscription.'],
+      cta: null,
+      secondaryCta: null,
+    };
+  }
+
+  if (team && team.state === 'walled') {
+    return {
+      title: 'No plan yet',
+      details: [
+        'Everything your team created is safe and waiting.',
+        team.isOwnerOrAdmin
+          ? 'Activate a plan to pick up where you left off.'
+          : 'Your team admin activates the plan for everyone.',
+      ],
+      cta: team.isOwnerOrAdmin ? 'plans' : null,
       secondaryCta: null,
     };
   }
