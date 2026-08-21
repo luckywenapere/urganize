@@ -38,6 +38,21 @@ import { TESTIMONIALS, type TestimonialId } from "@/content/testimonials";
 //                                      above that page's form — a second
 //                                      one would stack two testimonials
 //                                      on one CTA.
+//   for_executives_cta → (none)      same reason: tamuno's full quote (the
+//                                      site's one A&R voice, so the right
+//                                      one for that page) sits above the
+//                                      form. He also carries
+//                                      why_urganize_cta — a different page,
+//                                      which the no-stacking rule allows.
+//   for_curators_cta   → (none)      every quote on this site is from a
+//                                      manager or an A&R. Under a CURATOR's
+//                                      CTA that's proof from the other side
+//                                      of the pitch, so that page runs
+//                                      without one until a curator gives us
+//                                      a quote of their own.
+//   for_ai_artists_cta → (none)      no AI artist has given us a quote. We
+//                                      don't borrow an adjacent audience's
+//                                      voice to stand in for one.
 
 interface ProofLineProps {
   id: TestimonialId;
