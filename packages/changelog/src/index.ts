@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.59.1",
+    date: "August 21, 2026",
+    highlights: [
+      "On your phone, everything you can open for a release — Plan, Collect metadata, Pitch, Files, Calendar, Press kit — now sits together at the bottom of the screen, stacked so you can see all of it at once. It stays put while you scroll your activities, and nothing runs off the side of the screen the way the old sideways-scrolling row did.",
+      "Notes came off that row, since it already has its own tab in the bar at the bottom of your phone screen.",
+      "The content calendar is no longer marked Beta.",
+    ],
+  },
+  {
     version: "0.59.0",
     date: "August 21, 2026",
     highlights: [
