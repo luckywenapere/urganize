@@ -6,28 +6,49 @@ import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { HOME_PATH } from '@/lib/home-path';
-import { Button } from '@urganize/ui';
+import { openExternalUrl } from '@/lib/external-link';
 import { Input } from '@urganize/ui';
-import { Card } from '@urganize/ui';
-import { Logo } from '@urganize/ui';
+import { LogoIcon } from '@urganize/ui';
 import { LoadingScreen } from '@urganize/ui';
 import { Mail, Lock } from 'lucide-react';
 import { errorMessage } from "@/lib/errors";
 
-// /auth is now login-only. Organic signup flows through /onboarding
-// (Google + role parity); invited teammates flow through /invite/accept
-// (token-based, no email-match dependency). The previous in-page mode
-// toggle ('login' | 'role' | 'signup') has been removed; ?mode=signup
-// is preserved as a query parameter only so we can redirect old
-// bookmarks to the right entrance.
-type LoginProviderHint = 'unknown' | 'google' | 'email';
+// /auth is the single front door for BOTH sides of the account line, in the
+// stacked-pill layout: logo, heading, "Continue with Google", "Continue with
+// Email". The email path is identifier-first — the visitor enters only their
+// email and clicks Continue; /api/auth/providers then says whether that email
+// has an account. Registered → the password field appears under the email
+// field. Not registered → we hand the email to /onboarding (the organic
+// signup home) so they never retype it. Invited teammates still flow through
+// /invite/accept (token-based, no email-match dependency), and ?mode=signup
+// is preserved as a query parameter only so old bookmarks land somewhere.
+//
+// The lookup is a ROUTER here, not a wall (founder bug report, 2026-07-23:
+// when the old provider hint was wrong it locked the password field away
+// entirely). Two consequences: a lookup failure fails OPEN — password field
+// shown, plus a signup link so a genuinely-new person still has a path — and
+// a "created with Google" answer only adds a suggestion above a password
+// field that stays usable.
+type EmailStage = 'hidden' | 'collect' | 'password';
+type EmailAccountLookup = 'none' | 'password' | 'google-only' | 'unknown';
 const LAST_AUTH_EMAIL_KEY = 'urganize.last_auth_email';
 // Written by the pre-hydration probe in app/layout.tsx, read by the CSS gate in
 // app/globals.css, cleared here once Supabase confirms there is no session.
 const SESSION_HINT_ATTRIBUTE = 'data-auth-session';
+// Same founder-support destination global-error.tsx and the support pill use.
+const SUPPORT_WHATSAPP_URL = 'https://wa.me/2347067367057';
 const normalizeAuthEmail = (value: string) => value.trim().toLowerCase();
 
-const resolveLoginProviderHint = async (normalizedEmail: string): Promise<LoginProviderHint> => {
+// Both entrance pills share one look so Google and email read as equals, the
+// reference layout's whole point. Surface + border rather than a filled brand
+// pill because in light mode bg-surface is byte-identical to the page ground —
+// the border is what makes the pill exist there.
+const entrancePillClass =
+  'flex w-full items-center justify-center gap-3 rounded-full border border-stroke-default bg-bg-surface px-5 py-3.5 text-lg font-semibold text-content-primary transition-colors duration-fast ease-standard hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-50';
+const primaryPillClass =
+  'flex w-full items-center justify-center rounded-full bg-brand px-5 py-3.5 text-lg font-semibold text-content-inverse transition-colors duration-fast ease-standard hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50';
+
+const lookupEmailAccount = async (normalizedEmail: string): Promise<EmailAccountLookup> => {
   try {
     const response = await fetch('/api/auth/providers', {
       method: 'POST',
@@ -35,9 +56,25 @@ const resolveLoginProviderHint = async (normalizedEmail: string): Promise<LoginP
       body: JSON.stringify({ email: normalizedEmail }),
     });
 
-    if (!response.ok) throw new Error('provider_lookup_failed');
-    const payload = (await response.json()) as { hasGoogle?: boolean };
-    return payload.hasGoogle ? 'google' : 'email';
+    if (!response.ok) throw new Error('account_lookup_failed');
+    const payload = (await response.json()) as {
+      exists?: boolean;
+      hasGoogle?: boolean;
+      hasEmailProvider?: boolean;
+    };
+
+    // Only an EXPLICIT "no account" routes to signup — anything short of that
+    // certainty falls open to the password field. `exists` missing means a
+    // stale server bundle mid-deploy; derive what the legacy shape can prove
+    // and treat the rest as unknown rather than bouncing a real user into
+    // signup.
+    if (payload.exists === false) return 'none';
+    if (payload.exists === true) {
+      return payload.hasGoogle && !payload.hasEmailProvider ? 'google-only' : 'password';
+    }
+    if (payload.hasGoogle) return payload.hasEmailProvider ? 'password' : 'google-only';
+    if (payload.hasEmailProvider) return 'password';
+    return 'unknown';
   } catch {
     return 'unknown';
   }
@@ -115,20 +152,36 @@ export default function AuthPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [providerHint, setProviderHint] = useState<LoginProviderHint>('unknown');
-  const [providerHintEmail, setProviderHintEmail] = useState('');
-  const [showEmailLogin, setShowEmailLogin] = useState(false);
-  const providerLookupRequestIdRef = useRef(0);
+  const [emailStage, setEmailStage] = useState<EmailStage>('hidden');
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  // The exact normalized email the password stage was granted for. Editing
+  // the email field to anything else drops back to the collect stage, since
+  // the registered/unregistered branch was decided per-email.
+  const [checkedEmail, setCheckedEmail] = useState('');
+  const [accountHint, setAccountHint] = useState<'google-only' | 'unknown' | null>(null);
+
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  // Focus the email field only when the stage was opened by the user's own
+  // tap — an auto-open (invite prefill) must not pop the mobile keyboard on
+  // page load.
+  const focusEmailOnOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (emailStage === 'collect' && focusEmailOnOpenRef.current) {
+      focusEmailOnOpenRef.current = false;
+      emailInputRef.current?.focus();
+      return;
+    }
+    if (emailStage === 'password') {
+      passwordInputRef.current?.focus();
+    }
+  }, [emailStage]);
 
   const normalizedLoginEmail = normalizeAuthEmail(email);
-  const hasLookupEligibleEmail = showEmailLogin && normalizedLoginEmail.includes('@');
-  // HINT, not a wall (founder bug report, 2026-07-23): the provider lookup
-  // is a heuristic — when it was wrong it locked the password field away
-  // entirely. Now it only surfaces a suggestion; email login always works.
-  const showGoogleHint =
-    showEmailLogin &&
-    providerHint === 'google' &&
-    providerHintEmail === normalizedLoginEmail;
+  const signupHref = checkedEmail
+    ? `/onboarding?email=${encodeURIComponent(checkedEmail)}`
+    : '/onboarding';
 
   // Legacy ?mode=signup bookmarks: bounce to /onboarding immediately so
   // the user isn't stuck on a login form with no signup option. Runs
@@ -172,9 +225,8 @@ export default function AuthPage() {
         }
       } catch {
         // Network or server error — silently fall through to the login
-        // form. The user can still complete signup via the "Don't have
-        // an account?" link to /onboarding; the email-link trigger
-        // catches them post-signup.
+        // form. The user can still reach signup through the email flow
+        // itself; the email-link trigger catches them post-signup.
       }
     };
 
@@ -196,6 +248,10 @@ export default function AuthPage() {
     if (typeof window === 'undefined') return;
     if (inviteEmail && !email) {
       setEmail(inviteEmail);
+      // An invite link arrives with intent to use this email — open the
+      // email step so it isn't hidden behind the pill (no keyboard focus,
+      // per the ref note above).
+      setEmailStage((stage) => (stage === 'hidden' ? 'collect' : stage));
       return;
     }
     // A throw here (restricted storage context) must not crash the whole
@@ -211,30 +267,52 @@ export default function AuthPage() {
     }
   }, [email, inviteEmail]);
 
-  useEffect(() => {
-    const requestId = ++providerLookupRequestIdRef.current;
+  const openEmailStage = () => {
+    setError('');
+    focusEmailOnOpenRef.current = true;
+    setEmailStage('collect');
+  };
 
-    if (!showEmailLogin || !hasLookupEligibleEmail) {
-      setProviderHint('unknown');
-      setProviderHintEmail('');
+  const handleEmailContinue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // A disabled submit button does not stop Enter-in-a-field from firing the
+    // form again — guard re-entry here.
+    if (isCheckingEmail || isLoading || isGoogleLoading) return;
+    const normalized = normalizeAuthEmail(email);
+    if (!normalized.includes('@')) {
+      setError('Enter your email address.');
+      return;
+    }
+    setError('');
+    setIsCheckingEmail(true);
+
+    const account = await lookupEmailAccount(normalized);
+
+    if (account === 'none') {
+      // Best-effort convenience write — must not block the hand-off if
+      // storage throws (restricted webview context).
+      try {
+        localStorage.setItem(LAST_AUTH_EMAIL_KEY, normalized);
+      } catch {
+        // Ignore.
+      }
+      // Deliberately NOT resetting isCheckingEmail: the button stays in its
+      // busy state through the navigation instead of flashing back to
+      // "Continue".
+      router.push(`/onboarding?email=${encodeURIComponent(normalized)}`);
       return;
     }
 
-    const timer = window.setTimeout(async () => {
-      const hint = await resolveLoginProviderHint(normalizedLoginEmail);
-      if (providerLookupRequestIdRef.current !== requestId) return;
-
-      setProviderHint(hint);
-      setProviderHintEmail(normalizedLoginEmail);
-    }, 300);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [hasLookupEligibleEmail, normalizedLoginEmail, showEmailLogin]);
+    setIsCheckingEmail(false);
+    setCheckedEmail(normalized);
+    setAccountHint(account === 'google-only' ? 'google-only' : account === 'unknown' ? 'unknown' : null);
+    setPassword('');
+    setEmailStage('password');
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading || isGoogleLoading || isCheckingEmail) return;
     setError('');
     setIsLoading(true);
 
@@ -277,6 +355,8 @@ export default function AuthPage() {
     }
   };
 
+  const busy = isLoading || isGoogleLoading || isCheckingEmail;
+
   // Returning users must never see the login form — still true, and still the
   // point of this gate. What changed (2026-08-12) is WHEN the decision is
   // made. It used to be made during render and keyed on `authLoading`, which
@@ -313,190 +393,192 @@ export default function AuthPage() {
         <LoadingScreen variant="shell" title="Opening Urganize" asPage={false} />
       </div>
 
-      <div className="auth-form-shell relative min-h-screen overflow-hidden bg-bg-base p-4">
-      <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand/15 blur-3xl" />
-      <div className="pointer-events-none absolute -left-24 bottom-0 h-72 w-72 rounded-full bg-status-info/15 blur-3xl" />
-      <div className="mx-auto flex min-h-screen w-full max-w-md items-center justify-center">
-      <div className="w-full max-w-md relative z-10">
-        {/* Logo */}
-        <div className="mb-8 flex flex-col items-center text-center">
-          <Logo size="lg" priority />
-          <p className="mt-2 text-xs uppercase tracking-[0.14em] text-content-tertiary">
-            Welcome
-          </p>
-        </div>
+      <div className="auth-form-shell flex min-h-screen flex-col bg-bg-base px-6 pt-10 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center">
+          <LogoIcon size={64} priority />
 
-        {/* Signing in needs JavaScript. Say so instead of leaving the user
-            tapping a button that silently does nothing. */}
-        <noscript>
-          <p className="mb-4 border border-status-warning/40 bg-bg-surface px-4 py-3 text-sm leading-relaxed text-content-secondary">
-            Signing in needs JavaScript switched on. If you are using a content
-            blocker or private-browsing restrictions, turn them off for
-            urganize.app and reload this page.
-          </p>
-        </noscript>
+          {/* One h1, two renderings: phones read the reference layout's
+              "Log into Urganize"; desktop says what the identifier-first flow
+              actually does — sign up or log in, decided by the email.
+              (Founder call, 2026-08-21.) */}
+          <h1 className="mt-7 text-center font-display text-2xl font-bold uppercase tracking-[0.06em] text-content-primary">
+            <span className="lg:hidden">Log into Urganize</span>
+            <span className="hidden lg:inline">Sign up or log in</span>
+          </h1>
 
-        <Card padding="lg" className="rounded-3xl border border-stroke-default bg-bg-surface/95 backdrop-blur-sm shadow-[0_10px_40px_rgb(var(--shadow-ink)/calc(0.18*var(--shadow-alpha-scale)))]">
-          {/* Login only — signup moved to /onboarding (organic) and
-              /invite/accept (invited teammates). */}
-          {/* Google Button */}
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={isGoogleLoading || isLoading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-zinc-100 text-black font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGoogleLoading ? (
-              <>
-                <span aria-hidden="true" className="h-5 w-5 rounded-md bg-black/10 skeleton-shimmer" />
-                <span aria-hidden="true" className="h-3 w-32 rounded-full bg-black/10 skeleton-shimmer" />
-                <span className="sr-only">Loading Google sign-in</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  />
-                </svg>
-                <span>Continue with Google</span>
-              </>
-            )}
-          </button>
+          {/* Signing in needs JavaScript. Say so instead of leaving the user
+              tapping a button that silently does nothing. */}
+          <noscript>
+            <p className="mt-6 w-full border border-status-warning/40 bg-bg-surface px-4 py-3 text-sm leading-relaxed text-content-secondary">
+              Signing in needs JavaScript switched on. If you are using a content
+              blocker or private-browsing restrictions, turn them off for
+              urganize.app and reload this page.
+            </p>
+          </noscript>
 
-              {!showEmailLogin ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="mt-4 w-full"
-                  disabled={isLoading || isGoogleLoading}
-                  onClick={() => {
-                    setShowEmailLogin(true);
-                    setPassword('');
-                    setError('');
-                  }}
-                >
-                  Sign in with email
-                </Button>
+          <div className="mt-12 w-full space-y-4">
+            {/* Google */}
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={busy}
+              className={entrancePillClass}
+            >
+              {isGoogleLoading ? (
+                <>
+                  <span aria-hidden="true" className="h-5 w-5 rounded-md bg-content-primary/10 skeleton-shimmer" />
+                  <span aria-hidden="true" className="h-3 w-32 rounded-full bg-content-primary/10 skeleton-shimmer" />
+                  <span className="sr-only">Loading Google sign-in</span>
+                </>
               ) : (
                 <>
-                  {/* Divider */}
-                  <div className="relative my-6">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-stroke-subtle" />
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-bg-surface text-content-tertiary">or</span>
-                    </div>
-                  </div>
+                  <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    />
+                  </svg>
+                  <span>Continue with Google</span>
+                </>
+              )}
+            </button>
 
-                  {/* Email/Password Form */}
-                  <form onSubmit={handleLogin} className="space-y-4">
+            {/* Email — a pill until tapped, then the identifier-first form in
+                its place. Google stays visible above so switching method
+                mid-way never needs a back step. */}
+            {emailStage === 'hidden' ? (
+              <button
+                type="button"
+                onClick={openEmailStage}
+                disabled={busy}
+                className={entrancePillClass}
+              >
+                <Mail className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
+                <span>Continue with Email</span>
+              </button>
+            ) : (
+              <form
+                onSubmit={emailStage === 'collect' ? handleEmailContinue : handleLogin}
+                className="space-y-4 pt-2"
+              >
+                <Input
+                  ref={emailInputRef}
+                  type="email"
+                  aria-label="Email"
+                  value={email}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const value = e.target.value;
+                    setEmail(value);
+                    if (error) setError('');
+                    // The password stage was granted for one specific email;
+                    // typing a different one sends the flow back to Continue
+                    // so the branch is re-decided, never reused stale.
+                    if (emailStage === 'password' && normalizeAuthEmail(value) !== checkedEmail) {
+                      setEmailStage('collect');
+                      setPassword('');
+                      setAccountHint(null);
+                    }
+                  }}
+                  placeholder="you@example.com"
+                  leftIcon={<Mail className="h-4 w-4" />}
+                  inputClassName="text-lg"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  // Locked during the lookup too: an edit mid-check would let
+                  // the field drift from the email the branch was decided for.
+                  disabled={isLoading || isGoogleLoading || isCheckingEmail}
+                  required
+                />
+
+                {emailStage === 'password' && accountHint === 'google-only' && (
+                  <p className="text-center text-sm text-content-secondary">
+                    This account was created with Google — you can use
+                    &ldquo;Continue with Google&rdquo; above, or enter your
+                    password below.
+                  </p>
+                )}
+
+                {emailStage === 'password' && accountHint === 'unknown' && (
+                  <p className="text-center text-sm text-content-secondary">
+                    We couldn&apos;t check this email just now. New to Urganize?{' '}
+                    <Link href={signupHref} className="text-brand hover:underline">
+                      Create your account
+                    </Link>{' '}
+                    — otherwise enter your password below.
+                  </p>
+                )}
+
+                {emailStage === 'password' && (
+                  <>
                     <Input
-                      label="Email"
-                      type="email"
-                      value={email}
+                      ref={passwordInputRef}
+                      type="password"
+                      aria-label="Password"
+                      value={password}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                        setEmail(e.target.value);
+                        setPassword(e.target.value);
                         if (error) setError('');
                       }}
-                      placeholder="you@example.com"
-                      leftIcon={<Mail className="w-4 h-4" />}
-                      autoComplete="email"
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      spellCheck={false}
+                      placeholder="Your password"
+                      leftIcon={<Lock className="h-4 w-4" />}
+                      inputClassName="text-lg"
+                      autoComplete="current-password"
                       disabled={isLoading || isGoogleLoading}
                       required
                     />
+                    <p className="text-right text-sm">
+                      <Link href="/auth/forgot-password" className="text-brand hover:underline">
+                        Forgot password?
+                      </Link>
+                    </p>
+                  </>
+                )}
 
-                    {showGoogleHint && (
-                      <p className="text-center text-xs text-content-secondary">
-                        This account was created with Google — you can use
-                        &ldquo;Continue with Google&rdquo; above, or enter your
-                        password below.
-                      </p>
-                    )}
+                <button type="submit" disabled={busy} className={primaryPillClass}>
+                  {emailStage === 'collect'
+                    ? isCheckingEmail
+                      ? 'Checking…'
+                      : 'Continue'
+                    : isLoading
+                      ? 'Logging in…'
+                      : 'Log in'}
+                </button>
+              </form>
+            )}
 
-                    {true && (
-                      <>
-                        <Input
-                          label="Password"
-                          type="password"
-                          value={password}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                            setPassword(e.target.value);
-                            if (error) setError('');
-                          }}
-                          placeholder="••••••••"
-                          leftIcon={<Lock className="w-4 h-4" />}
-                          autoComplete="current-password"
-                          disabled={isLoading || isGoogleLoading}
-                          required
-                        />
+            {error && (
+              <p className="text-center text-sm text-status-error">{error}</p>
+            )}
+          </div>
+        </div>
 
-                        <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-                          {isLoading ? 'Signing in...' : 'Sign in'}
-                        </Button>
-                      </>
-                    )}
-
-                    {error && (
-                      <p className="text-center text-sm text-status-error">{error}</p>
-                    )}
-                  </form>
-                  <p className="mt-2 text-center text-sm text-content-tertiary">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowEmailLogin(false);
-                        setPassword('');
-                        setError('');
-                      }}
-                      className="text-brand hover:underline"
-                    >
-                      Hide email sign-in
-                    </button>
-                  </p>
-                </>
-              )}
-
-          {error && !showEmailLogin && (
-            <p className="mt-4 text-center text-sm text-status-error">{error}</p>
-          )}
-
-          <p className="text-center text-sm text-content-tertiary mt-6">
-            Don&apos;t have an account?{' '}
-            <Link href="/onboarding" className="text-brand hover:underline font-medium">
-              Sign up
-            </Link>
-          </p>
-
-          {showEmailLogin && (
-            <p className="text-center text-sm text-content-tertiary mt-2">
-              <Link href="/auth/forgot-password" className="text-brand hover:underline">
-                Forgot password?
-              </Link>
-            </p>
-          )}
-        </Card>
-      </div>
-      </div>
+        <p className="pt-10 text-center text-base text-content-secondary">
+          Having trouble signing in?{' '}
+          <button
+            type="button"
+            onClick={() => {
+              void openExternalUrl(SUPPORT_WHATSAPP_URL);
+            }}
+            className="font-semibold text-brand hover:underline"
+          >
+            Contact us
+          </button>
+        </p>
       </div>
     </>
   );
 }
-
