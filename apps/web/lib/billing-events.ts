@@ -72,6 +72,14 @@ function isSameUtcDay(a: Date, b: Date): boolean {
   );
 }
 
+/** What a wall interaction can turn into. A strict subset of the event union:
+ * the wall can only ever produce these three, and saying so in the type is
+ * what lets the founder-alert path accept the result without a cast. */
+export type TrackOutcome =
+  | 'paywall_hit'
+  | 'paywall_return_visit'
+  | 'talk_to_us_clicked';
+
 /**
  * Decide what a wall interaction should be recorded as.
  *
@@ -90,7 +98,7 @@ export function resolveTrackOutcome(input: {
   hasPriorPaywallHit: boolean;
   lastReturnVisitAt: string | null;
   now?: Date;
-}): BillingEventType | null {
+}): TrackOutcome | null {
   if (input.requested === 'talk_to_us') return 'talk_to_us_clicked';
 
   if (!input.hasPriorPaywallHit) return 'paywall_hit';

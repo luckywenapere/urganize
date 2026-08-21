@@ -1978,7 +1978,10 @@ export async function listNotifications(
   });
 }
 
-function resolveAppBaseUrl(): string {
+/** Exported since 2026-08-21 so the billing alerts can build an activate link
+ * without a third copy of this resolution (the Vercel SSO trap below is the
+ * reason there should only ever be one). */
+export function resolveAppBaseUrl(): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || '';
   if (appUrl) return appUrl.replace(/\/$/, '');
   // Production fallback is the CANONICAL domain, never the *.vercel.app

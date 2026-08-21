@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, createDueDateNotificationsForAllUsers } from '@/lib/tasks-server';
 import { sendWeeklyMotivationalNudges } from '@/lib/motivation-server';
+import { runTrialEndingSweep } from '@/lib/billing-alerts-server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
 // Cron automatically sends `Authorization: Bearer ${CRON_SECRET}` when that
@@ -38,5 +39,12 @@ export async function GET(request: NextRequest) {
   // Vercel does not read, and hourly is not allowed on the Hobby plan anyway.)
   await sendWeeklyMotivationalNudges(adminClient);
 
-  return NextResponse.json({ ok: true });
+  // Teams entering the last 3 days of their trial (2026-08-21). Same reasoning
+  // as the nudges above: no new cron entry, because the Hobby plan caps
+  // schedules at once a day and "entered the last 3 days" is a day-granularity
+  // question anyway. No-ops entirely while the hard-paywall flag is off, and
+  // deduped per team so repeated runs cannot re-announce the same trial.
+  const trialSweep = await runTrialEndingSweep(adminClient);
+
+  return NextResponse.json({ ok: true, trialSweep });
 }
