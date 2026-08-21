@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.58.1",
+    date: "August 21, 2026",
+    highlights: [
+      "Tapping the UrgAns icon while already on the assistant page now takes you back to your workspace — before, it did nothing.",
+      "On phones, switching between UrgAns and Home no longer loses the release you had pinned in the assistant.",
+    ],
+  },
+  {
     version: "0.58.0",
     date: "August 21, 2026",
     highlights: [
