@@ -7,6 +7,7 @@ import { errorMessage } from "@/lib/errors";
 import { installAccessRedirect } from './access-redirect';
 import { isAllowlistedEmail } from './paywall-allowlist';
 import { isCardTrialEnabled, resolveCardTrialDestination } from './trial-card';
+import { isHardPaywallEnabled } from './team-billing';
 import { isNativePlatform } from './platform';
 import { resetSceneData } from '@/stores/useSceneDataStore';
 import { resetSceneMemory } from '@/lib/scene-memory';
@@ -61,11 +62,24 @@ const PAYWALL_LOGIN_BOUNCE_ENABLED: boolean = false;
 // to /start-trial instead of the app. Existing accounts are untouched.
 const CARD_TRIAL_BOUNCE_ENABLED = isCardTrialEnabled();
 
+// Team trial + hard paywall (NEXT_PUBLIC_FEATURE_HARD_PAYWALL). When on, a
+// walled team is bounced to /locked at login. Independent of the two switches
+// above: this is the team-level successor to PAYWALL_LOGIN_BOUNCE_ENABLED, and
+// the answer comes from the server as `teamAccess` (see
+// lib/team-billing-server.ts), never re-derived here.
+const HARD_PAYWALL_BOUNCE_ENABLED = isHardPaywallEnabled();
+
 const ensureActiveAccessOrRedirect = async (
   accessToken: string,
   email: string | null | undefined
 ): Promise<void> => {
-  if (!PAYWALL_LOGIN_BOUNCE_ENABLED && !CARD_TRIAL_BOUNCE_ENABLED) return;
+  if (
+    !PAYWALL_LOGIN_BOUNCE_ENABLED &&
+    !CARD_TRIAL_BOUNCE_ENABLED &&
+    !HARD_PAYWALL_BOUNCE_ENABLED
+  ) {
+    return;
+  }
   if (typeof window === 'undefined') return;
   if (isOnSafeAuthPath()) return;
   // Fast path — allowlisted emails never see the locked page. The server
@@ -88,6 +102,7 @@ const ensureActiveAccessOrRedirect = async (
       trialUsed?: boolean;
       cardTrialRequired?: boolean;
       onboardingCompleted?: boolean | null;
+      teamAccess?: { hasAccess?: boolean } | null;
     };
 
     // Card gate first — it targets exactly the accounts the /locked bounce
@@ -99,6 +114,16 @@ const ensureActiveAccessOrRedirect = async (
     // it ever saw what it is paying for.
     if (CARD_TRIAL_BOUNCE_ENABLED && payload.cardTrialRequired === true) {
       window.location.replace(resolveCardTrialDestination(payload.onboardingCompleted));
+      return;
+    }
+
+    // Team wall. The server already decided (owner's subscription + the team's
+    // trial/comp state, with every uncertainty failing open); a missing
+    // teamAccess object means the flag is off server-side, so nothing happens.
+    if (HARD_PAYWALL_BOUNCE_ENABLED && payload.teamAccess) {
+      if (payload.teamAccess.hasAccess === false) {
+        window.location.replace('/locked?reason=team_trial_expired');
+      }
       return;
     }
 

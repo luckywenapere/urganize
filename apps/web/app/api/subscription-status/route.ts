@@ -8,6 +8,8 @@ import {
 } from '../../../lib/subscription-access';
 import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
 import { isCardTrialEnabled, resolveCardTrialRequirement } from '@/lib/trial-card';
+import { isHardPaywallEnabled } from '@/lib/team-billing';
+import { getTeamAccessForUser, toTeamAccessPayload } from '@/lib/team-billing-server';
 
 // cardTrialRequired — the card-before-trial gate signal (NEXT_PUBLIC_FEATURE_CARD_TRIAL).
 //
@@ -136,6 +138,19 @@ export async function GET(request: NextRequest) {
     snapshot
   );
 
+  // Team access (NEXT_PUBLIC_FEATURE_HARD_PAYWALL). Added ONLY when the flag is
+  // on, so with it off this payload is byte-identical to what every existing
+  // consumer already reads and costs no extra work. This endpoint is extended
+  // rather than joined by a sibling because the login bounce, the in-session
+  // gate, the trial indicator, the wall and Settings all fetch it already; a
+  // second endpoint would double the round trips on the gate's hot path.
+  //
+  // ownerEmail is stripped (toTeamAccessPayload): a teammate has no business
+  // reading their owner's address out of an API response.
+  const teamAccess = isHardPaywallEnabled()
+    ? toTeamAccessPayload(await getTeamAccessForUser(auth.user.id, auth.user.email))
+    : null;
+
   return NextResponse.json({
     status: snapshot.status,
     hasAccess: snapshot.hasAccess,
@@ -150,5 +165,6 @@ export async function GET(request: NextRequest) {
     paidAt: snapshot.paidAt,
     cardTrialRequired: cardTrialFacts.required,
     onboardingCompleted: cardTrialFacts.onboardingCompleted,
+    ...(teamAccess ? { teamAccess } : {}),
   });
 }
