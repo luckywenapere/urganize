@@ -6,6 +6,9 @@ import {
   getPlanMinorUnit,
   isRecurringPlan,
 } from '@/lib/billing-plans';
+import { isHardPaywallEnabled } from '@/lib/team-billing';
+import { resolveCheckoutSubject } from '@/lib/billing-events';
+import { logBillingEvent } from '@/lib/billing-events-server';
 
 // App-initiated Paystack subscription checkout.
 //
@@ -37,6 +40,9 @@ import {
 type StartCheckoutRequest = {
   plan?: unknown;
   currency?: unknown;
+  /** Team the plan is being activated for (hard-paywall flow). When present,
+   * the charge is credited to that team's owner. */
+  workspaceId?: string;
 };
 
 type StartCheckoutResponse = {
@@ -139,6 +145,50 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Team checkout (NEXT_PUBLIC_FEATURE_HARD_PAYWALL). The wall sends the team's
+  // id, and the charge is credited to the team's OWNER rather than to whoever
+  // clicked. This is what keeps the untouched Paystack webhook correct: it
+  // credits payments.user_id / metadata.user_id, and access resolves from the
+  // owner's snapshot, so crediting a paying ADMIN would take the money and
+  // leave the team walled. Members and guests are refused here; the wall shows
+  // them the notify-admin path instead of a picker they cannot use.
+  // With the flag off, or with no workspaceId, this is a no-op and the
+  // requester pays for themselves exactly as before.
+  let subjectUserId = userId;
+  if (isHardPaywallEnabled() && body.workspaceId) {
+    const workspaceResult = await admin
+      .from('workspaces')
+      .select('id, owner_id')
+      .eq('id', body.workspaceId)
+      .maybeSingle();
+
+    const workspace = workspaceResult.data as { id: string; owner_id: string | null } | null;
+    if (!workspace?.owner_id) {
+      return NextResponse.json({ error: 'That team could not be found.' }, { status: 404 });
+    }
+
+    const membershipResult = await admin
+      .from('workspace_members')
+      .select('role, status')
+      .eq('workspace_id', workspace.id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const membership = membershipResult.data as { role: string | null; status: string | null } | null;
+    const subject = resolveCheckoutSubject({
+      flagOn: true,
+      requesterId: userId,
+      workspace: { ownerId: workspace.owner_id },
+      membershipRole: membership?.role ?? null,
+      membershipStatus: membership?.status ?? null,
+    });
+
+    if ('error' in subject) {
+      return NextResponse.json({ error: subject.error }, { status: 403 });
+    }
+    subjectUserId = subject.subjectUserId;
+  }
+
   // Reserve the payments row BEFORE talking to Paystack. If the Paystack
   // call fails we'll have an orphan pending row, which is harmless — the
   // webhook never credits 'pending' references, and the row gives support
@@ -147,12 +197,17 @@ export async function POST(request: NextRequest) {
   // charge.success event (the renewal-matching path can't kick in until
   // subscription.create has populated paystack_subscription_code).
   const paymentInsert = await admin.from('payments').insert({
-    user_id: userId,
+    user_id: subjectUserId,
     amount: amountMinorUnit,
     reference,
     status: 'pending',
     plan,
-    paystack_response: { source: 'recurring_start_checkout', currency },
+    paystack_response: {
+      source: 'recurring_start_checkout',
+      currency,
+      ...(body.workspaceId ? { workspace_id: body.workspaceId } : {}),
+      ...(subjectUserId !== userId ? { paid_by_user_id: userId } : {}),
+    },
   });
   if (paymentInsert.error) {
     console.error('[billing/start-checkout] payments insert failed:', paymentInsert.error.message);
@@ -175,11 +230,19 @@ export async function POST(request: NextRequest) {
       // metadata.user_id is the canonical bind. The webhook reads it via
       // the verified Paystack transaction (looked up by reference) and
       // credits that exact account, no email matching.
+      //
+      // Under the team flow this is the team OWNER, not necessarily the person
+      // paying: access resolves from the owner's subscription, so crediting a
+      // paying admin would take the money and leave the team walled. The
+      // `email` above stays the payer's, since it is their card and their
+      // receipt.
       metadata: {
-        user_id: userId,
+        user_id: subjectUserId,
         plan,
         currency,
         source: 'recurring_start_checkout',
+        ...(body.workspaceId ? { workspace_id: body.workspaceId } : {}),
+        ...(subjectUserId !== userId ? { paid_by_user_id: userId } : {}),
       },
     }),
   });
@@ -203,6 +266,18 @@ export async function POST(request: NextRequest) {
       { error: initPayload?.message || 'Could not initialize Paystack checkout.' },
       { status: 502 }
     );
+  }
+
+  // Funnel step: they reached Paystack. Fire-and-forget, after the checkout is
+  // real, so a ledger hiccup can never cost someone their checkout.
+  if (isHardPaywallEnabled() && body.workspaceId) {
+    void logBillingEvent(admin, {
+      workspaceId: body.workspaceId,
+      ownerUserId: subjectUserId,
+      actorUserId: userId,
+      type: 'checkout_started',
+      metadata: { plan, currency, reference, amountMinorUnit },
+    });
   }
 
   const response: StartCheckoutResponse = {

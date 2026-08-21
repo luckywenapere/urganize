@@ -19,6 +19,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { ChunkRecoveryBridge } from '@/components/providers/ChunkRecoveryBridge';
 import { CardTrialGate } from '@/components/providers/CardTrialGate';
+import { HardPaywallGate } from '@/components/providers/HardPaywallGate';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
 import { CapacitorPushBridge } from '@/components/providers/CapacitorPushBridge';
 import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
@@ -385,6 +386,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         the moment it reaches app chrome. Renders nothing; a no-op while
         NEXT_PUBLIC_FEATURE_CARD_TRIAL is off. */}
     <CardTrialGate />
+    {/* Team wall's in-session half: routes a walled team to /locked whenever
+        they reach app chrome, so a trial lapsing mid-session (or a Back
+        navigation off the wall) does not leave anyone working inside a walled
+        team. Renders nothing; a no-op while NEXT_PUBLIC_FEATURE_HARD_PAYWALL
+        is off. */}
+    <HardPaywallGate />
     <TaskUIProvider>
       {requiresArtistNameGate ? (
         <ArtistNameGate />

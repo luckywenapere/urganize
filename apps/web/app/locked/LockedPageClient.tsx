@@ -22,6 +22,8 @@ import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
 import { isIOSApp, isNativePlatform } from '@/lib/platform';
 import { openExternalUrl } from '@/lib/external-link';
 import { isCardTrialEnabled } from '@/lib/trial-card';
+import { isHardPaywallEnabled } from '@/lib/team-billing';
+import { TeamWall } from '@/components/billing/TeamWall';
 
 // Recurring billing /locked page.
 //
@@ -45,6 +47,15 @@ import { isCardTrialEnabled } from '@/lib/trial-card';
 // /api/trial/start — which 404s under the flag to close the no-card bypass.
 const CARD_TRIAL_ENABLED = isCardTrialEnabled();
 
+// Team trial + hard paywall (NEXT_PUBLIC_FEATURE_HARD_PAYWALL). When on, this
+// route renders the TEAM wall instead of the per-user page below: two
+// equal-weight actions for an owner (pay, or talk to us), and a notify-my-admin
+// path for everyone else. Kept as a separate component with an early return
+// rather than branches threaded through this file, so the flag-off page stays
+// byte-identical (including its card-trial wiring) and the two can be read
+// independently.
+const HARD_PAYWALL_ENABLED = isHardPaywallEnabled();
+
 type AccessSnapshot = {
   accountStatus: AccountStatus;
   hasAccess: boolean;
@@ -60,6 +71,13 @@ const REASON_COPY: Record<string, string> = {
 };
 
 export default function LockedPage() {
+  if (HARD_PAYWALL_ENABLED) {
+    return <TeamWall />;
+  }
+  return <LegacyLockedPage />;
+}
+
+function LegacyLockedPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reason = searchParams.get('reason') || '';
