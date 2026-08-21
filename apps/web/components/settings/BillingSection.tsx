@@ -58,6 +58,13 @@ export function BillingSection() {
   const [isLoading, setIsLoading] = useState(true);
   // Cancel-trial (card-backed trials only): a two-step inline confirm — the
   // first click reveals the consequence line + Confirm/Keep, never a modal.
+  const [team, setTeam] = useState<{
+    state: string;
+    trialDaysLeft: number;
+    trialEndsAt: string | null;
+    isOwnerOrAdmin: boolean;
+    teamName: string | null;
+  } | null>(null);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState('');
@@ -104,6 +111,20 @@ export function BillingSection() {
         trialUsed: Boolean(payload.trialUsed),
         allowlisted: Boolean(payload.allowlisted),
       });
+      // Team access rides the same payload (hard-paywall flow). Absent means
+      // the flag is off server-side, and every string here stays as it was.
+      const team = payload.teamAccess as Record<string, unknown> | null | undefined;
+      setTeam(
+        team && typeof team.state === 'string'
+          ? {
+              state: team.state,
+              trialDaysLeft: typeof team.trialDaysLeft === 'number' ? team.trialDaysLeft : 0,
+              trialEndsAt: typeof team.trialEndsAt === 'string' ? team.trialEndsAt : null,
+              isOwnerOrAdmin: Boolean(team.isOwnerOrAdmin),
+              teamName: typeof team.teamName === 'string' ? team.teamName : null,
+            }
+          : null
+      );
       setIsConfirmingCancel(false);
       setCancelError('');
     } catch (caught) {
@@ -175,6 +196,7 @@ export function BillingSection() {
 
   const { title, details, cta, secondaryCta } = summarizeBilling(snapshot, {
     cardTrialEnabled: isCardTrialEnabled(),
+    ...(team ? { team } : {}),
   });
   const ctaClass =
     'shrink-0 rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover';

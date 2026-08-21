@@ -250,3 +250,91 @@ describe('summarizeBilling', () => {
     }
   });
 });
+
+// Team billing copy (NEXT_PUBLIC_FEATURE_HARD_PAYWALL). Passing `team` makes
+// billing a team question; leaving it out must not change a single string
+// above, which the untouched tests in this file already prove.
+describe('summarizeBilling — team access', () => {
+  const team = (overrides: Partial<NonNullable<Parameters<typeof summarizeBilling>[1]>['team']> = {}) => ({
+    state: 'trial',
+    trialDaysLeft: 6,
+    trialEndsAt: '2026-09-01T00:00:00.000Z',
+    isOwnerOrAdmin: true,
+    teamName: 'Midnight Records',
+    ...overrides,
+  });
+
+  it('reports the TEAM trial, not the profile trial', () => {
+    // The profile says unpaid with no trial; the team says six days left. Under
+    // this flag the team is what governs access, so the team must win.
+    const result = summarizeBilling(snapshot({ accountStatus: 'unpaid', trialUsed: false }), {
+      team: team(),
+    });
+    expect(result.title).toBe('Free trial');
+    expect(result.details[0]).toBe('6 days left.');
+    expect(result.details.join(' ')).not.toContain('28-day');
+  });
+
+  it('tells an owner the plan covers everyone, and offers them the picker', () => {
+    const result = summarizeBilling(snapshot(), { team: team({ isOwnerOrAdmin: true }) });
+    expect(result.details.join(' ')).toContain('covers everyone');
+    expect(result.cta).toBe('plans');
+  });
+
+  it('gives a member no dead CTA, since activating is not theirs to do', () => {
+    const result = summarizeBilling(snapshot(), { team: team({ isOwnerOrAdmin: false }) });
+    expect(result.details.join(' ')).toContain('team admin');
+    expect(result.cta).toBeNull();
+  });
+
+  it('handles the singular day', () => {
+    const result = summarizeBilling(snapshot(), { team: team({ trialDaysLeft: 1 }) });
+    expect(result.details[0]).toBe('1 day left.');
+  });
+
+  it('says "Ends today" rather than "0 days left"', () => {
+    const result = summarizeBilling(snapshot(), { team: team({ trialDaysLeft: 0 }) });
+    expect(result.details[0]).toBe('Ends today.');
+  });
+
+  it('describes the grace window as just ended, without a stale countdown', () => {
+    const result = summarizeBilling(snapshot(), {
+      team: team({ state: 'grace', trialDaysLeft: 0 }),
+    });
+    expect(result.details[0]).toBe('Your trial has just ended.');
+  });
+
+  it('names a comped team as complimentary, with nothing to buy', () => {
+    const result = summarizeBilling(snapshot(), { team: team({ state: 'comped' }) });
+    expect(result.title).toBe('Complimentary access');
+    expect(result.cta).toBeNull();
+  });
+
+  it('reassures a walled team that nothing was lost', () => {
+    const result = summarizeBilling(snapshot({ accountStatus: 'expired' }), {
+      team: team({ state: 'walled' }),
+    });
+    expect(result.details.join(' ')).toContain('safe and waiting');
+    expect(result.cta).toBe('plans');
+  });
+
+  it('a paid team falls through to the ordinary paid copy', () => {
+    const result = summarizeBilling(
+      snapshot({ accountStatus: 'paid', plan: 'annual', expiresAt: '2027-08-21T00:00:00.000Z' }),
+      { team: team({ state: 'paid' }) }
+    );
+    expect(result.title).toContain('Annual');
+  });
+
+  it('obeys the copy rules: no "workspace", no em dashes, no loss threats', () => {
+    for (const state of ['trial', 'grace', 'comped', 'walled'] as const) {
+      for (const isOwnerOrAdmin of [true, false]) {
+        const result = summarizeBilling(snapshot(), { team: team({ state, isOwnerOrAdmin }) });
+        const all = [result.title, ...result.details].join(' ');
+        expect(all.toLowerCase()).not.toContain('workspace');
+        expect(all).not.toContain('—');
+        expect(all).not.toMatch(/lose access|locked out|will be locked/i);
+      }
+    }
+  });
+});

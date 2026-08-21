@@ -1732,7 +1732,28 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-21 (Google signups now go through the onboarding wizard
+*Last updated: 2026-08-21 (team trial + hard paywall built flag-off — see "Team
+trial + hard paywall" above. Open access is replaced by a 14-day full-access
+TEAM trial ending in a hard wall, with pricing moved to ₦80,000/mo and
+₦800,000/yr. It SUPERSEDES the card-before-trial flow built three days earlier
+(opposite funnel; that surface stays dark and untouched, and its TRIAL_DAYS=28
+must not be reused). Entitlement is now a team question, which is the teammate
+inheritance this file has recorded as the blocker on restoring the paywall.
+Eight things a later change will be tempted to undo are in that section; the
+three sharpest: combineTeamAccess exists because provisioning gives every
+account its own empty workspace, so a teammate would otherwise keep working on
+a shell trial after their real team was walled; the 15-minute grace is
+server-only and all-method, because the fetch interceptor redirects on any 402
+and the notifications bell polls a gated route, so a lapse mid-edit would yank
+the page within seconds; and mark_paid must never write profiles.is_subscribed,
+which grants paid access forever with no expiry and would turn a one-year
+invoice deal permanent. Two verification lessons also recorded there: `next
+build` type-checks AFTER compiling, so grepping "Compiled successfully" does not
+prove a build passed, and `pkill -f "next start"` matches its own command line
+and kills the shell. **Before flipping the flag, mint Paystack Plans at the new
+prices and repoint the two NGN env vars** — the Plans in use still bill
+₦150,000/₦1,500,000, the fourth time this exact gap has come up. Previously,
+2026-08-21: Google signups now go through the onboarding wizard
 before billing — see point 8 under "Card before the free trial" above. `/auth`
 is login-only, so Google from the login page was the one account-creating path
 that skipped the wizard: it reached billing having created nothing, while an
@@ -1823,6 +1844,145 @@ exactly the transition that matters (scoping a release while already on
 `/dashboard`). Desktop is untouched — none of this touches its header row,
 since the FAB only exists in `MobileNavBar`, which never renders at `lg`+.
 Previously, the same day: cover art built flag-off — see "Cover art" above. Each release gains a dedicated "Cover art" scene — upload, replace, remove — closing the "future 'set as cover' action" the general Files route's own comment had deferred since Phase 3. Not a scope expansion: v1 scope item 4 names artwork outright, and no migration was needed since `releases.artwork_asset_id` and the `cover_art` asset category already existed. Its own flag, separate from Files, mirroring Song upload's reasoning exactly. Three things a later change will be tempted to undo: uploading REPLACES the current cover art (opposite of Song's keep-every-version model, because a release has exactly one identity image), deleting the old asset first (storage then row) rather than leaving an untethered duplicate the general Files scene would then show with no way to tell which is real; the scene reads `releases.artwork_asset_id` directly and never the legacy `artwork_url`/workspace-logo fallback those OTHER surfaces use, so "no cover art yet" here is honest rather than borrowed from a fallback chain; and a successful upload/removal force-refreshes the workspace command center so the catalog grid updates without a reload, unlike the general Files scene's cover_art uploads which never did. The founder's own phrasing offered "the side menu" as one placement option; it was deliberately NOT reintroduced, since a per-release side menu (`ReleaseSideNav.tsx`) was already tried and killed in URG-200 — this uses the established scene-pill pattern instead. Previously, the same day: the workspace's mobile pill dock — and the folded "more" menu panel inside it — stopped sticking to the screen entirely, reported the same day an unrelated PR, "Lock document to vertical panning to stop swipe-induced page drift" (#318), gave `<html>` its own `overflow-x: hidden` for the first time. `<body>` already had that property and stickiness worked fine, so the regression tracks to the ROOT element specifically — the textbook WebKit/Safari trigger for `position: sticky` breaking on descendants is exactly an ancestor, root included, carrying an explicit non-`visible` `overflow`. Fixed by dropping `overflow-x: hidden` from the `html` rule in `globals.css`; the other two properties that PR added (`overscroll-behavior-x: none`, `touch-action: pan-y`) stay, since neither touches the CSS overflow/scrolling-box model — only `overflow-x` does — and `touch-action: pan-y` was already the mechanism that PR's own comment called "the actual fix" for the swipe-drift bug, making `overflow-x: hidden` on `html` the redundant, riskier half of it all along. **If the swipe-drift bug ever reappears, do not reach for `overflow-x: hidden` on `html` again without re-testing sticky positioning on a real phone — the two trade off against each other through this exact property.** See the new fifth correction bullet under "Mobile scene navigation: top tabs + a folded more menu" above. Previously, the same day: the mobile menu zoom fix from earlier was itself WRONG and needed a second correction — see the same section, now updated in place. The first pass bumped the search input from `text-sm` to `text-base`, believing that hit Tailwind's stock 16px zoom-safe threshold; it does not, because THIS project's own type scale (`packages/config/tailwind/preset.js`) redefines `text-base` to 14px, so the zoom kept happening exactly as reported. Fixed for real with `text-lg` (verified against the actual compiled CSS, not just the class name: `.text-lg{font-size:16px}` vs `.text-base{font-size:14px}`), plus `touch-manipulation` added to both trigger buttons as an independent guard against Safari's separate double-tap-to-zoom gesture. **The generalizable lesson: whenever a fix here depends on a Tailwind size utility hitting a specific pixel value, check this preset's `fontSize` table first and verify against compiled output — its whole scale sits below Tailwind's defaults, not just at this one step, and the class name alone will lie to you.** Previously, the same day: three same-day corrections to the mobile scene nav rework, from the founder's own live use on a real phone: (1) the search input's `autoFocus` was zooming the whole page on iOS Safari the instant the hamburger was tapped (the fix that then needed the second correction above); (2) the standalone pill row at the panel's base carried a `border-t` + `bg-bg-base` that read as a boxed rectangle under the pills — dropped, matching the borderless top-tabs row; (3) Press kit moved out of the top tabs into the folded menu (paired with Fan capture at the end), and Release recap moved to the last position in the top tabs, trailing the two scene-toggle tabs that actually light up. No new flag, no migration — same pure repositioning as the original pass. Previously, 2026-08-16: mobile scene navigation reworked into top tabs + a folded "more" menu. Founder request via screenshot reference: below `lg`, the old "every pill in one wrapping dock" layout is gone, replaced by a persistent top-tab strip, a standalone row (New activity/Activities, Pitch), and a folded, filterable "more" menu reached via a search or hamburger icon-button. Desktop is untouched — same pills, same order, same rows. The two AI actions (Status update, Recap) changed from a single pre-rendered `extraActions` ReactNode blob into structured `TaskPanelAction` objects, specifically so the folded menu's search can filter on a real label. Previously, the same day: song upload built flag-off — see "Song upload" above. Each release gains a Song scene for its audio master, and UrgAns can start that upload from the conversation. Deliberately NOT recorded as a scope expansion, and that section says why: v1 scope item 4 names *masters* outright, and a song is an `assets` row with `category: 'audio'` — no new table, no new object, no migration. Four things a later change will be tempted to undo: the flag is separate from `NEXT_PUBLIC_FEATURE_FILES` on purpose even though they share one storage model, and the two were probe-verified independent; no tool can ever be handed a file, so `upload_song` hands the BROWSER a picker instead, and `input.click()` needing a user gesture is what makes the card the mechanism rather than a workaround; `open_song_upload` is the first client action that waits on the user, and unlike a confirmation card it deliberately survives later turns; and recording a song never replaces one, because the alternative destroys a file silently and invisibly with the files flag off. Previously, the same day: v0.56.0 — team logins SHIPPED: migration applied, ledger entry and version bump done across all 10 `package.json` files. Also carries a **measured partial correction to the `turbo-ignore` trap** recorded under the EP/album flip — read it before trusting any future `NEXT_PUBLIC_*` flip. A version-bump-only commit DOES rebuild `apps/web`, because `apps/web/package.json` is part of the `@urganize/web` package and bumping its `version` marks the package changed; the half that genuinely fails is a same-commit Redeploy or an env-var change with no new commit, where turbo-ignore sees a zero-file diff. Verify by running turbo-ignore yourself with `--fallback` set to the commit Vercel last deployed for that project. Previously, the same day: team logins built flag-off — see "Team logins" above. Creating a release now opens a compulsory step that generates a sign-in link for it, and Settings → Team gained a section that generates them without limit, copies each to WhatsApp or email, and revokes any of them. Deliberately NOT recorded as a scope expansion, and that section says why: workspace invite links have shipped since 2026-07-23 and what was missing was only the ability to list and revoke them — the table's own header has said "no UI for that yet, but the column is ready" for a month. Four things a later change will be tempted to undo: a login is a LINK and never a password, so the recipient chooses their own on /invite/accept rather than receiving one through a chat log; the mint POST stays UNGATED while list and revoke are flagged, because Settings → Teammates already calls it; "compulsory" means always-shown with one exit, and that exit stays enabled when generation FAILS, because a step that can trap a user on a dropped connection is a bug rather than discipline; and the create flow's three original branches were deferred into a resume() closure, not rewritten, which is what preserves the first-win reveal's "releases still empty at this point" assumption. Previously, 2026-08-14: fan email capture built flag-off — the tenth sanctioned scope expansion, see "Fan email capture" above. Per release, one public page trades a link for an email; the hand-crafted conversion playbook in `lib/capture-playbook` is the actual product here and is graded deterministically, with no AI in it. Three things recorded there that a later change will be tempted to undo: the link is paid out on the same screen and the destination is deliberately absent from the page's HTML so the exchange cannot be skipped; exactly three rules are blockers and a test pins the set; and the scene never touches localStorage because its payload is other people's email addresses. Verified in both flag states — the flag-off run is the one that matters and it took two attempts, because `pkill -f "next start"` matches its own command line and killed the shell before the env file was rewritten, so the first "flag off" build was silently another flag-on build. Previously: the curator invite page is server-rendered — the SAME weak-connection dead end, for the third time, and this one cost a real invited curator his sign-up: he could not open his link on Nigerian mobile data and reported it as his own connection. See "Third instance: the curator invite page" under "The front door is server-rendered". The generalizable lesson is recorded on that section's sibling-audit bullet: **the 2026-08-13 sweep's scope was the auth tree, which is exactly how a front door sitting behind an off flag escaped it — when a flag-gated surface is switched ON, re-audit its entry points before a user does it for you.** Two specifics worth carrying: `authLoading` is true on the first render for everybody and was AGAIN the reason nothing rendered server-side despite already being documented as a trap, and `force-dynamic` is right on this page though it was deliberately rejected on `/auth`, because this answer depends on a row that changes. Also on 2026-08-14: the press kit is back on — v0.54.0. `NEXT_PUBLIC_FEATURE_EPK` returns to `true` after an unrecorded spell switched off (that doc gap is now flagged in the EPK section rather than back-filled with a guessed reason), and its pill moved out of the header row to sit beside Calendar in the tasks-panel footer. No code was rebuilt; the whole feature had stayed in place behind the flag. The flag was flipped in Vercel and verified live the same day, so the press kit is reachable in production; the EPK section records the 401-vs-404 probe used to confirm it, which beats trusting a bundle string. Previously, the same day: the two portals are reachable from each other at every width — see "Crossing between the two portals" in the playlist-pitching Working-notes section. The dual-capability account shipped the day before had exactly one app→curator entry point, the identity card, and three independently-correct viewport gates compounded — the card's `hidden lg:block`, its rail-open self-hide, and the topbar's `hidden lg:grid` under the production-only `NEXT_PUBLIC_FEATURE_MOBILE_NAV` — into a band with NO crossing at all: our curator partner was opening a second browser tab on his phone. The crossing now has three homes, one per viewport band, all on one shared gate. Two lessons recorded there: check the flag COMBINATION production actually runs rather than each gate alone (the mistake URG-229 already corrected once for Metadata, repeated with one more gate in the stack), and clear a modal's scroll lock before trusting any width measurement — the first reading of the resulting 13px topbar overflow was a phantom produced by exactly `padding-right: 13px`, the same trap the Settings-tabs section documents. Also on 2026-08-14: Settings gains a billing section, v0.52.0 — see "Settings gains a billing section" above. The payment callback's "Billing" button pushed `/settings`, which had no billing section at any revision; it now leads the Account tab. Three decisions recorded there: it shows the plan NAME and never a price, because the list price in `@urganize/pricing` is not necessarily what a grandfathered account pays; it says "Active until" rather than "Renews", because renewal is not knowable from the snapshot; and it carries no iOS branch, because `/locked` already owns the Apple policy and the CTA is an in-app route. Also fixed the long-standing "Settings (profile, teammates, subscription)" error in the post-UI-cut inventory, and removed the section's card box after measuring that `bg-bg-surface` on `bg-bg-elevated` is the same colour in light mode. Previously, on 2026-08-13: playlist pitching's curator account type became a dual capability rather than an exclusive role, so a playlist owner can now also run releases under the same email; see "Dual-capability accounts" in the playlist-pitching Working-notes section. Also: Settings became four tabs, v0.51.0 — see "Settings became four tabs" above. Twelve sections in one flat column with no grouping and no page title became `/settings?tab=<account|workspace|team|notifications>`; the three notification toggles merged into one section of rows; the two identically-labelled artist-name editors were split across tabs and retitled; the page component went 612 to 202 lines with its state lifted into two hooks. Two traps recorded there: the tab param must stay DERIVED from `useSearchParams` (a post-mount read would desync on Back/Forward, and the /auth front-door trap does not apply for the reasons in the hook header), and Motivation’s deliberate lack of a feature flag is what guarantees the Notifications tab is never empty. Earlier the same day: the two front-door pages, `/auth` and `/onboarding`, are server-rendered now — see "The front door is server-rendered" above; a real user on a weak mobile connection could not sign up at all, because both pages' entire server HTML was a loading screen. Two traps recorded there for anyone editing those files: re-adding `useSearchParams()` to `AuthPageClient` silently returns `/auth` to serving a spinner as its HTML, and the pre-paint session gate is three coupled pieces — inline script, CSS, and the attribute clearing — that have to move together. Also corrected the Deploy Configuration section's redirect direction, which had been backwards since it was written: `www.urganize.app` 308s to the bare apex, verified live, not the reverse. Previously 2026-08-12: a completeness pass on mobile push notifications caught and fixed three real bugs before this ever shipped — see the three notes added inline above: the deadline-reminders toggle silently killing the pre-existing `task_overdue` notification, doubled curly quotes in every default due-date push body, and the motivational-nudges opt-out hidden behind the wrong feature flag — plus confirmed live which of the two new migrations is actually applied. Also: the identity card's nav + Metadata's viewport-split entry point, URG-229 — that entry corrects the "Identity card gains a nav" section, which described the pill's retreat as a flat `lg:hidden` when the shipped code computes it from two other flags; see `METADATA_PILL_HIDE_CLASS`. Previously 2026-08-10: mobile push notifications + editable presets built flag-off, extending the previously-undocumented Web Push stack — now backfilled above — to the native Android/iOS shell; UrgAns release planner rebuilt flag-off, superseding the tailor-plan build; playlist pitching built flag-off, and Resolved blocker #1 corrected: the paywall has been OFF in code since 2026-07-23. The release recap card, Notes and task outcomes from 2026-08-09 are also still flag-off; genre prediction from 2026-08-08 and the native mobile app entry from 2026-08-07 are otherwise still current).*
+
+---
+
+## Team trial + hard paywall (2026-08-21)
+
+Founder request: replace open access with a **14-day full-access TEAM trial that
+ends in a hard wall**. No permanent free tier. Pricing is founder-led sales, so
+the wall is a sales signal as much as a checkout gate — "Talk to us" carries the
+same visual weight as the plan picker, because a roster deal closes over an
+invoice and a walkthrough. Built flag-off behind
+`NEXT_PUBLIC_FEATURE_HARD_PAYWALL`; **not yet activated**.
+
+**Not a scope expansion.** Payments, the trial and `/locked` are all
+pre-existing v1 machinery. What is new is that entitlement is now a TEAM
+question, which is the "teammate subscription inheritance" landmine this file
+has recorded as a blocker on restoring the paywall since 2026-08-18.
+
+**This SUPERSEDES the card-before-trial flow** (`NEXT_PUBLIC_FEATURE_CARD_TRIAL`,
+2026-08-18, never flipped). That one takes a card *before* the app and charges at
+day 28; this one gives a team 14 days with no card and then walls. They are
+opposite funnels and must never both be on. The card-trial surface stays in the
+repo, flag off, untouched — nothing new imports it, and `TEAM_TRIAL_DAYS = 14`
+in `lib/team-billing.ts` is deliberately NOT its `TRIAL_DAYS = 28` (which is
+still load-bearing copy on `/terms` and the homepage).
+
+**Pricing moved with it** (founder call): Monthly **₦80,000**, Annual
+**₦800,000** in `packages/pricing` (team-priced, not per-seat). Marketing side
+effect is nil — `/pricing` has shown no prices since 2026-07-23. Note annual NGN
+now coincides with Label's stored ₦800,000; harmless, since Label is
+`contactSales` and displays no figure.
+
+**Eight things worth knowing before touching this:**
+
+1. **Money rows stay per-OWNER; team facts live on `workspaces`.** The webhook,
+   `subscriptions` and `payments` keep their keying untouched (rewiring the money
+   path is high risk for no benefit). `workspaces.owner_id` is UNIQUE, so team
+   and owner are 1:1 and the halves join cleanly.
+   `lib/team-billing-server.ts:getTeamAccessForUser` combines them.
+2. **The gate is ONE branch in ONE function.** All ~240 protected call sites
+   reach `requireActiveAccount` through three lines in `app/api/_shared/auth.ts`.
+   Flag off, `paywall.ts` is byte-identical, including the 2026-07-23 free-era
+   early return.
+3. **`combineTeamAccess` closes the teammate-shell leak.** Provisioning gives
+   EVERY non-curator account its own workspace, so an invited teammate owns an
+   empty shell with its own 14-day trial. Without the combiner they would keep
+   working after their real team was walled. An owned team counts only when the
+   person has no foreign teams or has releases of their own — mirroring the
+   primary-workspace exception in `resolveWorkspaceAccessContext`. Zero
+   workspaces fails OPEN, because the gate runs before provisioning.
+4. **The 15-minute grace is server-only, and applies to ALL methods.** The fetch
+   interceptor redirects on any same-origin 402 and the notifications bell polls
+   a gated route, so without grace a trial lapsing mid-edit yanks the page within
+   seconds. Clients pass `graceMs: 0` and `HardPaywallGate` draws the wall on the
+   next navigation. That split IS the spec's "let the save finish, gate on next
+   navigation" — do not "simplify" it to one number.
+5. **The resolver FAILS OPEN**, unlike the per-user gate it replaces
+   (`getFallbackSnapshot` fails closed). It joins four kinds of read, so it has
+   more ways to break on infrastructure we do not control, and a wall is a sales
+   gate rather than a security boundary (RLS and curator containment are
+   untouched). Positive-only 30s cache, so a walled team's answer is never
+   cached and paying/comping unlocks on the next request.
+6. **`/api/trial/start` 404s under this flag.** It is an OPEN route granting a
+   28-day PROFILE trial on nothing but `trial_used === false`, and the resolver
+   honours an owner's profile trial — so a walled owner could POST once and walk
+   back in. Not in the original spec; found while wiring the gate.
+7. **Team checkout credits the OWNER, never the clicker.** `start-checkout`'s
+   optional `workspaceId` resolves the subject through `resolveCheckoutSubject`
+   and writes the owner into both the `payments` row and Paystack's
+   `metadata.user_id`. Access resolves from the owner's snapshot, so crediting a
+   paying admin would take the money and leave the team walled.
+8. **`mark_paid` must NEVER write `profiles.is_subscribed`.** That flag grants
+   paid access forever through `resolveSnapshot`'s back-compat branch with no
+   expiry, so using it would turn a one-year invoice deal into a permanent one.
+   The admin route writes the subscription with an admin-set `expires_at` plus a
+   `payments` record row instead.
+
+- **Copy rules, enforced by test not review:** never the word "workspace", no em
+  dashes, no guilt or countdown pressure, and nothing threatening loss of
+  access. `billing-alert-templates.test.ts` and `billing-summary.test.ts` both
+  assert this on the customer-facing strings.
+- **Founder alerts are email + a ledger, not `notifications`.** That table
+  cannot carry them: `task_id` is NOT NULL with an FK to `tasks` and every
+  `notification_type` value is task-scoped. `billing_events` (RLS on, zero
+  policies) is the durable record and the dedupe store; the email is only the
+  interrupt, so alerts still show in `/admin/teams` when mail is off.
+- **The wall reports itself; the gate does not.** `POST /api/billing/track`
+  fires once from the wall's mount, and the SERVER decides first-hit vs
+  return-visit (deduped per UTC day). The gate fires many times per page and
+  cannot tell a person from a background poll.
+- **The trial indicator is above the topbar, not in it.** The topbar's right
+  cluster carries a documented width budget that already overflows a 375px phone
+  at eight controls. Not dismissible, deliberately: hiding it removes the one
+  thing that stops the wall being a surprise.
+- **`/admin/teams` is the migration summary** the spec asks for, and is
+  deliberately NOT flag-gated so deals can be set up before the flip. It
+  surfaces `grandfathered` (the `is_subscribed` back-compat branch) and
+  `allowlisted` explicitly, or a legacy paid team would read as walled there and
+  fine in the app.
+- **Verification lesson worth keeping:** `next build` type-checks AFTER
+  compiling, so grepping "Compiled successfully" does **not** prove a build
+  passed — it masked a real type error here. Check the exit code. Also note
+  `pkill -f "next start"` matches its own command line and kills the shell; use
+  a PID file (the capture-feature trap, hit again).
+- **The trial stamp is flag-gated, and that is a deploy-safety requirement.**
+  `ensureOwnedWorkspace` writes `trial_started_at` / `trial_ends_at` only when
+  the flag is on, because those columns do not exist until the migration is
+  applied and that is a manual step AFTER this code deploys. Writing them
+  unconditionally meant every new account's provisioning INSERT referenced
+  columns the live database lacked: swallowed on the
+  `loadWorkspaceAccessContext` path (`isTaskSchemaMissingError` matches `42703`
+  and `PGRST204`) but silently leaving the account with no team, and worse on
+  the routes that call it directly. Flag off, that INSERT is byte-for-byte what
+  it was before this feature. Do not "simplify" the gate away.
+- **Activation checklist:** (1) apply
+  `20260821120000_team_trial_hard_paywall.sql` — **this starts every existing
+  team's 14 days**; (2) review `/admin/teams`, assign Founding Member rates, comp
+  partners, extend anyone who needs longer; (3) **mint Paystack Plans at
+  ₦80,000/₦800,000 and repoint `PAYSTACK_PLAN_MONTHLY_NGN` /
+  `PAYSTACK_PLAN_ANNUAL_NGN`** — the Plans in use still bill ₦150,000/₦1,500,000,
+  so flipping first overcharges the first team to pay by ~2x (this gap has now
+  come up four times); (4) set `BILLING_ALERTS_EMAIL`; (5) flip the flag with a
+  deploy that rebuilds `apps/web`; (6) **re-run the migration's backfill
+  statement** (`update public.workspaces set trial_started_at = coalesce(...),
+  trial_ends_at = now() + interval '14 days' where trial_ends_at is null`) — it
+  is idempotent, and any team created between step 1 and step 5 is unstamped
+  because the stamp is flag-gated. Such a team fails OPEN (an unstamped row
+  reads as an active trial, never a wall), so this is tidying rather than a
+  rescue, and `/admin/teams` shows exactly who needs it; (7) changelog entry +
+  version bump across all 10 `package.json` files (the EPK precedent: the ledger
+  entry lands at flag-flip, not at merge); (8) verify live — pill at ≤10 days,
+  wall on all routes with owner vs member variants, checkout crediting the
+  owner, the five alert types arriving, comp/extend restoring access.
+- **Out of scope, flagged for a founder copy pass:** `/terms` and the homepage
+  `/signup` still say "28-day free trial".
+- **Not verified:** nothing has run against a real Supabase, Paystack or Resend
+  — no migration applied, so the resolver, the wall, checkout, the alerts and
+  the admin actions have never executed end to end. Unit-tested (939 tests) and
+  both flag states build clean with runtime route probes, which is not the same
+  as exercised.
 
 ---
 

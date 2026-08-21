@@ -5,6 +5,7 @@ import {
   invalidateSubscriptionSnapshot,
 } from '@/lib/subscription-access';
 import { TRIAL_DAYS, isCardTrialEnabled } from '@/lib/trial-card';
+import { isHardPaywallEnabled } from '@/lib/team-billing';
 
 // POST /api/trial/start
 // Starts the one-time 28-day trial for the logged-in user.
@@ -31,6 +32,16 @@ import { TRIAL_DAYS, isCardTrialEnabled } from '@/lib/trial-card';
 
 export async function POST(request: NextRequest) {
   if (isCardTrialEnabled()) {
+    return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  }
+
+  // Under the team trial + hard paywall, this route is a wall bypass: it is an
+  // OPEN route that grants a 28-day PROFILE trial on nothing but "trial_used is
+  // false", and the team resolver honours the owner's profile trial through
+  // their subscription snapshot. So a walled owner could POST here once and
+  // walk straight back into the product. Trials are team-scoped and granted at
+  // team creation now; extending one is an admin action.
+  if (isHardPaywallEnabled()) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 

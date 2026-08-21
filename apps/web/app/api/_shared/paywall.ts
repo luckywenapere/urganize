@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getSubscriptionSnapshot, type AccountStatus } from '@/lib/subscription-access';
 import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
+import { isHardPaywallEnabled } from '@/lib/team-billing';
+import { getTeamAccessForUser } from '@/lib/team-billing-server';
 
 // 402 Payment Required is the right code here. The frontend interceptor at
 // apps/web/lib/access-redirect.ts catches it and routes to /locked.
 export const ACCESS_REQUIRED_STATUS = 402;
 export const ACCESS_REQUIRED_CODE = 'ACCESS_REQUIRED';
 
-type LockReason = 'unpaid' | 'trial_expired' | 'expired';
+type LockReason = 'unpaid' | 'trial_expired' | 'expired' | 'team_trial_expired';
 
 const reasonForStatus = (status: AccountStatus, trialUsed: boolean): LockReason => {
   if (status === 'expired') {
@@ -28,6 +30,49 @@ export async function requireActiveAccount(
   userId: string,
   email?: string | null
 ) {
+  // ── TEAM TRIAL + HARD PAYWALL (NEXT_PUBLIC_FEATURE_HARD_PAYWALL) ────────
+  // When on, access is a TEAM question, not a per-user one: a team gets 14
+  // days from creation, then the wall, and every member inherits the owner's
+  // paid status (see lib/team-billing-server.ts). This branch supersedes the
+  // free-era early return below and the per-user gate under it.
+  //
+  // The resolver applies a 15-minute grace past trial expiry so an in-flight
+  // save is never lost and a background poll cannot yank someone mid-edit;
+  // the client-side gate uses exact time and moves them on their next
+  // navigation. See TEAM_TRIAL_EXPIRY_GRACE_MS.
+  //
+  // Curator-only accounts never arrive here: blockCuratorAccount 403s them in
+  // requireActiveAuthenticatedUser BEFORE this call, and the curator routes
+  // use requireCuratorUser, which never gates. The curator side stays free.
+  if (isHardPaywallEnabled()) {
+    if (isAllowlistedEmail(email)) {
+      console.log(
+        `[paywall-allowlist] bypass: user=${userId} email=${email?.trim().toLowerCase()}`
+      );
+      return null;
+    }
+
+    const team = await getTeamAccessForUser(userId, email);
+    if (team.hasAccess) {
+      return null;
+    }
+
+    return NextResponse.json(
+      {
+        error: 'This team needs an active plan.',
+        code: ACCESS_REQUIRED_CODE,
+        redirect: '/locked',
+        reason: 'team_trial_expired' satisfies LockReason,
+        // Legacy fields kept so existing consumers of this body (the fetch
+        // interceptor's reason extraction, the auth-store bounce) keep working
+        // unchanged rather than needing a parallel shape.
+        accountStatus: 'expired' satisfies AccountStatus,
+        trialUsed: true,
+      },
+      { status: ACCESS_REQUIRED_STATUS }
+    );
+  }
+
   // ── PAYWALL OFF (founder decision, 2026-07-23) ──────────────────────────
   // The app is free while the founders talk to every prospective team
   // directly (marketing /pricing now books a demo instead of selling

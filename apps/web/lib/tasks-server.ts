@@ -34,6 +34,8 @@ import { mapTaskOutcomeRow, type TaskOutcome } from '@/lib/task-outcomes';
 import { assignDueTier, type DueTier } from '@/lib/due-tiers';
 import { getNotificationPresets } from '@/lib/notification-presets-server';
 import type { NotificationPresets } from '@/lib/notification-presets';
+import { TEAM_TRIAL_DAYS, isHardPaywallEnabled } from '@/lib/team-billing';
+import { logBillingEvent } from '@/lib/billing-events-server';
 
 export const WORKSPACES_TABLE = 'workspaces';
 export const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
@@ -691,18 +693,69 @@ export async function ensureOwnedWorkspace(
     const organization = (organizationResult.data as OrganizationRow | null) || null;
     const createdAt = new Date().toISOString();
 
+    // Team trial stamp (NEXT_PUBLIC_FEATURE_HARD_PAYWALL). Stamped HERE and
+    // nowhere else: this insert is the single moment a team comes into
+    // existence, so it cannot be double-stamped, and the 23505 loser below
+    // re-reads the winner's already-stamped row.
+    //
+    // GATED ON THE FLAG, and that is a deploy-safety requirement rather than a
+    // preference. These two columns only exist once
+    // 20260821120000_team_trial_hard_paywall.sql has been applied, and that is
+    // a manual step that happens AFTER this code deploys. Writing them
+    // unconditionally would mean every new account's provisioning INSERT
+    // referenced columns the live database did not yet have: tolerated on the
+    // loadWorkspaceAccessContext path (isTaskSchemaMissingError swallows 42703
+    // and PGRST204) but silently leaving the account with no team, and outright
+    // failing for the routes that call this directly. Flag off, this insert is
+    // byte-for-byte what it was before the feature existed.
+    //
+    // Teams that predate the flag are covered by that migration's backfill
+    // (WHERE trial_ends_at IS NULL), which is idempotent — so re-running it at
+    // flip time catches anything created between apply and flip. An unstamped
+    // team fails OPEN in resolveTeamAccess regardless, so the worst case is a
+    // team that keeps working, never one that is wrongly walled.
+    const trialStamp = isHardPaywallEnabled()
+      ? {
+          trial_started_at: createdAt,
+          trial_ends_at: new Date(
+            Date.now() + TEAM_TRIAL_DAYS * 24 * 60 * 60 * 1000
+          ).toISOString(),
+        }
+      : {};
+
     const insertResult = await adminClient
       .from(WORKSPACES_TABLE)
       .insert({
         owner_id: owner.id,
         name: createWorkspaceName(owner, organization?.name || null),
         updated_at: createdAt,
+        ...trialStamp,
       })
       .select('id,owner_id,name,created_at,updated_at')
       .maybeSingle();
 
     if (insertResult.data) {
       workspace = insertResult.data as WorkspaceRow;
+      // Fire-and-forget: the ledger entry for "this team's clock started".
+      // Only on the successful-insert branch, so a raced request does not
+      // double-log, and never on the steady-state select hit above. Gated with
+      // the stamp above, for the same reason: billing_events is created by the
+      // same unapplied migration, and logBillingEvent swallows its own errors
+      // but there is no sense making a doomed round trip on every signup.
+      if ('trial_ends_at' in trialStamp) {
+        const stampedEnd = (trialStamp as { trial_ends_at: string }).trial_ends_at;
+        void logBillingEvent(adminClient, {
+          workspaceId: workspace.id,
+          ownerUserId: owner.id,
+          actorUserId: owner.id,
+          type: 'trial_started',
+          metadata: {
+            trialEndsAt: stampedEnd,
+            trialDays: TEAM_TRIAL_DAYS,
+            source: 'workspace_provisioned',
+          },
+        });
+      }
     } else if ((insertResult.error as { code?: string } | null)?.code === '23505') {
       // Another request for this same user won the race to create the
       // one-per-owner workspace (workspaces has a unique index on owner_id).
@@ -1951,7 +2004,10 @@ export async function listNotifications(
   });
 }
 
-function resolveAppBaseUrl(): string {
+/** Exported since 2026-08-21 so the billing alerts can build an activate link
+ * without a third copy of this resolution (the Vercel SSO trap below is the
+ * reason there should only ever be one). */
+export function resolveAppBaseUrl(): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || '';
   if (appUrl) return appUrl.replace(/\/$/, '');
   // Production fallback is the CANONICAL domain, never the *.vercel.app

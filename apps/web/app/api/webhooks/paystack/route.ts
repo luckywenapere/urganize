@@ -11,6 +11,9 @@ import {
   type RecurringPlanId,
 } from '@/lib/billing-plans';
 import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
+import { isHardPaywallEnabled } from '@/lib/team-billing';
+import { invalidateTeamAccess } from '@/lib/team-billing-server';
+import { notifyFounder } from '@/lib/billing-alerts-server';
 import {
   TRIAL_CARD_PLAN,
   buildDelayedSubscriptionPayload,
@@ -169,6 +172,38 @@ async function applyInitialOrManualCharge(
   }
 
   invalidateSubscriptionSnapshot(userId);
+  // The team resolver caches positive answers per user; this user just became
+  // paid, but their TEAMMATES may hold a cached walled answer. Their negatives
+  // were never cached (positive-only), so they resolve fresh on the next
+  // request — only the payer's own entry needs clearing.
+  invalidateTeamAccess(userId);
+
+  // A team just paid. Fire-and-forget after the credit has landed: the founder
+  // wants to know, but an alert must never turn a successful payment into a
+  // failed webhook. Guarded by the flag so nothing changes while it is off.
+  if (isHardPaywallEnabled()) {
+    void (async () => {
+      try {
+        const workspaceResult = await admin
+          .from('workspaces')
+          .select('id')
+          .eq('owner_id', userId)
+          .maybeSingle();
+        const workspaceId = (workspaceResult.data as { id: string } | null)?.id;
+        if (!workspaceId) return;
+        await notifyFounder(admin, {
+          kind: 'checkout_completed',
+          workspaceId,
+          ownerUserId: userId,
+          actorUserId: userId,
+          planViewed: plan,
+          metadata: { plan, amountMinorUnit, reference },
+        });
+      } catch {
+        // Never surface: the money is already credited.
+      }
+    })();
+  }
 }
 
 async function applyRenewal(
