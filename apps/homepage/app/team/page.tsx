@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
@@ -16,32 +17,36 @@ export const metadata: Metadata = buildPageMetadata({
 
 // Bios are founder-approved facts. Never edit a bio without re-approval —
 // same rule as the landing-page testimonials.
+//
+// Portraits are the illustrated brand set (cream ground, spring-green ink),
+// resized to 640px wide WebP in public/images/team. next/image serves the
+// display size from there, so replacing a portrait is a file swap only.
 const members = [
   {
     name: "Lucky Wenapere",
     role: "Co-Founder and CEO",
-    initials: "LW",
+    photo: "/images/team/lucky-wenapere.webp",
     bio: "Nine years in the music industry as a videographer, director, and editor; now manages two artists. Studied Computer Engineering at Afe Babalola University; currently works with Afreximbank's Tech & Innovation team via Pentagon Securities.",
     linkedin: "https://linkedin.com/in/lucky-wenapere",
   },
   {
     name: "Tedum King",
     role: "Co-Founder and AI Engineer",
-    initials: "TK",
+    photo: "/images/team/tedum-king.webp",
     bio: "An artist himself, in both music and visuals, Tedum builds Urganize's AI layer from inside the creative process it serves. Studied Computer Engineering at Afe Babalola University.",
     linkedin: "https://www.linkedin.com/in/tedum-king-kpunee-035556393/",
   },
   {
     name: "Adamu Kabiru",
     role: "Community Lead",
-    initials: "AK",
+    photo: "/images/team/adamu-kabiru.webp",
     bio: "Known in Nigeria's underground music scene as Don Baba K, Adamu is an artist manager, A&R, event organiser, and music PR who manages three artists and helps foster the growth of upcoming talent.",
     linkedin: null,
   },
   {
     name: "Chidera Nnamani",
     role: "Operations Manager",
-    initials: "CN",
+    photo: "/images/team/chidera-nnamani.webp",
     bio: "Manages artists and has worked across startups, bringing both the operator's and the manager's view to Urganize's operations. Holds an MBA in Music Management from the Creative Business Academy for Africa, on a foundation of engineering and mathematics.",
     linkedin: "https://www.linkedin.com/in/chidera-nnamani/",
   },
@@ -93,13 +98,16 @@ export default function TeamPage() {
                 key={member.name}
                 className="bg-[var(--marketing-bg)] px-6 py-7 sm:px-7 sm:py-8"
               >
-                <div
-                  aria-hidden="true"
-                  className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-[color:var(--marketing-border-strong)] bg-[var(--marketing-surface)]"
-                >
-                  <span className="font-display text-lg font-semibold tracking-[-0.02em] text-[var(--marketing-accent)]">
-                    {member.initials}
-                  </span>
+                <div className="relative aspect-[3/4] w-32 overflow-hidden rounded-lg border border-[color:var(--marketing-border-strong)] bg-[var(--marketing-surface)] sm:w-36">
+                  <Image
+                    src={member.photo}
+                    // Empty alt on purpose: the name sits directly below, so a
+                    // screen reader would otherwise hear it twice.
+                    alt=""
+                    fill
+                    sizes="144px"
+                    className="object-cover"
+                  />
                 </div>
                 <p className="mt-5 text-xl font-semibold tracking-[-0.02em]">
                   {member.linkedin ? (
