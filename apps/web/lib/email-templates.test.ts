@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildWorkspaceInviteEmail } from './email-templates';
+import { buildWelcomeEmail, buildWorkspaceInviteEmail } from './email-templates';
 
 const base = {
   workspaceName: 'Wavefront Records',
@@ -71,5 +71,54 @@ describe('buildWorkspaceInviteEmail', () => {
     expect(text).toMatch(/works once/i);
     expect(text).toMatch(/30 days/);
     expect(html).toMatch(/30 days/);
+  });
+});
+
+describe('buildWelcomeEmail', () => {
+  it('greets by first name when the stored name looks like one', () => {
+    const { html, text } = buildWelcomeEmail({ recipientName: 'Adenaiye Miracle' });
+    expect(text).toContain('Hey Adenaiye,');
+    expect(html).toContain('Hey Adenaiye,');
+  });
+
+  it('degrades to a bare greeting for an email-handle name', () => {
+    // ensureProfileRecord falls back to the email handle ("lucky.wenapere")
+    // when no real name exists — greeting someone by their handle reads
+    // worse than no name at all.
+    for (const name of ['lucky.wenapere', 'a@b.com', '', '   ']) {
+      const { text } = buildWelcomeEmail({ recipientName: name });
+      expect(text).toContain('Hey,');
+      expect(text).not.toContain('Hey lucky');
+    }
+  });
+
+  it('links the founder WhatsApp and the app in both parts', () => {
+    const { html, text } = buildWelcomeEmail({ recipientName: 'Lucky' });
+    for (const part of [html, text]) {
+      expect(part).toContain('https://wa.me/2347067367057');
+      expect(part).toContain('https://app.urganize.app');
+    }
+  });
+
+  it('escapes a hostile stored name', () => {
+    const { html } = buildWelcomeEmail({ recipientName: '<img onerror=x>' });
+    expect(html).not.toContain('<img');
+  });
+
+  it('stays plain: no banner, no button, no web fonts, no CSS variables', () => {
+    // The founder-note style IS the design: plain paragraphs that read as a
+    // personal email. A regression toward the invite template's branded card
+    // defeats the point and hurts spam scoring.
+    const { html } = buildWelcomeEmail({ recipientName: 'Lucky' });
+    expect(html).not.toContain('var(--');
+    expect(html).not.toContain('@font-face');
+    expect(html).not.toMatch(/background-color:#0d120e/i);
+    expect(html).not.toContain('display:inline-block');
+  });
+
+  it('signs off as the founder', () => {
+    const { text, subject } = buildWelcomeEmail({ recipientName: 'Lucky' });
+    expect(subject).toBe('Welcome to Urganize — a note from Lucky');
+    expect(text).toContain('Founder, Urganize');
   });
 });

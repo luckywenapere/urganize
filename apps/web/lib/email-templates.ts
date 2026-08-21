@@ -125,3 +125,86 @@ ${escapeHtml(`${inviter} invited you to join ${workspace} on Urganize.`)}
 
   return { subject, html, text };
 }
+
+export type WelcomeEmailInput = {
+  /** The recipient's display name as stored on their profile — may be a full
+   *  name, an email handle, or blank. Only the first word is used. */
+  recipientName: string;
+};
+
+/** The founder's WhatsApp deep link — the app's real support channel (see
+ *  CLAUDE.md, External services). The welcome note points here rather than at
+ *  a support@ address because this is where the founder actually answers. */
+const FOUNDER_WHATSAPP_URL = 'https://wa.me/2347067367057';
+
+const APP_URL = 'https://app.urganize.app';
+
+/** First word of the stored name, if it plausibly reads as a name. An email
+ *  handle like "lucky.wenapere" or a blank falls back to '' so the greeting
+ *  degrades to "Hey," rather than "Hey lucky.wenapere,". */
+function firstNameFrom(value: string): string {
+  const first = value.trim().split(/\s+/)[0] || '';
+  if (!first || first.includes('@') || first.includes('.') || first.length > 20) return '';
+  return first;
+}
+
+/**
+ * The founder-note welcome, sent once when a user completes onboarding.
+ *
+ * Deliberately UNLIKE the invite template: no banner, no button, no card —
+ * plain paragraphs in a system font on a white ground, so it reads as a
+ * personal email from a person rather than product mail. That is the point
+ * of the founder-note style, and it also scores better with spam filters,
+ * which treat heavily-designed mail from young domains with suspicion.
+ * Do not "brand this up".
+ */
+export function buildWelcomeEmail(input: WelcomeEmailInput): BuiltEmail {
+  const firstName = firstNameFrom(input.recipientName);
+  const greeting = firstName ? `Hey ${firstName},` : 'Hey,';
+
+  const subject = 'Welcome to Urganize — a note from Lucky';
+
+  const text = [
+    greeting,
+    '',
+    "Lucky here — I'm the founder of Urganize. Thanks for signing up.",
+    '',
+    'I built this because running a release across group chats and',
+    'spreadsheets kept breaking my own team. In Urganize you create a',
+    'release and get a full rollout plan — every task, in order, with',
+    'dates. You just work the plan.',
+    '',
+    'If anything feels confusing or missing, message me on WhatsApp:',
+    FOUNDER_WHATSAPP_URL,
+    'I read every message.',
+    '',
+    'When you are ready, set up your first release:',
+    APP_URL,
+    '',
+    '— Lucky',
+    'Founder, Urganize',
+  ].join('\n');
+
+  const p = `margin:0 0 16px;color:#1e2621;font-size:15px;line-height:1.65;`;
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#ffffff;">
+<div style="max-width:560px;margin:0 auto;padding:36px 24px;font-family:${FONT_STACK};">
+  <p style="${p}">${escapeHtml(greeting)}</p>
+  <p style="${p}">Lucky here &mdash; I&rsquo;m the founder of Urganize. Thanks for signing up.</p>
+  <p style="${p}">I built this because running a release across group chats and spreadsheets kept breaking my own team. In Urganize you create a release and get a full rollout plan &mdash; every task, in order, with dates. You just work the plan.</p>
+  <p style="${p}">If anything feels confusing or missing, <a href="${FOUNDER_WHATSAPP_URL}" style="color:#1e5c38;">message me on WhatsApp</a>. I read every message.</p>
+  <p style="${p}">When you&rsquo;re ready, <a href="${APP_URL}" style="color:#1e5c38;">set up your first release</a>.</p>
+  <p style="margin:24px 0 0;color:#1e2621;font-size:15px;line-height:1.65;">&mdash; Lucky<br>
+  <span style="color:${MUTED_TEXT};font-size:13px;">Founder, Urganize</span></p>
+</div>
+</body>
+</html>`;
+
+  return { subject, html, text };
+}
