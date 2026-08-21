@@ -10,6 +10,7 @@ import { readPersistedState } from '@/lib/persisted-state';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { AndroidAppBanner } from '@/components/app/AndroidAppBanner';
 import { AppTopbar } from '@/components/app/AppTopbar';
+import { TeamTrialStrip } from '@/components/app/TeamTrialStrip';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
@@ -423,6 +424,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               enough to shift the whole page and reveal it. 100dvh tracks the
               real visible viewport instead, so there is no residual slack. */}
           <div className="app-shell-frame mx-auto flex min-h-dvh w-full max-w-[1440px] flex-col">
+            {/* Trial indicator, above the topbar rather than in it: the
+                topbar's right cluster has a documented width budget that
+                already overflows a 375px phone, so a countdown there would
+                break phones. Renders nothing outside the last stretch of a
+                trial, and nothing at all while the flag is off. */}
+            <TeamTrialStrip />
             <AppTopbar onNewRelease={openCreateRelease} userName={workspaceUserName} />
             {/* <main> + the UrgAns side rail share a flex row so the rail is
                 a layout-flow column (content narrows; nothing is covered) on
