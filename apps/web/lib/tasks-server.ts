@@ -34,6 +34,8 @@ import { mapTaskOutcomeRow, type TaskOutcome } from '@/lib/task-outcomes';
 import { assignDueTier, type DueTier } from '@/lib/due-tiers';
 import { getNotificationPresets } from '@/lib/notification-presets-server';
 import type { NotificationPresets } from '@/lib/notification-presets';
+import { TEAM_TRIAL_DAYS } from '@/lib/team-billing';
+import { logBillingEvent } from '@/lib/billing-events-server';
 
 export const WORKSPACES_TABLE = 'workspaces';
 export const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
@@ -691,18 +693,43 @@ export async function ensureOwnedWorkspace(
     const organization = (organizationResult.data as OrganizationRow | null) || null;
     const createdAt = new Date().toISOString();
 
+    // Team trial stamp (NEXT_PUBLIC_FEATURE_HARD_PAYWALL). Stamped HERE and
+    // nowhere else: this insert is the single moment a team comes into
+    // existence, so it cannot be double-stamped, and the 23505 loser below
+    // re-reads the winner's already-stamped row. Teams that predate the feature
+    // were stamped by the backfill in
+    // 20260821120000_team_trial_hard_paywall.sql, so every team has dates
+    // regardless of deploy order. Written unconditionally, flag or no flag: the
+    // dates are inert until the flag reads them, and stamping only under the
+    // flag would leave every team created before the flip unstamped.
+    const trialEndsAt = new Date(
+      Date.now() + TEAM_TRIAL_DAYS * 24 * 60 * 60 * 1000
+    ).toISOString();
+
     const insertResult = await adminClient
       .from(WORKSPACES_TABLE)
       .insert({
         owner_id: owner.id,
         name: createWorkspaceName(owner, organization?.name || null),
         updated_at: createdAt,
+        trial_started_at: createdAt,
+        trial_ends_at: trialEndsAt,
       })
       .select('id,owner_id,name,created_at,updated_at')
       .maybeSingle();
 
     if (insertResult.data) {
       workspace = insertResult.data as WorkspaceRow;
+      // Fire-and-forget: the ledger entry for "this team's clock started".
+      // Only on the successful-insert branch, so a raced request does not
+      // double-log, and never on the steady-state select hit above.
+      void logBillingEvent(adminClient, {
+        workspaceId: workspace.id,
+        ownerUserId: owner.id,
+        actorUserId: owner.id,
+        type: 'trial_started',
+        metadata: { trialEndsAt, trialDays: TEAM_TRIAL_DAYS, source: 'workspace_provisioned' },
+      });
     } else if ((insertResult.error as { code?: string } | null)?.code === '23505') {
       // Another request for this same user won the race to create the
       // one-per-owner workspace (workspaces has a unique index on owner_id).
