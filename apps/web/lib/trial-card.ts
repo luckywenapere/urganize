@@ -158,11 +158,12 @@ export type CardTrialRequirementInput = {
  * anything short of positive proof of "new signup, no access, no trial yet,
  * not a teammate, not a curator" returns false.
  *
- * Note this drives only the login-time bounce (auth-store). The /start-trial
- * page itself deliberately does NOT key on it: onboarding sends brand-new
- * signups there under the flag alone, and gating the page on the cutoff too
- * would make a flag-on/cutoff-unset deploy silently bounce them straight back
- * to the dashboard.
+ * Note this drives the login-time bounce (auth-store) and the in-session gate
+ * (CardTrialGate, via /api/subscription-status's cardTrialRequired). The
+ * /start-trial page itself deliberately does NOT key on it: onboarding sends
+ * brand-new signups there under the flag alone, and gating the page on the
+ * cutoff too would make a flag-on/cutoff-unset deploy silently bounce them
+ * straight back to the dashboard.
  */
 export function resolveCardTrialRequirement(
   input: CardTrialRequirementInput
@@ -183,6 +184,94 @@ export function resolveCardTrialRequirement(
   if (role === 'curator') return false;
 
   if (input.isWorkspaceMember !== false) return false;
+
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// In-session gate (components/providers/CardTrialGate.tsx) — pure halves.
+//
+// Why it exists: the login-time bounce above only fires on FULL page loads,
+// and both signup funnels finish with client-side navigations while the
+// current pathname is still a safe auth path (so the bounce early-returns):
+//   - /auth/callback runs checkAuth on /auth/callback (a /auth safe path),
+//     then router.replace()s to the dashboard — a new Google signup lands in
+//     the app with no billing surface for the whole SPA session.
+//   - /auth email login races the same way: checkAuth's fetch usually
+//     resolves while the pathname is still /auth.
+//   - Back from /start-trial → /onboarding → its authenticated redirect →
+//     dashboard is three SPA hops with no full load anywhere.
+// The gate closes those by consulting the server-computed cardTrialRequired
+// whenever a gated chrome path is reached in-session. Everything here is pure
+// so the decision is unit-testable; the component owns only the fetch and the
+// redirect.
+// ---------------------------------------------------------------------------
+
+/** The chrome-bearing app surfaces the in-session gate covers. Deliberately
+ * NOT /curator (the curator side is free by design), not the public token
+ * pages (/epk, /credits, /capture), and not the auth/billing surfaces
+ * (/auth, /onboarding, /start-trial, /locked, /payment, /redeem, /invite) —
+ * bouncing those would loop or eat a flow mid-step. */
+const CARD_TRIAL_GATED_PATH_PREFIXES = ['/dashboard', '/settings', '/admin'] as const;
+
+export function isCardTrialGatedPath(pathname: string | null | undefined): boolean {
+  const path = String(pathname ?? '');
+  return CARD_TRIAL_GATED_PATH_PREFIXES.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`)
+  );
+}
+
+/** The last /api/subscription-status answer this tab holds, keyed by the user
+ * id AT ANSWER TIME. `required: false` is cacheable for the rest of the tab's
+ * life because the predicate is one-way for a given account: every state that
+ * makes it false (paid, trialing, trial used, pre-cutoff creation, teammate
+ * membership, curator role) never transitions back to required=true — see
+ * resolveCardTrialRequirement. `required: true` is deliberately NOT treated
+ * as settled: the gate re-asks on every gated entry so a checkout completed
+ * on /start-trial clears it without a full reload. */
+export type CardTrialGateAnswer = { userId: string; required: boolean } | null;
+
+export type CardTrialGateInput = {
+  /** NEXT_PUBLIC_FEATURE_CARD_TRIAL resolved by the caller. */
+  enabled: boolean;
+  pathname: string | null | undefined;
+  isAuthLoading: boolean;
+  isAuthenticated: boolean;
+  userId: string | null | undefined;
+  /** Client-side role read — curator-only accounts never see team billing.
+   * A stale/fallback role fails open server-side anyway. */
+  role: string | null | undefined;
+  /** isAllowlistedEmail(user.email) resolved by the caller — the same
+   * fast path the login bounce takes, saving the round trip. */
+  allowlisted: boolean;
+  lastAnswer: CardTrialGateAnswer;
+};
+
+/**
+ * Should the in-session gate consult /api/subscription-status right now?
+ * Fail-open discipline throughout (the resolveCardTrialRequirement doctrine):
+ * a `true` here only triggers a server read whose answer decides the
+ * redirect — never a redirect by itself.
+ */
+export function shouldConsultCardTrialGate(input: CardTrialGateInput): boolean {
+  if (!input.enabled) return false;
+  if (!isCardTrialGatedPath(input.pathname)) return false;
+  if (input.isAuthLoading || !input.isAuthenticated) return false;
+
+  const userId = String(input.userId ?? '').trim();
+  if (!userId) return false;
+
+  const role = String(input.role ?? '').trim().toLowerCase();
+  if (role === 'curator') return false;
+  if (input.allowlisted) return false;
+
+  if (
+    input.lastAnswer &&
+    input.lastAnswer.userId === userId &&
+    input.lastAnswer.required === false
+  ) {
+    return false;
+  }
 
   return true;
 }

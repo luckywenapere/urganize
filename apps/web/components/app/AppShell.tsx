@@ -18,6 +18,7 @@ import { ToastProvider } from '@/components/shared/ToastProvider';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { ChunkRecoveryBridge } from '@/components/providers/ChunkRecoveryBridge';
+import { CardTrialGate } from '@/components/providers/CardTrialGate';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
 import { CapacitorPushBridge } from '@/components/providers/CapacitorPushBridge';
 import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
@@ -363,6 +364,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     {/* Records every route change so back affordances (Settings' back
         button) can return to the exact previous page. */}
     <NavigationTracker />
+    {/* Card-before-trial's in-session gate: the auth-store bounce only fires
+        on full page loads, and both signup funnels finish with client-side
+        navigations — this routes a cardTrialRequired account to /start-trial
+        the moment it reaches app chrome. Renders nothing; a no-op while
+        NEXT_PUBLIC_FEATURE_CARD_TRIAL is off. */}
+    <CardTrialGate />
     <TaskUIProvider>
       {requiresArtistNameGate ? (
         <ArtistNameGate />

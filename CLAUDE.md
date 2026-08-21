@@ -1732,7 +1732,21 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-18 (card before the free trial, built flag-off — see
+*Last updated: 2026-08-21 (the card-before-trial flow gained its in-session
+gate — see point 7 under "Card before the free trial" above. The founder's own
+live test found a fresh account could create a blank-rollout release and use
+the whole app with billing never appearing; the primary cause is that
+`NEXT_PUBLIC_FEATURE_CARD_TRIAL` has still never been flipped (no ledger entry
+exists, and the activation blocker is unchanged: the Paystack Plans behind
+`PAYSTACK_PLAN_MONTHLY_NGN`/`PAYSTACK_PLAN_ANNUAL_NGN` still bill
+₦150,000/₦1,500,000, which is what a converting trial would charge on day 28 —
+mint the ₦3,500/₦35,000 Plans and repoint before flipping). But the flow also
+leaked flag-on: the login bounce fires only on full page loads and both signup
+funnels end in SPA navigations from safe paths, so `CardTrialGate` now routes
+a `cardTrialRequired` account to `/start-trial` the moment it reaches
+`/dashboard`, `/settings` or `/admin` in-session. Fail open everywhere, pure
+halves unit-tested, zero behavior change while the flag is off. Previously,
+2026-08-18: card before the free trial, built flag-off — see
 "Card before the free trial" above. New signups now add a card before reaching
 the app: onboarding lands them on `/start-trial`, Paystack takes a ₦100 card
 check that the webhook refunds, and a Paystack subscription with
@@ -1880,6 +1894,34 @@ product friction on the signup path, not a restored paywall.
    throw) and `/locked`'s trial button routes to `/start-trial` instead.
    `/api/promo/redeem` writes the trial fields directly and stays card-free by
    design.
+7. **The in-session gate (2026-08-21) is the third bounce, and it exists
+   because the first two both miss how the signup funnels actually end.** The
+   founder's own live test hit it: a fresh account creating its first release
+   as a blank rollout reached the app with no billing surface anywhere. Two
+   causes stacked — the flag was (and is) off in production, but even flag-on
+   the flow leaked: the auth-store bounce fires only on FULL page loads and
+   early-returns on safe paths, while `/auth/callback` runs `checkAuth` with
+   the pathname still `/auth/callback` (a `/auth` safe path) and then
+   `router.replace()`s to the dashboard — so a new Google signup lands in the
+   app as pure SPA navigation and the bounce never fires for the whole
+   session. Email login on `/auth` races the same way, and Back from
+   `/start-trial` → `/onboarding` → its authenticated redirect → dashboard is
+   three SPA hops with no full load. `CardTrialGate`
+   (`components/providers/CardTrialGate.tsx`, mounted by `AppShell` beside the
+   other bridges) closes all three: whenever `/dashboard`, `/settings` or
+   `/admin` is reached in-session it consults the server's `cardTrialRequired`
+   and routes to `/start-trial` when true. Fail open on every uncertainty;
+   `required: false` is cached per user for the tab (the predicate is one-way
+   for an account — every false state is permanent); `required: true` is
+   deliberately re-asked on each gated entry so a checkout completed on
+   `/start-trial` clears it without a reload; the redirect re-reads
+   `window.location.pathname` at resolve time (the MobileNavBar
+   click-time-fresh-read pattern) so gated→gated navigation mid-fetch still
+   bounces and landing on `/start-trial` mid-fetch never double-fires. The
+   decision halves are pure and unit-tested (`isCardTrialGatedPath`,
+   `shouldConsultCardTrialGate` in `lib/trial-card.ts`); `/curator` and the
+   public token pages are deliberately outside the gated set, so the free
+   curator side stays free.
 
 - **The cancel path closes the deleted flow's worst gap.** The 2026-06-05
   card-on-file flow (never live) had no refund and **no way to stop the

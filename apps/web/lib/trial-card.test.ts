@@ -7,9 +7,12 @@ import {
   buildDelayedSubscriptionPayload,
   computeTrialEnd,
   extractReusableAuthorization,
+  isCardTrialGatedPath,
   isCardTrialPlan,
   resolveCardTrialRequirement,
   resolveTrialVerificationKobo,
+  shouldConsultCardTrialGate,
+  type CardTrialGateInput,
   type CardTrialRequirementInput,
 } from './trial-card';
 
@@ -223,5 +226,127 @@ describe('resolveCardTrialRequirement', () => {
     expect(
       resolveCardTrialRequirement({ ...gated, isWorkspaceMember: null })
     ).toBe(false);
+  });
+});
+
+describe('isCardTrialGatedPath', () => {
+  it('covers the three chrome-bearing app surfaces and their subpaths', () => {
+    expect(isCardTrialGatedPath('/dashboard')).toBe(true);
+    expect(isCardTrialGatedPath('/dashboard/urgans')).toBe(true);
+    expect(isCardTrialGatedPath('/dashboard/notes')).toBe(true);
+    expect(isCardTrialGatedPath('/settings')).toBe(true);
+    expect(isCardTrialGatedPath('/admin')).toBe(true);
+    expect(isCardTrialGatedPath('/admin/waitlist')).toBe(true);
+  });
+
+  it('never covers auth/billing surfaces — bouncing those would loop or eat a flow mid-step', () => {
+    expect(isCardTrialGatedPath('/auth')).toBe(false);
+    expect(isCardTrialGatedPath('/auth/callback')).toBe(false);
+    expect(isCardTrialGatedPath('/onboarding')).toBe(false);
+    expect(isCardTrialGatedPath('/start-trial')).toBe(false);
+    expect(isCardTrialGatedPath('/locked')).toBe(false);
+    expect(isCardTrialGatedPath('/payment/callback')).toBe(false);
+    expect(isCardTrialGatedPath('/redeem')).toBe(false);
+    expect(isCardTrialGatedPath('/invite/accept')).toBe(false);
+  });
+
+  it('never covers the free curator side or the public token pages', () => {
+    expect(isCardTrialGatedPath('/curator')).toBe(false);
+    expect(isCardTrialGatedPath('/curator/playlists')).toBe(false);
+    expect(isCardTrialGatedPath('/epk/abc')).toBe(false);
+    expect(isCardTrialGatedPath('/credits/abc')).toBe(false);
+    expect(isCardTrialGatedPath('/capture/abc')).toBe(false);
+  });
+
+  it('prefix matching requires a real path segment, not a string prefix', () => {
+    expect(isCardTrialGatedPath('/dashboards')).toBe(false);
+    expect(isCardTrialGatedPath('/settingsx')).toBe(false);
+    expect(isCardTrialGatedPath('/administration')).toBe(false);
+  });
+
+  it('fails closed on nothing-values', () => {
+    expect(isCardTrialGatedPath(null)).toBe(false);
+    expect(isCardTrialGatedPath(undefined)).toBe(false);
+    expect(isCardTrialGatedPath('')).toBe(false);
+    expect(isCardTrialGatedPath('/')).toBe(false);
+  });
+});
+
+describe('shouldConsultCardTrialGate', () => {
+  // The one shape that must consult the server: flag on, a signed-in
+  // non-curator, non-allowlisted account on app chrome, with no settled
+  // "not required" answer for this user yet.
+  const consult: CardTrialGateInput = {
+    enabled: true,
+    pathname: '/dashboard',
+    isAuthLoading: false,
+    isAuthenticated: true,
+    userId: 'user-1',
+    role: 'artist-manager',
+    allowlisted: false,
+    lastAnswer: null,
+  };
+
+  it('consults in the one true case', () => {
+    expect(shouldConsultCardTrialGate(consult)).toBe(true);
+  });
+
+  it('flag off → never (zero behavior change while the feature is dark)', () => {
+    expect(shouldConsultCardTrialGate({ ...consult, enabled: false })).toBe(false);
+  });
+
+  it('only on gated chrome paths', () => {
+    expect(
+      shouldConsultCardTrialGate({ ...consult, pathname: '/start-trial' })
+    ).toBe(false);
+    expect(shouldConsultCardTrialGate({ ...consult, pathname: '/auth' })).toBe(false);
+    expect(
+      shouldConsultCardTrialGate({ ...consult, pathname: '/onboarding' })
+    ).toBe(false);
+    expect(shouldConsultCardTrialGate({ ...consult, pathname: null })).toBe(false);
+  });
+
+  it('waits for auth to RESOLVE and requires a signed-in user with an id', () => {
+    expect(
+      shouldConsultCardTrialGate({ ...consult, isAuthLoading: true })
+    ).toBe(false);
+    expect(
+      shouldConsultCardTrialGate({ ...consult, isAuthenticated: false })
+    ).toBe(false);
+    expect(shouldConsultCardTrialGate({ ...consult, userId: null })).toBe(false);
+    expect(shouldConsultCardTrialGate({ ...consult, userId: '  ' })).toBe(false);
+  });
+
+  it('curator-only accounts and allowlisted emails skip the round trip', () => {
+    expect(shouldConsultCardTrialGate({ ...consult, role: 'curator' })).toBe(false);
+    expect(shouldConsultCardTrialGate({ ...consult, role: ' Curator ' })).toBe(false);
+    expect(shouldConsultCardTrialGate({ ...consult, allowlisted: true })).toBe(false);
+  });
+
+  it('a settled "not required" answer for THIS user ends the asking for the tab', () => {
+    expect(
+      shouldConsultCardTrialGate({
+        ...consult,
+        lastAnswer: { userId: 'user-1', required: false },
+      })
+    ).toBe(false);
+  });
+
+  it('a "required" answer keeps the gate live — checkout completion must clear without a reload', () => {
+    expect(
+      shouldConsultCardTrialGate({
+        ...consult,
+        lastAnswer: { userId: 'user-1', required: true },
+      })
+    ).toBe(true);
+  });
+
+  it('an answer for a DIFFERENT user never settles this one (same-tab logout→login)', () => {
+    expect(
+      shouldConsultCardTrialGate({
+        ...consult,
+        lastAnswer: { userId: 'user-2', required: false },
+      })
+    ).toBe(true);
   });
 });
