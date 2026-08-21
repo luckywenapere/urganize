@@ -221,6 +221,24 @@ export function isCardTrialGatedPath(pathname: string | null | undefined): boole
   );
 }
 
+/** Where a card-owing account belongs. An account that has never finished
+ * onboarding has had no dopamine hit yet — it created no release and saw no
+ * plan — so billing-first would wall it cold. Sending it through the wizard
+ * first means EVERY funnel reads the same: questions → their release and its
+ * plan → billing → the app. Google signups from /auth are the ones this
+ * exists for: nothing routed them through onboarding, unlike the email
+ * funnel, which starts there. */
+export const ONBOARDING_SETUP_PATH = '/onboarding?setup=1';
+
+export function resolveCardTrialDestination(
+  onboardingCompleted: boolean | null | undefined
+): string {
+  // Unknown (a degraded read) → /start-trial: the same destination the flow
+  // has always used, and the wizard's own guard would bounce a
+  // finished-onboarding account straight back out anyway.
+  return onboardingCompleted === false ? ONBOARDING_SETUP_PATH : '/start-trial';
+}
+
 /** The last /api/subscription-status answer this tab holds, keyed by the user
  * id AT ANSWER TIME. `required: false` is cacheable for the rest of the tab's
  * life because the predicate is one-way for a given account: every state that
@@ -273,5 +291,44 @@ export function shouldConsultCardTrialGate(input: CardTrialGateInput): boolean {
     return false;
   }
 
+  return true;
+}
+
+/**
+ * Should /onboarding run in AUTHED-SETUP mode — i.e. serve the wizard to an
+ * account that is already signed in but has never finished it, instead of
+ * bouncing it home?
+ *
+ * Normally being signed in on /onboarding means "you already have an account,
+ * go to the app" (the wizard's redirect effect). Authed-setup is the narrow
+ * exception the card-trial funnel needs: a fresh Google signup from /auth is
+ * authenticated but un-onboarded, and it must get the questions + its first
+ * release BEFORE billing. Requires the marker param, so a normal /onboarding
+ * visit is completely unaffected.
+ *
+ * Gated on the flag too: with card-trial off, nothing routes anyone here with
+ * the param, and honoring it anyway would let a stale bookmark strand an
+ * onboarded user in a wizard whose finish line is a page that redirects home.
+ */
+export function shouldRunAuthedOnboardingSetup(input: {
+  enabled: boolean;
+  /** Whether ?setup=1 is present — read imperatively by the caller. The
+   * wizard must NOT call useSearchParams: that un-server-renders this page,
+   * the front-door bug of 2026-08-13. */
+  hasSetupParam: boolean;
+  isAuthLoading: boolean;
+  isAuthenticated: boolean;
+  /** profiles.onboarding_completed from the auth store. */
+  onboardingCompleted: boolean | null | undefined;
+  role: string | null | undefined;
+}): boolean {
+  if (!input.enabled) return false;
+  if (!input.hasSetupParam) return false;
+  if (input.isAuthLoading || !input.isAuthenticated) return false;
+  // Only an explicit false qualifies: undefined means the profile has not
+  // loaded (or the field is missing), and assuming "not onboarded" there
+  // would re-run the wizard for someone who already finished it.
+  if (input.onboardingCompleted !== false) return false;
+  if (String(input.role ?? '').trim().toLowerCase() === 'curator') return false;
   return true;
 }

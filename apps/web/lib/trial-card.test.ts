@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ONBOARDING_SETUP_PATH,
   TRIAL_CARD_PLAN,
   TRIAL_CARD_SOURCE,
   TRIAL_CARD_VERIFICATION_DISPLAY_NGN,
@@ -9,9 +10,11 @@ import {
   extractReusableAuthorization,
   isCardTrialGatedPath,
   isCardTrialPlan,
+  resolveCardTrialDestination,
   resolveCardTrialRequirement,
   resolveTrialVerificationKobo,
   shouldConsultCardTrialGate,
+  shouldRunAuthedOnboardingSetup,
   type CardTrialGateInput,
   type CardTrialRequirementInput,
 } from './trial-card';
@@ -348,5 +351,71 @@ describe('shouldConsultCardTrialGate', () => {
         lastAnswer: { userId: 'user-2', required: false },
       })
     ).toBe(true);
+  });
+});
+
+describe('resolveCardTrialDestination', () => {
+  it('never-onboarded → the wizard, so the release and plan come before billing', () => {
+    expect(resolveCardTrialDestination(false)).toBe(ONBOARDING_SETUP_PATH);
+  });
+
+  it('onboarded → billing (they already have their release)', () => {
+    expect(resolveCardTrialDestination(true)).toBe('/start-trial');
+  });
+
+  it('unknown → billing, the destination this flow has always used', () => {
+    expect(resolveCardTrialDestination(null)).toBe('/start-trial');
+    expect(resolveCardTrialDestination(undefined)).toBe('/start-trial');
+  });
+
+  it('carries the setup marker the wizard keys on — without it onboarding bounces a signed-in user home', () => {
+    expect(ONBOARDING_SETUP_PATH).toContain('setup=1');
+  });
+});
+
+describe('shouldRunAuthedOnboardingSetup', () => {
+  // The one shape that must serve the wizard to an already-signed-in account:
+  // the marker param, the flag on, auth resolved, and onboarding genuinely
+  // unfinished.
+  const setup = {
+    enabled: true,
+    hasSetupParam: true,
+    isAuthLoading: false,
+    isAuthenticated: true,
+    onboardingCompleted: false as boolean | null | undefined,
+    role: 'artist-manager' as string | null | undefined,
+  };
+
+  it('runs in the one true case', () => {
+    expect(shouldRunAuthedOnboardingSetup(setup)).toBe(true);
+  });
+
+  it('flag off → never (nothing routes anyone here with the param)', () => {
+    expect(shouldRunAuthedOnboardingSetup({ ...setup, enabled: false })).toBe(false);
+  });
+
+  it('no marker param → never, so a normal /onboarding visit is untouched', () => {
+    expect(shouldRunAuthedOnboardingSetup({ ...setup, hasSetupParam: false })).toBe(false);
+  });
+
+  it('waits for auth to RESOLVE, and needs a signed-in user', () => {
+    expect(shouldRunAuthedOnboardingSetup({ ...setup, isAuthLoading: true })).toBe(false);
+    expect(shouldRunAuthedOnboardingSetup({ ...setup, isAuthenticated: false })).toBe(false);
+  });
+
+  it('already onboarded → never: a stale link must not re-run the wizard', () => {
+    expect(shouldRunAuthedOnboardingSetup({ ...setup, onboardingCompleted: true })).toBe(false);
+  });
+
+  it('unknown onboarding state → never (profile not loaded yet)', () => {
+    expect(shouldRunAuthedOnboardingSetup({ ...setup, onboardingCompleted: null })).toBe(false);
+    expect(
+      shouldRunAuthedOnboardingSetup({ ...setup, onboardingCompleted: undefined })
+    ).toBe(false);
+  });
+
+  it('curator-only accounts → never (no team side, no billing)', () => {
+    expect(shouldRunAuthedOnboardingSetup({ ...setup, role: 'curator' })).toBe(false);
+    expect(shouldRunAuthedOnboardingSetup({ ...setup, role: ' Curator ' })).toBe(false);
   });
 });

@@ -79,7 +79,7 @@ import {
 } from '@/lib/onboarding-draft';
 import { getOnboardingAiMoment } from '@/lib/onboarding-ai-moment';
 import { getAvailableReleaseTypes } from '@/lib/release-templates/loader';
-import { isCardTrialEnabled } from '@/lib/trial-card';
+import { isCardTrialEnabled, shouldRunAuthedOnboardingSetup } from '@/lib/trial-card';
 
 // ---------------------------------------------------------------------------
 // Module-level constants
@@ -119,15 +119,9 @@ const STEP_TITLES: Record<StepIndex, string> = {
   6: 'Bring your team in',
 };
 
-const STEP_KICKER: Record<StepIndex, string> = {
-  0: `Step 1 of ${TOTAL_STEPS}`,
-  1: `Step 2 of ${TOTAL_STEPS}`,
-  2: `Step 3 of ${TOTAL_STEPS}`,
-  3: `Step 4 of ${TOTAL_STEPS}`,
-  4: `Step 5 of ${TOTAL_STEPS}`,
-  5: `Step 6 of ${TOTAL_STEPS}`,
-  6: `Step 7 of ${TOTAL_STEPS}`,
-};
+// The "Step N of M" kicker is computed in the render body, not a table:
+// authed-setup mode (?setup=1) skips the account step, so both the number and
+// the total depend on the mode the wizard is running in.
 
 // Role labels for the invite step. These are *display labels only* — the
 // invite API normalizes unknown role strings to 'member' (see
@@ -200,6 +194,35 @@ const ONBOARDING_ROLE_OPTIONS: Array<{ value: OnboardingRole; label: string; hel
 // the same hand-off the email/password path runs — just with the role and
 // artistName we captured pre-redirect.
 const RESUME_STORAGE_KEY = 'urganize.onboarding.resume_oauth';
+
+// Authed-setup mode (?setup=1) — the card-trial funnel's fix for Google
+// signups from /auth, which arrive authenticated but never went through this
+// wizard (nothing routed them here; the email funnel STARTS here). Without it
+// they were walled at billing before creating anything, while an email signup
+// got its release and plan first. With it, every funnel reads the same:
+// questions → your release and its plan → billing → the app.
+//
+// In this mode the account already exists, so step 5 (Create your account) is
+// skipped entirely: the wizard runs its questions and then executes the SAME
+// hand-off the two signup paths run (release creation + the onboarding PATCH)
+// against the session already in hand.
+//
+// The param is read IMPERATIVELY, once, in the pre-paint layout effect —
+// never via useSearchParams. Reading that hook in a statically prerendered
+// client component bails the page out to its loading.tsx as its server HTML,
+// which is exactly the weak-connection dead end of 2026-08-13 (see "The front
+// door is server-rendered" in CLAUDE.md). Both front doors must keep their
+// real markup in the initial response.
+const AUTHED_SETUP_PARAM = 'setup';
+
+function readAuthedSetupParam(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return new URLSearchParams(window.location.search).get(AUTHED_SETUP_PARAM) === '1';
+  } catch {
+    return false;
+  }
+}
 
 type OnboardingResumeData = {
   role: OnboardingRole;
@@ -304,6 +327,8 @@ export default function OnboardingPage() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthLoading = useAuthStore((state) => state.isLoading);
+  // Authed-setup mode needs the profile's onboarding_completed + role.
+  const user = useAuthStore((state) => state.user);
 
   const [draft, setDraft] = useState<OnboardingDraft>(EMPTY_ONBOARDING_DRAFT);
   const [hasHydrated, setHasHydrated] = useState(false);
@@ -337,6 +362,10 @@ export default function OnboardingPage() {
   const [resumeData, setResumeData] = useState<OnboardingResumeData | null>(null);
   const resumeStartedRef = useRef(false);
 
+  // Authed-setup mode. Read pre-paint from the URL (see readAuthedSetupParam)
+  // and combined with live auth state below — the param alone never grants it.
+  const [hasSetupParam, setHasSetupParam] = useState(false);
+
   const [inviteRows, setInviteRows] = useState<InviteRow[]>(() => [makeInviteRow()]);
   const [isFinishing, setIsFinishing] = useState(false);
 
@@ -363,6 +392,11 @@ export default function OnboardingPage() {
       setArtistName(resume.artistName);
       setStep(5);
     }
+    // Authed-setup marker. Read here (pre-paint, imperatively) so the
+    // redirect-suppression below has it on the first committed render — an
+    // effect-ordered read would let the bounce-home effect fire first and
+    // eject the very user this mode exists to serve.
+    setHasSetupParam(readAuthedSetupParam());
     setHasHydrated(true);
   }, []);
 
@@ -371,21 +405,51 @@ export default function OnboardingPage() {
     saveOnboardingDraft(draft);
   }, [draft, hasHydrated]);
 
+  // Authed-setup: a signed-in account that never finished onboarding, sent
+  // here deliberately (?setup=1) so it gets its release and plan before
+  // billing. The param alone is not enough — the account must really be
+  // un-onboarded, or a stale link would re-run the wizard for someone who
+  // already finished (see shouldRunAuthedOnboardingSetup).
+  const isAuthedSetup = shouldRunAuthedOnboardingSetup({
+    enabled: CARD_TRIAL_ENABLED,
+    hasSetupParam,
+    isAuthLoading,
+    isAuthenticated,
+    onboardingCompleted: user?.onboarding_completed,
+    role: user?.role,
+  });
+
   // If the user is already signed in BEFORE starting onboarding, send them
   // home. Once the onboarding flow has created an account (accountCreated),
-  // or we're mid-OAuth-resume, we let them stay on /onboarding to finish
-  // the hand-off instead of being shunted away the moment auth flips.
+  // we're mid-OAuth-resume, or we're in authed-setup mode, we let them stay
+  // on /onboarding to finish the hand-off instead of being shunted away the
+  // moment auth flips.
+  //
+  // hasHydrated gates the whole effect: the setup param is read pre-paint but
+  // lands in state, so acting before hydration completes would bounce an
+  // authed-setup visitor on the first render — the one user who must stay.
   useEffect(() => {
+    if (!hasHydrated) return;
     if (
       !isAuthLoading &&
       isAuthenticated &&
       !isSubmitting &&
       !accountCreated &&
-      !resumeData
+      !resumeData &&
+      !isAuthedSetup
     ) {
       router.replace(HOME_PATH);
     }
-  }, [isAuthenticated, isAuthLoading, isSubmitting, accountCreated, resumeData, router]);
+  }, [
+    isAuthenticated,
+    isAuthLoading,
+    isSubmitting,
+    accountCreated,
+    resumeData,
+    isAuthedSetup,
+    hasHydrated,
+    router,
+  ]);
 
   // ---- step gating -------------------------------------------------------
   const canAdvance = useMemo(() => {
@@ -424,6 +488,7 @@ export default function OnboardingPage() {
     setError('');
     setStep((current) => (current < LAST_STEP ? ((current + 1) as StepIndex) : current));
   };
+
 
   const handleBack = () => {
     setError('');
@@ -586,6 +651,35 @@ export default function OnboardingPage() {
       await runPostSignupHandoff(accessToken);
     } catch (handoffError) {
       setError(errorMessage(handoffError, 'Could not finish creating your workspace.'));
+      setProgressMessage('');
+      setIsSubmitting(false);
+    }
+  };
+
+  // Authed-setup's terminal action on step 4, standing in for "Create account
+  // & release": the account already exists, so this runs the hand-off (release
+  // + plan, then the onboarding PATCH) against the session in hand and lands
+  // on /start-trial via finishToDashboard. Deliberately reuses
+  // runPostSignupHandoff rather than reimplementing it — one hand-off means
+  // the wizard cannot produce a different result for Google than for email.
+  const handleAuthedSetupFinish = async () => {
+    if (!draft.releaseType) {
+      setError('Please complete the previous steps.');
+      return;
+    }
+    setError('');
+    setIsSubmitting(true);
+    // Suppresses the bounce-home effect for the rest of this flow: the PATCH
+    // inside the hand-off flips onboarding_completed to true, which would
+    // otherwise end authed-setup mode mid-run and eject the user before
+    // finishToDashboard's own redirect lands.
+    setAccountCreated(true);
+    setProgressMessage('Setting up your first release...');
+    try {
+      const accessToken = await getAccessToken();
+      await runPostSignupHandoff(accessToken);
+    } catch (handoffError) {
+      setError(errorMessage(handoffError, 'Could not finish setting up your workspace.'));
       setProgressMessage('');
       setIsSubmitting(false);
     }
@@ -823,6 +917,16 @@ export default function OnboardingPage() {
   // saved draft happens pre-paint above, so returning users still skip it.
 
   // ---- render ------------------------------------------------------------
+  // Authed-setup skips the account step, so it has one step fewer: the
+  // questions (0–4) plus the invite step when the workspace flag is on. The
+  // progress bar and the "Step N of M" kicker both read from these so they
+  // cannot disagree with the flow the user is actually walking.
+  const visibleTotalSteps = isAuthedSetup ? TOTAL_STEPS - 1 : TOTAL_STEPS;
+  // Step 6 (invite) sits one slot earlier in authed-setup's counting because
+  // step 5 never renders; every question step counts as itself.
+  const visibleStepNumber = isAuthedSetup && step === 6 ? 6 : step + 1;
+  const stepKicker = `Step ${visibleStepNumber} of ${visibleTotalSteps}`;
+
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
       <div className="mx-auto w-full max-w-xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12 md:max-w-2xl">
@@ -835,7 +939,12 @@ export default function OnboardingPage() {
             Welcome aboard
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-content-secondary">
-            A few questions before we set up your workspace.
+            {isAuthedSetup
+              ? // The account already exists here (a Google sign-in that came
+                // straight from /auth), so "before we set up your workspace"
+                // would describe a step that already happened.
+                'A few questions and your first release is ready.'
+              : 'A few questions before we set up your workspace.'}
           </p>
         </div>
 
@@ -852,13 +961,13 @@ export default function OnboardingPage() {
         {/* Progress bar — TOTAL_STEPS thin segments */}
         <div
           className="mb-6 flex items-center gap-1.5 sm:mb-8"
-          aria-label={`Onboarding progress, step ${step + 1} of ${TOTAL_STEPS}`}
+          aria-label={`Onboarding progress, step ${visibleStepNumber} of ${visibleTotalSteps}`}
         >
-          {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
+          {Array.from({ length: visibleTotalSteps }).map((_, index) => (
             <span
               key={index}
               className={`h-1 flex-1 transition-colors duration-base ease-standard ${
-                index <= step ? 'bg-brand' : 'bg-stroke-default'
+                index < visibleStepNumber ? 'bg-brand' : 'bg-stroke-default'
               }`}
             />
           ))}
@@ -867,7 +976,7 @@ export default function OnboardingPage() {
         {/* Step container */}
         <section className={`${cardShell} animate-fade-in`} aria-labelledby="onboarding-step-heading">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-            {STEP_KICKER[step]}
+            {stepKicker}
           </p>
           <h2
             id="onboarding-step-heading"
@@ -1402,6 +1511,19 @@ export default function OnboardingPage() {
                 className={primaryButton}
               >
                 {isFinishing ? 'Sending…' : 'Send invites & continue'}
+              </button>
+            ) : isAuthedSetup && step === 4 ? (
+              // Authed-setup: step 4 is the last question, since the account
+              // already exists and step 5 is skipped. This button does what
+              // "Create account & release" does for a signup — creates the
+              // release and its plan, then hands off to billing.
+              <button
+                type="button"
+                onClick={() => void handleAuthedSetupFinish()}
+                disabled={!canAdvance || isSubmitting}
+                className={primaryButton}
+              >
+                {isSubmitting ? 'Working…' : 'Create my release'}
               </button>
             ) : (
               <button

@@ -8,6 +8,7 @@ import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
 import {
   isCardTrialEnabled,
   isCardTrialGatedPath,
+  resolveCardTrialDestination,
   shouldConsultCardTrialGate,
   type CardTrialGateAnswer,
 } from '@/lib/trial-card';
@@ -95,11 +96,15 @@ export function CardTrialGate() {
         if (!response.ok) return;
         const payload = (await response.json().catch(() => ({}))) as {
           cardTrialRequired?: boolean;
+          onboardingCompleted?: boolean | null;
         };
         const required = payload.cardTrialRequired === true;
         lastAnswer = { userId: evaluatedUserId, required };
         if (required && isCardTrialGatedPath(window.location.pathname)) {
-          router.replace('/start-trial');
+          // Never-onboarded → the wizard first (its release and plan are the
+          // dopamine hit billing should follow, not precede); onboarded →
+          // straight to billing.
+          router.replace(resolveCardTrialDestination(payload.onboardingCompleted));
         }
       } catch {
         // Fail open — the next full page load's auth-store bounce is the net.
