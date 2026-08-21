@@ -17,6 +17,7 @@ import {
   Radio,
   TrendingUp,
   Users,
+  Building2,
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
@@ -57,6 +58,12 @@ const SECTIONS: Array<{
     label: 'Playlist owners',
     description: 'Invite links for playlist owners, and who has used them.',
     icon: ListMusic,
+  },
+  {
+    href: '/admin/teams',
+    label: 'Teams',
+    description: 'Trials, wall dates and deals. Extend, comp, or record a payment settled by invoice.',
+    icon: Building2,
   },
   {
     href: '/admin/waitlist',

@@ -12,6 +12,7 @@ import {
   Radio,
   TrendingUp,
   Users,
+  Building2,
 } from 'lucide-react';
 
 // The admin hub's left menu — one place linking every internal dashboard
@@ -46,6 +47,7 @@ const ITEMS: Array<{
     icon: ListMusic,
     href: '/admin/curator-invites',
   },
+  { key: 'teams', label: 'Teams', icon: Building2, href: '/admin/teams' },
   { key: 'waitlist', label: 'Waitlist', icon: Users, href: '/admin/waitlist' },
   { key: 'growth', label: 'Growth', icon: TrendingUp, href: '/admin/growth' },
   { key: 'interviews', label: 'Interviews', icon: Mic, href: '/admin/interviews' },
