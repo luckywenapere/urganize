@@ -1732,7 +1732,30 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-18 (card before the free trial, built flag-off — see
+*Last updated: 2026-08-21 (Google signups now go through the onboarding wizard
+before billing — see point 8 under "Card before the free trial" above. `/auth`
+is login-only, so Google from the login page was the one account-creating path
+that skipped the wizard: it reached billing having created nothing, while an
+email signup got its release and plan first. `/onboarding?setup=1` now runs the
+wizard in authed-setup mode (account exists → step 5 skipped, step 4 terminal,
+same hand-off), so every funnel reads questions → your release and its plan →
+billing → the app. The setup param is read imperatively pre-paint, never via
+`useSearchParams` — `/onboarding` and `/auth` are both verified still `○
+Static` with their real markup in the server HTML. Same day, earlier: the
+card-before-trial flow gained its in-session gate — see point 7 there. The founder's own
+live test found a fresh account could create a blank-rollout release and use
+the whole app with billing never appearing; the primary cause is that
+`NEXT_PUBLIC_FEATURE_CARD_TRIAL` has still never been flipped (no ledger entry
+exists, and the activation blocker is unchanged: the Paystack Plans behind
+`PAYSTACK_PLAN_MONTHLY_NGN`/`PAYSTACK_PLAN_ANNUAL_NGN` still bill
+₦150,000/₦1,500,000, which is what a converting trial would charge on day 28 —
+mint the ₦3,500/₦35,000 Plans and repoint before flipping). But the flow also
+leaked flag-on: the login bounce fires only on full page loads and both signup
+funnels end in SPA navigations from safe paths, so `CardTrialGate` now routes
+a `cardTrialRequired` account to `/start-trial` the moment it reaches
+`/dashboard`, `/settings` or `/admin` in-session. Fail open everywhere, pure
+halves unit-tested, zero behavior change while the flag is off. Previously,
+2026-08-18: card before the free trial, built flag-off — see
 "Card before the free trial" above. New signups now add a card before reaching
 the app: onboarding lands them on `/start-trial`, Paystack takes a ₦100 card
 check that the webhook refunds, and a Paystack subscription with
@@ -1880,6 +1903,98 @@ product friction on the signup path, not a restored paywall.
    throw) and `/locked`'s trial button routes to `/start-trial` instead.
    `/api/promo/redeem` writes the trial fields directly and stays card-free by
    design.
+7. **The in-session gate (2026-08-21) is the third bounce, and it exists
+   because the first two both miss how the signup funnels actually end.** The
+   founder's own live test hit it: a fresh account creating its first release
+   as a blank rollout reached the app with no billing surface anywhere. Two
+   causes stacked — the flag was (and is) off in production, but even flag-on
+   the flow leaked: the auth-store bounce fires only on FULL page loads and
+   early-returns on safe paths, while `/auth/callback` runs `checkAuth` with
+   the pathname still `/auth/callback` (a `/auth` safe path) and then
+   `router.replace()`s to the dashboard — so a new Google signup lands in the
+   app as pure SPA navigation and the bounce never fires for the whole
+   session. Email login on `/auth` races the same way, and Back from
+   `/start-trial` → `/onboarding` → its authenticated redirect → dashboard is
+   three SPA hops with no full load. `CardTrialGate`
+   (`components/providers/CardTrialGate.tsx`, mounted by `AppShell` beside the
+   other bridges) closes all three: whenever `/dashboard`, `/settings` or
+   `/admin` is reached in-session it consults the server's `cardTrialRequired`
+   and routes to `/start-trial` when true. Fail open on every uncertainty;
+   `required: false` is cached per user for the tab (the predicate is one-way
+   for an account — every false state is permanent); `required: true` is
+   deliberately re-asked on each gated entry so a checkout completed on
+   `/start-trial` clears it without a reload; the redirect re-reads
+   `window.location.pathname` at resolve time (the MobileNavBar
+   click-time-fresh-read pattern) so gated→gated navigation mid-fetch still
+   bounces and landing on `/start-trial` mid-fetch never double-fires. The
+   decision halves are pure and unit-tested (`isCardTrialGatedPath`,
+   `shouldConsultCardTrialGate` in `lib/trial-card.ts`); `/curator` and the
+   public token pages are deliberately outside the gated set, so the free
+   curator side stays free. **Coverage audit (2026-08-21), so nobody re-walks
+   it:** every other route is a redirect stub (`/`, `/release/[id]` →
+   gated paths), a public token page, or a flow page (`/auth`, `/onboarding`,
+   `/start-trial`, `/locked`, `/payment`, `/redeem`, `/invite`, `/join`) with
+   no product surface on it — and in production config every ASSISTANT
+   surface also lives inside gated chrome: the rail and MobileNavBar mount
+   only under `showWorkspaceChrome` (dashboard/settings), `/dashboard/urgans`
+   is gated by prefix, and ChappiDock renders nowhere because
+   `NEXT_PUBLIC_FEATURE_MOBILE_NAV=true` (its unconditional bail). One
+   residual, documented rather than plumbed: with mobile-nav OFF, the
+   below-lg dock renders on the three authenticated flow pages
+   (`/payment/callback`, `/redeem`, `/join/[code]`), so a card-gated account
+   that hand-typed one of those URLs could chat with UrgAns there — no UI
+   path leads a card-gated account to any of them today, but re-check this
+   before ever turning mobile-nav off. The API layer stays open either way
+   (the server paywall is off — the founder-accepted known limit at the end
+   of this section), so this gate is a UI wall, not an API one.
+8. **Google signups go through the wizard before billing (2026-08-21), so
+   every funnel has its dopamine hit first.** `/auth` is login-only — signup
+   lives at `/onboarding` — so the ONE account-creating path that skipped the
+   wizard was Google from the login page: the callback's profile upsert
+   creates the account, and nothing routed it to onboarding. That account
+   reached billing having created nothing, while an email signup got its
+   release and plan first. Now `/onboarding?setup=1` runs the wizard in
+   **authed-setup mode**: the account already exists, so step 5 (Create your
+   account) is skipped and step 4 becomes terminal ("Create my release"),
+   running the SAME `runPostSignupHandoff` both signup paths run against the
+   session in hand, then landing on `/start-trial`. Order is now identical
+   everywhere: questions → your release and its plan → billing → the app.
+   Five things worth keeping:
+   - **The param is read imperatively in the pre-paint layout effect, never
+     via `useSearchParams`** — that hook in a statically prerendered client
+     component serves `loading.tsx` as the page's HTML, the exact
+     weak-connection dead end of 2026-08-13. `/onboarding` and `/auth` are
+     both verified still `○ Static`, with the real step-1 questions in the
+     server HTML.
+   - **The param alone never grants the mode** (`shouldRunAuthedOnboardingSetup`,
+     unit-tested): the flag must be on, auth resolved, the account genuinely
+     un-onboarded (an explicit `false`, never a missing field) and not a
+     curator — so a stale link cannot re-run the wizard for someone who
+     finished it, and a normal `/onboarding` visit is untouched.
+   - **The bounce-home effect is gated on `hasHydrated`**, because the param
+     lands in state: acting before hydration would eject the one visitor this
+     mode exists to serve. `accountCreated` is set before the hand-off for the
+     same reason — its PATCH flips `onboarding_completed` to true, which would
+     otherwise end the mode mid-run.
+   - **The callback's routing is a SHORTCUT, not the gate.** CardTrialGate
+     reaches the same wizard from `/dashboard` anyway; deciding at the
+     callback only skips a flash of the app and its create-release modal. It
+     consults the server's `cardTrialRequired` (not just
+     `onboarding_completed`) because only the server can evaluate the
+     server-only cutoff and workspace membership — that read is what keeps
+     pre-cutoff dormant accounts, invited teammates and curators out of the
+     wizard. It is skipped entirely for already-onboarded accounts, bounded by
+     a 2.5s abort well inside the callback's 7s watchdog, and every failure
+     falls through to the app rather than the wizard.
+   - **Invited teammates were already safe**: `/api/invites/[token]` marks
+     `onboarding_completed: true` on accept, for this exact reason ("the
+     first-time onboarding wizard is wrong for them"). The membership
+     exemption in `cardTrialRequired` is the second layer.
+   The destination split lives in one tested place (`resolveCardTrialDestination`):
+   never-onboarded → the wizard, onboarded or unknown → `/start-trial`. Both
+   bounces (auth-store on full loads, CardTrialGate in-session) call it, and
+   `/api/subscription-status` now returns `onboardingCompleted` alongside
+   `cardTrialRequired` to feed it.
 
 - **The cancel path closes the deleted flow's worst gap.** The 2026-06-05
   card-on-file flow (never live) had no refund and **no way to stop the

@@ -23,14 +23,25 @@ import { isCardTrialEnabled, resolveCardTrialRequirement } from '@/lib/trial-car
 // so the two extra admin reads cost nothing for paid/trial/expired accounts.
 // Every read failure fails OPEN (false) — the isFirstReleaseRequired doctrine:
 // a wrong `true` walls someone out of the product.
+// Returned alongside it: onboardingCompleted, so the client can send a
+// card-owing account to the right place — the wizard when it has never
+// finished onboarding (no release, no plan, no dopamine hit yet), /start-trial
+// when it has. null when unknown/not applicable; the client treats anything
+// but an explicit false as "onboarded" (see resolveCardTrialDestination).
+type CardTrialGateFacts = {
+  required: boolean;
+  onboardingCompleted: boolean | null;
+};
+
 async function computeCardTrialRequired(
   userId: string,
   supabaseUrl: string,
   snapshot: SubscriptionSnapshot
-): Promise<boolean> {
-  if (!isCardTrialEnabled()) return false;
+): Promise<CardTrialGateFacts> {
+  const notRequired: CardTrialGateFacts = { required: false, onboardingCompleted: null };
+  if (!isCardTrialEnabled()) return notRequired;
   if (snapshot.accountStatus !== 'unpaid' || snapshot.trialUsed || snapshot.hasAccess) {
-    return false;
+    return notRequired;
   }
 
   const cutoffIso = process.env.TRIAL_CARD_SIGNUP_CUTOFF;
@@ -39,15 +50,19 @@ async function computeCardTrialRequired(
     console.warn(
       '[trial-card] NEXT_PUBLIC_FEATURE_CARD_TRIAL is on but TRIAL_CARD_SIGNUP_CUTOFF is unset — the login-time gate is inert.'
     );
-    return false;
+    return notRequired;
   }
 
   const admin = createAdminClient(supabaseUrl);
-  if (!admin) return false;
+  if (!admin) return notRequired;
 
   try {
     const [profileResult, membershipResult] = await Promise.all([
-      admin.from('profiles').select('created_at, role').eq('id', userId).maybeSingle(),
+      admin
+        .from('profiles')
+        .select('created_at, role, onboarding_completed')
+        .eq('id', userId)
+        .maybeSingle(),
       admin
         .from('workspace_members')
         .select('id')
@@ -57,10 +72,10 @@ async function computeCardTrialRequired(
         .limit(1),
     ]);
 
-    if (profileResult.error || !profileResult.data) return false;
-    if (membershipResult.error) return false;
+    if (profileResult.error || !profileResult.data) return notRequired;
+    if (membershipResult.error) return notRequired;
 
-    return resolveCardTrialRequirement({
+    const required = resolveCardTrialRequirement({
       enabled: true,
       cutoffIso,
       createdAtIso: profileResult.data.created_at ? String(profileResult.data.created_at) : null,
@@ -70,8 +85,16 @@ async function computeCardTrialRequired(
       role: profileResult.data.role ? String(profileResult.data.role) : null,
       isWorkspaceMember: (membershipResult.data?.length ?? 0) > 0,
     });
+
+    return {
+      required,
+      onboardingCompleted:
+        typeof profileResult.data.onboarding_completed === 'boolean'
+          ? profileResult.data.onboarding_completed
+          : null,
+    };
   } catch {
-    return false;
+    return notRequired;
   }
 }
 
@@ -102,11 +125,12 @@ export async function GET(request: NextRequest) {
       paidAt: null,
       allowlisted: true,
       cardTrialRequired: false,
+      onboardingCompleted: null,
     });
   }
 
   const snapshot = await getSubscriptionSnapshot(auth.user.id);
-  const cardTrialRequired = await computeCardTrialRequired(
+  const cardTrialFacts = await computeCardTrialRequired(
     auth.user.id,
     auth.supabaseUrl,
     snapshot
@@ -124,6 +148,7 @@ export async function GET(request: NextRequest) {
     trialUsed: snapshot.trialUsed,
     trialStartedAt: snapshot.trialStartedAt,
     paidAt: snapshot.paidAt,
-    cardTrialRequired,
+    cardTrialRequired: cardTrialFacts.required,
+    onboardingCompleted: cardTrialFacts.onboardingCompleted,
   });
 }

@@ -6,6 +6,56 @@ import { LoadingScreen } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { HOME_PATH, resolveHomePath } from '@/lib/home-path';
+import { ONBOARDING_SETUP_PATH, isCardTrialEnabled } from '@/lib/trial-card';
+import type { Profile } from '@/lib/supabase/client';
+
+const CARD_TRIAL_ENABLED = isCardTrialEnabled();
+
+/**
+ * Should this just-signed-in account be sent through the onboarding wizard
+ * before the app? Only for an account that has genuinely never finished it AND
+ * that the server says still owes the card step — the server read is what
+ * keeps pre-cutoff accounts, invited teammates and curators out of the wizard,
+ * since only it can evaluate TRIAL_CARD_SIGNUP_CUTOFF (a server-only env var)
+ * and workspace membership.
+ *
+ * Skips the request entirely for the common case (already onboarded), so a
+ * returning user's sign-in pays nothing for this. Any failure — non-OK, a
+ * throw, or the 2.5s abort — returns false and lands them in the app, where
+ * CardTrialGate consults the same endpoint without a deadline. Falling through
+ * to the app is the safe direction: the gate still routes them correctly, they
+ * just see the app for a moment first.
+ */
+async function shouldSendToOnboardingSetup(profile: Profile | null): Promise<boolean> {
+  if (!CARD_TRIAL_ENABLED) return false;
+  if (profile?.onboarding_completed !== false) return false;
+  if (String(profile?.role || '').toLowerCase() === 'curator') return false;
+
+  const controller = new AbortController();
+  // Bounded well inside the 7s callback watchdog above: this must never be
+  // what turns a successful sign-in into ?error=callback_timeout.
+  const abortTimer = window.setTimeout(() => controller.abort(), 2500);
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return false;
+    const response = await fetch('/api/subscription-status', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    if (!response.ok) return false;
+    const payload = (await response.json().catch(() => ({}))) as {
+      cardTrialRequired?: boolean;
+    };
+    return payload.cardTrialRequired === true;
+  } catch {
+    return false;
+  } finally {
+    window.clearTimeout(abortTimer);
+  }
+}
 
 // Roles a signup may carry in auth metadata. 'curator' is here so a playlist
 // owner signing in with Google keeps their role through this fallback upsert
@@ -126,9 +176,36 @@ export default function AuthCallbackPage() {
         // An explicit `next` still wins — that is how the curator join flow
         // returns to its own page after the OAuth round trip.
         const hasExplicitNext = Boolean(next && next.startsWith('/'));
-        const destination = hasExplicitNext
+        // /auth calls loginWithGoogle(searchParams.next || HOME_PATH), so a
+        // plain Google sign-in ALWAYS arrives carrying next=/dashboard — the
+        // default filler, not a destination anyone asked for. Treat only a
+        // next that points somewhere ELSE as purposeful: the /onboarding OAuth
+        // round trip, the curator join flow and the invite email link all
+        // carry their own path and keep winning outright.
+        const hasPurposefulNext = hasExplicitNext && safeNext !== HOME_PATH;
+        const profile = useAuthStore.getState().user;
+        // Card-before-trial: a Google sign-in straight from /auth has an
+        // account but has never been through onboarding — nothing routes it
+        // there, unlike the email funnel, which starts there. Send it to the
+        // wizard so it gets its first release and plan before billing, instead
+        // of landing in the app (where the card gate would wall it cold) or on
+        // /start-trial (paying before seeing anything).
+        //
+        // This is a SHORTCUT, not the gate: CardTrialGate would reach the same
+        // wizard from /dashboard anyway, but only after a flash of the app and
+        // its create-release modal. Skipping that flash is the whole point of
+        // deciding here.
+        //
+        // A purposeful `next` always wins (see hasPurposefulNext above), so
+        // the /onboarding OAuth round trip and the curator join flow are
+        // untouched — both arrive carrying their own path.
+        const destination = hasPurposefulNext
           ? safeNext
-          : resolveHomePath(useAuthStore.getState().user?.role);
+          : (await shouldSendToOnboardingSetup(profile))
+            ? ONBOARDING_SETUP_PATH
+            : hasExplicitNext
+              ? safeNext
+              : resolveHomePath(profile?.role);
 
         window.clearTimeout(timeout);
         router.replace(destination);

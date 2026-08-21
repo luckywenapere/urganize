@@ -6,7 +6,7 @@ import { supabase, type Profile, handleSupabaseError } from './supabase/client';
 import { errorMessage } from "@/lib/errors";
 import { installAccessRedirect } from './access-redirect';
 import { isAllowlistedEmail } from './paywall-allowlist';
-import { isCardTrialEnabled } from './trial-card';
+import { isCardTrialEnabled, resolveCardTrialDestination } from './trial-card';
 import { isNativePlatform } from './platform';
 import { resetSceneData } from '@/stores/useSceneDataStore';
 import { resetSceneMemory } from '@/lib/scene-memory';
@@ -87,14 +87,18 @@ const ensureActiveAccessOrRedirect = async (
       accountStatus?: string;
       trialUsed?: boolean;
       cardTrialRequired?: boolean;
+      onboardingCompleted?: boolean | null;
     };
 
     // Card gate first — it targets exactly the accounts the /locked bounce
     // would call 'unpaid', and /start-trial (not /locked) is where a
     // never-trialed new signup belongs. The predicate is entirely
-    // server-derived and fails open (see lib/trial-card.ts).
+    // server-derived and fails open (see lib/trial-card.ts). An account that
+    // never finished onboarding goes through the wizard first: it has no
+    // release and has seen no plan yet, so billing-first would wall it before
+    // it ever saw what it is paying for.
     if (CARD_TRIAL_BOUNCE_ENABLED && payload.cardTrialRequired === true) {
-      window.location.replace('/start-trial');
+      window.location.replace(resolveCardTrialDestination(payload.onboardingCompleted));
       return;
     }
 
