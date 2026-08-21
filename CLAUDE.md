@@ -1921,7 +1921,23 @@ product friction on the signup path, not a restored paywall.
    decision halves are pure and unit-tested (`isCardTrialGatedPath`,
    `shouldConsultCardTrialGate` in `lib/trial-card.ts`); `/curator` and the
    public token pages are deliberately outside the gated set, so the free
-   curator side stays free.
+   curator side stays free. **Coverage audit (2026-08-21), so nobody re-walks
+   it:** every other route is a redirect stub (`/`, `/release/[id]` →
+   gated paths), a public token page, or a flow page (`/auth`, `/onboarding`,
+   `/start-trial`, `/locked`, `/payment`, `/redeem`, `/invite`, `/join`) with
+   no product surface on it — and in production config every ASSISTANT
+   surface also lives inside gated chrome: the rail and MobileNavBar mount
+   only under `showWorkspaceChrome` (dashboard/settings), `/dashboard/urgans`
+   is gated by prefix, and ChappiDock renders nowhere because
+   `NEXT_PUBLIC_FEATURE_MOBILE_NAV=true` (its unconditional bail). One
+   residual, documented rather than plumbed: with mobile-nav OFF, the
+   below-lg dock renders on the three authenticated flow pages
+   (`/payment/callback`, `/redeem`, `/join/[code]`), so a card-gated account
+   that hand-typed one of those URLs could chat with UrgAns there — no UI
+   path leads a card-gated account to any of them today, but re-check this
+   before ever turning mobile-nav off. The API layer stays open either way
+   (the server paywall is off — the founder-accepted known limit at the end
+   of this section), so this gate is a UI wall, not an API one.
 
 - **The cancel path closes the deleted flow's worst gap.** The 2026-06-05
   card-on-file flow (never live) had no refund and **no way to stop the
