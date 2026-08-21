@@ -23,6 +23,14 @@ const ROLE_OPTIONS = [
   { value: "label_manager_executive", label: "Label manager" },
   { value: "a_and_r", label: "A&R" },
   { value: "music_producer", label: "Music producer" },
+  // Added 2026-08-21 alongside /for-curators: a real segmenting option, not
+  // just copy, since this value round-trips through POST /api/signup's Zod
+  // enum and the admin growth/waitlist dashboards' roleLabels maps (both
+  // updated to match — see WaitlistAdminPageClient.tsx). A curator waitlist
+  // signup is a separate thing from the app's actual curator accounts
+  // (playlist-pitching's invite-only `curator_profiles`, still behind
+  // NEXT_PUBLIC_FEATURE_PITCHING) — this only tags who to reach out to.
+  { value: "curator", label: "Playlist curator" },
 ] as const;
 
 const inputClassName =
