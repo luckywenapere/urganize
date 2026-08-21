@@ -9,6 +9,8 @@ import {
   loadWorkspaceAccessContext,
 } from '@/lib/tasks-server';
 import { type WorkspaceMemberRole } from '@/lib/tasks';
+import { isEmailConfigured, sendEmail } from '@/lib/email';
+import { buildWorkspaceInviteEmail } from '@/lib/email-templates';
 import {
   captureServerAnalyticsEvent,
   createPostHogEvent,
@@ -35,6 +37,16 @@ const PROFILE_TO_WORKSPACE_ROLE: Record<string, WorkspaceMemberRole> = {
   artist: 'member',
   'team-member': 'member',
   viewer: 'guest',
+};
+
+// Plain-English access description for the invite email. The recipient has
+// no idea what our role enum means, and 'guest' in particular reads as less
+// than it is.
+const WORKSPACE_ROLE_ACCESS_LABEL: Record<WorkspaceMemberRole, string> = {
+  owner: 'full access',
+  admin: 'manager access',
+  member: 'team access',
+  guest: 'read-only access',
 };
 
 const readString = (value: unknown): string => String(value || '').trim();
@@ -189,9 +201,40 @@ export async function POST(request: NextRequest) {
     }
 
     const inviteUrl = activeToken ? buildInviteUrl(activeToken) : null;
-    // TODO: replace this console handoff with the app's real transactional email flow once one exists.
+
+    // Deliver the invite. The row and its token are already committed, so a
+    // failed send is a degraded outcome and never an error: the response
+    // still carries inviteUrl and the caller falls back to "copy this and
+    // send it yourself". emailSent tells the UI which of those happened so
+    // it can't claim an email went out when none did.
+    let emailSent = false;
     if (inviteUrl) {
-      console.info(`[workspace-invite] ${email} -> ${inviteUrl}`);
+      if (isEmailConfigured()) {
+        const inviterLabel =
+          membership.name ||
+          readString(auth.user.user_metadata?.full_name) ||
+          readString(auth.user.email) ||
+          'A teammate';
+        const built = buildWorkspaceInviteEmail({
+          workspaceName: access.primaryWorkspace?.name || 'their workspace',
+          inviterLabel,
+          inviteUrl,
+          accessLabel: WORKSPACE_ROLE_ACCESS_LABEL[role],
+        });
+        const result = await sendEmail({
+          to: email,
+          subject: built.subject,
+          html: built.html,
+          text: built.text,
+        });
+        emailSent = result.ok;
+        if (!result.ok) {
+          console.error(`[workspace-invite] email failed for ${email}`, result.error);
+        }
+      }
+      // Kept even once email works: the server log is how the founder
+      // recovers a link when a send bounces or a recipient loses it.
+      console.info(`[workspace-invite] ${email} -> ${inviteUrl} (emailed: ${emailSent})`);
     } else {
       console.info(`[workspace-invite] ${email} -> already-active member, no link needed`);
     }
@@ -204,7 +247,7 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    return NextResponse.json({ ok: true, inviteUrl });
+    return NextResponse.json({ ok: true, inviteUrl, emailSent });
   } finally {
     await shutdownServerAnalytics(posthogServer);
   }
