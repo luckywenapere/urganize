@@ -65,6 +65,11 @@ const roleLabels: Record<string, string> = {
   a_and_r: 'A&R',
   music_producer: 'Music Producer',
   label_manager_executive: 'Label Manager / Label Executive',
+  // Added 2026-08-21 alongside the homepage ROLE_OPTIONS entry it mirrors
+  // (WaitlistForm.tsx) — labelFor() falls back to the raw value for an
+  // unmapped key, so this isn't strictly required, but every other option
+  // here has a proper label and this one should too.
+  curator: 'Playlist Curator',
 };
 
 const teamSizeLabels: Record<string, string> = {

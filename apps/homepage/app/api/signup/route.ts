@@ -38,6 +38,9 @@ const signupSchema = z.object({
       "a_and_r",
       "music_producer",
       "label_manager_executive",
+      // Added 2026-08-21 alongside /for-curators' ROLE_OPTIONS in
+      // WaitlistForm.tsx — keep both in sync.
+      "curator",
     ])
     .optional(),
   teamSize: z
