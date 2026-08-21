@@ -22,8 +22,15 @@ const productLinks = [
   { href: "/signup", label: "Sign up" },
   { href: "/features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/for-managers", label: "For managers" },
+  // Persona pages, executives first: they are the buyer and the hero in the
+  // locked positioning (founder brief, 2026-08-19), so they lead the group
+  // and get the best sitelink odds of the five. The other four are adjacent
+  // audiences, ordered by how close each is to that buyer.
+  { href: "/for-executives", label: "For executives" },
   { href: "/for-labels", label: "For labels" },
+  { href: "/for-managers", label: "For managers" },
+  { href: "/for-curators", label: "For curators" },
+  { href: "/for-ai-artists", label: "For AI artists" },
   { href: "/why-urganize", label: "Why Urganize" },
   { href: "/privacy", label: "Privacy" },
 ] as const;
@@ -37,12 +44,16 @@ const productLinks = [
 // Because this menu is their single home, its markup is ALWAYS rendered and
 // merely hidden when closed — never `{open && <menu/>}`. Conditional mounting
 // kept the links out of the served HTML until a human clicked, and crawlers
-// don't click: /features, /pricing, /why-urganize, /for-managers and
-// /for-labels had zero internal links anywhere on the site, so Google built
+// don't click: /features, /pricing, /why-urganize and the persona pages had
+// zero internal links anywhere on the site, so Google built
 // its picture of us from the only pages it could see (Team, Community, Brand,
 // Changelog, Terms) and drew its sitelinks from those. Keep the links in the
 // DOM. The `hidden` attribute keeps them out of the accessibility tree and
 // out of the tab order while closed, so this costs nothing visually.
+//
+// 2026-08-21: three persona pages were added here (executives, curators, AI
+// artists). This menu is still their only home, so the DOM rule above now
+// matters for five pages rather than two.
 export function ProductMenu() {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);

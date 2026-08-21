@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  PERSONA_HEADLINE_CLASS,
+  PersonaValueBlocks,
+} from "../components/landing/PersonaValueBlocks";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
@@ -64,9 +68,6 @@ const compactBlocks = [
   },
 ] as const;
 
-const headlineClass =
-  "text-balance text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[3.6rem]";
-
 export default function ForManagersPage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-[var(--marketing-bg)] text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)] selection:text-[var(--marketing-text)]">
@@ -107,48 +108,7 @@ export default function ForManagersPage() {
         </SectionShell>
 
         {/* VALUE BLOCKS */}
-        {valueBlocks.map((block, index) => (
-          <ScrollReveal key={block.title}>
-            <SectionShell
-              className="py-[60px] lg:py-[80px]"
-              containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
-            >
-              <div
-                className={`mx-auto grid max-w-[64rem] items-start gap-10 border-t border-[color:var(--marketing-border)] pt-14 lg:grid-cols-2 lg:gap-16 ${
-                  index % 2 === 1 ? "lg:[&>div:first-child]:order-2" : ""
-                }`}
-              >
-                <div>
-                  <p className="mono-label text-[var(--marketing-accent)]">
-                    {block.kicker}
-                  </p>
-                  <h2 className={`mt-5 ${headlineClass}`}>{block.title}</h2>
-                </div>
-                <div>
-                  <p className="text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
-                    {block.body}
-                  </p>
-                  <ul className="mt-7 space-y-3">
-                    {block.points.map((point) => (
-                      <li
-                        key={point}
-                        className="flex items-baseline gap-4 text-[0.95rem] leading-7 text-[var(--marketing-text)]"
-                      >
-                        <span
-                          className="font-mono text-[0.72rem] text-[var(--marketing-accent)]"
-                          aria-hidden
-                        >
-                          —
-                        </span>
-                        {point}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </SectionShell>
-          </ScrollReveal>
-        ))}
+        <PersonaValueBlocks blocks={valueBlocks} />
 
         {/* PRODUCT PROOF (2026-08-05, URG-218) — this page had zero product
             imagery; reuses the homepage's screenshot section verbatim so a
@@ -168,7 +128,7 @@ export default function ForManagersPage() {
               <p className="mono-label text-[var(--marketing-accent)]">
                 Everything else
               </p>
-              <h2 className={`mt-5 max-w-[40rem] ${headlineClass}`}>
+              <h2 className={`mt-5 max-w-[40rem] ${PERSONA_HEADLINE_CLASS}`}>
                 Hand-offs, the press kit and status come with it.
               </h2>
 
@@ -219,7 +179,7 @@ export default function ForManagersPage() {
         <ScrollReveal>
           <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
             <div className="text-center">
-              <h2 className={headlineClass}>Run every release with a system.</h2>
+              <h2 className={PERSONA_HEADLINE_CLASS}>Run every release with a system.</h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
                 Urganize is free to use right now, and we set up every team
                 personally. See{" "}
@@ -250,6 +210,13 @@ export default function ForManagersPage() {
               className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"
             >
               See Urganize for labels
+            </Link>
+            . Answering for releases other people run?{" "}
+            <Link
+              href="/for-executives"
+              className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"
+            >
+              See Urganize for executives
             </Link>
             .
           </p>
