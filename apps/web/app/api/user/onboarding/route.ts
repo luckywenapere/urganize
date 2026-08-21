@@ -14,6 +14,8 @@ import {
   type OnboardingApiError,
   type UpdateOnboardingBody,
 } from '@/lib/onboarding';
+import { isEmailConfigured, sendEmail } from '@/lib/email';
+import { buildWelcomeEmail } from '@/lib/email-templates';
 
 type ProfileOnboardingRecord = {
   id: string;
@@ -605,6 +607,33 @@ export async function PATCH(request: NextRequest) {
       { error: updateResult.error.message || 'Could not update onboarding state.' } satisfies OnboardingApiError,
       { status: 500 }
     );
+  }
+
+  // The founder-note welcome email, sent exactly once: this request flipped
+  // onboarding_completed to true AND the pre-update profile had it false, so
+  // step re-saves and idempotent completion re-PATCHes never re-send. It runs
+  // only after the DB write succeeded (a failed update must not email), and
+  // it is awaited-but-tolerated: sendEmail never throws (see lib/email.ts),
+  // and an unconfigured or failed send changes nothing about the response —
+  // email is a courtesy on top of onboarding, never a gate on it.
+  const isFirstCompletion =
+    body.onboardingCompleted === true && !profileResult.profile.onboarding_completed;
+  if (isFirstCompletion && isEmailConfigured()) {
+    const recipient = profileResult.profile.email || auth.user.email || '';
+    if (recipient) {
+      const built = buildWelcomeEmail({ recipientName: profileResult.profile.name || '' });
+      const result = await sendEmail({
+        to: recipient,
+        subject: built.subject,
+        html: built.html,
+        text: built.text,
+      });
+      if (!result.ok && !result.skipped) {
+        console.error(`[welcome-email] send failed for ${recipient}`, result.error);
+      } else if (result.ok) {
+        console.info(`[welcome-email] sent to ${recipient}`);
+      }
+    }
   }
 
   const onboarding = await syncResumableOnboardingState(

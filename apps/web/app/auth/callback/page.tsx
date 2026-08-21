@@ -176,6 +176,13 @@ export default function AuthCallbackPage() {
         // An explicit `next` still wins — that is how the curator join flow
         // returns to its own page after the OAuth round trip.
         const hasExplicitNext = Boolean(next && next.startsWith('/'));
+        // /auth calls loginWithGoogle(searchParams.next || HOME_PATH), so a
+        // plain Google sign-in ALWAYS arrives carrying next=/dashboard — the
+        // default filler, not a destination anyone asked for. Treat only a
+        // next that points somewhere ELSE as purposeful: the /onboarding OAuth
+        // round trip, the curator join flow and the invite email link all
+        // carry their own path and keep winning outright.
+        const hasPurposefulNext = hasExplicitNext && safeNext !== HOME_PATH;
         const profile = useAuthStore.getState().user;
         // Card-before-trial: a Google sign-in straight from /auth has an
         // account but has never been through onboarding — nothing routes it
@@ -189,13 +196,15 @@ export default function AuthCallbackPage() {
         // its create-release modal. Skipping that flash is the whole point of
         // deciding here.
         //
-        // An explicit `next` always wins, so the /onboarding OAuth round trip
-        // and the curator join flow are untouched — both arrive carrying one.
-        const destination =
-          hasExplicitNext
-            ? safeNext
-            : (await shouldSendToOnboardingSetup(profile))
-              ? ONBOARDING_SETUP_PATH
+        // A purposeful `next` always wins (see hasPurposefulNext above), so
+        // the /onboarding OAuth round trip and the curator join flow are
+        // untouched — both arrive carrying their own path.
+        const destination = hasPurposefulNext
+          ? safeNext
+          : (await shouldSendToOnboardingSetup(profile))
+            ? ONBOARDING_SETUP_PATH
+            : hasExplicitNext
+              ? safeNext
               : resolveHomePath(profile?.role);
 
         window.clearTimeout(timeout);

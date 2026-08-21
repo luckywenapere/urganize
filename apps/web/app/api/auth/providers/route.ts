@@ -14,8 +14,16 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const email = normalizeEmail((body as Record<string, unknown>).email);
 
+  // `exists` drives /auth's identifier-first branch (registered → password
+  // field, unregistered → /onboarding hand-off). It must only be false when
+  // we are CERTAIN there is no account: the client treats a lookup error as
+  // "unknown" and fails open to the password field, so a 500 here is safer
+  // than a guessed false.
   if (!email || !email.includes('@')) {
-    return NextResponse.json({ hasGoogle: false, hasEmailProvider: false }, { status: 200 });
+    return NextResponse.json(
+      { exists: false, hasGoogle: false, hasEmailProvider: false },
+      { status: 200 }
+    );
   }
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
@@ -31,12 +39,22 @@ export async function POST(req: NextRequest) {
   }
 
   if (!profile?.id) {
-    return NextResponse.json({ hasGoogle: false, hasEmailProvider: false }, { status: 200 });
+    return NextResponse.json(
+      { exists: false, hasGoogle: false, hasEmailProvider: false },
+      { status: 200 }
+    );
   }
 
   const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(profile.id);
   if (userError || !userData?.user) {
-    return NextResponse.json({ hasGoogle: false, hasEmailProvider: false }, { status: 200 });
+    // The profile row exists, so the ACCOUNT exists even though the identity
+    // lookup failed — say so rather than conflating this with "no account",
+    // or a real user would be bounced into signup. Providers unknown → both
+    // false, which the client reads as plain password login.
+    return NextResponse.json(
+      { exists: true, hasGoogle: false, hasEmailProvider: false },
+      { status: 200 }
+    );
   }
 
   const identities = Array.isArray(userData.user.identities) ? userData.user.identities : [];
@@ -45,6 +63,7 @@ export async function POST(req: NextRequest) {
     .filter(Boolean);
 
   return NextResponse.json({
+    exists: true,
     hasGoogle: providers.includes('google'),
     hasEmailProvider: providers.includes('email'),
   });

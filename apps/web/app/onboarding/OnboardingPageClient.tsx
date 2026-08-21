@@ -297,6 +297,14 @@ function isReleaseDateValid(value: string): boolean {
 
 const isEmailValid = (value: string): boolean => /\S+@\S+\.\S+/.test(value.trim());
 
+// The ?email= hand-off from /auth's identifier-first flow. Returns '' for
+// anything that isn't a plausible email so a mangled or hostile query value
+// never lands in the field.
+const normalizeHandoffEmail = (search: string): string => {
+  const value = (new URLSearchParams(search).get('email') || '').trim().toLowerCase();
+  return isEmailValid(value) ? value : '';
+};
+
 // ---------------------------------------------------------------------------
 // Reused class fragments — kept as constants so every input/button on this
 // page looks identical without each call site copying the class soup.
@@ -392,10 +400,21 @@ export default function OnboardingPage() {
       setArtistName(resume.artistName);
       setStep(5);
     }
-    // Authed-setup marker. Read here (pre-paint, imperatively) so the
-    // redirect-suppression below has it on the first committed render — an
-    // effect-ordered read would let the bounce-home effect fire first and
-    // eject the very user this mode exists to serve.
+    // Identifier-first hand-off from /auth: an email with no account arrives
+    // as ?email= so the person doesn't retype it at the account step. Read
+    // post-mount on purpose — useSearchParams() would knock this page off
+    // static server rendering (the /auth front-door trap). Email is local
+    // state, not part of the persisted draft, so there is nothing to clash
+    // with; the functional set keeps anything already typed.
+    const handoffEmail = normalizeHandoffEmail(window.location.search);
+    if (handoffEmail) {
+      setEmail((current) => current || handoffEmail);
+    }
+    // Authed-setup marker. Read here (pre-paint, imperatively — same reason as
+    // the email hand-off above) so the redirect-suppression below has it on
+    // the first committed render; an effect-ordered read would let the
+    // bounce-home effect fire first and eject the very user this mode exists
+    // to serve.
     setHasSetupParam(readAuthedSetupParam());
     setHasHydrated(true);
   }, []);

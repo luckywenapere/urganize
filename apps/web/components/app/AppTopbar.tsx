@@ -166,19 +166,38 @@ const CatalogLinkFallback = (
   </Link>
 );
 
-// Plain, pathname-agnostic fallback for the Suspense boundary below —
-// mirrors the ORIGINAL always-navigate Link exactly, so a slow/unresolved
-// useSearchParams read never blocks the icon from painting.
-const ChappiLinkFallback = (
-  <Link
-    href="/dashboard/urgans"
-    aria-label="UrgAns"
-    title="UrgAns"
-    className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary`}
-  >
-    <ChappiIcon className="h-[18px] w-[18px]" />
-  </Link>
-);
+// Fallback for the Suspense boundary below, so a slow/unresolved
+// useSearchParams read never blocks the icon from painting. Still a plain
+// Link — no store reads, no router calls — but it is NOT pathname-agnostic
+// any more (2026-08-19): /dashboard/urgans prerenders `○ Static`, and a
+// client component reading useSearchParams bails to its fallback during
+// prerender, so THIS is the icon in that page's shipped HTML until hydration.
+// Pointing it at the page it is already on made it a dead tap for exactly the
+// weak-connection window where a dead tap costs the most. usePathname is safe
+// to read here — only useSearchParams triggers the bailout this fallback
+// exists to cover.
+//
+// No scope restore in this branch, unlike the hydrated control: the
+// assistant's scope lives in an ephemeral store that is empty before
+// hydration, so '/dashboard' is the whole of the correct answer here.
+function ChappiLinkFallback() {
+  const pathname = usePathname();
+  const onAssistantPage = pathname === '/dashboard/urgans';
+  return (
+    <Link
+      href={onAssistantPage ? '/dashboard' : '/dashboard/urgans'}
+      aria-label="UrgAns"
+      title="UrgAns"
+      className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
+        onAssistantPage
+          ? 'bg-brand/10 text-brand'
+          : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
+      }`}
+    >
+      <ChappiIcon className="h-[18px] w-[18px]" />
+    </Link>
+  );
+}
 
 /**
  * The Catalog/Workspace topbar icon — mirrors ChappiTopbarAction below so
@@ -230,14 +249,16 @@ function CatalogTopbarAction() {
 
 /**
  * The UrgAns topbar icon — the persistent open/close affordance for the
- * side rail (URG-210). ON the assistant page it's a Link showing the active
- * tint (the rail doesn't exist there; the page IS the chat). Everywhere
- * else at lg+ it toggles the side rail (no navigation, no page transition);
- * below lg it navigates to the full page instead — the rail doesn't exist
- * on small viewports — carrying the drilled-in release as the assistant's
- * scope when the catalog has one (module-scope store — safe to set
- * synchronously right before the push). Needs its own Suspense boundary
- * (useSearchParams) — same reason ContextTitle has one.
+ * side rail (URG-210). ON the assistant page it CLOSES that surface by
+ * switching to the workspace, the exact inverse of CatalogTopbarAction's
+ * at-rest branch above; the rail doesn't exist there, so there is nothing
+ * local to toggle. Everywhere else at lg+ it toggles the side rail (no
+ * navigation, no page transition); below lg it navigates to the full page
+ * instead — the rail doesn't exist on small viewports — carrying the
+ * drilled-in release as the assistant's scope when the catalog has one
+ * (module-scope store — safe to set synchronously right before the push).
+ * Needs its own Suspense boundary (useSearchParams) — same reason
+ * ContextTitle has one.
  */
 function ChappiTopbarAction() {
   const pathname = usePathname();
@@ -246,16 +267,42 @@ function ChappiTopbarAction() {
   const isRailOpen = useChappiStore((state) => state.railOpen);
   const setRailOpen = useChappiStore((state) => state.setRailOpen);
 
+  // Fixed 2026-08-19: this branch used to render a <Link> pointing at the
+  // page it was already on — a dead click, and a direct contradiction of the
+  // pair's documented URG-211 contract ("clicking either one while it's
+  // already the surface you're on closes it by switching to the other"),
+  // which CatalogTopbarAction has always honoured and this one never did.
+  //
+  // Restoring `?release=` rather than pushing a bare '/dashboard' is
+  // deliberate: ChappiPageClient's "Collapse into workspace" control performs
+  // this same assistant-page -> workspace transition and already resumes the
+  // assistant's scope, so leaving it out here would give one transition two
+  // different outcomes depending on which control you used. It also keeps the
+  // round trip lossless — drill into a release, open UrgAns, close it, and you
+  // are back in that release rather than dumped at the catalog.
+  //
+  // Deliberately does NOT force the rail open, unlike that collapse control.
+  // "Collapse into workspace" is an explicit request for the split view, so
+  // overriding an earlier close is right there; this is a request to leave the
+  // assistant, and re-opening a rail the user had closed would be a surprise.
   if (pathname === '/dashboard/urgans') {
     return (
-      <Link
-        href="/dashboard/urgans"
+      <button
+        type="button"
+        onClick={() => {
+          const { scopedReleaseId } = useChappiStore.getState();
+          router.push(scopedReleaseId ? `/dashboard?release=${scopedReleaseId}` : '/dashboard');
+        }}
         aria-label="UrgAns"
         title="UrgAns"
+        // Pressed: this IS the open surface, and pressing again closes it —
+        // the same semantics (and the same bare attribute) as the Workspace
+        // icon's at-rest branch.
+        aria-pressed
         className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand transition-colors`}
       >
         <ChappiIcon className="h-[18px] w-[18px]" />
-      </Link>
+      </button>
     );
   }
 
@@ -422,7 +469,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             <Suspense fallback={CatalogLinkFallback}>
               <CatalogTopbarAction />
             </Suspense>
-            <Suspense fallback={ChappiLinkFallback}>
+            <Suspense fallback={<ChappiLinkFallback />}>
               <ChappiTopbarAction />
             </Suspense>
           </>
