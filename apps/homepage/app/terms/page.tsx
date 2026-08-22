@@ -18,7 +18,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 // Real date discipline: moves only when the terms text changes.
-const LAST_UPDATED = "June 11, 2026";
+const LAST_UPDATED = "August 22, 2026";
 
 const CONTACT_HREF =
   "mailto:contact@urganize.app?subject=Terms%20question%20-%20Urganize";
@@ -77,18 +77,20 @@ export default function TermsPage() {
 
             <Section number="04" title="Trial, subscriptions, and billing">
               <p>
-                New accounts get a 28-day free trial with no card required.
+                New teams get a 14-day free trial of the full product with no
+                card required. The trial covers the whole team, not each
+                person, so joining an existing team does not start a new one.
                 After the trial, continued use requires a paid subscription,
-                priced per workspace, billed monthly or annually through
-                Paystack in NGN or USD. We never see or store your card
-                details.
+                priced per team and billed monthly or annually through
+                Paystack. We never see or store your card details.
               </p>
               <p>
                 Subscriptions renew at the end of each billing cycle. You can
                 cancel anytime from Settings; you keep access through the
-                period you already paid for. If a payment fails or a
-                subscription lapses, access to the workspace is locked until
-                payment resumes. Your data is not deleted by a lapse.
+                period you already paid for. Access is locked when a trial ends
+                without a subscription, when a payment fails or when a
+                subscription lapses. Nothing you created is deleted when access
+                is locked.
               </p>
               <p>
                 Refunds are handled case by case. Email{" "}

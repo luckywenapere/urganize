@@ -181,7 +181,7 @@ export default function ForManagersPage() {
             <div className="text-center">
               <h2 className={PERSONA_HEADLINE_CLASS}>Run every release with a system.</h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
-                Urganize is free to use right now, and we set up every team
+                Start with a 14-day free trial, and we set up every team
                 personally. See{" "}
                 <Link
                   href="/pricing"
