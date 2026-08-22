@@ -326,8 +326,31 @@ describe('summarizeBilling — team access', () => {
     expect(result.title).toContain('Annual');
   });
 
+  // The regression this guard exists for. Money rows are owner-keyed, so a
+  // teammate on a paying team reads back 'unpaid' with trialUsed false (the
+  // trial route 404s under this flag, so they can never spend one). Before the
+  // 'paid' branch they fell all the way through to the no-plan fallback and
+  // were offered a free trial their team had already left behind, plus a CTA
+  // to the wall.
+  it('never offers a trial to a member of a PAYING team', () => {
+    for (const isOwnerOrAdmin of [true, false]) {
+      const result = summarizeBilling(
+        snapshot({ accountStatus: 'unpaid', trialUsed: false }),
+        { team: team({ state: 'paid', isOwnerOrAdmin }) }
+      );
+      const all = [result.title, ...result.details].join(' ');
+      expect(all).not.toMatch(/free trial/i);
+      expect(all).not.toContain('28');
+      expect(all).toContain('active plan');
+      // No CTA either: sending them to the picker would show a wall page for a
+      // team that pays.
+      expect(result.cta).toBeNull();
+      expect(result.secondaryCta).toBeNull();
+    }
+  });
+
   it('obeys the copy rules: no "workspace", no em dashes, no loss threats', () => {
-    for (const state of ['trial', 'grace', 'comped', 'walled'] as const) {
+    for (const state of ['trial', 'grace', 'comped', 'walled', 'paid'] as const) {
       for (const isOwnerOrAdmin of [true, false]) {
         const result = summarizeBilling(snapshot(), { team: team({ state, isOwnerOrAdmin }) });
         const all = [result.title, ...result.details].join(' ');

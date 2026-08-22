@@ -178,6 +178,23 @@ export function summarizeBilling(
     };
   }
 
+  // A member of a PAYING team. Money rows are owner-keyed by design, so this
+  // person's own snapshot still reads 'unpaid', and with /api/trial/start
+  // 404ing under this flag their trialUsed stays false forever — which dropped
+  // them all the way through to the "you have a free trial available" fallback
+  // at the end of this function and handed them a CTA to the wall, for a team
+  // that already pays. Guarded on their OWN status rather than their role so a
+  // paying owner still gets the richer paid copy below (plan name, active
+  // until, cancel). 'paid' was the last unhandled TeamAccessState here.
+  if (team && team.state === 'paid' && snapshot.accountStatus !== 'paid') {
+    return {
+      title: 'Active plan',
+      details: ['Your team has an active plan.', 'There is nothing for you to pay.'],
+      cta: null,
+      secondaryCta: null,
+    };
+  }
+
   const planName = describePlanName(snapshot.plan);
   const trialEnds = formatBillingDate(snapshot.trialEndsAt);
   const expires = formatBillingDate(snapshot.expiresAt);
