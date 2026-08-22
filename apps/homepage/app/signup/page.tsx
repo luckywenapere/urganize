@@ -49,7 +49,7 @@ export default function SignupPage() {
               Create your account
             </a>
             <p className="mt-4 text-sm text-[var(--marketing-text-subtle)]">
-              28 days free. No card required.
+              14 days free for your whole team. No card required.
             </p>
           </div>
 

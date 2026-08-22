@@ -191,7 +191,7 @@ export default function ForAiArtistsPage() {
                 Release fast without releasing messy.
               </h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
-                Urganize is free to use right now, and we set up every artist
+                Start with a 14-day free trial, and we set up every artist
                 personally. See{" "}
                 <Link
                   href="/pricing"
