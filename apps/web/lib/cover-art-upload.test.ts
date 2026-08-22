@@ -24,6 +24,15 @@ describe('cover art constants', () => {
   it('accepts exactly the MIME types it allows', () => {
     expect(COVER_ART_FILE_ACCEPT.split(',')).toEqual([...COVER_ART_MIME_TYPES]);
   });
+
+  /** A square 3000x3000 PNG — the file DSPs require — routinely runs past
+   * 10 MiB, so a ceiling below that would reject exactly what this product
+   * tells managers to produce. */
+  it('leaves room for a real DSP-sized image', () => {
+    expect(COVER_ART_MAX_BYTES).toBeGreaterThanOrEqual(20 * MIB);
+    // Still inside Supabase's 50 MiB per-upload cap.
+    expect(COVER_ART_MAX_BYTES).toBeLessThan(50 * MIB);
+  });
 });
 
 describe('validateCoverArtFile', () => {
@@ -42,7 +51,10 @@ describe('validateCoverArtFile', () => {
   it('rejects a file that is not an image', () => {
     const result = validateCoverArtFile({ name: 'master.wav', type: 'audio/wav', size: 2 * MIB });
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/JPEG, PNG or WebP/);
+    // Advertises the two formats DSPs ingest. WebP is still ACCEPTED (it
+    // displays fine in the product) but is graded down to a warning rather
+    // than offered up as a choice — see lib/cover-art-dsp.ts.
+    if (!result.ok) expect(result.error).toMatch(/JPEG or PNG/);
   });
 
   it('rejects a file with no detected type rather than guessing', () => {
@@ -80,6 +92,8 @@ const coverArt = {
   mimeType: 'image/png',
   storagePath: 'rel-1/cover_art/uuid-cover.png',
   uploadedAt: '2026-08-17T10:00:00Z',
+  width: 3000,
+  height: 3000,
   downloadUrl: 'https://storage.example/signed',
 };
 
@@ -115,6 +129,60 @@ describe('uploadCoverArt', () => {
       'https://storage.example/put',
       '/api/releases/rel-1/cover-art',
     ]);
+  });
+
+  it('sends the measured dimensions to the record step', async () => {
+    let recordBody: Record<string, unknown> = {};
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/cover-art/upload-url')) {
+        return jsonResponse({
+          upload_url: 'https://storage.example/put',
+          storage_path: coverArt.storagePath,
+        });
+      }
+      if (url === 'https://storage.example/put') return jsonResponse({});
+      recordBody = JSON.parse(String(init?.body || '{}'));
+      return jsonResponse({ coverArt });
+    }) as unknown as typeof fetch;
+
+    await uploadCoverArt({
+      releaseId: 'rel-1',
+      file: fakeFile(),
+      token: 'tok',
+      dimensions: { width: 3000, height: 3000 },
+      fetchImpl,
+    });
+
+    expect(recordBody.width).toBe(3000);
+    expect(recordBody.height).toBe(3000);
+  });
+
+  it('records fine with no dimensions at all', async () => {
+    let recordBody: Record<string, unknown> = {};
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/cover-art/upload-url')) {
+        return jsonResponse({
+          upload_url: 'https://storage.example/put',
+          storage_path: coverArt.storagePath,
+        });
+      }
+      if (url === 'https://storage.example/put') return jsonResponse({});
+      recordBody = JSON.parse(String(init?.body || '{}'));
+      return jsonResponse({ coverArt });
+    }) as unknown as typeof fetch;
+
+    const result = await uploadCoverArt({
+      releaseId: 'rel-1',
+      file: fakeFile(),
+      token: 'tok',
+      fetchImpl,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(recordBody.width).toBeUndefined();
+    expect(recordBody.height).toBeUndefined();
   });
 
   it('stops at step 1 and relays the server error verbatim', async () => {

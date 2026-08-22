@@ -4,7 +4,9 @@
 import { useCallback, useState } from 'react';
 import { ImageOff, Loader2, Trash2, Upload } from 'lucide-react';
 import { formatFileSize } from '@/lib/asset-constants';
-import { COVER_ART_FILE_ACCEPT, COVER_ART_FORMATS_LABEL, COVER_ART_MAX_BYTES } from '@/lib/cover-art-upload';
+import { COVER_ART_FILE_ACCEPT, COVER_ART_MAX_BYTES } from '@/lib/cover-art-upload';
+import { DSP_REQUIREMENT_LABEL, formatDimensions, gradeCoverArt } from '@/lib/cover-art-dsp';
+import { CoverArtDspNote } from './CoverArtDspNote';
 import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
@@ -57,6 +59,23 @@ export function CoverArtSection({ releaseId, onToast }: CoverArtSectionProps) {
     onUploaded: handleUploaded,
     onToast,
   });
+
+  /**
+   * Which grade to show, if any. Deliberately NOT `upload.grade ?? stored`:
+   * the picker's grade outlives the file it described, so after a REMOVE that
+   * would keep claiming a verdict for artwork that is no longer there. The
+   * uploaded/stored image is the subject; the picked file only speaks for
+   * itself while its upload is still in flight.
+   */
+  const storedGrade =
+    coverArt && coverArt.width && coverArt.height
+      ? gradeCoverArt({
+          width: coverArt.width,
+          height: coverArt.height,
+          mimeType: coverArt.mimeType,
+        })
+      : null;
+  const displayGrade = upload.isUploading ? upload.grade : storedGrade;
 
   const handleRemove = async () => {
     if (!coverArt) return;
@@ -122,15 +141,25 @@ export function CoverArtSection({ releaseId, onToast }: CoverArtSectionProps) {
               {coverArt ? 'Cover art' : 'Add cover art'}
             </p>
             <p className="mt-1 text-xs text-content-secondary">
-              {COVER_ART_FORMATS_LABEL}, up to {formatFileSize(COVER_ART_MAX_BYTES)}. Shows on the
+              {DSP_REQUIREMENT_LABEL}, up to {formatFileSize(COVER_ART_MAX_BYTES)}. Shows on the
               release card, the press kit and anywhere else the release is displayed. Uploading a
               new image replaces the current one.
             </p>
             {coverArt ? (
               <p className="mt-2 truncate text-xs text-content-tertiary" title={coverArt.fileName}>
                 {coverArt.fileName} · {formatFileSize(coverArt.fileSize)}
+                {coverArt.width && coverArt.height
+                  ? ` · ${formatDimensions(coverArt.width, coverArt.height)}`
+                  : ''}
               </p>
             ) : null}
+
+            {/* The verdict on what is CURRENTLY on the release, so a
+                below-spec image stays visibly below spec long after the upload
+                that put it there. Shows nothing for an image whose dimensions
+                were never recorded (uploaded before this existed, or through
+                the general Files scene). */}
+            <CoverArtDspNote grade={displayGrade} className="mt-2" />
 
             <div className="mt-3 flex flex-wrap gap-2">
               <input className="sr-only" {...upload.inputProps} />

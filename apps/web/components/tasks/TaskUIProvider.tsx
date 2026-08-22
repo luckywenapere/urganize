@@ -15,6 +15,7 @@ import { TaskDetailView, type TaskDetailPatchInput } from '@/components/tasks/Ta
 import { type DependencyTaskSummary } from '@/components/tasks/TaskDependenciesSection';
 import { TaskQuickCreateModal } from '@/components/tasks/TaskQuickCreateModal';
 import { TaskOutcomeSheet } from '@/components/tasks/TaskOutcomeSheet';
+import { CoverArtPromptSheet } from '@/components/tasks/CoverArtPromptSheet';
 import { UndoCompletionToast } from '@/components/tasks/UndoCompletionToast';
 import { type ReleaseOption } from '@/lib/release-helpers';
 import { isTypingTarget, type TaskCreateSource, type TaskDetail, type WorkspaceMember } from '@/lib/tasks';
@@ -735,6 +736,11 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
           stacks the sheet above it — both live on the z-[170] modal tier. The
           store decides whether this or the undo toast fires; never both. */}
       <TaskOutcomeSheet />
+
+      {/* "Add the cover art", after a cover-art playbook step is ticked. Same
+          tier and same either/or: the store picks exactly one bottom surface
+          per completion, and this one outranks both of the above. */}
+      <CoverArtPromptSheet />
       </TaskDetailRenderContext.Provider>
     </TaskUIContext.Provider>
   );

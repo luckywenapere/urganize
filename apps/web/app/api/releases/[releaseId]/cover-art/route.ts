@@ -61,7 +61,41 @@ type RecordCoverArtBody = {
   file_name?: unknown;
   file_size?: unknown;
   mime_type?: unknown;
+  width?: unknown;
+  height?: unknown;
 };
+
+/**
+ * Sanity ceiling on the client-reported pixel dimensions. Not a DSP rule (the
+ * grading in lib/cover-art-dsp.ts is the rule); just a bound so a nonsense
+ * number cannot be stored and rendered back.
+ */
+const MAX_RECORDED_EDGE = 20000;
+
+/**
+ * Read the dimensions the browser measured before uploading.
+ *
+ * These are a HINT, not an authority: they come from the client, and the hard
+ * DSP block (not square, too small) is enforced in the picker rather than
+ * here. Deliberate — validating them server-side would mean decoding the
+ * image, which needs a native dependency this repo does not carry, and the
+ * check is product guidance rather than a security boundary. Someone who
+ * bypasses it by calling this route directly only mis-labels the artwork on
+ * their own release. Anything unparseable is stored as nothing at all, which
+ * reads back as "we do not know" rather than as a passing grade.
+ */
+function readReportedDimensions(body: RecordCoverArtBody): {
+  width: number;
+  height: number;
+} | null {
+  const width = Number(body.width);
+  const height = Number(body.height);
+  const isUsable = (value: number) =>
+    Number.isFinite(value) && value > 0 && value <= MAX_RECORDED_EDGE;
+
+  if (!isUsable(width) || !isUsable(height)) return null;
+  return { width: Math.round(width), height: Math.round(height) };
+}
 
 /**
  * Record a cover art image the client has already uploaded to storage.
@@ -141,6 +175,8 @@ export async function POST(
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
+  const reportedDimensions = readReportedDimensions(body);
+
   // Confirm the bytes actually landed where claimed, at the size claimed.
   const lastSlash = storagePath.lastIndexOf('/');
   const directory = lastSlash > 0 ? storagePath.slice(0, lastSlash) : '';
@@ -177,9 +213,11 @@ export async function POST(
       storage_bucket: RELEASE_ASSETS_BUCKET,
       storage_path: storagePath,
       public_url: null,
-      metadata: {},
+      metadata: reportedDimensions ? { image: reportedDimensions } : {},
     })
-    .select('id,release_id,file_name,file_size,mime_type,storage_bucket,storage_path,created_at')
+    .select(
+      'id,release_id,file_name,file_size,mime_type,storage_bucket,storage_path,created_at,metadata'
+    )
     .maybeSingle();
 
   if (insertResult.error || !insertResult.data) {

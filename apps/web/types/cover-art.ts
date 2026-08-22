@@ -20,6 +20,17 @@ export type ReleaseCoverArt = {
   storagePath: string;
   uploadedAt: string;
   /**
+   * Pixel dimensions, from `assets.metadata.image`. Null when the image was
+   * uploaded before this was recorded, or through a path that never measured
+   * it (the general Files scene) — the scene reads that as "we do not know"
+   * and shows no DSP verdict rather than guessing one.
+   *
+   * Client-reported, so a HINT rather than an authority; see the POST handler
+   * in the cover-art route for why that is acceptable here.
+   */
+  width: number | null;
+  height: number | null;
+  /**
    * Short-lived signed download URL (ASSET_SIGNED_URL_TTL_SECONDS). Null when
    * signing failed — the row still renders, minus the preview image, rather
    * than failing the whole scene for one bad URL.
