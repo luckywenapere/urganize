@@ -84,10 +84,32 @@ type AssetRow = {
   storage_bucket: string | null;
   storage_path: string;
   created_at: string;
+  metadata?: unknown;
 };
 
 const COVER_ART_COLUMNS =
-  'id,release_id,file_name,file_size,mime_type,storage_bucket,storage_path,created_at';
+  'id,release_id,file_name,file_size,mime_type,storage_bucket,storage_path,created_at,metadata';
+
+/**
+ * Pixel dimensions out of `assets.metadata.image`, the shape the POST handler
+ * below writes. Anything else in there (or nothing at all, for an image
+ * recorded before this existed or through the general Files scene) reads as
+ * unknown rather than zero — the scene shows no verdict for unknown, and a
+ * zero would grade as unreadable.
+ */
+export function readImageMetadata(metadata: unknown): {
+  width: number | null;
+  height: number | null;
+} {
+  const image = (metadata as { image?: unknown } | null | undefined)?.image;
+  const record = image as { width?: unknown; height?: unknown } | null | undefined;
+  const width = Number(record?.width);
+  const height = Number(record?.height);
+  return {
+    width: Number.isFinite(width) && width > 0 ? Math.round(width) : null,
+    height: Number.isFinite(height) && height > 0 ? Math.round(height) : null,
+  };
+}
 
 export function toReleaseCoverArt(row: AssetRow, downloadUrl: string | null): ReleaseCoverArt {
   return {
@@ -98,6 +120,7 @@ export function toReleaseCoverArt(row: AssetRow, downloadUrl: string | null): Re
     mimeType: row.mime_type ?? null,
     storagePath: String(row.storage_path || ''),
     uploadedAt: String(row.created_at || ''),
+    ...readImageMetadata(row.metadata),
     downloadUrl,
   };
 }

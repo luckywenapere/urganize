@@ -38,13 +38,21 @@ export const ASSET_UPLOAD_URL_TTL_SECONDS = 60 * 60 * 2;
 const MIB = 1024 * 1024;
 
 // Tuned for Supabase Free plan headroom (50 MiB per-upload ceiling, 1 GiB
-// total). Audio/stems/video are kept under the per-upload cap; cover art and
-// images stay tight to preserve quota for masters and footage. Bump when the
+// total). Audio/stems/video are kept under the per-upload cap; promo images
+// stay tight to preserve quota for masters and footage. Bump when the
 // project moves to Pro.
+//
+// cover_art is the one deliberate exception at 25 MiB: DSPs require a square
+// 3000x3000 image (lib/cover-art-dsp.ts), and a PNG at that size routinely
+// runs past 10 MiB, so the old 5 MiB ceiling rejected exactly the files this
+// product tells managers to produce. Safe because uploads go from the browser
+// straight to Supabase Storage through a signed URL, never through a
+// serverless function, so neither Vercel's ~4.5 MB request body limit nor its
+// timeout applies here.
 export const ASSET_SIZE_LIMITS: Record<AssetCategory, number> = {
   audio: 40 * MIB,
   stems: 40 * MIB,
-  cover_art: 5 * MIB,
+  cover_art: 25 * MIB,
   promo_image: 5 * MIB,
   video: 40 * MIB,
   document: 10 * MIB,

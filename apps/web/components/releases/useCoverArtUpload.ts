@@ -3,6 +3,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { uploadCoverArt, validateCoverArtFile } from '@/lib/cover-art-upload';
+import { gradeCoverArt, type CoverArtGrade } from '@/lib/cover-art-dsp';
+import { readImageDimensions } from '@/lib/cover-art-image';
 import type { ReleaseCoverArt } from '@/types/cover-art';
 
 /**
@@ -17,6 +19,13 @@ import type { ReleaseCoverArt } from '@/types/cover-art';
 export type CoverArtUploadState = {
   isUploading: boolean;
   error: string;
+  /**
+   * How the last picked image measured against DSP requirements, or null
+   * before anything has been picked. A 'blocked' grade is ALSO surfaced as
+   * `error` (nothing uploaded); a 'warning' grade uploads and the caller keeps
+   * showing this so a below-spec image stays visibly below spec.
+   */
+  grade: CoverArtGrade | null;
   retryFile: File | null;
   inputProps: {
     ref: React.RefObject<HTMLInputElement | null>;
@@ -41,6 +50,7 @@ export function useCoverArtUpload(params: {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
   const [retryFile, setRetryFile] = useState<File | null>(null);
+  const [grade, setGrade] = useState<CoverArtGrade | null>(null);
 
   const begin = useCallback(
     async (file: File) => {
@@ -57,6 +67,21 @@ export function useCoverArtUpload(params: {
         return;
       }
 
+      // Measure before uploading, so a file no DSP would accept never becomes
+      // the release's cover in the first place. Dimensions are then handed to
+      // the record step rather than re-derived (see uploadCoverArt).
+      const dimensions = await readImageDimensions(file);
+      const dspGrade = gradeCoverArt({
+        width: dimensions?.width ?? null,
+        height: dimensions?.height ?? null,
+        mimeType: file.type || '',
+      });
+      setGrade(dspGrade);
+      if (dspGrade.verdict === 'blocked') {
+        setError(`${dspGrade.headline} ${dspGrade.detail}`.trim());
+        return;
+      }
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -69,7 +94,7 @@ export function useCoverArtUpload(params: {
       }
 
       setIsUploading(true);
-      const result = await uploadCoverArt({ releaseId, file, token });
+      const result = await uploadCoverArt({ releaseId, file, token, dimensions });
       setIsUploading(false);
 
       if (result.ok) {
@@ -96,6 +121,7 @@ export function useCoverArtUpload(params: {
   return {
     isUploading,
     error,
+    grade,
     retryFile,
     inputProps: {
       ref: inputRef,

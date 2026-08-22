@@ -10,6 +10,7 @@ import {
   type TaskRequirement,
 } from '@/lib/execution-types';
 import { getTaskCompletionBlocker } from '@/lib/release-execution';
+import { shouldPromptCoverArtUpload } from '@/lib/cover-art-tasks';
 import { type TaskPriority, type TaskStatus } from '@/lib/tasks';
 // Read at completion time via getState() — no subscription, no render
 // coupling. The auth store does not import this one, so there is no cycle.
@@ -56,6 +57,25 @@ export type OutcomePromptState = {
   tick: number;
 };
 
+/**
+ * The "upload the cover art" prompt, rendered by CoverArtPromptSheet when a
+ * cover-art playbook step is ticked off (see lib/cover-art-tasks.ts). Written
+ * in the same synchronous set() as the completion itself, for the same reason
+ * OutcomePromptState is: the sheet has to appear on that frame, and nothing
+ * about it may delay the tick.
+ *
+ * Takes PRIORITY over the check-in and the undo toast, and all three are
+ * mutually exclusive — one bottom surface at a time. An actionable ask ("we
+ * need the file") beats a reflective one ("how did it go?") at the moment the
+ * manager is looking at the artwork.
+ */
+export type CoverArtPromptState = {
+  taskId: string;
+  releaseId: string;
+  title: string;
+  tick: number;
+};
+
 type TaskStore = {
   tasks: ExecutionTask[];
   selectedTaskId: string | null;
@@ -78,6 +98,8 @@ type TaskStore = {
   completionToast: CompletionToastState | null;
   /** Open post-completion check-in, or null. See OutcomePromptState. */
   outcomePrompt: OutcomePromptState | null;
+  /** Open cover art upload prompt, or null. See CoverArtPromptState. */
+  coverArtPrompt: CoverArtPromptState | null;
   setTasks: (tasks: ExecutionTask[]) => void;
   selectTask: (taskId: string | null) => void;
   createTask: (input: TaskCreateInput) => Promise<ExecutionTask | null>;
@@ -92,6 +114,12 @@ type TaskStore = {
   dismissCompletionToast: (taskId?: string) => void;
   /** Closes the check-in sheet. Records nothing and never touches the task. */
   dismissOutcomePrompt: () => void;
+  /**
+   * Closes the cover art prompt. Records nothing and never touches the task:
+   * skipping is a first-class answer, and the Cover art scene stays the place
+   * to do it later.
+   */
+  dismissCoverArtPrompt: () => void;
   tasksForRelease: (releaseId: string) => ExecutionTask[];
 };
 
@@ -119,8 +147,10 @@ const PENDING_BEAT_MS = 1500;
 const TOAST_DURATION_MS = 5000;
 let completionToastTick = 0;
 let outcomePromptTick = 0;
+let coverArtPromptTick = 0;
 
 const TASK_OUTCOMES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_OUTCOMES === 'true';
+const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 
 const getAccessToken = async () => {
   const {
@@ -136,6 +166,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   pendingCompletionIds: {},
   completionToast: null,
   outcomePrompt: null,
+  coverArtPrompt: null,
   setTasks: (tasks) => set({ tasks, error: '' }),
   selectTask: (taskId) => set({ selectedTaskId: taskId }),
   tasksForRelease: (releaseId) => get().tasks.filter((task) => task.releaseId === releaseId),
@@ -287,6 +318,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         // about no longer stands.
         const nextOutcomePrompt =
           state.outcomePrompt?.taskId === taskId ? null : state.outcomePrompt;
+        // Same for the cover art ask — the step it was following up on is no
+        // longer done.
+        const nextCoverArtPrompt =
+          state.coverArtPrompt?.taskId === taskId ? null : state.coverArtPrompt;
         return {
           tasks: state.tasks.map((candidate) =>
             candidate.id === taskId ? optimisticReopened : candidate
@@ -294,6 +329,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           pendingCompletionIds: nextPending,
           completionToast: nextToast,
           outcomePrompt: nextOutcomePrompt,
+          coverArtPrompt: nextCoverArtPrompt,
           error: '',
         };
       });
@@ -396,14 +432,28 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     }, PENDING_BEAT_MS);
     pendingBeatTimers.set(taskId, beatTimer);
 
-    // The post-completion check-in replaces the undo toast rather than
-    // stacking on it: both are bottom surfaces, and "Undo?" alongside "how
-    // did it go?" reads as two contradictory asks. Undo stays available by
-    // unticking the checkbox, which routes to the reopen branch above.
+    // Exactly ONE bottom surface per completion, in this priority order:
+    // cover art ask, then the check-in, then the undo toast. They all live at
+    // the bottom of the screen, and stacking any two of them reads as
+    // contradictory asks ("Undo?" beside "how did it go?"). Undo stays
+    // available throughout by unticking the checkbox, which routes to the
+    // reopen branch above.
+    //
+    // Cover art wins because it is the actionable one: ticking off a cover art
+    // step is the moment the manager has the file open, and asking a minute
+    // later means asking after they have moved on.
+    const shouldPromptCoverArt =
+      COVER_ART_ENABLED &&
+      Boolean(optimisticDone.releaseId) &&
+      shouldPromptCoverArtUpload(optimisticDone);
+
     const shouldPromptOutcome =
+      !shouldPromptCoverArt &&
       TASK_OUTCOMES_ENABLED &&
       Boolean(optimisticDone.releaseId) &&
       useAuthStore.getState().user?.ask_after_tasks !== false;
+
+    const shouldShowToast = !shouldPromptCoverArt && !shouldPromptOutcome;
 
     // Mirror the same single-active-timer rule for the toast — the toast
     // lifetime (TOAST_DURATION_MS) is independent of the in-place beat so
@@ -412,7 +462,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     if (existingToastTimer) {
       clearTimeout(existingToastTimer);
     }
-    if (!shouldPromptOutcome) {
+    if (shouldShowToast) {
       const toastTimer = setTimeout(() => {
         completionToastTimers.delete(taskId);
         set((state) => {
@@ -427,7 +477,16 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
     let toastSnapshot: CompletionToastState | null = null;
     let outcomeSnapshot: OutcomePromptState | null = null;
-    if (shouldPromptOutcome) {
+    let coverArtSnapshot: CoverArtPromptState | null = null;
+    if (shouldPromptCoverArt) {
+      coverArtPromptTick += 1;
+      coverArtSnapshot = {
+        taskId,
+        releaseId: optimisticDone.releaseId as string,
+        title: optimisticDone.title,
+        tick: coverArtPromptTick,
+      };
+    } else if (shouldPromptOutcome) {
       outcomePromptTick += 1;
       outcomeSnapshot = {
         taskId,
@@ -456,6 +515,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       },
       completionToast: toastSnapshot ?? state.completionToast,
       outcomePrompt: outcomeSnapshot ?? state.outcomePrompt,
+      coverArtPrompt: coverArtSnapshot ?? state.coverArtPrompt,
       error: '',
     }));
 
@@ -484,6 +544,11 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           // even mid-typing: there is nothing to review.
           outcomePrompt:
             state.outcomePrompt?.taskId === taskId ? null : state.outcomePrompt,
+          // Same for the cover art ask. An upload already in flight is not
+          // orphaned by this: it is a separate request against the release,
+          // not the task, so it still lands.
+          coverArtPrompt:
+            state.coverArtPrompt?.taskId === taskId ? null : state.coverArtPrompt,
           error: message,
         };
       });
@@ -656,6 +721,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       }
       return { completionToast: null };
     });
+  },
+  dismissCoverArtPrompt: () => {
+    set((state) => (state.coverArtPrompt ? { coverArtPrompt: null } : state));
   },
   dismissOutcomePrompt: () => {
     set((state) => (state.outcomePrompt ? { outcomePrompt: null } : state));

@@ -34,7 +34,13 @@ export const COVER_ART_MAX_BYTES: number = ASSET_SIZE_LIMITS[COVER_ART_CATEGORY]
 /** The `accept` attribute for a cover art file input. */
 export const COVER_ART_FILE_ACCEPT = COVER_ART_MIME_TYPES.join(',');
 
-export const COVER_ART_FORMATS_LABEL = 'JPEG, PNG or WebP';
+/**
+ * What the picker tells the user to bring. Says JPEG or PNG even though the
+ * MIME allowlist still accepts WebP: WebP displays fine in the product but no
+ * DSP ingests it, so it is graded down to a warning rather than advertised.
+ * See lib/cover-art-dsp.ts.
+ */
+export const COVER_ART_FORMATS_LABEL = 'JPEG or PNG';
 
 export type CoverArtValidationResult = { ok: true } | { ok: false; error: string };
 
@@ -90,6 +96,13 @@ export async function uploadCoverArt(params: {
   releaseId: string;
   file: File;
   token: string;
+  /**
+   * Pixel dimensions, already measured by the caller (the picker has to
+   * measure them anyway to grade the file, so re-decoding here would be
+   * wasted work). Optional: an upload from a path that never measured still
+   * records, it just stores no dimensions and reads as unknown afterwards.
+   */
+  dimensions?: { width: number; height: number } | null;
   fetchImpl?: typeof fetch;
 }): Promise<CoverArtUploadOutcome> {
   const { releaseId, file, token } = params;
@@ -165,6 +178,8 @@ export async function uploadCoverArt(params: {
         file_name: file.name,
         file_size: file.size,
         mime_type: mimeType,
+        width: params.dimensions?.width,
+        height: params.dimensions?.height,
       }),
     });
     const data = (await response.json().catch(() => ({}))) as RecordResponse;
