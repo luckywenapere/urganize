@@ -20,6 +20,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.60.0",
+    date: "August 22, 2026",
+    highlights: [
+      "Every team now starts with a 14-day free trial of the whole product, no card required. The trial belongs to the team rather than to each person, so bringing teammates in does not start a fresh clock for them.",
+      "In the last ten days of a trial, a quiet line at the top of the app tells you how many are left. Nothing is held back or hidden while it runs — the trial is the full product.",
+      "When a trial ends, everything you built stays exactly where it is: releases, activities, files, notes, all of it. Nothing is deleted, and it is all waiting the moment a plan is active.",
+      "One plan covers everyone on your team. If you would rather talk to a person, or you need an invoice, that is on the same screen — a roster deal gets scoped and quoted by hand.",
+      "Billing in Settings now speaks for the team: how long the trial has left, which plan is active, and who can change it. If billing is not yours to handle, one tap tells the person whose it is.",
+    ],
+  },
+  {
     version: "0.59.1",
     date: "August 21, 2026",
     highlights: [

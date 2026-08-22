@@ -317,7 +317,7 @@ Current schedules, both daily and both approximate — Hobby precision is ±59 m
 
 All seven blockers identified during the v1 cut have been resolved.
 
-1. **Subscription gating implemented; the gate itself is currently OFF** (doc-drift found 2026-08-10 while building playlist pitching, not caused by it). This entry's original "globally on" heading has been wrong since **2026-07-23**: `requireActiveAccount` in `apps/web/app/api/_shared/paywall.ts` opens with `if (userId) return null;`, so every authenticated account passes and no route returns 402, and the client-side login bounce is disabled by `PAYWALL_LOGIN_BOUNCE_ENABLED = false` in `apps/web/lib/auth-store.ts`. Both carry comments explaining the founder decision (the app is free while the founders talk to prospective teams directly). All the machinery below is intact and dormant; restoring the paywall is deleting that early return and re-enabling the bounce. Surfaced here per this file's own rule about flagging doc/code conflicts rather than silently picking one. Note for whoever restores it: **curator accounts must stay free** — they never call `requireActiveAccount` today (curator routes use `requireCuratorUser`, and team routes reject curators before the paywall check), so no bypass exists or is needed, but a future refactor that routes them through the gate would lock every playlist owner out. The original description follows. Four-state access model (`unpaid | trial | paid | expired`) computed by `getSubscriptionSnapshot` in `apps/web/lib/subscription-access.ts` from `subscriptions.status`/`expires_at` + new `profiles.trial_*` / `paid_at` columns + `is_subscribed` back-compat. `requireActiveAccount(userId, email)` returns **402** + `{ redirect: '/locked', reason }` when blocked; wrapped by `requireActiveAuthenticatedUser` and applied to ~30 protected routes. Open routes (auth, payments/verify, webhook, trial/start, subscription-status, paywall-status, admin/*, account/delete-now, user/onboarding, pricing-validation) keep `getAuthenticatedUser`. 28-day no-card trial via `POST /api/trial/start`. `/locked` page with a three-plan picker (Annual / Monthly / Label radio cards from `@urganize/pricing`) + Start 28-day trial button (`apps/web/app/locked/page.tsx`). Frontend `window.fetch` monkey-patch in `apps/web/lib/access-redirect.ts` redirects same-origin 402 responses to `/locked`. 6-email allowlist at `apps/web/lib/paywall-allowlist.ts` bypasses the gate entirely (lowercased + trimmed comparison, logs `[paywall-allowlist]` on bypass). Vanity payment URL `urganize.app/pay`. The legacy `app_settings.global_paywall` toggle is no longer consulted; the snapshot fallback is now fail-CLOSED. → `f71a7c9` (initial), `02efe0b` (full gating + vanity URL, PRs #46, #47).
+1. **Subscription gating implemented; the gate is ON again since 2026-08-22, by the TEAM path.** `NEXT_PUBLIC_FEATURE_HARD_PAYWALL` is live in production, so `requireActiveAccount` (`apps/web/app/api/_shared/paywall.ts`) takes its team branch — allowlist, then `getTeamAccessForUser`, then **402** with `reason: 'team_trial_expired'` — and that branch runs **before** the free-era `if (userId) return null;`, which is now only the flag-OFF path. The client bounce follows the same switch (`HARD_PAYWALL_BOUNCE_ENABLED` in `apps/web/lib/auth-store.ts`); the old `PAYWALL_LOGIN_BOUNCE_ENABLED = false` likewise governs only the flag-off path. Full detail in "Team trial + hard paywall" under Working notes. **What is gated is now a TEAM, not an account** — the per-user machinery described below still computes the owner's snapshot, but entitlement is the resolver's combined answer, which is what finally closes the teammate-inheritance landmine this entry used to name as the blocker on restoring the paywall. **Curator accounts stay free, as this entry always required:** they never reach `requireActiveAccount` (curator routes use `requireCuratorUser`, and team routes reject curators first), and `requireCuratorUser` deliberately does not wrap the gate — do not "unify" it, or every playlist owner is locked out. Two earlier headings on this entry were both wrong in their turn (`"globally on"` until 2026-08-10, then `"currently OFF"` until now), so treat the flag, not this line, as the authority. The original per-user description follows. Four-state access model (`unpaid | trial | paid | expired`) computed by `getSubscriptionSnapshot` in `apps/web/lib/subscription-access.ts` from `subscriptions.status`/`expires_at` + new `profiles.trial_*` / `paid_at` columns + `is_subscribed` back-compat. `requireActiveAccount(userId, email)` returns **402** + `{ redirect: '/locked', reason }` when blocked; wrapped by `requireActiveAuthenticatedUser` and applied to ~30 protected routes. Open routes (auth, payments/verify, webhook, trial/start, subscription-status, paywall-status, admin/*, account/delete-now, user/onboarding, pricing-validation) keep `getAuthenticatedUser`. 28-day no-card trial via `POST /api/trial/start`. `/locked` page with a three-plan picker (Annual / Monthly / Label radio cards from `@urganize/pricing`) + Start 28-day trial button (`apps/web/app/locked/page.tsx`). Frontend `window.fetch` monkey-patch in `apps/web/lib/access-redirect.ts` redirects same-origin 402 responses to `/locked`. 6-email allowlist at `apps/web/lib/paywall-allowlist.ts` bypasses the gate entirely (lowercased + trimmed comparison, logs `[paywall-allowlist]` on bypass). Vanity payment URL `urganize.app/pay`. The legacy `app_settings.global_paywall` toggle is no longer consulted; the snapshot fallback is now fail-CLOSED. → `f71a7c9` (initial), `02efe0b` (full gating + vanity URL, PRs #46, #47).
 2. **Paystack webhook persistence added** — `charge.success` handler looks up the payment by reference, upserts `subscriptions`, and sets `profiles.is_subscribed = true`. Idempotent via upsert on `user_id`. → `6ed3125`
 3. **`activity_log` / `activity_logs` deduplication completed** — v1 cut migration migrated data from `activity_log` (singular) into `activity_logs` (plural) and dropped the old table. → `d23dfea`
 4. **`Db*` type drift removed** — `DbRelease`, `DbTask`, `DbFile` deleted from `lib/supabase/client.ts`. `Profile` type kept (used by analytics). → `77a29bf`
@@ -1732,8 +1732,21 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-22 (the 28-day trial promise is gone from the marketing
-site — see "The 28-day trial promise, removed" above. Five surfaces promised a
+*Last updated: 2026-08-22 (**the team trial + hard paywall is LIVE in production
+(v0.60.0)** — the flag is flipped, the migration applied and, for the first time
+in four attempts, the Paystack Plans were minted at the advertised prices
+(₦80,000/₦800,000) and the two NGN env vars repointed BEFORE the flip, so
+checkout charges what the picker shows. Resolved blocker #1's heading is
+corrected accordingly: the gate is ON again, by the TEAM path, and that branch
+runs before the free-era early return, which is now only the flag-off path. Two
+things the flip does not settle, both recorded in that section: the migration's
+idempotent backfill still wants re-running, since the trial stamp is flag-gated
+so any team created between apply and flip is unstamped (it fails OPEN, so this
+is tidying not a rescue), and nothing in the feature has been verified against
+live traffic yet — the pill, both wall variants, checkout crediting the OWNER
+rather than the clicker, the five alert types, comp/extend, and Settings for a
+teammate on a paying team. Earlier the same day: the 28-day trial promise is gone
+from the marketing site — see "The 28-day trial promise, removed" above. Five surfaces promised a
 28-day per-account trial or open-ended free access, none of them flag-aware, so
 all five would have gone wrong at flag flip; /terms was already wrong, since
 nothing has granted a trial on signup since 2026-07-23. /terms §04 got two
@@ -1864,7 +1877,7 @@ Previously, the same day: cover art built flag-off — see "Cover art" above. Ea
 
 ---
 
-## Team trial + hard paywall (2026-08-21)
+## Team trial + hard paywall (2026-08-21; LIVE in production 2026-08-22, v0.60.0)
 
 Founder request: replace open access with a **14-day full-access TEAM trial that
 ends in a hard wall**. No permanent free tier. Pricing is founder-led sales, so
@@ -1974,25 +1987,33 @@ now coincides with Label's stored ₦800,000; harmless, since Label is
   and `PGRST204`) but silently leaving the account with no team, and worse on
   the routes that call it directly. Flag off, that INSERT is byte-for-byte what
   it was before this feature. Do not "simplify" the gate away.
-- **Activation checklist:** (1) apply
-  `20260821120000_team_trial_hard_paywall.sql` — **this starts every existing
-  team's 14 days**; (2) review `/admin/teams`, assign Founding Member rates, comp
-  partners, extend anyone who needs longer; (3) **mint Paystack Plans at
-  ₦80,000/₦800,000 and repoint `PAYSTACK_PLAN_MONTHLY_NGN` /
-  `PAYSTACK_PLAN_ANNUAL_NGN`** — the Plans in use still bill ₦150,000/₦1,500,000,
-  so flipping first overcharges the first team to pay by ~2x (this gap has now
-  come up four times); (4) set `BILLING_ALERTS_EMAIL`; (5) flip the flag with a
-  deploy that rebuilds `apps/web`; (6) **re-run the migration's backfill
-  statement** (`update public.workspaces set trial_started_at = coalesce(...),
-  trial_ends_at = now() + interval '14 days' where trial_ends_at is null`) — it
-  is idempotent, and any team created between step 1 and step 5 is unstamped
-  because the stamp is flag-gated. Such a team fails OPEN (an unstamped row
-  reads as an active trial, never a wall), so this is tidying rather than a
-  rescue, and `/admin/teams` shows exactly who needs it; (7) changelog entry +
-  version bump across all 10 `package.json` files (the EPK precedent: the ledger
-  entry lands at flag-flip, not at merge); (8) verify live — pill at ≤10 days,
-  wall on all routes with owner vs member variants, checkout crediting the
-  owner, the five alert types arriving, comp/extend restoring access.
+- **ACTIVATED 2026-08-22 (founder).** The migration is applied, `/admin/teams`
+  reviewed, `BILLING_ALERTS_EMAIL` set, and
+  `NEXT_PUBLIC_FEATURE_HARD_PAYWALL=true` is live in Vercel `Web` Production.
+  **The recurring Paystack reprice trap is CLOSED for the first time:** Plans
+  were minted at ₦80,000/₦800,000 and `PAYSTACK_PLAN_MONTHLY_NGN` /
+  `PAYSTACK_PLAN_ANNUAL_NGN` repointed BEFORE the flip, so checkout charges what
+  the picker advertises. That gap had come up four times (2026-07-14, -07-20,
+  -08-16, and as the blocker on this feature) and this is the first pass that did
+  not ship it. Ledger entry + version bump across all 10 `package.json` files
+  landed as v0.60.0.
+- **Two things the flip does NOT settle, both outstanding:**
+  1. **Re-run the migration's backfill.** The trial stamp is flag-gated (see the
+     bullet above), so any team created between applying the migration and
+     flipping the flag has no `trial_ends_at`. Such a row fails OPEN — it reads
+     as an active trial, never a wall — so this is tidying rather than a rescue,
+     and it is idempotent: `update public.workspaces set trial_started_at =
+     coalesce(trial_started_at, created_at, now()), trial_ends_at = now() +
+     interval '14 days' where trial_ends_at is null;`. `/admin/teams` shows
+     exactly who needs it.
+  2. **Nothing has been verified against the live system yet.** Every claim in
+     this section rests on unit tests, both-flag-state builds and route probes.
+     Still to watch on real traffic: the pill appearing at ≤10 days, the wall in
+     both owner and member variants, checkout crediting the OWNER rather than the
+     clicker, the five founder alert types actually arriving, comp/extend
+     restoring access immediately, and Settings reading correctly for a teammate
+     on a paying team (the `'paid'` branch added 2026-08-22, which has never
+     rendered against a real session).
 - ~~**Out of scope, flagged for a founder copy pass:** `/terms` and the homepage
   `/signup` still say "28-day free trial".~~ **Done 2026-08-22** — see "The
   28-day trial promise, removed" below.
