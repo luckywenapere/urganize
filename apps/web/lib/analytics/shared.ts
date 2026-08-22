@@ -23,6 +23,23 @@ export type ReleaseCreatedSource =
 export type TaskCreatedSource = 'quick_create' | 'inline' | 'detail_panel' | 'onboarding';
 
 export interface AnalyticsEventPropertiesMap {
+  /**
+   * The session ended without the user asking for it — supabase-js dropped the
+   * token itself, almost always after a refresh it could not complete. This is
+   * the only signal that tells us whether users are being logged out in the
+   * wild, and it exists because four separate paths in lib/auth-store.ts used
+   * to do the same thing silently (URG-235).
+   *
+   * `last_failure_kind` is what the preceding auth failure classified as, when
+   * there was one within `last_failure_age_ms` — a `transient` value here means
+   * we very likely lost a live session to a bad connection rather than a real
+   * revocation.
+   */
+  auth_session_lost_unexpectedly: {
+    last_failure_kind?: 'revoked' | 'transient' | 'unknown';
+    last_failure_age_ms?: number;
+    was_authenticated: boolean;
+  };
   onboarding_started: EmptyAnalyticsProperties;
   onboarding_role_selected: { role: 'artist' | 'manager' | 'label' | 'other' };
   onboarding_release_created: {
