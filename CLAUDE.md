@@ -1780,9 +1780,12 @@ at a renewal. Earlier: the pricing page, and one number for a limit — see
 "The pricing page, and one number for a limit" above. The surface that makes a
 tier buyable: three columns on the public page, and a tier picker on the in-app
 wall. It REVERSES a founder decision — /pricing has been deliberately price-free
-since 2026-07-23 — so the table is flag-gated rather than swapped in, and flag
-off the page is byte-for-byte the July one. Every CTA stays a capture in both
-modes (founder call); nothing links to the app. The structural change is the part
+since 2026-07-23 — so the table shipped flag-gated rather than swapped in, though
+that gate came off a day later when flipping it failed twice in production (the
+flag is inlined at BUILD time, so it needed the var on the right one of two
+Vercel projects AND a rebuild of that app; the page has no risk surface, every
+CTA being a mailto, so the lever was not worth the coupling — apps/web keeps the
+flag, where it gates real checkout). Every CTA stays a capture in both modes (founder call); nothing links to the app. The structural change is the part
 worth keeping: apps/homepage cannot import apps/web, so a page quoting "4 people"
 would have carried its own copy of a figure the enforcement layer also holds —
 the display-vs-reality gap this repo has shipped four times with prices, waiting
@@ -3470,22 +3473,49 @@ The surface that makes a tier buyable, and the last piece before
 `NEXT_PUBLIC_FEATURE_PRICING_V2` is worth flipping. Two surfaces changed: the
 public `/pricing` page and the in-app wall.
 
-### It reverses a founder decision, which is why it is gated
+### It reverses a founder decision — gated at first, then unconditional
 
-`/pricing` has been in **BOOK-A-DEMO MODE since 2026-07-23** — the price table
+`/pricing` had been in **BOOK-A-DEMO MODE since 2026-07-23** — the price table
 was deliberately removed because the founders want to talk to every team before
 money changes hands. The pricing spec (2026-08-23) asks for a public
 three-column page, which is the opposite call, newer.
 
-So the table is **flag-gated rather than swapped in**. Flag off, `/pricing` is
-byte-for-byte the page that shipped in July, headline included; flipping the
-flag is the whole decision and flipping it back is the whole rollback. **Three
-CLAUDE.md claims about this page were stale** and are corrected here: it had no
-tier cards, no FAQ, and nothing anchored to its own `#waitlist` — its primary
-CTA was a `mailto:` book-a-demo, with the waitlist as a secondary section.
+So the table shipped **flag-gated rather than swapped in**, on the reasoning that
+a reversal of a founder decision should be revertible from a dashboard. **That
+gate was removed the next day (2026-08-24, founder call), and the page now
+renders the table unconditionally.** Read the header of
+`apps/homepage/app/pricing/PricingPageClient.tsx` before reinstating it.
 
-**Every CTA is still a capture, in both modes** (founder call). The cards book a
-demo and the sales-led card emails us. Nothing on the page links to
+**Why it came out, because the failure is the reusable part:** the flag is read
+at module scope, so Next inlines it at BUILD time. Flipping it therefore needed
+three things to line up at once — the var set on the right one of TWO Vercel
+projects, a commit touching `apps/homepage`, and a deploy `turbo-ignore` did not
+skip. Twice it did not, and the live page kept serving a bundle with `false`
+compiled in while the env var said otherwise. The second attempt was a version
+bump specifically chosen to force the rebuild (turbo-ignore was verified to
+answer "This commit affects @urganize/homepage"), and the page still did not
+change — which is what exhausted the code-side explanations and left only
+config we cannot see from the repo.
+
+What made removing the gate the right trade rather than a shortcut: **this page
+has no risk surface.** Every CTA is a mailto and nothing on it links to
+`app.urganize.app`, so the lever was never protecting money — it was protecting
+a headline, and editing one file reverts it either way.
+
+**The flag is still live in `apps/web`**, gating tier checkout, the picker on
+`/locked`, plan changes and the entitlement resolver. So the two surfaces CAN now
+legitimately disagree, and the safe direction is the one they disagree in: the
+public page may advertise a tier the app cannot yet sell (the visitor books a
+demo and reaches a human), where the reverse — an app selling what the site never
+mentioned — would be the surprise.
+
+**Three CLAUDE.md claims about this page were stale** when the table shipped and
+were corrected then: it had no tier cards, no FAQ, and nothing anchored to its own
+`#waitlist` — its primary CTA was a `mailto:` book-a-demo, with the waitlist as a
+secondary section.
+
+**Every CTA is still a capture** (founder call), and that was true in both modes
+while there were two. The cards book a demo and the sales-led card emails us. Nothing on the page links to
 `app.urganize.app`, because that would reopen the self-serve funnel closed in
 URG-125/URG-136. What price-table mode restores is **not** the pre-July layout in
 git history: that one sold legacy plans in two currencies, and the tier model is
@@ -3586,9 +3616,11 @@ confirm Paystack quotes ₦35,000.
 2. Mint Manager's two Paystack Plans (₦35,000 / ₦350,000) and set
    `PAYSTACK_PLAN_MANAGER_{MONTHLY,ANNUAL}_NGN`. **Do not repoint**
    `PAYSTACK_PLAN_{MONTHLY,ANNUAL}_NGN` — Label reuses them.
-3. Set `NEXT_PUBLIC_FEATURE_PRICING_V2=true` on **both** Vercel projects. The
-   product app and the marketing site both read it now, and setting it on only
-   one leaves the site advertising tiers the app cannot sell, or the reverse.
+3. Set `NEXT_PUBLIC_FEATURE_PRICING_V2=true` on the **`Web`** project only. This
+   said "both projects" until 2026-08-24, when the marketing site stopped reading
+   the flag entirely (see the section heading above) — the public table is
+   unconditional now, so the site needs no env var and setting one there does
+   nothing.
 4. Changelog entry + version bump at the flip, not at merge (the EPK precedent).
    `apps/homepage` changes never earn one, but the `apps/web` half does.
 
