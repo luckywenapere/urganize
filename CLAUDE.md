@@ -1732,7 +1732,31 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-23 (the other two countable caps, plus the archive action
+*Last updated: 2026-08-24 (tier checkout and renewal fixed — see "Tier checkout
+and renewal" above. This is the follow-up the enforcement PR flagged as blocking
+the pricing-v2 flag, and both bugs had one cause: under the tier model
+`subscriptions.plan` holds a TIER and no longer encodes the billing interval,
+while nothing stored the interval. So `getPlanExpiry` gave a Label-MONTHLY buyer
+a full year (the legacy label plan billed annually, so the name matched) and a
+Manager-ANNUAL buyer one month, and `isRecurringPlan` rejected `manager` so the
+webhook bailed and renewals silently stopped extending. The interval now rides
+`payments.paystack_response.selected_interval` from checkout and lands on the new
+`subscriptions.billing_interval` column, because a RENEWAL has no payments row to
+read. Five things a later change will be tempted to get wrong, all argued there:
+`advancePeriodEnd`'s extend-from-previous-end semantics are correct and must not
+be "fixed"; a stored `label` can only mean the new tier, so the copy layer needs
+no feature flag to disambiguate; Label's Paystack plan codes point at the LIVE
+monthly/annual env vars and never at `PAYSTACK_PLAN_LABEL_*`, which holds a
+mislabeled ₦750,000 Plan; the renewal sanity check resolves FORWARD, because
+reverse-mapping a code would warn on every Label renewal now that Label reuses
+those same Plans; and `enterprise` stays out of `isRecurringPlan` entirely. Also
+fixed the copy layer as a founder call — a paying Manager customer's Settings
+read "Active plan" with no name, and a lapsed Label subscriber was pointed at a
+mailto instead of checkout — which inverted two existing test assertions on
+purpose. Mutation-tested rather than merely asserted. STILL NOT REACHABLE: this
+makes tier checkout correct, not buyable; `/locked` still posts the legacy ids and
+keeps working by design, so the pricing-page PR is what a user would notice.
+Earlier: the other two countable caps, plus the archive action
 they needed — see "The other two caps: archive, active releases, assistant
 actions" above. Archiving a release ships UNFLAGGED, which is the unusual call:
 Chappi's update_release already accepts status 'archived' and is not
@@ -2454,6 +2478,12 @@ it into an already-large PR would bury it. It should be the next PR, and **it
 blocks the flag**: minting Manager's Paystack Plans is necessary but not
 sufficient.
 
+**RESOLVED 2026-08-24** — see "Tier checkout and renewal" below. Both bugs are
+fixed and the interval is now stored on `subscriptions.billing_interval`. Left
+as written above because the diagnosis is the useful part: it is the reason that
+column exists, and the reason a plan name must never be read as an interval
+again.
+
 ### Verified
 
 The full suite (**1076 passing**, 24 env-gated skips, of which 26 are new across
@@ -2677,24 +2707,30 @@ imports them yet, so they are tree-shaken out entirely — stronger than the fla
 hiding them. In the homepage build the tier data reaches server source maps only,
 never a browser chunk.
 
-**Activation checklist** — **CORRECTED 2026-08-23**, because step (2) alone is
-NOT sufficient and this list originally implied it was. Two pre-existing bugs in
-the checkout/renewal path have to be fixed first: `getPlanExpiry` matches plan
-NAMES (so `'label'` grants a year whatever interval was bought, and `'manager'`
-a month), and `isRecurringPlan` rejects tier ids (so the webhook bails and
-renewals silently stop extending). Root cause of both: under the tier model
-`plan` no longer encodes the interval and nothing stores it. Full detail under
-"The other two caps" below. So: (1) fix those two, which needs somewhere to keep
-the interval; (2) apply `20260823100000_pricing_tiers.sql`; (3) **mint two
-Paystack Plans — Manager monthly ₦35,000 and Manager annual ₦350,000 — and set
-`PAYSTACK_PLAN_MANAGER_MONTHLY_NGN` / `PAYSTACK_PLAN_MANAGER_ANNUAL_NGN`**, and
-add a `manager` entry to `PLAN_CODE_ENV_VAR`, which has none, so those two vars
-are currently read by nothing. Label reuses the Plans minted 2026-08-22
-unchanged, so **do not repoint** `PAYSTACK_PLAN_{MONTHLY,ANNUAL}_NGN`. Manager is
-the only tier that can reproduce the advertise-vs-charge gap (five occurrences
-and counting); (4) the pricing-page PR lands before the flag is worth flipping —
-enforcement and export are done, and the flag alone changes nothing a user sees;
-(5) changelog entry + version bump at flip, not at merge (the EPK precedent).
+**Activation checklist** — corrected twice, and now current. It first implied
+minting Paystack Plans was the only step, which was wrong: two pre-existing
+checkout/renewal bugs blocked the flag. **Both are FIXED as of 2026-08-24** —
+see "Tier checkout and renewal" below. What remains:
+
+1. Apply `20260823100000_pricing_tiers.sql` and
+   `20260824100000_subscriptions_billing_interval.sql`. The second is not
+   optional: without `subscriptions.billing_interval` a tier subscription cannot
+   record whether it bills monthly or annually, and every renewal extends by the
+   wrong period.
+2. **Mint two Paystack Plans — Manager monthly ₦35,000 and Manager annual
+   ₦350,000 — and set `PAYSTACK_PLAN_MANAGER_MONTHLY_NGN` /
+   `PAYSTACK_PLAN_MANAGER_ANNUAL_NGN`.** Both vars are now read (they were read
+   by nothing until 2026-08-24). Label reuses the Plans minted 2026-08-22
+   unchanged, so **do not repoint** `PAYSTACK_PLAN_{MONTHLY,ANNUAL}_NGN`. Manager
+   is the only tier that can reproduce the advertise-vs-charge gap (five
+   occurrences and counting) — and until its two vars are set, a Manager checkout
+   returns a 500 rather than charging the wrong Plan, which is the correct
+   failure.
+3. The pricing-page PR, which is what actually makes a tier buyable: `/locked`
+   still posts the legacy `monthly`/`annual` ids, and those keep working under
+   the flag by design. Enforcement, export and checkout/renewal are done, so the
+   flag alone still changes nothing a user sees.
+4. Changelog entry + version bump at flip, not at merge (the EPK precedent).
 
 ---
 
@@ -3241,6 +3277,125 @@ anyone kept editing.
   defeat — only extending the existing `fixed` pinning to keyboard-closed.
   `scrollHeight` greater than the visual viewport means something still
   overflows, and the two computed heights say which.
+
+---
+
+## Tier checkout and renewal (2026-08-24)
+
+The follow-up the enforcement PR flagged as blocking the pricing-v2 flag. Two
+pre-existing bugs, one root cause: **under the tier model `subscriptions.plan`
+holds a TIER and no longer encodes the billing interval, and nothing stored the
+interval.** Every function that switched on the plan *name* predated tiers.
+
+What that actually cost, had the flag been flipped: `getPlanExpiry` gave a
+**Label-monthly buyer a full year** (the legacy `label` plan billed annually, so
+the name matched) and a **Manager-annual buyer one month** (no match, so the
+monthly default). And `isRecurringPlan` rejected `manager`, so the webhook's
+renewal branch bailed at `non_recurring_subscription` and **renewals silently
+stopped extending**. Both invisible only because no code path could write a tier
+id.
+
+Founder calls: **API only** — `/locked` keeps its legacy picker, so this makes
+tier checkout *correct*, not *reachable*; and **fix the plan-naming copy here**.
+
+### Where the interval lives, and why it is two places
+
+- **Checkout → webhook** rides `payments.paystack_response.selected_interval`,
+  beside the `plan` column the webhook already treats as the trusted source
+  (both written server-side by us, not echoed back from Paystack). No migration.
+- **Webhook → renewal** needs `subscriptions.billing_interval`
+  (`20260824100000_subscriptions_billing_interval.sql`). A renewal has **no
+  payments row** — Paystack mints a fresh reference per invoice, so the webhook
+  matches on `paystack_subscription_code` and reads only the subscription row.
+  There is no jsonb column there, so this had to be real. Nullable, and null is
+  meaningful: "infer from the plan name", which is exactly right for every
+  pre-existing row.
+
+**`resolveBillingInterval` is the single place the ambiguity is settled**: a
+stored interval wins, else legacy plan-name inference, else **monthly**. That
+default direction is deliberate — under-granting a month is recoverable at the
+next renewal, over-granting a year gives away eleven months with no way to claw
+it back.
+
+### Five things a later change will be tempted to get wrong
+
+1. **`advancePeriodEnd`'s extend-from-previous-end semantics are NOT a bug.**
+   The `setMonth` clamp drift recorded under "The other two caps" is why a period
+   START cannot be derived backwards; storing the interval is the fix for that.
+   Advancing forward from the prior end is correct as written (a late renewal
+   must not shorten a paid window), and "fixing" the clamp would move real
+   billing dates.
+2. **The `label` id exists in both generations and needs no feature flag to
+   disambiguate — for a stored value.** Legacy Label was the sales-led
+   ₦800,000/yr roster plan; tier Label is the self-serve flagship. A stored
+   `label` can only be the tier, because the id was never in
+   `subscriptions_plan_check` until the tier migration added it and
+   `PAYSTACK_PLAN_LABEL_*` has never been set, so checkout 500s before the
+   constraint could be reached. `20260823100000_pricing_tiers.sql` already
+   relies on that same fact. This is why `billing-summary.ts` resolves
+   tier-first with no env read — it is documented as client-safe and reads no
+   flags, and it does not need one.
+3. **⚠️ Label's Paystack plan codes point at `PAYSTACK_PLAN_{MONTHLY,ANNUAL}_NGN`,
+   NOT `PAYSTACK_PLAN_LABEL_*`.** The tier's prices are byte-identical to the
+   legacy monthly/annual amounts by design, which is the entire reason the tier
+   rollout mints no new Plans for it and no subscriber changes price.
+   `PAYSTACK_PLAN_LABEL_NGN` holds a mislabeled ₦750,000 Plan from an earlier
+   attempt. There is a test for this, because it is a trap.
+4. **`planCodeMatchesSubscription` resolves FORWARD (stored plan → expected
+   code), and must keep doing so.** The obvious version reverse-maps the
+   incoming code — but because Label reuses the legacy Plans, one code
+   reverse-maps to both legacy `monthly` and `label` at monthly, so a reverse
+   lookup would warn on **every Label renewal**. `identifyPlanByCode` is
+   deliberately left legacy-only and is no longer the comparison.
+5. **`enterprise` is excluded from `isRecurringPlan` and has no plan code.** It
+   is quoted per contract and invoiced by hand, so a charge event must never
+   reach the renewal math with it; `getPlanExpiry` pegs it far-future like
+   `custom` as a belt-and-braces measure if one ever does.
+
+### Two smaller decisions
+
+- **Tier checkout is NGN-only and refuses USD plainly.** `PRICING_TIERS` carries
+  NGN prices alone, the Paystack account offers NGN only in plan creation, and no
+  `PAYSTACK_PLAN_*_USD` var has ever been set. Getting one step further before
+  failing would be worse than a clear 400.
+- **`resolveCheckoutPurchase` was extracted into `lib/billing-plans.ts`** rather
+  than left inline in the route. It decides which Paystack Plan a card is charged
+  against and for how long, and the route is unreachable from a test without
+  mocking Supabase and fetch — so the decision lives where vitest can see it and
+  the route is a thin caller. Its error precedence is tested: a malformed request
+  is answered before an unconfigured Plan, so nobody is ever told "plan not
+  configured" for a request that was invalid to begin with.
+
+### Copy layer
+
+`describePlanName` and `isContactSalesPlan` are tier-first now, and
+`payment/callback` calls the shared helper instead of repeating a legacy-only
+line. Before this, a paying Manager customer's Settings read "Active plan" with
+no name, and a lapsed Label subscriber was pointed at a mailto instead of the
+checkout they were trying to reach. **Two existing tests were inverted on
+purpose** (`isContactSalesPlan('label')` was asserted true) — the assertion
+encoded the legacy meaning, and the comment beside it records why it flipped.
+
+### Verified
+
+**1110 tests** (34 new), `eslint .` at the exact **3-error / 66-warning**
+baseline (all three errors pre-existing in `WorkspaceView.tsx`), `next build`
+green **by exit code** with pricing v2 off and on under production config
+(`NEXT_PUBLIC_FEATURE_HARD_PAYWALL=true`), and `/auth`, `/onboarding`,
+`/settings` still `○ Static` in each. **Mutation-tested rather than merely
+asserted:** making `resolveBillingInterval` ignore the stored interval, and
+dropping `manager` from `isRecurringPlan`, each fail exactly the tests written
+to catch them (six failures across the two, green again on revert).
+
+**Not verified, and this is the significant gap:** nothing has run against real
+Paystack or a real database. No charge, no webhook delivery, no renewal, no
+`billing_interval` row. The route's own validation cannot even be probed from
+outside — auth correctly runs first, so an unauthenticated request 401s before
+reaching the plan branch — which is precisely why the decision was extracted
+into a unit-tested function. Worth one real end-to-end pass once Manager's
+Paystack Plans exist: buy Manager monthly, confirm `expires_at` lands one month
+out and `billing_interval` reads `monthly`, then buy Label annual and confirm a
+year.
 
 ---
 

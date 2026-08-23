@@ -40,3 +40,70 @@ describe('getPlanExpiry', () => {
     expect(now.getTime()).toBe(snapshot);
   });
 });
+
+// ── Pricing v2: the plan no longer says how long a period is ────────────────
+//
+// THE BUG THIS CLOSES. A tier id ('manager' / 'label') carries no interval, so
+// name-matching alone gave a Label-monthly buyer a full year of access for one
+// month's money, and a Manager-annual buyer one month for a year's. The
+// interval now travels with the charge.
+
+describe('getPlanExpiry — tier plans', () => {
+  const now = new Date(2026, 5, 10); // Jun 10
+
+  it('gives the same tier a month or a year depending on what was bought', () => {
+    expect(getPlanExpiry('label', now, 'monthly').getTime()).toBe(new Date(2026, 6, 10).getTime());
+    expect(getPlanExpiry('label', now, 'annual').getTime()).toBe(new Date(2027, 5, 10).getTime());
+    expect(getPlanExpiry('manager', now, 'monthly').getTime()).toBe(new Date(2026, 6, 10).getTime());
+    expect(getPlanExpiry('manager', now, 'annual').getTime()).toBe(new Date(2027, 5, 10).getTime());
+  });
+
+  it('a stored interval overrides what the plan name would have implied', () => {
+    // The whole point: 'label' infers ANNUAL from its name (the legacy roster
+    // plan billed yearly), and an explicit monthly interval must beat it.
+    expect(getPlanExpiry('label', now).getTime()).toBe(new Date(2027, 5, 10).getTime());
+    expect(getPlanExpiry('label', now, 'monthly').getTime()).toBe(new Date(2026, 6, 10).getTime());
+  });
+
+  it('falls back to monthly for a tier with no interval recorded', () => {
+    // Deliberately the SHORT one. Under-granting a month is recoverable at the
+    // next renewal; over-granting a year gives away eleven months for free.
+    expect(getPlanExpiry('manager', now).getTime()).toBe(new Date(2026, 6, 10).getTime());
+  });
+
+  it('pegs enterprise far-future like custom, since it is invoiced by hand', () => {
+    expect(getPlanExpiry('enterprise', now).getTime()).toBe(new Date(2126, 5, 10).getTime());
+    // Even with an interval passed: a hand-negotiated contract term is not a
+    // Paystack billing period.
+    expect(getPlanExpiry('enterprise', now, 'monthly').getTime()).toBe(
+      new Date(2126, 5, 10).getTime()
+    );
+  });
+
+  it('ignores a malformed interval rather than trusting it', () => {
+    // These arrive out of a jsonb column, so anything is possible. Each must
+    // fall through to plan-name inference: 'annual' here.
+    for (const bogus of ['yearly', 'MONTHLY', 'weekly', '', '  ', null, undefined]) {
+      expect(getPlanExpiry('annual', now, bogus).getTime()).toBe(new Date(2027, 5, 10).getTime());
+    }
+  });
+
+  it('leaves every legacy plan exactly where it was (regression guard)', () => {
+    // This is what proves the change is additive: with no interval recorded,
+    // every value that can currently sit in subscriptions.plan keeps its
+    // historical term.
+    const cases: Array<[string, Date]> = [
+      ['monthly', new Date(2026, 6, 10)],
+      ['annual', new Date(2027, 5, 10)],
+      ['yearly', new Date(2027, 5, 10)],
+      ['access', new Date(2027, 5, 10)],
+      ['label', new Date(2027, 5, 10)],
+      ['custom', new Date(2126, 5, 10)],
+      ['founding', new Date(2026, 6, 10)],
+      ['trial_claim', new Date(2026, 6, 10)],
+    ];
+    for (const [plan, expected] of cases) {
+      expect(getPlanExpiry(plan, now).getTime()).toBe(expected.getTime());
+    }
+  });
+});

@@ -9,36 +9,59 @@
 // @urganize/pricing (shared between apps) and lib/billing-plans.ts
 // (server-only Paystack glue). Nothing else needs to live here.
 
-export const getPlanExpiry = (plan: string, now = new Date()): Date => {
+import { resolveBillingInterval } from './billing-plans';
+
+/**
+ * How long a successful first charge should buy.
+ *
+ * `interval` matters for exactly one reason, and it is the bug this argument
+ * exists to fix: under pricing v2 the plan string is a TIER ('manager',
+ * 'label') and no longer says whether the customer bought monthly or annual.
+ * Matching on the name alone gave a Label-monthly buyer a full year and a
+ * Manager-annual buyer one month. Pass the interval recorded at checkout
+ * (payments.paystack_response.selected_interval, then
+ * subscriptions.billing_interval) whenever the plan is a tier.
+ *
+ * Optional, so every legacy call site keeps its exact previous behaviour: for
+ * the legacy ids the name IS the interval, and `resolveBillingInterval` infers
+ * the same answer this function used to hardcode.
+ */
+export const getPlanExpiry = (
+  plan: string,
+  now = new Date(),
+  interval?: string | null
+): Date => {
   const expiresAt = new Date(now);
 
   // 'custom' is the contact-sales tier — admin-provisioned, no Paystack
   // involvement. Pegged to far-future so the rare webhook callsite (none
   // today, but the type allows it) doesn't accidentally set a short
   // window. Admin paths set their own expires_at directly.
-  if (plan === 'custom') {
+  //
+  // 'enterprise' is its pricing-v2 successor and is handled the same way for
+  // the same reason: quoted per contract, invoiced by hand, never charged
+  // through self-serve checkout. It is deliberately absent from
+  // isRecurringPlan, so a charge event cannot reach here with it — but if one
+  // ever does, a far-future window beats a silent one-month window on a deal
+  // somebody signed for a year.
+  if (plan === 'custom' || plan === 'enterprise') {
     expiresAt.setFullYear(expiresAt.getFullYear() + 100);
     return expiresAt;
   }
 
-  if (
-    plan === 'annual' ||
-    // 'label' is the ₦800,000/yr roster tier (repriced 2026-07-14 from
-    // ₦750,000) — annual interval, same
-    // 1-year expiry as 'annual'.
-    plan === 'label' ||
-    plan === 'yearly' ||
-    // 'access' is the flat-tier ₦15,000 SKU credited by the (now retired)
-    // standalone Paystack Payment Page flow. No new rows are created — kept
-    // here so the 3 grandfathered customers continue to map to 1 year as
-    // their existing rows lapse naturally.
-    plan === 'access'
-  ) {
+  // 'access' is the flat-tier ₦15,000 SKU credited by the (now retired)
+  // standalone Paystack Payment Page flow. No new rows are created — kept
+  // mapping to 1 year so the 3 grandfathered customers lapse naturally.
+  //
+  // Everything else routes through the shared resolver: a stored interval
+  // wins, then legacy plan-name inference ('annual' / 'yearly' / 'label' →
+  // annual), then monthly. See resolveBillingInterval for why monthly is the
+  // safe default rather than annual.
+  if (resolveBillingInterval({ plan, storedInterval: interval }) === 'annual') {
     expiresAt.setFullYear(expiresAt.getFullYear() + 1);
     return expiresAt;
   }
 
-  // Default: monthly recurring.
   expiresAt.setMonth(expiresAt.getMonth() + 1);
   return expiresAt;
 };

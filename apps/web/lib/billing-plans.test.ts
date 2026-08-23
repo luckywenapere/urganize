@@ -2,8 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   advancePeriodEnd,
   getPaystackPlanCode,
+  getTierMinorUnit,
+  getTierPaystackPlanCode,
   identifyPlanByCode,
   isRecurringPlan,
+  isSelfServeTier,
+  planCodeMatchesSubscription,
+  resolveBillingInterval,
+  resolveCheckoutPurchase,
 } from './billing-plans';
 
 // advancePeriodEnd is the renewal math the Paystack webhook trusts: a late
@@ -97,15 +103,364 @@ describe('getPaystackPlanCode / identifyPlanByCode', () => {
 });
 
 describe('isRecurringPlan', () => {
-  it('accepts exactly the three recurring tiers', () => {
+  it('accepts every plan that renews through Paystack', () => {
     expect(isRecurringPlan('monthly')).toBe(true);
     expect(isRecurringPlan('annual')).toBe(true);
     expect(isRecurringPlan('label')).toBe(true);
+    // Added with pricing v2. Its absence was the second half of the bug: this
+    // gate is what the webhook's renewal branch checks, so a plan missing here
+    // has its renewals SILENTLY STOP EXTENDING.
+    expect(isRecurringPlan('manager')).toBe(true);
   });
 
   it('rejects the legacy/admin plan strings', () => {
     expect(isRecurringPlan('access')).toBe(false);
     expect(isRecurringPlan('custom')).toBe(false);
     expect(isRecurringPlan('')).toBe(false);
+  });
+
+  it('rejects enterprise, which is invoiced by hand', () => {
+    // It has no Paystack plan code and its expires_at is set by an admin, so a
+    // charge event must never be able to reach the renewal math with it.
+    expect(isRecurringPlan('enterprise')).toBe(false);
+    expect(isSelfServeTier('enterprise')).toBe(false);
+    expect(isSelfServeTier('manager')).toBe(true);
+    expect(isSelfServeTier('label')).toBe(true);
+  });
+});
+
+// ── The interval, which the tier model stopped encoding in the plan name ─────
+
+describe('resolveBillingInterval', () => {
+  it('prefers a stored interval over anything the plan name implies', () => {
+    // 'label' infers ANNUAL from its name (the legacy roster plan billed
+    // yearly). A Label-monthly subscriber must not inherit that.
+    expect(resolveBillingInterval({ plan: 'label', storedInterval: 'monthly' })).toBe('monthly');
+    expect(resolveBillingInterval({ plan: 'monthly', storedInterval: 'annual' })).toBe('annual');
+    expect(resolveBillingInterval({ plan: 'label', storedInterval: ' annual ' })).toBe('annual');
+  });
+
+  it('infers from a legacy plan name when nothing is stored', () => {
+    expect(resolveBillingInterval({ plan: 'monthly' })).toBe('monthly');
+    expect(resolveBillingInterval({ plan: 'annual' })).toBe('annual');
+    expect(resolveBillingInterval({ plan: 'yearly' })).toBe('annual');
+    expect(resolveBillingInterval({ plan: 'access' })).toBe('annual');
+    expect(resolveBillingInterval({ plan: 'label' })).toBe('annual');
+  });
+
+  it('defaults to monthly for a tier with nothing recorded', () => {
+    // The short one on purpose: under-granting a month is recoverable, and
+    // over-granting a year cannot be clawed back.
+    expect(resolveBillingInterval({ plan: 'manager' })).toBe('monthly');
+    expect(resolveBillingInterval({ plan: 'manager', storedInterval: null })).toBe('monthly');
+  });
+
+  it('ignores a malformed stored value rather than trusting it', () => {
+    // It comes out of a text column, so anything is possible.
+    for (const bogus of ['yearly', 'ANNUAL', 'weekly', '', '   ', null, undefined]) {
+      expect(resolveBillingInterval({ plan: 'annual', storedInterval: bogus })).toBe('annual');
+      expect(resolveBillingInterval({ plan: 'manager', storedInterval: bogus })).toBe('monthly');
+    }
+  });
+
+  it('handles an absent plan without throwing', () => {
+    expect(resolveBillingInterval({ plan: null })).toBe('monthly');
+    expect(resolveBillingInterval({ plan: undefined })).toBe('monthly');
+  });
+});
+
+describe('advancePeriodEnd — tier plans', () => {
+  const now = new Date(2026, 0, 10);
+  const currentEnd = new Date(2026, 0, 20);
+
+  it('extends the same tier by a month or a year depending on what was bought', () => {
+    // THE BUG, in one assertion pair: without a stored interval both of these
+    // resolved off the name and one of them was wrong by eleven months.
+    expect(advancePeriodEnd('label', currentEnd, now, 'monthly').getTime()).toBe(
+      new Date(2026, 1, 20).getTime()
+    );
+    expect(advancePeriodEnd('label', currentEnd, now, 'annual').getTime()).toBe(
+      new Date(2027, 0, 20).getTime()
+    );
+    expect(advancePeriodEnd('manager', currentEnd, now, 'annual').getTime()).toBe(
+      new Date(2027, 0, 20).getTime()
+    );
+  });
+
+  it('keeps every legacy plan on its historical period (regression guard)', () => {
+    // No stored interval, exactly as every pre-existing row will read.
+    expect(advancePeriodEnd('monthly', currentEnd, now).getTime()).toBe(
+      new Date(2026, 1, 20).getTime()
+    );
+    expect(advancePeriodEnd('annual', currentEnd, now).getTime()).toBe(
+      new Date(2027, 0, 20).getTime()
+    );
+    expect(advancePeriodEnd('label', currentEnd, now).getTime()).toBe(
+      new Date(2027, 0, 20).getTime()
+    );
+  });
+
+  it('still refuses to truncate a paid window when an interval is supplied', () => {
+    // The lapsed-customer edge, re-checked on the new argument path.
+    const lapsed = new Date(2025, 10, 1);
+    expect(advancePeriodEnd('manager', lapsed, now, 'monthly').getTime()).toBe(
+      new Date(2026, 1, 10).getTime()
+    );
+  });
+});
+
+describe('tier plan codes and prices', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('points Label at the LIVE monthly/annual plans, not PAYSTACK_PLAN_LABEL_*', () => {
+    // This is the trap, so it gets a test. PAYSTACK_PLAN_LABEL_NGN holds a
+    // mislabeled ₦750,000 Plan from an earlier attempt; the Label tier's prices
+    // are identical to the live monthly/annual ones by design, which is why it
+    // reuses those Plan objects and needs none minted.
+    vi.stubEnv('PAYSTACK_PLAN_MONTHLY_NGN', 'PLN_live_month');
+    vi.stubEnv('PAYSTACK_PLAN_ANNUAL_NGN', 'PLN_live_year');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_NGN', 'PLN_wrong_750k');
+
+    expect(getTierPaystackPlanCode('label', 'monthly')).toBe('PLN_live_month');
+    expect(getTierPaystackPlanCode('label', 'annual')).toBe('PLN_live_year');
+    expect(getTierPaystackPlanCode('label', 'monthly')).not.toBe('PLN_wrong_750k');
+  });
+
+  it('reads Manager from its own two env vars', () => {
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_MONTHLY_NGN', '  PLN_mgr_m  ');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_ANNUAL_NGN', 'PLN_mgr_a');
+    expect(getTierPaystackPlanCode('manager', 'monthly')).toBe('PLN_mgr_m');
+    expect(getTierPaystackPlanCode('manager', 'annual')).toBe('PLN_mgr_a');
+  });
+
+  it('returns null when a tier plan is not configured, so checkout refuses', () => {
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_MONTHLY_NGN', '');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_ANNUAL_NGN', '   ');
+    expect(getTierPaystackPlanCode('manager', 'monthly')).toBeNull();
+    expect(getTierPaystackPlanCode('manager', 'annual')).toBeNull();
+  });
+
+  it('prices each tier per interval, in kobo', () => {
+    expect(getTierMinorUnit('manager', 'monthly')).toBe(35_000_00);
+    expect(getTierMinorUnit('manager', 'annual')).toBe(350_000_00);
+    expect(getTierMinorUnit('label', 'monthly')).toBe(80_000_00);
+    expect(getTierMinorUnit('label', 'annual')).toBe(800_000_00);
+  });
+});
+
+describe('planCodeMatchesSubscription', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('does not flag a Label renewal against the shared legacy plan code', () => {
+    // The reason this resolves FORWARD instead of reverse-mapping: Label reuses
+    // the legacy annual Plan, so a reverse lookup would report a mismatch on
+    // every Label renewal and fill the logs with a warning about our flagship.
+    vi.stubEnv('PAYSTACK_PLAN_ANNUAL_NGN', 'PLN_live_year');
+    expect(
+      planCodeMatchesSubscription({
+        code: 'PLN_live_year',
+        plan: 'label',
+        storedInterval: 'annual',
+      })
+    ).toBe(true);
+    // And it is interval-sensitive: the annual code on a monthly subscription
+    // IS a real mismatch worth logging.
+    vi.stubEnv('PAYSTACK_PLAN_MONTHLY_NGN', 'PLN_live_month');
+    expect(
+      planCodeMatchesSubscription({
+        code: 'PLN_live_year',
+        plan: 'label',
+        storedInterval: 'monthly',
+      })
+    ).toBe(false);
+  });
+
+  it('matches a legacy plan against either currency variant', () => {
+    vi.stubEnv('PAYSTACK_PLAN_ANNUAL_NGN', 'PLN_ngn');
+    vi.stubEnv('PAYSTACK_PLAN_ANNUAL_USD', 'PLN_usd');
+    expect(planCodeMatchesSubscription({ code: 'PLN_usd', plan: 'annual' })).toBe(true);
+    expect(planCodeMatchesSubscription({ code: 'PLN_other', plan: 'annual' })).toBe(false);
+  });
+
+  it('says nothing when it cannot judge, so a renewal is never blocked', () => {
+    // No incoming code, nothing configured, or an unrecognised plan: all must
+    // read as "no opinion" rather than as a mismatch.
+    expect(planCodeMatchesSubscription({ code: null, plan: 'annual' })).toBe(true);
+    expect(planCodeMatchesSubscription({ code: '  ', plan: 'annual' })).toBe(true);
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_ANNUAL_NGN', '');
+    expect(planCodeMatchesSubscription({ code: 'PLN_x', plan: 'manager' })).toBe(true);
+    expect(planCodeMatchesSubscription({ code: 'PLN_x', plan: 'access' })).toBe(true);
+  });
+});
+
+// ── What a checkout request resolves to ─────────────────────────────────────
+//
+// This decides which Paystack Plan a customer's card is charged against, and
+// for how long. The route it serves cannot be exercised from a test without
+// mocking Supabase and fetch, so the decision is pinned here instead.
+
+describe('resolveCheckoutPurchase', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const stubLive = () => {
+    vi.stubEnv('PAYSTACK_PLAN_MONTHLY_NGN', 'PLN_live_month');
+    vi.stubEnv('PAYSTACK_PLAN_ANNUAL_NGN', 'PLN_live_year');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_MONTHLY_NGN', 'PLN_mgr_month');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_ANNUAL_NGN', 'PLN_mgr_year');
+  };
+
+  it('resolves a tier purchase to its Plan, price and interval', () => {
+    stubLive();
+    expect(
+      resolveCheckoutPurchase({
+        plan: 'manager',
+        currency: 'NGN',
+        interval: 'annual',
+        pricingV2: true,
+      })
+    ).toEqual({
+      ok: true,
+      planId: 'manager',
+      planCode: 'PLN_mgr_year',
+      amountMinorUnit: 350_000_00,
+      interval: 'annual',
+    });
+  });
+
+  it('sends Label at the live Plans and records the interval it was sold as', () => {
+    stubLive();
+    const monthly = resolveCheckoutPurchase({
+      plan: 'label',
+      currency: 'NGN',
+      interval: 'monthly',
+      pricingV2: true,
+    });
+    const annual = resolveCheckoutPurchase({
+      plan: 'label',
+      currency: 'NGN',
+      interval: 'annual',
+      pricingV2: true,
+    });
+    expect(monthly).toMatchObject({
+      ok: true,
+      planCode: 'PLN_live_month',
+      amountMinorUnit: 80_000_00,
+      interval: 'monthly',
+    });
+    expect(annual).toMatchObject({
+      ok: true,
+      planCode: 'PLN_live_year',
+      amountMinorUnit: 800_000_00,
+      interval: 'annual',
+    });
+  });
+
+  it('records NO interval for a legacy purchase, whose id already carries it', () => {
+    stubLive();
+    expect(
+      resolveCheckoutPurchase({
+        plan: 'annual',
+        currency: 'NGN',
+        interval: undefined,
+        pricingV2: true,
+      })
+    ).toMatchObject({ ok: true, planId: 'annual', planCode: 'PLN_live_year', interval: null });
+  });
+
+  it('still accepts legacy ids with pricing v2 ON', () => {
+    // The live paywall posts these, so refusing them the moment the flag flips
+    // would break checkout for everyone.
+    stubLive();
+    expect(
+      resolveCheckoutPurchase({ plan: 'monthly', currency: 'NGN', interval: undefined, pricingV2: true })
+    ).toMatchObject({ ok: true, planId: 'monthly' });
+  });
+
+  it('rejects a tier outright with pricing v2 OFF', () => {
+    stubLive();
+    expect(
+      resolveCheckoutPurchase({
+        plan: 'manager',
+        currency: 'NGN',
+        interval: 'annual',
+        pricingV2: false,
+      })
+    ).toEqual({
+      ok: false,
+      status: 400,
+      error: 'plan must be "monthly", "annual", or "label".',
+    });
+  });
+
+  it('refuses enterprise with its own message, whatever the flag says', () => {
+    for (const pricingV2 of [true, false]) {
+      const result = resolveCheckoutPurchase({
+        plan: 'enterprise',
+        currency: 'NGN',
+        interval: 'annual',
+        pricingV2,
+      });
+      expect(result).toMatchObject({ ok: false, status: 400 });
+      expect(result.ok === false && result.error).toMatch(/quoted per contract/i);
+    }
+  });
+
+  it('requires an interval for a tier, and refuses a malformed one', () => {
+    stubLive();
+    for (const bogus of [undefined, null, '', 'yearly', 'ANNUAL', 3]) {
+      const result = resolveCheckoutPurchase({
+        plan: 'label',
+        currency: 'NGN',
+        interval: bogus,
+        pricingV2: true,
+      });
+      expect(result).toMatchObject({ ok: false, status: 400 });
+      expect(result.ok === false && result.error).toMatch(/interval must be/i);
+    }
+  });
+
+  it('refuses a tier in USD rather than half-attempting it', () => {
+    // There are no USD tier prices and no PAYSTACK_PLAN_*_USD var has ever been
+    // set, so getting one step further before failing would be worse.
+    stubLive();
+    const result = resolveCheckoutPurchase({
+      plan: 'label',
+      currency: 'USD',
+      interval: 'annual',
+      pricingV2: true,
+    });
+    expect(result).toMatchObject({ ok: false, status: 400 });
+    expect(result.ok === false && result.error).toMatch(/Naira/i);
+  });
+
+  it('reports an unconfigured Plan as a 500 rather than charging something else', () => {
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_ANNUAL_NGN', '');
+    const result = resolveCheckoutPurchase({
+      plan: 'manager',
+      currency: 'NGN',
+      interval: 'annual',
+      pricingV2: true,
+    });
+    expect(result).toMatchObject({ ok: false, status: 500 });
+    expect(result.ok === false && result.error).toMatch(/not configured/i);
+  });
+
+  it('answers the malformed request before the unconfigured one', () => {
+    // Error precedence: a caller must never be told "plan not configured" for a
+    // request that was invalid to begin with.
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_ANNUAL_NGN', '');
+    const result = resolveCheckoutPurchase({
+      plan: 'manager',
+      currency: 'NGN',
+      interval: 'quarterly',
+      pricingV2: true,
+    });
+    expect(result).toMatchObject({ ok: false, status: 400 });
   });
 });

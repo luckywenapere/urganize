@@ -5,9 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
-import { formatBillingDate } from '@/lib/billing-summary';
+import { describePlanName, formatBillingDate } from '@/lib/billing-summary';
 import { TRIAL_CARD_PLAN, TRIAL_DAYS } from '@/lib/trial-card';
-import { isBillingPlanId, getPlan } from '@urganize/pricing';
 import { LoadingMark, LoadingScreen } from '@urganize/ui';
 
 // Paystack post-checkout landing.
@@ -143,9 +142,12 @@ function PaymentCallbackContent() {
   }, [checkAuth, reference]);
 
   const isTrialCard = result.plan === TRIAL_CARD_PLAN;
-  // 'trial_card' is not a billing plan id, so the plan line naturally stays
+  // Shared with Settings rather than re-deriving here: that helper knows the
+  // pricing-v2 tier ids as well as the legacy ones, so a Manager or Label
+  // customer sees what they just bought instead of a blank line. 'trial_card'
+  // is not a plan id in either generation, so the plan line naturally stays
   // hidden for the trial variant.
-  const planLabel = isBillingPlanId(result.plan) ? getPlan(result.plan).label : null;
+  const planLabel = describePlanName(result.plan ?? null);
   const trialEndCopy = trialEndsAt ? formatBillingDate(trialEndsAt) : null;
 
   return (
