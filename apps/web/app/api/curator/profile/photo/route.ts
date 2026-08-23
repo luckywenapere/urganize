@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
 
   const mimeType = typeof body.mime_type === 'string' ? body.mime_type.trim() : '';
   if (!PHOTO_MIME_ALLOWLIST.includes(mimeType)) {
+    console.error('[curator-photo] rejected: mime', { mimeType, userId: auth.user.id });
     return NextResponse.json(
       { error: 'Photo must be a JPEG, PNG or WebP image.' },
       { status: 400 }
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'That file looks empty.' }, { status: 400 });
   }
   if (fileSize > PHOTO_SIZE_LIMIT) {
+    console.error('[curator-photo] rejected: too large', { fileSize, userId: auth.user.id });
     return NextResponse.json(
       { error: `Photo must be ${formatFileSize(PHOTO_SIZE_LIMIT)} or smaller.` },
       { status: 400 }
@@ -76,6 +78,9 @@ export async function POST(request: NextRequest) {
     .createSignedUploadUrl(storagePath);
 
   if (error || !data?.signedUrl) {
+    console.error('[curator-photo] could not sign upload:', error?.message, {
+      userId: auth.user.id,
+    });
     return NextResponse.json(
       { error: error?.message || 'Could not start the upload.' },
       { status: 500 }

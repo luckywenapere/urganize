@@ -10,7 +10,11 @@ import {
 } from '@/lib/asset-constants';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
-import { buildUploadFailureReport, type UploadStep } from '@/lib/upload-failure-report';
+import {
+  buildUploadFailureReport,
+  formatUploadFailureCode,
+  type UploadStep,
+} from '@/lib/upload-failure-report';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { getAccessToken } from './getAccessToken';
 import type { WorkspaceLogo } from './WorkspaceLogoSection';
@@ -306,7 +310,13 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
       setIdentityLogo(recordPayload.logo);
       setLogoMessage('Logo saved. Releases without cover art now show it automatically.');
     } catch (err) {
-      setLogoError(errorMessage(err, 'Could not upload logo.'));
+      // The code goes ON SCREEN, because that is the only channel that reaches
+      // us: the PostHog event below is inert unless NEXT_PUBLIC_POSTHOG_KEY is
+      // set, and a message the user cannot quote is a message we never see.
+      const code = formatUploadFailureCode({ surface: 'workspace_logo', step, status });
+      setLogoError(
+        `${errorMessage(err, 'Could not upload logo.')} If you report this, quote ${code}.`
+      );
       captureAnalyticsEvent(
         createPostHogEvent(
           'asset_upload_failed',

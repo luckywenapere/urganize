@@ -1424,6 +1424,30 @@ asserting a message full of both survives as `unknown`.
   the telemetry is what makes the next occurrence name itself. Check PostHog for
   `app_error_shown` and `asset_upload_failed` before assuming this closed it.
 
+**CORRECTION, same day: `NEXT_PUBLIC_POSTHOG_KEY` is NOT set in production, so
+every claim above about telemetry was wrong when written.** `captureAnalyticsEvent`
+sends to PostHog and otherwise only appends to the USER'S OWN localStorage
+(`persistAnalyticsEvent`), which nobody here can read — so `app_error_shown` has
+been recording nothing for as long as it has existed, and `asset_upload_failed`
+shipped inert. Do not treat either as a diagnostic channel until that env var is
+set on the `Web` project.
+
+What replaced it, and why this shape: **the failure code goes ON SCREEN**
+(`formatUploadFailureCode` in `lib/upload-failure-report.ts`), appended to the
+message the user already sees — `LOGO-3-400`, `PHOTO-2-NET`. It follows the idiom
+`app/error.tsx` already uses for a crash ("If you report this, quote <digest>"),
+needs no configuration, and needs nothing of the user beyond the screenshot they
+were already sending. `SURFACE-STEP-STATUS`, where NET means no response at all —
+a different diagnosis from any HTTP status and the likeliest on a weak link. It
+carries no file name and no URL for the same reason `classifyUploadFailure` does
+not: a string designed to be pasted into a chat has to be safe to paste into a
+chat.
+
+Second channel, for what the user never sees: the three upload routes now
+`console.error` every rejection with the user id, so **Vercel runtime logs** carry
+steps 1 and 3 with no third party involved. Step 2 is browser→Storage directly and
+cannot be logged server-side — which is exactly why the on-screen code exists.
+
 ---
 
 ## Settings became four tabs (2026-08-13, v0.51.0)

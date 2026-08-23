@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
 
   const mimeType = typeof body.mime_type === 'string' ? body.mime_type.trim() : '';
   if (!LOGO_MIME_ALLOWLIST.includes(mimeType)) {
+    console.error('[workspace-logo] rejected: mime', { mimeType, userId: auth.user.id });
     return NextResponse.json(
       { error: `Logo must be an image. Allowed: ${LOGO_MIME_ALLOWLIST.join(', ')}.` },
       { status: 400 }
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
     );
   }
   if (fileSize > LOGO_SIZE_LIMIT) {
+    console.error('[workspace-logo] rejected: too large', { fileSize, userId: auth.user.id });
     return NextResponse.json(
       { error: `Logo must be ${formatFileSize(LOGO_SIZE_LIMIT)} or smaller.` },
       { status: 400 }
@@ -85,6 +87,7 @@ export async function POST(request: NextRequest) {
     // different resolvers.
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     if (!access.primaryWorkspaceId) {
+      console.error('[workspace-logo] no workspace for user', { userId: auth.user.id });
       return NextResponse.json({ error: 'No workspace found.' }, { status: 404 });
     }
     const storagePath = buildWorkspaceLogoStoragePath(access.primaryWorkspaceId, fileName);
@@ -94,6 +97,9 @@ export async function POST(request: NextRequest) {
       .createSignedUploadUrl(storagePath);
 
     if (error || !data?.signedUrl) {
+      console.error('[workspace-logo] could not sign upload:', error?.message, {
+        userId: auth.user.id,
+      });
       return NextResponse.json(
         { error: error?.message || 'Could not create signed upload URL.' },
         { status: 500 }
@@ -106,6 +112,11 @@ export async function POST(request: NextRequest) {
       expires_in: ASSET_UPLOAD_URL_TTL_SECONDS,
     });
   } catch (error) {
+    console.error(
+      '[workspace-logo] upload-url threw:',
+      error instanceof Error ? error.message : error,
+      { userId: auth.user.id }
+    );
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Could not prepare logo upload.' },
       { status: 500 }
