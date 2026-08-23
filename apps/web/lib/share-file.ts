@@ -103,3 +103,72 @@ export async function shareOrDownloadImage({
   downloadBlob(await response.blob(), fileName);
   return 'downloaded';
 }
+
+/**
+ * Hand the user a generated TEXT file (a data export) whose bytes we already
+ * hold, rather than a remote image URL.
+ *
+ * Different enough from shareOrDownloadImage to need its own entry point, for
+ * one reason worth stating: an export is fetched from our own API with an
+ * Authorization header, so there is no URL a browser or a system browser could
+ * usefully be pointed at. The bytes arrive in memory and have to be saved from
+ * there.
+ *
+ * The three paths mirror the image helper, and the middle one is the honest
+ * failure this feature has to have:
+ *
+ *  1. Native with Share and Filesystem present — write to the cache directory
+ *     and open the share sheet, so the file can go to Files, Drive or a mail.
+ *  2. Native WITHOUT those plugins. A webview cannot download and there is no
+ *     URL to open, so this genuinely cannot save a file. It returns
+ *     'unsupported' rather than pretending: the caller tells the user to use
+ *     the web app. Silently doing nothing on a "get my data out" button would
+ *     be the worst possible outcome for a trust feature.
+ *  3. Web — a blob and an object URL, the only thing that actually saves.
+ */
+export type SaveTextOutcome = ShareOutcome | 'unsupported';
+
+export async function shareOrDownloadTextFile({
+  contents,
+  fileName,
+  mimeType,
+  title,
+}: {
+  contents: string;
+  fileName: string;
+  mimeType: string;
+  title?: string;
+}): Promise<SaveTextOutcome> {
+  const native = isNativePlatform();
+  const canShareNatively =
+    native && Capacitor.isPluginAvailable('Share') && Capacitor.isPluginAvailable('Filesystem');
+
+  if (canShareNatively) {
+    try {
+      const [{ Share }, { Filesystem, Directory, Encoding }] = await Promise.all([
+        import('@capacitor/share'),
+        import('@capacitor/filesystem'),
+      ]);
+
+      const written = await Filesystem.writeFile({
+        path: fileName,
+        data: contents,
+        directory: Directory.Cache,
+        encoding: Encoding.UTF8,
+      });
+
+      await Share.share({ title, files: [written.uri] });
+      return 'shared';
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (CANCELLED_PATTERN.test(message)) return 'cancelled';
+      console.error('[share] native export share failed', error);
+      return 'unsupported';
+    }
+  }
+
+  if (native) return 'unsupported';
+
+  downloadBlob(new Blob([contents], { type: mimeType }), fileName);
+  return 'downloaded';
+}

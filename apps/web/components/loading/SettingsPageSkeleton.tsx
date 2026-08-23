@@ -17,6 +17,7 @@ const WORKSPACE_FEATURE_ENABLED =
 // both flags are on, same gate as the identity card itself.
 const IDENTITY_PANEL_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' && WORKSPACE_FEATURE_ENABLED;
+const DATA_EXPORT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DATA_EXPORT === 'true';
 
 // The "After tasks" check-in row, same gate the real row reads.
 const TASK_OUTCOMES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_OUTCOMES === 'true';
@@ -112,6 +113,9 @@ export function SettingsPageSkeleton({
               { key: 'appearance', height: 'h-24', show: true },
               { key: 'security', height: 'h-40', show: true },
               { key: 'session', height: 'h-20', show: true },
+              // Flag-known, so unlike Admin this one CAN be reserved: two
+              // lines of copy plus a row of two buttons.
+              { key: 'data-export', height: 'h-28', show: DATA_EXPORT_ENABLED },
               { key: 'delete', height: 'h-28', show: true },
             ];
 
