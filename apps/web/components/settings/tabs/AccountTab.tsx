@@ -7,6 +7,7 @@ import { AppearanceSection } from '../AppearanceSection';
 import { SecuritySection } from '../SecuritySection';
 import { AdminSection } from '../AdminSection';
 import { SessionSection } from '../SessionSection';
+import { DataExportSection } from '../DataExportSection';
 import { DeleteAccountSection } from '../DeleteAccountSection';
 
 /**
@@ -39,6 +40,12 @@ import { DeleteAccountSection } from '../DeleteAccountSection';
  * nature. It exists here specifically because this is the ONLY mobile
  * surface Admin is reachable from — the desktop identity card's own Admin
  * link is `hidden lg:block` with no mobile equivalent anywhere else.
+ *
+ * DataExportSection (2026-08-23) sits directly above DeleteAccountSection, and
+ * that adjacency is the point: they are the same conversation in the right
+ * order. The export covers the same scope deletion destroys, so a user standing
+ * at the delete box has already been offered everything they are about to lose.
+ * It renders nothing when NEXT_PUBLIC_FEATURE_DATA_EXPORT is off.
  */
 export function AccountTab() {
   return (
@@ -50,6 +57,7 @@ export function AccountTab() {
       <SecuritySection />
       <AdminSection />
       <SessionSection />
+      <DataExportSection />
       <DeleteAccountSection />
     </div>
   );
