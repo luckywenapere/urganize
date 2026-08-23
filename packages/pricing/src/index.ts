@@ -99,16 +99,17 @@ export const SALES_WHATSAPP_URL = 'https://wa.me/2347067367057';
 //   - Label: untouched — ₦800,000 / $1,250/yr, and contactSales so no
 //     figure is displayed either way.
 //
-// OPERATIONAL FOLLOW-UP REQUIRED — this file is the DISPLAY price only.
-// The live Paystack Plan objects behind PAYSTACK_PLAN_MONTHLY_NGN /
-// PAYSTACK_PLAN_ANNUAL_NGN still bill ₦150,000 / ₦1,500,000. Until two new
-// Plan objects are created at ₦80,000 / ₦800,000 and those env vars are
-// repointed in Vercel, checkout will advertise ₦80,000 and charge ₦150,000.
-// This exact gap has now come up FOUR times (2026-07-14 shipped constants
-// with no Plans; 2026-07-15 closed it; 2026-08-16 reopened it; this pass
-// inherits it) — treat it as the default follow-up on any reprice, and note
-// that switching the hard paywall on before closing it means the first team
-// to pay is overcharged by ~2x.
+// OPERATIONAL STATUS (updated 2026-08-22): CLOSED for these two plans.
+// New Plan objects were minted at ₦80,000 / ₦800,000 and
+// PAYSTACK_PLAN_MONTHLY_NGN / PAYSTACK_PLAN_ANNUAL_NGN repointed in Vercel
+// BEFORE NEXT_PUBLIC_FEATURE_HARD_PAYWALL was switched on, so checkout now
+// charges what it advertises. This is the first pass in four that did not
+// ship the gap (2026-07-14 shipped constants with no Plans; 2026-07-15
+// closed it; 2026-08-16 reopened it; 2026-08-21 inherited it).
+//
+// The gap is OPEN AGAIN for the Manager tier below, which has no Plan
+// object yet — see the PRICING TIERS block. Treat minting-before-flipping
+// as the default order of operations on any reprice or new tier.
 //
 // Historical (2026-07-15 full retier, now superseded): Monthly went
 // ₦17,000→₦150,000 / $26→$100 and Annual ₦170,000→₦1,500,000 / $260→$1,000,
@@ -197,4 +198,146 @@ export function formatPlanCyclePrice(
   const price = getPlanPrice(id, currency);
   const suffix = id === 'monthly' ? '/mo' : '/yr';
   return `${formatPlanPrice(price)}${suffix}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRICING TIERS (v2) — the tier × interval matrix
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// ADDITIVE, and deliberately so. Everything above stays exactly as it is
+// because the LIVE paywall reads it: /locked and TeamWall call getPlan() at
+// render time and NEXT_PUBLIC_FEATURE_HARD_PAYWALL is on in production, so
+// editing BILLING_PLANS would change what a real checkout advertises. The
+// switch to the tiers below is gated by NEXT_PUBLIC_FEATURE_PRICING_V2 in
+// apps/web; with that flag off, nothing here reaches a user.
+//
+// The shape change is the point. Above, "monthly" and "annual" are two
+// PLANS. Here, plan and interval are two dimensions: three tiers, each
+// billable monthly or annually. A tier is what you buy; an interval is how
+// often you pay for it.
+//
+// LABEL'S PRICES ARE DELIBERATELY IDENTICAL TO THE LIVE monthly/annual
+// AMOUNTS (₦80,000 / ₦800,000), and that is what makes this migration cheap:
+//   - monthly → label @ monthly, annual → label @ annual, same figures
+//     against the SAME Paystack Plan objects. No existing or in-flight
+//     subscriber changes price.
+//   - Only MANAGER needs new Plan objects minted. See the ops note below.
+//   - Today's `label` tier above is contactSales and unreachable (it is
+//     absent from subscriptions_plan_check and PAYSTACK_PLAN_LABEL_* is
+//     unset, so checkout 500s before the CHECK could reject it). It maps
+//     onto `enterprise` here, which is the same offer under a clearer name.
+// A unit test pins Label's amounts to BILLING_PLANS' so the two cannot drift
+// apart while they share Plan objects.
+//
+// NGN only, matching the launch decision. USD is absent rather than zero:
+// USD checkout has never worked (the Paystack account offers NGN only in
+// plan creation), and carrying a USD figure here is how the currency toggle
+// ended up advertising two prices that were not the same offer.
+
+export type PricingTierId = 'manager' | 'label' | 'enterprise';
+export type BillingInterval = 'monthly' | 'annual';
+
+export type TierPrice = {
+  /** Whole naira, for display copy. */
+  amount: number;
+  /** Kobo, for Paystack transactions and webhook math. */
+  minorUnit: number;
+};
+
+export type PricingTierDefinition = {
+  id: PricingTierId;
+  label: string;
+  /** One line on who this is for — the pricing card's subtitle. */
+  audience: string;
+  /** NGN prices per interval. Absent entirely on a sales-led tier, so a
+   *  caller cannot accidentally render a price we never quoted. */
+  prices?: Record<BillingInterval, TierPrice>;
+  /** Sales-led: no price displayed, no self-serve checkout. Both surfaces
+   *  render a "Let's talk" CTA to SALES_CONTACT_EMAIL instead. */
+  contactSales?: boolean;
+  /** Visually elevated on the pricing page and carries the "Most teams
+   *  choose this" marker. Exactly one tier may set this. */
+  recommended?: boolean;
+};
+
+export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
+  manager: {
+    id: 'manager',
+    label: 'Manager',
+    audience: 'For an independent manager running one or two artists.',
+    prices: {
+      monthly: { amount: 35_000, minorUnit: 35_000_00 },
+      annual: { amount: 350_000, minorUnit: 350_000_00 },
+    },
+  },
+  label: {
+    id: 'label',
+    label: 'Label',
+    audience: 'For a label or a team running a roster.',
+    prices: {
+      // Identical to BILLING_PLANS.monthly / .annual on purpose — see the
+      // block comment above. Pinned by a test.
+      monthly: { amount: 80_000, minorUnit: 80_000_00 },
+      annual: { amount: 800_000, minorUnit: 800_000_00 },
+    },
+    recommended: true,
+  },
+  enterprise: {
+    id: 'enterprise',
+    label: 'Enterprise',
+    audience: 'For distributors and groups operating several labels.',
+    // No prices at all: an enterprise deal is quoted per contract and
+    // invoiced by hand. There is no Paystack plan code for it.
+    contactSales: true,
+  },
+};
+
+/** Card order on the pricing page: entry point, the tier we sell, sales-led. */
+export const PRICING_TIER_ORDER: readonly PricingTierId[] = [
+  'manager',
+  'label',
+  'enterprise',
+] as const;
+
+/** Annual is billed as ten months, so two are free. Used for the saving copy,
+ *  which the spec requires be phrased as "2 months free" and never as a
+ *  percentage. */
+export const ANNUAL_MONTHS_BILLED = 10;
+
+export function getTier(id: PricingTierId): PricingTierDefinition {
+  return PRICING_TIERS[id];
+}
+
+export function isPricingTierId(value: unknown): value is PricingTierId {
+  return value === 'manager' || value === 'label' || value === 'enterprise';
+}
+
+export function isBillingInterval(value: unknown): value is BillingInterval {
+  return value === 'monthly' || value === 'annual';
+}
+
+/** Null for a sales-led tier — callers must render "Let's talk", not ₦0. */
+export function getTierPrice(
+  id: PricingTierId,
+  interval: BillingInterval
+): TierPrice | null {
+  return PRICING_TIERS[id].prices?.[interval] ?? null;
+}
+
+/** Formats a tier's price with its cycle suffix, e.g. "₦80,000/mo".
+ *  Deliberately NOT formatPlanCyclePrice, which derives the suffix from
+ *  `id === 'monthly'` — correct for the legacy plans where the id IS the
+ *  interval, and silently wrong here where it never is. */
+export function formatTierCyclePrice(
+  id: PricingTierId,
+  interval: BillingInterval
+): string | null {
+  const price = getTierPrice(id, interval);
+  if (!price) return null;
+  const formatted = new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    maximumFractionDigits: 0,
+  }).format(price.amount);
+  return `${formatted}${interval === 'monthly' ? '/mo' : '/yr'}`;
 }
