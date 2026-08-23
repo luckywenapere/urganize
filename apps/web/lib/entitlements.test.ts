@@ -4,7 +4,9 @@ import {
   BILLING_PLAN_ORDER,
   PRICING_TIERS,
   PRICING_TIER_ORDER,
+  annualSavingCopy,
   getTierPrice,
+  tierHighlights,
 } from '@urganize/pricing';
 import { ADMIN_ASSIGNABLE_PLANS } from './admin-teams';
 import type { PricingTierId } from '@urganize/pricing';
@@ -438,5 +440,95 @@ describe('no plan the product can write today lands on a capped tier', () => {
     const tier = resolveTeamTier({ state: 'paid', ownerPlan: 'manager' });
     expect(tier).toBe('manager');
     expect(checkLimit({ tier, key: 'seats', current: 4 }).allowed).toBe(false);
+  });
+});
+
+// ── The published numbers and the enforced numbers are one number ────────────
+//
+// The marketing site renders tier ceilings and cannot import from this app, so
+// before 2026-08-24 a public page would have had to carry its own copy of every
+// figure. These tests exist to stop that copy coming back: the ceilings live in
+// @urganize/pricing and this map reads them.
+
+describe('countable ceilings are derived, not duplicated', () => {
+  it('reads every ceiling straight off the shared tier limits', () => {
+    for (const tier of PRICING_TIER_ORDER) {
+      const limits = PRICING_TIERS[tier].limits;
+      expect(ENTITLEMENTS[tier].seats).toBe(limits.seats);
+      expect(ENTITLEMENTS[tier].active_releases).toBe(limits.activeReleases);
+      expect(ENTITLEMENTS[tier].urgans_monthly_actions).toBe(limits.urgansMonthlyActions);
+    }
+  });
+
+  it('agrees with UNLIMITED on what "no ceiling" looks like', () => {
+    // Both sides use null. If one ever moved to Infinity or 0 the comparison
+    // above would still pass while isWithinLimit silently changed meaning.
+    expect(UNLIMITED).toBeNull();
+    expect(PRICING_TIERS.label.limits.seats).toBeNull();
+  });
+});
+
+describe('tierHighlights', () => {
+  it('states each ceiling using the enforced number, never a written-in one', () => {
+    const managerLimits = PRICING_TIERS.manager.limits;
+    const lines = tierHighlights('manager');
+    // Asserted against the limit rather than against "4", so re-cutting the
+    // tier moves the test with the product instead of breaking it.
+    expect(lines.some((line) => line.includes(String(managerLimits.seats)))).toBe(true);
+    expect(lines.some((line) => line.includes(String(managerLimits.activeReleases)))).toBe(true);
+    expect(
+      lines.some((line) => line.includes(String(managerLimits.urgansMonthlyActions)))
+    ).toBe(true);
+  });
+
+  it('says unlimited where there is no ceiling, and quotes no number', () => {
+    const lines = tierHighlights('label');
+    const ceilingLines = lines.slice(0, 3);
+    for (const line of ceilingLines) {
+      expect(line.toLowerCase()).toContain('unlimited');
+      expect(line).not.toMatch(/\d/);
+    }
+  });
+
+  it('includes every perk after the ceilings', () => {
+    for (const tier of PRICING_TIER_ORDER) {
+      const lines = tierHighlights(tier);
+      for (const perk of PRICING_TIERS[tier].perks) {
+        expect(lines).toContain(perk);
+      }
+    }
+  });
+});
+
+describe('public tier copy tells the truth', () => {
+  // Founder call, 2026-08-24: Enterprise may be sold on SSO and sub-teams in a
+  // CONTRACT, but a public page cannot claim them. Both are declared in the map
+  // above and read by nothing, so this is enforced structurally rather than
+  // left to a reviewer noticing.
+  it('never advertises an unbuilt feature', () => {
+    expect(ENTITLEMENTS.enterprise.sso).toBe(true);
+    expect(ENTITLEMENTS.enterprise.sub_teams).toBe(true);
+    const enterpriseCopy = tierHighlights('enterprise').join(' ').toLowerCase();
+    expect(enterpriseCopy).not.toContain('sso');
+    expect(enterpriseCopy).not.toContain('single sign');
+    expect(enterpriseCopy).not.toContain('sub-team');
+    expect(enterpriseCopy).not.toContain('sub team');
+  });
+
+  it('phrases the annual saving in months and never as a percentage', () => {
+    expect(annualSavingCopy('manager')).toBe('2 months free');
+    expect(annualSavingCopy('label')).toBe('2 months free');
+    // No annual price to save against.
+    expect(annualSavingCopy('enterprise')).toBeNull();
+  });
+
+  it('carries no percentage and no em dash anywhere in the tier copy', () => {
+    // The pricing spec forbids a percentage saving, and the marketing copy
+    // rules forbid em dashes in house copy.
+    for (const tier of PRICING_TIER_ORDER) {
+      const copy = [PRICING_TIERS[tier].audience, ...tierHighlights(tier)].join(' ');
+      expect(copy).not.toContain('%');
+      expect(copy).not.toContain('\u2014');
+    }
   });
 });

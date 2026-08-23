@@ -21,7 +21,7 @@
 // withheld to manufacture an upsell, because the founder is personally in the
 // room when a buyer asks why.
 
-import { isPricingTierId } from '@urganize/pricing';
+import { PRICING_TIERS, isPricingTierId } from '@urganize/pricing';
 import type { PricingTierId } from '@urganize/pricing';
 
 /** Feature switch for the tier model. Function form (the isHardPaywallEnabled /
@@ -94,13 +94,26 @@ export type Entitlements = {
 // principle 6 (do not build enterprise features until the problem is real):
 // the map records the offer, it does not authorise the build.
 
+// The three COUNTABLE ceilings come from @urganize/pricing rather than being
+// written here, and that is the point: the marketing site renders those numbers
+// and cannot import from this app, so a literal here would be a second copy of
+// a figure a public page already quotes. One number, read by the page that
+// advertises it and by the route that enforces it, is the only arrangement in
+// which a published limit cannot drift from a real one — the failure this repo
+// has shipped repeatedly with prices.
+//
+// The BOOLEANS stay written out below. They gate behaviour rather than being
+// numbers anyone quotes, and keeping the decision logic in this file is what
+// keeps it inside vitest's collection glob.
+const limitsOf = (tier: PricingTierId) => PRICING_TIERS[tier].limits;
+
 export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
   manager: {
-    seats: 4,
-    active_releases: 3,
+    seats: limitsOf('manager').seats,
+    active_releases: limitsOf('manager').activeReleases,
     rollout_template_default: true,
     rollout_template_custom_save: false,
-    urgans_monthly_actions: 150,
+    urgans_monthly_actions: limitsOf('manager').urgansMonthlyActions,
     urgans_priority: false,
     file_attachments: true,
     data_export: true,
@@ -110,11 +123,11 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sub_teams: false,
   },
   label: {
-    seats: UNLIMITED,
-    active_releases: UNLIMITED,
+    seats: limitsOf('label').seats,
+    active_releases: limitsOf('label').activeReleases,
     rollout_template_default: true,
     rollout_template_custom_save: true,
-    urgans_monthly_actions: UNLIMITED,
+    urgans_monthly_actions: limitsOf('label').urgansMonthlyActions,
     urgans_priority: false,
     file_attachments: true,
     data_export: true,
@@ -124,11 +137,11 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sub_teams: false,
   },
   enterprise: {
-    seats: UNLIMITED,
-    active_releases: UNLIMITED,
+    seats: limitsOf('enterprise').seats,
+    active_releases: limitsOf('enterprise').activeReleases,
     rollout_template_default: true,
     rollout_template_custom_save: true,
-    urgans_monthly_actions: UNLIMITED,
+    urgans_monthly_actions: limitsOf('enterprise').urgansMonthlyActions,
     urgans_priority: true,
     file_attachments: true,
     data_export: true,
@@ -260,11 +273,9 @@ export type LimitVerdict =
       upgradeTo: PricingTierId;
     };
 
-const TIER_LABEL: Record<PricingTierId, string> = {
-  manager: 'Manager',
-  label: 'Label',
-  enterprise: 'Enterprise',
-};
+/** Read from the package so the name in a limit message is the same string the
+ *  pricing page and Settings show. It used to be a third hand-written copy. */
+const tierLabel = (tier: PricingTierId): string => PRICING_TIERS[tier].label;
 
 /** Copy for a limit that has been reached.
  *
@@ -309,7 +320,7 @@ export function checkLimit(input: {
     key: input.key,
     limit: numericLimit,
     current: input.current,
-    message: limitMessage(input.key, numericLimit, TIER_LABEL[input.tier]),
+    message: limitMessage(input.key, numericLimit, tierLabel(input.tier)),
     upgradeTo: 'label',
   };
 }

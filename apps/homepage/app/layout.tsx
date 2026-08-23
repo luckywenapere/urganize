@@ -119,7 +119,11 @@ const softwareApplicationSchema = {
   "offers": {
     "@type": "Offer",
     "url": `${SITE_URL}/pricing`,
-    "priceCurrency": "USD"
+    // NGN, not USD. Every price Urganize actually charges is in Naira: the
+    // pricing tiers carry NGN amounts only, the Paystack account offers NGN
+    // alone in plan creation, and USD checkout has never worked. This said USD
+    // from the day it was written (corrected 2026-08-24).
+    "priceCurrency": "NGN"
   }
 } as const;
 
