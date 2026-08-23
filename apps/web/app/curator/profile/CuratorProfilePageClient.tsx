@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Camera, Check } from 'lucide-react';
 import { CuratorShell } from '@/components/curator/CuratorShell';
-import { CuratorProfileSkeleton } from '@/components/loading/CuratorSkeleton';
+import { CuratorLoadError } from '@/components/curator/CuratorLoadError';
 import { useCuratorStore } from '@/stores/useCuratorStore';
 import { supabase } from '@/lib/supabase/client';
 import { MAX_CURATOR_BIO_LENGTH, MAX_CURATOR_DISPLAY_NAME_LENGTH } from '@/lib/pitching';
@@ -28,37 +28,61 @@ const initialsOf = (name: string): string =>
 export function CuratorProfilePageClient() {
   const profile = useCuratorStore((state) => state.profile);
   const isLoading = useCuratorStore((state) => state.isLoadingProfile);
+  const loadError = useCuratorStore((state) => state.profileError);
   const loadProfile = useCuratorStore((state) => state.loadProfile);
   const saveProfile = useCuratorStore((state) => state.saveProfile);
 
-  const [displayName, setDisplayName] = useState('');
-  const [bio, setBio] = useState('');
+  /**
+   * Edits, as DRAFTS over the loaded profile: null means "not edited", so the
+   * field shows whatever the server has.
+   *
+   * Deliberately derived rather than seeded by an effect, which is what this
+   * used to do. Two problems that removes by construction:
+   *
+   *  - the form now renders BEFORE the profile arrives (so the page is readable
+   *    on a weak connection), and a seeding effect would overwrite whatever the
+   *    curator had already typed when the load finally landed;
+   *  - the save can send ONLY edited fields. Sending both unconditionally would
+   *    wipe an existing bio with '' whenever someone edits just their name
+   *    before the load lands. The PATCH route reads `'bio' in payload`, so an
+   *    omitted field is genuinely left alone.
+   *
+   * It also drops an effect that the react-hooks/set-state-in-effect rule flags,
+   * rather than suppressing it.
+   */
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [bioDraft, setBioDraft] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
   const [savedAt, setSavedAt] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Tracks whether the form has been seeded, so a background refresh cannot
-  // overwrite what the curator is currently typing.
-  const seededRef = useRef(false);
+
+  const displayName = nameDraft ?? profile?.displayName ?? '';
+  const bio = bioDraft ?? profile?.bio ?? '';
+  const hasEdits = nameDraft !== null || bioDraft !== null;
 
   useEffect(() => {
     void loadProfile();
   }, [loadProfile]);
 
-  useEffect(() => {
-    if (!profile || seededRef.current) return;
-    seededRef.current = true;
-    setDisplayName(profile.displayName);
-    setBio(profile.bio);
-  }, [profile]);
-
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();
+    // Enter in a text input submits the form even while the Save button is
+    // disabled, so the no-edits case has to be refused here too — otherwise it
+    // sends an empty patch and the route answers "Nothing to save.", which
+    // reads like a failure for someone who changed nothing.
+    if (!hasEdits) return;
     setError('');
     setIsSaving(true);
     try {
-      await saveProfile({ displayName: displayName.trim(), bio: bio.trim() });
+      await saveProfile({
+        ...(nameDraft !== null ? { displayName: nameDraft.trim() } : {}),
+        ...(bioDraft !== null ? { bio: bioDraft.trim() } : {}),
+      });
+      // Clear the drafts so both fields track the saved profile from here.
+      setNameDraft(null);
+      setBioDraft(null);
       setSavedAt(Date.now());
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Could not save your profile.');
@@ -134,8 +158,23 @@ export function CuratorProfilePageClient() {
 
   return (
     <CuratorShell>
-      {isLoading && !profile ? (
-        <CuratorProfileSkeleton />
+      {loadError && !profile ? (
+        // Nothing loaded, so there is nothing to edit: saving from a blank form
+        // here would either fail again or overwrite a real name with an empty
+        // one. Show the reason and a retry instead.
+        <div className="space-y-6">
+          <header className="space-y-2">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
+              Your profile
+            </p>
+            <h1 className="font-display text-2xl text-content-primary">Profile</h1>
+          </header>
+          <CuratorLoadError
+            message={loadError}
+            isRetrying={isLoading}
+            onRetry={() => void loadProfile({ force: true })}
+          />
+        </div>
       ) : (
         <div className="space-y-6">
           <header className="space-y-2">
@@ -147,6 +186,32 @@ export function CuratorProfilePageClient() {
               Artist teams see this beside every playlist you own.
             </p>
           </header>
+
+          {/* A line, not a full-page skeleton.
+              This page deliberately has NO `isLoading` gate around the form, so
+              its real markup — labels, inputs, the save control — is in the
+              server HTML and readable before any JavaScript arrives. That is
+              the /auth precedent (see CLAUDE.md, "The front door is
+              server-rendered"): a curator on weak mobile data used to get a
+              skeleton and nothing else. Re-adding a skeleton gate here would
+              silently undo it.
+              Safe because the form no longer depends on the load having
+              finished: the seed effect leaves edited fields alone, and the save
+              sends only edited fields, so nothing gets clobbered either way. */}
+          {isLoading && !profile ? (
+            <p className="text-xs text-content-tertiary" role="status">
+              Loading your details…
+            </p>
+          ) : null}
+
+          {loadError ? (
+            <CuratorLoadError
+              message={loadError}
+              variant="banner"
+              isRetrying={isLoading}
+              onRetry={() => void loadProfile({ force: true })}
+            />
+          ) : null}
 
           <form
             onSubmit={handleSave}
@@ -165,7 +230,7 @@ export function CuratorProfilePageClient() {
                   />
                 ) : (
                   <span className="flex h-full w-full items-center justify-center font-display text-lg text-content-tertiary">
-                    {initialsOf(displayName || profile?.displayName || '')}
+                    {initialsOf(displayName)}
                   </span>
                 )}
               </div>
@@ -211,7 +276,7 @@ export function CuratorProfilePageClient() {
                 className={inputClass}
                 value={displayName}
                 maxLength={MAX_CURATOR_DISPLAY_NAME_LENGTH}
-                onChange={(event) => setDisplayName(event.target.value)}
+                onChange={(event) => setNameDraft(event.target.value)}
                 required
               />
             </div>
@@ -225,7 +290,7 @@ export function CuratorProfilePageClient() {
                 rows={4}
                 value={bio}
                 maxLength={MAX_CURATOR_BIO_LENGTH}
-                onChange={(event) => setBio(event.target.value)}
+                onChange={(event) => setBioDraft(event.target.value)}
                 placeholder="What you look for. How often you refresh your playlists."
                 className="w-full rounded-xl border border-stroke-default bg-bg-base p-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
               />
@@ -243,7 +308,7 @@ export function CuratorProfilePageClient() {
             <div className="flex items-center gap-3">
               <button
                 type="submit"
-                disabled={busy || !displayName.trim()}
+                disabled={busy || !hasEdits || !displayName.trim()}
                 className="inline-flex h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:opacity-50"
               >
                 {isSaving ? 'Saving…' : 'Save profile'}

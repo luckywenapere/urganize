@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Inbox } from 'lucide-react';
 import { CuratorShell } from '@/components/curator/CuratorShell';
 import { CuratorInboxSkeleton } from '@/components/loading/CuratorSkeleton';
+import { CuratorLoadError } from '@/components/curator/CuratorLoadError';
 import { useCuratorStore } from '@/stores/useCuratorStore';
 import {
   MAX_PITCH_REPLY_LENGTH,
@@ -191,6 +192,7 @@ function PitchCard({ pitch }: { pitch: CuratorPitch }) {
 export function CuratorInboxPageClient() {
   const pitches = useCuratorStore((state) => state.pitches);
   const isLoading = useCuratorStore((state) => state.isLoadingPitches);
+  const loadError = useCuratorStore((state) => state.pitchesError);
   const hydrated = useCuratorStore((state) => state.hydrated);
   const loadPitches = useCuratorStore((state) => state.loadPitches);
   const [filter, setFilter] = useState<FilterKey>('waiting');
@@ -213,9 +215,7 @@ export function CuratorInboxPageClient() {
 
   return (
     <CuratorShell>
-      {isLoading && !hydrated ? (
-        <CuratorInboxSkeleton />
-      ) : (
+      {(
         <div className="space-y-6">
           <header className="space-y-2">
             <p className="text-[11px] uppercase tracking-[0.16em] text-content-tertiary">Inbox</p>
@@ -226,6 +226,18 @@ export function CuratorInboxPageClient() {
                 : 'Nothing waiting on you right now.'}
             </p>
           </header>
+
+          {/* A banner, not a replacement: an empty inbox is a legitimate state
+              for a new curator, so the list keeps rendering its own empty state
+              and this explains why it may be incomplete. */}
+          {loadError ? (
+            <CuratorLoadError
+              message={loadError}
+              variant="banner"
+              isRetrying={isLoading}
+              onRetry={() => void loadPitches({ force: true })}
+            />
+          ) : null}
 
           <div className="flex gap-2">
             {FILTERS.map((entry) => (
@@ -245,7 +257,17 @@ export function CuratorInboxPageClient() {
             ))}
           </div>
 
-          {visible.length === 0 ? (
+          {/* The LIST waits, the page around it does not.
+              Header and filters are real content and belong in the server HTML
+              so this page is legible before its JavaScript lands (the /auth
+              precedent, see CLAUDE.md). The list itself is gated because its
+              empty state makes a CLAIM — "No pitches yet" — that we cannot
+              honestly make before the load resolves. Do not swap this for a
+              page-level skeleton gate; that is what made a curator on weak data
+              see nothing at all. */}
+          {isLoading && !hydrated ? (
+            <CuratorInboxSkeleton />
+          ) : visible.length === 0 ? (
             <div className="rounded-xl border border-stroke-default bg-bg-surface p-8 text-center">
               <div className="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-bg-elevated text-content-tertiary">
                 <Inbox className="h-5 w-5" />

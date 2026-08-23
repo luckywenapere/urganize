@@ -7,7 +7,11 @@ import {
   getAuthenticatedUser,
   isPitchingFeatureEnabled,
 } from '../../_shared';
-import { looksLikeCuratorInviteCode, resolveCuratorInviteState } from '@/lib/curator-invites';
+import {
+  canResumeCuratorInviteClaim,
+  looksLikeCuratorInviteCode,
+  resolveCuratorInviteState,
+} from '@/lib/curator-invites';
 import { MAX_CURATOR_DISPLAY_NAME_LENGTH } from '@/lib/pitching';
 
 // Turning an invite link into a curator account.
@@ -30,6 +34,12 @@ import { MAX_CURATOR_DISPLAY_NAME_LENGTH } from '@/lib/pitching';
 //      behind a role that cannot see them, so that write is what we skip.
 
 const INVITE_COLUMNS = 'id,code,expires_at,revoked_at,used_at';
+
+// The POST needs one more column than the public GET: whether THIS user is the
+// one who already consumed the link (see the resume branch below). Deliberately
+// a separate constant rather than widening INVITE_COLUMNS — the GET is
+// unauthenticated, and used_by is somebody's user id.
+const JOIN_INVITE_COLUMNS = `${INVITE_COLUMNS},used_by`;
 
 /** How the link stands. Nothing else leaks, so this is safe to call unauthenticated. */
 export async function GET(
@@ -117,7 +127,7 @@ export async function POST(
 
   const { data: invite, error: inviteError } = await adminClient
     .from(CURATOR_INVITES_TABLE)
-    .select(INVITE_COLUMNS)
+    .select(JOIN_INVITE_COLUMNS)
     .eq('code', code)
     .maybeSingle();
 
@@ -130,30 +140,50 @@ export async function POST(
   }
 
   const state = resolveCuratorInviteState(invite);
-  if (state !== 'active') {
+
+  // Resume: this user already consumed this link, but setup did not finish, so
+  // they have no curator_profiles row (the early return above would have caught
+  // them otherwise). Without this branch they are stranded permanently — the
+  // link reads as 'used', a fresh one cannot be self-served, and if the profiles
+  // write below already landed then role='curator' also keeps them out of the
+  // team side. Letting the ORIGINAL claimant finish opens no race: a different
+  // user still gets the 409, and the consume step is skipped rather than redone.
+  //
+  // The predicate is pure and unit tested in lib/curator-invites.ts, including
+  // the revoked-but-reports-used case.
+  const isResumingOwnClaim = canResumeCuratorInviteClaim({
+    state,
+    revokedAt: invite.revoked_at,
+    usedBy: invite.used_by,
+    userId,
+  });
+
+  if (state !== 'active' && !isResumingOwnClaim) {
     return NextResponse.json({ error: inviteStateMessage(state), status: state }, { status: 409 });
   }
 
-  // Consume it. The where-clause is the lock: a second request racing this one
-  // updates zero rows and is told the link is used.
-  const { data: consumed, error: consumeError } = await adminClient
-    .from(CURATOR_INVITES_TABLE)
-    .update({ used_by: userId, used_at: new Date().toISOString() })
-    .eq('id', invite.id)
-    .is('used_at', null)
-    .is('revoked_at', null)
-    .select('id')
-    .maybeSingle();
+  if (!isResumingOwnClaim) {
+    // Consume it. The where-clause is the lock: a second request racing this one
+    // updates zero rows and is told the link is used.
+    const { data: consumed, error: consumeError } = await adminClient
+      .from(CURATOR_INVITES_TABLE)
+      .update({ used_by: userId, used_at: new Date().toISOString() })
+      .eq('id', invite.id)
+      .is('used_at', null)
+      .is('revoked_at', null)
+      .select('id')
+      .maybeSingle();
 
-  if (consumeError) {
-    console.error('[curator-join] invite consume failed:', consumeError.message);
-    return NextResponse.json({ error: 'Could not use this link right now.' }, { status: 500 });
-  }
-  if (!consumed?.id) {
-    return NextResponse.json(
-      { error: inviteStateMessage('used'), status: 'used' },
-      { status: 409 }
-    );
+    if (consumeError) {
+      console.error('[curator-join] invite consume failed:', consumeError.message);
+      return NextResponse.json({ error: 'Could not use this link right now.' }, { status: 500 });
+    }
+    if (!consumed?.id) {
+      return NextResponse.json(
+        { error: inviteStateMessage('used'), status: 'used' },
+        { status: 409 }
+      );
+    }
   }
 
   const displayName = resolveDisplayName(payload.displayName, auth.user);
@@ -176,27 +206,39 @@ export async function POST(
     );
 
     if (profileError) {
-      // The invite is already consumed at this point. Releasing it would open a
-      // race, so leave it used and let the admin mint another: a burnt code is
-      // cheaper than a link two people can claim.
+      // The invite is already consumed at this point, and it stays that way:
+      // releasing it would let a second person claim the link. The resume branch
+      // above is what makes this recoverable instead of terminal — this user can
+      // retry the same link and pick up exactly here.
       console.error('[curator-join] profile upsert failed after consuming invite:', profileError.message);
       return NextResponse.json(
-        { error: 'Could not finish setting up your account. Ask for a new link.' },
+        { error: 'Could not finish setting up your account. Try again.' },
         { status: 500 }
       );
     }
   }
 
-  const { error: curatorProfileError } = await adminClient.from(CURATOR_PROFILES_TABLE).insert({
-    user_id: userId,
-    display_name: displayName,
-    invite_id: invite.id,
-  });
+  // Upsert, not insert: a resumed claim (or two requests racing through the
+  // resume branch) must not 500 on the primary key. ignoreDuplicates leaves an
+  // existing row alone, so a curator who has since edited their display name
+  // does not get it reset to the invite-time default by a retry.
+  const { error: curatorProfileError } = await adminClient
+    .from(CURATOR_PROFILES_TABLE)
+    .upsert(
+      {
+        user_id: userId,
+        display_name: displayName,
+        invite_id: invite.id,
+      },
+      { onConflict: 'user_id', ignoreDuplicates: true }
+    );
 
   if (curatorProfileError) {
-    console.error('[curator-join] curator profile insert failed:', curatorProfileError.message);
+    // The invite stays consumed by THIS user, which is what makes the resume
+    // branch above able to recover them on a retry.
+    console.error('[curator-join] curator profile upsert failed:', curatorProfileError.message);
     return NextResponse.json(
-      { error: 'Could not finish setting up your account. Ask for a new link.' },
+      { error: 'Could not finish setting up your account. Try again.' },
       { status: 500 }
     );
   }

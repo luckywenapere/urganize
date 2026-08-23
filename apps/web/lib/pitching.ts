@@ -28,6 +28,21 @@ export const MAX_PLAYLIST_URL_LENGTH = 500;
 export const MAX_CURATOR_DISPLAY_NAME_LENGTH = 80;
 export const MAX_CURATOR_BIO_LENGTH = 500;
 
+/**
+ * Size ceiling for a curator's profile photo.
+ *
+ * Its OWN number, deliberately not `ASSET_SIZE_LIMITS.cover_art`, which the
+ * photo route used to borrow. That coupling broke the moment cover art was
+ * raised to 25 MiB to fit the square 3000x3000 image DSPs require: an avatar
+ * rendered at 64px silently started accepting a 25 MiB upload. The two have no
+ * reason to move together — one is a distributor deliverable, the other is a
+ * thumbnail beside a playlist name — so they no longer share a constant.
+ *
+ * The MIME allowlist is still shared with cover art (both are just "an image
+ * we can display"), which is fine: adding a format there is not a size change.
+ */
+export const MAX_CURATOR_PHOTO_BYTES = 5 * 1024 * 1024;
+
 /** Genre tags per playlist, and the length of one tag. */
 export const MAX_PLAYLIST_GENRES = 10;
 export const MAX_GENRE_TAG_LENGTH = 30;

@@ -1249,6 +1249,97 @@ A design partner's teammate on 2-bar MTN LTE could not sign up: she tapped throu
 - **The signed-in branch gates on a mount flag** (`hasMounted`, the `WorkspaceIdentityPanel` collapsed-state pattern) rather than on the store directly. The auth store **persists** `isAuthenticated`, so without it a returning signed-in visitor's first client render would pick the "Signed in as" branch while the server had rendered the form — a hydration mismatch. An invited stranger, who is the entire audience of this page, is unaffected either way.
 - **Verified post-deploy against production** with a real ACTIVE invite: heading + Google button + "Or with email" + all three `<input>`s + the `<noscript>` notice are in the server HTML; a bogus code server-renders "Link not available"; zero console errors on hydration; no overflow at 375px. Submitting still needs JS (supabase-js owns sign-up and the Google redirect) — unavoidable for auth, and where `/auth` landed too. The win is that the page now appears, tells the truth about the link, and lets someone start typing while JS arrives.
 
+### Fourth instance: the curator's own three pages (2026-08-24)
+
+**The same pattern, a fourth time, and this one was predicted in writing.** The
+third-instance bullet above records that its audit scope was the auth tree, and
+that a flag-gated surface should be re-audited when it is switched on. Pitching
+was switched on; `/curator`, `/curator/profile` and `/curator/playlists` were
+never re-audited. A newly invited playlist owner then reported "the profile
+section has an issue, I can't update profile" from a phone on 2 bars of LTE.
+
+**Read the evidence before assuming a server-side cause.** The screenshot was
+Chrome's own "Can't open this page", not anything this app rendered — the
+document never arrived. So the immediate cause was the client environment (weak
+LTE, 28 open tabs, an iOS renderer kill), and no server-rendering change fixes a
+document that never loads. What was ours was the blast radius: measured from a
+production build, `/curator/profile` prerendered 27 KiB of HTML containing **no**
+"Display name", no "Bio" and no "Save", behind **30 script tags**. A partial load
+gave them nothing, and nothing told them why.
+
+- **All three pages now server-render their real content**, and the split
+  between page and list is the part to preserve: headers, filters, the add
+  control and the whole profile FORM are real markup in the server HTML, while
+  the *lists* still wait behind their skeletons. That is deliberate — an empty
+  list makes a CLAIM ("No pitches yet", "No playlists yet") that cannot honestly
+  be made before the load resolves, whereas a form label is true either way. Do
+  not "tidy" this back into one page-level `isLoading` gate; that gate is what
+  made a curator on weak data see nothing at all. Verified the way `/auth` was:
+  grep the built HTML (`.next/server/app/curator/profile.html` contains "Display
+  name", "Short bio", "Save profile"; `curator.html` does NOT contain "No pitches
+  yet"), with all three still `○ Static`.
+- **Rendering the form early forced two correctness fixes, and they are why it is
+  safe.** The field values are now DERIVED (`nameDraft ?? profile?.displayName`)
+  rather than seeded by an effect, so a late-arriving profile cannot overwrite
+  what someone is already typing; and the save sends **only edited fields**,
+  because sending both unconditionally would wipe an existing bio with `''`
+  whenever a curator edits just their name before the load lands. The PATCH route
+  reads `'bio' in payload`, so an omitted field is genuinely left alone. Removing
+  that seeding effect also dropped a `react-hooks/set-state-in-effect` warning
+  instead of suppressing it. Enter-to-submit is guarded separately: a disabled
+  Save button does not stop form submission, and an empty patch would come back
+  "Nothing to save."
+- **Failures are visible now, which is the fix that made this report possible to
+  act on at all.** `useCuratorStore` had an `isForbidden` boolean that **nothing
+  read** — three writes, zero readers — so a failed load left the page with no
+  message, no retry, `isLoadingProfile: false` and `profile: null`. It is
+  replaced by `profileError`/`playlistsError`/`pitchesError` (three fields
+  mirroring the three `isLoading*` flags), rendered through
+  `components/curator/CuratorLoadError.tsx` as a blocking state when there is
+  nothing to show and a banner when stale data is still usable. `lib/curator-errors.ts`
+  holds the pure mapping and **prefers the server's own sentence** over a
+  status-derived one, so "This is only for playlist owners." and "Not found."
+  reach the user verbatim. The loaders also gained a `catch`: a dropped
+  connection used to reject into an unhandled promise, which is exactly the
+  weak-link case this whole entry is about.
+- **The join route could strand an account permanently, and did not need a real
+  failure to do it.** It consumes the invite BEFORE writing `profiles` and
+  `curator_profiles`, so a failure in between left the link marked used with no
+  curator row: `CuratorShell` bounces such an account out (no curator profile)
+  while the team-side chokepoints keep it out of the workspace (role is
+  `curator`). No client-reachable recovery. Now the ORIGINAL claimant may resume
+  a claim they already made (`canResumeCuratorInviteClaim`, pure and unit
+  tested), the `curator_profiles` write is an idempotent upsert, and the invite
+  is deliberately still NOT released — releasing it would let a second person
+  claim the link. Note `used_at` outranks `revoked_at` in
+  `resolveCuratorInviteState`, so a revoked link still reports 'used'; revocation
+  is therefore checked separately, and a link the founder turned off stays off.
+  The POST reads `used_by` through its own wider column list, because the public
+  GET on that route is unauthenticated and `used_by` is somebody's user id.
+- **A self-inflicted regression fixed in the same pass.** The curator photo route
+  read `ASSET_SIZE_LIMITS.cover_art`, and the 2026-08-22 cover-art work raised
+  that from 5 to 25 MiB for DSP-sized artwork — so a 64px avatar silently began
+  accepting a 25 MiB upload. It has its own `MAX_CURATOR_PHOTO_BYTES` (5 MiB)
+  now, with a test asserting the two are no longer the same number so
+  re-coupling them fails in CI rather than in production. The MIME allowlist is
+  still shared, which is fine: adding a format there is not a size change.
+- **Verified:** 1185 tests (of which ~20 new across `lib/curator-errors.test.ts`,
+  `lib/curator-invites-resume.test.ts` and the pitching limits), `eslint .` at
+  exactly the measured baseline (3 errors / 66 warnings, all pre-existing in
+  `WorkspaceView.tsx`, confirmed by linting a stashed tree), and `next build`
+  green by exit code in both flag states with `/auth`, `/onboarding` and
+  `/settings` still `○ Static`. Runtime probe: flag on, all four curator routes
+  401 unauthenticated; flag off, all four 404 while `/api/releases` still 401s.
+- **Not verified, and worth saying plainly:** none of this ran against a real
+  database, a real curator account or a real phone — this environment has no
+  network route to `app.urganize.app` and cannot mint a Supabase session. The
+  join resume path in particular has only ever been exercised as a pure
+  function. **It also does not prove the original report is fixed**, because the
+  screenshot's proximate cause was a failed document load. Two facts would still
+  settle that: the curator's **iOS version** (below 15.4 the whole app breaks on
+  `Object.hasOwn` in Next 16's framework chunk, and no application change can fix
+  it) and whether the page loads for them at all on wifi.
+
 ---
 
 ## Settings became four tabs (2026-08-13, v0.51.0)
@@ -1732,7 +1823,24 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-24 (read-only on payment failure — see "Read-only on
+*Last updated: 2026-08-24 (**the curator's three pages now server-render, and
+their failures are finally visible** — see "Fourth instance: the curator's own
+three pages" above. A newly invited playlist owner reported "I can't update
+profile"; the screenshot was Chrome's own "Can't open this page", so the
+proximate cause was a failed document load on weak LTE rather than anything we
+served, and that part is NOT fixed by code. What was ours: `/curator/profile`
+prerendered 27 KiB with no "Display name", no "Bio" and no "Save" behind 30
+script tags, and `useCuratorStore` carried an `isForbidden` flag that NOTHING
+read, so every failure was silent. Headers and the profile form are server
+markup now while the LISTS still wait, deliberately — an empty list claims "No
+pitches yet", which cannot be honestly said before the load resolves. Rendering
+the form early forced two correctness fixes that are why it is safe: field values
+are derived rather than seeded by an effect, and the save sends only edited
+fields (sending both would wipe an unloaded bio with ''). Also fixed: the join
+route could strand an account permanently by consuming the invite before writing
+`curator_profiles`, so the original claimant may now resume; and a regression I
+introduced two days earlier, where the curator avatar's size cap tracked
+`cover_art` and silently rose from 5 to 25 MiB. Previously: read-only on payment failure — see "Read-only on
 payment failure" above. The last item in the pricing spec, and the end of the
 binary access model: a team that PAID and whose renewal then failed keeps every
 read, permanently, and has its writes refused. A trial that expires still gets

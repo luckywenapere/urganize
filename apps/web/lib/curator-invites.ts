@@ -65,6 +65,35 @@ export function resolveCuratorInviteState(row: CuratorInviteRow): CuratorInviteS
   return 'active';
 }
 
+/**
+ * May THIS user finish a claim they already made on this link?
+ *
+ * The join flow consumes the invite before it writes the two profile rows, so a
+ * failure in between leaves the link marked used by someone who never got a
+ * curator profile. Without a resume path that account is stranded permanently:
+ * the link reads 'used', nothing self-serves a new one, and if the profiles
+ * write landed then role='curator' also keeps them off the team side.
+ *
+ * Only the ORIGINAL claimant may resume, which is what keeps this from
+ * reopening the single-use guarantee — a different user still gets refused.
+ *
+ * Note `used_at` outranks `revoked_at` in resolveCuratorInviteState, so a
+ * revoked link can still report 'used'. Revocation is checked separately here:
+ * a link the founder turned off stays off, even for its claimant.
+ */
+export function canResumeCuratorInviteClaim(input: {
+  state: CuratorInviteState;
+  revokedAt: string | null | undefined;
+  usedBy: string | null | undefined;
+  userId: string;
+}): boolean {
+  if (input.state !== 'used') return false;
+  if (input.revokedAt) return false;
+  const userId = String(input.userId || '').trim();
+  if (!userId) return false;
+  return String(input.usedBy || '').trim() === userId;
+}
+
 /** Expiry timestamp for a freshly minted link. */
 export function curatorInviteExpiry(days: number = CURATOR_INVITE_TTL_DAYS): string {
   const safeDays = Number.isFinite(days)
