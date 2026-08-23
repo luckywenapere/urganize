@@ -392,3 +392,57 @@ describe('summarizeBilling — team access', () => {
     }
   });
 });
+
+// ── A pending plan change has to be visible where the team looks ────────────
+//
+// A downgrade is agreed now and applies at the end of the period. Between those
+// two moments Settings would otherwise show only the tier they are leaving, and
+// a team that asked to move down and then sees no sign of it would reasonably
+// conclude the request was lost.
+
+describe('summarizeBilling — a pending plan change', () => {
+  it('names the move and when it happens, above the expiry line', () => {
+    const result = summarizeBilling(
+      snapshot({
+        accountStatus: 'paid',
+        plan: 'label',
+        pendingPlan: 'manager',
+        expiresAt: '2026-09-30T00:00:00.000Z',
+      })
+    );
+    // Still the tier they paid for: a downgrade takes nothing away early.
+    expect(result.title).toBe('Label plan');
+    expect(result.details[0]).toContain('Moving to Manager');
+    // First, not appended: it is the sentence about what happens next.
+    expect(result.details[0]).toMatch(/Moving to Manager on /);
+    expect(result.details.some((line) => line.startsWith('Active until'))).toBe(true);
+  });
+
+  it('says nothing when no change is pending', () => {
+    const result = summarizeBilling(
+      snapshot({ accountStatus: 'paid', plan: 'label', expiresAt: '2026-09-30T00:00:00.000Z' })
+    );
+    expect(result.details.some((line) => line.includes('Moving to'))).toBe(false);
+  });
+
+  it('stays quiet for an unrecognisable pending value rather than printing it raw', () => {
+    const result = summarizeBilling(
+      snapshot({
+        accountStatus: 'paid',
+        plan: 'label',
+        pendingPlan: 'platinum',
+        expiresAt: '2026-09-30T00:00:00.000Z',
+      })
+    );
+    expect(result.details.some((line) => line.includes('platinum'))).toBe(false);
+  });
+
+  it('needs a date before it will promise a move', () => {
+    // Without an expiry there is no "when", and "moving to Manager" with no date
+    // is worse than saying nothing.
+    const result = summarizeBilling(
+      snapshot({ accountStatus: 'paid', plan: 'label', pendingPlan: 'manager', expiresAt: null })
+    );
+    expect(result.details.some((line) => line.includes('Moving to'))).toBe(false);
+  });
+});

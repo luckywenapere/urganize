@@ -159,3 +159,28 @@ describe('customer-facing copy rules', () => {
     }
   });
 });
+
+// The swap alert is an ACTION, not a signal. Every other founder alert says
+// something happened; this one says something is owed at Paystack before a date,
+// and missing it charges a real customer the wrong amount.
+
+describe('the plan-change swap alert', () => {
+  it('carries a subject that reads as a task, and the note that names the deadline', () => {
+    const email = buildFounderBillingAlertEmail('plan_change_requested', {
+      teamName: 'Northside',
+      ownerName: 'Ada',
+      ownerEmail: 'ada@example.com',
+      daysSinceSignup: 40,
+      releasesDuringTrial: 3,
+      tasksDuringTrial: 61,
+      planViewed: 'label',
+      note: 'Downgrade to manager (monthly), effective 2026-09-30. Swap the Paystack subscription BEFORE that date.',
+    });
+    expect(email.subject).toContain('SWAP NEEDED');
+    expect(email.subject).toContain('Northside');
+    // The deadline has to survive into the body, since the subject is all that
+    // shows in a phone notification but the body is what gets acted on.
+    expect(email.text).toContain('2026-09-30');
+    expect(email.html).toContain('Northside');
+  });
+});

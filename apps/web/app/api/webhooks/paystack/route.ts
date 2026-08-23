@@ -15,6 +15,7 @@ import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
 import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { invalidateTeamAccess } from '@/lib/team-billing-server';
 import { notifyFounder } from '@/lib/billing-alerts-server';
+import { PLAN_CHANGE_SOURCE } from '@/lib/plan-change';
 import {
   TRIAL_CARD_PLAN,
   buildDelayedSubscriptionPayload,
@@ -171,6 +172,13 @@ async function applyInitialOrManualCharge(
         user_id: userId,
         plan,
         billing_interval: billingInterval,
+        // A fresh purchase supersedes anything that was waiting. Without this,
+        // a team whose period lapsed with a downgrade pending would re-activate
+        // on the tier they just bought and then be silently moved off it at the
+        // next renewal by a request they made months ago.
+        pending_plan: null,
+        pending_billing_interval: null,
+        pending_change_requested_at: null,
         status: 'active',
         amount: amountMinorUnit,
         paystack_reference: reference,
@@ -229,6 +237,98 @@ async function applyInitialOrManualCharge(
   }
 }
 
+/** The `source` start-checkout or change-plan wrote into the payments jsonb.
+ *  Narrowed rather than cast: it comes out of a jsonb column. */
+function readChargeSource(paystackResponse: Record<string, unknown> | null): string | null {
+  const value = paystackResponse?.source;
+  return typeof value === 'string' ? value : null;
+}
+
+/**
+ * A plan-change top-up cleared. Apply the new tier and leave the period alone.
+ *
+ * THE THREE THINGS THIS DOES NOT DO are the design:
+ *   - It does not touch `expires_at`. The team paid the DIFFERENCE for the days
+ *     they already own; moving the end date would be charging them for a period
+ *     twice.
+ *   - It does not touch `paystack_subscription_code`, which change-plan already
+ *     cleared. Restoring it here would let the founder's disable (part of the
+ *     manual swap) stamp status 'cancelled' over a perfectly healthy row.
+ *   - It does not create or alter anything at Paystack. The swap is the
+ *     founder's, and the alert below is what tells them it is owed.
+ *
+ * Idempotent: a re-delivered charge.success writes the same values.
+ */
+async function handlePlanChangeCharge(
+  admin: AdminClient,
+  payment: { id: string; user_id: string; plan: string; paystack_response: Record<string, unknown> | null },
+  reference: string,
+  now: Date
+) {
+  const targetPlan = String(payment.plan);
+  const interval = readSelectedInterval(payment.paystack_response);
+  const nowIso = now.toISOString();
+
+  const { error: subError } = await admin
+    .from('subscriptions')
+    .update({
+      plan: targetPlan,
+      billing_interval: interval,
+      // Whatever was waiting is now in effect, so the pending record is spent.
+      pending_plan: null,
+      pending_billing_interval: null,
+      pending_change_requested_at: nowIso,
+      status: 'active',
+      paystack_reference: reference,
+      updated_at: nowIso,
+    })
+    .eq('user_id', payment.user_id);
+  if (subError) {
+    // Logged, not retried. The money is taken and the payments row records what
+    // it was for, so the founder can reconcile from the ledger — and returning
+    // non-200 would only make Paystack redeliver into the same failure.
+    console.error('[paystack-webhook] plan change subscription update error:', subError.message);
+  }
+
+  invalidateSubscriptionSnapshot(payment.user_id);
+  invalidateTeamAccess(payment.user_id);
+
+  const workspaceId = readWorkspaceId(payment.paystack_response);
+  if (workspaceId) {
+    void (async () => {
+      try {
+        await notifyFounder(admin, {
+          kind: 'plan_change_requested',
+          workspaceId,
+          ownerUserId: payment.user_id,
+          actorUserId: payment.user_id,
+          planViewed: targetPlan,
+          note: `Prorated upgrade to ${targetPlan} has been PAID and applied. Swap their Paystack subscription to the ${targetPlan} plan before ${String(payment.paystack_response?.period_ends_at ?? 'the next charge')} or the next renewal bills the old price.`,
+          metadata: {
+            direction: 'upgrade',
+            from: payment.paystack_response?.change_from ?? null,
+            to: targetPlan,
+            interval,
+            reference,
+            paid: true,
+            oldSubscriptionCode: payment.paystack_response?.old_subscription_code ?? null,
+          },
+        });
+      } catch {
+        // Never surface: the upgrade is already applied.
+      }
+    })();
+  }
+
+  return ack({ event: 'charge.success', reference, matched: 'plan_change', plan: targetPlan });
+}
+
+/** The workspace id change-plan stashed in the jsonb, for the founder alert. */
+function readWorkspaceId(paystackResponse: Record<string, unknown> | null): string | null {
+  const value = paystackResponse?.workspace_id;
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
 async function applyRenewal(
   admin: AdminClient,
   userId: string,
@@ -240,14 +340,25 @@ async function applyRenewal(
   /** subscriptions.billing_interval, read on the same row as the plan. Without
    *  it a tier subscription cannot be extended correctly, because the plan name
    *  does not say whether a period is a month or a year. */
-  billingInterval: string | null = null
+  billingInterval: string | null = null,
+  /** A downgrade the team agreed to, waiting for this moment. See below. */
+  pending: { plan: string | null; interval: string | null } = { plan: null, interval: null }
 ) {
   // Renewal extends from the CURRENT expires_at (not now) so a renewal that
   // arrives a day late doesn't shorten the user's paid window. `advancePeriodEnd`
   // handles the "current end is in the past" edge (e.g. after a long pause)
   // by basing forward from now instead.
+  //
+  // THIS IS WHERE A DOWNGRADE LANDS, and it is the only place it can. A
+  // downgrade charges nothing and takes nothing away early: the team keeps the
+  // tier they paid for until the period they paid for ends, which is exactly
+  // now. The period is advanced using the OUTGOING plan's interval, because
+  // that is what the charge that just cleared was for — a self-serve change
+  // cannot cross intervals anyway, so the two agree in practice.
   const currentEnd = currentExpiresAt ? new Date(currentExpiresAt) : null;
   const nextEnd = advancePeriodEnd(plan, currentEnd, now, billingInterval);
+
+  const applyPending = Boolean(pending.plan);
 
   const { error: subError } = await admin
     .from('subscriptions')
@@ -256,6 +367,15 @@ async function applyRenewal(
       amount: amountMinorUnit,
       paystack_reference: reference,
       expires_at: nextEnd.toISOString(),
+      ...(applyPending
+        ? {
+            plan: pending.plan,
+            billing_interval: pending.interval ?? billingInterval,
+            pending_plan: null,
+            pending_billing_interval: null,
+            pending_change_requested_at: null,
+          }
+        : {}),
       updated_at: now.toISOString(),
     })
     .eq('user_id', userId);
@@ -619,6 +739,16 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
       return handleTrialCardCharge(admin, payment as TrialCardPaymentRow, payload, reference, now);
     }
 
+    // A prorated plan-change top-up. MUST divert before the recurring branch
+    // below for a different reason than the card check: `plan` here IS a real
+    // tier id, so isRecurringPlan accepts it and applyInitialOrManualCharge
+    // would upsert a fresh expires_at from getPlanExpiry — throwing away the
+    // period the team already paid for, which is the one thing an upgrade
+    // promises not to do. Keyed on the jsonb source, not on `plan`.
+    if (readChargeSource(payment.paystack_response) === PLAN_CHANGE_SOURCE) {
+      return handlePlanChangeCharge(admin, payment, reference, now);
+    }
+
     // Flip the reserved row to success (idempotent — re-deliveries hit this).
     if (payment.status !== 'success') {
       const { error: updateError } = await admin
@@ -694,6 +824,8 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
       plan: string;
       expires_at: string | null;
       billing_interval: string | null;
+      pending_plan: string | null;
+      pending_billing_interval: string | null;
     } | null;
     error: { message: string } | null;
   } | null = null;
@@ -701,7 +833,7 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
   if (renewalSubscriptionCode) {
     subscriptionLookup = await admin
       .from('subscriptions')
-      .select('id,user_id,plan,expires_at,billing_interval')
+      .select('id,user_id,plan,expires_at,billing_interval,pending_plan,pending_billing_interval')
       .eq('paystack_subscription_code', renewalSubscriptionCode)
       .maybeSingle();
   }
@@ -709,7 +841,7 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
   if ((!subscriptionLookup || !subscriptionLookup.data) && customerCode) {
     subscriptionLookup = await admin
       .from('subscriptions')
-      .select('id,user_id,plan,expires_at,billing_interval')
+      .select('id,user_id,plan,expires_at,billing_interval,pending_plan,pending_billing_interval')
       .eq('paystack_customer_code', customerCode)
       .maybeSingle();
   }
@@ -774,14 +906,17 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
     amountMinorUnit,
     reference,
     now,
-    subRow.billing_interval
+    subRow.billing_interval,
+    { plan: subRow.pending_plan, interval: subRow.pending_billing_interval }
   );
 
   return ack({
     event: 'charge.success',
     reference,
     matched: 'renewal',
-    plan: subRow.plan,
+    // The plan it ENDED on: a pending downgrade applies at this moment, so
+    // reporting subRow.plan would name the tier they just left.
+    plan: subRow.pending_plan ?? subRow.plan,
   });
 }
 

@@ -86,6 +86,10 @@ export function TeamWall() {
   const [selectedInterval, setSelectedInterval] = useState<BillingInterval>('annual');
   const [isStartingCheckout, setIsStartingCheckout] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  /** Set when a change completed without a redirect: a downgrade, or an upgrade
+   *  too small to charge for. Both need saying out loud, because a button that
+   *  goes quiet reads as a failure. */
+  const [changeResult, setChangeResult] = useState<string | null>(null);
   const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [notifyError, setNotifyError] = useState<string | null>(null);
   // Apple forbids linking out to external payment for a digital subscription
@@ -168,11 +172,56 @@ export function TeamWall() {
 
   const handleActivate = useCallback(async () => {
     setCheckoutError(null);
+    setChangeResult(null);
     setIsStartingCheckout(true);
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (!token) throw new Error('Sign in again and retry.');
+
+      // A TEAM THAT ALREADY HAS ACCESS IS CHANGING PLAN, NOT ACTIVATING ONE,
+      // and sending them to start-checkout would be actively harmful: that
+      // route initializes with a Paystack plan code, so Paystack opens a SECOND
+      // subscription on the same customer, and `subscription.create` matches on
+      // paystack_customer_code — overwriting the code on our single row and
+      // orphaning a subscription that keeps billing. It would also recompute
+      // expires_at from scratch and throw away the period they already paid for.
+      if (PRICING_V2 && team?.hasAccess) {
+        const changeResponse = await fetch('/api/billing/change-plan', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: selectedTier, interval: selectedInterval }),
+        });
+        const changePayload = (await changeResponse.json().catch(() => ({}))) as {
+          kind?: string;
+          authorizationUrl?: string;
+          effectiveAt?: string;
+          error?: string;
+        };
+        if (!changeResponse.ok) {
+          throw new Error(changePayload.error || 'Could not change your plan.');
+        }
+        // An upgrade with something to pay goes to Paystack; a downgrade and a
+        // free upgrade are already done, so say so rather than redirecting
+        // somewhere that would look like a failed payment.
+        if (changePayload.authorizationUrl) {
+          if (isNativePlatform()) {
+            await openExternalUrl(changePayload.authorizationUrl);
+            setIsStartingCheckout(false);
+          } else if (typeof window !== 'undefined') {
+            window.location.href = changePayload.authorizationUrl;
+          }
+          return;
+        }
+        setChangeResult(
+          changePayload.kind === 'downgrade'
+            ? 'Done. Your new plan starts when this period ends, and nothing changes before then.'
+            : 'Done. Your new plan is active now.'
+        );
+        setIsStartingCheckout(false);
+        if (userId) void getTeamAccessClient(userId, { force: true }).then(setTeam);
+        return;
+      }
 
       const response = await fetch('/api/billing/start-checkout', {
         method: 'POST',
@@ -207,7 +256,14 @@ export function TeamWall() {
       setCheckoutError(errorMessage(error, 'Could not start checkout.'));
       setIsStartingCheckout(false);
     }
-  }, [selectedPlan, selectedTier, selectedInterval, team?.primaryWorkspaceId]);
+  }, [
+    selectedPlan,
+    selectedTier,
+    selectedInterval,
+    team?.hasAccess,
+    team?.primaryWorkspaceId,
+    userId,
+  ]);
 
   const trackTalkToUs = useCallback(async () => {
     try {
@@ -440,6 +496,13 @@ export function TeamWall() {
                     <p className="flex items-start gap-2 text-sm text-status-error">
                       <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                       <span>{checkoutError}</span>
+                    </p>
+                  ) : null}
+
+                  {changeResult ? (
+                    <p className="flex items-start gap-2 text-sm text-content-secondary">
+                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand" />
+                      <span>{changeResult}</span>
                     </p>
                   ) : null}
                 </>

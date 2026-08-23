@@ -26,6 +26,12 @@ export type BillingSnapshot = {
   expiresAt: string | null;
   trialUsed: boolean;
   allowlisted: boolean;
+  /** A plan the team has agreed to move to that has not started yet —
+   *  subscriptions.pending_plan. Only ever set for a DOWNGRADE: an upgrade
+   *  applies the moment its prorated charge clears, so it never waits here.
+   *  Naming it out loud is the point, because a team that asked to move down and
+   *  then sees their old plan name would reasonably think the request was lost. */
+  pendingPlan?: string | null;
 };
 
 /** Which exit to offer. `null` means offer none. */
@@ -263,6 +269,13 @@ export function summarizeBilling(
           ? `Cancelled — access until ${expires}.`
           : `Active until ${expires}.`
       );
+    }
+    // A pending move reads BEFORE the expiry line in importance, so it goes
+    // first: "you are on Label until the 30th, then Manager" is one sentence
+    // about the future, and burying it under "Active until" inverts it.
+    const pendingName = describePlanName(snapshot.pendingPlan ?? null);
+    if (pendingName && expires) {
+      details.unshift(`Moving to ${pendingName} on ${expires}, as you asked.`);
     }
     return {
       title: planName ? `${planName} plan` : 'Active plan',

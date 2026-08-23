@@ -41,7 +41,13 @@ export type FounderAlertKind =
   | 'paywall_return_visit'
   | 'talk_to_us_clicked'
   | 'checkout_completed'
-  | 'manually_marked_paid';
+  | 'manually_marked_paid'
+  /** A team agreed a plan change and a Paystack swap is now owed. This one is
+   *  an ACTION for the founder rather than a signal: Paystack has no
+   *  plan-change endpoint, so the old subscription has to be disabled and a
+   *  replacement created by hand, and it has to happen before the next charge
+   *  or the team is billed at the wrong price. The note carries the deadline. */
+  | 'plan_change_requested';
 
 export type FounderAlertContext = {
   teamName: string | null;
@@ -70,6 +76,7 @@ const SUBJECT_PREFIX: Record<FounderAlertKind, string> = {
   talk_to_us_clicked: 'Wants to talk',
   checkout_completed: 'PAID',
   manually_marked_paid: 'Marked paid',
+  plan_change_requested: 'SWAP NEEDED',
 };
 
 const HEADLINE: Record<FounderAlertKind, string> = {
@@ -79,6 +86,8 @@ const HEADLINE: Record<FounderAlertKind, string> = {
   talk_to_us_clicked: 'This team asked to talk to you.',
   checkout_completed: 'This team just paid.',
   manually_marked_paid: 'This team was marked paid by hand.',
+  plan_change_requested:
+    'This team changed plan. Their Paystack subscription still needs swapping by hand.',
 };
 
 const formatCount = (value: number | null): string =>
