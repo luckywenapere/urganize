@@ -12,6 +12,7 @@ type SubscriptionRow = {
   expires_at?: string | null;
   plan?: string | null;
   updated_at?: string | null;
+  pending_plan?: string | null;
 };
 
 type ProfileAccessRow = {
@@ -33,6 +34,12 @@ export type SubscriptionSnapshot = {
   trialUsed: boolean;
   trialStartedAt: string | null;
   paidAt: string | null;
+  /** subscriptions.pending_plan — a plan the team agreed to move to that has
+   *  not started yet. PASSTHROUGH ONLY: nothing in `resolveSnapshot` branches on
+   *  it and no access decision reads it, because a pending change never affects
+   *  whether a team has access today. It rides along so Settings can name the
+   *  move without a second query on this route's hot path. */
+  pendingPlan: string | null;
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -129,6 +136,7 @@ export const resolveSnapshot = (
       trialUsed: profileTrialUsed,
       trialStartedAt: profile?.trial_started_at || null,
       paidAt: profile?.paid_at || null,
+      pendingPlan: subscription?.pending_plan ?? null,
     };
   }
 
@@ -149,6 +157,7 @@ export const resolveSnapshot = (
       trialUsed: profileTrialUsed,
       trialStartedAt: profile?.trial_started_at || null,
       paidAt: profile?.paid_at || null,
+      pendingPlan: subscription?.pending_plan ?? null,
     };
   }
 
@@ -166,6 +175,7 @@ export const resolveSnapshot = (
       trialUsed: profileTrialUsed,
       trialStartedAt: profile?.trial_started_at || null,
       paidAt: profile?.paid_at || null,
+      pendingPlan: subscription?.pending_plan ?? null,
     };
   }
 
@@ -182,6 +192,7 @@ export const resolveSnapshot = (
       trialUsed: true,
       trialStartedAt: profile?.trial_started_at || null,
       paidAt: profile?.paid_at || null,
+      pendingPlan: subscription?.pending_plan ?? null,
     };
   }
 
@@ -200,6 +211,7 @@ export const resolveSnapshot = (
       trialUsed: profileTrialUsed,
       trialStartedAt: profile?.trial_started_at || null,
       paidAt: profile?.paid_at || null,
+      pendingPlan: subscription?.pending_plan ?? null,
     };
   }
 
@@ -215,6 +227,7 @@ export const resolveSnapshot = (
     trialUsed: false,
     trialStartedAt: null,
     paidAt: null,
+    pendingPlan: subscription?.pending_plan ?? null,
   };
 };
 
@@ -233,6 +246,7 @@ const getFallbackSnapshot = (): SubscriptionSnapshot => ({
   trialUsed: false,
   trialStartedAt: null,
   paidAt: null,
+  pendingPlan: null,
 });
 
 async function fetchSnapshotFromApi(userId: string): Promise<SubscriptionSnapshot | null> {
@@ -283,6 +297,7 @@ async function fetchSnapshotFromApi(userId: string): Promise<SubscriptionSnapsho
       trialUsed: Boolean(payload.trialUsed),
       trialStartedAt: typeof payload.trialStartedAt === 'string' ? payload.trialStartedAt : null,
       paidAt: typeof payload.paidAt === 'string' ? payload.paidAt : null,
+      pendingPlan: typeof payload.pendingPlan === 'string' ? payload.pendingPlan : null,
     };
   } catch {
     return null;
@@ -363,7 +378,7 @@ export async function getSubscriptionSnapshot(userId: string): Promise<Subscript
     const [subscriptionResult, profileResult] = await Promise.all([
       supabase
         .from('subscriptions')
-        .select('status,expires_at,plan,updated_at')
+        .select('status,expires_at,plan,updated_at,pending_plan')
         .eq('user_id', userId)
         .order('updated_at', { ascending: false })
         .limit(1)

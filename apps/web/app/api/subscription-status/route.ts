@@ -163,6 +163,7 @@ export async function GET(request: NextRequest) {
     trialUsed: snapshot.trialUsed,
     trialStartedAt: snapshot.trialStartedAt,
     paidAt: snapshot.paidAt,
+    pendingPlan: snapshot.pendingPlan,
     cardTrialRequired: cardTrialFacts.required,
     onboardingCompleted: cardTrialFacts.onboardingCompleted,
     ...(teamAccess ? { teamAccess } : {}),

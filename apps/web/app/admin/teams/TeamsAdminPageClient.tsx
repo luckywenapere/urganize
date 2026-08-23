@@ -36,6 +36,9 @@ type TeamRow = {
   billingLockedAmount: number | null;
   billingNotes: string | null;
   subscriptionPlan: string | null;
+  /** A Paystack swap this team is owed. See the API route's comment. */
+  pendingPlan?: string | null;
+  pendingChangeRequestedAt?: string | null;
   subscriptionStatus: string | null;
   allowlisted: boolean;
   grandfathered: boolean;
@@ -425,6 +428,17 @@ export default function TeamsAdminPageClient() {
                   {team.subscriptionPlan ? (
                     <p className="mt-1 text-xs text-content-tertiary">
                       Sub: {team.subscriptionPlan} ({team.subscriptionStatus})
+                    </p>
+                  ) : null}
+                  {/* Loud on purpose. This is the one row state that needs an
+                      action taken in the Paystack dashboard before a date, and
+                      missing it charges a real customer the wrong amount. */}
+                  {team.pendingPlan ? (
+                    <p className="mt-1 text-xs font-semibold text-status-warning">
+                      SWAP OWED: move to {team.pendingPlan}
+                      {team.wallDate
+                        ? ` before ${new Date(team.wallDate).toLocaleDateString()}`
+                        : ''}
                     </p>
                   ) : null}
                 </td>

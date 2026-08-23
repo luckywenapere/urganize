@@ -231,7 +231,18 @@ export function BillingSection() {
             {CTA_LABEL.contact}
           </a>
         ) : cta ? (
-          <button type="button" onClick={() => router.push('/locked')} className={ctaClass}>
+          // 'change' MUST carry the intent param, and this was a live dead end
+          // until 2026-08-24: a paying team clicking "Change plan" landed on
+          // /locked, whose has-access effect immediately replaced them back into
+          // the app. A no-op round trip, and exactly the same bug that
+          // UrgansUsageStrip's "See plans" had before it was given
+          // ?intent=upgrade. 'plans' is for a team with NO access, which the
+          // wall renders for without any param.
+          <button
+            type="button"
+            onClick={() => router.push(cta === 'change' ? '/locked?intent=upgrade' : '/locked')}
+            className={ctaClass}
+          >
             {CTA_LABEL[cta]}
           </button>
         ) : null}

@@ -39,6 +39,11 @@ export const BILLING_EVENT_TYPES = [
   'custom_price_set',
   /** Settled outside checkout: invoice, bank transfer, an agreement. */
   'manually_marked_paid',
+  /** A team moved between plans. Carries the direction, both plans and any
+   *  prorated amount charged, and is the ledger record behind the founder's
+   *  "swap needed" alert — Paystack has no plan-change endpoint, so every one of
+   *  these owes a manual subscription swap before the next charge. */
+  'plan_change_requested',
   /** One assistant turn that reached the model. Counted per BILLING WINDOW to
    *  enforce urgans_monthly_actions — see lib/urgans-usage.ts. Deliberately one
    *  row per turn rather than per gateway round (a turn is up to five), and

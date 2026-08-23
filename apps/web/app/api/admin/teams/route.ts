@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
     ownerIds.length
       ? client
           .from('subscriptions')
-          .select('user_id, plan, status, amount, expires_at')
+          .select('user_id, plan, status, amount, expires_at, pending_plan, pending_change_requested_at')
           .in('user_id', ownerIds)
       : Promise.resolve({ data: [], error: null }),
   ]);
@@ -110,6 +110,8 @@ export async function GET(request: NextRequest) {
       status: string | null;
       amount: number | null;
       expires_at: string | null;
+      pending_plan: string | null;
+      pending_change_requested_at: string | null;
     }>).map((row) => [row.user_id, row])
   );
 
@@ -171,6 +173,14 @@ export async function GET(request: NextRequest) {
       subscriptionPlan: subscription?.plan ?? null,
       subscriptionStatus: subscription?.status ?? null,
       subscriptionExpiresAt: subscription?.expires_at ?? null,
+      // A PAYSTACK SWAP THIS TEAM IS OWED. Paystack has no plan-change
+      // endpoint, so a change means disabling the old subscription and creating
+      // a replacement by hand — and it has to happen before expires_at or the
+      // next charge is at the wrong price. The founder is emailed when a change
+      // is requested; this is the list, because an email is one chance to
+      // notice and a wrong charge is not recoverable by noticing later.
+      pendingPlan: subscription?.pending_plan ?? null,
+      pendingChangeRequestedAt: subscription?.pending_change_requested_at ?? null,
       allowlisted: ownerAllowlisted,
       grandfathered: !subscriptionActive && profile?.is_subscribed === true,
     };
