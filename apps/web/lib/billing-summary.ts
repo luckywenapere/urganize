@@ -1,4 +1,4 @@
-import { getPlan, isBillingPlanId } from '@urganize/pricing';
+import { getPlan, getTier, isBillingPlanId, isPricingTierId } from '@urganize/pricing';
 
 // What to SAY about an account's plan (2026-08-13).
 //
@@ -86,22 +86,46 @@ export function formatBillingDate(value: string | null): string | null {
  * NAME is safe; the number is not, which is why `/locked` — where you are about
  * to buy at the current price — is the only place a figure appears.
  *
- * `plan` is a loose string server-side: the three billing ids, plus the legacy
- * flat `access` SKU, admin-provisioned `custom` rows, and `trial_claim` relics
- * from the retired card-on-file flow. Anything unrecognised returns null and the
- * caller falls back to a generic title rather than printing a raw enum.
+ * `plan` is a loose string server-side: the pricing-v2 tier ids, the legacy
+ * billing ids, plus the legacy flat `access` SKU, admin-provisioned `custom`
+ * rows, and `trial_claim` relics from the retired card-on-file flow. Anything
+ * unrecognised returns null and the caller falls back to a generic title rather
+ * than printing a raw enum.
+ *
+ * TIERS ARE CHECKED FIRST, and 'label' is why it matters: that id exists in both
+ * generations with different meanings — legacy Label was the sales-led ₦800,000
+ * roster plan, tier Label is the self-serve flagship. For a STORED plan value the
+ * ambiguity is already settled and needs no feature flag to resolve: 'label' was
+ * never in subscriptions_plan_check until the tier migration added it, and
+ * PAYSTACK_PLAN_LABEL_* has never been set, so checkout 500s before the
+ * constraint could have been reached. No row anywhere carries the legacy meaning
+ * (see 20260823100000_pricing_tiers.sql, which relies on the same fact). So a
+ * stored 'label' is the tier, full stop.
  */
 export function describePlanName(plan: string | null): string | null {
   if (!plan) return null;
+  if (isPricingTierId(plan)) return getTier(plan).label;
   if (isBillingPlanId(plan)) return getPlan(plan).label;
   if (plan === 'access') return 'Access';
   if (plan === 'custom') return 'Custom';
   return null;
 }
 
-/** A sales-led tier has no self-serve checkout, so it must not be sent to the picker. */
+/**
+ * A sales-led plan has no self-serve checkout, so it must not be sent to the
+ * picker — the caller offers a "contact us" exit instead.
+ *
+ * Tier-first for the same reason as above, and the practical consequence is the
+ * one that would have bitten a real customer: under pricing v2 the sales-led
+ * plan is 'enterprise', while 'label' is buyable. Reading 'label' as the legacy
+ * contactSales plan would have pointed a lapsed Label subscriber at a mailto
+ * instead of the checkout they were trying to reach.
+ */
 export function isContactSalesPlan(plan: string | null): boolean {
-  return Boolean(plan && isBillingPlanId(plan) && getPlan(plan).contactSales);
+  if (!plan) return false;
+  if (isPricingTierId(plan)) return Boolean(getTier(plan).contactSales);
+  if (isBillingPlanId(plan)) return Boolean(getPlan(plan).contactSales);
+  return false;
 }
 
 /**

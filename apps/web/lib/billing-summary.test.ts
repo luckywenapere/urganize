@@ -55,11 +55,23 @@ describe('describePlanName', () => {
 
 describe('isContactSalesPlan', () => {
   it('is true only for the sales-led tier', () => {
-    expect(isContactSalesPlan('label')).toBe(true);
+    expect(isContactSalesPlan('enterprise')).toBe(true);
+    expect(isContactSalesPlan('manager')).toBe(false);
     expect(isContactSalesPlan('monthly')).toBe(false);
     expect(isContactSalesPlan('annual')).toBe(false);
     expect(isContactSalesPlan('access')).toBe(false);
     expect(isContactSalesPlan(null)).toBe(false);
+  });
+
+  // CHANGED 2026-08-24, and the direction is the point: this used to assert
+  // true. 'label' is the one id that exists in both plan generations — legacy
+  // Label was the sales-led ₦800,000 roster plan, tier Label is the self-serve
+  // flagship — and a STORED 'label' can only ever be the tier, because the id
+  // was not permitted by subscriptions_plan_check until the tier migration
+  // added it. Reading it as sales-led sent a paying Label subscriber to a
+  // mailto instead of the checkout they were trying to reach.
+  it('treats a stored Label plan as self-serve, not sales-led', () => {
+    expect(isContactSalesPlan('label')).toBe(false);
   });
 });
 
@@ -176,11 +188,30 @@ describe('summarizeBilling', () => {
     expect(result.title).toBe('Active plan');
   });
 
-  it('routes a Label plan to contact, not to the self-serve picker', () => {
-    // Label has no wired Paystack checkout, so /locked would be a dead end.
-    expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'label' })).cta).toBe('contact');
-    expect(summarizeBilling(snapshot({ accountStatus: 'expired', plan: 'label' })).cta).toBe(
+  it('routes a sales-led plan to contact, not to the self-serve picker', () => {
+    // Enterprise is quoted per contract, so /locked would be a dead end.
+    expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'enterprise' })).cta).toBe(
       'contact'
+    );
+    expect(summarizeBilling(snapshot({ accountStatus: 'expired', plan: 'enterprise' })).cta).toBe(
+      'contact'
+    );
+  });
+
+  it('names a tier plan rather than falling back to the generic title', () => {
+    // Before tiers were storable these fell through to 'Active plan', so a
+    // paying Manager customer was shown no indication of what they bought.
+    expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'manager' })).title).toBe(
+      'Manager plan'
+    );
+    expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'label' })).title).toBe(
+      'Label plan'
+    );
+    // Not 'contact': the exit a paying Label customer gets is "change plan",
+    // and a lapsed one gets the picker. Either way, never a mailto.
+    expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'label' })).cta).toBe('change');
+    expect(summarizeBilling(snapshot({ accountStatus: 'expired', plan: 'label' })).cta).toBe(
+      'plans'
     );
   });
 

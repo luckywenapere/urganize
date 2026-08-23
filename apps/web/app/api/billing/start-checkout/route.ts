@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isBillingPlanId, isPricingCurrency } from '@urganize/pricing';
+import { isPricingCurrency } from '@urganize/pricing';
 import { getAuthenticatedUser, createAdminClient } from '@/app/api/releases/_shared';
-import {
-  getPaystackPlanCode,
-  getPlanMinorUnit,
-  isRecurringPlan,
-} from '@/lib/billing-plans';
+import { resolveCheckoutPurchase } from '@/lib/billing-plans';
+import { isPricingV2Enabled } from '@/lib/entitlements';
 import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { resolveCheckoutSubject } from '@/lib/billing-events';
 import { logBillingEvent } from '@/lib/billing-events-server';
@@ -40,6 +37,11 @@ import { logBillingEvent } from '@/lib/billing-events-server';
 type StartCheckoutRequest = {
   plan?: unknown;
   currency?: unknown;
+  /** 'monthly' | 'annual'. REQUIRED for a pricing-v2 tier plan and ignored for
+   * a legacy plan id, because a tier does not encode its own interval. Without
+   * it the webhook cannot tell how far to set expires_at, which is the whole
+   * bug this argument exists to close. */
+  interval?: unknown;
   /** Team the plan is being activated for (hard-paywall flow). When present,
    * the charge is credited to that team's owner. */
   workspaceId?: string;
@@ -95,25 +97,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  const plan = body.plan;
   const currency = body.currency;
-  if (!isBillingPlanId(plan)) {
-    return NextResponse.json(
-      { error: 'plan must be "monthly", "annual", or "label".' },
-      { status: 400 }
-    );
-  }
   if (!isPricingCurrency(currency)) {
     return NextResponse.json(
       { error: 'currency must be "NGN" or "USD".' },
       { status: 400 }
     );
   }
-  if (!isRecurringPlan(plan)) {
-    // Belt-and-braces — isBillingPlanId already narrows to the recurring
-    // tiers, but the cleanup migration may introduce extra plan strings later.
-    return NextResponse.json({ error: 'Plan is not a recurring tier.' }, { status: 400 });
+
+  // Which Paystack Plan, how much, and (for a tier) which interval to record.
+  // The decision lives in lib/billing-plans.ts so it can be unit tested — it is
+  // what decides the amount and the term a customer's card is charged for, and
+  // this route is unreachable from a test without mocking Supabase and fetch.
+  const purchase = resolveCheckoutPurchase({
+    plan: body.plan,
+    currency,
+    interval: body.interval,
+    pricingV2: isPricingV2Enabled(),
+  });
+  if (!purchase.ok) {
+    return NextResponse.json({ error: purchase.error }, { status: purchase.status });
   }
+  const { planId, planCode, amountMinorUnit, interval: selectedInterval } = purchase;
 
   const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
   if (!paystackSecretKey) {
@@ -123,17 +128,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const planCode = getPaystackPlanCode(plan, currency);
-  if (!planCode) {
-    return NextResponse.json(
-      {
-        error: `Paystack plan code not configured for ${plan}/${currency}. Set the matching PAYSTACK_PLAN_* env var.`,
-      },
-      { status: 500 }
-    );
-  }
-
-  const amountMinorUnit = getPlanMinorUnit(plan, currency);
   const reference = generateReference();
   const callbackUrl = resolveCallbackUrl(request);
 
@@ -201,10 +195,14 @@ export async function POST(request: NextRequest) {
     amount: amountMinorUnit,
     reference,
     status: 'pending',
-    plan,
+    plan: planId,
     paystack_response: {
       source: 'recurring_start_checkout',
       currency,
+      // The interval hop from checkout to the webhook. Only written for a tier
+      // purchase: a legacy row's plan name already carries its interval, and
+      // omitting the key keeps those rows byte-identical to before.
+      ...(selectedInterval ? { selected_interval: selectedInterval } : {}),
       ...(body.workspaceId ? { workspace_id: body.workspaceId } : {}),
       ...(subjectUserId !== userId ? { paid_by_user_id: userId } : {}),
     },
@@ -238,7 +236,10 @@ export async function POST(request: NextRequest) {
       // receipt.
       metadata: {
         user_id: subjectUserId,
-        plan,
+        plan: planId,
+        // Recorded for support: the Plan code alone does not say which tier a
+        // reused Paystack Plan was sold as.
+        ...(selectedInterval ? { interval: selectedInterval } : {}),
         currency,
         source: 'recurring_start_checkout',
         ...(body.workspaceId ? { workspace_id: body.workspaceId } : {}),
@@ -276,7 +277,7 @@ export async function POST(request: NextRequest) {
       ownerUserId: subjectUserId,
       actorUserId: userId,
       type: 'checkout_started',
-      metadata: { plan, currency, reference, amountMinorUnit },
+      metadata: { plan: planId, interval: selectedInterval, currency, reference, amountMinorUnit },
     });
   }
 

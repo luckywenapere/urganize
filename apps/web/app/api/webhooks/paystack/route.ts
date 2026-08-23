@@ -8,6 +8,7 @@ import {
   getPlanMinorUnit,
   identifyPlanByCode,
   isRecurringPlan,
+  planCodeMatchesSubscription,
   type RecurringPlanId,
 } from '@/lib/billing-plans';
 import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
@@ -130,6 +131,21 @@ const planRef = (raw: PaystackWebhookPayload['data']): PaystackPlanRef | null =>
 
 // ─── credit-user helpers ─────────────────────────────────────────────────────
 
+/**
+ * The billing interval start-checkout recorded on the payments row.
+ *
+ * Narrowed rather than cast: this comes out of a jsonb column, so it is
+ * `unknown` as far as the type system is concerned, and anything that is not
+ * exactly 'monthly' or 'annual' must become null so the resolver falls back to
+ * plan-name inference instead of trusting a malformed value.
+ */
+function readSelectedInterval(
+  paystackResponse: Record<string, unknown> | null
+): 'monthly' | 'annual' | null {
+  const value = paystackResponse?.selected_interval;
+  return value === 'monthly' || value === 'annual' ? value : null;
+}
+
 async function applyInitialOrManualCharge(
   admin: AdminClient,
   userId: string,
@@ -138,9 +154,15 @@ async function applyInitialOrManualCharge(
   reference: string,
   customerCode: string | null,
   subscriptionCode: string | null,
-  now: Date
+  now: Date,
+  /** The interval the customer chose at checkout, from
+   *  payments.paystack_response.selected_interval. Null for a legacy plan id,
+   *  whose name already carries its interval. Persisting it is what lets every
+   *  future RENEWAL know the period: a renewal has no payments row to read, so
+   *  the subscription row is the only place this fact can live. */
+  billingInterval: 'monthly' | 'annual' | null = null
 ) {
-  const expiresAt = getPlanExpiry(plan, now);
+  const expiresAt = getPlanExpiry(plan, now, billingInterval);
 
   const { error: subError } = await admin
     .from('subscriptions')
@@ -148,6 +170,7 @@ async function applyInitialOrManualCharge(
       {
         user_id: userId,
         plan,
+        billing_interval: billingInterval,
         status: 'active',
         amount: amountMinorUnit,
         paystack_reference: reference,
@@ -213,14 +236,18 @@ async function applyRenewal(
   currentExpiresAt: string | null,
   amountMinorUnit: number,
   reference: string,
-  now: Date
+  now: Date,
+  /** subscriptions.billing_interval, read on the same row as the plan. Without
+   *  it a tier subscription cannot be extended correctly, because the plan name
+   *  does not say whether a period is a month or a year. */
+  billingInterval: string | null = null
 ) {
   // Renewal extends from the CURRENT expires_at (not now) so a renewal that
   // arrives a day late doesn't shorten the user's paid window. `advancePeriodEnd`
   // handles the "current end is in the past" edge (e.g. after a long pause)
   // by basing forward from now instead.
   const currentEnd = currentExpiresAt ? new Date(currentExpiresAt) : null;
-  const nextEnd = advancePeriodEnd(plan, currentEnd, now);
+  const nextEnd = advancePeriodEnd(plan, currentEnd, now, billingInterval);
 
   const { error: subError } = await admin
     .from('subscriptions')
@@ -609,6 +636,12 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
       // already have it here in `data.subscription` though, so persist
       // either way and let subscription.create be idempotent.
       const subscriptionCode = subscriptionRef?.subscription_code || null;
+      // The interval start-checkout wrote into the jsonb, which is the trusted
+      // source here for the same reason `plan` is: both were written server-side
+      // by us, not echoed back from Paystack. A tier plan needs it — its name
+      // does not say whether the customer bought a month or a year — and a
+      // legacy plan does not, so absent stays absent.
+      const selectedInterval = readSelectedInterval(payment.paystack_response);
       await applyInitialOrManualCharge(
         admin,
         userId,
@@ -617,7 +650,8 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
         reference,
         customerCode,
         subscriptionCode,
-        now
+        now,
+        selectedInterval
       );
       return ack({
         event: 'charge.success',
@@ -653,12 +687,21 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
   //    fresh reference per invoice). Match the subscription by
   //    subscription_code (preferred) then customer_code (fallback).
   const renewalSubscriptionCode = subscriptionRef?.subscription_code || null;
-  let subscriptionLookup: { data: { id: string; user_id: string; plan: string; expires_at: string | null } | null; error: { message: string } | null } | null = null;
+  let subscriptionLookup: {
+    data: {
+      id: string;
+      user_id: string;
+      plan: string;
+      expires_at: string | null;
+      billing_interval: string | null;
+    } | null;
+    error: { message: string } | null;
+  } | null = null;
 
   if (renewalSubscriptionCode) {
     subscriptionLookup = await admin
       .from('subscriptions')
-      .select('id,user_id,plan,expires_at')
+      .select('id,user_id,plan,expires_at,billing_interval')
       .eq('paystack_subscription_code', renewalSubscriptionCode)
       .maybeSingle();
   }
@@ -666,7 +709,7 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
   if ((!subscriptionLookup || !subscriptionLookup.data) && customerCode) {
     subscriptionLookup = await admin
       .from('subscriptions')
-      .select('id,user_id,plan,expires_at')
+      .select('id,user_id,plan,expires_at,billing_interval')
       .eq('paystack_customer_code', customerCode)
       .maybeSingle();
   }
@@ -700,15 +743,26 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
     return ack({ event: 'charge.success', reference, matched: false, reason: 'non_recurring_subscription' });
   }
 
-  const incomingPlanIdentified = identifyPlanByCode(incomingPlanCode);
-  if (incomingPlanIdentified && incomingPlanIdentified.plan !== subRow.plan) {
+  // Sanity check only, and FORWARD-resolving on purpose: because the Label tier
+  // reuses the legacy monthly/annual Paystack Plans by design, reverse-mapping
+  // the incoming code would report a mismatch on every single Label renewal.
+  // See planCodeMatchesSubscription.
+  if (
+    !planCodeMatchesSubscription({
+      code: incomingPlanCode,
+      plan: subRow.plan,
+      storedInterval: subRow.billing_interval,
+    })
+  ) {
     // Plan changed under us (Paystack-side migration?). Log but continue
     // — extend by the stored plan's period to match the contract the user
     // agreed to at signup. If this becomes a real workflow we can add a
     // plan-switch path later.
     console.warn('[paystack-webhook] renewal plan_code differs from stored plan', {
       stored: subRow.plan,
-      incoming: incomingPlanIdentified.plan,
+      stored_interval: subRow.billing_interval,
+      incoming_code: incomingPlanCode,
+      incoming_identified: identifyPlanByCode(incomingPlanCode)?.plan ?? null,
     });
   }
 
@@ -719,7 +773,8 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
     subRow.expires_at,
     amountMinorUnit,
     reference,
-    now
+    now,
+    subRow.billing_interval
   );
 
   return ack({
