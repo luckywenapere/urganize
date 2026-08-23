@@ -244,6 +244,28 @@ export type TierPrice = {
   minorUnit: number;
 };
 
+/** A countable ceiling on a tier. `null` means no ceiling.
+ *
+ * These live HERE rather than only in apps/web's entitlement map because the
+ * marketing site renders them and cannot import from the product app
+ * (apps/homepage depends on @urganize/pricing, not on apps/web). One number,
+ * read by the page that advertises it AND by the route that enforces it, is the
+ * only arrangement where a published limit cannot drift from a real one — which
+ * is the failure this repo has shipped repeatedly with prices.
+ *
+ * The BOOLEAN entitlements (data export, concierge onboarding, support channel,
+ * SSO) stay in apps/web: they gate behaviour rather than being numbers a page
+ * quotes, and the resolution logic around them has to stay where vitest
+ * collects it. */
+export type TierLimits = {
+  /** Active team members. */
+  seats: number | null;
+  /** Releases still being worked — not archived, not released. */
+  activeReleases: number | null;
+  /** UrgAns actions per billing period. */
+  urgansMonthlyActions: number | null;
+};
+
 export type PricingTierDefinition = {
   id: PricingTierId;
   label: string;
@@ -252,6 +274,17 @@ export type PricingTierDefinition = {
   /** NGN prices per interval. Absent entirely on a sales-led tier, so a
    *  caller cannot accidentally render a price we never quoted. */
   prices?: Record<BillingInterval, TierPrice>;
+  /** The countable ceilings. See TierLimits for why they live here. */
+  limits: TierLimits;
+  /** The non-countable things this tier includes, in customer words.
+   *
+   *  Written out rather than derived, because these are claims about the
+   *  product and each one has to be true today. Nothing here may name an
+   *  unbuilt feature: `sso` and `sub_teams` are declared in the entitlement map
+   *  and read by nothing, so they are deliberately ABSENT from Enterprise's
+   *  list (founder call, 2026-08-24) — a contract can promise them, a public
+   *  page cannot. */
+  perks: readonly string[];
   /** Sales-led: no price displayed, no self-serve checkout. Both surfaces
    *  render a "Let's talk" CTA to SALES_CONTACT_EMAIL instead. */
   contactSales?: boolean;
@@ -269,6 +302,13 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
       monthly: { amount: 35_000, minorUnit: 35_000_00 },
       annual: { amount: 350_000, minorUnit: 350_000_00 },
     },
+    limits: { seats: 4, activeReleases: 3, urgansMonthlyActions: 150 },
+    perks: [
+      'The full 11-week rollout plan, written by hand',
+      'Files, credits and press kits on every release',
+      'Export everything you put in, any time',
+      'Email support',
+    ],
   },
   label: {
     id: 'label',
@@ -280,6 +320,13 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
       monthly: { amount: 80_000, minorUnit: 80_000_00 },
       annual: { amount: 800_000, minorUnit: 800_000_00 },
     },
+    limits: { seats: null, activeReleases: null, urgansMonthlyActions: null },
+    perks: [
+      'Everything in Manager',
+      'Save your own rollout templates',
+      'We set your roster up with you',
+      'WhatsApp support, answered same day',
+    ],
     recommended: true,
   },
   enterprise: {
@@ -288,6 +335,16 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     audience: 'For distributors and groups operating several labels.',
     // No prices at all: an enterprise deal is quoted per contract and
     // invoiced by hand. There is no Paystack plan code for it.
+    limits: { seats: null, activeReleases: null, urgansMonthlyActions: null },
+    // Only what is built. `sso` and `sub_teams` are declared in the entitlement
+    // map and read by NOTHING, so they are deliberately not listed here — see
+    // the note on `perks`.
+    perks: [
+      'Everything in Label',
+      'A support commitment written into your contract',
+      'Priority on UrgAns, so answers come back first',
+      'Onboarding run by the founders',
+    ],
     contactSales: true,
   },
 };
@@ -303,6 +360,52 @@ export const PRICING_TIER_ORDER: readonly PricingTierId[] = [
  *  which the spec requires be phrased as "2 months free" and never as a
  *  percentage. */
 export const ANNUAL_MONTHS_BILLED = 10;
+
+/** The annual saving, phrased the one way the spec allows.
+ *
+ *  Never a percentage, by requirement: "2 months free" is what a manager can
+ *  check against their own bank statement, and a percentage invites an argument
+ *  about how it was calculated. Derived from ANNUAL_MONTHS_BILLED so repricing
+ *  cannot leave this line stale. Null for a tier with no annual price. */
+export function annualSavingCopy(id: PricingTierId): string | null {
+  if (!PRICING_TIERS[id].prices) return null;
+  const free = 12 - ANNUAL_MONTHS_BILLED;
+  return `${free} months free`;
+}
+
+/** One customer-facing line per countable ceiling, plus the tier's perks.
+ *
+ *  THE NUMBERS ARE NEVER WRITTEN INTO A STRING — they come out of `limits`, the
+ *  same field apps/web enforces against. So a re-cut tier updates the pricing
+ *  page and the enforcement together, and the page physically cannot advertise
+ *  a ceiling the product does not apply. That is the whole reason `limits` sits
+ *  in this package rather than only in the app.
+ *
+ *  Plural handling is explicit rather than a naive `+ 's'`: "1 people" on a
+ *  future one-seat tier would be the kind of small wrongness that makes a
+ *  pricing page feel unfinished. */
+export function tierHighlights(id: PricingTierId): string[] {
+  const { limits, perks } = PRICING_TIERS[id];
+  const lines: string[] = [];
+
+  lines.push(
+    limits.seats === null
+      ? 'Unlimited team members'
+      : `${limits.seats} ${limits.seats === 1 ? 'person' : 'people'} on your team`
+  );
+  lines.push(
+    limits.activeReleases === null
+      ? 'Unlimited releases at a time'
+      : `${limits.activeReleases} ${limits.activeReleases === 1 ? 'release' : 'releases'} at a time`
+  );
+  lines.push(
+    limits.urgansMonthlyActions === null
+      ? 'Unlimited UrgAns'
+      : `${limits.urgansMonthlyActions} UrgAns actions a month`
+  );
+
+  return [...lines, ...perks];
+}
 
 export function getTier(id: PricingTierId): PricingTierDefinition {
   return PRICING_TIERS[id];

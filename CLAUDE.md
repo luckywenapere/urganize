@@ -1732,7 +1732,28 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-24 (tier checkout and renewal fixed — see "Tier checkout
+*Last updated: 2026-08-24 (the pricing page, and one number for a limit — see
+"The pricing page, and one number for a limit" above. The surface that makes a
+tier buyable: three columns on the public page, and a tier picker on the in-app
+wall. It REVERSES a founder decision — /pricing has been deliberately price-free
+since 2026-07-23 — so the table is flag-gated rather than swapped in, and flag
+off the page is byte-for-byte the July one. Every CTA stays a capture in both
+modes (founder call); nothing links to the app. The structural change is the part
+worth keeping: apps/homepage cannot import apps/web, so a page quoting "4 people"
+would have carried its own copy of a figure the enforcement layer also holds —
+the display-vs-reality gap this repo has shipped four times with prices, waiting
+to happen with limits. The countable ceilings moved into @urganize/pricing as
+`limits`, ENTITLEMENTS now READS them, and tierHighlights() builds each line from
+the same field, so the page renders the number the route enforces by
+construction (mutation-tested). The booleans and all the resolution logic stayed
+in apps/web on purpose. Enterprise advertises neither SSO nor sub-teams, because
+both are declared and read by nothing — a contract can promise them, a public
+page cannot, and a test enforces that rather than trusting a reviewer. Also:
+intent=upgrade was worse than a dead param (a team at a ceiling was bounced
+straight back to the app) and now works, and layout.tsx's JSON-LD offer said USD
+when every price is in Naira. STILL NOT LIVE: both migrations, Manager's Paystack
+Plans, and the flag on BOTH Vercel projects. Earlier: tier checkout and renewal
+fixed — see "Tier checkout
 and renewal" above. This is the follow-up the enforcement PR flagged as blocking
 the pricing-v2 flag, and both bugs had one cause: under the tier model
 `subscriptions.plan` holds a TIER and no longer encodes the billing interval,
@@ -3396,6 +3417,136 @@ into a unit-tested function. Worth one real end-to-end pass once Manager's
 Paystack Plans exist: buy Manager monthly, confirm `expires_at` lands one month
 out and `billing_interval` reads `monthly`, then buy Label annual and confirm a
 year.
+
+---
+
+## The pricing page, and one number for a limit (2026-08-24)
+
+The surface that makes a tier buyable, and the last piece before
+`NEXT_PUBLIC_FEATURE_PRICING_V2` is worth flipping. Two surfaces changed: the
+public `/pricing` page and the in-app wall.
+
+### It reverses a founder decision, which is why it is gated
+
+`/pricing` has been in **BOOK-A-DEMO MODE since 2026-07-23** — the price table
+was deliberately removed because the founders want to talk to every team before
+money changes hands. The pricing spec (2026-08-23) asks for a public
+three-column page, which is the opposite call, newer.
+
+So the table is **flag-gated rather than swapped in**. Flag off, `/pricing` is
+byte-for-byte the page that shipped in July, headline included; flipping the
+flag is the whole decision and flipping it back is the whole rollback. **Three
+CLAUDE.md claims about this page were stale** and are corrected here: it had no
+tier cards, no FAQ, and nothing anchored to its own `#waitlist` — its primary
+CTA was a `mailto:` book-a-demo, with the waitlist as a secondary section.
+
+**Every CTA is still a capture, in both modes** (founder call). The cards book a
+demo and the sales-led card emails us. Nothing on the page links to
+`app.urganize.app`, because that would reopen the self-serve funnel closed in
+URG-125/URG-136. What price-table mode restores is **not** the pre-July layout in
+git history: that one sold legacy plans in two currencies, and the tier model is
+NGN-only.
+
+### The structural change: one number for a limit
+
+`apps/homepage` depends on `@urganize/pricing` and **cannot import from
+`apps/web`**. So a marketing page quoting "4 people" would have had to carry its
+own copy of a figure the enforcement layer also holds — the display-vs-reality
+gap this repo has shipped four times with prices, waiting to happen with limits.
+
+The countable ceilings therefore moved into the package as
+`PricingTierDefinition.limits`, and `ENTITLEMENTS` in `apps/web` now **reads
+them** instead of declaring them. `tierHighlights()` builds each ceiling line
+from that same field, so the page renders the number the route enforces, by
+construction. Three tests pin it, and the derivation was **mutation-tested**:
+re-literalising one ceiling fails them.
+
+Two things deliberately did NOT move:
+- **The boolean entitlements** (`data_export`, `concierge_onboarding`,
+  `support_channel`, `sso`, `sub_teams`) stay in `apps/web`. They gate behaviour
+  rather than being numbers a page quotes.
+- **The resolution logic** (`resolveTeamTier`, `checkLimit`, `getEntitlement`)
+  stays in `apps/web` for the reason its own header gives: `vitest.config.ts`
+  collects `lib/**/*.test.ts`, and that is decision logic which has to be tested.
+  The data moved; the decisions did not.
+
+`TIER_LABEL` in `entitlements.ts` was a third hand-written copy of the tier names
+and now reads `PRICING_TIERS[tier].label`.
+
+### Enterprise advertises only what is built
+
+`sso` and `sub_teams` are declared in the entitlement map and **read by
+nothing**. A contract can promise them; a public page cannot. Enterprise's
+`perks` therefore name neither (founder call), and a test asserts the rendered
+copy contains no such claim — the `data_export` discipline applied to a
+marketing claim, because "a reviewer will notice" is not a mechanism. Verified
+against the built HTML too: zero occurrences in visible text.
+
+### Four things worth knowing before editing either surface
+
+1. **The wall offers two tiers, not three.** Enterprise is absent from
+   `WALL_TIERS` because `TeamWall` already carries a full-weight "Talk to us"
+   card beside the picker, and a third radio that cannot check out would be a
+   dead end next to the real path. Exactly the reasoning that kept the legacy
+   `contactSales` plan out of `PLAN_ORDER`.
+2. **`intent=upgrade` was worse than a dead param, and now works.**
+   `UrgansUsageStrip` has linked to `/locked?intent=upgrade` since the caps
+   shipped and nothing read it — so a team that hit a ceiling still had access,
+   and the wall's has-access effect bounced them straight back to the app. A
+   no-op round trip. The wall now treats it as a deliberate arrival, with its own
+   headline and a "Change your plan" CTA.
+3. **The interval control comes before the tier cards, on both surfaces.** It
+   reprices every card below it, so asking for it afterwards would move the
+   numbers under the user's cursor.
+4. **The legacy `/locked` picker (`LegacyLockedPage`) was deliberately left
+   alone.** `NEXT_PUBLIC_FEATURE_HARD_PAYWALL` is on in production, so `TeamWall`
+   is what every real user sees; the legacy page is the documented flag-off
+   revert path, and the legacy plan ids it posts are still accepted by checkout.
+   Updating it would have doubled the picker work to change a page nobody
+   reaches. Same for `/start-trial`, whose funnel is superseded and flag-off.
+
+`TierPlanPicker` uses a real `<input type="radio">` inside a `<label>` (the
+`PlannerRadioGroup` approach) rather than the `<button role="radio">` the billing
+pickers have used until now — arrow-key groups, screen readers and the 44px hit
+target come free, along with the focus ring the hand-rolled version was missing.
+
+### Also fixed in passing
+
+`layout.tsx`'s `softwareApplicationSchema` declared `"priceCurrency": "USD"`.
+Every price Urganize charges is in Naira, and USD checkout has never worked. It
+said USD from the day it was written.
+
+### Verified
+
+**1118 tests** (8 new), `eslint .` at the exact **3-error / 66-warning** baseline
+in `apps/web` and **0 errors / 2 warnings** in `apps/homepage` — both unchanged.
+`next build` green **by exit code** for BOTH apps in BOTH flag states, with
+`/auth`, `/onboarding`, `/settings` still `○ Static` and `/pricing` still
+`○ Static` in each. The flag-on `/pricing` HTML was read directly rather than
+assumed: the new headline present and the old one gone, ₦350,000 and ₦800,000
+rendering, "2 months free", "Most teams", and the derived ceiling lines ("4
+people on your team", "3 releases at a time", "150 UrgAns actions a month")
+alongside "Unlimited" on the two uncapped tiers.
+
+**Not verified:** the in-app picker has never rendered in a browser — the wall
+needs an authenticated, walled session this environment cannot mint — so the
+interval toggle, the tier radios and a real tier checkout are reasoned from code
+plus unit tests. Nothing has run against real Paystack. Worth one pass once
+Manager's Plans exist: open the wall, switch to Monthly, pick Manager, and
+confirm Paystack quotes ₦35,000.
+
+### What is still needed before the flag goes on
+
+1. Apply `20260823100000_pricing_tiers.sql` and
+   `20260824100000_subscriptions_billing_interval.sql`.
+2. Mint Manager's two Paystack Plans (₦35,000 / ₦350,000) and set
+   `PAYSTACK_PLAN_MANAGER_{MONTHLY,ANNUAL}_NGN`. **Do not repoint**
+   `PAYSTACK_PLAN_{MONTHLY,ANNUAL}_NGN` — Label reuses them.
+3. Set `NEXT_PUBLIC_FEATURE_PRICING_V2=true` on **both** Vercel projects. The
+   product app and the marketing site both read it now, and setting it on only
+   one leaves the site advertising tiers the app cannot sell, or the reverse.
+4. Changelog entry + version bump at the flip, not at merge (the EPK precedent).
+   `apps/homepage` changes never earn one, but the `apps/web` half does.
 
 ---
 

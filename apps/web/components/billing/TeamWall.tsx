@@ -8,6 +8,8 @@ import {
   SALES_WHATSAPP_URL,
   formatPlanCyclePrice,
   getPlan,
+  type BillingInterval,
+  type PricingTierId,
 } from '@urganize/pricing';
 import { AlertTriangle, CheckCircle2, MessageCircle } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
@@ -20,6 +22,8 @@ import {
   getTeamAccessClient,
   type TeamAccessClientSnapshot,
 } from '@/lib/team-billing-client';
+import { isPricingV2Enabled } from '@/lib/entitlements';
+import { TierPlanPicker } from '@/components/billing/TierPlanPicker';
 
 // The wall (NEXT_PUBLIC_FEATURE_HARD_PAYWALL). Rendered by /locked when the
 // flag is on; the flag-off page is untouched beside it.
@@ -44,6 +48,20 @@ import {
 
 const PLAN_ORDER = ['annual', 'monthly'] as const;
 
+const PRICING_V2 = isPricingV2Enabled();
+
+/** The self-serve tiers the wall offers. Enterprise is absent on purpose: the
+ *  full-weight "Talk to us" card beside the picker IS its path, and a third
+ *  radio that cannot check out would be a dead end sitting next to the real one.
+ *  Exactly the reasoning that kept the legacy contactSales plan out of
+ *  PLAN_ORDER above. */
+const WALL_TIERS: readonly PricingTierId[] = ['manager', 'label'] as const;
+
+/** Which tier a returning owner lands on. The flagship rather than the entry
+ *  tier, matching the legacy picker defaulting to annual: it is what most teams
+ *  buy, and starting on the cheaper one reads as steering. */
+const DEFAULT_TIER: PricingTierId = 'label';
+
 const VALUE_LINES = [
   'Every release, task and file exactly where you left it.',
   'Your whole team, on the same plan.',
@@ -60,6 +78,12 @@ export function TeamWall() {
   const [team, setTeam] = useState<TeamAccessClientSnapshot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>('annual');
+  // Pricing v2 splits the one choice above into two: which tier, and how often.
+  // Both are unused while the flag is off, and the legacy state above is unused
+  // while it is on — kept side by side rather than overloaded, so a rollback is
+  // one boolean and not a data migration in component state.
+  const [selectedTier, setSelectedTier] = useState<PricingTierId>(DEFAULT_TIER);
+  const [selectedInterval, setSelectedInterval] = useState<BillingInterval>('annual');
   const [isStartingCheckout, setIsStartingCheckout] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
@@ -72,7 +96,17 @@ export function TeamWall() {
   // The owner may reach this page from the trial indicator while they still
   // have access, to pay early. Without this the hasAccess bounce below would
   // throw them straight back out.
-  const isActivateIntent = searchParams.get('intent') === 'activate';
+  // Two deliberate arrivals, and both must survive the bounce below.
+  //
+  // `activate` is an owner paying early from the trial strip. `upgrade` is a
+  // team that has hit a plan ceiling — UrgansUsageStrip has linked here with it
+  // since the caps shipped, and NOTHING read it, so a paying Manager team
+  // clicking "See plans" was bounced straight back to the app by the
+  // has-access effect. That made the link a no-op round trip rather than merely
+  // a dead param.
+  const intent = searchParams.get('intent');
+  const isDeliberateVisit = intent === 'activate' || intent === 'upgrade';
+  const isUpgradeIntent = intent === 'upgrade';
 
   const trackedRef = useRef(false);
 
@@ -100,10 +134,10 @@ export function TeamWall() {
   // Access came back while they were sitting here (the webhook landed, or an
   // admin comped them). Send them back into the app.
   useEffect(() => {
-    if (!isActivateIntent && team?.hasAccess) {
+    if (!isDeliberateVisit && team?.hasAccess) {
       router.replace(HOME_PATH);
     }
-  }, [isActivateIntent, team?.hasAccess, router]);
+  }, [isDeliberateVisit, team?.hasAccess, router]);
 
   // Tell the server a human is looking at the wall. It decides whether this is
   // the first hit or a return visit and whether the founder hears about it, so
@@ -121,13 +155,16 @@ export function TeamWall() {
         await fetch('/api/billing/track', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ event: 'paywall_view', planViewed: selectedPlan }),
+          body: JSON.stringify({
+            event: 'paywall_view',
+            planViewed: PRICING_V2 ? selectedTier : selectedPlan,
+          }),
         });
       } catch {
         // Telemetry must never affect what the user sees.
       }
     })();
-  }, [isLoading, team, selectedPlan]);
+  }, [isLoading, team, selectedPlan, selectedTier]);
 
   const handleActivate = useCallback(async () => {
     setCheckoutError(null);
@@ -140,9 +177,14 @@ export function TeamWall() {
       const response = await fetch('/api/billing/start-checkout', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        // Under v2 the tier and the interval are two fields, and the interval
+        // is REQUIRED: resolveCheckoutPurchase rejects a tier without one,
+        // because nothing else could tell the webhook how far to set
+        // expires_at. Flag off, this body is byte-identical to before.
         body: JSON.stringify({
-          plan: selectedPlan,
+          plan: PRICING_V2 ? selectedTier : selectedPlan,
           currency: 'NGN',
+          ...(PRICING_V2 ? { interval: selectedInterval } : {}),
           ...(team?.primaryWorkspaceId ? { workspaceId: team.primaryWorkspaceId } : {}),
         }),
       });
@@ -165,7 +207,7 @@ export function TeamWall() {
       setCheckoutError(errorMessage(error, 'Could not start checkout.'));
       setIsStartingCheckout(false);
     }
-  }, [selectedPlan, team?.primaryWorkspaceId]);
+  }, [selectedPlan, selectedTier, selectedInterval, team?.primaryWorkspaceId]);
 
   const trackTalkToUs = useCallback(async () => {
     try {
@@ -175,12 +217,15 @@ export function TeamWall() {
       await fetch('/api/billing/track', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event: 'talk_to_us', planViewed: selectedPlan }),
+        body: JSON.stringify({
+          event: 'talk_to_us',
+          planViewed: PRICING_V2 ? selectedTier : selectedPlan,
+        }),
       });
     } catch {
       // Never block the conversation on telemetry.
     }
-  }, [selectedPlan]);
+  }, [selectedPlan, selectedTier]);
 
   const handleWhatsApp = useCallback(() => {
     void trackTalkToUs();
@@ -255,11 +300,24 @@ export function TeamWall() {
 
         <header className="flex flex-col gap-3">
           <h1 className="font-display text-3xl font-semibold text-content-primary">
-            {team?.state === 'walled' ? 'Your trial has ended.' : 'Activate your plan.'}
+            {isUpgradeIntent
+              ? 'Move up a plan.'
+              : team?.state === 'walled'
+                ? 'Your trial has ended.'
+                : 'Activate your plan.'}
           </h1>
           <p className="max-w-2xl text-base leading-7 text-content-secondary">
-            Your releases, tasks and files are safe and waiting.
-            {team?.teamName ? ` Nothing on ${team.teamName} has been removed.` : ''}
+            {isUpgradeIntent ? (
+              // Someone who arrived here from a ceiling already has access, so
+              // the reassurance below would be answering a question they did
+              // not ask.
+              'Pick the plan that fits what your team is doing now. Your releases carry over untouched.'
+            ) : (
+              <>
+                Your releases, tasks and files are safe and waiting.
+                {team?.teamName ? ` Nothing on ${team.teamName} has been removed.` : ''}
+              </>
+            )}
           </p>
         </header>
 
@@ -304,6 +362,16 @@ export function TeamWall() {
                 </div>
               ) : (
                 <>
+                  {PRICING_V2 ? (
+                    <TierPlanPicker
+                      tiers={WALL_TIERS}
+                      selectedTier={selectedTier}
+                      onSelectTier={setSelectedTier}
+                      interval={selectedInterval}
+                      onIntervalChange={setSelectedInterval}
+                      disabled={isStartingCheckout}
+                    />
+                  ) : (
                   <div role="radiogroup" aria-label="Choose a plan" className="flex flex-col gap-2">
                     {PLAN_ORDER.map((planId) => {
                       const plan = getPlan(planId);
@@ -341,6 +409,7 @@ export function TeamWall() {
                       );
                     })}
                   </div>
+                  )}
 
                   <ul className="flex flex-col gap-2">
                     {VALUE_LINES.map((line) => (
@@ -360,7 +429,11 @@ export function TeamWall() {
                     disabled={isStartingCheckout}
                     onClick={handleActivate}
                   >
-                    {isStartingCheckout ? 'Opening secure checkout' : 'Activate your plan'}
+                    {isStartingCheckout
+                      ? 'Opening secure checkout'
+                      : isUpgradeIntent
+                        ? 'Change your plan'
+                        : 'Activate your plan'}
                   </Button>
 
                   {checkoutError ? (
@@ -380,7 +453,9 @@ export function TeamWall() {
                   Talk to us
                 </h2>
                 <p className="mt-1 text-sm text-content-secondary">
-                  Prefer an invoice or a walkthrough for your team? Talk to us directly.
+                  {PRICING_V2
+                    ? 'Running several labels, or prefer an invoice? Enterprise is quoted per contract. Talk to us directly.'
+                    : 'Prefer an invoice or a walkthrough for your team? Talk to us directly.'}
                 </p>
               </div>
 
