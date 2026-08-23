@@ -39,6 +39,8 @@ import {
   createServerPostHogClient,
   shutdownServerAnalytics,
 } from '@/lib/posthog';
+import { checkActiveReleaseAllowance } from '@/lib/release-cap-server';
+import { recordLimitHit } from '@/lib/seats-server';
 
 const trimString = (value: unknown): string => String(value || '').trim();
 
@@ -501,6 +503,27 @@ export async function POST(request: NextRequest) {
     // why it can't be derived, and why it lives in `metadata`.
     const templatePending =
       !plannerPending && releasePlan !== 'blank' && !releaseDateResult.value;
+
+    // Active-release ceiling. Separate from the existing count above, which has
+    // no status predicate on purpose: that one feeds first-release analytics and
+    // means "releases ever". This one means "releases still being worked", which
+    // is what the cap is about and what the identity card already shows.
+    //
+    // Placed immediately before the insert so nothing is half-created when it
+    // refuses, and after every validation so a refusal is the LAST word rather
+    // than pre-empting a 400 the caller should see first.
+    const releaseCap = await checkActiveReleaseAllowance(adminClient, auth.user.id);
+    if (!releaseCap.verdict.allowed) {
+      await recordLimitHit(adminClient, {
+        workspaceId: releaseCap.workspaceId ?? '',
+        ownerUserId: auth.user.id,
+        actorUserId: auth.user.id,
+        key: releaseCap.verdict.key,
+        limit: releaseCap.verdict.limit,
+        current: releaseCap.verdict.current,
+      });
+      return NextResponse.json({ error: releaseCap.verdict.message }, { status: 409 });
+    }
 
     const releaseResult = await adminClient
       .from('releases')

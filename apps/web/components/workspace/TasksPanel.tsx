@@ -14,6 +14,7 @@ import {
   Music,
   Newspaper,
   NotebookPen,
+  Archive,
   PartyPopper,
   Plus,
   Radio,
@@ -237,6 +238,9 @@ type TasksPanelProps = {
    * when the flag is off, no release is scoped, or the release isn't
    * recap-eligible yet (WorkspaceView owns that eligibility check). */
   recapAction?: TaskPanelAction | null;
+  /** Shelve a finished release, or restore an archived one. Modal-shaped like
+   *  recap, so it lives in the same two places. */
+  archiveAction?: TaskPanelAction | null;
   /**
    * When set, replaces the activity buckets with this content while keeping the
    * header row of pills above it (2026-08-05, founder call). That row is the
@@ -293,6 +297,7 @@ export function TasksPanel({
   id,
   statusUpdateAction,
   recapAction,
+  archiveAction,
   sceneContent,
   activitiesBanner,
   bannerReplacesEmptyState = false,
@@ -672,6 +677,13 @@ export function TasksPanel({
     </button>
   ) : null;
 
+  const archiveButton = archiveAction ? (
+    <button type="button" onClick={archiveAction.onClick} className={neutralPillClass}>
+      <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+      {archiveAction.label}
+    </button>
+  ) : null;
+
   /**
    * Mobile top tabs (2026-08-16, founder request via screenshot reference).
    * The permanent, always-visible entry points on a phone: Calendar,
@@ -767,6 +779,17 @@ export function TasksPanel({
           disabled: recapAction.disabled,
         }
       : null,
+    // Archive sits with recap for the same reason: it opens a modal rather
+    // than a scene, so it would never light up among the top tabs.
+    archiveAction
+      ? {
+          key: 'archive',
+          label: archiveAction.label,
+          icon: Archive,
+          onClick: archiveAction.onClick,
+          disabled: archiveAction.disabled,
+        }
+      : null,
     EPK_ENABLED && scopedRelease
       ? {
           key: 'epk',
@@ -832,6 +855,7 @@ export function TasksPanel({
         {notesPill}
         {statusUpdateButton}
         {recapButton}
+        {archiveButton}
       </div>
 
       {/* Mobile top tabs (below `lg` ONLY) — 2026-08-16, founder request via

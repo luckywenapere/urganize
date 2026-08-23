@@ -31,6 +31,9 @@ import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
+import { ArchiveReleaseDialog } from '@/components/workspace/ArchiveReleaseDialog';
+import { isReleaseActive } from '@/lib/release-activity';
+import { isRecapEligible as isRecapEligibleForRelease } from '@/lib/recap-eligibility';
 
 const TASKS_PANEL_ID = 'workspace-tasks';
 
@@ -182,6 +185,7 @@ export function WorkspaceView() {
   const [hasPlanDraft, setHasPlanDraft] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isRecapOpen, setIsRecapOpen] = useState(false);
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isGeneratingStatus, setIsGeneratingStatus] = useState(false);
   const [statusUpdate, setStatusUpdate] = useState('');
   // The counts behind the generated paragraph, shown as tiles above it so the
@@ -527,27 +531,26 @@ export function WorkspaceView() {
   // column, so they leave the rails alone (founder call).
   const hideRailsForLayout = (CHAPPI_ENABLED && isRailOpen) || activeScene === 'calendar';
 
-  // A recap is only worth offering once the release has actually happened.
-  // Mirrors the server predicate in the recap route's _shared.ts exactly, so
-  // the pill and the API can never disagree about what "finished" means.
-  // Release day itself counts: the share moment is the launch, not the day
-  // after. The all-tasks-done clause is what makes "complete" real today, since
-  // nothing in the product writes the released status, and it is the only route
-  // to a recap for a release whose date was never set.
+  // A recap is only worth offering once the release has actually happened, and
+  // this now calls the SAME lib/recap-eligibility.ts predicate the recap route
+  // gates on rather than re-implementing it. It used to be a hand-rolled copy
+  // that merely "mirrored" the server — a drift hazard that got worse the
+  // moment the archive action started depending on the same answer. Release day
+  // itself counts (the share moment is the launch, not the day after), and the
+  // all-tasks-done clause is what makes "complete" real today, since nothing in
+  // the product writes the released status.
   const isRecapEligible = useMemo(() => {
     if (!scopedReleaseSlim) return false;
-    if (scopedReleaseSlim.status === 'released' || scopedReleaseSlim.status === 'archived') {
-      return true;
-    }
-    if (scopedReleaseSlim.releaseDate) {
-      const releaseDay = new Date(`${scopedReleaseSlim.releaseDate}T00:00:00`);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (Number.isFinite(releaseDay.getTime()) && releaseDay.getTime() <= today.getTime()) {
-        return true;
+    return isRecapEligibleForRelease(
+      {
+        releaseDate: scopedReleaseSlim.releaseDate ?? null,
+        status: scopedReleaseSlim.status ?? '',
+      },
+      {
+        totalTasks: scopedTasks.length,
+        allTasksDone: scopedTasks.every((task) => task.status === 'done'),
       }
-    }
-    return scopedTasks.length > 0 && scopedTasks.every((task) => task.status === 'done');
+    );
   }, [scopedReleaseSlim, scopedTasks]);
 
   // The two AI actions, ported from the removed release detail page — only
@@ -570,6 +573,21 @@ export function WorkspaceView() {
   const recapAction =
     scopedReleaseId && RELEASE_RECAP_ENABLED && isRecapEligible
       ? { label: 'Release recap', onClick: () => setIsRecapOpen(true) }
+      : null;
+
+  // Archive is offered once a release reads as finished — the same eligibility
+  // the recap uses, because "worth celebrating" and "safe to shelve" are the
+  // same moment. Offering it on a release still in flight would invite someone
+  // to shelve work they are mid-way through. A release already archived shows
+  // Restore instead, so the action is always a round trip rather than a
+  // one-way door.
+  const isScopedArchived = !isReleaseActive(scopedReleaseSlim?.status);
+  const archiveAction =
+    scopedReleaseId && (isRecapEligible || isScopedArchived)
+      ? {
+          label: isScopedArchived ? 'Restore release' : 'Archive release',
+          onClick: () => setIsArchiveOpen(true),
+        }
       : null;
 
   // The Plan pill only exists while there is something to open: no activities
@@ -880,6 +898,7 @@ export function WorkspaceView() {
                   scopedRelease={scopedReleaseSlim}
                   statusUpdateAction={statusUpdateAction}
                   recapAction={recapAction}
+                  archiveAction={archiveAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
                   activitiesBanner={planBanner ?? setReleaseDateBanner}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
@@ -922,6 +941,7 @@ export function WorkspaceView() {
                 banner={newReleaseGuideBanner}
                 panelStatusUpdateAction={statusUpdateAction}
                 panelRecapAction={recapAction}
+                panelArchiveAction={archiveAction}
                 panelSceneContent={isDesktopViewport ? scenePanel : undefined}
                 panelActivitiesBanner={planBanner ?? setReleaseDateBanner}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
@@ -1038,6 +1058,23 @@ export function WorkspaceView() {
           onRegenerate={() => void generateStatus()}
         />
       ) : null}
+
+      <ArchiveReleaseDialog
+        open={isArchiveOpen}
+        release={scopedReleaseSlim}
+        archived={isScopedArchived}
+        onClose={() => setIsArchiveOpen(false)}
+        onArchived={(_releaseId, archived) => {
+          setIsArchiveOpen(false);
+          setToast({
+            message: archived ? 'Release archived.' : 'Release restored.',
+            tone: 'success',
+          });
+          // Force-refresh so the catalog grid and the identity card's active
+          // count both reflect it without a reload.
+          void loadCommandCenter({ force: true });
+        }}
+      />
 
       {/* Mounted only while open, so each open refetches and never shows a
           signed preview URL that expired since last time. */}

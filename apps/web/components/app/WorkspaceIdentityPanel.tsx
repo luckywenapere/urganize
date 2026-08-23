@@ -12,6 +12,7 @@ import { useChappiStore } from "@/stores/useChappiStore";
 import { CatalogIcon, ChappiIcon, GearIcon, NotesIcon } from "@/components/app/BrandIcons";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { readPersistedState, writePersistedState } from "@/lib/persisted-state";
+import { isReleaseActive } from "@/lib/release-activity";
 
 // Collapsed state — same lib/persisted-state pattern as the UrgAns rail's
 // RAIL_OPEN_KEY, and for the same reason: pure UI-chrome state, so a reload
@@ -165,11 +166,6 @@ function buildNavItems(
   ];
 }
 
-// Statuses that count as "still being worked" for the card's stat line.
-// Mirrors the URG-214 Linear issue's proposed definition — a release stops
-// counting once it's shipped or shelved.
-const INACTIVE_RELEASE_STATUSES = new Set(["released", "archived"]);
-
 // Same inline flag read AppShell uses for the UrgAns rail — needed here too
 // so this panel knows whether a rail could even be competing for width.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === "true";
@@ -250,8 +246,10 @@ export function WorkspaceIdentityPanel() {
     void loadCommandCenter();
   }, [load, loadCommandCenter]);
 
-  const activeReleaseCount = releases.filter(
-    (release) => !INACTIVE_RELEASE_STATUSES.has(release.status),
+  // Shared with the Manager tier's active-release ceiling (lib/release-activity.ts),
+  // so the number shown here and the number the cap counts cannot disagree.
+  const activeReleaseCount = releases.filter((release) =>
+    isReleaseActive(release.status),
   ).length;
 
   const showSkeleton = !hydrated;

@@ -11,6 +11,9 @@ import type {
   ChappiReleaseScope,
   ChappiResponse,
 } from '@/lib/chappi/types';
+import { getTeamAccessForUser } from '@/lib/team-billing-server';
+import { checkUrgansAllowance, recordUrgansAction } from '@/lib/urgans-usage-server';
+import { recordLimitHit } from '@/lib/seats-server';
 
 // Same budget rationale as the plan routes: the agent's tool rounds +
 // model latency must fit inside Vercel's function ceiling, so the loop is
@@ -143,11 +146,63 @@ export async function POST(request: NextRequest) {
       } satisfies ChappiResponse);
     }
 
+    // Assistant action ceiling. Reached only here, AFTER the confirmedAction
+    // branch above has returned, and that placement is the point: the
+    // confirmation replay calls the model too (closeConfirmedAction), so
+    // checking earlier would bill a user an action for clicking Approve on a
+    // permission card. Deterministic mode never reaches this far either — it
+    // returns before the body is read.
+    //
+    // The billable unit is one TURN, not one gateway round: runChappiAgent
+    // loops up to MAX_ROUNDS times per turn.
+    const team = await getTeamAccessForUser(auth.user.id, auth.user.email);
+    const capped = team.primaryWorkspaceId
+      ? await checkUrgansAllowance(auth.adminClient, {
+          workspaceId: team.primaryWorkspaceId,
+          ownerUserId: team.ownerUserId,
+          tier: team.tier,
+        })
+      : null;
+
+    if (capped && !capped.allowed) {
+      await recordLimitHit(auth.adminClient, {
+        workspaceId: team.primaryWorkspaceId ?? '',
+        ownerUserId: team.ownerUserId,
+        actorUserId: auth.user.id,
+        key: capped.key,
+        limit: capped.limit,
+        current: capped.current,
+      });
+      // 'deterministic' rather than 'error', deliberately (founder call): the
+      // client's fallback keyword router and action chips keep working, so a
+      // capped team can still create releases, activities and notes by typing.
+      // That path makes no model call, costs us nothing, and is already what
+      // production serves whenever no model is configured. The message is
+      // carried alongside so the UI can say why.
+      return NextResponse.json(
+        { mode: 'deterministic', notice: capped.message } satisfies ChappiResponse,
+        // 429 is not otherwise emitted by this route — the catch block below
+        // maps an upstream 429 down to a 503 — so a 429 here unambiguously
+        // means "your ceiling", never "gateway busy".
+        { status: 429 }
+      );
+    }
+
     const { reply, clientActions, pendingConfirmation } = await runChappiAgent({
       ctx,
       system,
       messages: messages.slice(-MAX_MESSAGES),
     });
+
+    // Counted after the turn succeeded, so a gateway failure is never charged.
+    if (team.primaryWorkspaceId) {
+      await recordUrgansAction(auth.adminClient, {
+        workspaceId: team.primaryWorkspaceId,
+        ownerUserId: team.ownerUserId,
+        actorUserId: auth.user.id,
+      });
+    }
+
     return NextResponse.json({
       mode: 'agent',
       reply,

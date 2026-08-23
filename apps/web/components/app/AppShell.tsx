@@ -11,6 +11,7 @@ import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { AndroidAppBanner } from '@/components/app/AndroidAppBanner';
 import { AppTopbar } from '@/components/app/AppTopbar';
 import { TeamTrialStrip } from '@/components/app/TeamTrialStrip';
+import { UrgansUsageStrip } from '@/components/app/UrgansUsageStrip';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
@@ -430,6 +431,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 break phones. Renders nothing outside the last stretch of a
                 trial, and nothing at all while the flag is off. */}
             <TeamTrialStrip />
+            {/* Assistant-usage indicator, same slot and same contract.
+                Renders only for a team inside the last fifth of its monthly
+                UrgAns actions, which today is nobody: no code path can write
+                the capped tier yet. */}
+            <UrgansUsageStrip />
             <AppTopbar onNewRelease={openCreateRelease} userName={workspaceUserName} />
             {/* <main> + the UrgAns side rail share a flex row so the rail is
                 a layout-flow column (content narrows; nothing is covered) on

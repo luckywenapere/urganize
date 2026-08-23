@@ -39,6 +39,11 @@ export const BILLING_EVENT_TYPES = [
   'custom_price_set',
   /** Settled outside checkout: invoice, bank transfer, an agreement. */
   'manually_marked_paid',
+  /** One assistant turn that reached the model. Counted per BILLING WINDOW to
+   *  enforce urgans_monthly_actions — see lib/urgans-usage.ts. Deliberately one
+   *  row per turn rather than per gateway round (a turn is up to five), and
+   *  never logged for a confirmation replay or a deterministic-mode call. */
+  'urgans_action',
   /** A team ran into a plan ceiling. `metadata` carries the entitlement key,
    *  the limit and the count, which is what makes this the upgrade signal the
    *  pricing spec asks to be tracked "by entitlement key". Frequent seat and

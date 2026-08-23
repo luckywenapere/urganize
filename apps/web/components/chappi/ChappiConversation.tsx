@@ -446,6 +446,13 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         appendAssistantReply(data.error);
         return;
       }
+      // A ceiling reply carries a reason. Shown before the router runs so the
+      // user understands why the answer reads differently, rather than
+      // silently getting a terser assistant. The typed command still works —
+      // that is the point of falling through rather than refusing.
+      if (data?.mode === 'deterministic' && data.notice) {
+        appendAssistantReply(data.notice);
+      }
       // Deterministic mode (model not configured) or any unexpected shape:
       // fall back to the local intent router.
       runDeterministic(prompt);

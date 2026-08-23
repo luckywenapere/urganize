@@ -23,6 +23,7 @@ import {
   createServerPostHogClient,
   shutdownServerAnalytics,
 } from '@/lib/posthog';
+import { isReleaseActive } from '@/lib/release-activity';
 
 const trimString = (value: unknown): string => String(value || '').trim();
 const TASKS_TABLE = 'tasks';
@@ -182,11 +183,20 @@ export async function GET(
   }
   const retentionSummary: ReleaseRetentionSummary = retentionResult.summary;
 
-  const computedStatus = commandCenter.readiness.readyForDistribution
-    ? 'ready'
-    : commandCenter.collaborators.length > 0
-      ? 'in_progress'
-      : 'draft';
+  // The computed status is a progress read-out: ready / in_progress / draft,
+  // derived from readiness and collaborators. It cannot express `released` or
+  // `archived`, so overwriting them here made an archived release read back as
+  // `draft` — this endpoint was the only place in the app that lied about it
+  // (every other read path returns the stored value). A terminal status is the
+  // user's explicit statement about the release and outranks any derivation.
+  const storedStatus = String(ownership.release.status || '');
+  const computedStatus = !isReleaseActive(storedStatus)
+    ? storedStatus
+    : commandCenter.readiness.readyForDistribution
+      ? 'ready'
+      : commandCenter.collaborators.length > 0
+        ? 'in_progress'
+        : 'draft';
 
   return NextResponse.json({
     release: {
