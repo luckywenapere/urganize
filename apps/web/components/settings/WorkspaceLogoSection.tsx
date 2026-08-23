@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { useState } from 'react';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { formatFileSize } from '@/lib/asset-constants';
 import { panelClass } from './panelClass';
@@ -36,6 +36,14 @@ export function WorkspaceLogoSection({
   onUpload,
   onRemove,
 }: WorkspaceLogoSectionProps) {
+  // Which URL failed to load, rather than a bare "it failed" boolean: a signed
+  // URL that expired (or an object deleted out of band) otherwise leaves the
+  // fallback stuck forever, so the NEXT successful upload would still read "No
+  // preview". Comparing against the current url resets it for free when a new
+  // logo arrives, with no effect to keep in sync.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const logoFailed = Boolean(logo?.url) && failedUrl === logo?.url;
+
   return (
     <section className={panelClass}>
       <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Workspace logo</h2>
@@ -55,13 +63,29 @@ export function WorkspaceLogoSection({
         <div className="space-y-3">
           {logo ? (
             <div className="flex items-center gap-4">
-              <Image
-                src={logo.url}
-                alt="Workspace logo"
-                width={96}
-                height={96}
-                className="h-24 w-24 border border-stroke-subtle bg-bg-elevated object-cover"
-              />
+              {/* A plain <img>, not next/image, matching what
+                  WorkspaceIdentityPanel already does with this exact URL and
+                  for the reason recorded there: this is a 1h SIGNED Storage
+                  URL, and routing it through the /_next/image optimizer both
+                  proxies and caches something built to expire. It also needs an
+                  onError — the optimizer path had none, so once the TTL lapsed
+                  the preview broke with no fallback and nothing to click. */}
+              {logoFailed ? (
+                <div className="grid h-24 w-24 place-items-center border border-stroke-subtle bg-bg-elevated text-[11px] text-content-tertiary">
+                  No preview
+                </div>
+              ) : (
+                // A signed Storage URL, same rationale as WorkspaceIdentityPanel.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logo.url}
+                  alt="Workspace logo"
+                  width={96}
+                  height={96}
+                  onError={() => setFailedUrl(logo.url)}
+                  className="h-24 w-24 border border-stroke-subtle bg-bg-elevated object-cover"
+                />
+              )}
               <div className="min-w-0">
                 <p className="truncate text-sm text-content-primary">
                   {logo.fileName || 'Logo'}

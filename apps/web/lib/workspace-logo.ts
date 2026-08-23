@@ -81,7 +81,23 @@ export async function buildWorkspaceLogoPayload(
   adminClient: SupabaseClient,
   workspaceId: string
 ): Promise<{ fileName: string | null; url: string } | null> {
-  const logo = await getWorkspaceLogo(adminClient, workspaceId);
+  // getWorkspaceLogo rethrows query errors by design, but this builder's own
+  // contract above is "null means no logo" — and its callers include the
+  // /api/workspace/identity AGGREGATE, where one unreadable logo column used to
+  // 500 the whole identity card (name, artist, member count and all). A missing
+  // column on an unmigrated environment is the realistic trigger. Degrade to
+  // "no logo", matching loadWorkspaceLogoFallbackUrl below, and log so it is
+  // still visible in the server output.
+  let logo: WorkspaceLogo | null;
+  try {
+    logo = await getWorkspaceLogo(adminClient, workspaceId);
+  } catch (error) {
+    console.error(
+      '[workspace-logo] could not read the logo pointer:',
+      error instanceof Error ? error.message : error
+    );
+    return null;
+  }
   if (!logo) {
     return null;
   }

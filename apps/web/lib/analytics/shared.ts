@@ -142,6 +142,26 @@ export interface AnalyticsEventPropertiesMap {
     error_name: string;
     digest?: string;
   };
+  /**
+   * An image upload that failed, reported so the founder can see WHICH step
+   * broke for which account without asking anyone to open a browser console.
+   *
+   * The reason this exists: both upload flows already catch everything and set
+   * an error string that only the one person looking at the screen ever sees.
+   * When a partner says "it doesn't upload", that string is unrecoverable, and
+   * you cannot reasonably ask them to press F12.
+   *
+   * Same privacy rule as app_error_shown above: no file names, no signed URLs,
+   * no storage paths. `surface` says which uploader, `step` says how far it got
+   * (1 sign, 2 storage PUT, 3 record), `status` is the HTTP status when there
+   * was a response at all. That is enough to act on.
+   */
+  asset_upload_failed: {
+    surface: 'workspace_logo' | 'curator_photo';
+    step: 1 | 2 | 3;
+    status?: number;
+    reason: string;
+  };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;

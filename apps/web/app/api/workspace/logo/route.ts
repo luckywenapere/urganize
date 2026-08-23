@@ -109,7 +109,17 @@ export async function PUT(request: NextRequest) {
 
     // Defense in depth: the path must live under this workspace's namespace.
     // Prevents a client from claiming someone else's upload as their logo.
+    //
+    // The mint side (./upload-url) MUST resolve the workspace with this same
+    // loadWorkspaceAccessContext. It used to use ensureOwnedWorkspace, and the
+    // two deliberately diverge for a user who owns no releases and belongs to
+    // someone else's team — so that person's upload always landed here and was
+    // rejected as "not theirs". If this branch starts firing again, suspect the
+    // resolvers have drifted apart rather than a hostile client.
     if (!storagePath.startsWith(workspaceLogoPathPrefix(workspaceId))) {
+      // The bytes are already in the bucket and nothing will ever point at
+      // them, so drop them rather than leaving an orphan behind.
+      await removeStorageObject(adminClient, storagePath);
       return NextResponse.json(
         { error: 'storage_path does not belong to this workspace.' },
         { status: 400 }

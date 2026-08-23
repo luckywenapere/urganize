@@ -61,6 +61,25 @@ export const ASSET_SIZE_LIMITS: Record<AssetCategory, number> = {
   other: 10 * MIB,
 };
 
+/**
+ * Size ceiling for a workspace logo.
+ *
+ * Its OWN number, deliberately not `ASSET_SIZE_LIMITS.cover_art`, which both
+ * halves of the logo flow used to read. That coupling broke the moment cover
+ * art was raised to 25 MiB to fit the square 3000x3000 image DSPs require: a
+ * logo rendered at 96px silently started accepting a 25 MiB upload, and the
+ * Settings help text advertised it.
+ *
+ * The second victim of exactly that coupling — `MAX_CURATOR_PHOTO_BYTES` in
+ * lib/pitching.ts was the first. A distributor deliverable and a 96px avatar
+ * have no reason to move together. Both now carry a test asserting they are
+ * NOT equal to the cover-art limit, which is what stops a third.
+ *
+ * The MIME allowlist is still shared with cover art (both are just "an image we
+ * can display"), and that is fine: adding a format there is not a size change.
+ */
+export const MAX_WORKSPACE_LOGO_BYTES = 5 * MIB;
+
 const AUDIO_MIMES = ['audio/wav', 'audio/mpeg', 'audio/flac', 'audio/x-wav'];
 const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
 const VIDEO_MIMES = ['video/mp4', 'video/quicktime', 'video/webm'];
