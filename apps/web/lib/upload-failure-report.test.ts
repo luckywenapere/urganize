@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildUploadFailureReport, classifyUploadFailure } from './upload-failure-report';
+import {
+  buildUploadFailureReport,
+  classifyUploadFailure,
+  formatUploadFailureCode,
+} from './upload-failure-report';
 
 describe('classifyUploadFailure', () => {
   it('classifies the statuses these routes actually return', () => {
@@ -87,5 +91,42 @@ describe('buildUploadFailureReport', () => {
       message: 'x'.repeat(500),
     });
     expect(report.reason.length).toBeLessThanOrEqual(60);
+  });
+});
+
+describe('formatUploadFailureCode', () => {
+  it('names the surface, the step and the status', () => {
+    expect(
+      formatUploadFailureCode({ surface: 'workspace_logo', step: 3, status: 400 })
+    ).toBe('LOGO-3-400');
+    expect(
+      formatUploadFailureCode({ surface: 'curator_photo', step: 2, status: 403 })
+    ).toBe('PHOTO-2-403');
+  });
+
+  it('says NET when there was no response at all', () => {
+    // A genuinely different diagnosis from any HTTP status, and the most likely
+    // one on a weak connection.
+    expect(formatUploadFailureCode({ surface: 'curator_photo', step: 2 })).toBe('PHOTO-2-NET');
+    expect(
+      formatUploadFailureCode({ surface: 'workspace_logo', step: 1, status: 0 })
+    ).toBe('LOGO-1-NET');
+    expect(
+      formatUploadFailureCode({ surface: 'workspace_logo', step: 1, status: null })
+    ).toBe('LOGO-1-NET');
+  });
+
+  /**
+   * This string is designed to be pasted into a chat or screenshotted, so it
+   * must be safe to paste into a chat: no file name, no signed URL, no token.
+   */
+  it('is short and carries nothing sensitive', () => {
+    for (const surface of ['workspace_logo', 'curator_photo'] as const) {
+      for (const step of [1, 2, 3] as const) {
+        const code = formatUploadFailureCode({ surface, step, status: 500 });
+        expect(code.length).toBeLessThanOrEqual(12);
+        expect(code).toMatch(/^(LOGO|PHOTO)-[123]-(\d{3}|NET)$/);
+      }
+    }
   });
 });

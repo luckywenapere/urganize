@@ -12,7 +12,11 @@ import { CuratorLoadError } from '@/components/curator/CuratorLoadError';
 import { useCuratorStore } from '@/stores/useCuratorStore';
 import { supabase } from '@/lib/supabase/client';
 import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
-import { buildUploadFailureReport, type UploadStep } from '@/lib/upload-failure-report';
+import {
+  buildUploadFailureReport,
+  formatUploadFailureCode,
+  type UploadStep,
+} from '@/lib/upload-failure-report';
 import { MAX_CURATOR_BIO_LENGTH, MAX_CURATOR_DISPLAY_NAME_LENGTH } from '@/lib/pitching';
 
 const inputClass =
@@ -146,7 +150,11 @@ export function CuratorProfilePageClient() {
       await saveProfile({ photoPath: signPayload.storage_path });
       setSavedAt(Date.now());
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : 'Could not save the photo.');
+      // On screen, not just in analytics — see formatUploadFailureCode.
+      const code = formatUploadFailureCode({ surface: 'curator_photo', step, status });
+      const detail =
+        uploadError instanceof Error ? uploadError.message : 'Could not save the photo.';
+      setError(`${detail} If you report this, quote ${code}.`);
       captureAnalyticsEvent(
         createPostHogEvent(
           'asset_upload_failed',

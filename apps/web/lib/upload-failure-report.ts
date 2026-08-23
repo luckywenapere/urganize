@@ -77,3 +77,34 @@ export function buildUploadFailureReport(input: {
     reason: classifyUploadFailure(input).slice(0, MAX_REASON_LENGTH),
   };
 }
+
+/**
+ * A short code to put ON SCREEN next to a failed upload, so the person who hit
+ * it can quote or screenshot it.
+ *
+ * This is the channel that actually works here. The PostHog event above is only
+ * as good as `NEXT_PUBLIC_POSTHOG_KEY`, and with that unset `captureAnalyticsEvent`
+ * reaches nothing but the user's own localStorage — unreadable by us. A code in
+ * the message survives that, needs no configuration, and needs nothing of the
+ * user beyond the screenshot they were already going to send.
+ *
+ * Follows the idiom app/error.tsx already uses for a crash ("If you report this,
+ * quote <digest>"). Shape: SURFACE-STEP-STATUS, e.g. `LOGO-3-400` (the record
+ * call was refused) or `PHOTO-2-NET` (the bytes never reached storage).
+ *
+ * Deliberately carries no file name and no URL, for the same reason
+ * classifyUploadFailure does not: this string is designed to be pasted into a
+ * chat, so it must be safe to paste into a chat.
+ */
+export function formatUploadFailureCode(input: {
+  surface: UploadSurface;
+  step: UploadStep;
+  status?: number | null;
+}): string {
+  const surface = input.surface === 'workspace_logo' ? 'LOGO' : 'PHOTO';
+  const status = Number(input.status);
+  // NET means "no response at all", which is a genuinely different diagnosis
+  // from any HTTP status and the one most likely on a weak connection.
+  const tail = Number.isFinite(status) && status > 0 ? String(status) : 'NET';
+  return `${surface}-${input.step}-${tail}`;
+}

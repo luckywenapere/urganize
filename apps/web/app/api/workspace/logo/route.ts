@@ -117,6 +117,13 @@ export async function PUT(request: NextRequest) {
     // rejected as "not theirs". If this branch starts firing again, suspect the
     // resolvers have drifted apart rather than a hostile client.
     if (!storagePath.startsWith(workspaceLogoPathPrefix(workspaceId))) {
+      // Logged loudly: if this fires at all, the mint and the check have drifted
+      // apart again (see the comment above), which is a bug on our side rather
+      // than a hostile client.
+      console.error('[workspace-logo] storage_path outside the workspace namespace', {
+        userId: auth.user.id,
+        workspaceId,
+      });
       // The bytes are already in the bucket and nothing will ever point at
       // them, so drop them rather than leaving an orphan behind.
       await removeStorageObject(adminClient, storagePath);
@@ -144,6 +151,10 @@ export async function PUT(request: NextRequest) {
     }
 
     if (!(listResult.data || []).some((obj) => obj.name === basename)) {
+      console.error('[workspace-logo] upload not found at storage_path', {
+        userId: auth.user.id,
+        workspaceId,
+      });
       return NextResponse.json({ error: 'Upload not found at storage_path.' }, { status: 400 });
     }
 
@@ -159,6 +170,10 @@ export async function PUT(request: NextRequest) {
       .eq('id', workspaceId);
 
     if (updateResult.error) {
+      console.error('[workspace-logo] could not save the pointer:', updateResult.error.message, {
+        userId: auth.user.id,
+        workspaceId,
+      });
       // The bytes are already in storage. Drop them so the user can retry.
       await removeStorageObject(adminClient, storagePath);
       return NextResponse.json(
