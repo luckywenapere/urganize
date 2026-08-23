@@ -20,6 +20,18 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "0.61.0",
+    date: "August 23, 2026",
+    highlights: [
+      "Pricing is now on the site. Three plans, what each one covers, and the choice of paying monthly or once a year, so you can see where your team fits before you talk to anyone.",
+      "You can move between plans whenever your team changes shape. Moving up charges only the difference for the days left in the period you already paid for, and your paid-through date does not move. Moving down costs nothing and starts when the period you paid for ends.",
+      "A failed card no longer locks you out. If a renewal does not go through, everything stays readable for as long as you need: your releases, activities, files and notes are all still there to open, and only changes are paused until the payment is sorted.",
+      "You can take your data out at any time, on any plan. One download gives you everything as a data file, and another gives you every activity as a spreadsheet you can open in Excel or Sheets.",
+      "Releases can be archived once they are done, which clears them out of your working list without deleting anything. Archived releases can be brought back the same way.",
+      "Settings now tells you plainly which plan is active, how many teammates it covers, and who can change it, so nobody has to guess whether something is theirs to sort out.",
+    ],
+  },
+  {
     version: "0.60.0",
     date: "August 22, 2026",
     highlights: [
