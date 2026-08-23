@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import {
   ASSET_MIME_ALLOWLIST,
-  ASSET_SIZE_LIMITS,
   ASSET_UPLOAD_URL_TTL_SECONDS,
   RELEASE_ASSETS_BUCKET,
   formatFileSize,
   sanitizeFileName,
 } from '@/lib/asset-helpers';
+import { MAX_CURATOR_PHOTO_BYTES } from '@/lib/pitching';
 import {
   curatorPhotoPathPrefix,
   flagOffResponse,
@@ -24,9 +24,11 @@ import {
 // asset paths always start with a release id). Reads are signed, so the object
 // is never public.
 
-// A curator photo is a small avatar, so it takes cover art's image rules.
+// A curator photo is a small avatar, so it takes cover art's image FORMATS but
+// its own size ceiling — see MAX_CURATOR_PHOTO_BYTES for why the two must not
+// share a number.
 const PHOTO_MIME_ALLOWLIST = ASSET_MIME_ALLOWLIST.cover_art;
-const PHOTO_SIZE_LIMIT = ASSET_SIZE_LIMITS.cover_art;
+const PHOTO_SIZE_LIMIT = MAX_CURATOR_PHOTO_BYTES;
 
 export async function POST(request: NextRequest) {
   if (!isPitchingFeatureEnabled()) return flagOffResponse();

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ASSET_SIZE_LIMITS } from './asset-constants';
 import {
   acceptsPitchReply,
   countWaitingPitches,
@@ -7,6 +8,7 @@ import {
   isPitchPlatform,
   isPitchStatus,
   isValidSongUrl,
+  MAX_CURATOR_PHOTO_BYTES,
   MAX_PITCH_NOTE_LENGTH,
   MAX_PLAYLIST_GENRES,
   MAX_SONG_URL_LENGTH,
@@ -199,5 +201,21 @@ describe('limits', () => {
   it('keeps the documented values', () => {
     expect(MAX_WAITING_PITCHES_PER_RELEASE).toBe(10);
     expect(MAX_PITCH_NOTE_LENGTH).toBe(300);
+  });
+
+  it('caps a curator photo at 5 MiB', () => {
+    expect(MAX_CURATOR_PHOTO_BYTES).toBe(5 * 1024 * 1024);
+  });
+
+  /**
+   * The photo route used to read ASSET_SIZE_LIMITS.cover_art. That coupling
+   * broke silently the moment cover art was raised to 25 MiB for DSP-sized
+   * artwork: a 64px avatar started accepting a 25 MiB upload. This asserts the
+   * two are no longer the same number, so re-coupling them fails here rather
+   * than in production.
+   */
+  it('does not track the cover art limit', () => {
+    expect(MAX_CURATOR_PHOTO_BYTES).not.toBe(ASSET_SIZE_LIMITS.cover_art);
+    expect(MAX_CURATOR_PHOTO_BYTES).toBeLessThan(ASSET_SIZE_LIMITS.cover_art);
   });
 });

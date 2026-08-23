@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, ListMusic, Plus, Trash2 } from 'lucide-react';
 import { CuratorShell } from '@/components/curator/CuratorShell';
 import { CuratorPlaylistsSkeleton } from '@/components/loading/CuratorSkeleton';
+import { CuratorLoadError } from '@/components/curator/CuratorLoadError';
 import { useCuratorStore, type PlaylistInput } from '@/stores/useCuratorStore';
 import {
   MAX_GENRE_TAG_LENGTH,
@@ -325,6 +326,7 @@ function PlaylistCard({ playlist }: { playlist: CuratorPlaylist }) {
 export function CuratorPlaylistsPageClient() {
   const playlists = useCuratorStore((state) => state.playlists);
   const isLoading = useCuratorStore((state) => state.isLoadingPlaylists);
+  const loadError = useCuratorStore((state) => state.playlistsError);
   const hydrated = useCuratorStore((state) => state.hydrated);
   const loadPlaylists = useCuratorStore((state) => state.loadPlaylists);
   const createPlaylist = useCuratorStore((state) => state.createPlaylist);
@@ -343,9 +345,7 @@ export function CuratorPlaylistsPageClient() {
 
   return (
     <CuratorShell>
-      {isLoading && !hydrated ? (
-        <CuratorPlaylistsSkeleton />
-      ) : (
+      {(
         <div className="space-y-6">
           <header className="space-y-2">
             <p className="text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
@@ -354,6 +354,17 @@ export function CuratorPlaylistsPageClient() {
             <h1 className="font-display text-2xl text-content-primary">Playlists</h1>
             <p className="text-sm text-content-secondary">{summary}</p>
           </header>
+
+          {/* Banner rather than a replacement, for the same reason the inbox
+              uses one: zero playlists is where every curator starts. */}
+          {loadError ? (
+            <CuratorLoadError
+              message={loadError}
+              variant="banner"
+              isRetrying={isLoading}
+              onRetry={() => void loadPlaylists({ force: true })}
+            />
+          ) : null}
 
           {isAdding ? (
             <PlaylistForm
@@ -375,7 +386,13 @@ export function CuratorPlaylistsPageClient() {
             </button>
           )}
 
-          {playlists.length === 0 && !isAdding ? (
+          {/* Same split as the inbox: the header and the add control are real
+              content and ship in the server HTML; only the list waits, because
+              "No playlists yet" is a claim we cannot make before the load
+              resolves. */}
+          {isLoading && !hydrated ? (
+            <CuratorPlaylistsSkeleton />
+          ) : playlists.length === 0 && !isAdding ? (
             <div className="rounded-xl border border-stroke-default bg-bg-surface p-8 text-center">
               <div className="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-bg-elevated text-content-tertiary">
                 <ListMusic className="h-5 w-5" />

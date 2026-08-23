@@ -2,6 +2,11 @@
 
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
+import {
+  CURATOR_NETWORK_ERROR,
+  describeCuratorFailure,
+  readServerMessage,
+} from '@/lib/curator-errors';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import type {
   CuratorPitch,
@@ -69,8 +74,19 @@ type CuratorStore = {
   isLoadingProfile: boolean;
   isLoadingPlaylists: boolean;
   isLoadingPitches: boolean;
-  /** True when a request came back 403: this account is not a curator. */
-  isForbidden: boolean;
+  /**
+   * Why the last load of each surface failed, or '' when it did not.
+   *
+   * Three fields rather than one, mirroring the three isLoading* flags above:
+   * each curator page loads exactly one of these, and a shared field would let
+   * one surface's failure caption another's.
+   *
+   * Replaced an `isForbidden` boolean that NOTHING read, which is what made a
+   * failed load silent — see lib/curator-errors.ts.
+   */
+  profileError: string;
+  playlistsError: string;
+  pitchesError: string;
   loadProfile: (options?: { force?: boolean }) => Promise<void>;
   loadPlaylists: (options?: { force?: boolean }) => Promise<void>;
   loadPitches: (options?: { force?: boolean }) => Promise<void>;
@@ -131,7 +147,9 @@ export const useCuratorStore = create<CuratorStore>((set, get) => ({
   isLoadingProfile: true,
   isLoadingPlaylists: true,
   isLoadingPitches: true,
-  isForbidden: false,
+  profileError: '',
+  playlistsError: '',
+  pitchesError: '',
 
   loadProfile: async (options) => {
     if (!options?.force) {
@@ -160,24 +178,37 @@ export const useCuratorStore = create<CuratorStore>((set, get) => ({
       }
 
       try {
+        set({ profileError: '' });
         const response = await fetch('/api/curator/profile', {
           headers: { Authorization: `Bearer ${accessToken}` },
           cache: 'no-store',
         });
-        if (response.status === 403) {
-          set({ isForbidden: true });
+        if (!response.ok) {
+          set({
+            profileError: describeCuratorFailure({
+              status: response.status,
+              serverMessage: await readServerMessage(response),
+            }),
+          });
           return;
         }
-        if (!response.ok) return;
         const payload = (await response.json().catch(() => null)) as {
           profile?: CuratorProfile;
         } | null;
-        if (!payload?.profile) return;
+        if (!payload?.profile) {
+          set({ profileError: describeCuratorFailure({ status: response.status }) });
+          return;
+        }
         // The signed photo URL is never cached: it expires, and a stale one
         // renders a broken image on the next visit.
         writeCache(userId, { profile: { ...payload.profile, photoUrl: null } });
         profileLoadedAt = Date.now();
         set({ profile: payload.profile, hydrated: true });
+      } catch {
+        // No response at all: offline, a dropped connection, a killed tab. This
+        // is the case the whole error surface exists for — without it the fetch
+        // rejects into an unhandled promise and the page shows an empty form.
+        set({ profileError: CURATOR_NETWORK_ERROR });
       } finally {
         set({ isLoadingProfile: false });
       }
@@ -204,22 +235,32 @@ export const useCuratorStore = create<CuratorStore>((set, get) => ({
         return;
       }
       try {
+        set({ playlistsError: '' });
         const response = await fetch('/api/curator/playlists', {
           headers: { Authorization: `Bearer ${accessToken}` },
           cache: 'no-store',
         });
-        if (response.status === 403) {
-          set({ isForbidden: true });
+        if (!response.ok) {
+          set({
+            playlistsError: describeCuratorFailure({
+              status: response.status,
+              serverMessage: await readServerMessage(response),
+            }),
+          });
           return;
         }
-        if (!response.ok) return;
         const payload = (await response.json().catch(() => null)) as {
           playlists?: CuratorPlaylist[];
         } | null;
-        if (!payload || !Array.isArray(payload.playlists)) return;
+        if (!payload || !Array.isArray(payload.playlists)) {
+          set({ playlistsError: describeCuratorFailure({ status: response.status }) });
+          return;
+        }
         writeCache(userId, { playlists: payload.playlists });
         playlistsLoadedAt = Date.now();
         set({ playlists: payload.playlists, hydrated: true });
+      } catch {
+        set({ playlistsError: CURATOR_NETWORK_ERROR });
       } finally {
         set({ isLoadingPlaylists: false });
       }
@@ -259,22 +300,32 @@ export const useCuratorStore = create<CuratorStore>((set, get) => ({
         return;
       }
       try {
+        set({ pitchesError: '' });
         const response = await fetch('/api/curator/pitches', {
           headers: { Authorization: `Bearer ${accessToken}` },
           cache: 'no-store',
         });
-        if (response.status === 403) {
-          set({ isForbidden: true });
+        if (!response.ok) {
+          set({
+            pitchesError: describeCuratorFailure({
+              status: response.status,
+              serverMessage: await readServerMessage(response),
+            }),
+          });
           return;
         }
-        if (!response.ok) return;
         const payload = (await response.json().catch(() => null)) as {
           pitches?: CuratorPitch[];
         } | null;
-        if (!payload || !Array.isArray(payload.pitches)) return;
+        if (!payload || !Array.isArray(payload.pitches)) {
+          set({ pitchesError: describeCuratorFailure({ status: response.status }) });
+          return;
+        }
         writeCache(userId, { pitches: payload.pitches });
         pitchesLoadedAt = Date.now();
         set({ pitches: payload.pitches, hydrated: true });
+      } catch {
+        set({ pitchesError: CURATOR_NETWORK_ERROR });
       } finally {
         set({ isLoadingPitches: false });
       }
@@ -292,19 +343,32 @@ export const useCuratorStore = create<CuratorStore>((set, get) => ({
     const { accessToken } = await getSession();
     if (!accessToken) throw new Error('Sign in again to save your profile.');
 
-    const response = await fetch('/api/curator/profile', {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(patch),
-    });
+    // A dropped connection throws here rather than returning a response. The
+    // page renders whatever this throws, so it has to be the same sentence the
+    // loaders use for the same failure, not a stack trace.
+    let response: Response;
+    try {
+      response = await fetch('/api/curator/profile', {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(patch),
+      });
+    } catch {
+      throw new Error(CURATOR_NETWORK_ERROR);
+    }
+
     const payload = (await response.json().catch(() => null)) as {
       profile?: CuratorProfile;
       error?: string;
     } | null;
-    if (!response.ok) throw new Error(payload?.error || 'Could not save your profile.');
+    if (!response.ok) {
+      throw new Error(
+        describeCuratorFailure({ status: response.status, serverMessage: payload?.error })
+      );
+    }
     if (payload?.profile) {
       profileLoadedAt = Date.now();
       set({ profile: payload.profile });
