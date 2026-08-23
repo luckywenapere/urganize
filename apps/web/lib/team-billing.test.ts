@@ -4,16 +4,24 @@ import {
   TEAM_TRIAL_DAYS,
   TEAM_TRIAL_EXPIRY_GRACE_MS,
   TEAM_TRIAL_PILL_THRESHOLD_DAYS,
+  READ_ONLY_REACTIVATE_HREF,
+  READ_ONLY_REFUSAL_CODE,
+  READ_ONLY_REFUSAL_MESSAGE,
+  READ_ONLY_REFUSAL_STATUS,
   combineTeamAccess,
   computeExtendedTrialEnd,
   computeTeamTrialDaysLeft,
   isHardPaywallGatedPath,
+  isReadOnlySafeMethod,
+  lapsedFromPayment,
   resolveTeamAccess,
   resolveWallVariant,
   shouldConsultHardPaywallGate,
   type HardPaywallGateInput,
+  type TeamAccessState,
   type WorkspaceBillingFields,
 } from './team-billing';
+import { ACCESS_REQUIRED_STATUS } from '@/app/api/_shared/paywall';
 
 const NOW = new Date('2026-09-01T12:00:00.000Z');
 const at = (offsetMs: number): string => new Date(NOW.getTime() + offsetMs).toISOString();
@@ -240,6 +248,7 @@ describe('combineTeamAccess', () => {
   it('an account with no teams yet passes — the gate runs before provisioning', () => {
     expect(combineTeamAccess({ own: null, foreign: [], ownReleaseCount: null })).toEqual({
       hasAccess: true,
+      canWrite: true,
       needsOwnReleaseCount: false,
     });
   });
@@ -251,7 +260,7 @@ describe('combineTeamAccess', () => {
         foreign: [{ state: 'paid' }],
         ownReleaseCount: null,
       })
-    ).toEqual({ hasAccess: true, needsOwnReleaseCount: false });
+    ).toEqual({ hasAccess: true, canWrite: true, needsOwnReleaseCount: false });
   });
 
   it('any unwalled foreign team is enough, even among walled ones', () => {
@@ -267,10 +276,10 @@ describe('combineTeamAccess', () => {
   it('an owner with only their own team is judged on it alone', () => {
     expect(
       combineTeamAccess({ own: { state: 'trial' }, foreign: [], ownReleaseCount: null })
-    ).toEqual({ hasAccess: true, needsOwnReleaseCount: false });
+    ).toEqual({ hasAccess: true, canWrite: true, needsOwnReleaseCount: false });
     expect(
       combineTeamAccess({ own: { state: 'walled' }, foreign: [], ownReleaseCount: null })
-    ).toEqual({ hasAccess: false, needsOwnReleaseCount: false });
+    ).toEqual({ hasAccess: false, canWrite: false, needsOwnReleaseCount: false });
   });
 
   it('asks for the release count only in the ambiguous shell branch', () => {
@@ -279,7 +288,11 @@ describe('combineTeamAccess', () => {
       foreign: [{ state: 'walled' }],
       ownReleaseCount: null,
     });
-    expect(ambiguous).toEqual({ hasAccess: false, needsOwnReleaseCount: true });
+    expect(ambiguous).toEqual({
+      hasAccess: false,
+      canWrite: false,
+      needsOwnReleaseCount: true,
+    });
   });
 
   it('an empty auto-provisioned shell cannot outlive the joined team wall', () => {
@@ -289,7 +302,7 @@ describe('combineTeamAccess', () => {
         foreign: [{ state: 'walled' }],
         ownReleaseCount: 0,
       })
-    ).toEqual({ hasAccess: false, needsOwnReleaseCount: false });
+    ).toEqual({ hasAccess: false, canWrite: false, needsOwnReleaseCount: false });
   });
 
   it('but a real second team of their own does grant access', () => {
@@ -299,7 +312,7 @@ describe('combineTeamAccess', () => {
         foreign: [{ state: 'walled' }],
         ownReleaseCount: 3,
       })
-    ).toEqual({ hasAccess: true, needsOwnReleaseCount: false });
+    ).toEqual({ hasAccess: true, canWrite: true, needsOwnReleaseCount: false });
   });
 
   it('walls when every team is walled', () => {
@@ -309,7 +322,7 @@ describe('combineTeamAccess', () => {
         foreign: [{ state: 'walled' }, { state: 'walled' }],
         ownReleaseCount: 5,
       })
-    ).toEqual({ hasAccess: false, needsOwnReleaseCount: false });
+    ).toEqual({ hasAccess: false, canWrite: false, needsOwnReleaseCount: false });
   });
 });
 
@@ -461,5 +474,250 @@ describe('shouldConsultHardPaywallGate', () => {
         lastAnswer: { userId: 'user-2', walled: false, checkedAt: NOW.getTime() },
       })
     ).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Read-only mode (payment failure, 2026-08-24)
+// ---------------------------------------------------------------------------
+
+/** A team well past its trial: the state where the read-only/wall fork happens. */
+const lapsedTeam: WorkspaceBillingFields = {
+  trialStartedAt: at(-40 * DAY),
+  trialEndsAt: at(-26 * DAY),
+  compedAt: null,
+  billingPlan: null,
+  billingLockedAmount: null,
+};
+
+describe('lapsedFromPayment', () => {
+  it('is true only when the owner has no access AND real money once landed', () => {
+    expect(lapsedFromPayment({ ownerHasAccess: false, ownerPaidAt: at(-90 * DAY) })).toBe(true);
+  });
+
+  it('is false for a team that never paid — trial expiry keeps the wall', () => {
+    // This is the founder's line, and it is the whole reason paid_at is the
+    // discriminator rather than subscriptions.status: a cancelled card-trial
+    // wears status 'cancelled' and never paid a penny.
+    expect(lapsedFromPayment({ ownerHasAccess: false, ownerPaidAt: null })).toBe(false);
+  });
+
+  it('is false while the owner still has access, however they got it', () => {
+    expect(lapsedFromPayment({ ownerHasAccess: true, ownerPaidAt: at(-90 * DAY) })).toBe(false);
+  });
+});
+
+describe('resolveTeamAccess — read-only', () => {
+  const readOnly = () =>
+    resolveTeamAccess({
+      ownerHasAccess: false,
+      ownerLapsedFromPayment: true,
+      team: lapsedTeam,
+      now: NOW,
+      graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
+    });
+
+  it('a lapsed PAYER reads everything and writes nothing', () => {
+    const resolution = readOnly();
+    expect(resolution.state).toBe('read_only');
+    expect(resolution.reason).toBe('payment_failed');
+    // hasAccess TRUE is what stops the wall being drawn. If this ever flips,
+    // HardPaywallGate redirects them to /locked and the feature is gone.
+    expect(resolution.hasAccess).toBe(true);
+    expect(resolution.canWrite).toBe(false);
+    expect(resolution.inGrace).toBe(false);
+  });
+
+  it('a lapsed TRIALIST still hits the wall', () => {
+    const resolution = resolveTeamAccess({
+      ownerHasAccess: false,
+      ownerLapsedFromPayment: false,
+      team: lapsedTeam,
+      now: NOW,
+      graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
+    });
+    expect(resolution.state).toBe('walled');
+    expect(resolution.hasAccess).toBe(false);
+    expect(resolution.canWrite).toBe(false);
+  });
+
+  it('omitting the input behaves exactly as before this feature existed', () => {
+    const resolution = resolveTeamAccess({
+      ownerHasAccess: false,
+      team: lapsedTeam,
+      now: NOW,
+    });
+    expect(resolution.state).toBe('walled');
+  });
+
+  it('every state that grants access grants writes, except read-only', () => {
+    const grantsAccess: Array<[TeamAccessState, ReturnType<typeof resolveTeamAccess>]> = [
+      [
+        'paid',
+        resolveTeamAccess({
+          ownerHasAccess: true,
+          ownerLapsedFromPayment: true,
+          team: lapsedTeam,
+          now: NOW,
+        }),
+      ],
+      [
+        'comped',
+        resolveTeamAccess({
+          ownerHasAccess: false,
+          ownerLapsedFromPayment: true,
+          team: { ...lapsedTeam, compedAt: at(-DAY) },
+          now: NOW,
+        }),
+      ],
+      [
+        'trial',
+        resolveTeamAccess({
+          ownerHasAccess: false,
+          ownerLapsedFromPayment: true,
+          team: trialingTeam,
+          now: NOW,
+        }),
+      ],
+      [
+        'grace',
+        resolveTeamAccess({
+          ownerHasAccess: false,
+          ownerLapsedFromPayment: true,
+          team: { ...lapsedTeam, trialEndsAt: at(-60 * 1000) },
+          now: NOW,
+          graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
+        }),
+      ],
+    ];
+    for (const [expectedState, resolution] of grantsAccess) {
+      expect(resolution.state).toBe(expectedState);
+      expect(resolution.hasAccess).toBe(true);
+      expect(resolution.canWrite).toBe(true);
+    }
+  });
+
+  it('an unstamped trial still fails OPEN even for a lapsed payer', () => {
+    // Fail-open is strictly more generous than read-only, so it stays above it
+    // in the precedence order: our missing backfill must never cost a customer
+    // their writes.
+    const resolution = resolveTeamAccess({
+      ownerHasAccess: false,
+      ownerLapsedFromPayment: true,
+      team: { ...lapsedTeam, trialEndsAt: null },
+      now: NOW,
+    });
+    expect(resolution.state).toBe('trial');
+    expect(resolution.reason).toBe('no_trial_stamp');
+    expect(resolution.canWrite).toBe(true);
+  });
+});
+
+describe('combineTeamAccess — the write axis', () => {
+  it('read-only grants reads across teams but never writes', () => {
+    expect(
+      combineTeamAccess({
+        own: { state: 'walled' },
+        foreign: [{ state: 'read_only' }],
+        ownReleaseCount: null,
+      })
+    ).toEqual({ hasAccess: true, canWrite: false, needsOwnReleaseCount: false });
+  });
+
+  it('a teammate cannot write through their own empty trial shell', () => {
+    // The shell rule has to keep holding on the write axis, or every teammate of
+    // a read-only team would keep writing via the workspace provisioning handed
+    // them — the same hole combineTeamAccess exists to close for the wall.
+    expect(
+      combineTeamAccess({
+        own: { state: 'trial' },
+        foreign: [{ state: 'read_only' }],
+        ownReleaseCount: 0,
+      })
+    ).toEqual({ hasAccess: true, canWrite: false, needsOwnReleaseCount: false });
+  });
+
+  it('but a paying team elsewhere restores writes', () => {
+    expect(
+      combineTeamAccess({
+        own: { state: 'read_only' },
+        foreign: [{ state: 'paid' }],
+        ownReleaseCount: null,
+      })
+    ).toEqual({ hasAccess: true, canWrite: true, needsOwnReleaseCount: false });
+  });
+
+  it('an owner of only a read-only team is read-only', () => {
+    expect(
+      combineTeamAccess({ own: { state: 'read_only' }, foreign: [], ownReleaseCount: null })
+    ).toEqual({ hasAccess: true, canWrite: false, needsOwnReleaseCount: false });
+  });
+
+  it('never grants a write without a read', () => {
+    const states: TeamAccessState[] = ['paid', 'comped', 'trial', 'grace', 'read_only', 'walled'];
+    for (const own of states) {
+      for (const other of states) {
+        for (const count of [null, 0, 4]) {
+          const combined = combineTeamAccess({
+            own: { state: own },
+            foreign: [{ state: other }],
+            ownReleaseCount: count,
+          });
+          if (combined.canWrite) expect(combined.hasAccess).toBe(true);
+        }
+      }
+    }
+  });
+});
+
+describe('isReadOnlySafeMethod', () => {
+  it('lets reads through, case-insensitively', () => {
+    for (const method of ['GET', 'get', 'HEAD', ' head ', 'OPTIONS']) {
+      expect(isReadOnlySafeMethod(method)).toBe(true);
+    }
+  });
+
+  it('refuses every write method', () => {
+    for (const method of ['POST', 'PATCH', 'PUT', 'DELETE', 'post']) {
+      expect(isReadOnlySafeMethod(method)).toBe(false);
+    }
+  });
+
+  it('treats an absent or unknown method as a write', () => {
+    // Every route-level caller that cannot name its method is a mutation route,
+    // so this is the safe reading rather than a convenience.
+    for (const method of [null, undefined, '', 'TRACE']) {
+      expect(isReadOnlySafeMethod(method)).toBe(false);
+    }
+  });
+});
+
+describe('the read-only refusal', () => {
+  it('is NOT 402, which would eject the team from the app', () => {
+    // lib/access-redirect.ts patches window.fetch and redirects the browser to
+    // /locked on ANY same-origin 402. A 402 here would therefore throw a
+    // read-only team out of the app on their first blocked save, which is
+    // exactly the wall this mode replaces. 403 is the whole point.
+    expect(READ_ONLY_REFUSAL_STATUS).toBe(403);
+    expect(READ_ONLY_REFUSAL_STATUS).not.toBe(ACCESS_REQUIRED_STATUS);
+  });
+
+  it('has a stable machine marker and a reactivation door that survives /locked', () => {
+    expect(READ_ONLY_REFUSAL_CODE).toBe('READ_ONLY');
+    // /locked bounces anyone who HAS access straight back into the app, and a
+    // read-only team has access, so a bare /locked link is a dead end.
+    expect(READ_ONLY_REACTIVATE_HREF).toContain('intent=reactivate');
+  });
+
+  it('says what happened and who can fix it, without threatening anything', () => {
+    for (const message of Object.values(READ_ONLY_REFUSAL_MESSAGE)) {
+      expect(message).toContain('read only');
+      // House copy rules.
+      expect(message).not.toContain('—');
+      // Nothing is being taken away: reads still work and nothing is deleted.
+      expect(message).not.toMatch(/lose|deleted|removed|permanently/i);
+    }
+    expect(READ_ONLY_REFUSAL_MESSAGE.owner).toMatch(/update your payment/i);
+    expect(READ_ONLY_REFUSAL_MESSAGE.member).toMatch(/team admin/i);
   });
 });

@@ -54,6 +54,7 @@ const FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'trial', label: 'On trial' },
   { value: 'walled', label: 'Walled' },
+  { value: 'read_only', label: 'Read only' },
   { value: 'paid', label: 'Paying' },
   { value: 'comped', label: 'Comped' },
   { value: 'deal', label: 'Founding / custom' },
@@ -66,6 +67,7 @@ const STATE_LABEL: Record<string, string> = {
   comped: 'Comped',
   trial: 'On trial',
   grace: 'Just lapsed',
+  read_only: 'Read only',
   walled: 'Walled',
 };
 
@@ -74,6 +76,7 @@ const STATE_CLASS: Record<string, string> = {
   comped: 'border-status-info/40 bg-status-info/10 text-status-info',
   trial: 'border-stroke-default bg-bg-elevated text-content-secondary',
   grace: 'border-status-warning/40 bg-status-warning/10 text-status-warning',
+  read_only: 'border-status-warning/40 bg-status-warning/10 text-status-warning',
   walled: 'border-status-error/40 bg-status-error/10 text-status-error',
 };
 
@@ -311,11 +314,14 @@ export default function TeamsAdminPageClient() {
         </p>
       ) : null}
 
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: 'Teams', value: payload?.stats.total ?? 0 },
           { label: 'On trial', value: counts.trial ?? 0 },
           { label: 'Walled', value: counts.walled ?? 0 },
+          // A lapsed PAYER, not a lapsed trialist. The most recoverable churn
+          // in this list, which is why it gets its own number.
+          { label: 'Read only', value: counts.read_only ?? 0 },
         ].map((card) => (
           <div
             key={card.label}
@@ -403,6 +409,13 @@ export default function TeamsAdminPageClient() {
                 <td className="px-3 py-3 text-content-secondary">
                   {team.comped ? (
                     <span className="text-content-tertiary">Never</span>
+                  ) : team.state === 'read_only' ? (
+                    // Read-only is permanent: there is no later wall to count
+                    // down to, so a date here would be a fiction.
+                    <>
+                      <span className="text-content-tertiary">No wall</span>
+                      <p className="text-xs text-content-tertiary">Paid before, lapsed since</p>
+                    </>
                   ) : (
                     <>
                       <p>{formatDate(team.wallDate)}</p>

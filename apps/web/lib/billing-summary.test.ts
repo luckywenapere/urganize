@@ -380,8 +380,55 @@ describe('summarizeBilling — team access', () => {
     }
   });
 
+  // ── Read-only (payment failure) ──────────────────────────────────────────
+  //
+  // A team that PAID and then lapsed. Reads keep working, permanently, so the
+  // copy has to say so, and the exit has to be a door that does not bounce:
+  // /locked ejects anyone who HAS access, and a read-only team has access.
+
+  it('tells the OWNER their plan ended and sends them somewhere that works', () => {
+    const result = summarizeBilling(
+      snapshot({
+        accountStatus: 'expired',
+        plan: 'manager',
+        expiresAt: '2026-08-01T00:00:00.000Z',
+      }),
+      { team: team({ state: 'read_only', isOwnerOrAdmin: true }) }
+    );
+    // The owner keeps the richer per-user copy: the plan name and the date.
+    expect(result.title).toBe('Manager plan ended');
+    expect(result.details.join(' ')).toContain('still see everything');
+    // 'plans' would land on a bare /locked and bounce straight back.
+    expect(result.cta).toBe('reactivate');
+  });
+
+  it('never offers a trial to a MEMBER of a read-only team', () => {
+    // The same regression the 'paid' branch above exists for: a member's own
+    // snapshot reads 'unpaid' with trialUsed false forever, so without a branch
+    // they fall through to "you have a 28-day free trial available".
+    const result = summarizeBilling(
+      snapshot({ accountStatus: 'unpaid', trialUsed: false }),
+      { team: team({ state: 'read_only', isOwnerOrAdmin: false }) }
+    );
+    const all = [result.title, ...result.details].join(' ');
+    expect(all).not.toMatch(/free trial/i);
+    expect(all).not.toContain('28');
+    expect(all).toContain('still see everything');
+    expect(all).toMatch(/team admin/i);
+    // Nothing for them to click: they cannot pay for the team.
+    expect(result.cta).toBeNull();
+  });
+
+  it('keeps the ordinary wall copy for a team that only ever trialed', () => {
+    const result = summarizeBilling(snapshot({ accountStatus: 'expired' }), {
+      team: team({ state: 'walled' }),
+    });
+    expect(result.cta).toBe('plans');
+    expect(result.details.join(' ')).not.toContain('still see everything');
+  });
+
   it('obeys the copy rules: no "workspace", no em dashes, no loss threats', () => {
-    for (const state of ['trial', 'grace', 'comped', 'walled', 'paid'] as const) {
+    for (const state of ['trial', 'grace', 'comped', 'walled', 'paid', 'read_only'] as const) {
       for (const isOwnerOrAdmin of [true, false]) {
         const result = summarizeBilling(snapshot(), { team: team({ state, isOwnerOrAdmin }) });
         const all = [result.title, ...result.details].join(' ');

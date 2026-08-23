@@ -10,6 +10,7 @@ import { readPersistedState } from '@/lib/persisted-state';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { AndroidAppBanner } from '@/components/app/AndroidAppBanner';
 import { AppTopbar } from '@/components/app/AppTopbar';
+import { TeamReadOnlyStrip } from '@/components/app/TeamReadOnlyStrip';
 import { TeamTrialStrip } from '@/components/app/TeamTrialStrip';
 import { UrgansUsageStrip } from '@/components/app/UrgansUsageStrip';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
@@ -431,6 +432,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 break phones. Renders nothing outside the last stretch of a
                 trial, and nothing at all while the flag is off. */}
             <TeamTrialStrip />
+            <TeamReadOnlyStrip />
             {/* Assistant-usage indicator, same slot and same contract.
                 Renders only for a team inside the last fifth of its monthly
                 UrgAns actions, which today is nobody: no code path can write

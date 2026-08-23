@@ -184,3 +184,24 @@ describe('the plan-change swap alert', () => {
     expect(email.html).toContain('Northside');
   });
 });
+
+// ── The failed-renewal alert ────────────────────────────────────────────────
+//
+// Fired from invoice.payment_failed, which lands WHILE the team still has
+// access: the snapshot treats past_due inside its period as paid, so Paystack is
+// retrying and nothing has broken for the customer yet. That makes this the one
+// billing moment where a recovery is cheap, and it is why the alert exists at
+// all rather than waiting for the lapse.
+describe('the failed-renewal alert', () => {
+  it('reads as an action in a phone preview, and says access is not gone yet', () => {
+    const email = buildFounderBillingAlertEmail('payment_failed', context);
+    expect(email.subject).toBe('CARD FAILED: Midnight Records');
+    for (const body of [email.text, email.html]) {
+      expect(body).toContain('Midnight Records');
+      expect(body).toContain('ada@midnight.example');
+      // The two facts that decide whether the founder acts today or next week.
+      expect(body).toMatch(/still have access/i);
+      expect(body).toMatch(/read only/i);
+    }
+  });
+});

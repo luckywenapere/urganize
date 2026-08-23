@@ -34,8 +34,13 @@ export type BillingSnapshot = {
   pendingPlan?: string | null;
 };
 
-/** Which exit to offer. `null` means offer none. */
-export type BillingCta = 'plans' | 'change' | 'contact';
+/** Which exit to offer. `null` means offer none.
+ *
+ * 'reactivate' exists separately from 'plans' because of where each one has to
+ * LAND. A team with no access reaches the wall at a bare /locked; a READ-ONLY
+ * team has access, so /locked's has-access effect would bounce them straight
+ * back into the app. They need ?intent=reactivate. Same picker, different door. */
+export type BillingCta = 'plans' | 'change' | 'contact' | 'reactivate';
 
 export type BillingSummary = {
   title: string;
@@ -194,6 +199,31 @@ export function summarizeBilling(
     };
   }
 
+  // Read-only: they paid, the payment lapsed, and they keep every read forever.
+  //
+  // Guarded on the person's OWN status, the shape the 'paid' branch below uses.
+  // The OWNER's snapshot reads 'expired' with a real plan on it, so they get the
+  // richer per-user copy at the end of this function (plan name, the date it
+  // ended) with a read-only line added there. This branch is for everyone ELSE
+  // on the team: money rows are owner-keyed, so a member reads back 'unpaid',
+  // and with /api/trial/start 404ing under this flag their trialUsed stays false
+  // forever — which would drop them all the way through to "you have a 28-day
+  // free trial available", the exact bug the 'paid' branch had to be added to
+  // fix.
+  if (team && team.state === 'read_only' && snapshot.accountStatus !== 'expired') {
+    return {
+      title: 'Plan ended',
+      details: [
+        'Your team can still see everything, and nothing has been removed.',
+        team.isOwnerOrAdmin
+          ? 'Update your payment to start making changes again.'
+          : 'Your team admin can update the payment.',
+      ],
+      cta: team.isOwnerOrAdmin ? 'reactivate' : null,
+      secondaryCta: null,
+    };
+  }
+
   if (team && team.state === 'walled') {
     return {
       title: 'No plan yet',
@@ -286,12 +316,20 @@ export function summarizeBilling(
   }
 
   if (snapshot.accountStatus === 'expired') {
+    const isReadOnlyTeam = team?.state === 'read_only';
     const details: string[] = [];
     if (expires) details.push(`Ended ${expires}.`);
+    // Under read-only mode an expired plan no longer means the wall, so say what
+    // is actually true: they can see everything and nothing was removed.
+    if (isReadOnlyTeam) {
+      details.push('Your team can still see everything, and nothing has been removed.');
+    }
     return {
       title: planName ? `${planName} plan ended` : 'Plan ended',
       details,
-      cta: salesLed ? 'contact' : 'plans',
+      // 'reactivate' rather than 'plans': a read-only team HAS access, so a bare
+      // /locked bounces them back into the app. See BillingCta.
+      cta: salesLed ? 'contact' : isReadOnlyTeam ? 'reactivate' : 'plans',
       secondaryCta: null,
     };
   }

@@ -43,12 +43,14 @@ import {
 //                            failed retries. Mark status='cancelled' but
 //                            KEEP expires_at — the user paid for the current
 //                            period and keeps access until it lapses.
-//   invoice.payment_failed — Renewal attempt failed. Mark past_due, log,
-//                            no immediate revoke. Paystack retries 3× over
-//                            ~72h; if all fail, subscription.disable lands.
-//                            Grace period is implicit: the user has access
-//                            until expires_at, which is the end of the
-//                            period they already paid for.
+//   invoice.payment_failed — Renewal attempt failed. Mark past_due, log, alert
+//                            the founder, no immediate revoke. Paystack retries
+//                            3× over ~72h; if all fail, subscription.disable
+//                            lands. Grace period is implicit: the user has
+//                            access until expires_at, which is the end of the
+//                            period they already paid for. Under the hard
+//                            paywall, a lapse from here lands in READ-ONLY
+//                            rather than at the wall — they have paid us before.
 //
 // What we no longer do:
 //   - Email-match standalone payments. The old ₦15,000 hosted-page flow has
@@ -987,14 +989,51 @@ async function handleInvoicePaymentFailed(payload: PaystackWebhookPayload) {
   // Mark past_due — informational only. Snapshot resolver lets past_due
   // + not expired keep access (the user paid for THIS period; the failed
   // charge is for the NEXT). When expires_at lapses without a successful
-  // renewal charge.success, access naturally ends.
-  const { error } = await admin
+  // renewal charge.success, access ends — and under the hard paywall that team
+  // lands in READ-ONLY rather than at the wall, because they have paid us before
+  // (lapsedFromPayment in lib/team-billing.ts).
+  //
+  // `user_id` is selected so the founder can be told. It is the only extra cost
+  // here and it is why this handler can alert at all.
+  const { data, error } = await admin
     .from('subscriptions')
     .update({ status: 'past_due', updated_at: new Date().toISOString() })
-    .eq('paystack_subscription_code', subscriptionCode);
+    .eq('paystack_subscription_code', subscriptionCode)
+    .select('user_id')
+    .maybeSingle();
 
   if (error) {
     console.error('[paystack-webhook] invoice.payment_failed update error:', error.message);
+  }
+
+  // Tell the founder NOW rather than when the period lapses. This is the only
+  // point in the whole billing system where a churn event is both known and
+  // still cheap to fix: retries are pending, the customer still has full access,
+  // and a message about a card takes a minute. Fire-and-forget, guarded by the
+  // flag, and swallowing everything — an alert must never fail a webhook, or
+  // Paystack retries an event we already handled.
+  const affectedUserId = (data as { user_id: string | null } | null)?.user_id ?? null;
+  if (isHardPaywallEnabled() && affectedUserId) {
+    void (async () => {
+      try {
+        const workspaceResult = await admin
+          .from('workspaces')
+          .select('id')
+          .eq('owner_id', affectedUserId)
+          .maybeSingle();
+        const workspaceId = (workspaceResult.data as { id: string } | null)?.id;
+        if (!workspaceId) return;
+        await notifyFounder(admin, {
+          kind: 'payment_failed',
+          workspaceId,
+          ownerUserId: affectedUserId,
+          actorUserId: null,
+          metadata: { subscriptionCode },
+        });
+      } catch {
+        // Never surface: past_due is already recorded.
+      }
+    })();
   }
 
   console.warn('[paystack-webhook] invoice.payment_failed', { subscription_code: subscriptionCode });

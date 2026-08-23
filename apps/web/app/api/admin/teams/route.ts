@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { verifyAdmin } from '../_shared';
-import { isHardPaywallEnabled, resolveTeamAccess, computeExtendedTrialEnd } from '@/lib/team-billing';
+import {
+  isHardPaywallEnabled,
+  lapsedFromPayment,
+  resolveTeamAccess,
+  computeExtendedTrialEnd,
+} from '@/lib/team-billing';
 import { invalidateTeamAccess } from '@/lib/team-billing-server';
 import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
 import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
@@ -44,15 +49,18 @@ type WorkspaceRow = {
 const WORKSPACE_COLUMNS =
   'id, owner_id, name, created_at, trial_started_at, trial_ends_at, comped_at, comped_by, billing_plan, billing_locked_amount, billing_notes';
 
-/** The wall date a team is actually working toward: none when comped, the paid
- * period's end when they pay, otherwise the trial end. */
+/** The wall date a team is actually working toward: none when comped or already
+ * read-only (read-only is permanent, so there is no later wall to count down
+ * to), the paid period's end when they pay, otherwise the trial end. */
 function resolveWallDate(input: {
   compedAt: string | null;
   subscriptionExpiresAt: string | null;
   subscriptionActive: boolean;
   trialEndsAt: string | null;
+  readOnly: boolean;
 }): string | null {
   if (input.compedAt) return null;
+  if (input.readOnly) return null;
   if (input.subscriptionActive) return input.subscriptionExpiresAt;
   return input.trialEndsAt;
 }
@@ -83,7 +91,10 @@ export async function GET(request: NextRequest) {
 
   const [profilesResult, subscriptionsResult] = await Promise.all([
     ownerIds.length
-      ? client.from('profiles').select('id, name, artist_name, email, is_subscribed').in('id', ownerIds)
+      ? client
+          .from('profiles')
+          .select('id, name, artist_name, email, is_subscribed, paid_at')
+          .in('id', ownerIds)
       : Promise.resolve({ data: [], error: null }),
     ownerIds.length
       ? client
@@ -100,6 +111,7 @@ export async function GET(request: NextRequest) {
       artist_name: string | null;
       email: string | null;
       is_subscribed: boolean | null;
+      paid_at: string | null;
     }>).map((row) => [row.id, row])
   );
 
@@ -137,6 +149,13 @@ export async function GET(request: NextRequest) {
     const resolution = resolveTeamAccess({
       ownerHasAccess,
       ownerAllowlisted,
+      // Same input the app's own resolver computes, from the same column, so
+      // this console cannot disagree with the product about whether a team is
+      // read-only or walled.
+      ownerLapsedFromPayment: lapsedFromPayment({
+        ownerHasAccess,
+        ownerPaidAt: profile?.paid_at ?? null,
+      }),
       team: {
         trialStartedAt: row.trial_started_at,
         trialEndsAt: row.trial_ends_at,
@@ -164,6 +183,7 @@ export async function GET(request: NextRequest) {
         subscriptionExpiresAt: subscription?.expires_at ?? null,
         subscriptionActive,
         trialEndsAt: row.trial_ends_at,
+        readOnly: resolution.state === 'read_only',
       }),
       comped: Boolean(row.comped_at),
       compedAt: row.comped_at,
@@ -286,6 +306,15 @@ export async function PATCH(request: NextRequest) {
       // NEVER writes profiles.is_subscribed: that flag grants paid access
       // FOREVER through the snapshot's back-compat branch, with no expiry, so
       // using it here would make a one-year deal permanent.
+      //
+      // It DOES write profiles.paid_at (below), and the distinction matters.
+      // paid_at grants nothing on its own — inside resolveSnapshot it only ever
+      // chooses between 'expired' and 'unpaid', both of which are no-access.
+      // What it does do is record that real money landed, which is the sole
+      // discriminator behind read-only mode (lapsedFromPayment). Without it, an
+      // invoice-settled team — a Label or Enterprise deal, exactly the customer
+      // most likely to be on an invoice — would hit the full wall when their
+      // year lapsed instead of keeping their catalogue readable.
       const subscriptionUpsert = await client.from('subscriptions').upsert(
         {
           user_id: workspace.owner_id,
@@ -319,6 +348,18 @@ export async function PATCH(request: NextRequest) {
           expires_at: action.expiresAt,
         },
       });
+
+      // Coalesced, so a second deal never rewrites when this team FIRST paid.
+      // Best-effort: the plan is already recorded and the money already has its
+      // paper trail, so a failure here must not fail the action.
+      const paidAtResult = await client
+        .from('profiles')
+        .update({ paid_at: nowIso })
+        .eq('id', workspace.owner_id)
+        .is('paid_at', null);
+      if (paidAtResult.error) {
+        console.error('[admin-teams] could not stamp paid_at:', paidAtResult.error.message);
+      }
 
       invalidateSubscriptionSnapshot(workspace.owner_id);
       eventMetadata.plan = action.plan;

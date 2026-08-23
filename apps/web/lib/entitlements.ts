@@ -222,7 +222,7 @@ const LEGACY_PLAN_IDS = new Set([
 
 export function resolveTeamTier(input: {
   /** TeamAccessResolution.state. */
-  state: 'paid' | 'comped' | 'trial' | 'grace' | 'walled';
+  state: 'paid' | 'comped' | 'trial' | 'grace' | 'read_only' | 'walled';
   /** subscriptions.plan for the team OWNER, or null. */
   ownerPlan?: string | null;
   /** workspaces.billing_plan — the deal marker, not an access grant. */
@@ -241,10 +241,11 @@ export function resolveTeamTier(input: {
   // off a subscription; treat it as the flagship, same as a trial.
   if (input.state === 'comped') return TRIAL_TIER;
 
-  // Walled: no access at all, so entitlements are moot. Return the flagship
-  // rather than the entry tier so that if a caller ever reads this without
-  // checking hasAccess first, it errs toward permissive.
-  if (input.state === 'walled') return 'label';
+  // Walled: no access at all, so entitlements are moot. Read-only likewise —
+  // a team that cannot write cannot reach a ceiling. Return the flagship rather
+  // than the entry tier so that if a caller ever reads this without checking
+  // hasAccess (or canWrite) first, it errs toward permissive.
+  if (input.state === 'walled' || input.state === 'read_only') return 'label';
 
   const plan = (input.ownerPlan ?? '').trim();
   if (isPricingTierId(plan)) return plan;
