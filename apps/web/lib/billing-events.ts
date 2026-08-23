@@ -39,6 +39,11 @@ export const BILLING_EVENT_TYPES = [
   'custom_price_set',
   /** Settled outside checkout: invoice, bank transfer, an agreement. */
   'manually_marked_paid',
+  /** A team ran into a plan ceiling. `metadata` carries the entitlement key,
+   *  the limit and the count, which is what makes this the upgrade signal the
+   *  pricing spec asks to be tracked "by entitlement key". Frequent seat and
+   *  release blocks on Manager are the clearest buy signal we get. */
+  'limit_hit',
 ] as const;
 
 export type BillingEventType = (typeof BILLING_EVENT_TYPES)[number];

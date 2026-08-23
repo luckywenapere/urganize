@@ -7,6 +7,8 @@ import {
   loadWorkspaceAccessContext,
   loadWorkspaceMembers,
 } from '@/lib/tasks-server';
+import { getWorkspaceTier } from '@/lib/team-billing-server';
+import { getEntitlement } from '@/lib/entitlements';
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuthenticatedAdmin(request);
@@ -23,7 +25,19 @@ export async function GET(request: NextRequest) {
     }
 
     const members = await loadWorkspaceMembers(adminClient, access.primaryWorkspaceId, auth.user.id);
-    return NextResponse.json(buildWorkspaceMembersResponse(access.primaryWorkspace, members));
+
+    // Seat ceiling, so Settings can say "3 of 4" rather than letting the
+    // manager discover the limit by being refused. Resolved here rather than
+    // inside buildWorkspaceMembersResponse, which is a pure shaper. null means
+    // no ceiling (every tier but Manager) or that the tier could not be read —
+    // the client renders no badge either way, which is the honest fallback.
+    const tier = await getWorkspaceTier(access.primaryWorkspaceId);
+    const seatLimit = tier ? getEntitlement(tier, 'seats') : null;
+
+    return NextResponse.json({
+      ...buildWorkspaceMembersResponse(access.primaryWorkspace, members),
+      seatLimit,
+    });
   } catch (error) {
     if (isTaskSchemaMissingError(error)) {
       return buildTaskSchemaResponse();

@@ -9,6 +9,8 @@ type TeamTabProps = {
   isLoadingTeammates: boolean;
   onTeammatesChange: (next: WorkspaceMember[]) => void;
   onRefetch: () => void;
+  /** Seat ceiling, or null when the team has none. */
+  seatLimit?: number | null;
 };
 
 /**
@@ -34,6 +36,7 @@ export function TeamTab({
   isLoadingTeammates,
   onTeammatesChange,
   onRefetch,
+  seatLimit = null,
 }: TeamTabProps) {
   return (
     <div className="divide-y divide-stroke-subtle">
@@ -42,6 +45,7 @@ export function TeamTab({
         isLoadingTeammates={isLoadingTeammates}
         onTeammatesChange={onTeammatesChange}
         onRefetch={onRefetch}
+        seatLimit={seatLimit}
       />
       <TeamLoginsSection />
     </div>

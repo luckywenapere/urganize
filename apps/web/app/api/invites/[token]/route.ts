@@ -5,6 +5,7 @@ import {
   looksLikeInviteLinkCode,
   verifyInviteLinkToken,
 } from '@/lib/invite-link';
+import { checkSeatAllowance, recordLimitHit } from '@/lib/seats-server';
 
 // Public + authenticated endpoints for token-based invite acceptance.
 //
@@ -193,6 +194,34 @@ async function joinWorkspaceViaLink(
   if (existingMembership.data?.id) {
     await markOnboardingComplete(admin, userId);
     return NextResponse.json({ status: 'already_member', workspaceId });
+  }
+
+  // Seat cap. This is the enforcement point that matters most: one shareable
+  // link can be redeemed by many people, so capping only the per-email invite
+  // route would leave the ceiling trivially bypassable. Placed after the
+  // already-a-member return above, because an existing member occupies a seat
+  // already and re-entering changes no total.
+  //
+  // Note the tier is resolved from the WORKSPACE, not from the acting user: the
+  // person here is the invitee, and their own primary team is not the team they
+  // are joining. Fails open on an unreadable count or tier — refusing a
+  // teammate over a transient read failure is the worse mistake.
+  const seats = await checkSeatAllowance(admin, workspaceId);
+  if (!seats.allowed) {
+    await recordLimitHit(admin, {
+      workspaceId,
+      actorUserId: userId,
+      key: seats.key,
+      limit: seats.limit,
+      current: seats.current,
+    });
+    // The accept page renders `error` verbatim in its inline banner, so the
+    // invitee reads this string. It names the plan rather than blaming them,
+    // and points at the person who can fix it.
+    return NextResponse.json(
+      { error: `${seats.message} Ask the person who invited you to upgrade, then open this link again.` },
+      { status: 409 }
+    );
   }
 
   const nowIso = new Date().toISOString();

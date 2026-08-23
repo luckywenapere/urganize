@@ -1732,7 +1732,22 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-23 (data export shipped flag-off — see "Data export"
+*Last updated: 2026-08-23 (seat enforcement and the tier resolver — see "Seat
+enforcement + the tier resolver" above. The first cap the entitlement map
+actually enforces, capped at BOTH places a seat can be created, because one
+shareable invite link can be redeemed by many people and capping only the
+per-email route leaves the ceiling bypassable. Four things a later change will
+be tempted to undo: the tier resolver FAILS OPEN on every uncertainty (unknown
+plan, legacy plan, trial, comp, grandfathered deal, read failure all resolve to
+the uncapped tier) and inverting that would cap real teams by accident;
+getWorkspaceTier exists because the user-scoped answer is wrong when an INVITEE
+redeems a link into someone else's team; lib/seats-server.ts must stay
+leaf-only, since the invites route deliberately avoids the paywalled auth chain;
+and there is NO feature flag because enforcement is structurally inert — nothing
+can write plan 'manager' today, and a test asserts that for every plan value any
+code path can currently write. Active-release and assistant caps are deferred
+with reasons recorded there, the first needing an archive action built first.
+Earlier the same day: data export shipped flag-off — see "Data export"
 above. Two downloads in Settings, everything as JSON and every activity as a
 spreadsheet, which is what makes `data_export` on every tier a true statement
 rather than a promise. Three things a later change will be tempted to undo: the
@@ -2143,6 +2158,113 @@ claim survives outside `/changelog`. **Not verified:** the paid-team-member
 copy has never rendered against a real session, so it rests on the unit tests
 plus the traced precondition. Worth one look in Settings as a teammate after
 the flag is flipped.
+
+---
+
+## Seat enforcement + the tier resolver (2026-08-23)
+
+The first cap the entitlement map actually enforces, plus the resolver every
+other cap will need. **Not flag-gated, because it does not need to be** — see
+the inertness argument below, which is a stronger guarantee than a flag and is
+pinned by a test.
+
+**The tier resolver is the piece to understand first.** `getTeamAccessForUser`
+already fetched the owner's subscription snapshot to decide `hasAccess` and threw
+its `plan` away; `resolveTeamTier` (`lib/entitlements.ts`) maps that plan onto a
+tier, and `TeamAccessSnapshot` now carries it.
+
+1. **It FAILS OPEN, everywhere, and inverting that would cap real teams by
+   accident.** An unknown plan, an absent plan, every legacy plan id, a trial, a
+   grace window, a comped team and a grandfathered `founding` deal all resolve to
+   `label`, which is uncapped. So does a walled team, and so does the fail-open
+   snapshot. Never change "unknown means uncapped" to "unknown means entry tier".
+2. **`getWorkspaceTier(workspaceId)` exists alongside it because the
+   user-scoped answer is wrong at one enforcement point.** When somebody redeems
+   a shareable invite link the acting user is the INVITEE, whose own primary team
+   is not the team being joined — usually their own empty shell, which is on a
+   trial and therefore uncapped. Resolving from the workspace's OWNER is the only
+   correct read there.
+
+**Seats are capped at BOTH creation points, and that is the whole point.**
+`POST /api/workspace/members/invite` mints one seat per email;
+`POST /api/invites/[token]` redeems a link MANY people can use. Capping only the
+first leaves the ceiling trivially bypassable. Two placement details that took
+reading the code to get right:
+
+- In the email route the check sits **inside the new-row `else` branch**, not
+  before it. Anywhere earlier also blocks a RE-invite of somebody who already
+  holds a seat, which changes no total and must always be allowed.
+- In the link route it sits in `joinWorkspaceViaLink` **after** the
+  already-a-member early return, which covers both link kinds in one edit.
+
+**`lib/seats-server.ts` is a leaf module on purpose.** The invites route
+deliberately hand-rolls its auth and re-declares its own table constant to stay
+off the `@/app/api/_shared/auth` chain, because that chain runs
+`requireActiveAccount` and an invitee joining a paid team has no subscription of
+their own. Importing anything paywall-adjacent into that route would lock out
+every new teammate. Keep this module's imports leaf-only.
+
+**Fail-open again, at the count.** `countTeamSeats` returns null on any read
+failure and every caller treats null as "do not enforce": turning a transient
+database blip into a team that cannot grow is a far worse failure than briefly
+allowing one seat too many. Unit-tested, including the throw path.
+
+**Why no feature flag: enforcement is INERT today, structurally.** Nothing in
+the product can write `subscriptions.plan = 'manager'` — checkout validates
+against the legacy plan ids and `ADMIN_ASSIGNABLE_PLANS` does not include it — so
+every team resolves to `label` and no ceiling exists to hit.
+`entitlements.test.ts` asserts that for **every plan value any code path can
+currently write**, so if someone later makes `manager` writable, that test
+failing is the reminder that caps just went live for real teams. A second flag
+here would add a way for that to be wrong without adding any safety.
+
+**Instrumentation:** a `limit_hit` billing event carrying the entitlement key,
+the limit and the count. `billing_events.type` is free text by design, so this
+needed **no migration**. These rows are the pricing spec's "track every limit
+hit, by entitlement key" and are the clearest buy signal the product produces.
+
+**Settings shows the ceiling before you meet it:** `GET /api/workspace/members`
+now returns `seatLimit`, and Teammates renders "3 of 4" plus disables Invite and
+Copy-link at the cap. `null` means no ceiling OR an unreadable tier, and renders
+nothing either way — the honest fallback. It is deliberately **not** cached
+alongside the member list: a ceiling changes when a plan changes, and a stale one
+would tell a manager who just upgraded that they are still capped. The disabled
+buttons are a courtesy, not a gate; the server still enforces.
+
+**The refusal needs no client work.** Both routes return a flat
+`{ error }` at **409**, and both surfaces already render that string verbatim —
+Settings in its inline error, and the invite-accept page in its banner. The
+invitee's copy adds "Ask the person who invited you to upgrade", since they
+cannot fix it themselves.
+
+**Deferred, with reasons rather than as a cherry-pick:**
+- **`active_releases`** needs an explicit archive action built first. Nothing has
+  ever written `releases.status = 'archived'`, and `GET /api/releases/[id]`
+  overwrites stored status with a computed value that cannot express it — so a
+  cap today would be a cap on releases-ever-created with no way to free a slot.
+  Three things that work will need care: `PATCH` is a full-row replace (a sparse
+  `{status}` blanks the title and 400s, hence a dedicated archive route);
+  `WorkspaceIdentityPanel`'s `activeReleaseCount` is dead code that goes live on
+  the first archive; and `isRecapEligible` is currently DUPLICATED in
+  `WorkspaceView.tsx`, so the shared predicate should close that rather than add
+  a third copy. Chappi's `update_release` can already set `archived` today, so any
+  new path must agree with it on side effects.
+- **`urgans_monthly_actions`** needs a counting substrate. Two findings worth
+  keeping: the confirmation-replay branch DOES call the model, so the cap must sit
+  inside `if (!confirmedAction)` or a permission click costs the user an action;
+  and one POST is up to five gateway rounds, so the unit is one per turn reaching
+  the agent, not per completion. `countBillingEventsSince` is fail-open (returns
+  0 on error), which is right for a notification cooldown and needs a deliberate
+  decision for a paid ceiling.
+- **`rollout_template_custom_save`** stays declarative — templates are static
+  TypeScript, so there is nothing to gate.
+
+**Verified:** 1050 tests (34 new), `eslint .` at the exact 3-error/65-warning
+baseline, `next build` green by exit code with pricing v2 both off and on under
+production config, `/auth` and `/settings` still `○ Static`. **Not verified:**
+nothing has run against a real database, so no seat has actually been refused —
+the caps rest on unit tests plus the traced call paths. Worth exercising once
+`manager` is a real plan.
 
 ---
 

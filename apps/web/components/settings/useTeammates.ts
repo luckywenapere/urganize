@@ -19,6 +19,10 @@ export type TeammatesState = {
   /** Accepts a list the section mutated locally (invite, remove) and persists
    * it, so the cache can't fall behind the rendered state. */
   setTeammates: (next: WorkspaceMember[]) => void;
+  /** Seat ceiling for this team, or null when it has none. Never read from the
+   * cache: a ceiling changes when a plan changes, and painting a stale one
+   * would tell a manager who just upgraded that they are still capped. */
+  seatLimit: number | null;
   refetch: () => void;
 };
 
@@ -69,6 +73,8 @@ export function useTeammates(userId: string, accessToken: string): TeammatesStat
     [userId]
   );
 
+  const [seatLimit, setSeatLimit] = useState<number | null>(null);
+
   const loadTeammates = useCallback(async () => {
     if (!accessToken) return;
     setIsLoadingTeammates(true);
@@ -79,10 +85,15 @@ export function useTeammates(userId: string, accessToken: string): TeammatesStat
       });
       const payload = (await response.json().catch(() => ({}))) as {
         members?: WorkspaceMember[];
+        seatLimit?: number | null;
         error?: string;
       };
       if (response.ok && Array.isArray(payload.members)) {
         setTeammatesState(payload.members);
+        // Deliberately NOT cached alongside members: a seat ceiling changes
+        // when a plan changes, and painting a stale one would tell a manager
+        // who just upgraded that they are still capped.
+        setSeatLimit(typeof payload.seatLimit === 'number' ? payload.seatLimit : null);
         if (userId) {
           writePersistedState<TeammatesCache>(TEAMMATES_CACHE_KEY, SETTINGS_CACHE_VERSION, {
             userId,
@@ -106,6 +117,7 @@ export function useTeammates(userId: string, accessToken: string): TeammatesStat
     teammates,
     isLoadingTeammates: isLoadingTeammates && !primed,
     setTeammates,
+    seatLimit,
     refetch: () => void loadTeammates(),
   };
 }
