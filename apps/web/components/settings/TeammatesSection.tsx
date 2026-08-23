@@ -18,6 +18,10 @@ type TeammatesSectionProps = {
   isLoadingTeammates: boolean;
   onTeammatesChange: (next: WorkspaceMember[]) => void;
   onRefetch: () => void;
+  /** Seat ceiling for this team, or null when there is none. Only the Manager
+   *  tier has one; an unresolvable tier is null too, so the badge and the
+   *  disabled states simply do not appear. */
+  seatLimit?: number | null;
 };
 
 /**
@@ -32,6 +36,7 @@ export function TeammatesSection({
   isLoadingTeammates,
   onTeammatesChange,
   onRefetch,
+  seatLimit = null,
 }: TeammatesSectionProps) {
   const user = useAuthStore((state) => state.user);
   // getRolePermissions returns a fresh object each call -- select the
@@ -39,6 +44,14 @@ export function TeammatesSection({
   // (a fresh object reference every render would defeat Zustand's equality
   // check on every unrelated store update).
   const rolePermissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
+
+  // Seats used counts the same rows the list below shows: invited and active
+  // both occupy one, matching the server's count. Disabling the two create
+  // controls at the ceiling saves a round trip that could only be refused; the
+  // server still enforces it, because a disabled button is a courtesy, not a
+  // gate.
+  const seatsUsed = teammates.length;
+  const atSeatLimit = seatLimit !== null && seatsUsed >= seatLimit;
 
   // Distinct artists on the roster, derived from the releases already in the
   // store — the picker for ARTIST invites (an artist only sees their own
@@ -228,6 +241,14 @@ export function TeammatesSection({
     <section id="teammates" className={`${panelClass} scroll-mt-24`}>
       <h2 className="mb-5 flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         Teammates
+        {/* Seat count, shown only when there IS a ceiling. Every tier but
+            Manager is uncapped, and an unreadable tier resolves to null, so
+            most teams see nothing here rather than a meaningless "3 of ∞". */}
+        {seatLimit !== null ? (
+          <span className="font-mono text-[10px] font-bold tracking-[0.14em] text-content-tertiary">
+            {seatsUsed} of {seatLimit}
+          </span>
+        ) : null}
       </h2>
       {canManage ? (
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
@@ -267,7 +288,7 @@ export function TeammatesSection({
         <button
           type="button"
           onClick={() => void handleInviteTeammate()}
-          disabled={isInviting}
+          disabled={isInviting || atSeatLimit}
           className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
         >
           {isInviting ? 'Inviting...' : 'Invite'}
@@ -281,7 +302,7 @@ export function TeammatesSection({
           <button
             type="button"
             onClick={() => void handleCreateInviteLink()}
-            disabled={isCreatingLink}
+            disabled={isCreatingLink || atSeatLimit}
             className="motion-focus inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary disabled:opacity-60"
           >
             <Copy className="h-3 w-3" aria-hidden="true" />

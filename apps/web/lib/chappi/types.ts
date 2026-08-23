@@ -241,5 +241,14 @@ export type ChappiResponse =
       clientActions: ChappiClientAction[];
       pendingConfirmation?: ChappiPendingConfirmation | null;
     }
-  | { mode: 'deterministic' }
+  | {
+      mode: 'deterministic';
+      /** Why the model was skipped, when there is a reason worth showing. Set
+       *  when a team has spent its assistant actions for the window: the
+       *  deterministic router still runs (typed commands and chips keep
+       *  working, and cost nothing), so this explains the difference rather
+       *  than reporting a failure. Absent in the ordinary no-model-configured
+       *  case, which needs no explanation. */
+      notice?: string;
+    }
   | { mode: 'error'; error: string };

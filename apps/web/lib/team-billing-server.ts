@@ -26,6 +26,8 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { getSubscriptionSnapshot } from './subscription-access';
+import { resolveTeamTier } from './entitlements';
+import type { PricingTierId } from '@urganize/pricing';
 import { isAllowlistedEmail } from './paywall-allowlist';
 import {
   TEAM_TRIAL_EXPIRY_GRACE_MS,
@@ -74,6 +76,10 @@ export type TeamAccessSnapshot = {
   /** Server-side only. Never serialize this to a client payload: a teammate
    * has no business reading their owner's email out of an API response. */
   ownerEmail: string | null;
+  /** Entitlement tier of the PRIMARY team, for limit checks. Everything that is
+   * not confidently a paying Manager resolves to `label`, which is uncapped —
+   * see resolveTeamTier. */
+  tier: PricingTierId;
 };
 
 type MembershipRow = {
@@ -120,6 +126,10 @@ const openSnapshot = (): TeamAccessSnapshot => ({
   ownerUserId: null,
   ownerName: null,
   ownerEmail: null,
+  // Uncapped, for the same reason access is granted: if we cannot tell, we do
+  // not punish. Capping a team on a read failure would be the worst version of
+  // this being wrong.
+  tier: 'label',
 });
 
 // Positive-only cache, mirroring lib/subscription-access.ts's snapshotCache.
@@ -274,7 +284,13 @@ export async function getTeamAccessForUser(
       }>).map((row) => [row.id, row])
     );
 
-    const ownerAccess = new Map<string, { hasAccess: boolean; allowlisted: boolean }>();
+    // `plan` is kept as well as hasAccess: it is what resolveTeamTier maps onto
+    // an entitlement tier, and this read already happens, so carrying it costs
+    // nothing. An allowlisted owner has no plan to read and is uncapped anyway.
+    const ownerAccess = new Map<
+      string,
+      { hasAccess: boolean; allowlisted: boolean; plan: string | null }
+    >();
     await Promise.all(
       ownerIds.map(async (ownerId) => {
         const ownerEmail =
@@ -282,22 +298,34 @@ export async function getTeamAccessForUser(
                              : (ownerProfiles.get(ownerId)?.email ?? null);
         const allowlisted = isAllowlistedEmail(ownerEmail);
         if (allowlisted) {
-          ownerAccess.set(ownerId, { hasAccess: true, allowlisted: true });
+          ownerAccess.set(ownerId, { hasAccess: true, allowlisted: true, plan: null });
           return;
         }
         const snapshot = await getSubscriptionSnapshot(ownerId);
-        ownerAccess.set(ownerId, { hasAccess: snapshot.hasAccess, allowlisted: false });
+        ownerAccess.set(ownerId, {
+          hasAccess: snapshot.hasAccess,
+          allowlisted: false,
+          plan: snapshot.plan,
+        });
       })
     );
 
     const resolveFor = (row: WorkspaceRow) => {
       const owner = row.owner_id ? ownerAccess.get(row.owner_id) : undefined;
-      return resolveTeamAccess({
+      const access = resolveTeamAccess({
         ownerHasAccess: Boolean(owner?.hasAccess),
         ownerAllowlisted: Boolean(owner?.allowlisted),
         team: toBillingFields(row),
         graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
       });
+      return {
+        ...access,
+        tier: resolveTeamTier({
+          state: access.state,
+          ownerPlan: owner?.plan ?? null,
+          billingPlan: row.billing_plan,
+        }),
+      };
     };
 
     const ownResolution = ownWorkspace ? resolveFor(ownWorkspace) : null;
@@ -358,6 +386,7 @@ export async function getTeamAccessForUser(
       ownerUserId: primary.workspace.owner_id,
       ownerName: ownerProfile?.name || ownerProfile?.artist_name || null,
       ownerEmail: ownerProfile?.email || null,
+      tier: primaryResolution.tier,
     };
 
     writeCache(userId, snapshot);
@@ -374,4 +403,70 @@ export type TeamAccessPayload = Omit<TeamAccessSnapshot, 'ownerEmail'>;
 export function toTeamAccessPayload(snapshot: TeamAccessSnapshot): TeamAccessPayload {
   const { ownerEmail: _ownerEmail, ...payload } = snapshot;
   return payload;
+}
+
+/**
+ * What tier is THIS team on — asked about a workspace, not about a user.
+ *
+ * `getTeamAccessForUser` answers "what tier is the team this USER belongs to",
+ * which is the wrong question at one of the two seat-enforcement points. When
+ * someone redeems a shareable invite link, the acting user is the INVITEE: their
+ * own primary team is not the team being joined, so resolving from them would
+ * read the wrong ceiling entirely (usually their own empty shell's, which is on
+ * a trial and therefore uncapped). This resolves from the workspace's OWNER,
+ * which is who is paying.
+ *
+ * Returns null when it cannot tell, and callers MUST treat null as "do not
+ * enforce". Refusing a teammate because a subscription read failed would turn a
+ * transient blip into a team that cannot grow, which is a far worse failure than
+ * briefly allowing one seat too many.
+ *
+ * Deliberately uncached: it is called on a write path that happens a handful of
+ * times per team per month, and `getSubscriptionSnapshot` underneath it is
+ * already 30s-cached, so the marginal cost is one workspace row.
+ */
+export async function getWorkspaceTier(workspaceId: string): Promise<PricingTierId | null> {
+  if (!workspaceId) return null;
+
+  try {
+    const client = createReadClient();
+    if (!client) return null;
+
+    const workspaceResult = await client
+      .from(WORKSPACES_TABLE)
+      .select(WORKSPACE_COLUMNS)
+      .eq('id', workspaceId)
+      .maybeSingle();
+
+    if (workspaceResult.error || !workspaceResult.data) return null;
+    const row = workspaceResult.data as unknown as WorkspaceRow;
+    if (!row.owner_id) return null;
+
+    const ownerResult = await client
+      .from(PROFILES_TABLE)
+      .select('email')
+      .eq('id', row.owner_id)
+      .maybeSingle();
+    // A missing profile row is not a reason to refuse: fall through with no
+    // email, which simply means the allowlist cannot match.
+    const ownerEmail = (ownerResult.data as { email: string | null } | null)?.email ?? null;
+
+    if (isAllowlistedEmail(ownerEmail)) return 'label';
+
+    const snapshot = await getSubscriptionSnapshot(row.owner_id);
+    const access = resolveTeamAccess({
+      ownerHasAccess: snapshot.hasAccess,
+      team: toBillingFields(row),
+      graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
+    });
+
+    return resolveTeamTier({
+      state: access.state,
+      ownerPlan: snapshot.plan,
+      billingPlan: row.billing_plan,
+    });
+  } catch (error) {
+    console.error('[team-billing] could not resolve workspace tier:', error);
+    return null;
+  }
 }

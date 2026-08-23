@@ -21,6 +21,7 @@
 // withheld to manufacture an upsell, because the founder is personally in the
 // room when a buyer asks why.
 
+import { isPricingTierId } from '@urganize/pricing';
 import type { PricingTierId } from '@urganize/pricing';
 
 /** Feature switch for the tier model. Function form (the isHardPaywallEnabled /
@@ -69,29 +70,24 @@ export type Entitlements = {
 // not sold to. `entitlements.test.ts` asserts this structurally across every
 // tier precisely so a later edit cannot quietly gate it. If a future change
 // needs to flip it, that test failing is the conversation, not an obstacle.
-// (Note the feature itself does not exist yet — no export route, no Settings
-// control. Declaring it here is a commitment, so do not advertise it on a
-// public page until it is built.)
+// (Built 2026-08-23: GET /api/account/export plus "Your data" in Settings,
+// behind NEXT_PUBLIC_FEATURE_DATA_EXPORT. That route is deliberately NOT behind
+// the paywall and has its own guard test — see lib/account-export.ts.)
 //
-// `rollout_template_custom_save` and `urgans_monthly_actions` are DECLARATIVE
-// ONLY. Neither has anything behind it yet: rollout templates are static
-// TypeScript in lib/release-templates and `release_plan_drafts` is unique per
-// release, so there is nowhere to save a reusable one; and nothing anywhere
-// counts assistant calls — no counter table, no server-side event, not even a
-// PostHog event per invocation. They are declared now so the map matches the
-// published tier table, but reading them to gate anything today would gate a
-// feature that does not exist.
+// `rollout_template_custom_save` is STILL DECLARATIVE ONLY, and reading it to
+// gate anything would gate a feature that does not exist: rollout templates are
+// static TypeScript in lib/release-templates, and `release_plan_drafts` is
+// unique per release so there is nowhere to save a reusable one. It is declared
+// so the map matches the published tier table, nothing more.
 //
-// `active_releases` IS NOT ENFORCEABLE YET, and the reason is worth reading
-// before anyone wires it up. Nothing in the product ever writes
-// `releases.status = 'released'` or `'archived'`, no UI exposes a status
-// picker, and GET /api/releases/[id] OVERWRITES the stored status with a
-// computed value that can only be draft | in_progress | ready. So a cap keyed
-// on `releases.status` is a cap on releases-ever-created with no way for a user
-// to free a slot — the opposite of the spec's "archiving or completing a
-// release frees a slot immediately". lib/recap-eligibility.ts already answers
-// "is this finished" honestly (release date passed OR every task done) and is
-// the definition to reuse, but an explicit archive action is a prerequisite.
+// `seats`, `active_releases` and `urgans_monthly_actions` ARE enforced as of
+// 2026-08-23 — see resolveTeamTier and checkLimit at the foot of this file, and
+// the enforcement notes in CLAUDE.md. Two things about that worth knowing here:
+// enforcing `active_releases` required building an explicit archive action
+// first, because nothing in the product had ever written
+// `releases.status = 'archived'`; and every cap is a no-op unless a team
+// resolves to the `manager` tier, which only happens once pricing v2 is live
+// and somebody is paying for it.
 //
 // `sso` and `sub_teams` are declared false everywhere except enterprise and
 // are read by nothing. That is deliberate and consistent with this repo's
@@ -182,3 +178,156 @@ export function remainingAllowance(current: number, limit: Limit): number | null
   if (limit === UNLIMITED) return null;
   return Math.max(0, limit - current);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Which tier is a team on, and is it over a limit
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Enforcement needs one question answered before it can ask anything else:
+// what tier is this team on? The team resolver already fetches the owner's
+// subscription snapshot to decide hasAccess and throws the plan away; this maps
+// that plan onto a tier.
+//
+// THE SAFETY PROPERTY THAT MAKES THIS MERGEABLE ONTO A LIVE PAYWALL: every
+// route that cannot be confidently placed on a capped tier resolves to `label`,
+// which is uncapped. So an unknown plan, a legacy plan, a trial, a comped team
+// and a grandfathered account are all uncapped, and enforcement is a structural
+// no-op until pricing v2 is live AND somebody is actually paying for Manager.
+// Never invert this into "unknown means entry tier" — that would cap real teams
+// on a read failure.
+
+/** Plan ids that predate the tier model. All of them were the single team
+ * price, which Label inherits at the same amount, so they map there. */
+const LEGACY_PLAN_IDS = new Set([
+  'monthly',
+  'annual',
+  'yearly',
+  'access',
+  'custom',
+  'founding',
+]);
+
+export function resolveTeamTier(input: {
+  /** TeamAccessResolution.state. */
+  state: 'paid' | 'comped' | 'trial' | 'grace' | 'walled';
+  /** subscriptions.plan for the team OWNER, or null. */
+  ownerPlan?: string | null;
+  /** workspaces.billing_plan — the deal marker, not an access grant. */
+  billingPlan?: string | null;
+}): PricingTierId {
+  // A grandfathered rate carries label entitlements in full, per the pricing
+  // spec's grandfathering rule. Checked first: the deal is what was agreed,
+  // whatever the subscription row says.
+  if (input.billingPlan === 'founding') return LEGACY_FOUNDING_TIER;
+
+  // A trial is full access by definition. Capping seats during an evaluation
+  // would teach the buyer the wrong thing about what they are evaluating.
+  if (input.state === 'trial' || input.state === 'grace') return TRIAL_TIER;
+
+  // Admin-granted free access. Nothing was bought, so there is no tier to read
+  // off a subscription; treat it as the flagship, same as a trial.
+  if (input.state === 'comped') return TRIAL_TIER;
+
+  // Walled: no access at all, so entitlements are moot. Return the flagship
+  // rather than the entry tier so that if a caller ever reads this without
+  // checking hasAccess first, it errs toward permissive.
+  if (input.state === 'walled') return 'label';
+
+  const plan = (input.ownerPlan ?? '').trim();
+  if (isPricingTierId(plan)) return plan;
+  if (LEGACY_PLAN_IDS.has(plan)) return 'label';
+  // Unknown or absent. Fail OPEN — see the note above.
+  return 'label';
+}
+
+// ── Limit checks ─────────────────────────────────────────────────────────────
+
+/** The entitlement keys that carry a countable ceiling. Deliberately not every
+ * key: the booleans are checked directly, and a limit only needs this shape
+ * when there is a number to compare and copy to write. */
+export type CountableLimitKey = 'seats' | 'active_releases' | 'urgans_monthly_actions';
+
+export type LimitVerdict =
+  | { allowed: true; limit: Limit; current: number; remaining: number | null }
+  | {
+      allowed: false;
+      key: CountableLimitKey;
+      limit: number;
+      current: number;
+      /** What to show the person who hit it. */
+      message: string;
+      /** The tier that lifts this limit, for the upgrade CTA. */
+      upgradeTo: PricingTierId;
+    };
+
+const TIER_LABEL: Record<PricingTierId, string> = {
+  manager: 'Manager',
+  label: 'Label',
+  enterprise: 'Enterprise',
+};
+
+/** Copy for a limit that has been reached.
+ *
+ * Rules this copy follows, from the pricing spec: plain and confident, no
+ * guilt, no countdown pressure, never the word "workspace", and no em dashes.
+ * Every number comes from the limit rather than being written into the string,
+ * so re-cutting a tier cannot leave the copy lying. A test asserts all of that.
+ */
+function limitMessage(key: CountableLimitKey, limit: number, tierLabel: string): string {
+  switch (key) {
+    case 'seats':
+      return `${tierLabel} plans include ${limit} people. Upgrade to Label for unlimited team members.`;
+    case 'active_releases':
+      return `${tierLabel} plans cover ${limit} releases at a time. Archive one you have finished, or upgrade to Label for unlimited releases.`;
+    case 'urgans_monthly_actions':
+      return `You have used all ${limit} UrgAns actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. Upgrade to Label for unlimited.`;
+  }
+}
+
+/** Is `current` within this tier's ceiling for `key`?
+ *
+ * `current` is the count BEFORE the thing being added, so a team with 3 of 4
+ * seats passes and a team with 4 of 4 does not. Unlimited always passes. */
+export function checkLimit(input: {
+  tier: PricingTierId;
+  key: CountableLimitKey;
+  current: number;
+}): LimitVerdict {
+  const limit = getEntitlement(input.tier, input.key);
+  if (isWithinLimit(input.current, limit)) {
+    return {
+      allowed: true,
+      limit,
+      current: input.current,
+      remaining: remainingAllowance(input.current, limit),
+    };
+  }
+  // isWithinLimit only returns false for a numeric ceiling, so this narrows.
+  const numericLimit = limit as number;
+  return {
+    allowed: false,
+    key: input.key,
+    limit: numericLimit,
+    current: input.current,
+    message: limitMessage(input.key, numericLimit, TIER_LABEL[input.tier]),
+    upgradeTo: 'label',
+  };
+}
+
+/** True once a tier is at or past `ratio` of its ceiling. Used for the
+ * warn-before-you-hit-it banner, which the spec puts at 80% and explicitly
+ * requires to be non-interrupting. Unlimited never warns. */
+export function isApproachingLimit(input: {
+  tier: PricingTierId;
+  key: CountableLimitKey;
+  current: number;
+  ratio?: number;
+}): boolean {
+  const limit = getEntitlement(input.tier, input.key);
+  if (limit === UNLIMITED) return false;
+  const ratio = input.ratio ?? 0.8;
+  return input.current >= Math.floor(limit * ratio);
+}
+
+/** The ratio at which the usage banner appears. */
+export const LIMIT_WARNING_RATIO = 0.8;

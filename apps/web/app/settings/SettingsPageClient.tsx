@@ -200,6 +200,7 @@ export default function SettingsPage() {
               isLoadingTeammates={teammates.isLoadingTeammates}
               onTeammatesChange={teammates.setTeammates}
               onRefetch={teammates.refetch}
+              seatLimit={teammates.seatLimit}
             />
           )}
           {activeTab === 'notifications' && <NotificationsTab />}

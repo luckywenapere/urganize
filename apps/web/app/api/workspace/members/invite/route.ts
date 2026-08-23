@@ -11,6 +11,7 @@ import {
 import { type WorkspaceMemberRole } from '@/lib/tasks';
 import { isEmailConfigured, sendEmail } from '@/lib/email';
 import { buildWorkspaceInviteEmail } from '@/lib/email-templates';
+import { checkSeatAllowance, recordLimitHit } from '@/lib/seats-server';
 import {
   captureServerAnalyticsEvent,
   createPostHogEvent,
@@ -171,6 +172,27 @@ export async function POST(request: NextRequest) {
         activeToken = '';
       }
     } else {
+      // Seat cap — INSIDE this branch on purpose. `existingResult.data?.id` is
+      // known-falsy here, so we are provably about to create a NEW seat.
+      // Checking any earlier would also block a RE-invite of somebody who
+      // already occupies a seat, which changes no total and must always be
+      // allowed. Fails open on an unreadable count or tier; see
+      // checkSeatAllowance.
+      const seats = await checkSeatAllowance(adminClient, workspaceId);
+      if (!seats.allowed) {
+        await recordLimitHit(adminClient, {
+          workspaceId,
+          actorUserId: auth.user.id,
+          key: seats.key,
+          limit: seats.limit,
+          current: seats.current,
+        });
+        // 409, matching the invite-link cap already in this route group. The
+        // client renders `error` verbatim, so this string is what the manager
+        // reads.
+        return NextResponse.json({ error: seats.message }, { status: 409 });
+      }
+
       const insertPayload: Record<string, unknown> = {
         workspace_id: workspaceId,
         user_id: null,
