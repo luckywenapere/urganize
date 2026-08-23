@@ -3,8 +3,14 @@
 import { useEffect, useState } from 'react';
 
 import { errorMessage } from '@/lib/errors';
-import { ASSET_MIME_ALLOWLIST, ASSET_SIZE_LIMITS, formatFileSize } from '@/lib/asset-constants';
+import {
+  ASSET_MIME_ALLOWLIST,
+  MAX_WORKSPACE_LOGO_BYTES,
+  formatFileSize,
+} from '@/lib/asset-constants';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
+import { buildUploadFailureReport, type UploadStep } from '@/lib/upload-failure-report';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { getAccessToken } from './getAccessToken';
 import type { WorkspaceLogo } from './WorkspaceLogoSection';
@@ -29,7 +35,10 @@ const IDENTITY_PANEL_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' && WORKSPACE_FEATURE_ENABLED;
 
 export const LOGO_MIME_ALLOWLIST = ASSET_MIME_ALLOWLIST.cover_art;
-export const LOGO_SIZE_LIMIT = ASSET_SIZE_LIMITS.cover_art;
+// Formats shared with cover art, size ceiling deliberately NOT — see
+// MAX_WORKSPACE_LOGO_BYTES. Must stay the same constant the upload-url route
+// validates against, or the client advertises a limit the server refuses.
+export const LOGO_SIZE_LIMIT = MAX_WORKSPACE_LOGO_BYTES;
 
 type WorkspaceArtistResponse = {
   workspaceId?: string;
@@ -228,6 +237,10 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
     }
 
     setIsSavingLogo(true);
+    // Which of the three steps we are on, so a failure can say how far it got
+    // (see lib/upload-failure-report.ts for why this is reported at all).
+    let step: UploadStep = 1;
+    let status: number | undefined;
     try {
       const token = await getAccessToken();
       if (!token) throw new Error('Session expired. Please sign in again.');
@@ -250,17 +263,22 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
         error?: string;
       };
       if (!uploadUrlResponse.ok || !uploadUrlPayload.upload_url || !uploadUrlPayload.storage_path) {
+        status = uploadUrlResponse.status;
         throw new Error(uploadUrlPayload.error || 'Could not create upload URL.');
       }
 
+      step = 2;
       const storageResponse = await fetch(uploadUrlPayload.upload_url, {
         method: 'PUT',
         headers: { 'Content-Type': mimeType },
         body: file,
       });
       if (!storageResponse.ok) {
+        status = storageResponse.status;
         throw new Error(`Storage upload failed (${storageResponse.status}).`);
       }
+
+      step = 3;
 
       const recordResponse = await fetch('/api/workspace/logo', {
         method: 'PUT',
@@ -278,6 +296,10 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
         error?: string;
       };
       if (!recordResponse.ok || !recordPayload.logo) {
+        status = recordResponse.status;
+        // The orphaned object is cleaned up by the route that rejected it (it
+        // has both the path and the admin client) rather than by a second
+        // request from here.
         throw new Error(recordPayload.error || 'Could not save logo.');
       }
 
@@ -285,6 +307,17 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
       setLogoMessage('Logo saved. Releases without cover art now show it automatically.');
     } catch (err) {
       setLogoError(errorMessage(err, 'Could not upload logo.'));
+      captureAnalyticsEvent(
+        createPostHogEvent(
+          'asset_upload_failed',
+          buildUploadFailureReport({
+            surface: 'workspace_logo',
+            step,
+            status,
+            message: err instanceof Error ? err.message : null,
+          })
+        )
+      );
     } finally {
       setIsSavingLogo(false);
     }

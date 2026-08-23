@@ -1342,6 +1342,90 @@ gave them nothing, and nothing told them why.
 
 ---
 
+## Logo and photo uploads: one resolver, own limits, self-reporting failures (2026-08-24)
+
+The same curator came back with a sharper report: **desktop too**, and *"if I try to
+upload profile or logo it doesn't and the page crashes."* That retires the
+weak-connection story as the explanation, and it cannot be chased with devtools —
+you cannot ask a partner to open a console. So this pass fixes what is provable
+and makes the rest report itself.
+
+**A theory checked and discarded, so nobody re-chases it.** `next/image` throwing
+"Invalid src prop … hostname is not configured" looked like the crash:
+`WorkspaceLogoSection` rendered a signed Supabase URL through `next/image` with no
+`unoptimized`, and `next.config.js` derives `remotePatterns` from
+`NEXT_PUBLIC_SUPABASE_URL` **at build time** (empty allowlist if it is missing).
+But the installed Next 16.2.1 source settles it: that check sits under
+`if (process.env.NODE_ENV !== 'production')` in
+`next/dist/shared/lib/image-loader.js`, and `unoptimized` returns before the loader
+runs at all (`get-img-props.js`). **In production it cannot throw** — an
+unallowlisted host just makes `/_next/image` answer 400 and the image break.
+Dev-only. Read the installed source before believing a Next error is your crash.
+
+**The one deterministic bug, and it matches "the logo doesn't upload".** The two
+halves of the logo upload used DIFFERENT workspace resolvers: `./upload-url` minted
+the path with `ensureOwnedWorkspace` (the workspace the user OWNS) while the
+recording `PUT` validated it against `loadWorkspaceAccessContext`'s
+`primaryWorkspaceId`. Those deliberately diverge — a user who owns zero releases
+and belongs to someone else's team gets the JOINED workspace as their primary (a
+2026-07-23 founder decision so an invitee's Teammates list shows their real team,
+`lib/tasks-server.ts`). So for anyone newly invited into a team the bytes uploaded
+fine and the record call then rejected its own signed path as "not this
+workspace's", leaving an orphaned object. Both sides now use
+`loadWorkspaceAccessContext`, and both files carry a comment saying the mint and
+the check must never drift apart again. Two bonuses: that resolver has its own
+provision-on-miss, so a brand-new account is not newly 404'd; and a curator-only
+account now gets a clean "No workspace found." instead of `ensureOwnedWorkspace`'s
+`CuratorAccountError` surfacing from a *logo* upload as "Playlist owner accounts
+cannot create releases."
+
+**The workspace logo was the SECOND victim of the cover-art limit raise**, missed
+when the curator photo was decoupled two days earlier. Both halves
+(`useWorkspaceSettings.ts`, `upload-url/route.ts`) read
+`ASSET_SIZE_LIMITS.cover_art`, so a 96px logo accepted 25 MiB and the Settings help
+text advertised it. It has `MAX_WORKSPACE_LOGO_BYTES` (5 MiB) now.
+`lib/asset-constants.test.ts` asserts **both** avatar limits are strictly less than
+the cover-art limit, and that cover art still clears 20 MiB — a comment could not
+stop a third instance, that test can.
+
+**The logo preview no longer uses `next/image`.** Its own sibling renders the SAME
+url as a plain `<img>` with an `onError`, and says why
+(`WorkspaceIdentityPanel.tsx`: a 1h signed URL should not be proxied and cached by
+the optimizer). Two conventions for one URL in one codebase; the documented one
+won. The failure state is keyed on the URL that failed, not a bare boolean, so the
+next successful upload clears it instead of being stuck on "No preview" forever.
+
+**`buildWorkspaceLogoPayload` no longer takes the identity card down with it.**
+`getWorkspaceLogo` rethrows query errors by design, and this builder feeds the
+`/api/workspace/identity` AGGREGATE — so one unreadable logo column 500'd the whole
+card (name, artist, member count and all). It degrades to "no logo" now, matching
+its own documented contract and its sibling `loadWorkspaceLogoFallbackUrl`.
+
+**Upload failures report themselves, and this is the part that answers "I cannot
+ask them".** Both flows already caught everything and set a message only the person
+at the screen ever saw, which is unrecoverable when a partner says "it doesn't
+upload". Both now also fire `asset_upload_failed` (PostHog, the `app_error_shown`
+precedent) carrying the surface, the STEP it reached (1 sign, 2 storage PUT, 3
+record) and the HTTP status. **`lib/upload-failure-report.ts` is an allowlist, not a
+denylist, and that is load-bearing:** an upload error message can carry the user's
+file name (often their artist name) or a signed Storage URL, which is a live
+credential for an hour. The reason is reduced to a bounded classification
+(`network`, `forbidden`, `too_large`, …) rather than passed through, with a test
+asserting a message full of both survives as `unknown`.
+
+- **Verified:** 1198 tests (13 new), `eslint .` at exactly the measured baseline
+  (3 errors / 66 warnings, all pre-existing in `WorkspaceView.tsx`), `next build`
+  green by exit code in both flag states with `/auth`, `/onboarding` and
+  `/settings` still `○ Static`. Runtime probe: flags on, the logo and curator photo
+  routes 401 unauthenticated; flags off they 404 while `/api/releases` still 401s.
+- **Not verified, and it matters here:** nothing ran against a real database,
+  Storage bucket, or account — no upload has been exercised end to end. **This does
+  NOT prove the reported crash is fixed**, because the crash was never identified;
+  the telemetry is what makes the next occurrence name itself. Check PostHog for
+  `app_error_shown` and `asset_upload_failed` before assuming this closed it.
+
+---
+
 ## Settings became four tabs (2026-08-13, v0.51.0)
 
 Founder: the page was "a bit all over the place." It was **twelve sections in one flat 760px column** divided only by hairlines, with no grouping and — because `AppTopbar` deliberately maps `/settings` to an empty title — **no page title anywhere except the browser tab**. Rare admin work (Teammates) led it, frequent trivia (Appearance) sat sixth, three notification toggles were spread apart, and release deletion sat between two preference switches and the password form. Now: `/settings?tab=<account|workspace|team|notifications>`.
@@ -1823,7 +1907,23 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-24 (**the curator's three pages now server-render, and
+*Last updated: 2026-08-24 (**logo and photo uploads: one workspace resolver, their
+own size limits, and failures that report themselves** — see "Logo and photo
+uploads" above. The curator came back with desktop plus "if I try to upload profile
+or logo it doesn't and the page crashes", which cannot be chased with devtools on a
+partner. A theory to NOT re-chase: the next/image "hostname is not configured"
+throw sits under `NODE_ENV !== 'production'` in the installed Next 16.2.1, so it
+cannot crash production — read the installed source before believing a Next error
+is your crash. The provable bug: the logo's two halves used DIFFERENT workspace
+resolvers, and those deliberately diverge for a user who owns zero releases and
+belongs to someone else's team, so every newly-invited person's upload was rejected
+as "not this workspace's" and orphaned. Both sides use loadWorkspaceAccessContext
+now. The logo was also the SECOND victim of the cover-art limit raise (96px avatar
+accepting 25 MiB), so it has its own constant and a test now covers BOTH avatars.
+Uploads fire `asset_upload_failed` with the step and status — through an allowlist,
+never the raw message, because an upload error can carry a file name or a live
+signed URL. NOT verified against any real upload, and it does not prove the crash
+is fixed; the telemetry is what makes the next report name itself. Previously: **the curator's three pages now server-render, and
 their failures are finally visible** — see "Fourth instance: the curator's own
 three pages" above. A newly invited playlist owner reported "I can't update
 profile"; the screenshot was Chrome's own "Can't open this page", so the

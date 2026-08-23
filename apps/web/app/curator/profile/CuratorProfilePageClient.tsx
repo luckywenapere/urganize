@@ -11,6 +11,8 @@ import { CuratorShell } from '@/components/curator/CuratorShell';
 import { CuratorLoadError } from '@/components/curator/CuratorLoadError';
 import { useCuratorStore } from '@/stores/useCuratorStore';
 import { supabase } from '@/lib/supabase/client';
+import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
+import { buildUploadFailureReport, type UploadStep } from '@/lib/upload-failure-report';
 import { MAX_CURATOR_BIO_LENGTH, MAX_CURATOR_DISPLAY_NAME_LENGTH } from '@/lib/pitching';
 
 const inputClass =
@@ -96,6 +98,10 @@ export function CuratorProfilePageClient() {
   const handlePhoto = async (file: File) => {
     setError('');
     setIsUploading(true);
+    // Tracks how far the three-step upload got, so a failure reports its step
+    // rather than just "it didn't work" — see lib/upload-failure-report.ts.
+    let step: UploadStep = 1;
+    let status: number | undefined;
     try {
       const {
         data: { session },
@@ -121,20 +127,37 @@ export function CuratorProfilePageClient() {
         error?: string;
       } | null;
       if (!signResponse.ok || !signPayload?.upload_url || !signPayload.storage_path) {
+        status = signResponse.status;
         throw new Error(signPayload?.error || 'Could not start the upload.');
       }
 
+      step = 2;
       const uploadResponse = await fetch(signPayload.upload_url, {
         method: 'PUT',
         headers: { 'Content-Type': file.type },
         body: file,
       });
-      if (!uploadResponse.ok) throw new Error('The upload did not finish.');
+      if (!uploadResponse.ok) {
+        status = uploadResponse.status;
+        throw new Error('The upload did not finish.');
+      }
 
+      step = 3;
       await saveProfile({ photoPath: signPayload.storage_path });
       setSavedAt(Date.now());
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : 'Could not save the photo.');
+      captureAnalyticsEvent(
+        createPostHogEvent(
+          'asset_upload_failed',
+          buildUploadFailureReport({
+            surface: 'curator_photo',
+            step,
+            status,
+            message: uploadError instanceof Error ? uploadError.message : null,
+          })
+        )
+      );
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   requireAuthenticatedAdmin,
-  ensureOwnedWorkspace,
+  loadWorkspaceAccessContext,
 } from '@/lib/tasks-server';
 import {
   ASSET_MIME_ALLOWLIST,
-  ASSET_SIZE_LIMITS,
   ASSET_UPLOAD_URL_TTL_SECONDS,
+  MAX_WORKSPACE_LOGO_BYTES,
   RELEASE_ASSETS_BUCKET,
   formatFileSize,
 } from '@/lib/asset-helpers';
@@ -22,10 +22,11 @@ type UploadUrlBody = {
   file_size?: unknown;
 };
 
-// The logo shares cover art's image constraints (JPEG/PNG/WebP, 5 MiB) —
-// it renders in the exact same cover-art slot on release cards.
+// The logo shares cover art's image FORMATS — it renders in the same slot on
+// release cards — but NOT its size ceiling. See MAX_WORKSPACE_LOGO_BYTES for
+// why the two must not share a number.
 const LOGO_MIME_ALLOWLIST = ASSET_MIME_ALLOWLIST.cover_art;
-const LOGO_SIZE_LIMIT = ASSET_SIZE_LIMITS.cover_art;
+const LOGO_SIZE_LIMIT = MAX_WORKSPACE_LOGO_BYTES;
 
 export async function POST(request: NextRequest) {
   if (!isFlagOn()) {
@@ -70,8 +71,23 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const workspace = await ensureOwnedWorkspace(adminClient, auth.user);
-    const storagePath = buildWorkspaceLogoStoragePath(workspace.id, fileName);
+    // MUST be the same resolver the recording PUT uses (see
+    // app/api/workspace/logo/route.ts). This route used to mint under
+    // ensureOwnedWorkspace — the workspace the user OWNS — while the PUT
+    // validates the path against loadWorkspaceAccessContext's
+    // primaryWorkspaceId, and those two deliberately diverge: a user who owns
+    // zero releases and belongs to someone else's team gets the JOINED
+    // workspace as their primary (lib/tasks-server.ts, a 2026-07-23 founder
+    // decision so an invitee's Teammates list shows their real team). For that
+    // person the bytes uploaded fine and the record call then rejected its own
+    // signed path with "storage_path does not belong to this workspace",
+    // leaving an orphaned object behind. Never let the mint and the check use
+    // different resolvers.
+    const access = await loadWorkspaceAccessContext(adminClient, auth.user);
+    if (!access.primaryWorkspaceId) {
+      return NextResponse.json({ error: 'No workspace found.' }, { status: 404 });
+    }
+    const storagePath = buildWorkspaceLogoStoragePath(access.primaryWorkspaceId, fileName);
 
     const { data, error } = await adminClient.storage
       .from(RELEASE_ASSETS_BUCKET)
