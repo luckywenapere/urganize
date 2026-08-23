@@ -108,9 +108,17 @@ export function TeamWall() {
   // clicking "See plans" was bounced straight back to the app by the
   // has-access effect. That made the link a no-op round trip rather than merely
   // a dead param.
+  //
+  // `reactivate` is a READ-ONLY team coming to fix a failed payment, and it is
+  // load-bearing for the same reason: read-only is hasAccess TRUE (that is what
+  // stops it drawing the wall), so without this the bounce below would eject the
+  // one team that most needs this page. Every link that sends them here carries
+  // it — see READ_ONLY_REACTIVATE_HREF.
   const intent = searchParams.get('intent');
-  const isDeliberateVisit = intent === 'activate' || intent === 'upgrade';
+  const isDeliberateVisit =
+    intent === 'activate' || intent === 'upgrade' || intent === 'reactivate';
   const isUpgradeIntent = intent === 'upgrade';
+  const isReadOnlyTeam = team?.state === 'read_only';
 
   const trackedRef = useRef(false);
 
@@ -186,7 +194,12 @@ export function TeamWall() {
       // paystack_customer_code — overwriting the code on our single row and
       // orphaning a subscription that keeps billing. It would also recompute
       // expires_at from scratch and throw away the period they already paid for.
-      if (PRICING_V2 && team?.hasAccess) {
+      // canWrite, NOT hasAccess. A read-only team has access and no live period,
+      // so quotePlanChange would refuse it with 'no_active_period' — a dead end
+      // on the only button that page offers them. They are REACTIVATING, which
+      // is an ordinary checkout. Reading canWrite here means this branch and the
+      // quote agree by construction rather than by coincidence.
+      if (PRICING_V2 && team?.hasAccess && team.canWrite) {
         const changeResponse = await fetch('/api/billing/change-plan', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -261,6 +274,7 @@ export function TeamWall() {
     selectedTier,
     selectedInterval,
     team?.hasAccess,
+    team?.canWrite,
     team?.primaryWorkspaceId,
     userId,
   ]);
@@ -358,9 +372,11 @@ export function TeamWall() {
           <h1 className="font-display text-3xl font-semibold text-content-primary">
             {isUpgradeIntent
               ? 'Move up a plan.'
-              : team?.state === 'walled'
-                ? 'Your trial has ended.'
-                : 'Activate your plan.'}
+              : isReadOnlyTeam
+                ? 'Your plan ended.'
+                : team?.state === 'walled'
+                  ? 'Your trial has ended.'
+                  : 'Activate your plan.'}
           </h1>
           <p className="max-w-2xl text-base leading-7 text-content-secondary">
             {isUpgradeIntent ? (
@@ -368,6 +384,10 @@ export function TeamWall() {
               // the reassurance below would be answering a question they did
               // not ask.
               'Pick the plan that fits what your team is doing now. Your releases carry over untouched.'
+            ) : isReadOnlyTeam ? (
+              // They can already see everything, so the reassurance is about
+              // what they cannot do rather than what they might have lost.
+              'Your team can still see everything. Pay again to start making changes.'
             ) : (
               <>
                 Your releases, tasks and files are safe and waiting.
@@ -489,7 +509,9 @@ export function TeamWall() {
                       ? 'Opening secure checkout'
                       : isUpgradeIntent
                         ? 'Change your plan'
-                        : 'Activate your plan'}
+                        : isReadOnlyTeam
+                          ? 'Start your plan again'
+                          : 'Activate your plan'}
                   </Button>
 
                   {checkoutError ? (

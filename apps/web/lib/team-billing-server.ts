@@ -33,6 +33,7 @@ import {
   TEAM_TRIAL_EXPIRY_GRACE_MS,
   combineTeamAccess,
   computeTeamTrialDaysLeft,
+  lapsedFromPayment,
   resolveTeamAccess,
   resolveWallVariant,
   type TeamAccessReason,
@@ -60,6 +61,11 @@ const createReadClient = (): SupabaseClient | null => {
 
 export type TeamAccessSnapshot = {
   hasAccess: boolean;
+  /** Whether writes are allowed. Differs from hasAccess for exactly one state,
+   *  'read_only' — a team that paid and then lapsed. Read it, never re-derive
+   *  it from `state`: like hasAccess, this is the COMBINED answer across every
+   *  team the person belongs to, while `state` describes only the primary one. */
+  canWrite: boolean;
   /** State of the PRIMARY team — what the wall and the pill talk about. */
   state: TeamAccessState;
   reason: TeamAccessReason;
@@ -115,6 +121,10 @@ const toBillingFields = (row: WorkspaceRow): WorkspaceBillingFields => ({
 /** The answer when we cannot tell. Access granted, never cached. */
 const openSnapshot = (): TeamAccessSnapshot => ({
   hasAccess: true,
+  // Writes granted too, for the same reason reads are: if we cannot tell, we do
+  // not punish. Fail-open here has to mean fully open, or an infrastructure blip
+  // would silently turn every team read-only.
+  canWrite: true,
   state: 'trial',
   reason: 'no_trial_stamp',
   primaryWorkspaceId: null,
@@ -289,7 +299,14 @@ export async function getTeamAccessForUser(
     // nothing. An allowlisted owner has no plan to read and is uncapped anyway.
     const ownerAccess = new Map<
       string,
-      { hasAccess: boolean; allowlisted: boolean; plan: string | null }
+      {
+        hasAccess: boolean;
+        allowlisted: boolean;
+        plan: string | null;
+        /** profiles.paid_at — the read-only discriminator. Carried for the same
+         *  reason `plan` is: this read already happens, so it costs nothing. */
+        paidAt: string | null;
+      }
     >();
     await Promise.all(
       ownerIds.map(async (ownerId) => {
@@ -298,7 +315,12 @@ export async function getTeamAccessForUser(
                              : (ownerProfiles.get(ownerId)?.email ?? null);
         const allowlisted = isAllowlistedEmail(ownerEmail);
         if (allowlisted) {
-          ownerAccess.set(ownerId, { hasAccess: true, allowlisted: true, plan: null });
+          ownerAccess.set(ownerId, {
+            hasAccess: true,
+            allowlisted: true,
+            plan: null,
+            paidAt: null,
+          });
           return;
         }
         const snapshot = await getSubscriptionSnapshot(ownerId);
@@ -306,6 +328,7 @@ export async function getTeamAccessForUser(
           hasAccess: snapshot.hasAccess,
           allowlisted: false,
           plan: snapshot.plan,
+          paidAt: snapshot.paidAt,
         });
       })
     );
@@ -315,6 +338,10 @@ export async function getTeamAccessForUser(
       const access = resolveTeamAccess({
         ownerHasAccess: Boolean(owner?.hasAccess),
         ownerAllowlisted: Boolean(owner?.allowlisted),
+        ownerLapsedFromPayment: lapsedFromPayment({
+          ownerHasAccess: Boolean(owner?.hasAccess),
+          ownerPaidAt: owner?.paidAt ?? null,
+        }),
         team: toBillingFields(row),
         graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
       });
@@ -371,6 +398,7 @@ export async function getTeamAccessForUser(
 
     const snapshot: TeamAccessSnapshot = {
       hasAccess: combined.hasAccess,
+      canWrite: combined.canWrite,
       state: primaryResolution.state,
       reason: primaryResolution.reason,
       primaryWorkspaceId: primary.workspace.id,
@@ -456,6 +484,10 @@ export async function getWorkspaceTier(workspaceId: string): Promise<PricingTier
     const snapshot = await getSubscriptionSnapshot(row.owner_id);
     const access = resolveTeamAccess({
       ownerHasAccess: snapshot.hasAccess,
+      ownerLapsedFromPayment: lapsedFromPayment({
+        ownerHasAccess: snapshot.hasAccess,
+        ownerPaidAt: snapshot.paidAt,
+      }),
       team: toBillingFields(row),
       graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
     });

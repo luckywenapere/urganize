@@ -47,12 +47,17 @@ export async function getAuthenticatedUser(request: NextRequest) {
 // trial/start, payments/verify, webhooks, subscription-status, admin/*,
 // account/delete-now, user/onboarding, pricing-validation) keep using
 // getAuthenticatedUser directly — they must work when the user is locked.
+//
+// `request.method` is forwarded to the gate for READ-ONLY MODE only: a team that
+// paid and then lapsed keeps its reads and has its writes refused with a 403.
+// Every gated route inherits that from this one line, which is why it is here
+// and not in each handler. See the read-only branch in _shared/paywall.ts.
 export async function requireActiveAuthenticatedUser(request: NextRequest) {
   const auth = await getAuthenticatedUser(request);
   if ('error' in auth) return auth;
   const curatorBlock = await blockCuratorAccount(auth.user.id, auth.supabaseUrl);
   if (curatorBlock) return { error: curatorBlock };
-  const block = await requireActiveAccount(auth.user.id, auth.user.email);
+  const block = await requireActiveAccount(auth.user.id, auth.user.email, request.method);
   if (block) return { error: block };
   return auth;
 }
@@ -180,7 +185,7 @@ async function resolveInternalActor(request: NextRequest) {
 export async function requireActiveAuthenticatedUserOrInternal(request: NextRequest) {
   const internal = await resolveInternalActor(request);
   if (internal) {
-    const block = await requireActiveAccount(internal.user.id, internal.user.email);
+    const block = await requireActiveAccount(internal.user.id, internal.user.email, request.method);
     if (block) return { error: block };
     return { user: internal.user, supabaseUrl: internal.supabaseUrl };
   }
@@ -192,7 +197,7 @@ export async function requireActiveAuthenticatedUserOrInternal(request: NextRequ
 export async function requireAuthenticatedAdminOrInternal(request: NextRequest) {
   const internal = await resolveInternalActor(request);
   if (internal) {
-    const block = await requireActiveAccount(internal.user.id, internal.user.email);
+    const block = await requireActiveAccount(internal.user.id, internal.user.email, request.method);
     if (block) return { error: block };
     return { user: internal.user, supabaseUrl: internal.supabaseUrl, adminClient: internal.adminClient };
   }

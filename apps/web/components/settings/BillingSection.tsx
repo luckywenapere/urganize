@@ -49,7 +49,18 @@ const CTA_LABEL = {
   plans: 'See plans',
   change: 'Change plan',
   contact: 'Contact us',
+  reactivate: 'Update payment',
 } as const;
+
+/** Where each CTA lands. The intent params are not decoration: /locked bounces
+ *  anyone who HAS access back into the app, so both 'change' (a paying team) and
+ *  'reactivate' (a read-only team) would be no-op round trips without one.
+ *  'plans' is for a team with no access, which the wall renders for unmarked. */
+const CTA_HREF: Record<'plans' | 'change' | 'reactivate', string> = {
+  plans: '/locked',
+  change: '/locked?intent=upgrade',
+  reactivate: '/locked?intent=reactivate',
+};
 
 export function BillingSection() {
   const router = useRouter();
@@ -236,11 +247,11 @@ export function BillingSection() {
           // /locked, whose has-access effect immediately replaced them back into
           // the app. A no-op round trip, and exactly the same bug that
           // UrgansUsageStrip's "See plans" had before it was given
-          // ?intent=upgrade. 'plans' is for a team with NO access, which the
-          // wall renders for without any param.
+          // ?intent=upgrade. 'reactivate' carries one for the same reason — a
+          // read-only team has access too. See CTA_HREF.
           <button
             type="button"
-            onClick={() => router.push(cta === 'change' ? '/locked?intent=upgrade' : '/locked')}
+            onClick={() => router.push(CTA_HREF[cta])}
             className={ctaClass}
           >
             {CTA_LABEL[cta]}

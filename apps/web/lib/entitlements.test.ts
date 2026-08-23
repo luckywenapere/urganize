@@ -286,6 +286,9 @@ describe('resolveTeamTier fails open', () => {
 
   it('errs permissive for a walled team, where entitlements are moot anyway', () => {
     expect(resolveTeamTier({ state: 'walled', ownerPlan: 'manager' })).toBe('label');
+    // Read-only likewise: a team that cannot write cannot reach a ceiling, so
+    // entitlements are moot and the permissive answer is the safe one.
+    expect(resolveTeamTier({ state: 'read_only', ownerPlan: 'manager' })).toBe('label');
   });
 });
 

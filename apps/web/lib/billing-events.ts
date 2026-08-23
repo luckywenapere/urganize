@@ -49,6 +49,13 @@ export const BILLING_EVENT_TYPES = [
    *  row per turn rather than per gateway round (a turn is up to five), and
    *  never logged for a confirmation replay or a deterministic-mode call. */
   'urgans_action',
+  /** A renewal charge failed. Recorded from the Paystack invoice.payment_failed
+   *  webhook, while Paystack is still retrying and the team STILL HAS ACCESS
+   *  (the snapshot treats past_due inside its period as paid) — which is what
+   *  makes this the one billing moment where a save is cheap. If the retries all
+   *  fail and the period lapses, that team lands in read-only rather than at the
+   *  wall: see lapsedFromPayment in lib/team-billing.ts. */
+  'payment_failed',
   /** A team ran into a plan ceiling. `metadata` carries the entitlement key,
    *  the limit and the count, which is what makes this the upgrade signal the
    *  pricing spec asks to be tracked "by entitlement key". Frequent seat and

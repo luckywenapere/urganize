@@ -45,6 +45,13 @@ import { getTeamAccessClient } from '@/lib/team-billing-client';
 //    double-fire.
 //  - /admin is deliberately not gated (see isHardPaywallGatedPath): a walled
 //    founder must still be able to comp or extend a team.
+//  - IT MUST NOT REDIRECT A READ-ONLY TEAM, and the reason it does not is that
+//    it reads `hasAccess`, which is TRUE for state 'read_only' (a team that paid
+//    and then lapsed keeps every read, permanently — see resolveTeamAccess).
+//    Do not "tidy" this into a check on `canWrite` or on `state`: that would put
+//    the wall back in front of exactly the customers read-only mode exists to
+//    keep. TeamReadOnlyStrip is what tells them, and the server's 403 is what
+//    refuses their writes. A test in lib/team-billing.test.ts pins this.
 
 const HARD_PAYWALL_ENABLED = isHardPaywallEnabled();
 

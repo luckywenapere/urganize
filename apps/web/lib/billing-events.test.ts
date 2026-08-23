@@ -25,6 +25,10 @@ describe('billing event types', () => {
       'checkout_completed',
       'comped',
       'manually_marked_paid',
+      // A renewal charge that failed while the team still has access. The one
+      // recoverable churn moment in the system, and the signal that a team is
+      // heading for read-only rather than the wall.
+      'payment_failed',
     ]) {
       expect(BILLING_EVENT_TYPES).toContain(required);
     }

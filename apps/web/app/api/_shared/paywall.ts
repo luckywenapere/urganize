@@ -1,11 +1,21 @@
 import { NextResponse } from 'next/server';
 import { getSubscriptionSnapshot, type AccountStatus } from '@/lib/subscription-access';
 import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
-import { isHardPaywallEnabled } from '@/lib/team-billing';
+import {
+  READ_ONLY_REFUSAL_CODE,
+  READ_ONLY_REFUSAL_MESSAGE,
+  READ_ONLY_REFUSAL_STATUS,
+  isHardPaywallEnabled,
+  isReadOnlySafeMethod,
+} from '@/lib/team-billing';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 
-// 402 Payment Required is the right code here. The frontend interceptor at
-// apps/web/lib/access-redirect.ts catches it and routes to /locked.
+// 402 Payment Required is the right code for NO ACCESS. The frontend interceptor
+// at apps/web/lib/access-redirect.ts catches it and routes to /locked.
+//
+// This module emits a second, different refusal: READ-ONLY mode, at 403. That
+// one must NOT be a 402 precisely because of the interceptor above — see the
+// read-only branch below.
 export const ACCESS_REQUIRED_STATUS = 402;
 export const ACCESS_REQUIRED_CODE = 'ACCESS_REQUIRED';
 
@@ -26,9 +36,16 @@ const reasonForStatus = (status: AccountStatus, trialUsed: boolean): LockReason 
 // in releases/_shared.ts, tasks-server.ts, ui-drafts/_shared.ts,
 // plans/_shared.ts) all forward it through. Routes calling this inline should
 // pass `user.email` from their auth result.
+//
+// `method` is the request's HTTP method, and it exists for read-only mode alone
+// (see the branch below). The three call sites in app/api/_shared/auth.ts all
+// have the NextRequest in hand and pass `request.method`. Omitting it counts as
+// a write, which is the safe reading: every route-level caller that cannot name
+// its method is a mutation route.
 export async function requireActiveAccount(
   userId: string,
-  email?: string | null
+  email?: string | null,
+  method?: string | null
 ) {
   // ── TEAM TRIAL + HARD PAYWALL (NEXT_PUBLIC_FEATURE_HARD_PAYWALL) ────────
   // When on, access is a TEAM question, not a per-user one: a team gets 14
@@ -54,7 +71,32 @@ export async function requireActiveAccount(
 
     const team = await getTeamAccessForUser(userId, email);
     if (team.hasAccess) {
-      return null;
+      if (team.canWrite) return null;
+
+      // ── READ-ONLY (payment failure, 2026-08-24) ─────────────────────────
+      // This team paid us and their paid period lapsed without a successful
+      // renewal. They keep every read, permanently; writes are refused. A
+      // trial that merely expired never reaches here — it is walled below.
+      //
+      // 403, NOT 402, and that is the load-bearing detail: the fetch
+      // interceptor in lib/access-redirect.ts redirects the browser to /locked
+      // on any same-origin 402, so a 402 here would eject a read-only team
+      // from the app on their first blocked save — the very wall this mode
+      // replaces. The shape (a flat { error } at 403) matches
+      // buildReadOnlyResponse in lib/tasks-server.ts, which already refuses a
+      // guest's writes this way, so the mutation surfaces render it unchanged.
+      if (isReadOnlySafeMethod(method)) return null;
+
+      return NextResponse.json(
+        {
+          error: team.isOwnerOrAdmin
+            ? READ_ONLY_REFUSAL_MESSAGE.owner
+            : READ_ONLY_REFUSAL_MESSAGE.member,
+          code: READ_ONLY_REFUSAL_CODE,
+          readOnly: true,
+        },
+        { status: READ_ONLY_REFUSAL_STATUS }
+      );
     }
 
     return NextResponse.json(
@@ -122,9 +164,10 @@ type LegacyOptions = { feature: string; message: string };
 export async function requirePaidAccess(
   userId: string,
   _options?: LegacyOptions,
-  email?: string | null
+  email?: string | null,
+  method?: string | null
 ) {
-  return requireActiveAccount(userId, email);
+  return requireActiveAccount(userId, email, method);
 }
 
 export const PAYWALL_RESPONSE_CODE = ACCESS_REQUIRED_CODE;

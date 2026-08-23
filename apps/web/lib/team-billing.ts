@@ -1,8 +1,14 @@
 // Team trial + hard paywall (NEXT_PUBLIC_FEATURE_HARD_PAYWALL) — pure logic.
 //
 // A team gets 14 days of full access from the moment it is created, then the
-// wall goes up: no read-only mode, no partial access, nothing deleted. The wall
-// lifts on payment, a comp, or an extended trial.
+// wall goes up: no partial access, nothing deleted. The wall lifts on payment, a
+// comp, or an extended trial.
+//
+// ONE EXCEPTION, added 2026-08-24: a team that has actually PAID us and whose
+// paid period then lapsed lands in read-only rather than at the wall — they keep
+// every read, permanently, and writes are refused. A trial that expires still
+// gets the wall (founder decision). See resolveTeamAccess and
+// lapsedFromPayment; this file's own header used to say "no read-only mode".
 //
 // WHAT LIVES WHERE. Billing has always been per-user in this codebase
 // (subscriptions.user_id UNIQUE, the trial fields on profiles) and rewiring the
@@ -78,6 +84,10 @@ export type TeamAccessState =
   | 'trial'
   /** Past the trial but inside TEAM_TRIAL_EXPIRY_GRACE_MS (server only). */
   | 'grace'
+  /** Paid before, and the paid period ended without a successful renewal. They
+   *  keep every read; writes are refused. Permanent — there is no second
+   *  deadline and no wall after it. See resolveTeamAccess. */
+  | 'read_only'
   /** The wall. */
   | 'walled';
 
@@ -88,12 +98,19 @@ export type TeamAccessReason =
   | 'trial_active'
   | 'trial_grace'
   | 'trial_expired'
+  /** Paid before, lapsed since. The read-only state. */
+  | 'payment_failed'
   /** trial_ends_at was never stamped. Fails OPEN — see resolveTeamAccess. */
   | 'no_trial_stamp';
 
 export type TeamAccessResolution = {
   state: TeamAccessState;
   hasAccess: boolean;
+  /** Whether writes are allowed. Equal to hasAccess for every state EXCEPT
+   *  'read_only', which is the whole reason this is a separate axis: a
+   *  read-only team must not draw the wall (hasAccess true) and must not be
+   *  able to change anything (canWrite false). */
+  canWrite: boolean;
   reason: TeamAccessReason;
   trialEndsAt: string | null;
   /** Whole days remaining, rounded up; 0 once past. */
@@ -117,12 +134,47 @@ export function computeTeamTrialDaysLeft(
 }
 
 /**
+ * Did this team's access lapse from a PAYMENT rather than from a trial?
+ *
+ * This is the whole discriminator behind read-only mode, and the founder's line
+ * is exactly one sentence: payment failure gets read-only, trial expiry keeps
+ * the wall.
+ *
+ * `profiles.paid_at` is the only unambiguous "real money landed" marker in this
+ * schema. It is written by exactly the two webhook paths where a charge
+ * succeeded (the first credit and each renewal) and DELIBERATELY WITHHELD by the
+ * card-verification path, whose own comment says so: "NOT is_subscribed /
+ * paid_at: nothing has been bought yet". So a lapsed trial has no paid_at and
+ * keeps the wall, whether it was a plain 28-day trial, a card-backed one that
+ * never converted, or one the user cancelled.
+ *
+ * DO NOT widen this to a status check. `subscriptions.status = 'cancelled'` is
+ * worn by a cancelled card-trial that never paid a penny, so reading the status
+ * string would hand read-only to exactly the teams the founder decided keep the
+ * wall. Money, not status.
+ *
+ * Takes primitives rather than a SubscriptionSnapshot on purpose: this module is
+ * imported by client components, and importing lib/subscription-access.ts would
+ * drag @supabase/supabase-js into every bundle that only wanted a feature flag.
+ */
+export function lapsedFromPayment(input: {
+  /** The owner's snapshot hasAccess. Only a team with NO access can be
+   *  read-only, so this is a guard rather than a nicety. */
+  ownerHasAccess: boolean;
+  /** profiles.paid_at for the team OWNER. */
+  ownerPaidAt: string | null;
+}): boolean {
+  if (input.ownerHasAccess) return false;
+  return Boolean(input.ownerPaidAt);
+}
+
+/**
  * Resolve ONE team's access.
  *
- * Precedence — owner-paid, then comped, then trial. Paid outranks comped so a
- * team that starts paying reads as 'paid' even if an old comp was never
- * cleared; comped outranks trial so comping a lapsed team works without
- * touching its dates.
+ * Precedence — owner-paid, then comped, then trial, then read-only, then the
+ * wall. Paid outranks comped so a team that starts paying reads as 'paid' even
+ * if an old comp was never cleared; comped outranks trial so comping a lapsed
+ * team works without touching its dates.
  *
  * `ownerHasAccess` is the owner's `getSubscriptionSnapshot().hasAccess`, which
  * already folds in every way this codebase can be paid: an active/cancelled/
@@ -134,11 +186,22 @@ export function computeTeamTrialDaysLeft(
  * An unstamped row means provisioning or the backfill has not run for this
  * team, which is our bug, not the team's — walling them for it would be the
  * worst possible failure. The stamp arrives at provisioning; the backfill
- * covers everything older.
+ * covers everything older. Note this sits ABOVE the read-only branch
+ * deliberately: fail-open is strictly more generous than read-only, so an
+ * unstamped team that also lapsed from payment gets full access rather than
+ * read-only, which is the right direction to be wrong.
+ *
+ * READ-ONLY replaces the final wall, and only for a team that has actually paid
+ * us (see lapsedFromPayment). Every state above it is unaffected, so turning
+ * this on cannot take anything away from anyone.
  */
 export function resolveTeamAccess(input: {
   ownerHasAccess: boolean;
   ownerAllowlisted?: boolean;
+  /** True when this team paid before and their paid period has lapsed. The
+   *  caller computes it with lapsedFromPayment. Absent means "no", which is
+   *  what keeps every pre-existing caller behaving exactly as it did. */
+  ownerLapsedFromPayment?: boolean;
   team: WorkspaceBillingFields;
   now?: Date;
   /** Server passes TEAM_TRIAL_EXPIRY_GRACE_MS; clients pass 0 (or omit). */
@@ -153,6 +216,7 @@ export function resolveTeamAccess(input: {
     return {
       state: 'paid',
       hasAccess: true,
+      canWrite: true,
       reason: 'owner_allowlisted',
       trialEndsAt,
       trialDaysLeft,
@@ -164,6 +228,7 @@ export function resolveTeamAccess(input: {
     return {
       state: 'paid',
       hasAccess: true,
+      canWrite: true,
       reason: 'owner_paid',
       trialEndsAt,
       trialDaysLeft,
@@ -175,6 +240,7 @@ export function resolveTeamAccess(input: {
     return {
       state: 'comped',
       hasAccess: true,
+      canWrite: true,
       reason: 'comped',
       trialEndsAt,
       trialDaysLeft,
@@ -188,6 +254,7 @@ export function resolveTeamAccess(input: {
     return {
       state: 'trial',
       hasAccess: true,
+      canWrite: true,
       reason: 'no_trial_stamp',
       trialEndsAt,
       trialDaysLeft: 0,
@@ -200,6 +267,7 @@ export function resolveTeamAccess(input: {
     return {
       state: 'trial',
       hasAccess: true,
+      canWrite: true,
       reason: 'trial_active',
       trialEndsAt,
       trialDaysLeft,
@@ -211,6 +279,7 @@ export function resolveTeamAccess(input: {
     return {
       state: 'grace',
       hasAccess: true,
+      canWrite: true,
       reason: 'trial_grace',
       trialEndsAt,
       trialDaysLeft: 0,
@@ -218,14 +287,69 @@ export function resolveTeamAccess(input: {
     };
   }
 
+  if (input.ownerLapsedFromPayment) {
+    return {
+      state: 'read_only',
+      hasAccess: true,
+      canWrite: false,
+      reason: 'payment_failed',
+      trialEndsAt,
+      trialDaysLeft: 0,
+      inGrace: false,
+    };
+  }
+
   return {
     state: 'walled',
     hasAccess: false,
+    canWrite: false,
     reason: 'trial_expired',
     trialEndsAt,
     trialDaysLeft: 0,
     inGrace: false,
   };
+}
+
+/** Does this state grant reads? Everything except the wall. */
+const grantsRead = (state: TeamAccessState): boolean => state !== 'walled';
+
+/** Does this state grant writes? Everything except the wall and read-only. */
+const grantsWrite = (state: TeamAccessState): boolean =>
+  state !== 'walled' && state !== 'read_only';
+
+/**
+ * The combination algorithm, once, parameterized by what counts as a grant.
+ *
+ * Running it twice — once for reads, once for writes — is what makes read-only
+ * fall out of the multi-team rules correctly rather than needing a second set of
+ * rules that could drift from the first. See combineTeamAccess for the rules
+ * themselves.
+ */
+function combineWith(
+  own: { state: TeamAccessState } | null,
+  foreign: Array<{ state: TeamAccessState }>,
+  ownReleaseCount: number | null,
+  grants: (state: TeamAccessState) => boolean
+): { granted: boolean; needsOwnReleaseCount: boolean } {
+  if (!own && foreign.length === 0) {
+    return { granted: true, needsOwnReleaseCount: false };
+  }
+
+  if (foreign.some((team) => grants(team.state))) {
+    return { granted: true, needsOwnReleaseCount: false };
+  }
+
+  if (own && grants(own.state)) {
+    if (foreign.length === 0) {
+      return { granted: true, needsOwnReleaseCount: false };
+    }
+    if (ownReleaseCount === null) {
+      return { granted: false, needsOwnReleaseCount: true };
+    }
+    return { granted: ownReleaseCount > 0, needsOwnReleaseCount: false };
+  }
+
+  return { granted: false, needsOwnReleaseCount: false };
 }
 
 /**
@@ -242,14 +366,20 @@ export function resolveTeamAccess(input: {
  *   1. No teams at all -> ACCESS. The gate runs before route-level
  *      provisioning, so a brand-new account's very first request has no rows
  *      yet. Failing closed here would deadlock first load.
- *   2. Any team the person does NOT own is unwalled -> ACCESS. This is the
+ *   2. Any team the person does NOT own grants -> ACCESS. This is the
  *      inheritance the whole feature exists for.
- *   3. Their own team is unwalled -> ACCESS only if it is plausibly their real
+ *   3. Their own team grants -> ACCESS only if it is plausibly their real
  *      team: either they belong to no foreign teams at all, or they have at
  *      least one release of their own. This mirrors the primary-workspace
  *      exception in resolveWorkspaceAccessContext, which treats an owned
  *      workspace with zero releases as the empty shell it is.
  *   4. Otherwise -> WALLED.
+ *
+ * READS AND WRITES RUN THE SAME RULES, with a different definition of "grants"
+ * (grantsRead / grantsWrite above). That is what makes read-only compose: a
+ * teammate of a read-only team reads through it and cannot write through their
+ * own empty trial shell either, because rule 3 still refuses a shell with no
+ * releases.
  *
  * `ownReleaseCount: null` means "not fetched". The caller only pays for that
  * count in rule 3's ambiguous branch, signalled by `needsOwnReleaseCount`.
@@ -258,28 +388,19 @@ export function combineTeamAccess(input: {
   own: { state: TeamAccessState } | null;
   foreign: Array<{ state: TeamAccessState }>;
   ownReleaseCount: number | null;
-}): { hasAccess: boolean; needsOwnReleaseCount: boolean } {
+}): { hasAccess: boolean; canWrite: boolean; needsOwnReleaseCount: boolean } {
   const foreign = input.foreign ?? [];
+  const read = combineWith(input.own, foreign, input.ownReleaseCount, grantsRead);
+  const write = combineWith(input.own, foreign, input.ownReleaseCount, grantsWrite);
 
-  if (!input.own && foreign.length === 0) {
-    return { hasAccess: true, needsOwnReleaseCount: false };
-  }
-
-  if (foreign.some((team) => team.state !== 'walled')) {
-    return { hasAccess: true, needsOwnReleaseCount: false };
-  }
-
-  if (input.own && input.own.state !== 'walled') {
-    if (foreign.length === 0) {
-      return { hasAccess: true, needsOwnReleaseCount: false };
-    }
-    if (input.ownReleaseCount === null) {
-      return { hasAccess: false, needsOwnReleaseCount: true };
-    }
-    return { hasAccess: input.ownReleaseCount > 0, needsOwnReleaseCount: false };
-  }
-
-  return { hasAccess: false, needsOwnReleaseCount: false };
+  return {
+    hasAccess: read.granted,
+    // Write requires read. The predicates already guarantee that, so this is
+    // belt-and-braces: no future edit to either of them should be able to
+    // produce a team that can write but not read.
+    canWrite: read.granted && write.granted,
+    needsOwnReleaseCount: read.needsOwnReleaseCount || write.needsOwnReleaseCount,
+  };
 }
 
 /**
@@ -318,6 +439,68 @@ export function computeExtendedTrialEnd(
     : now.getTime();
   return new Date(base + days * DAY_MS);
 }
+
+// ---------------------------------------------------------------------------
+// Read-only mode (payment failure)
+// ---------------------------------------------------------------------------
+
+/** Methods a read-only team may still use.
+ *
+ * OPTIONS is included because a CORS preflight is not a write and refusing it
+ * would break the request that follows rather than refuse it honestly. An
+ * ABSENT or unrecognised method counts as a write: every route-level caller
+ * that cannot name its method is a mutation route.
+ *
+ * The imprecision runs in both directions and both are accepted, deliberately:
+ *   - A GET that writes still writes. Lazy workspace provisioning, the
+ *     `metadata_viewed` stamp, the default task-group insert and the
+ *     opportunistic notification flush all happen on GETs. That is a
+ *     REQUIREMENT, not a leak: gating provisioning would stop a first page load
+ *     resolving at all, and the metadata read fails hard if its insert fails.
+ *   - A handful of non-GET pure reads are over-refused: the genre-prediction
+ *     proxy and the AI status generator both only read. Harmless, because the
+ *     PATCH that would save either result is refused anyway, and consistent
+ *     with UrgAns being unavailable in read-only mode.
+ */
+const READ_ONLY_SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+export function isReadOnlySafeMethod(method: string | null | undefined): boolean {
+  return READ_ONLY_SAFE_METHODS.has(String(method ?? '').trim().toUpperCase());
+}
+
+/**
+ * The status a read-only write refusal carries. 403, and it MUST NOT be 402.
+ *
+ * apps/web/lib/access-redirect.ts monkey-patches window.fetch and redirects the
+ * browser to /locked on ANY same-origin 402, so a 402 here would eject a
+ * read-only team from the app on their first blocked save — which is exactly the
+ * wall this mode replaces. 403 is inert to that interceptor and is the honest
+ * code anyway: authenticated, understood, refused, and retrying will not help.
+ *
+ * It also matches the precedent already in the codebase:
+ * buildReadOnlyResponse in lib/tasks-server.ts refuses a guest's write with a
+ * flat { error } at 403, and every mutation surface already renders that string.
+ */
+export const READ_ONLY_REFUSAL_STATUS = 403;
+
+/** Machine-readable marker on the refusal body, for a caller that wants to
+ *  branch rather than just show the message. */
+export const READ_ONLY_REFUSAL_CODE = 'READ_ONLY';
+
+/** Where a read-only team goes to fix it. The `intent` is load-bearing: /locked
+ *  bounces anyone who HAS access straight back into the app, and a read-only
+ *  team has access, so a bare /locked link is a dead end. */
+export const READ_ONLY_REACTIVATE_HREF = '/locked?intent=reactivate';
+
+/** What a blocked write says. No guilt, no countdown, and no threat of losing
+ *  anything, because nothing is being taken away: reads still work and nothing
+ *  is deleted. Split by whether this person can actually act on it. */
+export const READ_ONLY_REFUSAL_MESSAGE = {
+  owner:
+    'Your plan ended, so the app is read only for now. Update your payment to start working again.',
+  member:
+    'Your plan ended, so the app is read only for now. Your team admin can update the payment.',
+} as const;
 
 // ---------------------------------------------------------------------------
 // In-session gate predicates (the CardTrialGate shape: pure decision, tested)

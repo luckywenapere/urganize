@@ -16,6 +16,11 @@ import type { TeamAccessReason, TeamAccessState } from './team-billing';
 
 export type TeamAccessClientSnapshot = {
   hasAccess: boolean;
+  /** False only for a read-only team (paid before, lapsed since). Read this
+   *  rather than comparing `state`: hasAccess and canWrite are the COMBINED
+   *  answers across every team the person belongs to, while `state` describes
+   *  the primary team alone. */
+  canWrite: boolean;
   state: TeamAccessState;
   reason: TeamAccessReason;
   primaryWorkspaceId: string | null;
@@ -74,6 +79,9 @@ async function fetchTeamAccess(): Promise<TeamAccessClientSnapshot | null> {
 
     return {
       hasAccess: team.hasAccess,
+      // Absent means an older server that predates read-only mode; treat it as
+      // writable, matching every fail-open decision in this feature.
+      canWrite: team.canWrite !== false,
       state: (team.state as TeamAccessState) ?? 'trial',
       reason: (team.reason as TeamAccessReason) ?? 'no_trial_stamp',
       primaryWorkspaceId: team.primaryWorkspaceId ?? null,

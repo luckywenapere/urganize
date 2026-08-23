@@ -47,7 +47,11 @@ export type FounderAlertKind =
    *  plan-change endpoint, so the old subscription has to be disabled and a
    *  replacement created by hand, and it has to happen before the next charge
    *  or the team is billed at the wrong price. The note carries the deadline. */
-  | 'plan_change_requested';
+  | 'plan_change_requested'
+  /** A renewal charge failed while the team still has access. An ACTION, like
+   *  plan_change_requested: reach the customer before the period lapses, because
+   *  after that they drop into read-only and the recovery gets much harder. */
+  | 'payment_failed';
 
 export type FounderAlertContext = {
   teamName: string | null;
@@ -77,6 +81,7 @@ const SUBJECT_PREFIX: Record<FounderAlertKind, string> = {
   checkout_completed: 'PAID',
   manually_marked_paid: 'Marked paid',
   plan_change_requested: 'SWAP NEEDED',
+  payment_failed: 'CARD FAILED',
 };
 
 const HEADLINE: Record<FounderAlertKind, string> = {
@@ -88,6 +93,8 @@ const HEADLINE: Record<FounderAlertKind, string> = {
   manually_marked_paid: 'This team was marked paid by hand.',
   plan_change_requested:
     'This team changed plan. Their Paystack subscription still needs swapping by hand.',
+  payment_failed:
+    'A renewal charge failed for this team. They still have access while Paystack retries, and they drop to read only if the period ends unpaid.',
 };
 
 const formatCount = (value: number | null): string =>
