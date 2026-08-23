@@ -1,45 +1,47 @@
 "use client";
 
-import { RiArrowRightLine } from "react-icons/ri";
 import { ProofLine } from "../components/landing/ProofLine";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { SALES_CONTACT_EMAIL } from "@urganize/pricing";
 import { PricingTierCards } from "../components/pricing/PricingTierCards";
 
-// TWO MODES, ONE FLAG.
+// THE PRICE TABLE IS UNCONDITIONAL. Do not put it back behind a flag.
 //
-// BOOK-A-DEMO MODE (founder decision, 2026-07-23) is still what this page
-// serves by default. The price table was deliberately removed: the founders
-// want to talk to every team before any money changes hands, so the page's one
-// job is to start that conversation rather than to sell a tier.
+// It shipped on 2026-08-24 gated by NEXT_PUBLIC_FEATURE_PRICING_V2, because
+// showing prices REVERSES the founder's 2026-07-23 book-a-demo decision and a
+// flag made that reversal revertible from a dashboard. That gate was removed a
+// day later, after it failed twice in production, and the reason is worth
+// keeping: the flag was read at module scope, so Next inlined it at BUILD time.
+// Flipping it therefore needed three things to line up at once — the var set on
+// the right one of TWO Vercel projects, and a commit touching this app, and a
+// deploy that turbo-ignore did not skip. Twice it did not, and the page kept
+// serving a bundle with `false` compiled into it while the env var said
+// otherwise.
 //
-// PRICE-TABLE MODE arrives with NEXT_PUBLIC_FEATURE_PRICING_V2 (2026-08-24).
-// The pricing spec asks for a public three-column page, which REVERSES the
-// 2026-07-23 call — so it is gated rather than swapped in. Flag off, this page
-// is byte-for-byte the page that shipped in July; flipping the flag is the
-// whole decision, and flipping it back is the whole rollback.
+// What made removing the gate the right trade rather than a shortcut: THIS PAGE
+// HAS NO RISK SURFACE. Every CTA is a mailto in both modes and nothing here
+// links to app.urganize.app, so the rollback lever was never protecting money —
+// it was protecting a headline. Reverting it is a one-line code change either
+// way.
 //
-// What does NOT change between the two modes: every CTA is still a capture.
-// The cards book a demo and the sales-led card emails us. Nothing on this page
-// links to app.urganize.app, because that would reopen the self-serve funnel
-// the founder closed in URG-125/URG-136. The waitlist section stays where it
-// is in both modes.
+// NEXT_PUBLIC_FEATURE_PRICING_V2 IS STILL LIVE, in apps/web, where it gates
+// tier checkout, the picker on /locked, plan changes and the entitlement
+// resolver. So the two surfaces CAN now legitimately disagree, and the safe
+// direction is the one they disagree in: this page can advertise a tier the app
+// cannot yet sell (the visitor books a demo and talks to a human), where the
+// reverse — an app selling what the site never mentioned — would be the
+// surprise. If a public figure ever needs suppressing again, edit this file.
 //
-// The pre-2026-07-23 layout (Monthly/Annual/Label cards, geo-resolved currency
-// toggle, billing FAQ + JSON-LD) is in git history and is NOT what price-table
-// mode restores — that one sold legacy plans in two currencies, and the tier
-// model is NGN-only by design.
-
-// First flag read on an indexed marketing page (the MarketingFooter/roadmap
-// pair was the only prior use in this app, and that route 404s when off). Both
-// modes here render a complete, coherent page with valid metadata, which is the
-// bar a crawler-visible flag has to clear.
-const PRICING_V2 = process.env.NEXT_PUBLIC_FEATURE_PRICING_V2 === "true";
-
-const DEMO_MAILTO = `mailto:${SALES_CONTACT_EMAIL}?subject=${encodeURIComponent("Book an Urganize demo")}`;
+// Two things that have NOT changed, both still load-bearing:
+//   * Every CTA is a capture. The cards book a demo and the sales-led card
+//     emails us. Nothing links to app.urganize.app, because that would reopen
+//     the self-serve funnel the founder closed in URG-125/URG-136.
+//   * This is NOT the pre-2026-07-23 layout (Monthly/Annual/Label cards,
+//     geo-resolved currency toggle, billing FAQ + JSON-LD). That one sold legacy
+//     plans in two currencies; the tier model is NGN-only by design. It is in
+//     git history if anyone needs it.
 
 // ANIMATION: CSS, not framer-motion (2026-08-08 performance pass).
 //
@@ -65,52 +67,23 @@ export function PricingPageClient() {
               Pricing
             </div>
 
-            {/* The flag-off headline announces the ABSENCE of a price table,
-                so it cannot survive into a mode that shows one. */}
-            {PRICING_V2 ? (
-              <>
-                <h1 className="hero-fade-in hero-delay-1 mb-8 text-5xl font-black leading-[0.95] tracking-tighter sm:text-6xl md:text-7xl">
-                  Priced by the size
-                  <br />
-                  <span className="text-[var(--marketing-accent)]">of your roster.</span>
-                </h1>
+            <h1 className="hero-fade-in hero-delay-1 mb-8 text-5xl font-black leading-[0.95] tracking-tighter sm:text-6xl md:text-7xl">
+              Priced by the size
+              <br />
+              <span className="text-[var(--marketing-accent)]">of your roster.</span>
+            </h1>
 
-                <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
-                  Urganize is the AI workspace for music executives. One price
-                  covers your whole team. We still set every team up ourselves,
-                  so start with a demo and we will take it from there.
-                </p>
-              </>
-            ) : (
-              <>
-                <h1 className="hero-fade-in hero-delay-1 mb-8 text-5xl font-black leading-[0.95] tracking-tighter sm:text-6xl md:text-7xl">
-                  No price table.
-                  <br />
-                  <span className="text-[var(--marketing-accent)]">Book a demo.</span>
-                </h1>
-
-                <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
-                  Urganize is the AI workspace for music executives. Right now we
-                  set up every team personally. You show us your roster. We show
-                  you the product. We take it from there.
-                </p>
-              </>
-            )}
+            <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
+              Urganize is the AI workspace for music executives. One price covers
+              your whole team. We still set every team up ourselves, so start
+              with a demo and we will take it from there.
+            </p>
 
             <div className="hero-fade-in hero-delay-3 mt-10">
-              {/* Dropped in price-table mode: each card carries this exact CTA
-                  a few hundred pixels below, and three buttons that all say
-                  "Book a demo" read as one button repeated. */}
-              {PRICING_V2 ? null : (
-                <a
-                  href={DEMO_MAILTO}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_12px_32px_var(--marketing-shadow-strong)] hover:bg-[var(--marketing-primary-hover)]"
-                >
-                  Book a demo
-                  <RiArrowRightLine className="size-4" aria-hidden="true" />
-                </a>
-              )}
-              <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-[var(--marketing-text-subtle)]">
+              {/* NO hero CTA, deliberately: each of the three cards below
+                  carries "Book a demo" already, and a fourth identical button up
+                  here reads as one button repeated rather than as a choice. */}
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--marketing-text-subtle)]">
                 Built for music executives working with ambitious artists.
               </p>
               {/* Mirrors the homepage FinalCTA's Founding Member line — the
@@ -125,7 +98,7 @@ export function PricingPageClient() {
           </div>
         </section>
 
-        {PRICING_V2 ? <PricingTierCards /> : null}
+        <PricingTierCards />
 
         {/* WHAT A DEMO LOOKS LIKE — plain-language expectations so "demo"
             doesn't read as a sales gauntlet. Three short beats. */}
