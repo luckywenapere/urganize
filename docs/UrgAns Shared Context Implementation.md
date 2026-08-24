@@ -180,6 +180,36 @@ Section-by-section editing, inline save, "last edited by X" per section.
 
 Same prompt, same workspace, brief empty vs. filled produces a visibly more specific answer on a real workspace — not a rigged one. Member B benefits from a brief written entirely by Member A. Editing changes the next answer immediately.
 
+### As built (2026-08-24)
+
+**Flag-gated** behind `NEXT_PUBLIC_FEATURE_TEAM_BRIEF`, default off. The spec
+does not ask for a flag; its own working rules say to match existing patterns
+over its suggestions, and every surface in this repo ships behind one.
+
+**One row per section** (`team_brief_sections`), not one row with five content
+columns. Per-section attribution decided it: a single row needs fifteen columns
+and a migration to add or rename a section.
+
+**OWNER-scoped RLS on a table any MEMBER may edit** — a conscious deviation
+from "RLS scoped to workspace membership", recorded rather than silently taken.
+Every policy in this schema is owner-scoped and real team access lives app-side
+in the service-role routes; a team-scoped policy here would be the first of its
+kind and would disagree with how the rest of the product is enforced. This is
+the `task_outcomes` precedent, which CLAUDE.md already records for exactly the
+same wording in a different brief.
+
+**Guests cannot edit**, restriction on or off. They are read-only across the
+whole product (founder decision, 2026-07-23) and the brief is not an exception.
+The spec's "any workspace member can edit by default" would otherwise have made
+it one.
+
+**Saving is explicit and per section, not autosave.** Any teammate may edit the
+same document; the notes editor's 800ms autosave would let one person's
+in-flight copy of a section land on top of what another just wrote in it.
+
+**The editor is a section inside the Workspace tab**, as the spec requires, and
+placed before `ReleasesSection` — which is destructive and stays last.
+
 ---
 
 ## Phase 3 — Empty state and nudge
