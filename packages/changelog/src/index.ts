@@ -20,15 +20,24 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.0.0",
+    date: "August 24, 2026",
+    highlights: [
+      "Urganize is 1.0. UrgAns, your AI helper, is switched on.",
+      "Ask UrgAns anything about your releases and it answers right away.",
+      "Tell it what to do and it does it: start a release, add an activity, tick one off, save a note.",
+      "It always asks first before doing anything you can't undo.",
+    ],
+  },
+  {
     version: "0.61.0",
     date: "August 23, 2026",
     highlights: [
-      "Pricing is now on the site. Three plans, what each one covers, and the choice of paying monthly or once a year, so you can see where your team fits before you talk to anyone.",
-      "You can move between plans whenever your team changes shape. Moving up charges only the difference for the days left in the period you already paid for, and your paid-through date does not move. Moving down costs nothing and starts when the period you paid for ends.",
-      "A failed card no longer locks you out. If a renewal does not go through, everything stays readable for as long as you need: your releases, activities, files and notes are all still there to open, and only changes are paused until the payment is sorted.",
-      "You can take your data out at any time, on any plan. One download gives you everything as a data file, and another gives you every activity as a spreadsheet you can open in Excel or Sheets.",
-      "Releases can be archived once they are done, which clears them out of your working list without deleting anything. Archived releases can be brought back the same way.",
-      "Settings now tells you plainly which plan is active, how many teammates it covers, and who can change it, so nobody has to guess whether something is theirs to sort out.",
+      "You can switch plans any time. Moving up only charges for the days you have left, and your paid-through date stays the same. Moving down costs nothing and starts when your paid time ends.",
+      "If your card fails, you don't get locked out. You can still open everything. You just can't make changes until it's sorted.",
+      "You can download your data any time, on any plan. One file has everything, and a second one is a spreadsheet of your activities.",
+      "Finished a release? Archive it to clear it off your list. Nothing is deleted, and you can bring it back.",
+      "Settings now shows which plan is on, how many teammates it covers, and who can change it.",
     ],
   },
   {
