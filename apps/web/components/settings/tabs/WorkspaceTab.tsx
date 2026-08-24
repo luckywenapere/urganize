@@ -4,6 +4,8 @@ import { WorkspaceIdentitySection } from '../WorkspaceIdentitySection';
 import { WorkspaceLogoSection } from '../WorkspaceLogoSection';
 import { WorkspaceArtistSection } from '../WorkspaceArtistSection';
 import { ReleasesSection } from '../ReleasesSection';
+import { TeamBriefSection } from '../TeamBriefSection';
+import { isTeamBriefEnabled } from '@/lib/team-brief';
 import {
   IDENTITY_PANEL_ENABLED,
   LOGO_MIME_ALLOWLIST,
@@ -71,6 +73,9 @@ export function WorkspaceTab({ workspace }: WorkspaceTabProps) {
           onSave={workspace.saveArtist}
         />
       )}
+
+      {/* Before ReleasesSection, which is destructive and stays last. */}
+      {isTeamBriefEnabled() && <TeamBriefSection />}
 
       <ReleasesSection />
     </div>

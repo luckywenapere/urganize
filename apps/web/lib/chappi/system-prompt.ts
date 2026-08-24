@@ -8,6 +8,8 @@
 import { TaskService } from '@/lib/services/task-service';
 import { listVisibleReleases } from './release-scope';
 import { buildWorkspaceSummary } from './workspace-summary';
+import { formatTeamBriefForPrompt, isTeamBriefEnabled } from '@/lib/team-brief';
+import { loadTeamBriefEntries } from '@/lib/team-brief-server';
 import type { ChappiToolContext } from './tools';
 
 const ROLE = `You are UrgAns, the assistant inside Urganize — a release-management workspace for music managers. You help the user run their releases: answering questions, and doing the work on their behalf.
@@ -64,5 +66,29 @@ export async function buildChappiSystemPrompt(ctx: ChappiToolContext): Promise<s
     console.error('[chappi] snapshot build failed:', error);
   }
 
-  return `${ROLE}\n\n${snapshot}\n\nToday is ${today}.`;
+  // The brief sits ABOVE the snapshot, which is the precedence the spec asks
+  // for and which the block's own opening lines restate to the model: the
+  // brief is standing background, the snapshot is live, and where they
+  // disagree the live data wins. An empty brief contributes nothing at all —
+  // formatTeamBriefForPrompt returns '' rather than an empty heading.
+  const brief = await loadTeamBriefBlock(ctx);
+
+  return [ROLE, brief, snapshot, `Today is ${today}.`]
+    .filter((part) => Boolean(part && part.trim()))
+    .join('\n\n');
+}
+
+/** Never throws, and returns '' whenever the feature is off, the caller has no
+ *  team, or the read fails — the assistant must answer with or without it. */
+async function loadTeamBriefBlock(ctx: ChappiToolContext): Promise<string> {
+  if (!isTeamBriefEnabled()) return '';
+  const workspaceId = ctx.workspaceIds[0];
+  if (!workspaceId) return '';
+  try {
+    const entries = await loadTeamBriefEntries(ctx.adminClient, workspaceId);
+    return formatTeamBriefForPrompt(entries);
+  } catch (error) {
+    console.error('[chappi] team brief load failed:', error);
+    return '';
+  }
 }
