@@ -3,8 +3,8 @@
 // can go stale within a turn — the REAL guard is per-tool server-side
 // re-validation against live rows, not this prompt.
 
-import { ReleaseService } from '@/lib/services/release-service';
 import { TaskService } from '@/lib/services/task-service';
+import { listVisibleReleases } from './release-scope';
 import type { ChappiToolContext } from './tools';
 
 const ROLE = `You are UrgAns, the assistant inside Urganize — a release-management workspace for music managers. You help the user run their releases: answering questions, and doing the work on their behalf.
@@ -50,7 +50,7 @@ Generating does NOT schedule anything: the plan is a draft the user reviews. Sum
 export async function buildChappiSystemPrompt(ctx: ChappiToolContext): Promise<string> {
   let snapshot = 'Workspace snapshot unavailable.';
   try {
-    const releases = await new ReleaseService(ctx.adminClient).getReleasesForUser(ctx.user.id);
+    const releases = await listVisibleReleases(ctx);
     const tasks = ctx.workspaceIds.length
       ? await new TaskService(ctx.adminClient).getTasksForUser(ctx.user.id, ctx.workspaceIds)
       : [];

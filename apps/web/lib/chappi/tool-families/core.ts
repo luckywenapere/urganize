@@ -5,8 +5,8 @@
 // reimplemented — except completion/reopen, which need the dependency cascade
 // the PATCH route lacks and so go through TaskService directly.
 
-import { ReleaseService } from '@/lib/services/release-service';
 import { TaskService } from '@/lib/services/task-service';
+import { listVisibleReleases } from '../release-scope';
 import type { ChappiClientAction } from '../types';
 import {
   argString,
@@ -24,7 +24,7 @@ export const CORE_TOOLS: ChappiTool[] = [
     description: "List all of the user's releases with status and date.",
     inputSchema: { type: 'object', properties: {} },
     execute: async (ctx) => {
-      const releases = await new ReleaseService(ctx.adminClient).getReleasesForUser(ctx.user.id);
+      const releases = await listVisibleReleases(ctx);
       const data = releases.map((r) => ({
         id: r.id,
         title: r.title,
@@ -47,7 +47,7 @@ export const CORE_TOOLS: ChappiTool[] = [
     execute: async (ctx, args) => {
       const releaseId = argString(args, 'releaseId');
       if (!releaseId) return fail('releaseId is required.');
-      const releases = await new ReleaseService(ctx.adminClient).getReleasesForUser(ctx.user.id);
+      const releases = await listVisibleReleases(ctx);
       const release = releases.find((r) => r.id === releaseId);
       if (!release) return fail('That release was not found in your workspace.');
       const tasks = await new TaskService(ctx.adminClient).getTasksForUser(
@@ -104,7 +104,7 @@ export const CORE_TOOLS: ChappiTool[] = [
       "Get a high-level snapshot: release count, task counts by state, and today's suggested focus task.",
     inputSchema: { type: 'object', properties: {} },
     execute: async (ctx) => {
-      const releases = await new ReleaseService(ctx.adminClient).getReleasesForUser(ctx.user.id);
+      const releases = await listVisibleReleases(ctx);
       const tasks = ctx.workspaceIds.length
         ? await new TaskService(ctx.adminClient).getTasksForUser(ctx.user.id, ctx.workspaceIds)
         : [];
