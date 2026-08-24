@@ -283,6 +283,37 @@ A flow walking a new team through the brief section by section, completable live
 
 ---
 
+### Phase 5 as built (2026-08-24)
+
+**The guided flow is a MODE of the existing editor, not a route or a modal.**
+Same component, same save path, so a section filled on a call is stored by
+exactly the code that stores one filled later. "Walk me through it" shows one
+section at a time with a step counter; "Show all sections" leaves at any point.
+
+**It resumes rather than restarting.** The entry control reads "Pick up where we
+left off" once anything is written and opens at the first unfilled section — the
+fifteen-minute pass survives a dropped call. A complete brief re-walks from the
+beginning, which is a legitimate thing to want on a later call.
+
+**Skip is a first-class answer.** A team with no internal vocabulary should
+still reach the end; forcing content into a section to get past it is how a
+brief acquires filler the model then believes.
+
+**Save advances only when the save succeeded.** Advancing regardless would
+carry someone past a section whose text never landed, with only a banner to say
+so — the failure a guided flow makes worse, because the next screen looks like
+progress.
+
+**Completion is counted the way the prompt counts**, via
+`listInjectedBriefSections`, so the figure can never take credit for content
+UrgAns ignores. A team shown "20% filled" for a section holding only spaces
+would go looking for work they had already done.
+
+**Exposed on `/admin/teams`** as a Brief column — percent plus the raw count,
+because "40%" alone does not say how much is left to ask for. Batched into ONE
+query for every team on the page, and degrading to 0% for everybody rather than
+failing the billing console.
+
 ## Cut from this spec
 
 - File content indexing, embeddings, chunking, pgvector. Separate spec, after `NEXT_PUBLIC_FEATURE_FILES` ships.

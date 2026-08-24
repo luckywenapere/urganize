@@ -10,6 +10,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   TEAM_BRIEF_SECTIONS,
+  briefCompletion,
   listInjectedBriefSections,
   TEAM_BRIEF_SECTION_MAX_CHARS,
   TEAM_BRIEF_SECTION_META,
@@ -147,6 +148,46 @@ describe('listInjectedBriefSections agrees with the prompt block', () => {
       entry('roster', 'r'),
     ]);
     expect(listed).toEqual(['roster', 'vocabulary']);
+  });
+});
+
+// ── Phase 5: the completion figure internal views show ──────────────────────
+describe('briefCompletion', () => {
+  it('reports zero for a brief nobody has written', () => {
+    expect(briefCompletion([])).toEqual({ filled: 0, total: 5, percent: 0 });
+  });
+
+  // Counts the same way the prompt does, so a completion figure can never take
+  // credit for content UrgAns ignores. A team shown "20% filled" for a section
+  // holding only spaces would go looking for the missing 80% they already wrote.
+  it('does not count a whitespace-only section as filled', () => {
+    expect(briefCompletion([entry('roster', '   ')]).filled).toBe(0);
+  });
+
+  it('counts each written section once, whatever order they arrive in', () => {
+    const result = briefCompletion([
+      entry('vocabulary', 'DSP = distributor'),
+      entry('roster', 'Zara'),
+    ]);
+    expect(result.filled).toBe(2);
+    expect(result.percent).toBe(40);
+  });
+
+  it('reaches exactly 100 when every section is written', () => {
+    const all = TEAM_BRIEF_SECTIONS.map((section) => entry(section, `about ${section}`));
+    expect(briefCompletion(all)).toEqual({ filled: 5, total: 5, percent: 100 });
+  });
+
+  // The percentage and the raw count must agree — the admin table prints both
+  // side by side, and "60% (2/5)" is the kind of small wrongness that makes a
+  // console untrustworthy.
+  it('keeps the percentage consistent with the count at every step', () => {
+    for (let n = 0; n <= TEAM_BRIEF_SECTIONS.length; n += 1) {
+      const entries = TEAM_BRIEF_SECTIONS.slice(0, n).map((section) => entry(section, 'x'));
+      const result = briefCompletion(entries);
+      expect(result.filled, `${n} filled`).toBe(n);
+      expect(result.percent, `${n} filled`).toBe(Math.round((n / 5) * 100));
+    }
   });
 });
 

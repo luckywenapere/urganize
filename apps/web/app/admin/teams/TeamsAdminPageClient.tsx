@@ -42,6 +42,11 @@ type TeamRow = {
   subscriptionStatus: string | null;
   allowlisted: boolean;
   grandfathered: boolean;
+  /** Team brief completion (Phase 5 of the shared-context build). Absent on a
+   *  payload from before that shipped, so read defensively. */
+  briefFilled?: number;
+  briefTotal?: number;
+  briefPercent?: number;
 };
 
 type TeamsPayload = {
@@ -371,7 +376,7 @@ export default function TeamsAdminPageClient() {
         <table className="w-full min-w-[1100px] text-left text-sm">
           <thead className="bg-bg-elevated text-content-tertiary">
             <tr>
-              {['Team', 'Owner', 'State', 'Walls', 'Deal', 'Notes', 'Actions'].map((heading) => (
+              {['Team', 'Owner', 'State', 'Walls', 'Deal', 'Brief', 'Notes', 'Actions'].map((heading) => (
                 <th key={heading} className="px-3 py-2 font-medium">
                   {heading}
                 </th>
@@ -455,6 +460,26 @@ export default function TeamsAdminPageClient() {
                     </p>
                   ) : null}
                 </td>
+                {/* Team brief completion. The onboarding signal: a team at 0%
+                    has never been walked through it, and one at 100% got the
+                    full fifteen minutes. Percent AND the raw count, because
+                    "40%" alone does not say how much is left to ask for. */}
+                <td className="whitespace-nowrap px-3 py-3 text-xs">
+                  <span
+                    className={
+                      (team.briefPercent ?? 0) === 0
+                        ? 'text-content-tertiary'
+                        : (team.briefPercent ?? 0) === 100
+                          ? 'text-brand'
+                          : 'text-content-secondary'
+                    }
+                  >
+                    {team.briefPercent ?? 0}%
+                  </span>
+                  <span className="ml-1.5 text-content-tertiary">
+                    {team.briefFilled ?? 0}/{team.briefTotal ?? 5}
+                  </span>
+                </td>
                 <td className="max-w-[16rem] px-3 py-3 text-xs text-content-tertiary">
                   {team.billingNotes || '—'}
                 </td>
@@ -511,7 +536,7 @@ export default function TeamsAdminPageClient() {
             ))}
             {teams.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-sm text-content-tertiary">
+                <td colSpan={8} className="px-3 py-6 text-center text-sm text-content-tertiary">
                   No teams match that.
                 </td>
               </tr>

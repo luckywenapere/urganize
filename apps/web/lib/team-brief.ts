@@ -125,6 +125,26 @@ export function listInjectedBriefSections(entries: TeamBriefEntry[]): TeamBriefS
   );
 }
 
+export type TeamBriefCompletion = {
+  filled: number;
+  total: number;
+  /** 0–100, rounded. The number internal account views show. */
+  percent: number;
+};
+
+/**
+ * How much of the brief a team has written.
+ *
+ * Counts the same way the prompt does — a section only counts as filled if it
+ * would actually be injected — so a completion figure can never claim credit
+ * for content UrgAns ignores.
+ */
+export function briefCompletion(entries: TeamBriefEntry[]): TeamBriefCompletion {
+  const total = TEAM_BRIEF_SECTIONS.length;
+  const filled = listInjectedBriefSections(entries).length;
+  return { filled, total, percent: Math.round((filled / total) * 100) };
+}
+
 export function isTeamBriefSection(value: unknown): value is TeamBriefSection {
   return TEAM_BRIEF_SECTIONS.includes(value as TeamBriefSection);
 }

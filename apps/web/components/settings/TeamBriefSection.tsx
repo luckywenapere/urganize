@@ -7,6 +7,8 @@ import { panelClass } from './panelClass';
 import { feedbackErrorClass } from './feedback';
 import {
   TEAM_BRIEF_COUNTER_WARN_RATIO,
+  briefCompletion,
+  listInjectedBriefSections,
   TEAM_BRIEF_SECTIONS,
   TEAM_BRIEF_SECTION_MAX_CHARS,
   TEAM_BRIEF_SECTION_META,
@@ -47,6 +49,11 @@ export function TeamBriefSection() {
   const [brief, setBrief] = useState<TeamBrief | null>(null);
   const [drafts, setDrafts] = useState<Partial<Record<SectionKey, string>>>({});
   const [savingSection, setSavingSection] = useState<SectionKey | null>(null);
+  // The Phase 5 guided flow: null = the ordinary all-sections editor, a number
+  // = walking one section at a time. Not a route and not a modal — the same
+  // component, the same save path, so a section filled on a call is saved by
+  // exactly the code a section filled later is.
+  const [guideStep, setGuideStep] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -76,7 +83,7 @@ export function TeamBriefSection() {
   }, []);
 
   const save = useCallback(
-    async (section: SectionKey, content: string) => {
+    async (section: SectionKey, content: string): Promise<boolean> => {
       setSavingSection(section);
       setError('');
       try {
@@ -91,7 +98,7 @@ export function TeamBriefSection() {
         const payload = await res.json().catch(() => null);
         if (!res.ok) {
           setError((payload as { error?: string } | null)?.error || 'Could not save. Try again.');
-          return;
+          return false;
         }
         setBrief(payload as TeamBrief);
         // Drop the draft so the field falls back to the saved value — keeping
@@ -101,8 +108,10 @@ export function TeamBriefSection() {
           delete next[section];
           return next;
         });
+        return true;
       } catch {
         setError('Could not save. Check your connection and try again.');
+        return false;
       } finally {
         setSavingSection(null);
       }
@@ -132,6 +141,23 @@ export function TeamBriefSection() {
   }
 
   const canEdit = brief.canEdit;
+  const completion = briefCompletion(brief.entries);
+  const inGuide = guideStep !== null;
+  const isLastGuideStep = guideStep === TEAM_BRIEF_SECTIONS.length - 1;
+  /** Leaving the guide at the end rather than looping: it is a finishable
+   *  fifteen-minute pass, not a carousel. */
+  const advanceGuide = () => {
+    setGuideStep((step) =>
+      step === null || step >= TEAM_BRIEF_SECTIONS.length - 1 ? null : step + 1
+    );
+  };
+  const advanceGuideIfGuiding = () => {
+    if (guideStep !== null) advanceGuide();
+  };
+  // Only the sections being walked through, when guiding.
+  const visibleSections = inGuide
+    ? [TEAM_BRIEF_SECTIONS[Math.min(guideStep, TEAM_BRIEF_SECTIONS.length - 1)]]
+    : TEAM_BRIEF_SECTIONS;
 
   return (
     <section className={panelClass}>
@@ -142,10 +168,46 @@ export function TeamBriefSection() {
           : 'Your team lead keeps this up to date. UrgAns reads it on every question you ask.'}
       </p>
 
+      {/* Progress, always visible. The guided flow's own value is that it is
+          finishable, so how much is left has to be legible without entering
+          it. */}
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
+          {completion.filled} of {completion.total} filled
+        </span>
+        <div className="h-1.5 w-24 overflow-hidden rounded-full bg-stroke-strong">
+          <div className="h-full bg-brand" style={{ width: `${completion.percent}%` }} />
+        </div>
+        {canEdit && !inGuide ? (
+          <button
+            type="button"
+            onClick={() => setGuideStep(firstUnfilledStep(brief.entries))}
+            className="motion-focus rounded-lg border border-stroke-default px-3 py-1.5 text-sm text-content-primary transition-colors hover:bg-bg-hover"
+          >
+            {completion.filled === 0 ? 'Walk me through it' : 'Pick up where we left off'}
+          </button>
+        ) : null}
+      </div>
+
+      {inGuide ? (
+        <div className="mt-6 flex items-center justify-between gap-3">
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
+            Step {(guideStep ?? 0) + 1} of {TEAM_BRIEF_SECTIONS.length}
+          </p>
+          <button
+            type="button"
+            onClick={() => setGuideStep(null)}
+            className="motion-focus rounded-md px-2 py-1 text-xs text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary"
+          >
+            Show all sections
+          </button>
+        </div>
+      ) : null}
+
       {error ? <p className={`mt-4 ${feedbackErrorClass}`}>{error}</p> : null}
 
       <div className="mt-6 space-y-8">
-        {TEAM_BRIEF_SECTIONS.map((section) => {
+        {visibleSections.map((section) => {
           const entry = brief.entries.find((e) => e.section === section);
           const saved = entry?.content ?? '';
           const value = drafts[section] ?? saved;
@@ -192,14 +254,46 @@ export function TeamBriefSection() {
                     : 'Not written yet'}
                 </p>
                 {canEdit ? (
-                  <button
-                    type="button"
-                    disabled={!dirty || over || savingSection === section}
-                    onClick={() => save(section, value)}
-                    className="motion-focus rounded-lg border border-stroke-default px-3 py-1.5 text-sm text-content-primary transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {savingSection === section ? 'Saving...' : 'Save'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* In the guide, Skip is a first-class answer: a team that
+                        does not have a Vocabulary should reach the end anyway,
+                        and forcing content into a section to get past it is how
+                        a brief acquires filler the model then believes. */}
+                    {inGuide ? (
+                      <button
+                        type="button"
+                        onClick={advanceGuide}
+                        className="motion-focus rounded-md px-2 py-1.5 text-xs text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary"
+                      >
+                        Skip
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      disabled={(!dirty && !inGuide) || over || savingSection === section}
+                      onClick={() => {
+                        if (dirty) {
+                          // Advance ONLY on a successful save. Advancing
+                          // regardless would carry someone past a section whose
+                          // text never landed, with only a banner to say so.
+                          void save(section, value).then((saved) => {
+                            if (saved) advanceGuideIfGuiding();
+                          });
+                          return;
+                        }
+                        advanceGuide();
+                      }}
+                      className="motion-focus rounded-lg border border-stroke-default px-3 py-1.5 text-sm text-content-primary transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {savingSection === section
+                        ? 'Saving...'
+                        : inGuide
+                          ? isLastGuideStep
+                            ? 'Save and finish'
+                            : 'Save and next'
+                          : 'Save'}
+                    </button>
+                  </div>
                 ) : null}
               </div>
             </div>
@@ -208,6 +302,15 @@ export function TeamBriefSection() {
       </div>
     </section>
   );
+}
+
+/** Where "pick up where we left off" starts: the first section with nothing in
+ *  it, or the beginning when the brief is complete (re-walking a finished brief
+ *  is a legitimate thing to want on a later call). */
+function firstUnfilledStep(entries: TeamBrief['entries']): number {
+  const filled = new Set(listInjectedBriefSections(entries));
+  const index = TEAM_BRIEF_SECTIONS.findIndex((section) => !filled.has(section));
+  return index === -1 ? 0 : index;
 }
 
 function Heading() {

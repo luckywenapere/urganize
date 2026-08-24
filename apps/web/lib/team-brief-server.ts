@@ -11,10 +11,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   TEAM_BRIEF_SECTIONS,
+  briefCompletion,
   canEditTeamBrief,
   isTeamBriefSection,
   normalizeBriefContent,
   type TeamBrief,
+  type TeamBriefCompletion,
   type TeamBriefEntry,
   type TeamBriefSection,
 } from './team-brief';
@@ -174,4 +176,62 @@ export async function saveTeamBriefSection(
     return { ok: false, error: 'Could not save. Try again.' };
   }
   return { ok: true };
+}
+
+/**
+ * Brief completion for many teams at once, for internal account views.
+ *
+ * ONE query for every workspace asked about, grouped in JS: the admin console
+ * lists every team on the platform, and a per-team read would be a query per
+ * row. Teams with no rows at all are returned as 0% rather than omitted — a
+ * missing key in an admin table reads as "unknown", and the honest answer is
+ * "nothing written".
+ *
+ * Never throws: an unapplied migration or a failed read degrades to an empty
+ * map, and the caller renders every team as 0%. A billing console must not go
+ * down because a brief could not be counted.
+ */
+export async function loadBriefCompletionByWorkspace(
+  adminClient: SupabaseClient,
+  workspaceIds: string[]
+): Promise<Map<string, TeamBriefCompletion>> {
+  const result = new Map<string, TeamBriefCompletion>();
+  const ids = Array.from(new Set(workspaceIds.filter(Boolean)));
+  if (!ids.length) return result;
+
+  const empty = briefCompletion([]);
+  for (const id of ids) result.set(id, empty);
+
+  try {
+    const { data, error } = await adminClient
+      .from(TABLE)
+      .select('workspace_id,section,content')
+      .in('workspace_id', ids);
+    if (error) throw error;
+
+    const rowsByWorkspace = new Map<string, TeamBriefEntry[]>();
+    for (const row of (Array.isArray(data) ? data : []) as Array<{
+      workspace_id: string;
+      section: string;
+      content: string | null;
+    }>) {
+      if (!isTeamBriefSection(row.section)) continue;
+      const list = rowsByWorkspace.get(row.workspace_id) || [];
+      list.push({
+        section: row.section,
+        content: normalizeBriefContent(row.content),
+        updatedAt: null,
+        updatedByName: null,
+      });
+      rowsByWorkspace.set(row.workspace_id, list);
+    }
+
+    for (const [workspaceId, entries] of rowsByWorkspace) {
+      result.set(workspaceId, briefCompletion(entries));
+    }
+    return result;
+  } catch (error) {
+    console.error('[team-brief] could not count completion:', error);
+    return result;
+  }
 }
