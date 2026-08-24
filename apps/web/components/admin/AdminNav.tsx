@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  ArrowLeft,
   BadgeDollarSign,
   BellRing,
   ClipboardList,
@@ -59,8 +60,33 @@ export function AdminNav() {
   return (
     <nav
       aria-label="Admin menu"
-      className="flex shrink-0 lg:sticky lg:top-8 lg:h-fit lg:w-52 lg:flex-col"
+      className="flex shrink-0 flex-col lg:sticky lg:top-8 lg:h-fit lg:w-52"
     >
+      {/*
+        The way out. /admin/* renders no app chrome at all — AppShell's
+        showWorkspaceChrome covers only /dashboard and /settings — so there is
+        no topbar and no identity card here, and until this link existed the
+        only exits were the browser Back button and typing a URL. The hub's
+        own per-page "Back" buttons were removed on 2026-07-30 when this menu
+        replaced them, and nothing took over that job; this is it.
+
+        It sits ABOVE the item list rather than inside it because it leaves the
+        section rather than picking one, and because the list scrolls
+        horizontally below lg — an exit that can scroll off the side of a phone
+        is not an exit. It is never active, so it carries no aria-current.
+
+        Labelled "catalog" to match the identity card's own name for
+        /dashboard, so the two navs agree on what that surface is called.
+        /dashboard is hardcoded here, as it is there: HOME_PATH is the
+        post-authentication LANDING decision, and this is an ordinary nav href.
+      */}
+      <Link
+        href="/dashboard"
+        className="motion-focus mb-3 flex h-9 w-fit items-center gap-2.5 rounded-lg px-3 text-sm text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary lg:mb-4"
+      >
+        <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span className="whitespace-nowrap">Back to catalog</span>
+      </Link>
       <p className="hidden font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary lg:block lg:px-3 lg:pb-3">
         Admin
       </p>
