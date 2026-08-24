@@ -281,7 +281,7 @@ export type PricingTierDefinition = {
    *  Written out rather than derived, because these are claims about the
    *  product and each one has to be true today. Nothing here may name an
    *  unbuilt feature: `sso` and `sub_teams` are declared in the entitlement map
-   *  and read by nothing, so they are deliberately ABSENT from Enterprise's
+   *  and read by nothing, so they are deliberately ABSENT from Group's
    *  list (founder call, 2026-08-24) — a contract can promise them, a public
    *  page cannot. */
   perks: readonly string[];
@@ -329,12 +329,24 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     ],
     recommended: true,
   },
+  // DISPLAY NAME vs ID: this tier is called "Group" everywhere a customer can
+  // read it, and its id stays `enterprise`. Renamed 2026-08-24 (founder call)
+  // — "Enterprise" is B2B software jargon that means nothing to a label head,
+  // and the audience line below is the accurate name: a distributor is not a
+  // label, and a group operating several labels is not "a label" either.
+  //
+  // DO NOT rename the id to match. It is written into subscriptions.plan by
+  // the checkout/admin paths and allowed by subscriptions_plan_check
+  // (20260823100000_pricing_tiers.sql), so changing it needs a migration AND a
+  // backfill, and would silently re-grade any stored row. The `label` id in
+  // particular already carries two historical meanings (see the legacy
+  // BILLING_PLANS.label above) — do not add a third collision here.
   enterprise: {
     id: 'enterprise',
-    label: 'Enterprise',
+    label: 'Group',
     audience: 'For distributors and groups operating several labels.',
-    // No prices at all: an enterprise deal is quoted per contract and
-    // invoiced by hand. There is no Paystack plan code for it.
+    // No prices at all: a Group deal is quoted per contract and invoiced by
+    // hand. There is no Paystack plan code for it.
     limits: { seats: null, activeReleases: null, urgansMonthlyActions: null },
     // Only what is built. `sso` and `sub_teams` are declared in the entitlement
     // map and read by NOTHING, so they are deliberately not listed here — see

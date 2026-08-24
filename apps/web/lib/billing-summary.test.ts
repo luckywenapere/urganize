@@ -189,7 +189,7 @@ describe('summarizeBilling', () => {
   });
 
   it('routes a sales-led plan to contact, not to the self-serve picker', () => {
-    // Enterprise is quoted per contract, so /locked would be a dead end.
+    // Group is quoted per contract, so /locked would be a dead end.
     expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'enterprise' })).cta).toBe(
       'contact'
     );

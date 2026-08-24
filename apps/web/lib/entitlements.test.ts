@@ -163,6 +163,23 @@ describe('tier prices and the sales-led tier', () => {
     expect(getTierPrice('enterprise', 'annual')).toBeNull();
   });
 
+  // The stored id and the customer-facing name deliberately differ for the
+  // sales-led tier: it is called "Group" on every surface a customer reads
+  // (founder call, 2026-08-24 — "Enterprise" is B2B jargon that means nothing
+  // to a label head, and a distributor is not a label either), while the id
+  // stays `enterprise` because it is written into subscriptions.plan and
+  // allowed by subscriptions_plan_check. Renaming the id needs a migration and
+  // a backfill; this test is what turns "tidying" it into a failure here
+  // rather than a silently re-graded row in production.
+  it('calls the sales-led tier Group while keeping the enterprise id', () => {
+    expect(PRICING_TIERS.enterprise.id).toBe('enterprise');
+    expect(PRICING_TIERS.enterprise.label).toBe('Group');
+    // No tier displays the old name anywhere.
+    for (const tier of TIERS) {
+      expect(PRICING_TIERS[tier].label).not.toMatch(/enterprise/i);
+    }
+  });
+
   it('recommends exactly one tier, and it is the one we sell', () => {
     const recommended = TIERS.filter((tier) => PRICING_TIERS[tier].recommended);
     expect(recommended).toEqual(['label']);
@@ -504,7 +521,7 @@ describe('tierHighlights', () => {
 });
 
 describe('public tier copy tells the truth', () => {
-  // Founder call, 2026-08-24: Enterprise may be sold on SSO and sub-teams in a
+  // Founder call, 2026-08-24: Group may be sold on SSO and sub-teams in a
   // CONTRACT, but a public page cannot claim them. Both are declared in the map
   // above and read by nothing, so this is enforced structurally rather than
   // left to a reviewer noticing.
