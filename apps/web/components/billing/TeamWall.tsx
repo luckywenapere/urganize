@@ -50,7 +50,8 @@ const PLAN_ORDER = ['annual', 'monthly'] as const;
 
 const PRICING_V2 = isPricingV2Enabled();
 
-/** The self-serve tiers the wall offers. Enterprise is absent on purpose: the
+/** The self-serve tiers the wall offers. Group (id `enterprise`) is absent on
+ *  purpose: the
  *  full-weight "Talk to us" card beside the picker IS its path, and a third
  *  radio that cannot check out would be a dead end sitting next to the real one.
  *  Exactly the reasoning that kept the legacy contactSales plan out of
@@ -539,7 +540,7 @@ export function TeamWall() {
                 </h2>
                 <p className="mt-1 text-sm text-content-secondary">
                   {PRICING_V2
-                    ? 'Running several labels, or prefer an invoice? Enterprise is quoted per contract. Talk to us directly.'
+                    ? 'Running several labels, or prefer an invoice? Group is quoted per contract. Talk to us directly.'
                     : 'Prefer an invoice or a walkthrough for your team? Talk to us directly.'}
                 </p>
               </div>

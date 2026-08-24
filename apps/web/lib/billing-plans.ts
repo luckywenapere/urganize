@@ -385,7 +385,7 @@ export function resolveCheckoutPurchase(input: {
     return {
       ok: false,
       status: 400,
-      error: 'Enterprise is quoted per contract. Contact us rather than checking out.',
+      error: 'Group is quoted per contract. Contact us rather than checking out.',
     };
   }
 

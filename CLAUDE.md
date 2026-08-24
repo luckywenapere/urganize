@@ -2906,7 +2906,30 @@ paying team. Behind `NEXT_PUBLIC_FEATURE_PRICING_V2` (default off). **PR 1 of
 several: schema and config only, nothing enforced, nothing displayed.**
 
 Tiers: **Manager** ₦35,000/₦350,000, **Label** ₦80,000/₦800,000 (`recommended`,
-the tier we sell), **Enterprise** sales-led with no price. Both priced tiers hold
+the tier we sell), **Enterprise** sales-led with no price.
+
+**Renamed 2026-08-24 (founder call): the sales-led tier is called "Group", not
+"Enterprise".** Two reasons, both about this niche: "Enterprise" is B2B software
+jargon that means nothing to a label head and breaks the marketing voice rules
+(fifth-grade readable, no jargon), and "Group" is what its own audience line
+already says — distributors and groups operating several labels, neither of
+which is "a label". The founder's first instinct was a two-step shuffle
+(Enterprise→Label, Label→Team); the second half was argued down and dropped,
+because it would have moved the word "Label" off the priced, self-serve,
+recommended tier and put the ICP behind a sales conversation, and because
+nobody self-identifies as "a team". The ladder is **Manager → Label → Group**.
+
+**The DISPLAY NAME changed; the `enterprise` ID did NOT, and must not.** That id
+is written into `subscriptions.plan` and allowed by `subscriptions_plan_check`
+(`20260823100000_pricing_tiers.sql`), so renaming it needs a migration plus a
+backfill and would silently re-grade stored rows — and the `label` id already
+carries two historical meanings, so a third collision is exactly what to avoid.
+`entitlements.test.ts` pins the split (id `enterprise`, label `Group`, and no
+tier displaying the old word), mutation-tested rather than merely asserted. No
+changelog entry or version bump: in `apps/web` every surface carrying this copy
+is behind `NEXT_PUBLIC_FEATURE_PRICING_V2`, which is off, so the only live
+surface is the public `/pricing` page — an `apps/homepage` change, which the
+app-only scope rule excludes. Both priced tiers hold
 the 10× "2 months free" ratio the ladder has always used.
 
 **Five things worth knowing before touching this:**

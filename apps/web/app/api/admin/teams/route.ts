@@ -312,7 +312,7 @@ export async function PATCH(request: NextRequest) {
       // chooses between 'expired' and 'unpaid', both of which are no-access.
       // What it does do is record that real money landed, which is the sole
       // discriminator behind read-only mode (lapsedFromPayment). Without it, an
-      // invoice-settled team — a Label or Enterprise deal, exactly the customer
+      // invoice-settled team — a Label or Group deal, exactly the customer
       // most likely to be on an invoice — would hit the full wall when their
       // year lapsed instead of keeping their catalogue readable.
       const subscriptionUpsert = await client.from('subscriptions').upsert(

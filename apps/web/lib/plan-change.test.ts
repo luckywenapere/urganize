@@ -330,7 +330,7 @@ describe('the quote can never contradict the tier table', () => {
   });
 
   it('never quotes a price for a tier the package has no price for', () => {
-    // Enterprise carries no `prices` at all, which is what makes this
+    // Group (id `enterprise`) carries no `prices` at all, which is what makes this
     // structural rather than a lookup that happens to return undefined.
     expect(PRICING_TIERS.enterprise.prices).toBeUndefined();
   });
