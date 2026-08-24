@@ -13,6 +13,7 @@ import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
 import { ACTION_EVENT_TYPE, parseTeamAdminAction } from '@/lib/admin-teams';
 import { logBillingEvent } from '@/lib/billing-events-server';
 import { notifyFounder } from '@/lib/billing-alerts-server';
+import { loadBriefCompletionByWorkspace } from '@/lib/team-brief-server';
 
 // /api/admin/teams — the founder's billing console, and the review surface for
 // the migration that started every existing team's trial.
@@ -129,6 +130,14 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
 
+  // Brief completion per team (Phase 5). ONE query for every workspace on the
+  // page rather than one per row, and it degrades to 0% for everybody rather
+  // than failing the console.
+  const briefByWorkspace = await loadBriefCompletionByWorkspace(
+    client,
+    workspaces.map((row) => row.id)
+  );
+
   const teams = workspaces.map((row) => {
     const profile = row.owner_id ? profiles.get(row.owner_id) : undefined;
     const subscription = row.owner_id ? subscriptions.get(row.owner_id) : undefined;
@@ -203,6 +212,9 @@ export async function GET(request: NextRequest) {
       pendingChangeRequestedAt: subscription?.pending_change_requested_at ?? null,
       allowlisted: ownerAllowlisted,
       grandfathered: !subscriptionActive && profile?.is_subscribed === true,
+      briefFilled: briefByWorkspace.get(row.id)?.filled ?? 0,
+      briefTotal: briefByWorkspace.get(row.id)?.total ?? 0,
+      briefPercent: briefByWorkspace.get(row.id)?.percent ?? 0,
     };
   });
 
