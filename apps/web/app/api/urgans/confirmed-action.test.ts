@@ -43,7 +43,7 @@ vi.mock('@/lib/chappi/runner', () => ({
 }));
 
 vi.mock('@/lib/chappi/system-prompt', () => ({
-  buildChappiSystemPrompt: async () => 'system prompt',
+  buildChappiSystemPrompt: async () => ({ prompt: 'system prompt', briefSections: [] }),
 }));
 
 import { POST } from './route';

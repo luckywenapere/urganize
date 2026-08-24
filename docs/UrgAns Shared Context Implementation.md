@@ -250,6 +250,33 @@ When an answer was materially shaped by the brief, show an expandable marker lis
 
 ---
 
+### Phase 4 as built (2026-08-24) — the requirement was not buildable as written
+
+The spec asks for a marker "when an answer was **materially shaped** by the
+brief". That is not detectable. The only two ways to know would be to ask the
+model to self-report, which is unreliable and puts a confession in every reply,
+or to diff the answer's wording against the brief's, which any paraphrase
+defeats. Both produce a marker that appears and vanishes for reasons a user
+cannot predict, which is worse than one that is honest and consistent.
+
+**So the marker reports what was IN CONTEXT, and the copy says exactly that:**
+"Read your team brief", never "shaped by". Expanding it lists the sections
+UrgAns was working from, which is what lets a user judge the answer against
+them — the thing attribution is actually for.
+
+Mechanically: `buildChappiSystemPrompt` now returns `{ prompt, briefSections }`
+rather than a string, because the builder is the only thing that knows what it
+injected — the alternative was a second read of the brief per request. The
+sections ride the assistant MESSAGE, not component state, so scrolling back up
+a transcript shows what each answer was working from instead of relabelling
+every earlier one.
+
+`listInjectedBriefSections` and `formatTeamBriefForPrompt` must never disagree,
+or the marker names a section the model was never shown. They are asserted
+against each other over generated section combinations rather than a few
+examples, since the failure mode is drift between two implementations of one
+rule.
+
 ## Phase 5 — Onboarding
 
 A flow walking a new team through the brief section by section, completable live on a call in under fifteen minutes. Track completion percentage per workspace, exposed in internal account views.

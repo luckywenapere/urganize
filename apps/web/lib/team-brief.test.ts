@@ -10,6 +10,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   TEAM_BRIEF_SECTIONS,
+  listInjectedBriefSections,
   TEAM_BRIEF_SECTION_MAX_CHARS,
   TEAM_BRIEF_SECTION_META,
   canEditTeamBrief,
@@ -98,6 +99,54 @@ describe('the prompt block', () => {
   it('caps a section that somehow arrived over-long', () => {
     const out = formatTeamBriefForPrompt([entry('roster', 'x'.repeat(9_000))]);
     expect(out.length).toBeLessThan(TEAM_BRIEF_SECTION_MAX_CHARS + 600);
+  });
+});
+
+// ── Phase 4: attribution names exactly what was injected ────────────────────
+//
+// These two functions must agree or the marker names a section the model was
+// never shown, which is worse than no marker at all. Asserted as a property
+// over generated combinations rather than a handful of examples, because the
+// failure mode is a drift between two implementations of the same rule.
+describe('listInjectedBriefSections agrees with the prompt block', () => {
+  const CASES: Array<Array<[string, string]>> = [
+    [],
+    [['roster', 'Zara']],
+    [['roster', '  '], ['vocabulary', 'DSP = distributor']],
+    [['constraints', 'No paid promo'], ['roster', 'Zara'], ['how_we_work', 'Eleven weeks']],
+    TEAM_BRIEF_SECTIONS.map((section) => [section, `content for ${section}`] as [string, string]),
+  ];
+
+  it.each(CASES.map((c, i) => [i, c] as const))(
+    'case %i: every listed section appears in the block, and vice versa',
+    (_i, pairs) => {
+      const entries = pairs.map(([section, content]) => entry(section, content));
+      const listed = listInjectedBriefSections(entries);
+      const block = formatTeamBriefForPrompt(entries);
+
+      // Nothing listed <=> nothing injected.
+      expect(listed.length === 0).toBe(block === '');
+
+      for (const section of listed) {
+        expect(block, `${section} listed but not injected`).toContain(
+          TEAM_BRIEF_SECTION_META[section].promptLabel
+        );
+      }
+      for (const section of TEAM_BRIEF_SECTIONS) {
+        if (listed.includes(section)) continue;
+        expect(block, `${section} injected but not listed`).not.toContain(
+          TEAM_BRIEF_SECTION_META[section].promptLabel
+        );
+      }
+    }
+  );
+
+  it('lists in the canonical order, not the input order', () => {
+    const listed = listInjectedBriefSections([
+      entry('vocabulary', 'v'),
+      entry('roster', 'r'),
+    ]);
+    expect(listed).toEqual(['roster', 'vocabulary']);
   });
 });
 

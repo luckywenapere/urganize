@@ -8,7 +8,12 @@
 import { TaskService } from '@/lib/services/task-service';
 import { listVisibleReleases } from './release-scope';
 import { buildWorkspaceSummary } from './workspace-summary';
-import { formatTeamBriefForPrompt, isTeamBriefEnabled } from '@/lib/team-brief';
+import {
+  formatTeamBriefForPrompt,
+  isTeamBriefEnabled,
+  listInjectedBriefSections,
+  type TeamBriefSection,
+} from '@/lib/team-brief';
 import { loadTeamBriefEntries } from '@/lib/team-brief-server';
 import type { ChappiToolContext } from './tools';
 
@@ -52,7 +57,26 @@ There are seven things to find out. Ask them naturally, one or two at a time, in
 Then read the seven answers back in plain language and get a yes before calling generate_release_plan. Usually the release does not exist yet — call it with NO releaseId and it creates the release and drafts the plan in one go (pass the title if the user named one). Pass a releaseId only when planning an existing release that has no activities yet; a release that already has activities already has its plan. Never call it without a releaseId twice for the same rollout — if it fails after creating the release, its result carries the new releaseId, so retry with that id. If it comes back saying an answer doesn't work, fix just that one question and try again — don't start the interview over. If it says a draft already exists, ask whether to keep the current one or start fresh; only pass replace when they say start fresh.
 Generating does NOT schedule anything: the plan is a draft the user reviews. Summarize the phases, tell them it's waiting for them, and offer to approve it. Approval creates every activity at once and goes through a confirmation card. A plan needs a release date before it can be approved — if there isn't one, use schedule_release first.`;
 
-export async function buildChappiSystemPrompt(ctx: ChappiToolContext): Promise<string> {
+export type ChappiSystemPrompt = {
+  prompt: string;
+  /**
+   * Which brief sections were actually injected into `prompt`.
+   *
+   * ATTRIBUTION MEANS "UrgAns read this", NOT "this shaped the answer". The
+   * spec asks for a marker when an answer was "materially shaped by the
+   * brief", and that is not detectable: the only ways to know would be to ask
+   * the model to self-report, which is unreliable, or to diff the answer's
+   * wording against the brief's, which paraphrase defeats immediately. A
+   * marker that appears inconsistently is worse than one that is honest about
+   * what it means, so this reports what was in front of the model and the UI
+   * copy says exactly that. See the Phase 4 note in the spec.
+   */
+  briefSections: TeamBriefSection[];
+};
+
+export async function buildChappiSystemPrompt(
+  ctx: ChappiToolContext
+): Promise<ChappiSystemPrompt> {
   const today = new Date().toISOString().slice(0, 10);
   let snapshot = 'Workspace snapshot unavailable.';
   try {
@@ -73,22 +97,36 @@ export async function buildChappiSystemPrompt(ctx: ChappiToolContext): Promise<s
   // formatTeamBriefForPrompt returns '' rather than an empty heading.
   const brief = await loadTeamBriefBlock(ctx);
 
-  return [ROLE, brief, snapshot, `Today is ${today}.`]
-    .filter((part) => Boolean(part && part.trim()))
-    .join('\n\n');
+  return {
+    prompt: [ROLE, brief.block, snapshot, `Today is ${today}.`]
+      .filter((part) => Boolean(part && part.trim()))
+      .join('\n\n'),
+    briefSections: brief.sections,
+  };
 }
 
 /** Never throws, and returns '' whenever the feature is off, the caller has no
  *  team, or the read fails — the assistant must answer with or without it. */
-async function loadTeamBriefBlock(ctx: ChappiToolContext): Promise<string> {
-  if (!isTeamBriefEnabled()) return '';
+async function loadTeamBriefBlock(
+  ctx: ChappiToolContext
+): Promise<{ block: string; sections: TeamBriefSection[] }> {
+  const nothing = { block: '', sections: [] as TeamBriefSection[] };
+  if (!isTeamBriefEnabled()) return nothing;
   const workspaceId = ctx.workspaceIds[0];
-  if (!workspaceId) return '';
+  if (!workspaceId) return nothing;
   try {
     const entries = await loadTeamBriefEntries(ctx.adminClient, workspaceId);
-    return formatTeamBriefForPrompt(entries);
+    // Both derived from the same entries, so the marker cannot name a section
+    // the model was not shown. listInjectedBriefSections returns [] for
+    // exactly the inputs that make the block empty — a property the tests in
+    // lib/team-brief.test.ts assert over generated combinations, which is why
+    // there is no redundant "only if the block is non-empty" guard here.
+    return {
+      block: formatTeamBriefForPrompt(entries),
+      sections: listInjectedBriefSections(entries),
+    };
   } catch (error) {
     console.error('[chappi] team brief load failed:', error);
-    return '';
+    return nothing;
   }
 }
