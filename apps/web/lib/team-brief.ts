@@ -109,6 +109,22 @@ export function isTeamBriefEmpty(entries: TeamBriefEntry[]): boolean {
   return entries.every((entry) => !normalizeBriefContent(entry.content));
 }
 
+/**
+ * The sections formatTeamBriefForPrompt would actually print, in the same
+ * order.
+ *
+ * Deliberately derived from the same normalize-and-drop-empties rule rather
+ * than re-implemented: if these two ever disagree, the attribution marker
+ * names a section the model was never shown, which is worse than no marker.
+ * A test pins them together.
+ */
+export function listInjectedBriefSections(entries: TeamBriefEntry[]): TeamBriefSection[] {
+  const bySection = new Map(entries.map((e) => [e.section, e]));
+  return TEAM_BRIEF_SECTIONS.filter((section) =>
+    Boolean(normalizeBriefContent(bySection.get(section)?.content))
+  );
+}
+
 export function isTeamBriefSection(value: unknown): value is TeamBriefSection {
   return TEAM_BRIEF_SECTIONS.includes(value as TeamBriefSection);
 }

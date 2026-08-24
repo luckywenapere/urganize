@@ -71,7 +71,7 @@ describe.skipIf(!configured)('UrgAns release scoping', () => {
   /** Titles the SNAPSHOT shows — parsed from the prompt, not from a helper, so
    *  a bug in prompt assembly is visible here rather than hidden behind it. */
   async function snapshotTitles(ctx: ChappiToolContext): Promise<string[]> {
-    const prompt = await buildChappiSystemPrompt(ctx);
+    const { prompt } = await buildChappiSystemPrompt(ctx);
     expect(prompt, 'the snapshot must not have silently failed').not.toContain(
       'Workspace snapshot unavailable.'
     );
