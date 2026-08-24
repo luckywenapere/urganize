@@ -1931,7 +1931,7 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-24 (**logo and photo uploads: one workspace resolver, their
+*Last updated: 2026-08-24 (**Urganize is v1.0.0** — the founder called AI activation met now that UrgAns runs on a real tool-calling model in production, so the version reserved for it has shipped and every `package.json` moved to 1.0.0. The v0.61.0 changelog entry was rewritten in the same pass after being rejected as "too bogus and technical", and it carried a pricing-page bullet that the app-only scope rule already forbade — so the Release procedure now carries explicit **voice rules**: fifth-grade readable, one or two short sentences per highlight, say "you", and never a marketing-site change. Previously: **logo and photo uploads: one workspace resolver, their
 own size limits, and failures that report themselves** — see "Logo and photo
 uploads" above. The curator came back with desktop plus "if I try to upload profile
 or logo it doesn't and the page crashes", which cannot be chased with devtools on a
@@ -4149,14 +4149,20 @@ The earlier decision (2026-07-10) NOT to version was an early-stage call and has
 - **All `package.json` versions mirror it.** Root + every workspace (`apps/*` — including `apps/mobile` — and `packages/*`; 10 files as of 2026-08-04) carry the same number. They are bumped together with the ledger, never independently.
 - **App-only scope (founder decision, 2026-07-18):** the changelog and the version track the product app (`apps/web`) ONLY. Marketing-site (`apps/homepage`) changes, however visible on the site (homepage copy, pricing display, OG/share images, brand/team/press/roadmap pages), never earn a ledger entry or a version bump. Pricing display updates count as marketing under this rule. Applied retroactively on 2026-07-18: marketing entries were purged from the ledger and the version recalculated (0.14.7 dropped to 0.14.3). Removed numbers stay retired, survivors keep their historical numbers, and gaps in the sequence are expected.
 - **Current version:** whatever the ledger's top entry says, always read it from there. Do not restate the number in this file: an earlier revision hardcoded `0.10.0` here and drifted. Versions before v0.10.0 in the ledger are reconstructed milestones; strict per-release semver applies from v0.10.0 forward.
-- **Bump rules (pre-1.0 semver):** patch (`0.10.x`) = fixes/polish; minor (`0.x.0`) = new user-facing feature(s). **`v1.0.0` is reserved for AI activation** — the moment Chappi + the rollout planner + the status generator are switched on for users.
-- **`v1.0.0` note:** at 1.0, "breaking change → major" semver begins in earnest; until then the middle number is the feature counter.
+- **`v1.0.0` SHIPPED 2026-08-24 (founder call).** It was reserved for AI activation, and the founder called that met once UrgAns was running on a real tool-calling model in production (RodiumAi, `openai/gpt-4o-mini` — see the AI integration section). Note the planner and the status generator are still behind their own flags, so "AI activation" was judged on the assistant, not on all three surfaces; if either flag is flipped later it is an ordinary minor bump, not a second 1.0.
+- **Bump rules (from 1.0 on):** patch (`1.0.x`) = fixes/polish; minor (`1.x.0`) = new user-facing feature(s); major = a breaking change. Before 1.0 the middle number was the feature counter and the same rules applied one place to the right.
 
 ### Release procedure (how to ship a version)
 
 When shipping a **user-facing app change** (a new feature, visible behavior change, or bug fix in `apps/web` that a user of the product would notice):
 
-1. Add a release entry at the **top** of `changelog` in `packages/changelog/src/index.ts`: `{ version, date, highlights }`. Bump `version` per the rules above; `date` is a display string (e.g. `"July 13, 2026"`); `highlights` are plain-English, benefit-framed, no jargon/file names — match the existing voice. Batch same-day changes into one entry rather than minting a version per commit.
+1. Add a release entry at the **top** of `changelog` in `packages/changelog/src/index.ts`: `{ version, date, highlights }`. Bump `version` per the rules above; `date` is a display string (e.g. `"July 13, 2026"`). Batch same-day changes into one entry rather than minting a version per commit.
+
+   **Voice rules for `highlights` (founder call, 2026-08-24 — the v0.61.0 entry was rejected as "too bogus and technical" and rewritten):**
+   - **A fifth grader has to understand it.** Short everyday words. If a sentence needs a second read, rewrite it.
+   - **Straight to the point.** One or two short sentences per highlight, and few highlights. Do not explain the mechanism, the trade-off, or the reasoning — say what the user can now do. The pre-2026-08-24 entries are the wordy house style this rule replaces; leave them as the historical record and do not copy their tone.
+   - **Say "you", not "users" or "your team can now".** No jargon, no file names, no flag names, no feature-branding.
+   - **NEVER put a marketing-site (`apps/homepage`) change in here.** This is the in-app announcement, and it covers the product app only. The app-only scope rule under Versioning already said so and it was broken anyway on v0.61.0 (a pricing-page bullet), so treat this as the second, louder statement of the same rule: if the change is on urganize.app rather than app.urganize.app, it does not go in the ledger at all.
 2. Set every `package.json` `version` (root + all workspaces) to the new number.
 3. That's the whole ceremony — no git tag, no separate CHANGELOG.md. Production still deploys continuously from `main`; the ledger renders publicly at `/changelog` with a "current version" badge.
 
