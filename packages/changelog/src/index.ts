@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.1.0",
+    date: "August 24, 2026",
+    highlights: [
+      "You can now pick your plan in the app. Manager, Label or Group, paid monthly or once a year.",
+      "Every plan says plainly what it covers: how many people can be on your team, how many releases you can run at once, and how much UrgAns you get.",
+      "Bigger setups are priced per deal. If Group fits you, there is a button to talk to us instead of paying online.",
+    ],
+  },
+  {
     version: "1.0.0",
     date: "August 24, 2026",
     highlights: [

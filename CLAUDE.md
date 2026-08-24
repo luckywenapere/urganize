@@ -1932,7 +1932,7 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-24 (**Urganize is v1.0.0** — the founder called AI activation met now that UrgAns runs on a real tool-calling model in production, so the version reserved for it has shipped and every `package.json` moved to 1.0.0. The v0.61.0 changelog entry was rewritten in the same pass after being rejected as "too bogus and technical", and it carried a pricing-page bullet that the app-only scope rule already forbade — so the Release procedure now carries explicit **voice rules**: fifth-grade readable, one or two short sentences per highlight, say "you", and never a marketing-site change. Previously: **logo and photo uploads: one workspace resolver, their
+*Last updated: 2026-08-24 (**pricing v2 is LIVE and Urganize is v1.1.0** — the founder applied both migrations, minted Manager's Paystack Plans and switched `NEXT_PUBLIC_FEATURE_PRICING_V2` on, so the three tiers, their caps, plan changes and read-only-on-payment-failure are all real for users; the ledger entry landed at the flip, per the EPK precedent, announcing the in-app plan picker. The sales-led tier is now called **Group**, not Enterprise — the display name only, since the `enterprise` id is stored in `subscriptions.plan`; a mutation-tested guard pins that split. Nothing in pricing v2 has been exercised against live traffic or real Paystack, and this sandbox cannot reach either urganize domain (the proxy answers 403 to CONNECT), so that gap stands. Previously: **Urganize is v1.0.0** — the founder called AI activation met now that UrgAns runs on a real tool-calling model in production, so the version reserved for it has shipped and every `package.json` moved to 1.0.0. The v0.61.0 changelog entry was rewritten in the same pass after being rejected as "too bogus and technical", and it carried a pricing-page bullet that the app-only scope rule already forbade — so the Release procedure now carries explicit **voice rules**: fifth-grade readable, one or two short sentences per highlight, say "you", and never a marketing-site change. Previously: **logo and photo uploads: one workspace resolver, their
 own size limits, and failures that report themselves** — see "Logo and photo
 uploads" above. The curator came back with desktop plus "if I try to upload profile
 or logo it doesn't and the page crashes", which cannot be chased with devtools on a
@@ -3865,7 +3865,34 @@ plus unit tests. Nothing has run against real Paystack. Worth one pass once
 Manager's Plans exist: open the wall, switch to Monthly, pick Manager, and
 confirm Paystack quotes ₦35,000.
 
-### What is still needed before the flag goes on
+### Activated 2026-08-24 (founder) — what this checklist required
+
+**`NEXT_PUBLIC_FEATURE_PRICING_V2=true` is live on the `Web` project.** The
+founder confirmed both migrations applied, Manager's two Paystack Plans minted
+and `PAYSTACK_PLAN_MANAGER_{MONTHLY,ANNUAL}_NGN` set, with
+`PAYSTACK_PLAN_{MONTHLY,ANNUAL}_NGN` left pointing at the Plans Label reuses.
+The ledger entry landed as **v1.1.0** — announcing the in-app plan picker,
+which is the half a user actually notices (the public table has been live and
+unconditional since 2026-08-24 and, being `apps/homepage`, never earns an
+entry).
+
+**One deploy-order detail worth keeping.** `NEXT_PUBLIC_*` is inlined at build
+time, so setting the variable does nothing until a deploy rebuilds `apps/web`.
+The commit that did that here was the unrelated Enterprise→Group rename, not a
+deliberate flip — so the flag may have sat set-but-inert for a stretch. On any
+future flag flip, run `npx turbo-ignore @urganize/web --fallback=<the commit
+Vercel last deployed for that project>` and confirm it answers "This commit
+affects @urganize/web" before believing the flip took.
+
+**NOT verified, and it is the whole risk surface:** nothing here has been
+exercised against live traffic or real Paystack. No tier checkout has been
+charged, no proration taken, no cap has refused anyone, and no team has gone
+read-only. This sandbox cannot reach `app.urganize.app` — the agent proxy
+answers 403 to CONNECT for both urganize domains — so every claim rests on unit
+tests and both-flag-state builds. Worth one real pass: buy Manager monthly and
+confirm Paystack quotes ₦35,000, then check the seat cap refuses a fifth invite.
+
+### The original checklist (kept for the record)
 
 1. Apply `20260823100000_pricing_tiers.sql` and
    `20260824100000_subscriptions_billing_interval.sql`.
