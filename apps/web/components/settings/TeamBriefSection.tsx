@@ -138,7 +138,7 @@ export function TeamBriefSection() {
       <Heading />
       <p className="mt-2 max-w-prose text-sm text-content-secondary">
         {canEdit
-          ? 'Tell UrgAns about your team once, and it stops asking. Anyone here can fill this in, and everyone gets the benefit.'
+          ? 'Tell UrgAns about your team once, and it stops asking. None of this shows up in your Catalog — it only gives UrgAns a head start. Anyone here can fill this in, and everyone gets the benefit.'
           : 'Your team lead keeps this up to date. UrgAns reads it on every question you ask.'}
       </p>
 
