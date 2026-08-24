@@ -20,6 +20,7 @@ import {
   ThumbsUp,
   type LucideIcon,
 } from 'lucide-react';
+import { TeamBriefNudge } from './TeamBriefNudge';
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
 import { ChappiSongUploadCard } from '@/components/chappi/ChappiSongUploadCard';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
@@ -772,7 +773,15 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       </div>
 
       <div className="mt-3 shrink-0">
-        <div className={`mx-auto w-full ${isPanel ? '' : 'max-w-[46rem] px-1'}`}>{inputForm}</div>
+        <div className={`mx-auto w-full ${isPanel ? '' : 'max-w-[46rem] px-1'}`}>
+          {/* Phase 3 nudge: only once UrgAns has actually answered ("when
+              UrgAns answers in a team with an empty brief", per the spec) —
+              never on the empty landing, never mid-question. Above the
+              composer so it is visible without scrolling; the component
+              itself decides whether it has anything to say. */}
+          {messages.some((message) => message.role === 'assistant') ? <TeamBriefNudge /> : null}
+          {inputForm}
+        </div>
       </div>
     </div>
   );

@@ -102,6 +102,13 @@ export type TeamBrief = {
   canEdit: boolean;
 };
 
+/** True when nothing has been written into any section — the state the
+ *  Phase 3 nudge fires on. Whitespace-only content counts as empty, matching
+ *  what the prompt injection would do with it (omit it). */
+export function isTeamBriefEmpty(entries: TeamBriefEntry[]): boolean {
+  return entries.every((entry) => !normalizeBriefContent(entry.content));
+}
+
 export function isTeamBriefSection(value: unknown): value is TeamBriefSection {
   return TEAM_BRIEF_SECTIONS.includes(value as TeamBriefSection);
 }

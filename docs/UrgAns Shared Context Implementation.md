@@ -220,6 +220,30 @@ When UrgAns answers in a workspace with an empty brief, show a small dismissible
 
 ---
 
+### Phase 3 as built (2026-08-24)
+
+The empty-state half shipped inside Phase 2 (question placeholders, genuinely
+empty start); Phase 3 added the framing line to the editor's lead-in and built
+the nudge.
+
+**The nudge counts per SESSION, not per answer.** "Show it a few times" would
+otherwise burn its whole budget on three replies in one conversation. One
+browser session = one show, however many times the dock and rail remount
+(sessionStorage marker); the cap is 3 sessions, dismissal is immediate and
+permanent, and blocked storage degrades toward showing LESS, never more.
+
+**The emptiness check is a client-side GET of `/api/workspace/brief`, not a
+field on the agent response** — the agent route has three response shapes and
+the nudge must work in deterministic mode too, since a team with no model
+configured is exactly a team that has not set anything up yet. The answer is
+cached per session; no fetch happens at all once capped or dismissed. A 404
+(feature off server-side, or no team) means no nudge — pointing someone at an
+editor that will not render is worse than silence.
+
+**It renders only once an assistant reply exists in the transcript** ("when
+UrgAns answers", per this phase), above the composer — never on the empty
+landing.
+
 ## Phase 4 — Attribution
 
 When an answer was materially shaped by the brief, show an expandable marker listing which sections were used.
