@@ -107,6 +107,29 @@ Two vocabularies exist. `workspace_members.role` is `owner|admin|member|guest` �
 
 Use `profiles.role`. UrgAns needs to know it is talking to an A&R rather than an admin; permission level tells it nothing useful about how to answer. Include `workspace_members.role` only where it changes what UrgAns should suggest — for example, not proposing an action a `guest` cannot take.
 
+### As built (2026-08-24)
+
+Selection and ORDER were separated, which the spec did not distinguish.
+Selection degrades by recency, as asked. The printed order stays chronological:
+ranking the visible list by recency would make "what is coming up" harder to
+read off, and the ordering is not what the cap is for.
+
+"Recently touched" is the later of the release's own `updatedAt` and the newest
+`updatedAt` among its activities. A rollout in full swing is one whose
+ACTIVITIES keep changing while the release row sits still, so ranking on the
+release row alone would drop exactly the release being worked on today.
+
+`profiles.role` is not on `WorkspaceMember` and `loadProfilesByIds` selects
+`id,name,email`. Widening that helper — used by the member list and assignee
+resolution — to serve the prompt would be the unrelated refactor the working
+rules forbid, so the snapshot has its own small read in
+`lib/chappi/workspace-summary.ts`.
+
+`workspace_members.role` is surfaced for `guest` only, per the rule above: it is
+the one value that changes what UrgAns should propose, because guests are
+read-only. Invited-but-not-joined members are flagged too — they cannot be
+assigned work, and proposing it would fail.
+
 ### Budget
 
 There is no token budget today, so do not invent one in this phase. But note what the audit found: fixed overhead is ~7,400 tokens per request, of which **~5,200 is the 47 tool schemas** — roughly 3.5× the system prompt. Capping the prompt string while ignoring tool schemas optimises the smaller half.
