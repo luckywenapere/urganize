@@ -15,9 +15,10 @@ import { INACTIVE_RELEASE_STATUSES } from './release-activity';
 // not enforce". Refusing to let someone create a release because a count query
 // blipped is a far worse failure than briefly allowing a fourth.
 //
-// Inert today for the same structural reason seats are: nothing writes
-// subscriptions.plan = 'manager', so every team resolves to `label`, which has
-// no release ceiling.
+// LIVE since 2026-08-24, for the same reason seats are: pricing v2 went on in
+// production and Manager is purchasable, so a team on it is capped at three
+// active releases. Every pre-tier plan id, plus trials, comps and `founding`
+// deals, still resolves to the uncapped tier — see entitlements.test.ts.
 
 const ALLOWED: LimitVerdict = { allowed: true, limit: null, current: 0, remaining: null };
 

@@ -64,12 +64,17 @@ export async function countTeamSeats(
  *     allowing one seat too many;
  *   - an unresolvable tier does the same, via getWorkspaceTier returning null.
  *
- * It is also INERT today, structurally rather than by a flag. Nothing in the
- * product writes `subscriptions.plan = 'manager'`: checkout validates against
- * the legacy plan ids and ADMIN_ASSIGNABLE_PLANS does not include it. So every
- * team resolves to `label`, which has no seat ceiling, until pricing v2 puts
- * Manager into checkout. A second flag check here would add a way for that to
- * be wrong without adding any safety.
+ * LIVE since 2026-08-24. This paragraph used to say the check was inert
+ * because nothing could write `subscriptions.plan = 'manager'`; switching
+ * NEXT_PUBLIC_FEATURE_PRICING_V2 on made Manager purchasable, so a team that
+ * buys it is genuinely capped at four seats now. There is still deliberately no
+ * flag check here: reachability is decided at checkout, and a second gate would
+ * add a way for the two to disagree without adding any safety.
+ *
+ * Who this can and cannot bite: only a team whose OWNER holds a paid `manager`
+ * subscription. A trial, a comped team, a grandfathered `founding` deal and
+ * every pre-tier plan id all resolve to the uncapped tier, so the flip capped
+ * no existing customer — `entitlements.test.ts` asserts exactly that.
  */
 export async function checkSeatAllowance(
   client: SupabaseClient,

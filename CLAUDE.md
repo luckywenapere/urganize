@@ -2557,7 +2557,20 @@ failure and every caller treats null as "do not enforce": turning a transient
 database blip into a team that cannot grow is a far worse failure than briefly
 allowing one seat too many. Unit-tested, including the throw path.
 
-**Why no feature flag: enforcement is INERT today, structurally.** Nothing in
+**LIVE since 2026-08-24, and the tripwire below did NOT fire.** Pricing v2 went
+on in production, so a team that buys Manager is genuinely capped at four seats,
+three active releases and 150 assistant actions. The guard written to announce
+that moment watched `BILLING_PLAN_ORDER` and `ADMIN_ASSIGNABLE_PLANS`, and
+`manager` never entered either — it became purchasable through a THIRD path,
+`resolveCheckoutPurchase`'s `pricingV2 && isSelfServeTier(plan)` branch. **A test
+pointed at constant arrays cannot see a new branch.** It is now pointed at the
+checkout decision itself and mutation-tested. Two docstrings that still claimed
+inertness (`lib/seats-server.ts`, `lib/release-cap-server.ts`) were corrected at
+the same time. The flip capped no existing customer: every pre-tier plan id, plus
+trials, comps and `founding` deals, resolves to the uncapped tier, which is now
+asserted rather than reasoned about. The original argument follows.
+
+**Why no feature flag: enforcement WAS inert, structurally.** Nothing in
 the product can write `subscriptions.plan = 'manager'` — checkout validates
 against the legacy plan ids and `ADMIN_ASSIGNABLE_PLANS` does not include it — so
 every team resolves to `label` and no ceiling exists to hit.

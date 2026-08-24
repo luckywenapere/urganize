@@ -9,6 +9,7 @@ import {
   tierHighlights,
 } from '@urganize/pricing';
 import { ADMIN_ASSIGNABLE_PLANS } from './admin-teams';
+import { resolveCheckoutPurchase } from './billing-plans';
 import type { PricingTierId } from '@urganize/pricing';
 import {
   ENTITLEMENTS,
@@ -419,26 +420,66 @@ describe('isApproachingLimit', () => {
   });
 });
 
-// ── Enforcement is inert today, and that is what makes it safe to merge ──────
+// ── The caps are LIVE, and the guard that has to survive that ────────────────
 //
-// Nothing in the product can currently put a team on a capped tier: checkout
-// validates against the legacy plan ids, and ADMIN_ASSIGNABLE_PLANS has no
-// 'manager' in it. So every plan the system is capable of WRITING must resolve
-// to an uncapped tier. If someone later adds 'manager' to a write path, this
-// test failing is the reminder that caps just went live for real teams.
-describe('no plan the product can write today lands on a capped tier', () => {
-  // Every value any code path can put in subscriptions.plan right now:
-  // checkout's isBillingPlanId set, the admin-assignable set, and the legacy
-  // values the CHECK constraint still permits.
-  const WRITABLE_PLANS = [
+// This block used to assert the opposite: that enforcement was inert because
+// nothing could write `subscriptions.plan = 'manager'`. That stopped being true
+// on 2026-08-24 when NEXT_PUBLIC_FEATURE_PRICING_V2 was switched on in
+// production — and the old tripwire DID NOT FIRE, which is the lesson worth
+// keeping. It watched BILLING_PLAN_ORDER and ADMIN_ASSIGNABLE_PLANS, and
+// `manager` never entered either: it became purchasable through a THIRD path,
+// `resolveCheckoutPurchase`'s `pricingV2 && isSelfServeTier(plan)` branch. A
+// test pointed at two constant arrays cannot see a new branch, so this one is
+// pointed at the checkout decision itself.
+describe('the seat cap is reachable, and only for a team that bought Manager', () => {
+  // The reachability half. Env-independent on purpose: getTierPaystackPlanCode
+  // reads a PAYSTACK_PLAN_* var that no test environment sets, so a configured
+  // checkout would fail here for a reason that has nothing to do with the
+  // question. What matters is whether `manager` is RECOGNISED as purchasable,
+  // which is exactly the rejection this asserts on.
+  const rejectedAsUnknownPlan = (pricingV2: boolean): boolean => {
+    const result = resolveCheckoutPurchase({
+      plan: 'manager',
+      currency: 'NGN',
+      interval: 'monthly',
+      pricingV2,
+    });
+    return !result.ok && /plan must be/i.test(result.error);
+  };
+
+  it('is a plan checkout will sell once pricing v2 is on', () => {
+    expect(rejectedAsUnknownPlan(true)).toBe(false);
+  });
+
+  it('is not a plan checkout will sell with pricing v2 off', () => {
+    expect(rejectedAsUnknownPlan(false)).toBe(true);
+  });
+
+  it('caps a paying Manager team at its fourth seat, so the fifth invite is refused', () => {
+    const tier = resolveTeamTier({ state: 'paid', ownerPlan: 'manager' });
+    expect(tier).toBe('manager');
+    // Three seats used, inviting a fourth: fine. Four used, inviting a fifth:
+    // refused. `current` is the count BEFORE the new seat, and both invite
+    // routes call it that way.
+    expect(checkLimit({ tier, key: 'seats', current: 3 }).allowed).toBe(true);
+    const blocked = checkLimit({ tier, key: 'seats', current: 4 });
+    expect(blocked.allowed).toBe(false);
+    if (blocked.allowed) throw new Error('expected blocked');
+    expect(blocked.message).toContain('4');
+  });
+
+  // The half that protects everyone who already pays us. Switching the flag on
+  // must not newly cap a single existing customer, and this is why it did not:
+  // every plan value that existed before tiers resolves to the uncapped tier.
+  const LEGACY_WRITABLE_PLANS = [
     ...BILLING_PLAN_ORDER,
     ...ADMIN_ASSIGNABLE_PLANS,
     'yearly',
     'access',
   ];
 
-  it('resolves every one of them to an uncapped tier', () => {
-    for (const plan of WRITABLE_PLANS) {
+  it('leaves every pre-tier plan uncapped, so no existing team was capped by the flip', () => {
+    for (const plan of LEGACY_WRITABLE_PLANS) {
       const tier = resolveTeamTier({ state: 'paid', ownerPlan: plan });
       const entitlements = resolveEntitlements(tier);
       expect(isUnlimited(entitlements.seats), `${plan} -> ${tier} seats`).toBe(true);
@@ -450,16 +491,17 @@ describe('no plan the product can write today lands on a capped tier', () => {
     }
   });
 
-  it('confirms manager is not admin-assignable, which is why the above holds', () => {
+  // Manager is still not something an admin can hand out by hand, so the only
+  // way onto a capped tier remains an actual purchase.
+  it('confirms manager is still not admin-assignable', () => {
     expect(ADMIN_ASSIGNABLE_PLANS).not.toContain('manager');
   });
 
-  // The corollary: once 'manager' IS writable, the cap bites. Proving that here
-  // means the enforcement path is tested before it is ever reachable.
-  it('does cap a team once it is actually on manager', () => {
-    const tier = resolveTeamTier({ state: 'paid', ownerPlan: 'manager' });
-    expect(tier).toBe('manager');
-    expect(checkLimit({ tier, key: 'seats', current: 4 }).allowed).toBe(false);
+  // A trial is full access by definition, so an evaluating team never meets the
+  // ceiling — even though its owner may already carry a manager plan row.
+  it('does not cap a team that is still trialling', () => {
+    const tier = resolveTeamTier({ state: 'trial', ownerPlan: 'manager' });
+    expect(isUnlimited(resolveEntitlements(tier).seats)).toBe(true);
   });
 });
 
