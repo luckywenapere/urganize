@@ -33,6 +33,9 @@ const ctx = {
   user: { id: 'user-1', email: 'manager@example.com' },
   adminClient: {} as never,
   workspaceIds: ['ws-1'],
+  releaseOwnerIds: ['user-1'],
+  artistScopeByOwnerId: {},
+  artistScopeByWorkspaceId: {},
   origin: 'https://app.test',
   authToken: 'jwt',
 } satisfies ChappiToolContext;

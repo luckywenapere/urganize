@@ -14,8 +14,31 @@ import type {
 export type ChappiToolContext = {
   user: { id: string; email?: string | null };
   adminClient: SupabaseClient;
-  /** Workspaces the caller can access (from loadWorkspaceAccessContext). */
+  /** Workspaces the caller can access (from loadWorkspaceAccessContext).
+   *  Tasks are scoped by this — `tasks.workspace_id` exists. */
   workspaceIds: string[];
+  /**
+   * Owners of every workspace the caller belongs to, always including the
+   * caller. RELEASES ARE SCOPED BY THIS, NOT BY workspaceIds: the `releases`
+   * table has no workspace_id, it has `owner_user_id`, so whole-workspace
+   * visibility is the union of those owners (founder decision, 2026-07-23).
+   * Normalized non-empty by resolveChappiContext.
+   */
+  releaseOwnerIds: string[];
+  /**
+   * Artist-scoped memberships, keyed by OWNER user id. An artist invited to a
+   * manager's team sees only that owner's releases whose `artist_id` matches.
+   *
+   * REQUIRED, and required on purpose: this map is the only thing standing
+   * between whole-workspace visibility and an artist reading a manager's whole
+   * roster. An optional field is one a caller forgets, and forgetting it here
+   * fails OPEN. Never resolve releases from releaseOwnerIds without it — use
+   * listVisibleReleases in ../release-scope.ts, which pairs them by
+   * construction.
+   */
+  artistScopeByOwnerId: Record<string, string>;
+  /** The same scopes keyed by workspace id, for task/board checks. */
+  artistScopeByWorkspaceId: Record<string, string>;
   /** Same-origin base for internal REST calls, e.g. "http://localhost:3000". */
   origin: string;
   /** The caller's bearer token, forwarded to the protected REST endpoints. */

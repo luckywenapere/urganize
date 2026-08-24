@@ -66,6 +66,29 @@ Case 4 is the one that matters. Write it before the fix, watch it fail correctly
 
 All five pass, snapshot and `list_releases` agree for every member type, no other behaviour changed.
 
+### As built (2026-08-24) — one deviation, recorded
+
+**There were five call sites, not two.** The audit found the snapshot and
+`list_releases`; `grep -rn "getReleasesForUser(ctx.user.id)"` finds three more:
+`get_release` and `get_dashboard` in `tool-families/core.ts`, and
+`delete_release`'s confirmation builder in `tool-families/releases.ts`.
+`get_release`'s was the worst of them — it is that tool's ownership check, so a
+teammate could not open ANY team release through the assistant.
+
+**Four were widened. `delete_release` was deliberately left owner-only.**
+`DELETE /api/releases/[releaseId]` runs `ensureReleaseOwnership` against the
+caller alone — the release routes widened GET to whole-workspace visibility and
+kept PATCH/DELETE owner-only on purpose. Widening the confirmation builder to
+match the others would show a teammate a card reading "Delete 'Midnight EP' and
+its 42 activities", then 403 the moment they approved it. That is worse than the
+honest refusal they get today. Making it consistent is a change to the ROUTE
+first, and a separate decision.
+
+`lib/chappi/release-scope.ts` exports both resolutions —
+`listVisibleReleases` (team) and `listOwnedReleases` (owner-only) — so which one
+a surface uses is a visible choice rather than an accident, and a test pins
+`delete_release` to the narrow one.
+
 ---
 
 ## Phase 1 — Workspace summary content
