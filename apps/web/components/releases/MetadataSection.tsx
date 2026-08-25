@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   Check,
+  ChevronDown,
   ClipboardList,
   Copy,
   ExternalLink,
@@ -12,6 +13,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
+import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { MetadataFieldsSkeleton, ShareLinkCardSkeleton } from '@/components/loading/ReleaseSectionSkeletons';
 import type { ReleaseMetadataSnapshot } from '@/lib/release-ops';
 import {
@@ -24,9 +26,9 @@ import { useSceneDataStore, type MetadataScenePayload } from '@/stores/useSceneD
 
 // The metadata hub (URG-108). Self-contained (the EpkSection pattern): takes
 // releaseId, fetches its own data, renders its own loading/empty/error
-// states. Hosted by ReleaseSceneOverlay as an overlay window over the
-// workspace (2026-08-04 — it had its own /dashboard/releases/[releaseId]/metadata
-// page until then; that route is a redirect stub now). Three sections: editable
+// states. Hosted by ReleaseScenePanel as an inline panel over the workspace
+// (2026-08-04 — it had its own /dashboard/releases/[releaseId]/metadata page
+// until then; that route is a redirect stub now). Three sections: editable
 // release-level distribution fields, the collaborator credits share link, and
 // the submissions collected through it.
 //
@@ -38,6 +40,30 @@ import { useSceneDataStore, type MetadataScenePayload } from '@/stores/useSceneD
 // here: name the thing in words a beginner knows before naming it in industry
 // terms (ISRC gets a hint, not just a label), and say what is optional out
 // loud rather than leaving silence to imply "required".
+//
+// ROUND TWO (2026-08-25, founder feedback: the page is still "overloaded with
+// too much information for when a user just enters that section" — "bring down
+// the information so that even a 5th grader would understand what is going on
+// there and how to use it intuitively"). Round one fixed the COPY; entering the
+// scene still painted all three steps fully open at once — an intro line, three
+// headers, three helper paragraphs, all 8 fields with their hints, the explicit
+// checkbox, Save, the link card, and an empty-state line. So this pass changes
+// what renders on entry, not what it says: each step is now a collapsed card
+// (the TasksPanel bucket pattern — collapsed-by-default `<button aria-expanded
+// aria-controls>` with a rotating ChevronDown), carrying a plain title and a
+// live one-line status chip. Three decisions worth keeping if this gets touched
+// again:
+//   - All three cards start CLOSED on every entry, with no "smart" auto-open of
+//     the next incomplete step. Auto-opening would re-dump the 8-field grid on
+//     exactly the first-time user this complaint is about.
+//   - The open/closed state is session-only `useState`, NOT persisted to
+//     localStorage like the task buckets are. Buckets are a daily working view
+//     a user curates; this scene is visited occasionally and the complaint was
+//     about *entry*, so every entry has to start calm.
+//   - A load error hides all three cards behind ONE error box (there used to be
+//     two identical Retry boxes, one per step, plus a third step whose
+//     empty-state copy quietly lied during an error) — the whole scene is one
+//     fetch, so one error state covers it.
 //
 // NEXT_PUBLIC_ prefix so the value is inlined at build time for this client
 // component. The API routes guard the same flag server-side (404 when off).
@@ -121,6 +147,15 @@ function splitTotalTone(total: number): string {
   return Math.round(total * 100) / 100 === 100 ? 'text-content-secondary' : 'text-status-warning';
 }
 
+/** Whether a split total needs a flag on the collapsed Step 3 chip — reuses
+ * splitTotalTone's own rounding so the chip and the in-card banner can never
+ * disagree about what "off" means. */
+function splitTotalIsOff(total: number): boolean {
+  return splitTotalTone(total) === 'text-status-warning';
+}
+
+type StepKey = 'details' | 'credits' | 'answers';
+
 type MetadataSectionProps = {
   releaseId: string;
   onToast?: (message: string, tone: 'success' | 'error' | 'warning') => void;
@@ -141,6 +176,20 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
 
   const link = data?.link ?? null;
   const submissions = useMemo(() => data?.submissions ?? [], [data]);
+
+  // --- Collapsed-card state ---------------------------------------------------
+  // Session-only and all-closed on every mount — see the ROUND TWO doc comment
+  // above for why this deliberately does not persist like the task buckets do.
+  const [openSteps, setOpenSteps] = useState<Record<StepKey, boolean>>({
+    details: false,
+    credits: false,
+    answers: false,
+  });
+  const toggleStep = (key: StepKey) =>
+    setOpenSteps((current) => ({ ...current, [key]: !current[key] }));
+  const detailsBodyId = useId();
+  const creditsBodyId = useId();
+  const answersBodyId = useId();
 
   // --- Release-level fields -------------------------------------------------
   const [form, setForm] = useState<MetadataFormState>(EMPTY_FORM);
@@ -396,6 +445,9 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
   );
   const hasAnySongwriterSplit = submissions.some((item) => item.songwriterSplit !== null);
   const hasAnyMasterSplit = submissions.some((item) => item.masterSplit !== null);
+  const splitsNeedAttention =
+    (hasAnySongwriterSplit && splitTotalIsOff(totalSongwriterSplit)) ||
+    (hasAnyMasterSplit && splitTotalIsOff(totalMasterSplit));
 
   // "N of 8 filled in" — the explicit checkbox is a yes/no, not a blank to
   // fill, so it stays out of the count.
@@ -409,307 +461,386 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
 
   if (!METADATA_ENABLED) return null;
 
+  const answersChipLabel =
+    submissions.length > 0 ? `${submissions.length} answer${submissions.length === 1 ? '' : 's'}` : 'No answers yet';
+
   return (
-    <div className="mt-8 space-y-8">
-      {/* One plain sentence saying what this whole page is for, before the
-          three numbered steps below (founder feedback, 2026-08-13: the page
-          carried too much cognitive load — jargon copy, no ordering, nothing
-          saying fields are optional). */}
+    <div className="mt-8 space-y-4">
+      {/* One plain sentence saying what this whole page is for AND how to use
+          it — the interaction itself ("tap a step") is part of the 5th-grader
+          bar, not just the vocabulary (founder feedback, round two, 2026-08-25). */}
       <p className="text-sm leading-relaxed text-content-secondary">
-        Everything a music store needs to list this song correctly — plus one link that collects
-        your collaborators&rsquo; details for you. Three steps, all optional, in any order.
+        Everything music stores need for this song, in three steps. Tap a step to open it —
+        everything is optional.
       </p>
 
-      {/* Step 1: release details */}
-      <section>
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-            Step 1 · The song&rsquo;s details
-          </h2>
-          {!isLoading && !loadError ? (
-            <span
-              className={`text-[11px] ${filledFieldCount === 8 ? 'text-brand' : 'text-content-tertiary'}`}
-            >
-              {filledFieldCount} of 8 filled in
-            </span>
-          ) : null}
+      {loadError ? (
+        // One error box for the whole scene, not one per step: it is a single
+        // fetch, and letting each step's body render its own copy of the form
+        // risks saving blanks over real data mid-error.
+        <div className="flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-status-error">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => void reloadScene()}
+            className="inline-flex h-9 shrink-0 items-center self-start border border-stroke-default bg-bg-elevated px-4 text-sm font-semibold text-content-primary hover:bg-bg-hover sm:self-auto"
+          >
+            Retry
+          </button>
         </div>
-        <p className="mt-1 text-sm text-content-secondary">
-          Music stores like Spotify and Apple ask for these when a song goes out. Every field is
-          optional — fill in what you know now and come back for the rest.
-        </p>
-
-        {isLoading ? (
-          <MetadataFieldsSkeleton />
-        ) : loadError ? (
-          <div className="mt-4 flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-status-error">{loadError}</p>
+      ) : (
+        <div className="space-y-3">
+          {/* Step 1: release details */}
+          <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
             <button
               type="button"
-              onClick={() => void reloadScene()}
-              className="inline-flex h-9 shrink-0 items-center self-start border border-stroke-default bg-bg-elevated px-4 text-sm font-semibold text-content-primary hover:bg-bg-hover sm:self-auto"
+              onClick={() => toggleStep('details')}
+              aria-expanded={openSteps.details}
+              aria-controls={detailsBodyId}
+              className={`motion-focus flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover ${
+                openSteps.details ? 'border-b border-stroke-subtle' : ''
+              }`}
             >
-              Retry
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+                Step 1 · The song&rsquo;s details
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                {isLoading ? (
+                  <SkeletonBlock className="h-3 w-20" />
+                ) : (
+                  <span className={`text-[11px] ${filledFieldCount === 8 ? 'text-brand' : 'text-content-tertiary'}`}>
+                    {filledFieldCount} of 8 filled in
+                  </span>
+                )}
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${
+                    openSteps.details ? '' : '-rotate-90'
+                  }`}
+                  aria-hidden="true"
+                />
+              </span>
             </button>
-          </div>
-        ) : (
-          // Ordered easiest-first on purpose: the form opens on words a
-          // beginner already knows (genre, language) rather than on ISRC/UPC,
-          // which read as a wall of acronyms and used to be the first thing
-          // anyone saw.
-          <div className="mt-4 grid grid-cols-1 gap-4 border border-stroke-default bg-bg-surface p-4 sm:grid-cols-2">
-            <Field
-              label="Genre"
-              hint="The main style of the music, like Afrobeats or Hip-hop."
-              value={form.genre}
-              onChange={(v) => editForm((f) => ({ ...f, genre: v }))}
-              labelAction={
-                GENRE_PREDICTION_ENABLED ? (
-                  <>
-                    <input
-                      ref={genreFileInputRef}
-                      type="file"
-                      accept={GENRE_PREDICTION_ACCEPT_ATTR}
-                      className="hidden"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        // Reset so picking the same file again still fires.
-                        event.target.value = '';
-                        if (file) void handlePredictGenre(file);
-                      }}
+            {openSteps.details ? (
+              <div id={detailsBodyId} className="p-4">
+                <p className="text-sm text-content-secondary">
+                  Music stores like Spotify and Apple ask for these when a song goes out. Every field
+                  is optional — fill in what you know now and come back for the rest.
+                </p>
+
+                {isLoading ? (
+                  <MetadataFieldsSkeleton />
+                ) : (
+                  // Ordered easiest-first on purpose: the form opens on words a
+                  // beginner already knows (genre, language) rather than on ISRC/UPC,
+                  // which read as a wall of acronyms and used to be the first thing
+                  // anyone saw.
+                  <div className="mt-4 grid grid-cols-1 gap-4 border border-stroke-default bg-bg-surface p-4 sm:grid-cols-2">
+                    <Field
+                      label="Genre"
+                      hint="The main style of the music, like Afrobeats or Hip-hop."
+                      value={form.genre}
+                      onChange={(v) => editForm((f) => ({ ...f, genre: v }))}
+                      labelAction={
+                        GENRE_PREDICTION_ENABLED ? (
+                          <>
+                            <input
+                              ref={genreFileInputRef}
+                              type="file"
+                              accept={GENRE_PREDICTION_ACCEPT_ATTR}
+                              className="hidden"
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                // Reset so picking the same file again still fires.
+                                event.target.value = '';
+                                if (file) void handlePredictGenre(file);
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => genreFileInputRef.current?.click()}
+                              disabled={isPredictingGenre || isSaving}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-60"
+                            >
+                              {isPredictingGenre ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Sparkles className="h-3 w-3" />
+                              )}
+                              {isPredictingGenre ? 'Predicting…' : 'Predict from audio'}
+                            </button>
+                          </>
+                        ) : undefined
+                      }
                     />
+                    <Field
+                      label="Subgenre"
+                      hint="A more specific style, like Amapiano or Drill. Leave blank if none fits."
+                      value={form.subgenre}
+                      onChange={(v) => editForm((f) => ({ ...f, subgenre: v }))}
+                    />
+                    <Field
+                      label="Language"
+                      hint="The language of the lyrics, like English or Yoruba."
+                      value={form.language}
+                      onChange={(v) => editForm((f) => ({ ...f, language: v }))}
+                    />
+                    <Field
+                      label="Label name"
+                      hint="The label putting this out. Use the artist's name if there's no label."
+                      value={form.labelName}
+                      onChange={(v) => editForm((f) => ({ ...f, labelName: v }))}
+                    />
+                    <Field
+                      label="ISRC"
+                      hint="The ID code for this one recording. Your distributor gives it to you — leave blank if you don't have it yet."
+                      value={form.isrc}
+                      onChange={(v) => editForm((f) => ({ ...f, isrc: v }))}
+                    />
+                    <Field
+                      label="UPC"
+                      hint="The barcode number for the whole release. Also from your distributor."
+                      value={form.upc}
+                      onChange={(v) => editForm((f) => ({ ...f, upc: v }))}
+                    />
+                    <Field
+                      label="℗ line (who owns the recording)"
+                      hint="The year, then whoever owns the recording."
+                      placeholder="℗ 2026 Some Label"
+                      value={form.pLine}
+                      onChange={(v) => editForm((f) => ({ ...f, pLine: v }))}
+                    />
+                    <Field
+                      label="© line (who owns the words and artwork)"
+                      hint="The year, then whoever owns the song itself."
+                      placeholder="© 2026 Some Label"
+                      value={form.cLine}
+                      onChange={(v) => editForm((f) => ({ ...f, cLine: v }))}
+                    />
+                    <label className="flex items-center gap-2 text-sm text-content-secondary sm:col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={form.explicit}
+                        onChange={(event) => editForm((f) => ({ ...f, explicit: event.target.checked }))}
+                        className="h-4 w-4 accent-brand"
+                      />
+                      This song has explicit content (swearing or adult themes)
+                    </label>
+                    <div className="sm:col-span-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleSaveMetadata()}
+                        disabled={isSaving}
+                        className="inline-flex h-9 items-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                        {isSaving ? 'Saving…' : 'Save details'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          {/* Step 2: credits share link */}
+          <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
+            <button
+              type="button"
+              onClick={() => toggleStep('credits')}
+              aria-expanded={openSteps.credits}
+              aria-controls={creditsBodyId}
+              className={`motion-focus flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover ${
+                openSteps.credits ? 'border-b border-stroke-subtle' : ''
+              }`}
+            >
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+                Step 2 · Collect everyone&rsquo;s credits
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                {isLoading ? (
+                  <SkeletonBlock className="h-3 w-16" />
+                ) : (
+                  <span className={`text-[11px] ${link ? 'text-brand' : 'text-content-tertiary'}`}>
+                    {link ? 'Link is live' : 'No link yet'}
+                  </span>
+                )}
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${
+                    openSteps.credits ? '' : '-rotate-90'
+                  }`}
+                  aria-hidden="true"
+                />
+              </span>
+            </button>
+            {openSteps.credits ? (
+              <div id={creditsBodyId} className="p-4">
+                <p className="text-sm text-content-secondary">
+                  Anyone who worked on this song — producers, writers, engineers — fills out one
+                  short form. Copy the link and send it to them on WhatsApp, text, or email. They
+                  don&rsquo;t need an account.
+                </p>
+
+                {isLoading ? (
+                  <ShareLinkCardSkeleton />
+                ) : !link ? (
+                  <div className="mt-4 border border-stroke-default bg-bg-surface p-6 text-center">
+                    <p className="text-sm text-content-secondary">
+                      One link works for everyone who worked on this song.
+                    </p>
                     <button
                       type="button"
-                      onClick={() => genreFileInputRef.current?.click()}
-                      disabled={isPredictingGenre || isSaving}
-                      className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-60"
+                      onClick={() => void handleCreateLink()}
+                      disabled={isMutatingLink}
+                      className="mt-3 inline-flex items-center gap-2 border border-brand/25 bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {isPredictingGenre ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
+                      {isMutatingLink ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Creating…
+                        </>
                       ) : (
-                        <Sparkles className="h-3 w-3" />
+                        <>
+                          <ClipboardList className="h-3.5 w-3.5" />
+                          Create the link
+                        </>
                       )}
-                      {isPredictingGenre ? 'Predicting…' : 'Predict from audio'}
                     </button>
-                  </>
-                ) : undefined
-              }
-            />
-            <Field
-              label="Subgenre"
-              hint="A more specific style, like Amapiano or Drill. Leave blank if none fits."
-              value={form.subgenre}
-              onChange={(v) => editForm((f) => ({ ...f, subgenre: v }))}
-            />
-            <Field
-              label="Language"
-              hint="The language of the lyrics, like English or Yoruba."
-              value={form.language}
-              onChange={(v) => editForm((f) => ({ ...f, language: v }))}
-            />
-            <Field
-              label="Label name"
-              hint="The label putting this out. Use the artist's name if there's no label."
-              value={form.labelName}
-              onChange={(v) => editForm((f) => ({ ...f, labelName: v }))}
-            />
-            <Field
-              label="ISRC"
-              hint="The ID code for this one recording. Your distributor gives it to you — leave blank if you don't have it yet."
-              value={form.isrc}
-              onChange={(v) => editForm((f) => ({ ...f, isrc: v }))}
-            />
-            <Field
-              label="UPC"
-              hint="The barcode number for the whole release. Also from your distributor."
-              value={form.upc}
-              onChange={(v) => editForm((f) => ({ ...f, upc: v }))}
-            />
-            <Field
-              label="℗ line (who owns the recording)"
-              hint="The year, then whoever owns the recording."
-              placeholder="℗ 2026 Some Label"
-              value={form.pLine}
-              onChange={(v) => editForm((f) => ({ ...f, pLine: v }))}
-            />
-            <Field
-              label="© line (who owns the words and artwork)"
-              hint="The year, then whoever owns the song itself."
-              placeholder="© 2026 Some Label"
-              value={form.cLine}
-              onChange={(v) => editForm((f) => ({ ...f, cLine: v }))}
-            />
-            <label className="flex items-center gap-2 text-sm text-content-secondary sm:col-span-2">
-              <input
-                type="checkbox"
-                checked={form.explicit}
-                onChange={(event) => editForm((f) => ({ ...f, explicit: event.target.checked }))}
-                className="h-4 w-4 accent-brand"
-              />
-              This song has explicit content (swearing or adult themes)
-            </label>
-            <div className="sm:col-span-2">
-              <button
-                type="button"
-                onClick={() => void handleSaveMetadata()}
-                disabled={isSaving}
-                className="inline-flex h-9 items-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                {isSaving ? 'Saving…' : 'Save details'}
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Step 2: credits share link */}
-      <section>
-        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Step 2 · Collect everyone&rsquo;s credits
-        </h2>
-        <p className="mt-1 text-sm text-content-secondary">
-          Anyone who worked on this song — producers, writers, engineers — fills out one short form.
-          Copy the link and send it to them on WhatsApp, text, or email. They don&rsquo;t need an
-          account.
-        </p>
-
-        {isLoading ? (
-          <ShareLinkCardSkeleton />
-        ) : loadError ? (
-          <div className="mt-4 flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-status-error">{loadError}</p>
-            <button
-              type="button"
-              onClick={() => void reloadScene()}
-              className="inline-flex h-9 shrink-0 items-center self-start border border-stroke-default bg-bg-elevated px-4 text-sm font-semibold text-content-primary hover:bg-bg-hover sm:self-auto"
-            >
-              Retry
-            </button>
-          </div>
-        ) : !link ? (
-          <div className="mt-4 border border-stroke-default bg-bg-surface p-6 text-center">
-            <p className="text-sm text-content-secondary">
-              One link works for everyone who worked on this song.
-            </p>
-            <button
-              type="button"
-              onClick={() => void handleCreateLink()}
-              disabled={isMutatingLink}
-              className="mt-3 inline-flex items-center gap-2 border border-brand/25 bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isMutatingLink ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Creating…
-                </>
-              ) : (
-                <>
-                  <ClipboardList className="h-3.5 w-3.5" />
-                  Create the link
-                </>
-              )}
-            </button>
-          </div>
-        ) : (
-          <div className="mt-4 border border-stroke-default bg-bg-surface p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <p className="min-w-0 flex-1 truncate font-mono text-xs text-content-secondary" title={shareUrl}>
-                {shareUrl}
-              </p>
-              <div className="flex flex-wrap gap-2 sm:shrink-0">
-                <button
-                  type="button"
-                  onClick={() => void handleCopy()}
-                  className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="h-3.5 w-3.5 text-brand" />
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3.5 w-3.5" />
-                      Copy link
-                    </>
-                  )}
-                </button>
-                <a
-                  href={shareUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  Open form
-                </a>
-                <button
-                  type="button"
-                  onClick={() => void handleRegenerateLink()}
-                  disabled={isMutatingLink}
-                  className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-status-warning disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isMutatingLink ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  )}
-                  Regenerate
-                </button>
-              </div>
-            </div>
-            <p className="mt-3 text-xs text-content-tertiary">
-              Anyone with this link can fill out the form — no account needed. Need a fresh link?
-              Tap Regenerate: the old one stops working right away, and answers you already
-              collected are safe.
-            </p>
-          </div>
-        )}
-      </section>
-
-      {/* Step 3: submissions */}
-      <section>
-        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Step 3 · Their answers land here {submissions.length > 0 ? `(${submissions.length})` : ''}
-        </h2>
-
-        {submissions.length === 0 ? (
-          <p className="mt-4 text-sm text-content-secondary">
-            {link
-              ? 'Nothing yet. Once you share the link, each person’s answer shows up here on its own.'
-              : 'Create the link in step 2 first, then share it. Answers show up here as they come in.'}
-          </p>
-        ) : (
-          <>
-            {(hasAnySongwriterSplit || hasAnyMasterSplit) && (
-              <div className="mt-4 flex flex-col gap-2 border border-stroke-default bg-bg-surface p-4 text-sm sm:flex-row sm:items-center sm:gap-6">
-                {hasAnySongwriterSplit && (
-                  <p className={splitTotalTone(totalSongwriterSplit)}>
-                    {describeSplitTotal('Writing shares', totalSongwriterSplit)}
-                  </p>
-                )}
-                {hasAnyMasterSplit && (
-                  <p className={splitTotalTone(totalMasterSplit)}>
-                    {describeSplitTotal('Recording shares', totalMasterSplit)}
-                  </p>
+                  </div>
+                ) : (
+                  <div className="mt-4 border border-stroke-default bg-bg-surface p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <p className="min-w-0 flex-1 truncate font-mono text-xs text-content-secondary" title={shareUrl}>
+                        {shareUrl}
+                      </p>
+                      <div className="flex flex-wrap gap-2 sm:shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => void handleCopy()}
+                          className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
+                        >
+                          {copied ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-brand" />
+                              Copied
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5" />
+                              Copy link
+                            </>
+                          )}
+                        </button>
+                        <a
+                          href={shareUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Open form
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => void handleRegenerateLink()}
+                          disabled={isMutatingLink}
+                          className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-status-warning disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isMutatingLink ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          )}
+                          Regenerate
+                        </button>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-xs text-content-tertiary">
+                      Need a fresh link? Tap Regenerate: the old one stops working right away, and
+                      answers you already collected are safe.
+                    </p>
+                  </div>
                 )}
               </div>
-            )}
+            ) : null}
+          </div>
 
-            <div className="mt-4 space-y-3">
-              {submissions.map((submission) => (
-                <SubmissionCard
-                  key={submission.id}
-                  submission={submission}
-                  isDeleting={deletingId === submission.id}
-                  onDelete={() => void handleDeleteSubmission(submission.id, submission.legalName)}
+          {/* Step 3: submissions */}
+          <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
+            <button
+              type="button"
+              onClick={() => toggleStep('answers')}
+              aria-expanded={openSteps.answers}
+              aria-controls={answersBodyId}
+              className={`motion-focus flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover ${
+                openSteps.answers ? 'border-b border-stroke-subtle' : ''
+              }`}
+            >
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+                Step 3 · Their answers land here
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                {isLoading ? (
+                  <SkeletonBlock className="h-3 w-20" />
+                ) : (
+                  <span
+                    className={`text-[11px] ${
+                      submissions.length > 0 ? 'text-content-secondary' : 'text-content-tertiary'
+                    }`}
+                  >
+                    {answersChipLabel}
+                    {splitsNeedAttention ? <span className="text-status-warning"> · check the shares</span> : null}
+                  </span>
+                )}
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${
+                    openSteps.answers ? '' : '-rotate-90'
+                  }`}
+                  aria-hidden="true"
                 />
-              ))}
-            </div>
-          </>
-        )}
-      </section>
+              </span>
+            </button>
+            {openSteps.answers ? (
+              <div id={answersBodyId} className="p-4">
+                {submissions.length === 0 ? (
+                  <p className="text-sm text-content-secondary">
+                    {link
+                      ? 'Nothing yet. Once you share the link, each person’s answer shows up here on its own.'
+                      : 'Create the link in step 2 first, then share it. Answers show up here as they come in.'}
+                  </p>
+                ) : (
+                  <>
+                    {(hasAnySongwriterSplit || hasAnyMasterSplit) && (
+                      <div className="flex flex-col gap-2 border border-stroke-default bg-bg-surface p-4 text-sm sm:flex-row sm:items-center sm:gap-6">
+                        {hasAnySongwriterSplit && (
+                          <p className={splitTotalTone(totalSongwriterSplit)}>
+                            {describeSplitTotal('Writing shares', totalSongwriterSplit)}
+                          </p>
+                        )}
+                        {hasAnyMasterSplit && (
+                          <p className={splitTotalTone(totalMasterSplit)}>
+                            {describeSplitTotal('Recording shares', totalMasterSplit)}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div className={`space-y-3 ${hasAnySongwriterSplit || hasAnyMasterSplit ? 'mt-4' : ''}`}>
+                      {submissions.map((submission) => (
+                        <SubmissionCard
+                          key={submission.id}
+                          submission={submission}
+                          isDeleting={deletingId === submission.id}
+                          onDelete={() => void handleDeleteSubmission(submission.id, submission.legalName)}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
