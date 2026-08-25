@@ -15,15 +15,15 @@ export function WorkspaceShotSection() {
         containerClassName={wideContainerClass}
         className="py-[60px] lg:py-[80px]"
       >
-        {/* Proof numbers live here — the page's designated credibility
-            beat (screen three) — not in a separate hero strip; the page
-            was deliberately trimmed for overwhelm on 2026-08-13. Numbers
-            are founder-supplied (2026-08 brief): update or remove them the
-            moment they stop being true. */}
-        <p className="mono-label mb-10 text-center text-[var(--marketing-text-subtle)]">
-          7 founding teams, 10 artists and 2 releases running right now.
-          Live since January 2026.
-        </p>
+        {/* The proof-numbers line that used to sit here ("7 founding teams,
+            10 artists and 2 releases running right now. Live since January
+            2026.") was REMOVED 2026-08-25 on the founder's call, in the same
+            pass that cut the row titles from TransformationSection. The
+            screenshot is the proof this beat needs; a small-numbers boast
+            was doing the opposite of persuading. Do not restore it without
+            a fresh founder-supplied count — the numbers here were only ever
+            true as of the 2026-08 brief. The /pricing Founding Member claim
+            and FinalCTASection's 43% line are separate and untouched. */}
         <div className="overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
           <ThemedProductShot
             light="/images/product/workspace-releases.png"

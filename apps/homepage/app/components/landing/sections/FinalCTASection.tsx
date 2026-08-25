@@ -23,22 +23,22 @@ export function FinalCTASection() {
 
           <div className="relative z-[60] mt-10 flex w-full flex-col items-center gap-3">
             <WaitlistForm source="homepage_final_cta" />
-            {/* Founding Member line at the decision point, not the hero:
-                scarcity belongs next to the ask. Every claim here is
-                checkable — the cap, the price lock and the conversion
-                figure are founder-supplied (2026-08 brief); /pricing
-                carries a matching line so the two pages never disagree.
-                The 43% sentence is the founder's first-cut candidate if
-                this ever reads as too much. */}
-            <p className="mx-auto max-w-[30rem] text-balance text-sm leading-6 text-[var(--marketing-text-subtle)]">
-              Founding Members: capped at 10 teams, price locked for life.
-              43% of teams that try Urganize pay for it. There is no sales
-              team.
-            </p>
+            {/* The Founding Member line that used to sit here ("Founding
+                Members: capped at 10 teams, price locked for life. 43% of
+                teams that try Urganize pay for it. There is no sales
+                team.") was REMOVED 2026-08-25 on the founder's call, in the
+                same pass that cut the row titles from TransformationSection
+                and the proof-numbers line from WorkspaceShotSection. The
+                ask plus one real quote is the whole beat now. /pricing
+                still carries its own, shorter Founding Member line
+                ("...price locked for life. Still open.") — that one was
+                deliberately left, so the two pages no longer mirror each
+                other and the old never-disagree note no longer applies. Do
+                not restore this without fresh founder-supplied figures. */}
             {/* Adenaiye's chaos/multiple-releases sentence — the sharpest
                 ICP-match line on the site — at the last chance to convert a
                 scroller. Swapped off tamuno 2026-08-13: his full quote
-                already anchors TransformationSection's "The status" row, so
+                already anchors the last row of TransformationSection, so
                 mounting him here repeated the same words twice on one page. */}
             <ProofLine id="adenaiye" className="mt-2" />
           </div>
