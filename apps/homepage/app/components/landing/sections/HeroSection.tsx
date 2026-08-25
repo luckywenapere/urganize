@@ -8,20 +8,16 @@ import { wideContainerClass } from "./shared";
 export function HeroSection() {
   return (
     <SectionShell
-      className="pb-20 pt-16 sm:pb-24 sm:pt-20 lg:pb-28 lg:pt-24"
+      className="pb-20 pt-20 sm:pb-24 sm:pt-24 lg:pb-28 lg:pt-28"
       containerClassName={wideContainerClass}
     >
       <div className="mx-auto flex max-w-[64rem] flex-col items-center text-center">
-        {/* Executive repositioning (2026-08-19): the eyebrow carries the
-            locked category claim as a plain noun; the h1 spends its words
-            on the buyer's outcome. "AI workspace" is a category label here
-            — AI verbs only ever describe shipped UrgAns behavior (see
-            ThreeFeaturesSection). */}
-        <p className="hero-fade-in mono-label text-[var(--marketing-text-subtle)]">
-          The AI workspace for music executives
-        </p>
-
-        <div className="mt-8 flex flex-col items-center gap-8 sm:gap-10">
+        {/* Eyebrow removed (2026-08-25, founder call): the h1 now leads the
+            viewport directly, so the section's own top padding carries the
+            framing that the eyebrow + its mt-8 used to (bumped one step at
+            every breakpoint to keep the same visual weight under the fixed
+            header). */}
+        <div className="flex flex-col items-center gap-8 sm:gap-10">
           {/* Outcome-first h1: the old "One home for every release" was a
               container metaphor, banned under the 2026-08 positioning.
               The accent stays on "every release" — the unit of work. */}
