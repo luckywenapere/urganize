@@ -16,14 +16,11 @@ export function FinalCTASection() {
             Releases shouldn&apos;t be hard to run.
           </h2>
 
-          {/* The one artists-as-advocates line on the page (2026-08
-              positioning: executives buy, artists benefit, word spreads).
-              Addressed to the executive — never to the artist. Cuttable if
-              the page ever feels heavy again. */}
-          <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
-            Your artists will feel the difference.
-          </p>
-
+          {/* The artists-as-advocates line ("Your artists will feel the
+              difference.") was cut 2026-08-25 on the founder's call — its
+              own comment had marked it cuttable from the day it shipped.
+              The headline plus the form plus one real quote is the whole
+              beat. */}
           <div className="relative z-[60] mt-10 flex w-full flex-col items-center gap-3">
             <WaitlistForm source="homepage_final_cta" />
             {/* The Founding Member line that used to sit here ("Founding
