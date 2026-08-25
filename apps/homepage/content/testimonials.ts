@@ -112,7 +112,14 @@ export const TESTIMONIALS: Record<TestimonialId, Testimonial> = {
 export interface TransformationPair {
   testimonialId: TestimonialId;
   kicker: string;
-  /** Verbatim from why-urganize/page.tsx's `comparisons[].them`. */
+  /**
+   * House copy owned by THIS file (see the provenance correction above).
+   * Plain-language pass 2026-08-25: keep these to one short thought a
+   * visitor can read without re-reading. The Antoine row is mirrored
+   * byte-identically by why-urganize/page.tsx's `comparisons[0].them` and
+   * the Adenaiye row by its `compactComparisons[0].them` — change those
+   * together with this file or not at all.
+   */
   before: string;
   /**
    * An exact, complete-sentence excerpt from the same person's recorded
@@ -130,7 +137,7 @@ export const transformationPairs: readonly TransformationPair[] = [
     testimonialId: "antoine",
     kicker: "The plan",
     before:
-      "The plan sits in a pinned message, a spreadsheet someone made once and your head. Every new release starts from zero, plus whatever you remember from the last one.",
+      "Your plan is spread across a pinned chat, an old spreadsheet and your memory. Every new release starts from scratch.",
   },
   {
     testimonialId: "adenaiye",
@@ -142,8 +149,8 @@ export const transformationPairs: readonly TransformationPair[] = [
   },
   {
     testimonialId: "tamuno",
-    kicker: "Status",
+    kicker: "The status",
     before:
-      "To find out where a release stands, you scroll back through weeks of chat. Or you ask someone to repeat what they already told you. Now do that for every release you run.",
+      "To find out where a release stands, you scroll back through weeks of chat or ask someone to repeat themselves.",
   },
 ];

@@ -38,7 +38,7 @@ export function FinalCTASection() {
             {/* Adenaiye's chaos/multiple-releases sentence — the sharpest
                 ICP-match line on the site — at the last chance to convert a
                 scroller. Swapped off tamuno 2026-08-13: his full quote
-                already anchors TransformationSection's "Status" row, so
+                already anchors TransformationSection's "The status" row, so
                 mounting him here repeated the same words twice on one page. */}
             <ProofLine id="adenaiye" className="mt-2" />
           </div>
