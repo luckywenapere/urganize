@@ -113,7 +113,19 @@ export interface AnalyticsEventPropertiesMap {
     tasks_removed: number;
     tasks_added: number;
     ai_applied: boolean;
+    /** Approved from the twenty-second nudge rather than the standing bar. */
+    via_prompt: boolean;
   };
+  /** The twenty-second review nudge (2026-08-25). A manager scrolling a
+   * sixty-task plan has no natural end point, so after twenty seconds the
+   * approve bar offers to move them on. `shown` against
+   * `planner_draft_approved.via_prompt` says whether the nudge converts;
+   * `dismissed` against a later approve says whether it merely interrupts.
+   * Both are payload-free on purpose: the interesting counts already ride on
+   * the approve event, and reading them here would mean either a stale
+   * closure or restarting the timer on every keystroke. */
+  planner_review_prompt_shown: EmptyAnalyticsProperties;
+  planner_review_prompt_dismissed: EmptyAnalyticsProperties;
   // UrgAns reply action row (2026-08-12): copy / retry / thumbs under each
   // assistant reply. Thumbs are the first structured feedback signal on
   // assistant quality — worth watching once the agent model is wired.
