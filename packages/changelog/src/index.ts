@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.1.1",
+    date: "August 25, 2026",
+    highlights: [
+      "The back arrow above a release now takes you back. If you have a page open like Cover art or Song, it closes that first and puts you back on your activities. Press it again and you go to wherever you were before.",
+      "Fixed a case where the back arrow did nothing at all if you only had one release.",
+    ],
+  },
+  {
     version: "1.1.0",
     date: "August 24, 2026",
     highlights: [
