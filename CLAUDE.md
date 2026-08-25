@@ -931,7 +931,7 @@ Calendar's discovery problem (buried in the release header's pill row, easy to m
 
 The fifth sanctioned v1 scope expansion (see the 2026-07-21 note in "v1 scope") — and the moment this file should have gained an entry but didn't, until now. `apps/mobile` is a **Capacitor native shell** (`com.urganize.app`, Android + iOS) that wraps the existing product app rather than reimplementing it.
 
-- **Strategy: remote URL, not static export.** `capacitor.config.ts` points `server.url` at `https://app.urganize.app` — the webview loads the real, continuously-deployed production app. A static export was evaluated and rejected outright: 48 API route handlers (auth-gated CRUD, Supabase Storage signed uploads, the two AI features, Chappi's agent loop, the Paystack webhook) require a live server, full stop. Trade-off accepted explicitly: no offline shell (consistent with the product today — every page already round-trips to Supabase), and in exchange every web-code change ships to installed apps instantly, with zero store review. Only native-shell changes (icons, splash, permissions, added plugins) go through Play Store / App Store review. The full audit and reasoning: `docs/mobile/capacitor-audit.md`.
+- **Strategy: remote URL, not static export.** `capacitor.config.ts` points `server.url` at `https://app.urganize.app` — the webview loads the real, continuously-deployed production app. A static export was evaluated and rejected outright: 48 API route handlers (auth-gated CRUD, Supabase Storage signed uploads, the two AI features, Chappi's agent loop, the Paystack webhook) require a live server, full stop. ~~Trade-off accepted explicitly: no offline shell~~ **Reversed 2026-08-25 (founder call): see "Offline support" below.** The remote-URL strategy itself is unchanged — this reverses only the "no offline shell" half of the trade-off, via a service worker layered on top of the same remote-URL webview, not a return to a static export. In exchange every web-code change still ships to installed apps instantly, with zero store review. Only native-shell changes (icons, splash, permissions, added plugins) go through Play Store / App Store review. The full audit and reasoning: `docs/mobile/capacitor-audit.md`.
 - **Auth.** Supabase auth here is 100% localStorage-based (no cookies), which survives inside a webview unmodified. The one real fix needed: Google blocks OAuth inside embedded webviews by user-agent detection, so `signInWithGoogle` on native platforms (`apps/web/lib/auth-store.ts`) opens the consent screen in the system browser via `@capacitor/browser` and returns via the custom URL scheme `com.urganize.app://auth/callback`, caught by `apps/web/components/providers/CapacitorAuthBridge.tsx` and rewritten into the existing `/auth/callback` page rather than reimplementing the PKCE exchange. Manual dashboard steps (Supabase redirect allowlist) are in `docs/mobile/auth-setup.md`; **applied and verified end-to-end on a real Android device 2026-08-07** (`Browser.open` → Google consent in a Chrome Custom Tab → `appUrlOpen` → `Browser.close`, landing back in `MainActivity` signed in). Until the allowlist entry existed, Supabase silently fell back to the Site URL and finished the whole flow inside the Custom Tab, leaving the session in Chrome's storage rather than the app's — if native Google sign-in ever regresses to "it just opens a browser", check that allowlist entry first, not the app code.
 - **Billing.** Apple prohibits linking to external payment for digital subscriptions from inside a reviewed iOS app. `apps/web/lib/platform.ts` (`isIOSApp()`/`isNativePlatform()`, via `Capacitor.isNativePlatform()`, no plugin needed) gates `LockedPageClient.tsx`: on iOS native, the Subscribe button and plan pricing are hidden, replaced by a "manage on the web" link opened in the system browser; the trial CTA and promo-code redemption stay visible (neither touches a payment provider, so neither trips Apple's policy). Android has no equivalent restriction — Paystack checkout opens via `@capacitor/browser` there instead of the in-app webview, but otherwise stays as-is.
 - **Other webview fixes already landed:** `apps/web/lib/external-link.ts` (`openExternalUrl`) routes external links, file-download anchors, and attachment previews through `@capacitor/browser` on native instead of a plain `target="_blank"` anchor (the highest-risk item — a bare new-tab anchor to a remote Supabase Storage URL commonly fails or opens blank in an embedded webview); the highest-consequence unguarded `localStorage` calls in the auth/onboarding paths got try/catch guards; `app/layout.tsx` gained a `viewport` export (`viewportFit: 'cover'`) and `theme-color` so status-bar/safe-area behavior coordinates with native chrome.
@@ -941,6 +941,174 @@ The fifth sanctioned v1 scope expansion (see the 2026-07-21 note in "v1 scope") 
 - **Release signing wired (2026-08-07), keystore still to generate.** `android/app/build.gradle` now reads credentials from an untracked `android/keystore.properties` (template: `keystore.properties.example`; full procedure: `docs/mobile/android-signing.md`). The config is conditional on that file existing, so a clone without it still builds — `assembleRelease` just emits `app-release-unsigned.apk` instead of failing. **The `.gitignore`'s `*.jks`/`*.keystore` lines were commented out by the Capacitor scaffold and are now uncommented**, alongside `keystore.properties`. Generating the keystore needs a password, so it stays a founder step — losing that file (and its password) means never updating `com.urganize.app` again, which is why the doc leads with backup, not generation.
 - **Versioning of the native build:** `versionName` is read from `apps/mobile/package.json` at build time (verified resolving to `0.41.2`), so it tracks the ledger automatically instead of becoming another hand-maintained number that drifts. `versionCode` stays a manual integer (currently `1`, correct for a first upload) and MUST be incremented for every upload to any Play track — Play never reuses a number, even from a deleted build, and a monotonic counter can't be derived unambiguously from semver.
 - **Not yet done:** generating/backing up the upload keystore, and a Play Console app record + internal testing track. No user-facing release has shipped through either store, so there is no changelog-ledger entry yet — the Versioning section's release procedure applies the first time a build actually reaches a store track.
+
+---
+
+## Offline support (2026-08-25)
+
+Founder request: Urganize should work offline for the parts that can — never a
+blank browser page when the connection drops, the user can keep navigating the
+app, and offline-capable writes (activity creation, cover art, notes) queue and
+sync when the connection returns. **This consciously reverses the "no offline
+shell" trade-off** the Capacitor audit accepted and CLAUDE.md recorded (see the
+corrected bullets in "Native mobile app" above) — not a scope expansion (nothing
+on the out-of-scope list is touched; this changes WHERE existing v1 features run,
+not what exists), but a real reversal of a prior documented decision, flagged per
+this file's own doc-drift rule rather than silently overwritten.
+
+**What was actually happening before this, confirmed by reading the code rather
+than assumed:** the service worker (`public/sw.js`) was push-notification-only —
+its own header said so — with no fetch handler and no caching anywhere in the
+repo. A dropped connection meant a cold load showed the browser's own offline
+page; `checkAuth` treated ANY `supabase.auth.getUser()` network failure as "not
+authenticated" and visibly signed the user out, even with a perfectly valid
+persisted session; `loadCommandCenter`'s fetch had no try/catch at all, so
+offline turned into an unhandled promise rejection at every `void
+loadCommandCenter(...)` call site (a permanent skeleton on a cache miss, a stuck
+"refreshing" spinner on a cache hit); and cached cover-art thumbnails (signed
+URLs, 1h TTL) had no `onError`, so a cache-first paint after the TTL showed a
+broken image. None of that was offline-specific work — those were bugs today,
+just bugs a stable connection usually hides.
+
+**Two-part build, phases 1–2 shipped, phase 3 (the mutation queue) pending:**
+
+### Phase 1 — unflagged correctness fixes (live immediately, no flag)
+
+- **`lib/offline/network-error.ts`** — the one classifier both the auth store and
+  every guarded store fetch consult, so "the network is down" and "the server
+  said no" can never be told apart differently in two places. Allowlist of known
+  network-failure shapes (`AuthRetryableFetchError` by name, `Failed to fetch`,
+  Safari's `Load failed`, etc.) rather than a denylist of auth-rejection shapes —
+  a denylist would need to anticipate every real rejection reason instead of
+  every way a request can simply never leave the device.
+- **`checkAuth` (`lib/auth-store.ts`) no longer signs a user out over a network
+  blip.** Both the `getUser()` error branch and the outer `catch` check
+  `isNetworkFailure` first: a network failure with an already-persisted session
+  now leaves that session alone (`isLoading: false`, nothing cleared); a real
+  rejection (expired refresh token, revoked session, bad credentials) still signs
+  out exactly as before. **Server-side auth is untouched** — every API route
+  still validates the token independently; this only stops the CLIENT UI evicting
+  itself over a dropped connection.
+- **`loadCommandCenter` / `useNotesStore.load` / `useWorkspaceIdentityStore.load`
+  all now catch a network failure and keep whatever is already painted**
+  (cached or in-memory) instead of throwing an unhandled rejection out of a
+  `void`'d call site. `loadCommandCenter` shows an honest "You're offline.
+  Reconnect to load your releases." only when there is truly nothing on screen.
+- **`WorkspaceReleaseCard` and `AppTopbar`'s cover-art thumbnails gained
+  `onError` fallbacks** to the default mark, keyed on the failing URL (the
+  `WorkspaceIdentityPanel` logo precedent) — a cache-first paint after the 1h
+  signed-URL TTL now shows the mark instead of a broken image.
+
+### Phase 2 — the offline shell (`NEXT_PUBLIC_FEATURE_OFFLINE`, default `false`)
+
+**The analysis of what works offline, what queues, and what stays online-only —
+the deliverable the founder actually asked for:**
+
+| Works offline (existing caches) | Cannot work offline (by design) | Queues when offline (phase 3) | Online-only, always |
+|---|---|---|---|
+| Catalog + task buckets + scoped release view (`urganize.cache.command-center`) | Files downloads, song playback, cover-art image beyond its 45-min memory window (signed 1h URLs, deliberately never persisted) | Activity quick-create | Sign-in/up |
+| Metadata, Press kit, Calendar (calendar list), Pitch scenes (persisted scene cache) | Capture leads (privacy exclusion — other people's emails never touch localStorage) | Task complete / reopen (+ computed cascade unlocks) | Release creation (server-side template instantiation, caps, artist resolution) |
+| Notes (newest 50, full bodies) | Plan editor (an autosaved document, deliberately excluded from the cache) | Note create + edit | UrgAns + all AI (planner, status update, outcomes follow-up) |
+| Settings: artist, teammates, chrome | Calendar POSTS (never cached), activity feed (excluded from the command-center cache on purpose) | Cover art upload | Metadata editing (its PATCH behaves like a PUT — replaying a stale whole-doc offline would wipe fields someone else edited) |
+| Curator inbox/profile/playlists, identity card | — | Song upload | Calendar post CRUD, EPK/capture/credits link minting, pitching sends, payments/billing, invites/team logins, recap generation, data export, admin, genre prediction, push toggles |
+
+- **The service worker is split in three, all in `public/`:** `sw-push.js` holds
+  the push + notificationclick handlers verbatim (unchanged from before this
+  work); `sw.js` (registered when the flag is off) `importScripts` it and adds
+  nothing else, except one thing — its `activate` handler deletes any
+  `urganize-offline-*` caches, which is the **kill switch**: flipping the flag
+  back off and letting the next load re-register `sw.js` actively removes the
+  offline layer's state, not just stops adding to it. `sw-offline.js`
+  (registered when the flag is on) also `importScripts`'s the push handlers and
+  adds the actual caching layer.
+- **Both worker scripts register at the SAME scope (`/`)**, so `lib/push.ts`'s
+  existing `getRegistration('/sw.js')` lookups (used by `getPushStatus`,
+  `enablePush`, `disablePush`) keep resolving correctly no matter which script
+  is currently registered there — that argument matches by scope, not by script
+  URL, so push functionality needed zero changes.
+- **`sw-offline.js` never touches `/api/*` or any non-GET request, and never
+  touches a cross-origin request** (Supabase Storage, PostHog) — those pass
+  straight through to the browser's default handling. Data belongs to the
+  store/localStorage layer above; a service-worker cache of an API response
+  would fight that layer's own auth and staleness rules for no benefit.
+  `/_next/static/*` is cache-first (content-hashed, immutable — synergizes with
+  `deploymentId` skew protection, since a cached page requests its own
+  deployment's assets). `/images/*` and the manifest are stale-while-revalidate.
+  Navigations are network-first with a ~5s timeout, falling back to an exact
+  cached copy of that page, then — for signed-in app-chrome paths
+  (`/dashboard*`, `/settings*`, `/admin*`, `/`) only — the cached dashboard
+  shell, then a small inline offline HTML page that needs no precaching to
+  exist. **Public token pages (`/epk/`, `/credits/`, `/capture/`, `/curator*`,
+  `/auth*`, `/join`, `/invite`) NEVER fall back to the app shell** — a press
+  contact, a fan, or a collaborator submitting credits must never be shown
+  someone's dashboard chrome; those paths get only the generic offline page.
+  Covered by `lib/offline/sw-offline.test.ts` (10 cases), which loads the
+  script's source into a `new Function` body — the file has no exports to
+  import, since it is a plain script meant to run in the service-worker global
+  scope, not a module — with `self`/`caches`/`importScripts`/`fetch` stubbed on
+  `globalThis` beforehand.
+- **`lib/offline/register.ts`'s `registerAppServiceWorker()` replaces
+  `registerPushServiceWorker()` as AppShell's mount-time registration call.**
+  Deliberately does NOT require `PushManager`/a VAPID key like the push
+  registration does — today's registration silently never happens at all in any
+  environment without a VAPID key configured (dev, most previews), which meant
+  the offline shell would never register there either if it piggybacked on the
+  push gate. Offline registration needs only `'serviceWorker' in navigator`.
+- **`lib/offline/status.ts`** — `useOnlineStatus()` (the `useIsDesktopViewport`
+  `useSyncExternalStore` precedent) plus a non-hook `isBrowserOnline()` for call
+  sites outside a component. `navigator.onLine` is treated as a HINT, not
+  authority: `offline` is trusted as definite, `online` only as probable — real
+  mutations still trust an actual fetch failure over this value, never the other
+  way around.
+- **`components/app/OfflineBanner.tsx`** — the `TeamTrialStrip` contract
+  verbatim: above the topbar (not in it — the topbar's right cluster already has
+  a documented width budget that overflows a 375px phone), calm, and **NOT
+  dismissible** (dismissing it would hide the one thing that stops "why did my
+  activity disappear" from being a surprise). Shows "You're offline. You can keep
+  working — changes will sync when you're back online." while offline, then
+  "Back online." for a few seconds on reconnect. Tracks the online/offline
+  transition via the raw window events rather than a reactive effect over the
+  hook's current value on purpose — setState belongs in the EVENT CALLBACK, not
+  synchronously in the effect body, or React flags a cascading render
+  (`react-hooks/set-state-in-effect`, one of the two rules this repo runs at
+  warn rather than error during the React 19 migration — still fixed properly
+  here rather than left to add to that count). **Renders nothing with the flag
+  off.** Phase 3 extends the reconnect message to name how many queued changes
+  are syncing.
+- **Reconnect refresh:** AppShell listens for the `online` event and force-
+  refreshes the command center — `loadCommandCenter`'s own in-flight dedup and
+  recency-window guards make this cheap even when there's nothing to do.
+- **A tight, explicit online-only sweep, not an app-wide one:**
+  `CreateReleaseModal`'s submit and the status-update generator both check
+  `isBrowserOnline()` first and show plain copy ("You're offline — this needs a
+  connection.") instead of firing a request that can only fail after the fact.
+  The UrgAns composer was deliberately LEFT ALONE: `submitPrompt`'s existing
+  `catch` already falls back to the local deterministic intent-router on any
+  failure, network failures included — sending an offline user straight to the
+  no-AI command bar is the CORRECT degrade already built in, not a gap.
+
+### Phase 3 — the mutation queue (not yet built)
+
+The design (IndexedDB-backed FIFO queue via a hand-rolled wrapper — no `idb`
+dependency, the hand-rolled MCP/FCM precedent — for activity create/complete,
+notes, and cover-art/song uploads, replaying through the exact same
+`uploadCoverArt`/`uploadSong`/REST calls the online path already uses) is
+recorded but not implemented. An offline-created task will show a "Waiting to
+sync" marker and stay uncompletable until synced — no chained operations on
+temporary ids, which keeps replay free of id-remapping. See the phase's own PR
+when it lands for the shipped shape; this paragraph is a placeholder for that
+entry, not a description of working code.
+
+### Activation
+
+`NEXT_PUBLIC_FEATURE_OFFLINE` is registered in `turbo.json` and documented in
+`apps/web/.env.example`. Flip in Vercel `Web` → Production with a commit that
+actually rebuilds `apps/web` (the documented `turbo-ignore` trap — a
+version-bump-only commit does rebuild it, since `apps/web/package.json` is part
+of the `@urganize/web` package; a same-commit Redeploy or an env-only change
+with no new commit does not). Changelog entry + version bump at the flip, not at
+merge (the EPK precedent), once phase 3 makes "offline" a complete claim rather
+than "the app doesn't go blank."
 
 ---
 

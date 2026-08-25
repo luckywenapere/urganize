@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { isBrowserOnline } from '@/lib/offline/status';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { type Task } from '@/lib/tasks';
@@ -296,6 +297,13 @@ export function WorkspaceView() {
 
   const generateStatus = async () => {
     if (!scopedReleaseId) return;
+    // The status generator is a single AI call with no offline story — say
+    // so plainly rather than opening the modal on a fetch that can only
+    // fail after the fact.
+    if (!isBrowserOnline()) {
+      setToast({ tone: 'error', message: "You're offline — generating a status update needs a connection." });
+      return;
+    }
     setIsStatusOpen(true);
     setIsGeneratingStatus(true);
     setStatusUpdate('');

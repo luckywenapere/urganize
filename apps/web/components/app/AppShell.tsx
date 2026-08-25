@@ -26,7 +26,8 @@ import { HardPaywallGate } from '@/components/providers/HardPaywallGate';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
 import { CapacitorPushBridge } from '@/components/providers/CapacitorPushBridge';
 import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
-import { registerPushServiceWorker } from '@/lib/push';
+import { registerAppServiceWorker } from '@/lib/offline/register';
+import { OfflineBanner } from '@/components/app/OfflineBanner';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { CURATOR_HOME_PATH } from '@/lib/home-path';
 
@@ -127,6 +128,7 @@ const ANDROID_APP_BANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_ANDROID_APP_B
 // PushPermissionPrompt.tsx for why the ask is a card and why its BUTTON, not
 // this mount, is what opens the OS prompt.
 const PUSH_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PUSH_PROMPT === 'true';
+const OFFLINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_OFFLINE === 'true';
 
 // Once-per-session arming for the side rail: landing on the assistant page
 // (the post-auth front door when the flag is on — see lib/home-path.ts)
@@ -316,13 +318,31 @@ export function AppShell({ children }: { children: ReactNode }) {
     });
   }, [isAuthLoading, isAuthenticated, isCuratorAccount, router]);
 
-  // Register the push service worker once per load. Registration alone never
-  // prompts for permission — the prompt only fires when the user explicitly
-  // enables notifications in Settings (PushNotificationsSection). Having the
-  // worker registered early means an already-subscribed device keeps
-  // receiving pushes even before the user navigates anywhere.
+  // Register the app's service worker once per load — push-only (sw.js) or
+  // the offline shell (sw-offline.js), decided by registerAppServiceWorker
+  // itself. Registration alone never prompts for push permission — that
+  // prompt only fires when the user explicitly enables notifications in
+  // Settings (PushNotificationsSection). Having the worker registered early
+  // means an already-subscribed device keeps receiving pushes even before
+  // the user navigates anywhere, and (when the offline flag is on) the
+  // offline shell is ready before the connection ever drops.
   useEffect(() => {
-    void registerPushServiceWorker();
+    void registerAppServiceWorker();
+  }, []);
+
+  // Reconnect refresh: the moment the browser reports the connection is
+  // back, re-pull the catalog rather than waiting for the next natural
+  // trigger (a click, the 10s freshness window). loadCommandCenter's own
+  // guards make this cheap when there is nothing to do — in-flight dedup
+  // and the recency window both still apply, so this never doubles up with
+  // an already-running or already-fresh load.
+  useEffect(() => {
+    if (!OFFLINE_ENABLED) return;
+    const handleOnline = () => {
+      void useReleaseStore.getState().loadCommandCenter({ force: true });
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, []);
 
   // Engagement drip (founder request, 2026-07-23): ping once per tab
@@ -431,6 +451,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 already overflows a 375px phone, so a countdown there would
                 break phones. Renders nothing outside the last stretch of a
                 trial, and nothing at all while the flag is off. */}
+            <OfflineBanner />
             <TeamTrialStrip />
             <TeamReadOnlyStrip />
             {/* Assistant-usage indicator, same slot and same contract.

@@ -17,6 +17,7 @@ import {
   getTemplateLeadTimeDays,
 } from '@/lib/release-templates/loader';
 import { DEFAULT_RELEASE_TITLE, type DbReleaseType } from '@/types/releases';
+import { isBrowserOnline } from '@/lib/offline/status';
 
 // The release types this modal can create: authored AND switched on AND
 // storable. getAvailableReleaseTypes is the loader's flag gate, so with
@@ -318,6 +319,16 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!validateForm()) {
+      return;
+    }
+
+    // Release creation needs the server: artist resolution, the release
+    // cap check, and (for a template plan) task instantiation all happen
+    // there, and the flow branches on the id it returns. There is nothing
+    // useful to queue, so say so plainly instead of firing a request that
+    // can only time out.
+    if (!isBrowserOnline()) {
+      setSubmitError("You're offline — creating a release needs a connection. Try again once you're back online.");
       return;
     }
 
