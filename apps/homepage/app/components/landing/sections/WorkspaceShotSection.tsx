@@ -1,7 +1,6 @@
 import { ThemedProductShot } from "../ThemedProductShot";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
-import { WaitlistForm } from "../WaitlistForm";
 import { wideContainerClass } from "./shared";
 
 // Real screenshot of the current workspace (light and dark retaken together
@@ -37,20 +36,18 @@ export function WorkspaceShotSection() {
           />
         </div>
 
-        {/* Mid-page ask (2026-08-25, founder request). It was argued for by
-            the five-screen gap between the hero form and the final CTA;
-            that gap closed hours later when the before/after and playbook
-            beats came out, and the ask stays anyway — this is now literally
-            the middle of a five-section page, and it is still the moment
-            the visitor has just seen the product. Inline in this section
-            rather than a section of its own so it adds no rhythm beat of
-            its own. Cuttable as a block. */}
-        <div className="relative z-[60] mx-auto mt-12 flex w-full max-w-[44rem] flex-col items-center gap-3 text-center">
-          <p className="text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
-            Put your next release on plan.
-          </p>
-          <WaitlistForm source="homepage_mid" />
-        </div>
+        {/* The mid-page waitlist ask ("Put your next release on plan." +
+            a WaitlistForm tagged homepage_mid) lived here for part of
+            2026-08-25 and was REMOVED the same day, founder call. It was
+            built to bridge a five-screen gap between the hero form and the
+            final CTA; the before/after and playbook removals closed that
+            gap hours later, leaving three identical forms on a
+            five-section page — pressure, not convenience. The header's
+            persistent button plus the hero and final forms cover every
+            scroll position within ~2 screens now. homepage_mid collected
+            for under a day, so its analytics tag carries no history worth
+            preserving. Rebuild from git history if the page ever grows
+            long enough to need a bridge again. */}
       </SectionShell>
     </ScrollReveal>
   );
