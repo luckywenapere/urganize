@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.1.4",
+    date: "August 25, 2026",
+    highlights: [
+      "You stay logged in. A slow or patchy connection used to sign you out for real — you would come back to the app, or reopen it on your phone, and be asked to log in again even though nothing was wrong with your account. Now a request that does not get through is treated as exactly that, and your session is left alone.",
+      "A hiccup loading your profile no longer looks like being logged out, and no longer shows you a red error while you are working.",
+      "If your session genuinely does end, the login page now tells you so instead of appearing out of nowhere, and your email is still filled in.",
+    ],
+  },
+  {
     version: "1.1.3",
     date: "August 25, 2026",
     highlights: [
