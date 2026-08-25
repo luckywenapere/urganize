@@ -17,6 +17,7 @@
 // (founder call: nobody clicked it) — same deal, git history has it.
 export { FinalCTASection } from "./sections/FinalCTASection";
 export { HeroSection } from "./sections/HeroSection";
+export { StatsSection } from "./sections/StatsSection";
 export { TemplatePlanSection } from "./sections/TemplatePlanSection";
 export { ThreeFeaturesSection } from "./sections/ThreeFeaturesSection";
 export { TransformationSection } from "./sections/TransformationSection";

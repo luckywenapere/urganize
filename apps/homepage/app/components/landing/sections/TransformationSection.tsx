@@ -52,7 +52,7 @@ export function TransformationSection() {
   return (
     <ScrollReveal>
       <SectionShell
-        className="py-[100px] lg:py-[120px]"
+        className="py-[80px] lg:py-[100px]"
         containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
       >
         <div className="mx-auto max-w-[52rem] text-center">

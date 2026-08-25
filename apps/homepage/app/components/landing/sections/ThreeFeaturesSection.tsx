@@ -23,7 +23,10 @@ const featureColumns = [
 export function ThreeFeaturesSection() {
   return (
     <ScrollReveal>
-      <SectionShell containerClassName={wideContainerClass}>
+      <SectionShell
+        className="py-[80px] lg:py-[100px]"
+        containerClassName={wideContainerClass}
+      >
         <div className="grid divide-y divide-[color:var(--marketing-border)] border-y border-[color:var(--marketing-border)] lg:grid-cols-3 lg:divide-x lg:divide-y-0">
           {featureColumns.map((feature) => (
             <div key={feature.title} className="py-10 lg:px-10 lg:py-14">

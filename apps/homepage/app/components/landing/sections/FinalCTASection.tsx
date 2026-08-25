@@ -7,7 +7,10 @@ import { centeredHeadlineClass } from "./shared";
 export function FinalCTASection() {
   return (
     <ScrollReveal>
-      <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
+      <SectionShell
+        className="py-[100px] lg:py-[120px]"
+        containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10"
+      >
         <div className="text-center">
           <h2 className={centeredHeadlineClass}>
             Releases shouldn&apos;t be hard to run.
