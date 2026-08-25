@@ -56,21 +56,26 @@ export async function POST(request: NextRequest) {
   const form = await readOauthFormBody(request);
   const grantType = form.grant_type || '';
 
+  // Grant type FIRST, before the environment check. Error precedence matters
+  // here for the same reason resolveCheckoutPurchase records it: nobody should
+  // be told the server is misconfigured for a request that was invalid to begin
+  // with, and a client debugging its own integration needs the answer about its
+  // own request.
+  if (grantType !== 'authorization_code' && grantType !== 'refresh_token') {
+    return oauthErrorResponse(
+      'unsupported_grant_type',
+      'Only authorization_code and refresh_token are supported.'
+    );
+  }
+
   const adminClient = createOauthAdminClient();
   if (!adminClient) {
     return oauthErrorResponse('server_error', 'Server environment is not configured.');
   }
 
-  if (grantType === 'authorization_code') {
-    return exchangeAuthorizationCode(adminClient, form);
-  }
-  if (grantType === 'refresh_token') {
-    return rotateRefreshToken(adminClient, form);
-  }
-  return oauthErrorResponse(
-    'unsupported_grant_type',
-    'Only authorization_code and refresh_token are supported.'
-  );
+  return grantType === 'authorization_code'
+    ? exchangeAuthorizationCode(adminClient, form)
+    : rotateRefreshToken(adminClient, form);
 }
 
 async function exchangeAuthorizationCode(
