@@ -23,6 +23,7 @@ import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { TasksPanel } from './TasksPanel';
 import { useSceneOverlay } from './useSceneOverlay';
+import { resolveActiveScene } from '@/lib/scene-cache';
 import { useScenePrefetch } from './useScenePrefetch';
 import { useIsDesktopViewport } from './useIsDesktopViewport';
 import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
@@ -66,18 +67,10 @@ const RELEASE_RECAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_RECAP === 
 // which mutated real task rows the moment the model answered.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
-// Same flag TasksPanel reads for its Calendar pill. The scene URL param has to
-// be gated on it too: with the flag off, a stale `?scene=calendar` bookmark
-// used to render the calendar island shell around a permanently failing fetch
-// (its API routes 404 when off) instead of the normal activity list.
-const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
-const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
-// Same flag TasksPanel reads for its Song pill, gated here for the same reason
-// the two above are: a stale `?scene=song` bookmark must resolve to the normal
-// activity list, not to a scene whose API routes 404.
-const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
-// Same reason again, for the Cover art pill/scene.
-const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
+// The four flag-gated scene params (calendar / capture / song / coverart) used
+// to be read here as local consts and compared inline. They now live behind
+// `resolveActiveScene` in lib/scene-cache.ts, because TasksPanel and
+// WorkspaceSkeleton need the identical answer and the copies had drifted.
 
 // Team logins (2026-08-16). Gates ONLY the compulsory post-create step here;
 // the mint endpoint behind it is the pre-existing, ungated invite-link route.
@@ -132,16 +125,12 @@ export function WorkspaceView() {
   // appear"), so this view has to know about it to build the panel body and to
   // give the calendar its width.
   const { activeScene: urlScene, openScene, closeScene } = useSceneOverlay();
-  // Flag-gate the calendar scene at the one place the URL is resolved: with
-  // the flag off the param is treated as no-scene, matching the pill (which
-  // never renders) and the API routes (which 404).
-  const activeScene =
-    (urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED) ||
-    (urlScene === 'capture' && !CAPTURE_ENABLED) ||
-    (urlScene === 'song' && !SONG_UPLOAD_ENABLED) ||
-    (urlScene === 'coverart' && !COVER_ART_ENABLED)
-      ? null
-      : urlScene;
+  // Flag-gate the scene the URL names: with a flag off the param reads as
+  // no-scene, matching the pill (which never renders) and the API routes (which
+  // 404). One shared resolver rather than a local copy — TasksPanel and
+  // WorkspaceSkeleton have to agree with this exactly, and the three
+  // hand-rolled copies this replaces had already drifted once.
+  const activeScene = resolveActiveScene(urlScene);
   // Which of the two always-in-the-DOM layout branches (mobile drill-down /
   // desktop focused) should receive side-effectful children — see the hook.
   const isDesktopViewport = useIsDesktopViewport();
@@ -546,15 +535,31 @@ export function WorkspaceView() {
       />
     ) : undefined;
 
-  // The content calendar's month grid is built for ~1200px, so it gets the
-  // release rails out of the way — the same treatment the UrgAns rail already
-  // triggers. The grid↔agenda swap itself is container-width-based now
-  // (cc-month-view/cc-agenda-view in globals.css), so a still-narrow column
-  // (identity panel or rail open) degrades to the agenda instead of squeezing
-  // the grid; hiding the rails here is what makes the grid the COMMON case at
-  // lg+ rather than the lucky one. The other scenes fit the normal centre
-  // column, so they leave the rails alone (founder call).
-  const hideRailsForLayout = (CHAPPI_ENABLED && isRailOpen) || activeScene === 'calendar';
+  // ANY open scene gets the release rails out of the way — the same treatment
+  // the UrgAns rail already triggers.
+  //
+  // This used to be calendar-ONLY, on the recorded reasoning that "the other
+  // scenes fit the normal centre column, so they leave the rails alone (founder
+  // call)". A founder report on Collect metadata (2026-08-25, screenshot)
+  // retires that: at xl+ the two rails plus their gaps take 220 + 24 + 24 + 220
+  // = 488px of the surface, so a 1280px viewport with the identity card on left
+  // the scene about 450px — and on a ONE-RELEASE account both rails are
+  // literally empty `<div aria-hidden>` (see RailColumn), so nearly half the
+  // surface was blank while an 8-field form was crushed beside it. The clipped
+  // "Regener…" button in that screenshot is the same width shortage one level
+  // down.
+  //
+  // The rails' own documented purpose — "so the centered card sits in the
+  // middle, not flush against the viewport edge" — is about the release-CARD
+  // view. A scene REPLACES the activity list with a working surface (forms,
+  // a month grid, a file list, a press-kit preview), and every one of those
+  // wants the width more than a sibling release card does. The back arrow and
+  // the catalog are still one press away.
+  //
+  // Boolean(activeScene) and not `!== null` on the raw URL param on purpose:
+  // `activeScene` is already flag-gated above, so a stale `?scene=capture` URL
+  // with that flag off correctly counts as no scene and keeps the rails.
+  const hideRailsForLayout = (CHAPPI_ENABLED && isRailOpen) || Boolean(activeScene);
 
   // A recap is only worth offering once the release has actually happened, and
   // this now calls the SAME lib/recap-eligibility.ts predicate the recap route

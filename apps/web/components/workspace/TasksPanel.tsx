@@ -34,6 +34,7 @@ import { TaskRow } from '@/components/tasks/TaskRow';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useSceneOverlay, type SceneName } from './useSceneOverlay';
+import { resolveActiveScene } from '@/lib/scene-cache';
 
 // Metadata entry point (URG-108). This flag also gates the identity panel's
 // "Collect metadata" nav item (WorkspaceIdentityPanel) — the two must never
@@ -313,20 +314,14 @@ export function TasksPanel({
   // overlays, and are now an inline swap per the founder's correction. Clicking
   // the pill of the scene that's already open closes it, back to activities.
   const { activeScene: urlScene, openScene, closeScene } = useSceneOverlay();
-  // Mirror WorkspaceView's flag gate: with the calendar flag off, a stale
-  // `?scene=calendar` URL must not flip the leading pill to "Activities" for a
-  // scene that isn't rendering (WorkspaceView passes no sceneContent then).
-  // Same for `?scene=capture`/`?scene=song`/`?scene=coverart` behind their own
-  // flags — 'song' and 'coverart' were missing from this specific mirror
-  // until 'coverart' was added, a small pre-existing gap now closed alongside
-  // it (WorkspaceView's own copy of this gate already covered all four).
-  const activeScene =
-    (urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED) ||
-    (urlScene === 'capture' && !CAPTURE_ENABLED) ||
-    (urlScene === 'song' && !SONG_UPLOAD_ENABLED) ||
-    (urlScene === 'coverart' && !COVER_ART_ENABLED)
-      ? null
-      : urlScene;
+  // Shared with WorkspaceView (which builds the scene body) and
+  // WorkspaceSkeleton (which reserves its layout) rather than mirrored here:
+  // with a flag off, a stale `?scene=…` URL must not flip the leading pill to
+  // "Activities" for a scene that isn't rendering. This used to be a local copy
+  // of the same four-flag expression and it had drifted — 'song' and 'coverart'
+  // were missing from it for a while — which is exactly why it now lives in
+  // lib/scene-cache.ts.
+  const activeScene = resolveActiveScene(urlScene);
 
   /**
    * Pill classes, lit when that scene is the open one. `shrink-0

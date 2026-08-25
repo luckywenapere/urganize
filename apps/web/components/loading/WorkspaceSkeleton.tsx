@@ -8,6 +8,7 @@ import {
 } from '@/components/workspace/TasksPanel';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownReleaseCount } from './known-counts';
+import { resolveActiveScene } from '@/lib/scene-cache';
 
 // Same URL param useReleaseScope reads (`?release=`). Knowing this at
 // skeleton-render time (before release data has loaded) lets the skeleton
@@ -99,12 +100,14 @@ const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 
 export function WorkspaceSkeleton() {
   const searchParams = useSearchParams();
   const isRailOpen = useChappiStore((state) => state.railOpen);
-  // Mirrors WorkspaceView's hideRailsForLayout exactly: rails also hide while
-  // the calendar scene is open, and a refresh on a `?scene=calendar` URL used
-  // to paint 3-column rails here that vanished the moment data resolved.
-  const isCalendarScene =
-    CONTENT_CALENDAR_ENABLED && searchParams.get('scene') === 'calendar';
-  const hideRails = (CHAPPI_ENABLED && isRailOpen) || isCalendarScene;
+  // Mirrors WorkspaceView's hideRailsForLayout exactly: the rails hide while
+  // ANY scene is open, and a refresh on a `?scene=…` URL used to paint
+  // 3-column rails here that vanished the moment data resolved. Widened from
+  // calendar-only alongside the real view (2026-08-25) — the two read the same
+  // `resolveActiveScene`, so they cannot disagree about whether a stale
+  // flag-off param counts as an open scene.
+  const hideRails =
+    (CHAPPI_ENABLED && isRailOpen) || resolveActiveScene(searchParams.get('scene')) !== null;
   const knownCount = useKnownReleaseCount();
   // `?release=` is the normal signal, but a single-release workspace scopes
   // itself in an effect, so the URL is still bare while WorkspaceView holds

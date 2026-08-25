@@ -63,6 +63,40 @@ export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
   ...(CAPTURE_ENABLED ? (['capture'] as const) : []),
 ];
 
+/**
+ * Resolve the `?scene=` param into the scene that is actually RENDERING, or
+ * null.
+ *
+ * Two jobs in one place, and the second is why this lives in lib rather than
+ * beside any one consumer: the param has to be a known scene name, AND its
+ * feature flag has to be on, because with a flag off the pill never renders and
+ * the API routes 404 — so a stale URL must read as "no scene open".
+ *
+ * WHY IT IS SHARED. This exact expression was hand-rolled in three places
+ * (WorkspaceView, which builds the scene body; TasksPanel, which decides
+ * which pill is lit; and now WorkspaceSkeleton, which has to reserve the same
+ * layout the real view will paint). They drifted once already — TasksPanel's
+ * copy was missing 'song' and 'coverart' long after the real gate had them —
+ * and a layout decision computed two ways is the bug class this consolidation
+ * exists to end.
+ *
+ * DELIBERATELY ONLY FOUR FLAGS. metadata / files / epk / pitch / plan are NOT
+ * gated here, matching the behaviour this replaces exactly: those scenes gate
+ * themselves inside ReleaseScenePanel and their own pills, and adding them here
+ * would change which scenes render rather than just consolidating the check.
+ * If one of them ever needs URL-level gating, it belongs here — but that is a
+ * behaviour change, not a tidy-up.
+ */
+export function resolveActiveScene(rawParam: string | null): SceneName | null {
+  if (!rawParam || !(SCENE_NAMES as readonly string[]).includes(rawParam)) return null;
+  const scene = rawParam as SceneName;
+  if (scene === 'calendar' && !CONTENT_CALENDAR_ENABLED) return null;
+  if (scene === 'capture' && !CAPTURE_ENABLED) return null;
+  if (scene === 'song' && !SONG_UPLOAD_ENABLED) return null;
+  if (scene === 'coverart' && !COVER_ART_ENABLED) return null;
+  return scene;
+}
+
 /** Within this window a cached scene is served with NO network call at all.
  * Matches useWorkspaceIdentityStore's 30s — long enough that the tap-around-
  * the-scenes loop is free, short enough that a teammate's edit shows up fast. */
