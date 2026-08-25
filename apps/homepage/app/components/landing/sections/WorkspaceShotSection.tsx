@@ -14,7 +14,7 @@ export function WorkspaceShotSection() {
     <ScrollReveal>
       <SectionShell
         containerClassName={wideContainerClass}
-        className="py-[60px] lg:py-[80px]"
+        className="py-[80px] lg:py-[100px]"
       >
         {/* The proof-numbers line that used to sit here ("7 founding teams,
             10 artists and 2 releases running right now. Live since January
@@ -37,13 +37,14 @@ export function WorkspaceShotSection() {
           />
         </div>
 
-        {/* Mid-page ask (2026-08-25, founder request): the hero form and the
-            final CTA sit five screens apart with only the header button in
-            between, so the ask repeats once here — directly under the
-            screenshot, the page's peak-proof moment. Inline in this section
-            rather than a section of its own so it adds no new rhythm beat to
-            a page that keeps getting trimmed for weight. Cuttable as a
-            block. */}
+        {/* Mid-page ask (2026-08-25, founder request). It was argued for by
+            the five-screen gap between the hero form and the final CTA;
+            that gap closed hours later when the before/after and playbook
+            beats came out, and the ask stays anyway — this is now literally
+            the middle of a five-section page, and it is still the moment
+            the visitor has just seen the product. Inline in this section
+            rather than a section of its own so it adds no rhythm beat of
+            its own. Cuttable as a block. */}
         <div className="relative z-[60] mx-auto mt-12 flex w-full max-w-[44rem] flex-col items-center gap-3 text-center">
           <p className="text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
             Put your next release on plan.
