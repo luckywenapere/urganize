@@ -88,7 +88,14 @@ export async function requireActiveAuthenticatedUser(request: NextRequest) {
  * account, exactly as it was before this existed. Access itself is still gated
  * by requireActiveAccount below.
  */
-async function blockCuratorAccount(
+/**
+ * Exported since 2026-08-25 so the OAuth consent grant can apply the same
+ * containment. That route deliberately uses the split calls rather than
+ * requireActiveAuthenticatedUser (it needs a read-grade paywall check, see its
+ * own header), and losing the curator block on the way would be exactly the
+ * gap the *OrInternal helpers below used to carry.
+ */
+export async function blockCuratorAccount(
   userId: string,
   supabaseUrl: string
 ): Promise<NextResponse | null> {
