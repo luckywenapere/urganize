@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { requireActiveAccount } from '@/app/api/_shared/paywall';
-import { getMcpConfig, verifyMcpAccessKey } from '@/lib/mcp/config';
+import { getMcpConfig, isMcpConnectEnabled, verifyMcpAccessKey } from '@/lib/mcp/config';
+import { extractBearerToken } from '@/lib/mcp/oauth';
+import { resolveMcpToken } from '@/lib/mcp/tokens-server';
 
 // Single source of truth for API route auth. This replaces the per-domain
 // copies that used to live in releases/_shared.ts, tasks-server.ts,
@@ -144,47 +146,73 @@ export async function requireAuthenticatedAdmin(request: NextRequest) {
   return { user: auth.user, supabaseUrl: auth.supabaseUrl, adminClient };
 }
 
-// ── internal server-to-server actor (URG-183) ─────────────────────────────
+// ── internal server-to-server actor (URG-183; per-user OAuth added 2026-08-25) ─
 //
 // The MCP endpoint (app/api/mcp/route.ts) reuses Chappi's tool registry, and
-// four of those tools deliberately work by calling our own REST routes over
+// several of those tools deliberately work by calling our own REST routes over
 // HTTP so template instantiation, assignee validation, and notifications are
 // never reimplemented (see the header of lib/chappi/tools.ts). Those routes
-// validate a Supabase JWT — which an MCP client, authenticating with a static
-// bearer key, does not have.
+// validate a Supabase JWT — which an MCP client does not have.
 //
-// So: a request whose bearer IS the MCP access key resolves to the single
-// account that key is bound to (MCP_USER_ID). No acting-user header exists on
-// purpose — the binding is env-side, so a leaked key can only ever act as that
-// one user, never as an arbitrary account. The internal actor still passes the
-// paywall gate, so MCP behaves exactly as that user does in the UI.
+// TWO CREDENTIALS RESOLVE HERE, and the ORDER matters: the env key is checked
+// first because it is a constant-time comparison against a value already in
+// memory, so the common per-user path never pays for it and the founder path
+// never touches the database.
 //
-// Only the four proxied routes opt into this via the *OrInternal helpers below.
-// Every other route keeps calling the plain helpers and rejects the key with a
-// normal 401 (GoTrue won't validate it as a token).
+//   1. MCP_ACCESS_KEY → the single account MCP_USER_ID names.
+//   2. A per-user OAuth access token → the account on its own token row.
+//
+// Both share the property this branch has always rested on: THE CREDENTIAL IS
+// THE BINDING. There is no acting-user header, by design — a leaked credential
+// can only ever act as the one account it resolves to, never as an arbitrary
+// one. Adding per-user tokens does not weaken that; it moves the binding from
+// an env var into a row, which is what makes revocation possible at all.
+//
+// Both also pass the paywall gate, so MCP behaves exactly as that user does in
+// the UI, and both now pass the CURATOR block. That block was missing here
+// until 2026-08-25 and it mattered the moment the actor stopped being one
+// hand-picked account: a curator-only account holds no team, and these routes
+// run with an RLS-bypassing service-role client, so without it a playlist owner
+// with a token would have been handed a team-data session.
+//
+// Only the proxied routes opt into this via the *OrInternal helpers below.
+// Every other route keeps calling the plain helpers and rejects both
+// credentials with a normal 401 (GoTrue won't validate either as a token).
 
 async function resolveInternalActor(request: NextRequest) {
-  const config = getMcpConfig();
-  if (!config) return null;
-
-  const authHeader = request.headers.get('authorization') || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!token || !verifyMcpAccessKey(token)) return null;
+  const token = extractBearerToken(request.headers.get('authorization'));
+  if (!token) return null;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   if (!supabaseUrl) return null;
   const adminClient = createAdminClient(supabaseUrl);
   if (!adminClient) return null;
 
-  const { data, error } = await adminClient.auth.admin.getUserById(config.userId);
+  const userId = await resolveInternalActorUserId(adminClient, token);
+  if (!userId) return null;
+
+  const { data, error } = await adminClient.auth.admin.getUserById(userId);
   if (error || !data.user?.id) {
-    // Misconfiguration (MCP_USER_ID doesn't resolve). Fall through to normal
-    // auth, which 401s — better than granting access on a bad binding.
-    console.error('[mcp] MCP_USER_ID did not resolve to a user:', error?.message);
+    // Either MCP_USER_ID doesn't resolve, or a token outlived its user. Fall
+    // through to normal auth, which 401s — better than granting access on a
+    // binding we cannot confirm.
+    console.error('[mcp] internal actor did not resolve to a user:', error?.message);
     return null;
   }
 
   return { user: data.user, supabaseUrl, adminClient };
+}
+
+/** Which account this bearer is, if either credential recognises it. */
+async function resolveInternalActorUserId(
+  adminClient: SupabaseClient,
+  token: string
+): Promise<string | null> {
+  const config = getMcpConfig();
+  if (config && verifyMcpAccessKey(token)) return config.userId;
+  if (!isMcpConnectEnabled()) return null;
+  const actor = await resolveMcpToken(adminClient, token);
+  return actor?.userId || null;
 }
 
 /** requireActiveAuthenticatedUser, plus the internal-actor path. Use ONLY on
@@ -192,6 +220,8 @@ async function resolveInternalActor(request: NextRequest) {
 export async function requireActiveAuthenticatedUserOrInternal(request: NextRequest) {
   const internal = await resolveInternalActor(request);
   if (internal) {
+    const curatorBlock = await blockCuratorAccount(internal.user.id, internal.supabaseUrl);
+    if (curatorBlock) return { error: curatorBlock };
     const block = await requireActiveAccount(internal.user.id, internal.user.email, request.method);
     if (block) return { error: block };
     return { user: internal.user, supabaseUrl: internal.supabaseUrl };
@@ -204,6 +234,8 @@ export async function requireActiveAuthenticatedUserOrInternal(request: NextRequ
 export async function requireAuthenticatedAdminOrInternal(request: NextRequest) {
   const internal = await resolveInternalActor(request);
   if (internal) {
+    const curatorBlock = await blockCuratorAccount(internal.user.id, internal.supabaseUrl);
+    if (curatorBlock) return { error: curatorBlock };
     const block = await requireActiveAccount(internal.user.id, internal.user.email, request.method);
     if (block) return { error: block };
     return { user: internal.user, supabaseUrl: internal.supabaseUrl, adminClient: internal.adminClient };

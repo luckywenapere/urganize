@@ -23,7 +23,14 @@ import { Loader2, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { getAccessToken } from '@/components/settings/getAccessToken';
-import { isMcpConnectEnabled } from '@/lib/mcp/config';
+
+
+// Read inline at module scope rather than through lib/mcp/config's
+// isMcpConnectEnabled: that module imports node:crypto for the founder key's
+// constant-time compare, and pulling it into a client component drags a Node
+// builtin into the browser bundle. Every other flag-gated component in this app
+// reads its own one-liner for the same reason (see EpkSection, NotesPageClient).
+const MCP_CONNECT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MCP_CONNECT === 'true';
 
 type AuthorizeParams = {
   clientId: string;
@@ -164,7 +171,7 @@ export default function AuthorizePageClient() {
     }
   }, [isSubmitting, params]);
 
-  if (!isMcpConnectEnabled()) {
+  if (!MCP_CONNECT_ENABLED) {
     return (
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12">
         <h1 className="font-display text-2xl text-content-primary">Not available</h1>
