@@ -10,7 +10,6 @@ import {
   FinalCTASection,
   HeroSection,
   StatsSection,
-  TemplatePlanSection,
   ThreeFeaturesSection,
   WorkspaceShotSection,
 } from "./components/landing/Sections";
@@ -60,7 +59,12 @@ export default function Home() {
               and /why-urganize). Rebuild from git history if the beat is
               ever wanted back. */}
           <WorkspaceShotSection />
-          <TemplatePlanSection />
+          {/* TemplatePlanSection (the playbook excerpt) was REMOVED
+              2026-08-25, founder call, in the same trim as the
+              before/after rows above. The rollout-plan claim it carried
+              still leads the hero ("Urganize plans the rollout...") and
+              is spelled out in full on /features, /why-urganize and the
+              persona pages. Rebuild from git history if wanted back. */}
           <ThreeFeaturesSection />
           <FinalCTASection />
         </main>
