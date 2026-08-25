@@ -184,6 +184,13 @@ export interface Task {
   context?: TaskContextLink;
   commentCount?: number;
   attachmentCount?: number;
+
+  /** True for a task created offline that hasn't reached the server yet
+   * (lib/offline/queue.ts). Its id is a local placeholder, not a real row
+   * id — nothing should PATCH or complete it until the queue replays it
+   * and this flag (along with the id) is replaced by the server's real
+   * row. Undefined/absent for every ordinary task. */
+  pendingSync?: boolean;
 }
 
 export const TASK_OUTCOME_RATINGS = ['went_well', 'went_okay', 'not_to_plan'] as const;

@@ -28,6 +28,7 @@ import { CapacitorPushBridge } from '@/components/providers/CapacitorPushBridge'
 import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
 import { registerAppServiceWorker } from '@/lib/offline/register';
 import { OfflineBanner } from '@/components/app/OfflineBanner';
+import { flushOfflineQueue } from '@/lib/offline/sync';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { CURATOR_HOME_PATH } from '@/lib/home-path';
 
@@ -330,19 +331,24 @@ export function AppShell({ children }: { children: ReactNode }) {
     void registerAppServiceWorker();
   }, []);
 
-  // Reconnect refresh: the moment the browser reports the connection is
-  // back, re-pull the catalog rather than waiting for the next natural
-  // trigger (a click, the 10s freshness window). loadCommandCenter's own
-  // guards make this cheap when there is nothing to do — in-flight dedup
-  // and the recency window both still apply, so this never doubles up with
-  // an already-running or already-fresh load.
+  // Reconnect: replay whatever queued offline while the connection was
+  // down, THEN re-pull the catalog rather than waiting for the next
+  // natural trigger (a click, the 10s freshness window). flushOfflineQueue
+  // coalesces concurrent calls and loadCommandCenter has its own in-flight
+  // dedup and recency window, so this never doubles up with an
+  // already-running or already-fresh load. Also runs once on mount — a
+  // page reload can leave items queued from before the reload, and they
+  // should not have to wait for a fresh online/offline transition to sync.
   useEffect(() => {
     if (!OFFLINE_ENABLED) return;
-    const handleOnline = () => {
-      void useReleaseStore.getState().loadCommandCenter({ force: true });
+    const syncNow = () => {
+      void flushOfflineQueue().finally(() => {
+        void useReleaseStore.getState().loadCommandCenter({ force: true });
+      });
     };
-    window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
+    syncNow();
+    window.addEventListener('online', syncNow);
+    return () => window.removeEventListener('online', syncNow);
   }, []);
 
   // Engagement drip (founder request, 2026-07-23): ping once per tab

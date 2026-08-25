@@ -1004,12 +1004,12 @@ just bugs a stable connection usually hides.
 **The analysis of what works offline, what queues, and what stays online-only —
 the deliverable the founder actually asked for:**
 
-| Works offline (existing caches) | Cannot work offline (by design) | Queues when offline (phase 3) | Online-only, always |
+| Works offline (existing caches) | Cannot work offline (by design) | Queues when offline (**shipped** — see Phase 3 below) | Still online-only (not queued yet, or by design) |
 |---|---|---|---|
-| Catalog + task buckets + scoped release view (`urganize.cache.command-center`) | Files downloads, song playback, cover-art image beyond its 45-min memory window (signed 1h URLs, deliberately never persisted) | Activity quick-create | Sign-in/up |
-| Metadata, Press kit, Calendar (calendar list), Pitch scenes (persisted scene cache) | Capture leads (privacy exclusion — other people's emails never touch localStorage) | Task complete / reopen (+ computed cascade unlocks) | Release creation (server-side template instantiation, caps, artist resolution) |
-| Notes (newest 50, full bodies) | Plan editor (an autosaved document, deliberately excluded from the cache) | Note create + edit | UrgAns + all AI (planner, status update, outcomes follow-up) |
-| Settings: artist, teammates, chrome | Calendar POSTS (never cached), activity feed (excluded from the command-center cache on purpose) | Cover art upload | Metadata editing (its PATCH behaves like a PUT — replaying a stale whole-doc offline would wipe fields someone else edited) |
+| Catalog + task buckets + scoped release view (`urganize.cache.command-center`) | Files downloads, song playback, cover-art image beyond its 45-min memory window (signed 1h URLs, deliberately never persisted) | **Activity (task) creation** | Sign-in/up |
+| Metadata, Press kit, Calendar (calendar list), Pitch scenes (persisted scene cache) | Capture leads (privacy exclusion — other people's emails never touch localStorage) | **Cover art upload** | Task complete / reopen — not queued yet, unchanged inline error on a network failure |
+| Notes (newest 50, full bodies) | Plan editor (an autosaved document, deliberately excluded from the cache) | **Song upload** | Note create / edit — not queued yet (see Phase 3's `useNotesStore.create` note below) |
+| Settings: artist, teammates, chrome | Calendar POSTS (never cached), activity feed (excluded from the command-center cache on purpose) | — | Release creation, UrgAns + all AI, Metadata editing (its PATCH behaves like a PUT — replaying a stale whole-doc offline would wipe fields someone else edited) |
 | Curator inbox/profile/playlists, identity card | — | Song upload | Calendar post CRUD, EPK/capture/credits link minting, pitching sends, payments/billing, invites/team logins, recap generation, data export, admin, genre prediction, push toggles |
 
 - **The service worker is split in three, all in `public/`:** `sw-push.js` holds
@@ -1087,17 +1087,103 @@ the deliverable the founder actually asked for:**
   failure, network failures included — sending an offline user straight to the
   no-AI command bar is the CORRECT degrade already built in, not a gap.
 
-### Phase 3 — the mutation queue (not yet built)
+### Phase 3 — the mutation queue (`NEXT_PUBLIC_FEATURE_OFFLINE`, same flag)
 
-The design (IndexedDB-backed FIFO queue via a hand-rolled wrapper — no `idb`
-dependency, the hand-rolled MCP/FCM precedent — for activity create/complete,
-notes, and cover-art/song uploads, replaying through the exact same
-`uploadCoverArt`/`uploadSong`/REST calls the online path already uses) is
-recorded but not implemented. An offline-created task will show a "Waiting to
-sync" marker and stay uncompletable until synced — no chained operations on
-temporary ids, which keeps replay free of id-remapping. See the phase's own PR
-when it lands for the shipped shape; this paragraph is a placeholder for that
-entry, not a description of working code.
+- **`lib/offline/idb.ts`** — the repo's first use of IndexedDB, and the reason is
+  narrow: a cover-art/song `File` (up to 25 MiB) cannot live in localStorage's
+  quota-limited envelope the way every other cache in this codebase does. Hand-
+  rolled promise wrapper around one object store (`urganize-offline` /
+  `queue`) — four operations (`idbPut`/`idbGetAll`/`idbDelete`/`idbClear`), no
+  dependency (`idb`, `localforage`), the same "boring stack" call already made
+  for the MCP JSON-RPC layer and the FCM sender. All four resolve to a safe
+  no-op when IndexedDB is unavailable (old browsers, some locked-down
+  webviews, private-browsing modes that disable it) — a queue that can't
+  queue just means mutations run online-only, exactly as before this feature.
+  Tested against a hand-rolled fake IndexedDB (this repo's vitest environment
+  is plain Node, which — unlike `fetch`/`Request`/`Response` — has no
+  IndexedDB global at all; adding `fake-indexeddb` purely to test four narrow
+  operations was judged not worth a new dependency).
+- **`lib/offline/queue.ts`** — generic FIFO storage plus the flush DECISION
+  logic, deliberately split from the actual replay: this file knows nothing
+  about tasks, notes, or uploads, only `{kind, payload, blob?}` records and a
+  caller-supplied `replay` function per flush. `decideFlushOutcome` (pure,
+  fully unit-tested independent of IndexedDB) is the whole policy: success →
+  dequeue; a network failure → **stop the entire flush run** (every later item
+  would fail identically, so don't burn attempts on them); a 4xx → drop
+  immediately, no retry fixes a rejected request; a 5xx → requeue, up to
+  `MAX_SERVER_ERROR_ATTEMPTS` (3) attempts total across separate flushes
+  before giving up — the same retry-classification philosophy
+  `lib/ai/provider.ts` already applies server-side. Every queued item carries
+  the `userId` it was created under, and `flush()` only ever replays the
+  CURRENTLY signed-in user's own items — a shared device or an account switch
+  must never sync one person's queued work under another's session.
+- **`lib/offline/sync.ts`** — the orchestrator: maps each `QueuedMutationKind`
+  to its real replay (a raw `POST /api/tasks` for `task_create`; the EXISTING
+  `uploadCoverArt`/`uploadSong` flows, called verbatim, for the two upload
+  kinds) and applies a successful replay back into the live stores — swapping
+  a task's local placeholder id for the server's real row, or running the
+  same `setScene` + `loadCommandCenter({force:true})` write-through the
+  interactive cover-art upload already runs on success. `flushOfflineQueue()`
+  coalesces concurrent calls into one in-flight run (an `online` event and an
+  app-boot call can both fire close together without racing IndexedDB).
+  **`note_create` exists in the type union but is deliberately NOT wired in
+  yet** — `useNotesStore.create`'s own comment explains why: "No optimistic
+  phantom row: the editor needs a real id to autosave into, and a note the
+  server has never seen has nowhere to save to." Queuing a note create means
+  the autosave loop has to target a temporary id instead of PATCHing a real
+  one, and the virgin-note reaper's assumptions need re-checking against
+  that — real, separate work, left for a follow-up rather than forced in here.
+- **What actually queues today: activity (task) creation, cover-art uploads,
+  song uploads.** Task completion/reopen, and notes, do NOT queue yet — a
+  network failure there still shows the ordinary inline error, unchanged from
+  before this feature.
+- **`TaskUIProvider.createQuickTask`** — on a network failure (or a known-
+  offline attempt) with the flag on, builds a local task row with
+  `id: 'offline-task-...'` and the new `Task.pendingSync: true` field
+  (`types/tasks.ts`), inserts it into `useTaskStore` immediately, and enqueues
+  the create. `TaskRow` shows a "Waiting to sync" pill next to the title
+  (comfortable density) and `TaskCompletionCheckbox` renders its `disabled`
+  variant (a plain, non-interactive muted circle, not a `<button>`) for such
+  a row — **no chained operations on a placeholder id**, which is what keeps
+  replay free of id-remapping logic. Once the queue replays the create, the
+  row is swapped in place for the server's real one; nothing about its
+  position in the list changes.
+- **`useCoverArtUpload` / `useSongUpload`** gained a `queued` field alongside
+  the existing `error`/`retryFile`. A pick made while genuinely offline (or a
+  retryable failure that happens to land while the connection has already
+  dropped mid-upload) skips the Retry-button path entirely and enqueues the
+  file instead, since a signed upload URL from before the drop may itself be
+  what's stale by the time connectivity returns — replay re-runs the whole
+  3-step flow from scratch with a fresh token. All four consumers
+  (`CoverArtSection`, `SongSection`, `CoverArtPromptSheet`,
+  `ChappiSongUploadCard`) surface it — the two with an `onToast` prop get the
+  message as a toast, the two without render it inline next to where the
+  error message would otherwise go.
+- **`OfflineBanner`'s reconnect message names how many changes are syncing**
+  ("Back online — syncing 2 changes…") and counts down LIVE as
+  `flushOfflineQueue` actually dequeues each one (via
+  `subscribeQueueChanges`), rather than freezing at whatever the count was
+  the instant the connection returned — a `useRef` mirrors the "currently
+  showing the reconnect message" state for the queue-subscription callback to
+  read, since that callback is created once on mount and a bare read of the
+  `showReconnected` STATE variable there would always see its stale initial
+  value. AppShell's reconnect effect now flushes the queue before refreshing
+  the catalog, and also runs once on mount — a page reload can leave items
+  queued from before the reload, and they shouldn't have to wait for a fresh
+  online/offline transition to sync.
+- **Verified:** the full vitest suite (1328 passing, 33 new across
+  `idb.test.ts`, `queue.test.ts`, `sync.test.ts`), `eslint .` at the exact
+  3-error/66-warning baseline, and `tsc --noEmit` clean on every file this
+  touched (the 8 pre-existing errors in `confirmed-action.test.ts` are
+  unrelated and present on a clean checkout, confirmed by stashing this
+  work and re-running). **Not verified:** nothing has run in a real browser —
+  no real IndexedDB, no real service worker, no real offline transition. The
+  queue's decision logic and the orchestrator's replay-and-apply behavior are
+  covered by unit tests with hand-rolled fakes standing in for IndexedDB and
+  the upload/task-creation calls; that is not the same as a phone going into
+  airplane mode mid-upload. Worth one manual pass on a preview deploy before
+  calling this done: create an activity offline, pick a cover art offline,
+  reconnect, and confirm both land.
 
 ### Activation
 
@@ -1107,8 +1193,9 @@ actually rebuilds `apps/web` (the documented `turbo-ignore` trap — a
 version-bump-only commit does rebuild it, since `apps/web/package.json` is part
 of the `@urganize/web` package; a same-commit Redeploy or an env-only change
 with no new commit does not). Changelog entry + version bump at the flip, not at
-merge (the EPK precedent), once phase 3 makes "offline" a complete claim rather
-than "the app doesn't go blank."
+merge (the EPK precedent). Worth the manual preview-deploy pass named at the end
+of Phase 3 above before flipping — nothing in phases 2–3 has run in a real
+browser yet."
 
 ---
 

@@ -22,6 +22,11 @@ type TaskCompletionCheckboxProps = {
    * pill, blocker banner) refreshes correctly rather than only the store's
    * list state. */
   onToggle?: () => Promise<void> | void;
+  /** True for a task that hasn't reached the server yet (offline queue,
+   * see types/tasks.ts's Task.pendingSync). Renders the same muted circle a
+   * locked task gets but as a plain, non-interactive element — nothing
+   * should attempt to complete or reopen a row that has no real id yet. */
+  disabled?: boolean;
 };
 
 /**
@@ -48,6 +53,7 @@ export function TaskCompletionCheckbox({
   taskTitle,
   className = '',
   onToggle,
+  disabled = false,
 }: TaskCompletionCheckboxProps) {
   const isDone = status === TASK_DONE_STATUS;
   const isLocked = status === TASK_LOCKED_STATUS;
@@ -77,6 +83,21 @@ export function TaskCompletionCheckbox({
     : isLocked
       ? 'border-stroke-default bg-bg-elevated/40 text-transparent hover:border-stroke-strong'
       : 'border-stroke-default bg-bg-surface text-transparent hover:border-stroke-strong';
+
+  if (disabled) {
+    return (
+      <div
+        role="checkbox"
+        aria-checked={false}
+        aria-disabled="true"
+        aria-label={`${taskLabel} hasn't synced yet`}
+        title="Waiting to sync"
+        className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-elevated/40 text-transparent ${className}`}
+      >
+        <Check className="h-3.5 w-3.5" strokeWidth={3} />
+      </div>
+    );
+  }
 
   return (
     <button

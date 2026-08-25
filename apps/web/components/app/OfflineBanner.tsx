@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useOnlineStatus } from '@/lib/offline/status';
+import { supabase } from '@/lib/supabase/client';
+import { pendingCount, subscribeQueueChanges } from '@/lib/offline/queue';
 
 // The offline indicator. A slim full-width strip above the topbar — the
 // TeamTrialStrip contract verbatim: calm, states the fact, offers no action
@@ -15,11 +17,12 @@ import { useOnlineStatus } from '@/lib/offline/status';
 // a banner claiming "you can keep working" while nothing actually queues
 // yet would be a lie.
 //
-// RECONNECT_MESSAGE_MS is how long the "Back online" confirmation lingers
-// after reconnecting, purely so the transition doesn't vanish before anyone
-// reads it. Phase 3 (the mutation queue) extends this message to name how
-// many queued changes are syncing; until then it just confirms the network
-// is back.
+// The reconnect message names how many queued changes are syncing, and
+// updates as they actually leave the queue (via subscribeQueueChanges) —
+// not a one-off count frozen at the instant the connection came back, which
+// would drift from reality the moment the first item synced. Once the
+// count reaches zero it collapses to a plain "Back online." for
+// RECONNECT_MESSAGE_MS before disappearing.
 //
 // The reconnect transition is tracked via the raw window online/offline
 // events, not a reactive effect over useOnlineStatus()'s current value —
@@ -31,7 +34,15 @@ const RECONNECT_MESSAGE_MS = 4000;
 export function OfflineBanner() {
   const isOnline = useOnlineStatus();
   const [showReconnected, setShowReconnected] = useState(false);
+  const [syncingCount, setSyncingCount] = useState(0);
   const wasOfflineRef = useRef(false);
+  // Mirrors showReconnected but readable from inside the queue-subscription
+  // closure below without it going stale: that closure is created once, on
+  // mount, and a plain read of the `showReconnected` STATE variable there
+  // would always see its initial value rather than the current one. A ref
+  // is exactly the "read current external state from a callback" case the
+  // set-state-in-effect rule's own guidance points at.
+  const showingReconnectRef = useRef(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -44,8 +55,26 @@ export function OfflineBanner() {
       }
     };
 
+    const refreshSyncingCount = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) return;
+      const count = await pendingCount(userId);
+      setSyncingCount(count);
+      if (count === 0) {
+        clearHideTimer();
+        hideTimerRef.current = setTimeout(() => {
+          showingReconnectRef.current = false;
+          setShowReconnected(false);
+        }, RECONNECT_MESSAGE_MS);
+      }
+    };
+
     const handleOffline = () => {
       wasOfflineRef.current = true;
+      showingReconnectRef.current = false;
       clearHideTimer();
       setShowReconnected(false);
     };
@@ -53,22 +82,38 @@ export function OfflineBanner() {
     const handleOnline = () => {
       if (!wasOfflineRef.current) return;
       wasOfflineRef.current = false;
+      showingReconnectRef.current = true;
       setShowReconnected(true);
       clearHideTimer();
-      hideTimerRef.current = setTimeout(() => setShowReconnected(false), RECONNECT_MESSAGE_MS);
+      void refreshSyncingCount();
     };
+
+    // The queue changes as AppShell's flush (lib/offline/sync.ts) works
+    // through it — this is what lets the count count DOWN in place rather
+    // than freezing at whatever it was the instant the connection returned.
+    const unsubscribeQueue = subscribeQueueChanges(() => {
+      if (showingReconnectRef.current) {
+        void refreshSyncingCount();
+      }
+    });
 
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
     return () => {
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
+      unsubscribeQueue();
       clearHideTimer();
     };
   }, []);
 
   if (!OFFLINE_ENABLED) return null;
   if (isOnline && !showReconnected) return null;
+
+  const reconnectMessage =
+    syncingCount > 0
+      ? `Back online — syncing ${syncingCount} ${syncingCount === 1 ? 'change' : 'changes'}…`
+      : 'Back online.';
 
   return (
     <div
@@ -78,7 +123,7 @@ export function OfflineBanner() {
     >
       <p className="text-sm text-content-secondary">
         {isOnline ? (
-          <span className="font-medium text-content-primary">Back online.</span>
+          <span className="font-medium text-content-primary">{reconnectMessage}</span>
         ) : (
           <>
             <span className="font-medium text-content-primary">You&rsquo;re offline.</span>{' '}

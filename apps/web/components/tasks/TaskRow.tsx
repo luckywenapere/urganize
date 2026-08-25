@@ -130,6 +130,7 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
           status={task.status}
           onBlocker={onBlocker}
           taskTitle={task.title}
+          disabled={task.pendingSync}
         />
         <p
           className={`min-w-0 flex-1 ${titleClass}`}
@@ -183,6 +184,7 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
         status={task.status}
         onBlocker={onBlocker}
         taskTitle={task.title}
+        disabled={task.pendingSync}
       />
 
       <div className="min-w-0 flex-1">
@@ -201,6 +203,11 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
           <p className={titleClass} title={task.title}>
             {task.title}
           </p>
+          {task.pendingSync ? (
+            <span className="shrink-0 rounded-full border border-stroke-default bg-bg-elevated px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] text-content-tertiary">
+              Waiting to sync
+            </span>
+          ) : null}
           {task.groupName ? (
             <GroupTagPill
               name={task.groupName}
