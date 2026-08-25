@@ -179,11 +179,17 @@ export function EpkSection({ releaseId, onToast }: EpkSectionProps) {
             >
               {shareUrl}
             </p>
-            <div className="flex flex-wrap gap-2 sm:shrink-0">
+            {/* No `sm:shrink-0` on this group, deliberately — it pinned the row
+                at max-content so the `flex-wrap` could never fire and the
+                buttons overflowed and were clipped instead. Each button carries
+                `shrink-0 whitespace-nowrap` so they wrap whole. Same fix, same
+                day, as the identical row in MetadataSection and
+                CaptureSection — read the note there for the full reasoning. */}
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => void handleCopy()}
-                className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
+                className="inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
               >
                 {copied ? (
                   <>
@@ -201,7 +207,7 @@ export function EpkSection({ releaseId, onToast }: EpkSectionProps) {
                 href={shareUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
+                className="inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
                 View kit
@@ -210,7 +216,7 @@ export function EpkSection({ releaseId, onToast }: EpkSectionProps) {
                 type="button"
                 onClick={() => void handleRevoke()}
                 disabled={isMutating}
-                className="inline-flex h-9 items-center border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-status-error disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-9 shrink-0 items-center whitespace-nowrap border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-status-error disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isMutating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Revoke link'}
               </button>

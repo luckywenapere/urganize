@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   SCENE_CACHE_MAX_RELEASES,
   SCENE_FRESH_MS,
@@ -224,5 +224,68 @@ describe('withinPersistBudget', () => {
 
   it('allows exactly the limit', () => {
     expect(withinPersistBudget('x'.repeat(SCENE_PERSIST_MAX_BYTES))).toBe(true);
+  });
+});
+
+// resolveActiveScene reads its four feature flags at MODULE scope (the
+// NEXT_PUBLIC_* inlining pattern), so stubbing env after an import would be too
+// late — each case re-imports with the flags it wants. All four are stubbed
+// explicitly rather than read from the ambient environment: vitest does not load
+// .env.local, and leaving any of them to chance would make these assertions
+// depend on whoever ran them.
+async function loadResolver(flagsOn: boolean) {
+  vi.resetModules();
+  for (const flag of [
+    'NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR',
+    'NEXT_PUBLIC_FEATURE_CAPTURE',
+    'NEXT_PUBLIC_FEATURE_SONG_UPLOAD',
+    'NEXT_PUBLIC_FEATURE_COVER_ART',
+  ]) {
+    vi.stubEnv(flag, flagsOn ? 'true' : 'false');
+  }
+  return import('./scene-cache');
+}
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe('resolveActiveScene', () => {
+  it('returns null for no param, an unknown name, and near-misses', async () => {
+    const { resolveActiveScene } = await loadResolver(true);
+    expect(resolveActiveScene(null)).toBeNull();
+    expect(resolveActiveScene('')).toBeNull();
+    expect(resolveActiveScene('bogus')).toBeNull();
+    // Case and whitespace are NOT normalized: the app only ever writes these
+    // params itself, so a near-miss is a hand-typed URL and reads as no scene.
+    expect(resolveActiveScene('Metadata')).toBeNull();
+    expect(resolveActiveScene(' metadata')).toBeNull();
+  });
+
+  it('resolves every scene name when its flag is on', async () => {
+    const { resolveActiveScene, SCENE_NAMES: names } = await loadResolver(true);
+    for (const scene of names) {
+      expect(resolveActiveScene(scene)).toBe(scene);
+    }
+  });
+
+  it('treats the four flag-gated scenes as closed when their flags are off', async () => {
+    const { resolveActiveScene } = await loadResolver(false);
+    for (const scene of ['calendar', 'capture', 'song', 'coverart']) {
+      expect(resolveActiveScene(scene)).toBeNull();
+    }
+  });
+
+  it('leaves the five ungated scenes open with those flags off', async () => {
+    // Deliberate, and the reason this is asserted rather than left implicit:
+    // metadata / files / epk / pitch / plan gate themselves inside
+    // ReleaseScenePanel and their own pills, and gating them here would change
+    // which scenes RENDER rather than just consolidating the check. A future
+    // change that adds one of them to the resolver has to break this test on
+    // purpose.
+    const { resolveActiveScene } = await loadResolver(false);
+    for (const scene of ['metadata', 'files', 'epk', 'pitch', 'plan']) {
+      expect(resolveActiveScene(scene)).toBe(scene);
+    }
   });
 });

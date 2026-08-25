@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.1.3",
+    date: "August 25, 2026",
+    highlights: [
+      "On a computer, pages inside a release now use the full width. Collect metadata, your calendar, files and your press kit were being squeezed into a narrow strip with empty space next to them.",
+      "The buttons next to a share link no longer get cut off.",
+    ],
+  },
+  {
     version: "1.1.2",
     date: "August 25, 2026",
     highlights: [

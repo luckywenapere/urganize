@@ -712,11 +712,23 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
                       <p className="min-w-0 flex-1 truncate font-mono text-xs text-content-secondary" title={shareUrl}>
                         {shareUrl}
                       </p>
-                      <div className="flex flex-wrap gap-2 sm:shrink-0">
+                      {/* `sm:shrink-0` used to sit on this group and it made the
+                          `flex-wrap` beside it dead code: flex-shrink:0 pins the
+                          group at its ~350px max-content width, so instead of
+                          wrapping it OVERFLOWED the card and got clipped
+                          mid-word ("Regener…" — founder screenshot,
+                          2026-08-25). The group shrinks now and each button
+                          carries `shrink-0 whitespace-nowrap` instead, so they
+                          move whole onto a second row rather than compressing
+                          and breaking their own labels inside a fixed h-9 —
+                          the same fix TasksPanel's pills took on 2026-08-10.
+                          The URL beside them is `flex-1` with a 0 basis, so it
+                          absorbs none of the shrinkage and keeps truncating. */}
+                      <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() => void handleCopy()}
-                          className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
+                          className="inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
                         >
                           {copied ? (
                             <>
@@ -734,7 +746,7 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
                           href={shareUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
+                          className="inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                           Open form
@@ -743,7 +755,7 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
                           type="button"
                           onClick={() => void handleRegenerateLink()}
                           disabled={isMutatingLink}
-                          className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-status-warning disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-status-warning disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {isMutatingLink ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
