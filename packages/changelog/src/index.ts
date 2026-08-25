@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.2.0",
+    date: "August 25, 2026",
+    highlights: [
+      "Connect Claude, ChatGPT or another AI app to Urganize and ask it about your releases. It can see your releases, activities and notes, and add or change them — it cannot delete anything.",
+      "You decide which apps get in, and you can cut any of them off at any time from Settings.",
+    ],
+  },
+  {
     version: "1.1.4",
     date: "August 25, 2026",
     highlights: [
