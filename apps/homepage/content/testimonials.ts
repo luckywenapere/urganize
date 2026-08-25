@@ -134,6 +134,15 @@ export interface TransformationPair {
 // Row order is the section's reading order: plan -> team -> status. The
 // rows carry NO visible title (removed 2026-08-25, founder call) — that
 // grouping lives only here, as the reason each pairing sits where it does.
+//
+// RENDERER REMOVED (2026-08-25, founder call): TransformationSection — the
+// only component that ever rendered these pairs — was cut from the homepage
+// as too bulky. This export deliberately stays: it is the sign-off ledger
+// for the quoteOverride excerpts and the canonical OWNER of the Antoine and
+// Adenaiye `before` strings that /why-urganize mirrors byte-identically
+// (see the provenance correction above). Do not delete it as "dead code"
+// without re-homing that ownership; rebuild the section from git history if
+// the beat is ever wanted back.
 export const transformationPairs: readonly TransformationPair[] = [
   {
     testimonialId: "antoine",

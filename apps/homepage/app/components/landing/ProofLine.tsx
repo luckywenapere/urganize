@@ -16,10 +16,11 @@ import { TESTIMONIALS, type TestimonialId } from "@/content/testimonials";
 //                                      per pixel, right where the primary
 //                                      CTA lives)
 //   homepage_final_cta → adenaiye    (sharpest ICP-match sentence; swapped
-//                                      off tamuno 2026-08-13 — his full
-//                                      quote already anchors Transformation-
-//                                      Section's "Status" row on the same
-//                                      page, so this mount repeated it)
+//                                      off tamuno 2026-08-13 to avoid
+//                                      repeating his then-on-page full
+//                                      quote. TransformationSection was
+//                                      removed 2026-08-25; her mount stands
+//                                      on the ICP-match merit alone.)
 //   features_cta       → antoine     (plan-already-laid-out fits the page)
 //   why_urganize_cta   → tamuno      (status-at-a-glance is that page's
 //                                      remaining thesis; swapped off
@@ -27,11 +28,11 @@ import { TESTIMONIALS, type TestimonialId } from "@/content/testimonials";
 //                                      files-in-three-chats quote was
 //                                      retired, see content/testimonials.ts.
 //                                      Her new 2026-08-05 review appears on
-//                                      the site via TransformationSection's
-//                                      "team" row and the /for-managers
-//                                      featured testimonial — not as a
-//                                      ProofLine mount, so this row's choice
-//                                      stands.)
+//                                      the site via the /for-managers
+//                                      featured testimonial (its Transform-
+//                                      ationSection mount was removed
+//                                      2026-08-25) — not as a ProofLine
+//                                      mount, so this row's choice stands.)
 //   pricing            → zaddyfunds  (short + linkable on an otherwise
 //                                      all-numbers-free page)
 //   for_managers_cta   → (none)      a full quote already sits directly

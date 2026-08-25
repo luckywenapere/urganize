@@ -157,8 +157,9 @@ export default function ForManagersPage() {
             canonical copy. Swapped in 2026-08-05: her new review's chaos/
             multiple-releases-and-artists-and-team sentence is this page's
             exact audience. Antoine (the prior quote here) still carries the
-            landing TransformationSection's "plan" row and the /features CTA
-            ProofLine, so his voice isn't lost from the site. */}
+            /features CTA ProofLine (his landing TransformationSection row
+            went with that section, removed 2026-08-25), so his voice isn't
+            lost from the site. */}
         <ScrollReveal>
           <SectionShell
             className="py-[80px] lg:py-[100px]"

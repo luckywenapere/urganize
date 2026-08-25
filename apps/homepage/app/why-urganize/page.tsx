@@ -44,8 +44,9 @@ const comparisons = [
 // Folded from three full-size blocks into one compact section (see the
 // note above). Each row is a single sentence per side joined by an arrow
 // instead of a boxed grid, deliberately a different shape from the "The
-// plan" comparison above and from the homepage's TransformationSection, so
-// a visitor arriving from either doesn't see the same format a third time.
+// plan" comparison above (and originally from the homepage's
+// TransformationSection too — that section was removed 2026-08-25), so a
+// visitor doesn't see the same format twice.
 const compactComparisons = [
   {
     kicker: "Ownership",

@@ -40,9 +40,10 @@ export function FinalCTASection() {
                 not restore this without fresh founder-supplied figures. */}
             {/* Adenaiye's chaos/multiple-releases sentence — the sharpest
                 ICP-match line on the site — at the last chance to convert a
-                scroller. Swapped off tamuno 2026-08-13: his full quote
-                already anchors the last row of TransformationSection, so
-                mounting him here repeated the same words twice on one page. */}
+                scroller. Swapped off tamuno 2026-08-13 to avoid repeating
+                his then-on-page TransformationSection quote; that section
+                was removed 2026-08-25 and this mount stands on the
+                ICP-match merit alone. */}
             <ProofLine id="adenaiye" className="mt-2" />
           </div>
         </div>
