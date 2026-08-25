@@ -1,6 +1,7 @@
 import { ThemedProductShot } from "../ThemedProductShot";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
+import { WaitlistForm } from "../WaitlistForm";
 import { wideContainerClass } from "./shared";
 
 // Real screenshot of the current workspace (light and dark retaken together
@@ -33,6 +34,20 @@ export function WorkspaceShotSection() {
             height={970}
             sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
           />
+        </div>
+
+        {/* Mid-page ask (2026-08-25, founder request): the hero form and the
+            final CTA sit five screens apart with only the header button in
+            between, so the ask repeats once here — directly under the
+            screenshot, the page's peak-proof moment. Inline in this section
+            rather than a section of its own so it adds no new rhythm beat to
+            a page that keeps getting trimmed for weight. Cuttable as a
+            block. */}
+        <div className="relative z-[60] mx-auto mt-12 flex w-full max-w-[44rem] flex-col items-center gap-3 text-center">
+          <p className="text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
+            Put your next release on plan.
+          </p>
+          <WaitlistForm source="homepage_mid" />
         </div>
       </SectionShell>
     </ScrollReveal>
