@@ -33,14 +33,15 @@ export default function Home() {
         <MarketingHeader />
 
         <main>
-          {/* Proof sits at screen two (2026-07-31 reorder), directly after
-              the hero, so the credibility check happens before the visitor
-              has already decided to leave. Trimmed 2026-08-13 (founder call:
-              the page was overwhelming): MirrorSection was cut because it
-              made the hero's WhatsApp/scattered-notes argument a third time,
-              and AskAISection was cut because it sent visitors off-site to
-              three AI chatbots one scroll before the final CTA. Rebuild both
-              from git history if either beat is ever wanted back. */}
+          {/* The page is five beats (2026-08-25 trim): hero + video, the
+              offer (stats), the product (screenshot), three features, the
+              final ask. Proof rides as one-line ProofLines under the hero
+              and final forms rather than as sections of its own. Removal
+              history: MirrorSection and AskAISection cut 2026-08-13
+              (founder call: the page was overwhelming — one repeated the
+              hero's argument a third time, the other sent visitors
+              off-site one scroll before the final CTA). Rebuild any of
+              these from git history if a beat is ever wanted back. */}
           {/* CommunitySection was REMOVED 2026-08-19 (founder call: nobody
               clicked it) — the page now ends on the final waitlist CTA, the
               journey's one terminal ask. The /community page and the
