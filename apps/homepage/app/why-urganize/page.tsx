@@ -36,7 +36,7 @@ const comparisons = [
     // `them` is byte-identical to transformationPairs[0].before in
     // content/testimonials.ts — that file owns the string, this page
     // mirrors it. Change both together or not at all.
-    them: "The plan sits in a pinned message, a spreadsheet someone made once and your head. Every new release starts from zero, plus whatever you remember from the last one.",
+    them: "Your plan is spread across a pinned chat, an old spreadsheet and your memory. Every new release starts from scratch.",
     us: "Create a release and Urganize lays out the whole 11-week rollout. 64 activities, from locking the master to pulling your first-week numbers. Real managers wrote it and tested it. Edit or delete any activity.",
   },
 ] as const;

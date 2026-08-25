@@ -1,7 +1,7 @@
 import { TESTIMONIALS, transformationPairs } from "@/content/testimonials";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
-import { centeredHeadlineClass } from "./shared";
+import { centeredHeadlineClass, mutedLeadClass } from "./shared";
 
 // Replaces the old TestimonialSection (2026-07-31): the signed-off quotes,
 // restructured as a before→after so the proof does more work than a
@@ -15,16 +15,36 @@ import { centeredHeadlineClass } from "./shared";
 // this section now has three rows: plan (Antoine) -> team (Adenaiye) ->
 // status (Tamuno). See content/testimonials.ts for the sign-off log.
 //
-// ATTRIBUTION SAFEGUARD (read before touching this file): each row's LEFT
+// PLAIN-LANGUAGE PASS (2026-08-25, founder call: the section was confusing
+// and a visitor clicked the words "The plan" expecting a link). Three
+// things changed and each is load-bearing — do not undo one without
+// re-reading why it is here:
+//
+//  1. The row title is a real <h3> in plain body colour, NOT a
+//     `mono-label` in `--marketing-accent`. That combination (uppercase
+//     mono + accent) is what this site's links look like, so a standalone
+//     line styled that way reads as clickable. That is the reported bug.
+//  2. The per-cell labels were "In WhatsApp + Drive" / "In Urganize",
+//     repeating the same two facts six times down the section. They are
+//     now plain "Before" / "After" and the WhatsApp-and-Drive fact is
+//     stated ONCE, in the lead below the headline.
+//  3. The lead exists because the grid never explained itself: a visitor
+//     had to decode what the two columns meant. It says so outright, and
+//     it is worded without "left"/"right" because the grid stacks to one
+//     column below sm.
+//
+// Net effect: the section went from ten uppercase labels to one.
+//
+// ATTRIBUTION SAFEGUARD (read before touching this file): each row's FIRST
 // cell is Urganize's own words about the pre-Urganize workflow (owned by
 // content/testimonials.ts — see the provenance note there; /why-urganize
 // mirrors two of the rows). It
 // must never carry quote marks, a name, or a <figcaption> — that would
 // misattribute Urganize's words to the testimonial person. The asymmetry
-// between the two cells (plain muted text on the left; <figure> + curly
-// quotes + named <figcaption> on the right) is structural, not just
+// between the two cells (plain muted text on one side; <figure> + curly
+// quotes + named <figcaption> on the other) is structural, not just
 // styling. Do not "balance" the two sides by adding attribution to the
-// left one.
+// "Before" one.
 export function TransformationSection() {
   return (
     <ScrollReveal>
@@ -42,8 +62,13 @@ export function TransformationSection() {
               executive wants before buying. Roles render verbatim from
               testimonials.ts and are immutable. */}
           <h2 className={`mt-6 ${centeredHeadlineClass}`}>
-            The people who run releases, in their own words.
+            Before Urganize, and after.
           </h2>
+          <p className={`mx-auto mt-6 max-w-[42rem] ${mutedLeadClass}`}>
+            Each row is one part of a release. Before is how it goes in
+            WhatsApp and Drive. After is what the people who run releases
+            told us.
+          </p>
         </div>
 
         <div className="mt-16 space-y-12">
@@ -54,29 +79,31 @@ export function TransformationSection() {
                 key={pair.testimonialId}
                 className="mx-auto max-w-[64rem] border-t border-[color:var(--marketing-border)] pt-12"
               >
-                <p className="mono-label text-[var(--marketing-accent)]">
+                {/* Plain heading, not a mono-label in accent — see point 1
+                    of the plain-language note above the export. */}
+                <h3 className="text-[1.15rem] font-semibold tracking-[-0.02em] text-[var(--marketing-text)]">
                   {pair.kicker}
-                </p>
+                </h3>
 
-                <div className="mt-8 grid grid-cols-1 gap-px bg-[color:var(--marketing-border)] sm:grid-cols-2">
+                <div className="mt-6 grid grid-cols-1 gap-px bg-[color:var(--marketing-border)] sm:grid-cols-2">
                   {/* BEFORE — Urganize's own words, no quote marks, no name.
                       See the attribution safeguard note above the export. */}
                   <div className="bg-[var(--marketing-bg)] px-6 py-7 sm:px-7 sm:py-8">
-                    <p className="mono-label text-[var(--marketing-text-subtle)]">
-                      In WhatsApp + Drive
+                    <p className="text-sm font-medium text-[var(--marketing-text-subtle)]">
+                      Before
                     </p>
-                    <p className="mt-4 text-[0.95rem] leading-7 text-[var(--marketing-text-muted)]">
+                    <p className="mt-3 text-[0.95rem] leading-7 text-[var(--marketing-text-muted)]">
                       {pair.before}
                     </p>
                   </div>
 
                   {/* AFTER — the real, signed-off quote, verbatim. */}
                   <figure className="bg-[var(--marketing-bg)] px-6 py-7 sm:px-7 sm:py-8">
-                    <p className="mono-label text-[var(--marketing-accent)]">
-                      In Urganize
+                    <p className="text-sm font-medium text-[var(--marketing-accent)]">
+                      After
                     </p>
                     <blockquote>
-                      <p className="mt-4 text-[0.95rem] leading-7 text-[var(--marketing-text)]">
+                      <p className="mt-3 text-[0.95rem] leading-7 text-[var(--marketing-text)]">
                         &ldquo;{pair.quoteOverride ?? testimonial.quote}&rdquo;
                       </p>
                     </blockquote>
