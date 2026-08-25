@@ -16,6 +16,7 @@ import {
   type PlanPhase,
 } from '@/lib/release-planning';
 import { usePlanDraft } from './usePlanDraft';
+import { PlanApproveBar } from './PlanApproveBar';
 import { PlanPhaseSection } from './PlanPhaseSection';
 import { PlanSceneSkeleton } from './PlanSceneSkeleton';
 
@@ -37,6 +38,15 @@ type PlanSceneProps = {
   onApproved: () => void;
   onStartIntake: () => void;
 };
+
+// How long a manager reads before the bar offers to move them on (founder
+// request, 2026-08-25). Twenty seconds is long enough to have scrolled a phase
+// or two and short enough to still be a nudge rather than an interruption; it
+// deliberately matches the twenty seconds the generating skeleton waits before
+// it speaks up, so the scene only ever has one sense of "this is taking a
+// while". Counted from the moment a plan is actually on screen and approvable,
+// not from mount.
+const REVIEW_PROMPT_AFTER_MS = 20_000;
 
 const noticeClass =
   'flex items-start gap-2 rounded-lg border px-3 py-2 text-xs leading-5';
@@ -85,6 +95,9 @@ export function PlanScene({
   );
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [slowNotice, setSlowNotice] = useState(false);
+  const [reviewPrompt, setReviewPrompt] = useState<'pending' | 'shown' | 'dismissed'>(
+    'pending'
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -140,6 +153,29 @@ export function PlanScene({
       doc.generated_for_release_date !== release.releaseDate
   );
 
+  // Everything the approve button needs before it will do anything. The nudge
+  // below is gated on it too — an offer to skip ahead that lands on a disabled
+  // button is worse than no offer.
+  const canApprove =
+    draft.phase === 'ready' && Boolean(doc) && activeCount > 0 && Boolean(release.releaseDate);
+
+  useEffect(() => {
+    if (!canApprove || reviewPrompt !== 'pending') return;
+    const timer = setTimeout(() => {
+      setReviewPrompt('shown');
+      captureAnalyticsEvent(createPostHogEvent('planner_review_prompt_shown', {}));
+    }, REVIEW_PROMPT_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [canApprove, reviewPrompt]);
+
+  // Dismissal lasts as long as the scene does. Closing the plan and coming
+  // back is a fresh read, so the nudge is allowed to return — but it cannot
+  // nag inside one sitting.
+  const handleDismissPrompt = () => {
+    setReviewPrompt('dismissed');
+    captureAnalyticsEvent(createPostHogEvent('planner_review_prompt_dismissed', {}));
+  };
+
   const handleApprove = async () => {
     const result = await draft.approve();
     if (!result.ok) {
@@ -153,6 +189,7 @@ export function PlanScene({
         tasks_removed: doc ? doc.tasks.filter((task) => task.removed).length : 0,
         tasks_added: doc ? doc.tasks.filter((task) => task.origin === 'user').length : 0,
         ai_applied: Boolean(doc?.ai.applied),
+        via_prompt: reviewPrompt === 'shown',
       })
     );
 
@@ -267,7 +304,8 @@ export function PlanScene({
     <section aria-label={`${release.title} plan`} className="min-w-0">
       {header}
 
-      {/* Mobile-only, always-visible approve bar (2026-08-17 fix): the
+      {/* Mobile-only, always-visible approve bar (2026-08-17 fix; it also
+          carries the twenty-second nudge — see PlanApproveBar): the
           desktop-only footer bar further down (still `sticky bottom-0`
           inside TasksPanel's own bounded scroll column at lg+, where that
           works correctly) required scrolling past every phase — up to ~113
@@ -284,27 +322,17 @@ export function PlanScene({
           document scroll — the same scroll box AppTopbar's own
           `sticky top-0 z-30` uses, and `top-0` here would stick this bar
           directly BEHIND that topbar rather than under it. `lg:hidden` —
-          desktop keeps the original bottom bar below, unchanged. */}
-      <div className="sticky top-16 z-20 mt-4 flex items-center justify-between gap-3 border-b border-stroke-default bg-bg-base py-3 lg:hidden">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
-          {activeCount} {activeCount === 1 ? 'task' : 'tasks'} ready
-        </p>
-        <Button
-          type="button"
-          onClick={() => void handleApprove()}
-          disabled={draft.isApproving || activeCount === 0 || !release.releaseDate}
-          className="h-10 shrink-0 justify-center px-4"
-        >
-          {draft.isApproving ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              Scheduling
-            </>
-          ) : (
-            'Approve plan'
-          )}
-        </Button>
-      </div>
+          desktop is served by the bottom bar further down instead. */}
+      <PlanApproveBar
+        activeCount={activeCount}
+        canApprove={canApprove}
+        isApproving={draft.isApproving}
+        showPrompt={reviewPrompt === 'shown' && canApprove}
+        onApprove={() => void handleApprove()}
+        onDismissPrompt={handleDismissPrompt}
+        className="sticky top-16 z-20 mt-4 border-b border-stroke-default bg-bg-base py-3 lg:hidden"
+        buttonClassName="h-10 px-4"
+      />
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
@@ -395,30 +423,24 @@ export function PlanScene({
         ))}
       </div>
 
-      {/* Desktop footer — unchanged. Sticky within TasksPanel's own bounded
-          scroll column at lg+, which is where sticky-to-bottom already works
+      {/* Desktop footer. Sticky within TasksPanel's own bounded scroll
+          column at lg+, which is where sticky-to-bottom already works
           correctly (see the mobile bar right under the header above for why
-          it doesn't below lg). */}
-      <div className="mt-4 hidden items-center justify-between gap-3 border-t border-stroke-default bg-bg-base py-3 lg:sticky lg:bottom-0 lg:flex">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
-          {activeCount} {activeCount === 1 ? 'task' : 'tasks'} ready
-        </p>
-        <Button
-          type="button"
-          onClick={() => void handleApprove()}
-          disabled={draft.isApproving || activeCount === 0 || !release.releaseDate}
-          className="h-9 justify-center"
-        >
-          {draft.isApproving ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              Scheduling
-            </>
-          ) : (
-            'Approve plan'
-          )}
-        </Button>
-      </div>
+          it doesn't below lg). Same component as that bar, so the two cannot
+          disagree about what they offer; only the anchor and the tap targets
+          differ. `lg:block` rather than `lg:flex` — the row is one level in,
+          because a base `flex` here would be overridden by the base `hidden`
+          beside it. */}
+      <PlanApproveBar
+        activeCount={activeCount}
+        canApprove={canApprove}
+        isApproving={draft.isApproving}
+        showPrompt={reviewPrompt === 'shown' && canApprove}
+        onApprove={() => void handleApprove()}
+        onDismissPrompt={handleDismissPrompt}
+        className="mt-4 hidden border-t border-stroke-default bg-bg-base py-3 lg:sticky lg:bottom-0 lg:block"
+        buttonClassName="h-9 px-4"
+      />
     </section>
   );
 }
