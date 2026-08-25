@@ -21,6 +21,14 @@ export async function resolveChappiContext(params: {
     user: { id: params.user.id, email: params.user.email },
     adminClient: params.adminClient,
     workspaceIds: access.workspaceIds,
+    // Releases are owner-scoped, not workspace-scoped, so these three travel
+    // together with workspaceIds or the assistant answers differently from the
+    // rest of the app. This function used to forward workspaceIds alone and
+    // drop the rest on the floor; see lib/chappi/release-scope.ts for what
+    // that cost and why the scope maps are not optional.
+    releaseOwnerIds: access.releaseOwnerIds,
+    artistScopeByOwnerId: access.artistScopeByOwnerId,
+    artistScopeByWorkspaceId: access.artistScopeByWorkspaceId,
     origin: params.origin,
     authToken: params.authToken,
   };

@@ -10,6 +10,11 @@ export type ChappiMessage = {
   id: string;
   role: ChappiRole;
   content: string;
+  /** Assistant turns only: which brief sections were in context (Phase 4).
+   *  Held per MESSAGE rather than on the store root so scrolling back up a
+   *  transcript still shows what each answer was working from — a single
+   *  "latest" value would relabel every earlier answer. */
+  briefSections?: string[];
 };
 
 /**
@@ -240,6 +245,11 @@ export type ChappiResponse =
       reply: string;
       clientActions: ChappiClientAction[];
       pendingConfirmation?: ChappiPendingConfirmation | null;
+      /** Brief sections that were in the system prompt for this turn (Phase 4
+       *  attribution). "UrgAns read this", NOT "this shaped the answer" — see
+       *  the note on ChappiSystemPrompt.briefSections for why the honest
+       *  claim is the weaker one. Absent/empty means nothing was injected. */
+      briefSections?: string[];
     }
   | {
       mode: 'deterministic';

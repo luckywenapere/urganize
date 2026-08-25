@@ -1932,7 +1932,30 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-24 (**pricing v2 is LIVE and Urganize is v1.1.0** — the founder applied both migrations, minted Manager's Paystack Plans and switched `NEXT_PUBLIC_FEATURE_PRICING_V2` on, so the three tiers, their caps, plan changes and read-only-on-payment-failure are all real for users; the ledger entry landed at the flip, per the EPK precedent, announcing the in-app plan picker. The sales-led tier is now called **Group**, not Enterprise — the display name only, since the `enterprise` id is stored in `subscriptions.plan`; a mutation-tested guard pins that split. Nothing in pricing v2 has been exercised against live traffic or real Paystack, and this sandbox cannot reach either urganize domain (the proxy answers 403 to CONNECT), so that gap stands. Previously: **Urganize is v1.0.0** — the founder called AI activation met now that UrgAns runs on a real tool-calling model in production, so the version reserved for it has shipped and every `package.json` moved to 1.0.0. The v0.61.0 changelog entry was rewritten in the same pass after being rejected as "too bogus and technical", and it carried a pricing-page bullet that the app-only scope rule already forbade — so the Release procedure now carries explicit **voice rules**: fifth-grade readable, one or two short sentences per highlight, say "you", and never a marketing-site change. Previously: **logo and photo uploads: one workspace resolver, their
+*Last updated: 2026-08-25 (**the workspace back arrow goes back** — see "The
+workspace back arrow goes back now" above. Two faults behind one founder report
+that it "is not working": it pointed at the catalog unconditionally, and for a
+single-release account it was a literal no-op, because `hasAutoScopedRef` meant
+"the auto-scope ran" rather than "the auto-scope has had its one chance" — so
+arriving ALREADY scoped (a refresh, a bookmark, an UrgAns link, the release
+redirect stub) left the ref false, the first press cleared the scope, the effect
+immediately re-scoped, and the skeleton gate covered the bounce so nothing
+visibly happened. The ref's own comment claimed that bug was fixed; the fix only
+covered arrivals where the auto-scope had actually run. Now one rule, three
+cases: a scene open closes the scene, otherwise the previous in-app URL from
+lib/nav-history, otherwise unscope. Three things not to undo, argued there: it
+must never become router.back() (a redirect stub can make a scene URL a tab's
+first history entry, so back() ejects the user from the app); the resolver MUST
+keep rejecting a previous location that still scopes the same release, because
+nav-history holds one slot and skips same-URL writes, so right after closing a
+scene the previous location IS that scene (mutation-tested); and the label is
+derived from activeScene alone, never from the resolver, which reads
+sessionStorage. Reuse rather than new plumbing — nav-history and
+NavigationTracker have existed since 2026-07-23 and Settings was their only
+consumer. NOT verified by clicking it: no authenticated session in the sandbox
+and no route to either urganize domain, and the auto-scope branch has no unit
+test since this repo does not test components. Shipped as v1.1.1. Previously:
+**pricing v2 is LIVE and Urganize is v1.1.0** — the founder applied both migrations, minted Manager's Paystack Plans and switched `NEXT_PUBLIC_FEATURE_PRICING_V2` on, so the three tiers, their caps, plan changes and read-only-on-payment-failure are all real for users; the ledger entry landed at the flip, per the EPK precedent, announcing the in-app plan picker. The sales-led tier is now called **Group**, not Enterprise — the display name only, since the `enterprise` id is stored in `subscriptions.plan`; a mutation-tested guard pins that split. Nothing in pricing v2 has been exercised against live traffic or real Paystack, and this sandbox cannot reach either urganize domain (the proxy answers 403 to CONNECT), so that gap stands. Previously: **Urganize is v1.0.0** — the founder called AI activation met now that UrgAns runs on a real tool-calling model in production, so the version reserved for it has shipped and every `package.json` moved to 1.0.0. The v0.61.0 changelog entry was rewritten in the same pass after being rejected as "too bogus and technical", and it carried a pricing-page bullet that the app-only scope rule already forbade — so the Release procedure now carries explicit **voice rules**: fifth-grade readable, one or two short sentences per highlight, say "you", and never a marketing-site change. Previously: **logo and photo uploads: one workspace resolver, their
 own size limits, and failures that report themselves** — see "Logo and photo
 uploads" above. The curator came back with desktop plus "if I try to upload profile
 or logo it doesn't and the page crashes", which cannot be chased with devtools on a
@@ -4184,6 +4207,107 @@ exists — let a renewal fail, confirm access continues to `expires_at`, then
 confirm the strip appears, a save is refused with a readable message, "Update
 payment" reaches the picker rather than bouncing, and paying restores writes on
 the next request.
+
+---
+
+## The workspace back arrow goes back now (2026-08-25)
+
+Founder report: the circled back arrow left of the MOTION bar "is not working,
+it's always meant to take you to the last place the user was no matter what."
+Two separate faults, and the second is why it read as dead rather than merely
+wrong.
+
+### Fault 1: it pointed at the catalog, always
+
+`handleClose` was one line, `setScope(null)`, and the button was labelled "Back
+to all releases". From an open scene it therefore skipped TWO levels at once,
+dropping the scene and the release scope together. It was not history-aware in
+any way.
+
+### Fault 2: for a single-release account it was a genuine no-op
+
+`hasAutoScopedRef` in `WorkspaceView.tsx` meant **"the auto-scope ran"**, not
+**"the auto-scope has had its one chance"**. So an account with one release that
+**arrived already scoped** — a refresh, a bookmark, an UrgAns link, or the
+`/dashboard/releases/[releaseId]` redirect stub — returned early at
+`scopedReleaseId` and left the ref `false`. The first back press cleared the
+scope, which then satisfied every guard, so the effect fired and re-scoped
+straight back in. And the skeleton gate (`isSingleRelease && !scopedReleaseId &&
+!hasAutoScopedRef.current`) covers exactly that frame, so **nothing visibly
+happened**.
+
+The ref's own comment described this bug as already fixed. It was, for arrivals
+where the auto-scope had actually run — which is not the arrival most people
+have. **The fix is one branch: arriving already scoped now spends the chance.**
+Note what it deliberately does NOT do: `!isSingleRelease` leaves the chance
+OPEN, because a zero-release account is handed the create modal and must still
+get its one auto-scope when that first release lands.
+
+### The behaviour: one rule, three cases
+
+`goBack` in `WorkspaceView.tsx`, shared by the desktop arrow and the mobile one:
+
+1. **A scene is open** -> `closeScene()`. Lands on Activities for the same
+   release, and never consults history.
+2. **No scene** -> the previous in-app URL from `lib/nav-history`, pushed.
+3. **Nothing usable** -> `setScope(null)`, the old behaviour, still the floor.
+
+**Case 1 is load-bearing, not just the founder's preference** (asked and
+answered, 2026-08-25): because history is never read while a scene is open,
+scene-to-scene ping-pong is structurally impossible rather than merely guarded
+against, and one stray tap can never throw someone out of a release they were
+part-way through.
+
+### Three things a later change will be tempted to get wrong
+
+1. **It must not become `router.back()`.** A legacy-route redirect can make a
+   scene URL the FIRST history entry in a tab, so `back()` would eject the user
+   out of the app entirely. Recorded at `useSceneOverlay.closeScene`, the stub it
+   names is real, and nothing in this app calls `router.back()` anywhere.
+2. **`resolveWorkspaceBackTarget` (in `lib/nav-history.ts`) rejects a previous
+   location that still scopes THIS release, and that is the point of it.**
+   `nav-history` holds ONE slot, not a stack, and skips same-URL writes — so
+   immediately after closing a scene the previous location IS that scene's own
+   URL, and pushing it would re-open what the user just left. Going back to the
+   release you are leaving is not leaving it. This is the analogue of the
+   Settings back button's `!previous.startsWith('/settings')` guard, which does
+   not transfer directly because both URLs here share one pathname.
+   Mutation-tested: removing the guard fails exactly the ping-pong test.
+3. **The label is derived from `activeScene` alone, never from the resolver.**
+   The resolver reads `sessionStorage`, and a storage read during render gives
+   the server and the client different text for one attribute. The button is not
+   in the server output today (the skeleton gate holds while `authLoading`), so
+   it would not mismatch in practice, but a label is not worth depending on
+   that. "Back" is vague and never wrong; "Back to all releases" was specific
+   and usually wrong.
+
+**Reuse, not new plumbing:** `lib/nav-history.ts` and `NavigationTracker` have
+existed since 2026-07-23 (founder request) and already record the previous in-app
+URL, query string included. The Settings back button was their only consumer.
+Nothing new was built to store history.
+
+Also corrected: `WorkspaceDesktopFocused`'s `onClose` prop doc claimed it is
+"omitted when there is no catalog worth returning to — a workspace with a single
+release". That was never true of the code (the only call site always passes it),
+and it is a large part of why a dead button read as intentional.
+
+### Verified
+
+1274 tests (8 new in `lib/nav-history.test.ts`, the module's first), `eslint .`
+at the exact 3-error / 66-warning baseline, `next build` green by exit code with
+`/auth`, `/onboarding` and `/settings` still `○ Static`. **One of those three
+pre-existing errors is on this very machinery** — `hasAutoScopedRef.current` read
+during render — and converting the ref to state was deliberately NOT bundled: it
+would fix the lint error but changes render timing on the skeleton gate, which is
+a bigger and riskier change than the bug being fixed.
+
+**Not verified:** the click itself. The workspace needs an authenticated session
+with a real release, which this sandbox cannot mint (and it cannot reach either
+urganize domain — the proxy answers 403 to CONNECT), so the three cases rest on
+unit tests plus traced call paths. The auto-scope branch has no unit test at all,
+since this repo does not test components. Worth one pass on a real account: from
+`?release=X&scene=coverart`, press back three times and expect Activities, then
+wherever you came from, and never a silent no-op.
 
 ---
 

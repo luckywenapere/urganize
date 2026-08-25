@@ -121,7 +121,8 @@ export async function POST(request: NextRequest) {
       authToken,
     });
     const releaseScope = parseReleaseScope(body);
-    let system = await buildChappiSystemPrompt(ctx);
+    const built = await buildChappiSystemPrompt(ctx);
+    let system = built.prompt;
     if (releaseScope) {
       system += `\n\nThe user has scoped this conversation to the release "${releaseScope.title}" (release id: ${releaseScope.id}). Unless they clearly name a different release, interpret questions and actions as being about this release and pass its id to tools. If the id doesn't resolve, say so instead of guessing.`;
     }
@@ -143,6 +144,7 @@ export async function POST(request: NextRequest) {
         reply: closing || result.summary,
         clientActions: result.ok ? (result.clientAction ? [result.clientAction] : [{ type: 'refresh' }]) : [],
         pendingConfirmation: null,
+        briefSections: built.briefSections,
       } satisfies ChappiResponse);
     }
 
@@ -208,6 +210,7 @@ export async function POST(request: NextRequest) {
       reply,
       clientActions,
       pendingConfirmation,
+      briefSections: built.briefSections,
     } satisfies ChappiResponse);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'UrgAns failed.';

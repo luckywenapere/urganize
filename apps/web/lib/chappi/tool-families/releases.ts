@@ -10,8 +10,8 @@
 //    builders state the real blast radius (task counts), and the runner never
 //    executes them from inside the model loop — see runner.ts.
 
-import { ReleaseService } from '@/lib/services/release-service';
 import { TaskService } from '@/lib/services/task-service';
+import { listOwnedReleases } from '../release-scope';
 import {
   apiError,
   argString,
@@ -148,7 +148,12 @@ export const RELEASE_TOOLS: ChappiTool[] = [
       const releaseId = argString(args, 'releaseId');
       if (!releaseId) return { ok: false, summary: 'releaseId is required.' };
 
-      const releases = await new ReleaseService(ctx.adminClient).getReleasesForUser(ctx.user.id);
+      // OWNER-ONLY on purpose, unlike every other release read in the
+      // assistant. DELETE /api/releases/[releaseId] runs ensureReleaseOwnership
+      // against the caller alone, so widening this to the whole team would show
+      // a teammate a confirmation card for a deletion that 403s the moment they
+      // approve it. See listOwnedReleases in ../release-scope.ts.
+      const releases = await listOwnedReleases(ctx);
       const release = releases.find((r) => r.id === releaseId);
       if (!release) return { ok: false, summary: 'That release was not found in your workspace.' };
 

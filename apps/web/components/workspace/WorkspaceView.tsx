@@ -29,6 +29,7 @@ import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
+import { readPreviousLocation, resolveWorkspaceBackTarget } from '@/lib/nav-history';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
 import { ArchiveReleaseDialog } from '@/components/workspace/ArchiveReleaseDialog';
@@ -215,18 +216,42 @@ export function WorkspaceView() {
   // Deliberately not applied at 2+: the moment there is a choice to make, the
   // catalog is how you make it.
   const isSingleRelease = releases.length === 1;
-  // Guards the auto-scope effect below so it only ever fires once per
-  // mount. Without this, an explicit "back to catalog" tap (which clears
-  // `scopedReleaseId`) immediately re-triggered this same effect and
-  // re-scoped straight back into the only release — the back button
-  // rendered but was never actually able to do anything. One auto-scope on
-  // arrival is the intended convenience; re-fighting a deliberate exit is
-  // the bug that made the workspace un-leavable for single-release accounts.
+  // "The auto-scope has HAD ITS ONE CHANCE this mount" — not "the auto-scope
+  // ran". The distinction is the bug: without this guard an explicit back tap
+  // (which clears `scopedReleaseId`) immediately re-triggered the effect below
+  // and re-scoped straight back into the only release, so the back button
+  // rendered but could never do anything. One auto-scope on arrival is the
+  // intended convenience; re-fighting a deliberate exit is what made the
+  // workspace un-leavable for single-release accounts.
+  //
+  // Read the effect for which arrivals spend the chance. Arriving ALREADY
+  // scoped spends it, and missing that case is how the same bug survived here
+  // for anyone who refreshed or followed a link into a scoped release.
   const hasAutoScopedRef = useRef(false);
   useEffect(() => {
     // Wait for the first load: `releases` is empty until it lands, and acting
     // on that would look like zero releases rather than one.
-    if (isInitialLoading || !isSingleRelease || scopedReleaseId || hasAutoScopedRef.current) return;
+    if (isInitialLoading || hasAutoScopedRef.current) return;
+    // 0 or 2+ releases: the chance stays OPEN deliberately. A brand-new account
+    // has zero here and is handed the create modal; when its first release
+    // lands, isSingleRelease flips true and that account should still get its
+    // one auto-scope. Consuming the chance now would silently remove it.
+    if (!isSingleRelease) return;
+    // ARRIVED ALREADY SCOPED — a refresh, a bookmark, an UrgAns link, or the
+    // /dashboard/releases/[releaseId] redirect stub. The convenience this effect
+    // exists to provide is already satisfied, so the chance is SPENT.
+    //
+    // This line is the whole fix for a back button that did nothing. Without it
+    // the ref stayed false on every such arrival, so the first back press
+    // cleared the scope, which then satisfied every guard below, and this effect
+    // dragged the user straight back into the release — invisibly, because the
+    // skeleton gate further down covers exactly that frame. The ref's comment
+    // above claimed this bug was fixed; the fix only covered arrivals where the
+    // auto-scope had actually run.
+    if (scopedReleaseId) {
+      hasAutoScopedRef.current = true;
+      return;
+    }
     hasAutoScopedRef.current = true;
     // `replace`, the hook's default — an auto-scope the user never asked for
     // must not become a history entry they have to press Back through, and
@@ -678,18 +703,70 @@ export function WorkspaceView() {
     }
   };
 
-  const handleClose = () => {
+  // THE BACK ARROW. One rule, three cases, in order:
+  //
+  //   1. A SCENE IS OPEN -> close the scene. Lands on Activities for the same
+  //      release, and never consults history. This is what makes scene-to-scene
+  //      ping-pong structurally impossible rather than merely guarded against,
+  //      and it is why one stray tap can never throw someone out of a release
+  //      they were part-way through.
+  //   2. NO SCENE -> go to where they actually were, via lib/nav-history — the
+  //      same per-tab record the Settings back button has used since 2026-07-23,
+  //      which stores the previous in-app URL query string and all. `push`, like
+  //      Settings, so this is a real forward move rather than a rewrite of the
+  //      entry they are on.
+  //   3. NOTHING USABLE -> drop the release scope, which is what this button did
+  //      unconditionally before and is still the right floor.
+  //
+  // NOT router.back(), and that is not an oversight: a legacy-route redirect can
+  // make a scene URL the FIRST history entry in a tab, so back() would eject the
+  // user out of the app entirely. Recorded at useSceneOverlay.closeScene, and the
+  // stub it names is real (app/dashboard/releases/[releaseId]/page.tsx). Nothing
+  // in this app calls router.back() anywhere.
+  //
+  // resolveWorkspaceBackTarget owns every rejection — most importantly that a
+  // previous location still scoping THIS release is not "back" at all. See it
+  // for why that matters more than it looks.
+  const resolveBackTarget = () =>
+    resolveWorkspaceBackTarget({
+      previous: readPreviousLocation(),
+      scopedReleaseId,
+    });
+
+  const goBack = () => {
+    if (activeScene) {
+      closeScene();
+      return;
+    }
+    const target = resolveBackTarget();
+    if (target) {
+      router.push(target);
+      return;
+    }
     // Replace-not-push so desktop deselects don't grow history with a
-    // duplicate at-rest entry. Matches the mobile back affordance below.
+    // duplicate at-rest entry.
     setScope(null);
   };
 
   const handleMobileBack = () => {
-    setScope(null);
+    goBack();
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'auto' });
     }
   };
+
+  // What the arrow SAYS, matched to what it will actually do. The old label,
+  // "Back to all releases", is now true in only one of the three cases, and a
+  // screen reader announcing the wrong destination is worse than a vague one.
+  //
+  // Deliberately derived from `activeScene` ALONE, not from resolveBackTarget():
+  // that reads sessionStorage, and a storage read during render gives the server
+  // and the client different text for the same attribute. The button does not
+  // appear in the server output today (the skeleton gate holds while
+  // authLoading), so it would not mismatch in practice — but a label is not
+  // worth depending on that. "Back" is vague and never wrong; the old label was
+  // specific and usually wrong.
+  const backLabel = activeScene ? 'Back to activities' : 'Back';
 
   // ONE skeleton, rendered here (not as a route-segment Suspense fallback).
   // SSR serializes the skeleton into the HTML response; hydration re-renders
@@ -830,14 +907,18 @@ export function WorkspaceView() {
               <>
                 <div className="mb-4 flex items-center gap-3">
                   {/* Always rendered: even with one release, the user must be
-                      able to get back to the catalog (e.g. to fix a blank
-                      "Untitled release" or start a fresh one). The prior
-                      isSingleRelease-gated hide left single-release
-                      workspaces with no way out at all. */}
+                      able to get out (e.g. to fix a blank "Untitled release" or
+                      start a fresh one). The prior isSingleRelease-gated hide
+                      left single-release workspaces with no way out at all.
+
+                      Same three-case handler as the desktop arrow, deliberately:
+                      the complaint that started this ("the back button is not
+                      working") applies identically on a phone, and letting the
+                      two diverge is how this file has drifted before. */}
                   <button
                     type="button"
                     onClick={handleMobileBack}
-                    aria-label="Back to releases"
+                    aria-label={backLabel}
                     className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
                   >
                     <ArrowLeft className="h-4 w-4" aria-hidden="true" />
@@ -936,7 +1017,8 @@ export function WorkspaceView() {
                 scopedTasks={scopedTasks}
                 scopedRelease={scopedReleaseSlim}
                 onSelect={handleSelect}
-                onClose={handleClose}
+                onClose={goBack}
+                closeLabel={backLabel}
                 hideRails={hideRailsForLayout}
                 banner={newReleaseGuideBanner}
                 panelStatusUpdateAction={statusUpdateAction}

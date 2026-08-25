@@ -30,12 +30,21 @@ type WorkspaceDesktopFocusedProps = {
   /** Slim release shape for the panels' pill/scope copy. */
   scopedRelease: Pick<Release, 'id' | 'title' | 'artistName'>;
   onSelect: (releaseId: string) => void;
-  /** Omitted when there is no catalog worth returning to — a workspace with a
-   * single release scopes to it automatically (see isSingleRelease in
-   * WorkspaceView), so the back control would lead to a one-card grid the
-   * user cannot stay on. Undefined hides the control entirely rather than
-   * rendering a dead one. */
+  /** The back arrow's action. Owned entirely by WorkspaceView's `goBack`, which
+   * closes an open scene first and only then leaves the release — read it for
+   * the three cases.
+   *
+   * THIS COMMENT USED TO SAY the prop is "omitted when there is no catalog worth
+   * returning to — a workspace with a single release scopes to it
+   * automatically", implying the arrow is deliberately absent for those
+   * accounts. That was never true of the code: the only call site always passes
+   * it, so the arrow always renders in focused mode. The claim is worth recording
+   * because it is why a genuinely dead button read as intentional for so long. */
   onClose?: () => void;
+  /** What the arrow announces. Computed by the caller, because only it knows
+   * whether the next press closes a scene or leaves the release; a hardcoded
+   * "Back to all releases" was wrong in two of the three cases. */
+  closeLabel?: string;
   /** True while the Chappi slide-in panel is open (URL-agnostic — the caller
    * decides). Drops both rails to a single centered track so the 2/3-width
    * area stays readable instead of squeezing three columns into less
@@ -88,6 +97,7 @@ export function WorkspaceDesktopFocused({
   scopedRelease,
   onSelect,
   onClose,
+  closeLabel,
   hideRails = false,
   banner,
   panelStatusUpdateAction,
@@ -123,8 +133,8 @@ export function WorkspaceDesktopFocused({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Back to all releases"
-            title="Back to all releases"
+            aria-label={closeLabel ?? 'Back'}
+            title={closeLabel ?? 'Back'}
             className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />

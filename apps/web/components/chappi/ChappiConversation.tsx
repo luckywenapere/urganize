@@ -20,6 +20,8 @@ import {
   ThumbsUp,
   type LucideIcon,
 } from 'lucide-react';
+import { TeamBriefNudge } from './TeamBriefNudge';
+import { BriefAttribution } from './BriefAttribution';
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
 import { ChappiSongUploadCard } from '@/components/chappi/ChappiSongUploadCard';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
@@ -212,8 +214,20 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // Appends only the ASSISTANT side of a turn. Callers own appending the
   // user side (a chip's label, or the typed prompt) — keeps each turn
   // recorded exactly once regardless of which path produced it.
-  const appendAssistantReply = (replyText: string, replyMeta?: ChappiReply) => {
-    appendMessage({ id: nextMessageId('a'), role: 'assistant', content: replyText });
+  const appendAssistantReply = (
+    replyText: string,
+    replyMeta?: ChappiReply,
+    briefSections?: string[]
+  ) => {
+    appendMessage({
+      id: nextMessageId('a'),
+      role: 'assistant',
+      content: replyText,
+      // Attribution rides the MESSAGE, not this component's state: scrolling
+      // back up a transcript should show what each answer was working from,
+      // and a single latest value would relabel every earlier one.
+      ...(briefSections?.length ? { briefSections } : {}),
+    });
     setReply(replyMeta ?? { text: replyText });
   };
 
@@ -431,7 +445,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       const data = (await response.json().catch(() => null)) as ChappiResponse | null;
 
       if (response.ok && data?.mode === 'agent') {
-        appendAssistantReply(data.reply);
+        appendAssistantReply(data.reply, undefined, data.briefSections);
         setPendingConfirmation(data.pendingConfirmation ?? null);
         if (data.pendingConfirmation) {
           captureAnalyticsEvent({
@@ -510,7 +524,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       const data = (await response.json().catch(() => null)) as ChappiResponse | null;
 
       if (response.ok && data?.mode === 'agent') {
-        appendAssistantReply(data.reply);
+        appendAssistantReply(data.reply, undefined, data.briefSections);
         executeClientActions(data.clientActions);
         return;
       }
@@ -772,7 +786,15 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       </div>
 
       <div className="mt-3 shrink-0">
-        <div className={`mx-auto w-full ${isPanel ? '' : 'max-w-[46rem] px-1'}`}>{inputForm}</div>
+        <div className={`mx-auto w-full ${isPanel ? '' : 'max-w-[46rem] px-1'}`}>
+          {/* Phase 3 nudge: only once UrgAns has actually answered ("when
+              UrgAns answers in a team with an empty brief", per the spec) —
+              never on the empty landing, never mid-question. Above the
+              composer so it is visible without scrolling; the component
+              itself decides whether it has anything to say. */}
+          {messages.some((message) => message.role === 'assistant') ? <TeamBriefNudge /> : null}
+          {inputForm}
+        </div>
       </div>
     </div>
   );
@@ -839,6 +861,7 @@ function Transcript({
             content={message.content}
             reveal={message.id === revealMessageId}
             onRetry={message.id === retryMessageId ? onRetry : undefined}
+            briefSections={message.briefSections}
           />
         )
       )}
@@ -924,10 +947,12 @@ function AssistantMessage({
   content,
   reveal,
   onRetry,
+  briefSections,
 }: {
   content: string;
   reveal: boolean;
   onRetry?: () => void;
+  briefSections?: string[];
 }) {
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
@@ -971,6 +996,10 @@ function AssistantMessage({
       <div className="whitespace-pre-wrap text-sm leading-7 text-content-primary">
         {reveal ? <RevealedText content={content} /> : content}
       </div>
+      {/* Attribution sits between the answer and the action row: it belongs to
+          the answer, and placing it among copy/retry/thumbs would read as a
+          fourth button. */}
+      {briefSections?.length ? <BriefAttribution sections={briefSections} /> : null}
       {/* Quiet action row — tertiary ink, brightening on hover, same voice as
           the "New chat" control above the transcript. */}
       <div className="mt-1.5 flex items-center gap-0.5">

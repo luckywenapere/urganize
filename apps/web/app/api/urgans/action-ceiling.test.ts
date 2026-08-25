@@ -42,6 +42,9 @@ vi.mock('@/lib/chappi/dispatch', () => ({
     user: { id: 'user-1' },
     adminClient: {},
     workspaceIds: ['ws-1'],
+  releaseOwnerIds: ['user-1'],
+  artistScopeByOwnerId: {},
+  artistScopeByWorkspaceId: {},
     origin: 'https://app.test',
     authToken: 'jwt',
   }),
@@ -53,7 +56,7 @@ vi.mock('@/lib/chappi/runner', () => ({
 }));
 
 vi.mock('@/lib/chappi/system-prompt', () => ({
-  buildChappiSystemPrompt: async () => 'system prompt',
+  buildChappiSystemPrompt: async () => ({ prompt: 'system prompt', briefSections: [] }),
 }));
 
 vi.mock('@/lib/team-billing-server', () => ({
