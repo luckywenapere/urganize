@@ -49,13 +49,10 @@ export function StatsSection() {
         className="py-[80px] lg:py-[100px]"
         containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
       >
+        {/* No kicker (the "What you get" mono-label was cut 2026-08-25,
+            founder call) — the h2 carries the beat alone. */}
         <div className="mx-auto max-w-[52rem] text-center">
-          <p className="mono-label text-[var(--marketing-text-subtle)]">
-            What you get
-          </p>
-          <h2 className={`mt-6 ${centeredHeadlineClass}`}>
-            Built to move faster
-          </h2>
+          <h2 className={centeredHeadlineClass}>Built to move faster</h2>
         </div>
 
         {/* rounded-[1.5rem] bordered cards: the PricingTierCards treatment —

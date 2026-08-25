@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { BackToTopButton } from "./BackToTopButton";
 import { FaLinkedin } from "react-icons/fa6";
 import {
   SiInstagram,
@@ -64,6 +65,7 @@ export function MarketingFooter() {
       className="pb-10 pt-14 sm:pb-12 sm:pt-16 lg:pb-14 lg:pt-20"
       style={{ borderTop: "0.5px solid var(--marketing-border)" }}
     >
+      <BackToTopButton />
       <div className="mx-auto max-w-[84rem] px-6 sm:px-8 lg:px-10">
         <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
           <div>
