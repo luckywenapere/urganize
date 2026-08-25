@@ -29,7 +29,7 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "Every artist's rollout, the same system.",
-    body: "Each release gets the full rollout: 64 activities across 11 weeks, from locking the master to pulling your first-week numbers. Run it the same way for every artist on the roster and edit or delete any activity.",
+    body: "Each release gets the full rollout, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Run it the same way for every artist on the roster and edit or delete any activity.",
     points: [
       "One template, shaped for each release",
       "Every activity dated around that release day",

@@ -37,7 +37,7 @@ const comparisons = [
     // content/testimonials.ts — that file owns the string, this page
     // mirrors it. Change both together or not at all.
     them: "Your plan is spread across a pinned chat, an old spreadsheet and your memory. Every new release starts from scratch.",
-    us: "Create a release and Urganize lays out the whole 11-week rollout. 64 activities, from locking the master to pulling your first-week numbers. Real managers wrote it and tested it. Edit or delete any activity.",
+    us: "Create a release and Urganize lays out the whole rollout, written by real managers and sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Edit or delete any activity.",
   },
 ] as const;
 
