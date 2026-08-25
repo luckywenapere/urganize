@@ -27,7 +27,7 @@ const SITE_NAME = "Urganize";
 export const LANDING_TITLE =
   "Urganize | Music Release Workspace for Label Teams";
 export const LANDING_DESCRIPTION =
-  "Urganize is the AI workspace for music executives. Run each release on an 11-week plan, put an owner on every task and see status without chasing anyone.";
+  "Urganize is the AI workspace for music executives. Run each release on a full rollout plan, put an owner on every task and see status without chasing anyone.";
 
 // Absolute, canonical share image. Served as a static asset from public/
 // (NOT the app/opengraph-image.png file convention), so the URL is stable
