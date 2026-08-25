@@ -424,6 +424,7 @@ All six v1 scope items are now built in code. Internal use continues throughout 
 - **If a request would violate a principle in this file, flag it before proceeding.** Don't silently comply with requests that contradict the architectural principles.
 - **When you find anti-patterns documented here** (the schema-missing fallback), do not propagate them. Fix or work around them; don't extend them.
 - **The "Resolved v1 blockers" section is closed.** If you discover a new v1 blocker, surface it immediately before proceeding.
+- **Anything the user has to READ or COPY goes in the reply, not a Bash command.** Tool output is shown to the assistant, not reliably to the user, so `cat`-ing a file at them delivers nothing — this happened with a migration on 2026-08-25 and the founder's answer was "I cant see the sql you want me to run". **Migration SQL especially: paste the whole file into a fenced ```sql block in the message.** He applies migrations by hand in the Supabase dashboard, and `supabase/migrations/` is the only sanctioned way to change schema (principle 9), so every feature here eventually needs its SQL handed over that way. Same for anything else meant to be copied — an env block, a generated config, a command to run. Reading a file to understand it is what Bash is for; delivering it to a human is not.
 
 ---
 
