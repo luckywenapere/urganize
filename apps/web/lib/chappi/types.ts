@@ -92,6 +92,9 @@ export type ChappiReply = {
 export type ChappiToolKind = 'read' | 'mutate';
 
 export type ChappiToolName =
+  // context (2026-08-25) — the portable half of what UrgAns knows
+  | 'get_workspace_context'
+  | 'get_release_context'
   // core (pre-expansion)
   | 'list_releases'
   | 'get_release'

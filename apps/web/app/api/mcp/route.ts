@@ -30,21 +30,34 @@ import { CURRENT_VERSION } from '@urganize/changelog';
 import { createAdminClient } from '@/app/api/_shared/auth';
 import { requireActiveAccount } from '@/app/api/_shared/paywall';
 import { logBillingEvent } from '@/lib/billing-events-server';
-import { getChappiTool } from '@/lib/chappi/tools';
 import { executeToolCall, resolveChappiContext } from '@/lib/chappi/dispatch';
+import { listVisibleReleases } from '@/lib/chappi/release-scope';
+import {
+  buildPortableWorkspaceContext,
+  buildReleaseContext,
+} from '@/lib/chappi/portable-context';
 import { getMcpConfig, isMcpConnectEnabled, verifyMcpAccessKey } from '@/lib/mcp/config';
 import { extractBearerToken } from '@/lib/mcp/oauth';
 import { resolveMcpToken } from '@/lib/mcp/tokens-server';
 import {
   JSON_RPC_INVALID_PARAMS,
   JSON_RPC_METHOD_NOT_FOUND,
+  WORKSPACE_CONTEXT_URI,
   buildInitializeResult,
+  buildReleaseContextUri,
+  buildResourceDescriptor,
   jsonRpcError,
   jsonRpcResult,
   parseJsonRpcMessage,
+  parseReleaseContextUri,
+  resourceTextResult,
   toolResultToMcp,
 } from '@/lib/mcp/protocol';
-import { getMcpToolDescriptors, isMcpToolName } from '@/lib/mcp/tools';
+import {
+  getMcpToolDescriptors,
+  isMcpToolName,
+  resolveMcpToolAccessMethod,
+} from '@/lib/mcp/tools';
 import { resolveAppBaseUrl } from '@/lib/tasks-server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -157,6 +170,84 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(jsonRpcResult(id, { tools: getMcpToolDescriptors() }));
   }
 
+  // ── Resources ────────────────────────────────────────────────────────────
+  //
+  // The same context the two context tools return, exposed as the primitive
+  // that actually means "attach this": a client browses resources and picks
+  // one, where a tool is something a model decides to call. Both exist because
+  // tool support is universal and resource support is not.
+  //
+  // Reads only, so no access gate beyond the bearer — and deliberately the same
+  // read path as everything else (listVisibleReleases), which is what keeps an
+  // artist-scoped member from listing a manager's whole roster here.
+  if (method === 'resources/list' || method === 'resources/read') {
+    try {
+      const { data: resourceUser, error: resourceError } =
+        await adminClient.auth.admin.getUserById(actor.userId);
+      if (resourceError || !resourceUser.user?.id) {
+        console.error('[mcp] actor did not resolve to a user:', resourceError?.message);
+        return NextResponse.json({ error: 'MCP user is not configured correctly' }, { status: 500 });
+      }
+
+      const ctx = await resolveChappiContext({
+        user: resourceUser.user,
+        adminClient,
+        origin: new URL(request.url).origin,
+        authToken: actor.authToken,
+      });
+
+      if (method === 'resources/list') {
+        const releases = await listVisibleReleases(ctx);
+        return NextResponse.json(
+          jsonRpcResult(id, {
+            resources: [
+              buildResourceDescriptor({
+                uri: WORKSPACE_CONTEXT_URI,
+                name: 'Everything about this team',
+                description:
+                  'How the team works, every current release with its progress, what is overdue, and who is carrying what.',
+              }),
+              ...releases.map((release) =>
+                buildResourceDescriptor({
+                  uri: buildReleaseContextUri(release.id),
+                  name: release.title,
+                  description: `One release in full: dates, progress, what is blocked and what is next.${
+                    release.releaseDate ? ` Out ${release.releaseDate}.` : ''
+                  }`,
+                })
+              ),
+            ],
+          })
+        );
+      }
+
+      const uri = typeof params.uri === 'string' ? params.uri.trim() : '';
+      if (uri === WORKSPACE_CONTEXT_URI) {
+        const context = await buildPortableWorkspaceContext(ctx);
+        return NextResponse.json(jsonRpcResult(id, resourceTextResult(uri, context.text)));
+      }
+
+      const releaseId = parseReleaseContextUri(uri);
+      if (releaseId) {
+        const context = await buildReleaseContext(ctx, releaseId);
+        // A release the caller cannot see is indistinguishable from one that
+        // does not exist, which is the same line the rest of the app draws.
+        if (context) {
+          return NextResponse.json(jsonRpcResult(id, resourceTextResult(uri, context)));
+        }
+      }
+
+      return NextResponse.json(
+        jsonRpcError(id, JSON_RPC_INVALID_PARAMS, `Unknown resource: ${uri || '(none)'}`)
+      );
+    } catch (resourceFailure) {
+      console.error(`[mcp] ${method} failed:`, resourceFailure);
+      return NextResponse.json(
+        jsonRpcError(id, JSON_RPC_INVALID_PARAMS, 'That context could not be read.')
+      );
+    }
+  }
+
   if (method === 'tools/call') {
     const name = typeof params.name === 'string' ? params.name : '';
     if (!isMcpToolName(name)) {
@@ -187,8 +278,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'MCP user is not configured correctly' }, { status: 500 });
     }
 
-    const tool = getChappiTool(name);
-    const syntheticMethod = tool?.kind === 'read' ? 'GET' : 'POST';
+    const syntheticMethod = resolveMcpToolAccessMethod(name);
     const block = await requireActiveAccount(
       actor.userId,
       actorUser.user.email,

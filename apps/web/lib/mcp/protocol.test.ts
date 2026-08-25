@@ -7,8 +7,13 @@ import {
   negotiateProtocolVersion,
   parseJsonRpcMessage,
   toolResultToMcp,
+  WORKSPACE_CONTEXT_URI,
+  buildReleaseContextUri,
+  buildResourceDescriptor,
+  parseReleaseContextUri,
+  resourceTextResult,
 } from './protocol';
-import { getMcpToolDescriptors, isMcpToolName } from './tools';
+import { getMcpToolDescriptors, isMcpToolName, resolveMcpToolAccessMethod } from './tools';
 
 // The protocol layer is hand-rolled (no MCP SDK), so these tests are the
 // contract: they pin the wire shapes an MCP client depends on. Everything here
@@ -84,13 +89,16 @@ describe('negotiateProtocolVersion', () => {
 });
 
 describe('buildInitializeResult', () => {
-  it('declares tools as the only capability', () => {
+  it('declares tools and resources, and nothing else', () => {
     const result = buildInitializeResult({
       requestedVersion: '2025-06-18',
       serverVersion: '0.35.1',
     });
     expect(result.protocolVersion).toBe('2025-06-18');
-    expect(result.capabilities).toEqual({ tools: {} });
+    // Resources joined tools on 2026-08-25. Neither declares listChanged: the
+    // tool list is static per deploy, and the resource list changes only when
+    // the user's own releases do.
+    expect(result.capabilities).toEqual({ tools: {}, resources: {} });
     expect(result.serverInfo).toEqual({ name: 'urganize', version: '0.35.1' });
   });
 });
@@ -122,18 +130,20 @@ describe('toolResultToMcp', () => {
 });
 
 describe('MCP tool surface', () => {
-  // The count is the conscious-decision tripwire: a new Chappi tool joins MCP
-  // automatically unless it is excluded, so adding one fails this test until
-  // someone decides which it should be. It stayed at 11 through the 2026-08-14
-  // full-control expansion — every tool added there is excluded, because the
-  // gated ones have no confirmation UI over MCP and the rest reach REST routes
-  // that reject the MCP internal-actor bearer.
-  it('exposes the eleven Chappi tools and excludes navigate', () => {
+  // THE TRIPWIRE, INVERTED (2026-08-25). This list used to be a deny-list, so a
+  // new Chappi tool joined MCP automatically and this count was what forced
+  // somebody to notice. It is an allow-list now — a new tool is unreachable
+  // until it is named — so the count no longer guards against accidental
+  // exposure. It is kept because it still catches the opposite mistake: an
+  // intended tool silently dropping out of the surface after a rename.
+  it('exposes exactly the thirteen allow-listed tools', () => {
     const names = getMcpToolDescriptors().map((tool) => tool.name);
-    expect(names).toHaveLength(11);
+    expect(names).toHaveLength(13);
     expect(names).not.toContain('navigate');
     expect(names).toEqual(
       expect.arrayContaining([
+        'get_workspace_context',
+        'get_release_context',
         'list_releases',
         'get_release',
         'list_tasks',
@@ -166,5 +176,70 @@ describe('MCP tool surface', () => {
     expect(isMcpToolName('delete_release')).toBe(false);
     expect(isMcpToolName('delete_task')).toBe(false);
     expect(isMcpToolName('delete_note')).toBe(false);
+  });
+});
+
+describe('resource URIs', () => {
+  it('builds and parses a release URI symmetrically', () => {
+    const uri = buildReleaseContextUri('11111111-2222-3333-4444-555555555555');
+    expect(uri).toBe('urganize://release/11111111-2222-3333-4444-555555555555/context');
+    expect(parseReleaseContextUri(uri)).toBe('11111111-2222-3333-4444-555555555555');
+  });
+
+  it('refuses anything that is not exactly a release context URI', () => {
+    // A lenient split would yield '' or a traversal string for several of
+    // these, and the id it yields is fed straight to a lookup.
+    for (const uri of [
+      '',
+      'urganize://workspace/context',
+      'urganize://release//context',
+      'urganize://release/abc',
+      'urganize://release/abc/context/extra',
+      'urganize://release/../../etc/context',
+      'https://app.urganize.app/release/abc/context',
+      'urganize://release/abc/CONTEXT',
+    ]) {
+      expect(parseReleaseContextUri(uri), uri).toBeNull();
+    }
+  });
+
+  it('does not confuse the workspace URI for a release one', () => {
+    expect(parseReleaseContextUri(WORKSPACE_CONTEXT_URI)).toBeNull();
+  });
+
+  it('describes resources as plain text, which is what they are', () => {
+    expect(
+      buildResourceDescriptor({ uri: WORKSPACE_CONTEXT_URI, name: 'n', description: 'd' })
+    ).toEqual({
+      uri: WORKSPACE_CONTEXT_URI,
+      name: 'n',
+      description: 'd',
+      mimeType: 'text/plain',
+    });
+    expect(resourceTextResult('urganize://x', 'body')).toEqual({
+      contents: [{ uri: 'urganize://x', mimeType: 'text/plain', text: 'body' }],
+    });
+  });
+});
+
+describe('the access-method resolver', () => {
+  // MCP is all-POST and requireActiveAccount reads read-only mode off the
+  // method, so this mapping is what lets a payment-lapsed team still take its
+  // context out. Asserted against the REAL registry, not a fixture.
+  it('treats every exposed read as a GET', () => {
+    for (const name of ['get_workspace_context', 'get_release_context', 'list_releases', 'get_release', 'list_tasks', 'get_dashboard']) {
+      expect(resolveMcpToolAccessMethod(name), name).toBe('GET');
+    }
+  });
+
+  it('treats every exposed write as a POST', () => {
+    for (const name of ['create_release', 'create_task', 'create_note', 'update_task', 'complete_task', 'reopen_task', 'generate_status_update']) {
+      expect(resolveMcpToolAccessMethod(name), name).toBe('POST');
+    }
+  });
+
+  it('treats an unknown name as a write, which is the safe reading', () => {
+    expect(resolveMcpToolAccessMethod('nonsense')).toBe('POST');
+    expect(resolveMcpToolAccessMethod('')).toBe('POST');
   });
 });
