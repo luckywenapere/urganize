@@ -111,7 +111,6 @@ export const TESTIMONIALS: Record<TestimonialId, Testimonial> = {
 // and Tamuno's row is standalone.
 export interface TransformationPair {
   testimonialId: TestimonialId;
-  kicker: string;
   /**
    * House copy owned by THIS file (see the provenance correction above).
    * Plain-language pass 2026-08-25: keep these to one short thought a
@@ -132,16 +131,17 @@ export interface TransformationPair {
   quoteOverride?: string;
 }
 
+// Row order is the section's reading order: plan -> team -> status. The
+// rows carry NO visible title (removed 2026-08-25, founder call) — that
+// grouping lives only here, as the reason each pairing sits where it does.
 export const transformationPairs: readonly TransformationPair[] = [
   {
     testimonialId: "antoine",
-    kicker: "The plan",
     before:
       "Your plan is spread across a pinned chat, an old spreadsheet and your memory. Every new release starts from scratch.",
   },
   {
     testimonialId: "adenaiye",
-    kicker: "The team",
     before:
       "Work gets assigned in a chat message that gets scrolled past.",
     quoteOverride:
@@ -149,7 +149,6 @@ export const transformationPairs: readonly TransformationPair[] = [
   },
   {
     testimonialId: "tamuno",
-    kicker: "The status",
     before:
       "To find out where a release stands, you scroll back through weeks of chat or ask someone to repeat themselves.",
   },
