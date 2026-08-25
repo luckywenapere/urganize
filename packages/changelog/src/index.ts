@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.1.2",
+    date: "August 25, 2026",
+    highlights: [
+      "The Collect metadata page is easier to read. You now see three small steps — tap one to open it.",
+      "Each step shows a quick note, like how many details you've filled in or whether your link is live, so you know what's left without opening anything.",
+    ],
+  },
+  {
     version: "1.1.1",
     date: "August 25, 2026",
     highlights: [
