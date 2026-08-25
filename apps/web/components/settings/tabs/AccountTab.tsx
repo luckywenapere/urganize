@@ -8,6 +8,7 @@ import { SecuritySection } from '../SecuritySection';
 import { AdminSection } from '../AdminSection';
 import { SessionSection } from '../SessionSection';
 import { DataExportSection } from '../DataExportSection';
+import { McpConnectionsSection } from '@/components/mcp/McpConnectionsSection';
 import { DeleteAccountSection } from '../DeleteAccountSection';
 
 /**
@@ -41,6 +42,15 @@ import { DeleteAccountSection } from '../DeleteAccountSection';
  * surface Admin is reachable from — the desktop identity card's own Admin
  * link is `hidden lg:block` with no mobile equivalent anywhere else.
  *
+ * McpConnectionsSection (2026-08-25) sits with the tail items for the same
+ * reason AdminSection does — most accounts have connected nothing, so it
+ * renders as a short empty state and does not deserve to push billing or the
+ * profile down. It is in Account rather than Team because an MCP connection is
+ * approved by one person and resolves to one account: somebody else on the
+ * roster connecting claude.ai has nothing to do with you. It carries no
+ * "connect" button, and cannot — a connection only ever begins at the app doing
+ * the connecting, which sends the user to /oauth/authorize.
+ *
  * DataExportSection (2026-08-23) sits directly above DeleteAccountSection, and
  * that adjacency is the point: they are the same conversation in the right
  * order. The export covers the same scope deletion destroys, so a user standing
@@ -57,6 +67,7 @@ export function AccountTab() {
       <SecuritySection />
       <AdminSection />
       <SessionSection />
+      <McpConnectionsSection />
       <DataExportSection />
       <DeleteAccountSection />
     </div>
