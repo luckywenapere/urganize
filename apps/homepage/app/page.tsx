@@ -9,6 +9,7 @@ import {
 import {
   FinalCTASection,
   HeroSection,
+  StatsSection,
   TemplatePlanSection,
   ThreeFeaturesSection,
   TransformationSection,
@@ -48,6 +49,11 @@ export default function Home() {
               footer's Community link survive; only the landing beat is
               gone. Rebuild from git history if it's ever wanted back. */}
           <HeroSection />
+          {/* Stats added 2026-08-25 (founder-supplied figures — the same-day
+              removals in WorkspaceShot/FinalCTA asked for exactly these before
+              any stat beat returns): the offer in three cards, right under
+              the demo video. */}
+          <StatsSection />
           <TransformationSection />
           <WorkspaceShotSection />
           <TemplatePlanSection />

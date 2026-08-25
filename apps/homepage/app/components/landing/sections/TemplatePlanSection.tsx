@@ -23,7 +23,10 @@ const templateExcerpt = [
 export function TemplatePlanSection() {
   return (
     <ScrollReveal>
-      <SectionShell containerClassName="max-w-[64rem] px-6 sm:px-8 lg:px-10">
+      <SectionShell
+        className="py-[80px] lg:py-[100px]"
+        containerClassName="max-w-[64rem] px-6 sm:px-8 lg:px-10"
+      >
         <div className="mx-auto max-w-[52rem] text-center">
           <p className="mono-label text-[var(--marketing-text-subtle)]">
             The playbook
