@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -93,6 +93,10 @@ function ContextTitle() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const releases = useReleaseStore((state) => state.releases);
+  // A cache-first paint can carry a cover art URL whose 1h signed-URL TTL
+  // has since expired. Fall back to the default mark rather than a
+  // broken-image icon, keyed on the URL so a fresh one clears the failure.
+  const [failedCoverArtUrl, setFailedCoverArtUrl] = useState<string | null>(null);
 
   const releaseId = pathname === '/dashboard' ? searchParams.get('release') : null;
   if (!releaseId) return null;
@@ -110,13 +114,14 @@ function ContextTitle() {
   return (
     <div className={`${MOBILE_NAV_ENABLED ? 'hidden lg:flex' : 'hidden sm:flex'} min-w-0 items-center gap-3`}>
       <div className="hidden h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-stroke-subtle bg-bg-elevated sm:block">
-        {release.coverArtUrl ? (
+        {release.coverArtUrl && release.coverArtUrl !== failedCoverArtUrl ? (
           <Image
             src={release.coverArtUrl}
             alt=""
             width={40}
             height={40}
             className="h-full w-full object-cover"
+            onError={() => setFailedCoverArtUrl(release.coverArtUrl ?? null)}
           />
         ) : (
           <div className="grid h-full w-full place-items-center" aria-hidden="true">

@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { isNetworkFailure } from '@/lib/offline/network-error';
 
 export type WorkspaceIdentityArtist = {
   id: string;
@@ -102,10 +103,19 @@ export const useWorkspaceIdentityStore = create<WorkspaceIdentityStore>((set, ge
 
       if (!accessToken) return;
 
-      const response = await fetch('/api/workspace/identity', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: 'no-store',
-      });
+      let response: Response;
+      try {
+        response = await fetch('/api/workspace/identity', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          cache: 'no-store',
+        });
+      } catch (error) {
+        // Offline / a dropped connection: keep whatever identity (cached or
+        // in-memory) is already painted rather than throwing out of a `void
+        // load(...)` call site.
+        if (isNetworkFailure(error)) return;
+        throw error;
+      }
       if (!response.ok) return;
 
       const payload = (await response.json().catch(() => null)) as {

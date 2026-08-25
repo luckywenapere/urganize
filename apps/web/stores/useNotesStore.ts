@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { sortNotes } from '@/lib/notes';
 import type { Note } from '@/types/notes';
+import { isNetworkFailure } from '@/lib/offline/network-error';
 
 type NotePatch = {
   body?: string;
@@ -128,6 +129,13 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         cacheNotes(userId, notes);
         notesLoadedAt = Date.now();
         set({ notes, hydrated: true });
+      } catch (error) {
+        // Offline / a dropped connection: keep whatever notebook is already
+        // painted (cached or in-memory) rather than letting this become an
+        // unhandled rejection at every `void load(...)` call site. A real
+        // bug still surfaces — only a recognized network failure is
+        // swallowed here.
+        if (!isNetworkFailure(error)) throw error;
       } finally {
         set({ isInitialLoading: false });
       }

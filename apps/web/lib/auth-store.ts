@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 import type { User } from '@supabase/supabase-js';
 import { supabase, type Profile, handleSupabaseError } from './supabase/client';
 import { errorMessage } from "@/lib/errors";
+import { isNetworkFailure } from './offline/network-error';
 import { installAccessRedirect } from './access-redirect';
 import { isAllowlistedEmail } from './paywall-allowlist';
 import { isCardTrialEnabled, resolveCardTrialDestination } from './trial-card';
@@ -399,7 +400,17 @@ export const useAuthStore = create<AuthState>()(
             ] = await Promise.all([supabase.auth.getUser(), supabase.auth.getSession()]);
 
             if (userError) {
-              // If getUser fails, we are definitely not authenticated
+              // A real rejection (expired refresh token, revoked session,
+              // bad credentials) means we are definitely not authenticated.
+              // A network failure means we simply couldn't ask — if we
+              // already have a persisted session, trust it rather than
+              // signing the user out from under them over a dropped
+              // connection. Server-side auth is untouched either way: every
+              // API route still checks the token independently.
+              if (isNetworkFailure(userError) && currentState.isAuthenticated && currentState.user) {
+                set({ isLoading: false });
+                return;
+              }
               set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, hasCuratorProfile: null, error: null });
               return;
             }
@@ -452,6 +463,15 @@ export const useAuthStore = create<AuthState>()(
             if (isAbortError(error)) {
               set((state) => ({ isLoading: false, error: state.error }));
               return;
+            }
+            // Same reasoning as the userError branch above: a network
+            // failure mid-check must not evict a session we already trust.
+            if (isNetworkFailure(error)) {
+              const persisted = get();
+              if (persisted.isAuthenticated && persisted.user) {
+                set({ isLoading: false });
+                return;
+              }
             }
             console.error('Auth check failed:', error);
             const errorMessage = handleSupabaseError(error);

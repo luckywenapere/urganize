@@ -8,6 +8,7 @@ import { useTaskStore } from '@/stores/useTaskStore';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
 import { isDbReleaseType } from '@/types/releases';
+import { isNetworkFailure } from '@/lib/offline/network-error';
 
 type ReleaseStore = {
   releases: ExecutionRelease[];
@@ -143,10 +144,28 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
         return null;
       }
 
-      const response = await fetch('/api/command-center', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: 'no-store',
-      });
+      let response: Response;
+      try {
+        response = await fetch('/api/command-center', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          cache: 'no-store',
+        });
+      } catch (fetchError) {
+        // Offline / DNS / a dropped connection — never a rejected promise
+        // out of loadCommandCenter: every caller is `void`d, so a throw here
+        // was an unhandled rejection and, on a cache miss, a permanent
+        // skeleton. Keep whatever is already painted (cached or in-memory);
+        // only show an error when there is truly nothing on screen.
+        if (isNetworkFailure(fetchError)) {
+          set((state) => ({
+            isInitialLoading: false,
+            isRefreshing: false,
+            error: state.releases.length > 0 ? '' : "You're offline. Reconnect to load your releases.",
+          }));
+          return null;
+        }
+        throw fetchError;
+      }
       const payload = (await response.json().catch(() => ({}))) as Partial<CommandCenterData> & { error?: string };
       if (!response.ok || !Array.isArray(payload.releases)) {
         set({ isInitialLoading: false, isRefreshing: false, error: payload.error || 'Could not load releases.' });

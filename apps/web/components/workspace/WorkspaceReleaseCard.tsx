@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import type { Release } from '@/types/releases';
 
@@ -89,6 +90,12 @@ export function WorkspaceReleaseCard({
   coverArtUrl,
   variant = 'tile',
 }: WorkspaceReleaseCardProps) {
+  // A cache-first paint can show a cover art URL whose 1h signed-URL TTL has
+  // since expired (the command-center cache has no maxAge). Rather than a
+  // broken-image icon, fall back to the default mark — keyed on the URL
+  // itself so a fresh signed URL (after a refresh) clears the failure.
+  const [failedCoverArtUrl, setFailedCoverArtUrl] = useState<string | null>(null);
+  const showCoverArt = Boolean(coverArtUrl) && coverArtUrl !== failedCoverArtUrl;
   const progress = tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0;
   const normalizedStatus = statusLabel[release.status] || release.status.replace(/_/g, ' ');
   const releaseDateLabel = formatReleaseDate(release.releaseDate);
@@ -172,13 +179,14 @@ export function WorkspaceReleaseCard({
             so the card reads as a slim listing row instead of a banner. */}
         <div className="flex items-stretch">
           <div className="relative w-28 shrink-0 self-stretch overflow-hidden border-r border-stroke-subtle bg-bg-elevated sm:w-36">
-            {coverArtUrl ? (
+            {showCoverArt ? (
               <Image
-                src={coverArtUrl}
+                src={coverArtUrl as string}
                 alt={`${release.title} cover art`}
                 fill
                 className="object-cover transition-transform duration-slow ease-out group-hover:scale-[1.02]"
                 sizes="144px"
+                onError={() => setFailedCoverArtUrl(coverArtUrl ?? null)}
               />
             ) : (
               <DefaultCoverArt markClassName="w-10 sm:w-12" />
@@ -202,9 +210,9 @@ export function WorkspaceReleaseCard({
           Urganize "U" mark as default cover art (founder call, 2026-07-23 —
           replaces the earlier empty muted panel). */}
       <div className="aspect-square overflow-hidden border-b border-stroke-subtle bg-bg-elevated">
-        {coverArtUrl ? (
+        {showCoverArt ? (
           <Image
-            src={coverArtUrl}
+            src={coverArtUrl as string}
             alt={`${release.title} cover art`}
             width={720}
             height={720}
@@ -214,6 +222,7 @@ export function WorkspaceReleaseCard({
             // The old value claimed 100vw below 768px and over-fetched on
             // every phone.
             sizes="280px"
+            onError={() => setFailedCoverArtUrl(coverArtUrl ?? null)}
           />
         ) : (
           <DefaultCoverArt markClassName="w-14 sm:w-16" />
