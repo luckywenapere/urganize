@@ -14,6 +14,7 @@ import type { Note } from '@/types/notes';
 export {
   getAuthenticatedUser,
   requireActiveAuthenticatedUser,
+  requireActiveAuthenticatedUserOrInternal,
   requireAuthenticatedAdmin,
   createAdminClient,
 } from '@/app/api/_shared/auth';

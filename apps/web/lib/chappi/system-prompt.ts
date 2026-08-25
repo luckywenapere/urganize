@@ -1,20 +1,19 @@
-// Chappi system prompt builder (SERVER-ONLY). Inlines a compact workspace
-// snapshot — releases, overdue work, who is carrying what, and who is on the
-// team — so the model can answer the common questions without a tool round trip and
-// can reference real release/task ids. The snapshot can go stale within a turn:
-// the REAL guard is per-tool server-side re-validation against live rows, not
-// this prompt. See workspace-summary.ts for what each section contains.
+// Chappi system prompt builder (SERVER-ONLY). ROLE plus the portable context —
+// the team brief, a compact workspace snapshot (releases, overdue work, who is
+// carrying what, who is on the team) and today's date — so the model can answer
+// the common questions without a tool round trip and can reference real
+// release/task ids. The snapshot can go stale within a turn: the REAL guard is
+// per-tool server-side re-validation against live rows, not this prompt.
+//
+// Everything except ROLE now comes from ./portable-context, which the MCP
+// surface also serves to a customer's own LLM. That is the point of the split:
+// ROLE names tools and confirmation cards that only exist inside this app, while
+// the rest is just true, so an answer from claude.ai and an answer from UrgAns
+// are working from the same facts by construction. See workspace-summary.ts for
+// what each snapshot section contains.
 
-import { TaskService } from '@/lib/services/task-service';
-import { listVisibleReleases } from './release-scope';
-import { buildWorkspaceSummary } from './workspace-summary';
-import {
-  formatTeamBriefForPrompt,
-  isTeamBriefEnabled,
-  listInjectedBriefSections,
-  type TeamBriefSection,
-} from '@/lib/team-brief';
-import { loadTeamBriefEntries } from '@/lib/team-brief-server';
+import { buildPortableWorkspaceContext } from './portable-context';
+import type { TeamBriefSection } from '@/lib/team-brief';
 import type { ChappiToolContext } from './tools';
 
 const ROLE = `You are UrgAns, the assistant inside Urganize — a release-management workspace for music managers. You help the user run their releases: answering questions, and doing the work on their behalf.
@@ -29,6 +28,7 @@ What you can reach:
 - Content calendars: list_content_calendars, create_content_calendar, delete_content_calendar, list_content_posts, create_content_post, update_content_post, delete_content_post. Planning only — nothing here posts anything anywhere.
 - Team: list_workspace_members, invite_teammate, remove_teammate.
 - Promotion: list_pitch_playlists, list_pitches, pitch_song (send a song to a curator's playlist); get_epk, create_epk_link, revoke_epk_link (the public press kit); get_recap, generate_recap, delete_recap (the shareable card for a finished release).
+- Context: get_workspace_context (everything you already know, as one block), get_release_context (one release in full).
 - Other: get_dashboard, generate_status_update, navigate.
 
 Rules:
@@ -77,56 +77,10 @@ export type ChappiSystemPrompt = {
 export async function buildChappiSystemPrompt(
   ctx: ChappiToolContext
 ): Promise<ChappiSystemPrompt> {
-  const today = new Date().toISOString().slice(0, 10);
-  let snapshot = 'Workspace snapshot unavailable.';
-  try {
-    const releases = await listVisibleReleases(ctx);
-    const tasks = ctx.workspaceIds.length
-      ? await new TaskService(ctx.adminClient).getTasksForUser(ctx.user.id, ctx.workspaceIds)
-      : [];
-
-    snapshot = await buildWorkspaceSummary(ctx, releases, tasks, today);
-  } catch (error) {
-    console.error('[chappi] snapshot build failed:', error);
-  }
-
-  // The brief sits ABOVE the snapshot, which is the precedence the spec asks
-  // for and which the block's own opening lines restate to the model: the
-  // brief is standing background, the snapshot is live, and where they
-  // disagree the live data wins. An empty brief contributes nothing at all —
-  // formatTeamBriefForPrompt returns '' rather than an empty heading.
-  const brief = await loadTeamBriefBlock(ctx);
+  const context = await buildPortableWorkspaceContext(ctx);
 
   return {
-    prompt: [ROLE, brief.block, snapshot, `Today is ${today}.`]
-      .filter((part) => Boolean(part && part.trim()))
-      .join('\n\n'),
-    briefSections: brief.sections,
+    prompt: [ROLE, context.text].filter((part) => Boolean(part && part.trim())).join('\n\n'),
+    briefSections: context.briefSections,
   };
-}
-
-/** Never throws, and returns '' whenever the feature is off, the caller has no
- *  team, or the read fails — the assistant must answer with or without it. */
-async function loadTeamBriefBlock(
-  ctx: ChappiToolContext
-): Promise<{ block: string; sections: TeamBriefSection[] }> {
-  const nothing = { block: '', sections: [] as TeamBriefSection[] };
-  if (!isTeamBriefEnabled()) return nothing;
-  const workspaceId = ctx.workspaceIds[0];
-  if (!workspaceId) return nothing;
-  try {
-    const entries = await loadTeamBriefEntries(ctx.adminClient, workspaceId);
-    // Both derived from the same entries, so the marker cannot name a section
-    // the model was not shown. listInjectedBriefSections returns [] for
-    // exactly the inputs that make the block empty — a property the tests in
-    // lib/team-brief.test.ts assert over generated combinations, which is why
-    // there is no redundant "only if the block is non-empty" guard here.
-    return {
-      block: formatTeamBriefForPrompt(entries),
-      sections: listInjectedBriefSections(entries),
-    };
-  } catch (error) {
-    console.error('[chappi] team brief load failed:', error);
-    return nothing;
-  }
 }

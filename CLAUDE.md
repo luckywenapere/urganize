@@ -751,12 +751,246 @@ The third sanctioned v1 scope expansion (see the 2026-07-30 note in "v1 scope").
 
 An MCP endpoint at **`POST /api/mcp`** exposes Chappi's existing tool surface to an external MCP client (Claude Code / Claude Desktop), so the founder can read and mutate releases/tasks from outside the app. **Not a scope expansion:** it's a second access path to the already-sanctioned Chappi tool registry, not a new feature — no new tools, no new business logic. Internal-only → no ledger entry/version bump (Versioning rules).
 
-- **Founder-only, env-bound.** `MCP_ACCESS_KEY` (bearer secret) + `MCP_USER_ID` (the `auth.users` id every call acts as). Presence of BOTH is the feature switch — unset → the route 404s (dark, mirroring the flag-off 404s). Deliberately no `NEXT_PUBLIC_FEATURE_MCP`: nothing reaches the client bundle, and a separate flag would only create a half-configured state. Server-only runtime vars, so no `turbo.json` entry (same as `CRON_SECRET`/`CHAPPI_API_KEY`). No per-user keys, no DB table, no Settings UI, no OAuth — claude.ai web connectors (OAuth 2.1 + DCR) are a separate future issue.
+- **Founder-only, env-bound.** `MCP_ACCESS_KEY` (bearer secret) + `MCP_USER_ID` (the `auth.users` id every call acts as). Presence of BOTH is the feature switch — unset → the route 404s (dark, mirroring the flag-off 404s). Deliberately no `NEXT_PUBLIC_FEATURE_MCP`: nothing reaches the client bundle, and a separate flag would only create a half-configured state. Server-only runtime vars, so no `turbo.json` entry (same as `CRON_SECRET`/`CHAPPI_API_KEY`). ~~No per-user keys, no DB table, no Settings UI, no OAuth — claude.ai web connectors (OAuth 2.1 + DCR) are a separate future issue.~~ **Superseded 2026-08-25: per-user OAuth shipped — see "Per-user MCP access, over OAuth 2.1" below.** Everything else in this section still describes the founder-key path exactly, and that path is untouched; it is now one of two ways in.
 - **Transport hand-rolled, no new dependency.** `lib/mcp/protocol.ts` is a pure JSON-RPC layer (~200 lines) covering the five methods a stateless server needs: `initialize`, `notifications/initialized`, `ping`, `tools/list`, `tools/call`. `@modelcontextprotocol/sdk`/`mcp-handler` would have added a dependency, the repo's first catch-all route segment, and session machinery for that small a surface — the same call the admin hub's Growth chart made against chart.js. Stateless is load-bearing: **never emit `Mcp-Session-Id`** (issuing one commits us to session semantics), GET/DELETE are 405, responses are plain JSON (no SSE). Batch arrays are rejected (-32600). **A failed tool is a successful call with `isError: true`** — JSON-RPC errors are reserved for protocol problems, so the model can see failures instead of the transport eating them.
 - **Tools = `CHAPPI_TOOLS` minus `EXCLUDED_TOOL_NAMES`** (`lib/mcp/tools.ts`), still **11** after the 2026-08-14 expansion took Chappi to 45: the four reads plus create_release, create_task, create_note, update_task, complete_task, reopen_task, generate_status_update. The list derives automatically, so a new Chappi tool joins MCP unless it is excluded — `protocol.test.ts` asserts the count, which is the tripwire that makes that decision conscious. **Every tool added by the full-control expansion is excluded**, for two separate reasons: the gated ones (`delete_release`, `delete_task`, `delete_note`) have no confirmation UI over MCP, and the rest reach REST routes that don't accept the MCP internal-actor bearer (the allowlist is still exactly four routes) so they would 401 anyway. Opting one in means switching its route to `requireAuthenticatedAdminOrInternal` AND bumping the count — do not do it for a gated tool at all. `navigate` is excluded because it returns a `clientAction` for a React router that doesn't exist off-browser; `clientAction` is dropped from every MCP result for the same reason. `lib/chappi/**` is imported, never edited — the two surfaces can't drift. Read the schema off the registry's camelCase `inputSchema`, NOT via `getChappiToolSchemas()` (which renames to Anthropic's `input_schema`).
-- **The internal-actor auth branch** is the one non-obvious piece. Four mutating tools work by internal fetch to our own REST routes (preserving template instantiation / assignee validation / notifications — see the `lib/chappi/tools.ts` header), and those routes validate a Supabase JWT an MCP client doesn't have. So `app/api/_shared/auth.ts` gained `requireActiveAuthenticatedUserOrInternal` + `requireAuthenticatedAdminOrInternal`: a request whose bearer timing-safe-equals `MCP_ACCESS_KEY` resolves to `MCP_USER_ID` via `auth.admin.getUserById`, then still passes the paywall gate (parity with the UI). **There is no acting-user header on purpose** — the binding is env-side, so a leaked key can only ever act as that one account. **Exactly four routes opt in** (`POST /api/releases`, `POST /api/tasks`, `PATCH /api/tasks/[id]`, `POST /api/releases/[releaseId]/generate-status`); every other route keeps the plain helpers and rejects the key with a normal 401. Do not broaden this to new routes without a reason as concrete as the internal-fetch constraint.
+- **The internal-actor auth branch** is the one non-obvious piece. Four mutating tools work by internal fetch to our own REST routes (preserving template instantiation / assignee validation / notifications — see the `lib/chappi/tools.ts` header), and those routes validate a Supabase JWT an MCP client doesn't have. So `app/api/_shared/auth.ts` gained `requireActiveAuthenticatedUserOrInternal` + `requireAuthenticatedAdminOrInternal`: a request whose bearer timing-safe-equals `MCP_ACCESS_KEY` resolves to `MCP_USER_ID` via `auth.admin.getUserById`, then still passes the paywall gate (parity with the UI). **There is no acting-user header on purpose** — the binding is env-side, so a leaked key can only ever act as that one account. ~~**Exactly four routes opt in**~~ **FIVE since 2026-08-25** (`POST /api/releases`, `POST /api/tasks`, `PATCH /api/tasks/[id]`, `POST /api/releases/[releaseId]/generate-status`, `POST /api/notes`); every other route keeps the plain helpers and rejects the key with a normal 401. The fifth closes a bug that shipped alongside this section: `create_note` was exposed over MCP from day one and always 401'd, because five exposed tools proxy REST routes and only four routes had opted in. There is a structural test for it now — see the section below. Do not broaden this to new routes without a reason as concrete as the internal-fetch constraint.
 - **Also:** `apps/web/vitest.config.ts` gained the `@/*` path alias so lib modules under test can import across directories the way the app does.
 - **Activation:** set both env vars in Vercel `Web` production, then `claude mcp add --transport http urganize https://app.urganize.app/api/mcp --header "Authorization: Bearer <key>"`.
+
+---
+
+## Per-user MCP access, over OAuth 2.1 (2026-08-25)
+
+Founder request: *"Figure out a way for all users to take context to any LLM of
+their choice through Urganize consistently through MCP probably."*
+
+Every customer can now connect their own LLM client — claude.ai, Claude Desktop,
+ChatGPT, Claude Code, Cursor — to their own workspace, and take their release
+context with them. Built flag-off behind `NEXT_PUBLIC_FEATURE_MCP_CONNECT`;
+**not yet activated**. The founder-key path above is untouched, unflagged and
+independent: either, both, or neither may be switched on.
+
+**Not a scope expansion.** MCP shipped 2026-07-31 and this file recorded it as
+"a second access path to the already-sanctioned Chappi tool registry, not a new
+feature". This is the same registry reaching the same data for the same reasons;
+what changed is who may hold a credential.
+
+**The external fact that decided the architecture, and it is worth re-checking
+before anyone "simplifies" this into a token.** Claude Code accepts a static
+bearer via `--header`. **claude.ai web and Claude Desktop do not:** their
+custom-connector flow assumes OAuth 2.1 and attempts Dynamic Client
+Registration on connect, with no "no auth" option and no static-header fallback
+(anthropics/claude-ai-mcp#402, closed as not planned). ChatGPT connectors want
+OAuth too. This product's users are artist managers, not developers — they live
+in claude.ai and the phone apps, which are exactly the OAuth-only clients. A
+per-user token would have been three columns instead of three tables, and would
+have served the founder and nobody else.
+
+**Schema:** `20260825100000_mcp_oauth.sql` — `mcp_oauth_clients` (DCR
+registrations), `mcp_oauth_codes`, `mcp_oauth_tokens`. RLS enabled with **zero
+policies** on all three, the `workspace_invite_links` / `curator_invites`
+posture. **Not applied anywhere yet.**
+
+### Eight things worth knowing before editing this
+
+1. **The credential IS the binding, and that property is preserved rather than
+   abandoned.** `app/api/_shared/auth.ts` argued the env binding was safe because
+   "a leaked key can only ever act as that one user", with deliberately no
+   acting-user header. A token row carries its own `user_id`, so that still
+   holds — one credential resolves to one account and no request header can
+   redirect it. What changed is that the binding lives in a row, which is what
+   makes revocation possible at all (`.env.example` used to say, of the founder
+   key, "there is no revocation UI").
+2. **Tokens and codes are stored sha256-HASHED, which deviates from every other
+   token in this repo.** `createHash` appeared nowhere in `apps/web` before this,
+   because share links and invite codes must be re-readable to render a Copy
+   button (`INVITE_LINK_COLUMNS` says so in as many words). That reason does not
+   apply here: an access token is handed to a client once and never shown to a
+   human, so nothing needs the plaintext back and a leaked row should not be a
+   working credential.
+3. **The access gate is per TOOL, not per HTTP method.** `requireActiveAccount`
+   reads read-only mode off `request.method` and MCP is all-POST, so the honest
+   method would refuse a payment-lapsed team its MCP **reads** as well as its
+   writes — while that same team can still read everything in the app.
+   `resolveMcpToolAccessMethod` maps `tool.kind` to a synthetic GET or POST, and
+   a refusal comes back as a JSON-RPC result carrying `isError` so the model can
+   explain it rather than reporting a dead server. **Never pass the real method
+   here.**
+4. **The 401 carries `WWW-Authenticate` with `resource_metadata`, and that header
+   is the entire discovery mechanism.** Without it a client reports the server
+   unreachable instead of starting the OAuth flow. It is the first thing to check
+   on any "the connector will not connect" report.
+5. **`/.well-known/*` is served through `next.config.js` rewrites, and it has to
+   be.** Next's router ignores dot-prefixed path segments, so
+   `app/.well-known/…/route.ts` never resolves, and there is no `middleware.ts`
+   in this app. Both the bare AND the path-suffixed forms are mapped
+   (`/.well-known/oauth-protected-resource/api/mcp`), because RFC 9728 has a
+   client try the suffixed one first for a resource that lives at a path —
+   serving one and not the other works with some clients and silently fails with
+   others.
+6. **Single-use codes and refresh rotation are conditional UPDATEs, not
+   application-level checks.** `update … where consumed_at is null returning id`;
+   zero rows means somebody else won. The row is the lock — the `curator_invites`
+   pattern. `checkCodeRedemption`'s own `consumedAt` check is a fast path and is
+   explicitly NOT what makes single-use true. Rotation swaps both hashes on the
+   existing row rather than inserting a successor, so an hourly refresh does not
+   fill the owner's Settings list with dead entries.
+7. **MCP tool calls are NOT metered against `urgans_monthly_actions`.** That
+   ceiling exists because an UrgAns turn costs us gateway tokens; over MCP the
+   customer's own model does the thinking and we pay for a database read. Each
+   call records an `mcp_tool_call` billing event for visibility instead —
+   free-text `type` column, existing index, **no migration**.
+8. **`/api/mcp/connections` and its DELETE are deliberately NOT behind the
+   paywall** — the `app/api/account/export` call, for a stronger reason: a walled
+   or read-only team must always be able to cut off a credential. Authentication
+   plus the curator block, and nothing else.
+
+### The allow-list inversion, and the bug the old default shipped
+
+`lib/mcp/tools.ts` was a **deny-list** (`EXCLUDED_TOOL_NAMES`), so a newly
+registered Chappi tool joined MCP automatically and a hard-coded count in
+`protocol.test.ts` was the tripwire that made somebody notice. That default was
+defensible while one founder-held env key could reach the endpoint. It is not
+once any customer can: `executeToolCall` never reads `tool.confirm` (the gate
+lives in `runner.ts`, which the MCP path does not go through), so **that list is
+the only thing standing between an outside model and a confirmation-gated tool.**
+
+It is now an explicit `MCP_TOOL_NAMES_ALLOWED` — 13: the original 11 plus the two
+context tools. The count test stays, but its job changed: it no longer guards
+against accidental exposure, it catches an intended tool silently dropping out
+after a rename.
+
+**And it fixed what the old default already shipped:** `create_note` was in
+`tools/list` from day one and always 401'd, because it proxies `POST /api/notes`
+and that route used the plain auth helper. `tool-registry.test.ts` now parses the
+tool-family sources, extracts each allow-listed tool's `callInternalApi` path AND
+method, resolves the route file, and asserts that specific handler accepts the
+internal actor. **It was mutation-tested twice:** the first version passed on the
+reverted fix, because it matched the file's *import* rather than the handler
+body — so it is per-handler now, which also lets a route legitimately opt its
+POST in while leaving its GET on the plain helper, exactly what `/api/notes`
+does.
+
+### The context surface, and why "consistently" was already half-built
+
+`buildChappiSystemPrompt` composed ROLE + team brief + workspace snapshot +
+today, and only ROLE is specific to the assistant inside this app — it names
+tools an outside model does not have and confirmation cards it will never see.
+Everything else is just true. So that portable half moved into
+`lib/chappi/portable-context.ts` and `buildChappiSystemPrompt` now calls it:
+**one composition, two consumers**, so an answer from claude.ai and an answer
+from UrgAns cannot be working from different facts. That is what the word
+"consistently" in the request actually required, and a second renderer would have
+drifted within a month — this repo has undone that duplication for
+`isRecapEligible`, for the four-flag scene expression, and for four copies of
+`getAccessToken`.
+
+It lives in `lib/chappi/` and not `lib/mcp/` deliberately: `lib/mcp` imports
+`lib/chappi` and never the reverse.
+
+Exposed **both** as tools (`get_workspace_context`, `get_release_context`) and as
+MCP resources (`resources/list` / `resources/read`, at
+`urganize://workspace/context` and `urganize://release/<id>/context`). Resources
+are the primitive that means "attach this"; tools are what every client supports;
+a manager should not have to know which kind of client they picked.
+`capabilities` now declares `{ tools: {}, resources: {} }`.
+
+Both context tools are `kind: 'read'`, which is load-bearing rather than
+descriptive — see point 3 above.
+
+### Doc-drift found on the way, surfaced rather than absorbed
+
+Two features exist in the code and appear nowhere in this file:
+
+- **The team brief** (`lib/team-brief.ts`, `team-brief-server.ts`,
+  `team-brief-nudge.ts`, `components/settings/TeamBriefSection.tsx`,
+  `components/chappi/BriefAttribution.tsx`, migration
+  `20260824120000_team_briefs.sql`) — a manager-authored five-section standing
+  document (roster, how we work, positioning, constraints, vocabulary), capped
+  per section, injected into UrgAns's system prompt on every request, edited in
+  Settings → Workspace, flag-gated on `NEXT_PUBLIC_FEATURE_TEAM_BRIEF`. It is
+  half of what "context" means in this feature.
+- **`lib/chappi/workspace-summary.ts`** — the pure, unit-tested workspace
+  snapshot renderer (releases capped at 25 and selected by recency of the release
+  *or* its activities, overdue, open work per person, the team). The other half.
+
+Neither has a Working-notes entry. Flagged here per this file's own rule rather
+than back-filling a section for work this pass did not do.
+
+### Known gaps, stated plainly
+
+- **No rate limiting**, anywhere in this repo, and this opens an authenticated
+  endpoint a customer can point any client at. Out of scope at current scale
+  (principle 6); the `mcp_tool_call` event is the signal that should arrive
+  before it matters.
+- **Open Dynamic Client Registration**, which is what claude.ai requires.
+  Registering grants nothing — a client id is not a credential, and nothing
+  happens until a signed-in person approves it — and it is mitigated by
+  public-clients-only plus redirect-URI validation.
+- **Prompt injection widens.** Hostile text in workspace data now reaches a
+  third-party model that can call create/update tools. Same accepted posture as
+  UrgAns (reversible, visible, undoable in-app), restated because the model is
+  one we do not control.
+- **Hand-rolling an authorization server is the risk in this work.** It matches
+  the repo's precedent (`lib/mcp/protocol.ts` hand-rolls JSON-RPC,
+  `lib/fcm-server.ts` an RS256 JWT) and avoids a vendor under "boring stack", but
+  PKCE verification, exact redirect-URI matching and single-use codes are where
+  this goes wrong. All three are pure, unit-tested, and were mutation-tested:
+  making PKCE accept `plain`, making redirect matching a prefix, and dropping the
+  single-use check each fail exactly the tests written to catch them.
+
+### Verified
+
+The full suite (**1372 passing**, 30 env-gated skips, ~83 of them new across
+`lib/mcp/oauth.test.ts`, `lib/mcp-connections.test.ts`,
+`lib/chappi/portable-context.test.ts` and the two updated registry tests),
+`eslint .` at **3 errors / 67 warnings** — the 3 errors are the unchanged
+pre-existing `WorkspaceView.tsx` ones, and the single new warning is
+`useMcpConnections`'s fetch-on-mount, byte-identical to the finding
+`useTeamLogins` already carries (the documented React-19 downgraded rule).
+`next build` green **by exit code** in both flag states, with `/auth`,
+`/onboarding`, `/settings` and `/oauth/authorize` all still `○ Static`.
+
+Runtime probes against `next start`, **rebuilding between flag states** because
+`NEXT_PUBLIC_*` is inlined at build time even server-side: flag OFF, all six
+OAuth/well-known routes plus `/api/mcp/connections` and `/api/mcp` return
+**404** while the ungated `/api/releases` still **401**s — that discrimination is
+what proves the gate rather than a routing accident. Flag ON, both metadata
+documents return valid JSON with absolute URLs, `POST /api/mcp` returns **401
+carrying `WWW-Authenticate` with `resource_metadata`**, and the authenticated
+routes 401. One real defect was found this way and fixed: `/api/oauth/token`
+answered `server_error` before `unsupported_grant_type`, telling a client the
+server was misconfigured for a request that was invalid to begin with.
+
+**NOT verified, and it is most of the interesting surface.** Nothing has run
+against a real database — the migration is unapplied — and this sandbox cannot
+mint a Supabase session or reach either urganize domain (the proxy answers 403 to
+CONNECT). So no client has registered, no consent screen has rendered, no code
+has been exchanged, no token has been refreshed or revoked, and the Settings list
+has never painted. It rests on unit tests, both-flag-state builds and route
+probes. **The one thing worth doing by hand before trusting it:** run
+`npx @modelcontextprotocol/inspector` against a local server, then add a real
+custom connector on claude.ai.
+
+### Activation checklist
+
+1. Apply `20260825100000_mcp_oauth.sql`.
+2. Set `NEXT_PUBLIC_FEATURE_MCP_CONNECT=true` on the Vercel `Web` project **and
+   make sure the deploy rebuilds `apps/web`** — verify with
+   `npx turbo-ignore @urganize/web --fallback=<the commit Vercel last deployed>`
+   before trusting the flip.
+3. Changelog entry + version bump across all 10 `package.json` files, at the flip
+   rather than at merge (the EPK precedent).
+4. Probe production: `/.well-known/oauth-authorization-server` returns JSON, and
+   `POST /api/mcp` returns 401 with the `WWW-Authenticate` header. Do **not** try
+   to prove the flag by grepping the client bundle — both ternary branches
+   compile in, a false positive this repo has recorded twice.
+5. Connect end to end from claude.ai, ask it something about a real release, then
+   disconnect it in Settings → Account → Connected apps and confirm the next call
+   fails.
+
+Customer-facing setup guide: `docs/mcp-connect.md`.
 
 ---
 
@@ -1932,7 +2166,32 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-25 (**an open scene gets the whole surface** — see "An
+*Last updated: 2026-08-25 (**per-user MCP access, over OAuth 2.1** — see
+"Per-user MCP access, over OAuth 2.1" above. Founder ask: let all users take
+their context to any LLM of their choice. It is OAuth rather than a per-user
+token because of one external fact worth re-checking before anyone simplifies
+it: Claude Code accepts a static bearer, but claude.ai web and Claude Desktop
+assume OAuth 2.1 and attempt Dynamic Client Registration with no no-auth option
+and no static-header fallback — and artist managers live in exactly those
+clients, so a token would have served the founder and nobody else. Three tables,
+five routes, a consent screen, and hashed tokens (a deliberate deviation:
+nothing else here hashes anything, because share links must be re-readable to
+render a Copy button and an access token never is). "Consistently" turned out to
+be half-built already — buildChappiSystemPrompt's team brief plus workspace
+snapshot IS the portable context, so it moved to one builder with two consumers
+rather than growing a second renderer that would drift. Also inverts the MCP
+tool list from a deny-list to an allow-list, because "exposed unless someone
+remembers to exclude it" was fine for one founder key and is not once every
+customer holds a credential — that list is the only thing between an outside
+model and a confirmation-gated tool, since executeToolCall never reads
+tool.confirm. Which is how a real bug surfaced: create_note was advertised over
+MCP from day one and always 401'd, and the test now guarding that was
+mutation-tested twice (the first version matched the import, not the handler).
+Two undocumented features found on the way — the team brief and
+workspace-summary.ts — are flagged rather than back-filled. NOT verified against
+a real database, a real client, or a real consent screen: no migration applied,
+no session mintable here, and no route to either urganize domain. Previously:
+**an open scene gets the whole surface** — see "An
 open scene gets the whole surface" above. Third founder report on Collect
 metadata, this one a desktop screenshot, and two width faults behind it. The
 release rails only stepped aside for the UrgAns rail and for `?scene=calendar`,

@@ -8,6 +8,7 @@ import {
   isNotesFeatureEnabled,
   parseNoteBody,
   requireActiveAuthenticatedUser,
+  requireActiveAuthenticatedUserOrInternal,
   toNote,
 } from './_shared';
 
@@ -59,7 +60,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 
-  const auth = await requireActiveAuthenticatedUser(request);
+  // *OrInternal: create_note is one of Chappi's tools, and Chappi reaches it by
+  // internal fetch so template/notification side effects are never
+  // reimplemented (see lib/chappi/tools.ts). Over MCP that fetch carries the
+  // caller's MCP credential rather than a Supabase JWT, which the plain helper
+  // rejects — so create_note was advertised in tools/list and silently 401'd
+  // from its first day until 2026-08-25. Only POST opts in: nothing proxies the
+  // GET.
+  const auth = await requireActiveAuthenticatedUserOrInternal(request);
   if ('error' in auth) return auth.error;
 
   let payload: Record<string, unknown>;

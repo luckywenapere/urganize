@@ -29,6 +29,36 @@ const nextConfig = {
   outputFileTracingIncludes: {
     '/api/releases/[releaseId]/recap': ['./assets/fonts/*.ttf'],
   },
+  // /.well-known/* CANNOT be an app/ directory: Next's router ignores
+  // dot-prefixed path segments, so app/.well-known/oauth-.../route.ts never
+  // resolves. There is no middleware.ts in this app either (and adding one has
+  // app-wide implications), so a rewrite is the mechanism.
+  //
+  // Both the bare and the path-suffixed forms are mapped for the
+  // protected-resource document, because RFC 9728 has a client try
+  // /.well-known/oauth-protected-resource/api/mcp FIRST for a resource that
+  // lives at a path, and only then fall back to the root document. Serving one
+  // and not the other works with some clients and silently fails with others.
+  async rewrites() {
+    return [
+      {
+        source: '/.well-known/oauth-protected-resource',
+        destination: '/api/well-known/oauth-protected-resource',
+      },
+      {
+        source: '/.well-known/oauth-protected-resource/:path*',
+        destination: '/api/well-known/oauth-protected-resource',
+      },
+      {
+        source: '/.well-known/oauth-authorization-server',
+        destination: '/api/well-known/oauth-authorization-server',
+      },
+      {
+        source: '/.well-known/oauth-authorization-server/:path*',
+        destination: '/api/well-known/oauth-authorization-server',
+      },
+    ];
+  },
   images: {
     remotePatterns: supabaseHostname
       ? [

@@ -179,6 +179,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname?.startsWith('/listen/') ||
     pathname?.startsWith('/epk/') ||
     pathname?.startsWith('/capture/') ||
+    // The OAuth consent screen. Signed-in, but it is a decision about handing a
+    // third-party client access — app chrome around it would invite the user to
+    // wander off mid-authorization, and the dock floating over a consent prompt
+    // is exactly the wrong furniture. Same treatment as /epk/.
+    pathname?.startsWith('/oauth/') ||
     isPreSavePublicRoute ||
     isOnboardingRoute ||
     isInviteRoute ||
