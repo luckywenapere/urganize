@@ -21,17 +21,17 @@ const stats: Array<{
 }> = [
   {
     figure: "1 workspace",
-    body: "All artists, releases and tasks in one place",
+    body: "All artists",
     Icon: RiStackLine,
   },
   {
     figure: "14 days free",
-    body: "Full access, no card required to start",
+    body: "Full access",
     Icon: RiCalendarCheckLine,
   },
   {
     figure: "10 lifetime spots",
-    body: "Founding Member price lock, never changes",
+    body: "Founding Member price lock",
     Icon: RiVipCrownLine,
   },
 ];
