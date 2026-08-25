@@ -12,7 +12,6 @@ import {
   StatsSection,
   TemplatePlanSection,
   ThreeFeaturesSection,
-  TransformationSection,
   WorkspaceShotSection,
 } from "./components/landing/Sections";
 
@@ -54,7 +53,12 @@ export default function Home() {
               any stat beat returns): the offer in three cards, right under
               the demo video. */}
           <StatsSection />
-          <TransformationSection />
+          {/* TransformationSection (the before/after quote rows) was REMOVED
+              2026-08-25, founder call: too bulky for a skimming visitor, and
+              every quoted voice survives elsewhere (hero + final-CTA
+              ProofLines here; full quotes on /for-managers, /for-executives
+              and /why-urganize). Rebuild from git history if the beat is
+              ever wanted back. */}
           <WorkspaceShotSection />
           <TemplatePlanSection />
           <ThreeFeaturesSection />

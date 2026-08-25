@@ -19,7 +19,8 @@ export function WorkspaceShotSection() {
         {/* The proof-numbers line that used to sit here ("7 founding teams,
             10 artists and 2 releases running right now. Live since January
             2026.") was REMOVED 2026-08-25 on the founder's call, in the same
-            pass that cut the row titles from TransformationSection. The
+            pass that cut the row titles from TransformationSection (itself
+            removed 2026-08-25). The
             screenshot is the proof this beat needs; a small-numbers boast
             was doing the opposite of persuading. Do not restore it without
             a fresh founder-supplied count — the numbers here were only ever
