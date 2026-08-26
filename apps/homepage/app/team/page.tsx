@@ -26,7 +26,7 @@ const members = [
     name: "Lucky Wenapere",
     role: "Co-Founder and CEO",
     photo: "/images/team/lucky-wenapere.webp",
-    bio: "Nine years in the music industry as a videographer, director, and editor; now manages two artists. Studied Computer Engineering at Afe Babalola University; currently works with Afreximbank's Tech & Innovation team via Pentagon Securities.",
+    bio: "Nine years in the music industry as a videographer, director, and editor; now manages two artists. Studied Computer Engineering at Afe Babalola University; currently works with Afreximbank's Tech & Innovation team.",
     linkedin: "https://linkedin.com/in/lucky-wenapere",
   },
   {
