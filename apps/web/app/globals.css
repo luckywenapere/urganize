@@ -293,11 +293,12 @@ html[data-theme='light'] {
   --shadow-alpha-scale: 0.25;
 }
 
-/* The wordmark PNG (packages/ui/src/Logo.tsx) is solid white on
-   transparent — correct on dark's near-black canvas, invisible on
-   light's near-white one. Dark is the CSS baseline (:root), so only
-   light needs the invert. */
-html[data-theme='light'] .app-wordmark {
+/* The wordmark PNG and the square icon mark (packages/ui/src/Logo.tsx) are
+   solid white on transparent — correct on dark's near-black canvas,
+   invisible on light's near-white one. Dark is the CSS baseline (:root), so
+   only light needs the invert. */
+html[data-theme='light'] .app-wordmark,
+html[data-theme='light'] .app-mark-invert {
   filter: invert(1);
 }
 

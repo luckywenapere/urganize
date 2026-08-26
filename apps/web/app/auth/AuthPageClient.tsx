@@ -417,7 +417,7 @@ export default function AuthPage() {
               "Log into Urganize"; desktop says what the identifier-first flow
               actually does — sign up or log in, decided by the email.
               (Founder call, 2026-08-21.) */}
-          <h1 className="mt-7 text-center font-display text-2xl font-bold uppercase tracking-[0.06em] text-content-primary">
+          <h1 className="mt-10 text-center font-display text-2xl font-bold uppercase tracking-[0.06em] text-content-primary">
             <span className="lg:hidden">Log into Urganize</span>
             <span className="hidden lg:inline">Sign up or log in</span>
           </h1>
@@ -445,7 +445,7 @@ export default function AuthPage() {
             </p>
           )}
 
-          <div className="mt-12 w-full space-y-4">
+          <div className="mt-16 w-full space-y-4">
             {/* Google */}
             <button
               type="button"
