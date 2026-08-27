@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { buildWelcomeEmail, buildWorkspaceInviteEmail } from './email-templates';
+import {
+  buildCreditSubmissionEmail,
+  buildWelcomeEmail,
+  buildWorkspaceInviteEmail,
+} from './email-templates';
 
 const base = {
   workspaceName: 'Wavefront Records',
@@ -120,5 +124,90 @@ describe('buildWelcomeEmail', () => {
     const { text, subject } = buildWelcomeEmail({ recipientName: 'Lucky' });
     expect(subject).toBe('Welcome to Urganize — a note from Lucky');
     expect(text).toContain('Founder, Urganize');
+  });
+});
+
+describe('buildCreditSubmissionEmail', () => {
+  const input = {
+    collaboratorLabel: 'Adaeze Okonkwo (Ada)',
+    releaseTitle: 'Midnight EP',
+    rows: [
+      { label: 'Roles', value: 'Songwriter' },
+      { label: 'Writing share', value: '50%' },
+      { label: 'Society ID (IPI)', value: '00123456789' },
+    ],
+    metadataUrl: 'https://app.urganize.app/dashboard?release=rel-1&scene=metadata',
+  };
+
+  it('names who sent it and which release, in the subject', () => {
+    const email = buildCreditSubmissionEmail(input);
+    expect(email.subject).toBe('Adaeze Okonkwo (Ada) sent credits for Midnight EP');
+  });
+
+  it('carries the actual detail in BOTH bodies', () => {
+    // This is the whole reason the email exists rather than just the push: it
+    // has to be forwardable to a distributor.
+    const email = buildCreditSubmissionEmail(input);
+    for (const body of [email.html, email.text]) {
+      expect(body).toContain('Songwriter');
+      expect(body).toContain('50%');
+      expect(body).toContain('00123456789');
+      expect(body).toContain('rel-1');
+    }
+  });
+
+  it('escapes the collaborator label, which is free text they typed', () => {
+    const email = buildCreditSubmissionEmail({
+      ...input,
+      collaboratorLabel: '<script>alert(1)</script>',
+    });
+    expect(email.html).not.toContain('<script>');
+    expect(email.html).toContain('&lt;script&gt;');
+  });
+
+  it('escapes row values too', () => {
+    const email = buildCreditSubmissionEmail({
+      ...input,
+      rows: [{ label: 'Publisher', value: 'Ada & Sons "Music"' }],
+    });
+    expect(email.html).toContain('&amp;');
+    expect(email.html).toContain('&quot;');
+  });
+
+  it('drops rows with a blank label or value', () => {
+    const email = buildCreditSubmissionEmail({
+      ...input,
+      rows: [
+        { label: 'Roles', value: 'Producer' },
+        { label: 'Phone', value: '  ' },
+        { label: '  ', value: 'orphan' },
+      ],
+    });
+    expect(email.text).toContain('Roles: Producer');
+    expect(email.text).not.toContain('Phone');
+    expect(email.text).not.toContain('orphan');
+  });
+
+  it('survives no rows at all', () => {
+    const email = buildCreditSubmissionEmail({ ...input, rows: [] });
+    expect(email.subject).toContain('Midnight EP');
+    expect(email.html).toContain('Open the release');
+  });
+
+  it('defaults a blank name and release rather than rendering gaps', () => {
+    const email = buildCreditSubmissionEmail({
+      ...input,
+      collaboratorLabel: '   ',
+      releaseTitle: '   ',
+    });
+    expect(email.subject).toBe('A collaborator sent credits for your release');
+  });
+
+  it('uses inline styles only, no var() and no web fonts', () => {
+    // Mail clients strip <style> blocks and do not resolve custom properties.
+    const email = buildCreditSubmissionEmail(input);
+    expect(email.html).not.toContain('var(--');
+    expect(email.html).not.toContain('@font-face');
+    expect(email.html).not.toContain('<style');
   });
 });

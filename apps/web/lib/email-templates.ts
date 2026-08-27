@@ -208,3 +208,107 @@ export function buildWelcomeEmail(input: WelcomeEmailInput): BuiltEmail {
 
   return { subject, html, text };
 }
+
+export type CreditSubmissionEmailInput = {
+  /** Who filled the form in, already labelled (legal name plus stage name). */
+  collaboratorLabel: string;
+  /** The release they answered for, already defaulted. */
+  releaseTitle: string;
+  /** Label/value pairs, already filtered to the ones they actually gave. */
+  rows: Array<{ label: string; value: string }>;
+  /** Absolute URL to the Metadata scene for this release. */
+  metadataUrl: string;
+};
+
+/**
+ * "Someone sent their credits" — the detail half of the credit-submission
+ * notification (2026-08-27).
+ *
+ * The push is the ping; THIS is the part that carries what they actually
+ * typed, so a manager can check a split or forward the whole thing to a
+ * distributor without opening the app. That is the entire reason both channels
+ * exist rather than just one, so if this is ever trimmed to a bare "you have a
+ * new submission" line, the email stops being worth sending.
+ *
+ * Card style (like the invite, unlike the founder-note welcome): this IS
+ * product mail and reads better as a structured record than as prose.
+ */
+export function buildCreditSubmissionEmail(input: CreditSubmissionEmailInput): BuiltEmail {
+  const who = input.collaboratorLabel.trim() || 'A collaborator';
+  const release = input.releaseTitle.trim() || 'your release';
+  const url = input.metadataUrl;
+  const rows = input.rows.filter((row) => row.label.trim() && row.value.trim());
+
+  const subject = `${who} sent credits for ${release}`;
+
+  const text = [
+    `${who} filled in the credits form for ${release}.`,
+    '',
+    ...rows.map((row) => `${row.label}: ${row.value}`),
+    '',
+    'See everything they sent, and the running split totals:',
+    url,
+    '',
+    'You are getting this because you created the credits link for this',
+    'release. Corrections they make later replace this entry quietly, without',
+    'another email.',
+  ].join('\n');
+
+  const rowsHtml = rows
+    .map(
+      (row) => `      <tr>
+        <td style="padding:7px 14px 7px 0;color:${MUTED_TEXT};font-size:13px;line-height:1.5;vertical-align:top;white-space:nowrap;">${escapeHtml(row.label)}</td>
+        <td style="padding:7px 0;color:${INK};font-size:14px;line-height:1.5;vertical-align:top;">${escapeHtml(row.value)}</td>
+      </tr>`
+    )
+    .join('\n');
+
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:${PAGE_BG};">
+<div style="display:none;font-size:0;line-height:0;max-height:0;overflow:hidden;">
+${escapeHtml(`${who} filled in the credits form for ${release}.`)}
+</div>
+<div style="background-color:${PAGE_BG};padding:32px 16px;font-family:${FONT_STACK};">
+  <div style="max-width:520px;margin:0 auto;background-color:#ffffff;border:1px solid ${HAIRLINE};border-radius:14px;overflow:hidden;">
+    <div style="background-color:${INK};padding:22px 28px;">
+      <span style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:-0.2px;">Urganize</span>
+    </div>
+    <div style="padding:32px 28px;">
+      <h1 style="margin:0 0 14px;color:${INK};font-size:21px;line-height:1.35;font-weight:700;">
+        ${escapeHtml(who)} sent their credits
+      </h1>
+      <p style="margin:0 0 22px;color:${BODY_TEXT};font-size:15px;line-height:1.6;">
+        For ${escapeHtml(release)}. Here is what they filled in.
+      </p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;border-top:1px solid ${HAIRLINE};border-bottom:1px solid ${HAIRLINE};margin:0 0 24px;">
+${rowsHtml}
+      </table>
+      <a href="${escapeHtml(url)}"
+         style="display:inline-block;background-color:${SPRING};color:${INK};font-size:15px;font-weight:700;text-decoration:none;padding:13px 26px;border-radius:10px;">
+        Open the release
+      </a>
+      <p style="margin:22px 0 0;color:${MUTED_TEXT};font-size:13px;line-height:1.6;">
+        Or paste this link into your browser:<br>
+        <a href="${escapeHtml(url)}" style="color:${BODY_TEXT};word-break:break-all;">${escapeHtml(url)}</a>
+      </p>
+    </div>
+    <div style="border-top:1px solid ${HAIRLINE};padding:18px 28px;">
+      <p style="margin:0;color:${MUTED_TEXT};font-size:12px;line-height:1.6;">
+        You are getting this because you created the credits link for this
+        release. If they correct something later it replaces this entry quietly,
+        without another email.
+      </p>
+    </div>
+  </div>
+</div>
+</body>
+</html>`;
+
+  return { subject, html, text };
+}

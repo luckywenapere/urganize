@@ -4936,11 +4936,96 @@ page has never rendered. The owner UI needs an authenticated session this
 environment cannot mint, and there is no network route to app.urganize.app. All
 of it rests on unit tests plus traced call paths.
 
-**Phase 2 items the spec defers and this pass did NOT build:** owner
-notification on a new submission (nothing notifies today — the `notifications`
-table is task-scoped and cannot carry a credits event without a migration), CSV
-export of submissions (`lib/csv.ts` exists; the CaptureSection clipboard export
-is the precedent), and prefilling from a past release.
+**Phase 2 items the spec defers:** CSV export of submissions (`lib/csv.ts`
+exists; the CaptureSection clipboard export is the precedent) and prefilling from
+a past release. **Owner notification was built 2026-08-27 — see the section
+below.**
+
+### The owner notification (2026-08-27)
+
+Founder request, Phase 2 item 1. **Push AND email, both, every time, fired inline
+from the public credits POST.** No migration, no new feature flag, no changelog
+entry yet (see the trigger at the end).
+
+Founder calls: both channels every time; off switch on the admin presets page
+rather than a per-user column; **new people only** (a correction stays quiet);
+one notification per submission, each naming the person.
+
+**Why not the in-app bell, and this is the load-bearing decision.**
+`notifications.task_id` is `not null references public.tasks(id)` and all seven
+`notification_type` values are task-scoped, so a credits event has no legal row
+there. Making it fit needs an enum add, dropping NOT NULL on the app's hottest
+realtime table (it is in `supabase_realtime` with `replica identity full`), a new
+`release_id` column, and ~8 code sites — `NotificationRow`/`TaskNotification`
+both hard-type `taskId: string`, `listNotifications` would push `null` into an
+`.in()`, the unread dedupe is keyed on `task_id`, `buildTaskPushPayload` would
+emit `tag: task-undefined-…`, and `NotificationsBell.handleSelect` calls
+`openTask(taskId)` unconditionally while its `sameScope` short-circuit ignores
+`scene`, so an owner already scoped to that release would get NO navigation at
+all. The bell is also `hidden lg:block`, i.e. **desktop only**, so an
+in-app-only notification would never reach a phone.
+`lib/billing-alerts-server.ts:9-14` is the recorded precedent for choosing email
+at this exact fork, and CLAUDE.md's own out-of-scope line names transactional
+email as fine while deferring the inbox to v2. **`scheduled_notifications` is
+also ruled out**: its only flusher is a DAILY cron on the Hobby plan, shortened
+only by some unrelated user logging in — up to ~24h, wrong for "someone just
+submitted".
+
+**Five things worth knowing before editing this:**
+
+1. **The push `tag` is keyed on the SUBMISSION, never the release.** A shared tag
+   makes the push service REPLACE the previous notification rather than stack it,
+   so two collaborators answering minutes apart would leave the owner seeing only
+   the second — silently defeating the founder's "one each, naming the person".
+   Mutation-tested.
+2. **Insert path only is a security property, not a preference.** The UPDATE path
+   carries no submission cap by design (a correction adds no row), so notifying
+   on updates would let anyone holding the share link send the owner unlimited
+   pushes and emails. This is also **the first place in the app where an
+   unauthenticated request can trigger a push at all** — every other
+   `sendPushToUsers` caller is a cron, an admin route, or authenticated.
+3. **The email is the half that carries the detail**, and that is the whole
+   reason both channels exist rather than one: name, stage name, roles, both
+   splits, PRO, IPI, publisher, so a manager can check a number or forward the
+   thing to a distributor without opening the app. If it is ever trimmed to "you
+   have a new submission", it stops being worth sending. `buildCreditDetailRows`
+   drops blank fields entirely — a wall of "not given" is worse than a short list.
+4. **It never throws and never fails the submission.** A collaborator on weak
+   mobile data has already done the work by then. Push and email run in
+   `Promise.all` so the worst case is `max()` not `sum()`; the honest ceiling is
+   the email module's own 10s abort, typical is ~300ms. If that ever bites, the
+   follow-up is a `send_at = now()` queue row, which trades latency back.
+5. **`fillCreditPlaceholders` leaves an UNKNOWN `{placeholder}` alone** rather
+   than blanking it: a silently-emptied word reads as a broken product to whoever
+   receives the notification. Also mutation-tested.
+
+Files: `lib/credit-notifications.ts` (pure copy + the tag/url decisions),
+`lib/credit-notifications-server.ts` (the leaf sender, the
+`release-reminders-server.ts` shape), `buildCreditSubmissionEmail` in
+`lib/email-templates.ts`, a fourth `creditSubmissions` category in
+`lib/notification-presets.ts` (JSON in `app_settings`, so the normalizer keeps
+pre-2026-08-27 rows working with no migration), the admin section in
+`app/admin/notifications/NotificationsPageClient.tsx` plus its "Send test to me"
+branch, and one `await notifyCreditSubmission(...)` on the insert path of
+`app/api/credits/[token]/route.ts`.
+
+**Verified:** 1491 tests (37 new), `eslint .` at byte-identical baseline (3
+errors / 68 warnings, all pre-existing in `WorkspaceView.tsx`), `next build`
+green by exit code in both flag states with `/auth`, `/onboarding`, `/settings`
+still `○ Static`. Flag off, the credits POST 404s while the ungated control
+401s.
+
+**NOT verified, and it is the whole risk surface: no notification has ever been
+delivered.** No real database, no Resend key, no push subscription here. The
+500s a local probe returns are the placeholder Supabase URL failing upstream of
+this code (`"Could not resolve this link."`), not the notifier.
+
+**Changelog entry deliberately deferred**, the flag-flip precedent applied to a
+feature with no flag: the code runs on every submission but both channels no-op
+until `RESEND_API_KEY` + `EMAIL_FROM` (or the VAPID pair) are set in Vercel. The
+entry lands when the first channel is configured, because until then it would
+announce something nobody receives. The admin section is internal-only and never
+earns one.
 
 **The two adjacent findings this pass flagged were fixed the same day** (founder
 request), and both are invisible in production because the flag is on — no

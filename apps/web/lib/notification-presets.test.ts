@@ -111,3 +111,51 @@ describe('normalizeNotificationPresets', () => {
     );
   });
 });
+
+describe('creditSubmissions category', () => {
+  it('fills in from defaults when the stored blob predates it', () => {
+    // Every row written before 2026-08-27 has no creditSubmissions key at all,
+    // and must keep working without a migration.
+    const presets = normalizeNotificationPresets({
+      releaseReminders: { enabled: false },
+      motivational: { enabled: false },
+      deadlineReminders: { enabled: false },
+    });
+    expect(presets.creditSubmissions).toEqual(
+      DEFAULT_NOTIFICATION_PRESETS.creditSubmissions
+    );
+  });
+
+  it('honours an admin turning it off', () => {
+    const presets = normalizeNotificationPresets({ creditSubmissions: { enabled: false } });
+    expect(presets.creditSubmissions.enabled).toBe(false);
+    // Copy still falls back rather than going blank.
+    expect(presets.creditSubmissions.copy.title).toBe(
+      DEFAULT_NOTIFICATION_PRESETS.creditSubmissions.copy.title
+    );
+  });
+
+  it('keeps admin-edited copy and clamps it', () => {
+    const presets = normalizeNotificationPresets({
+      creditSubmissions: {
+        enabled: true,
+        copy: { title: 'T'.repeat(200), body: '  Someone answered  ' },
+      },
+    });
+    expect(presets.creditSubmissions.copy.title).toHaveLength(TITLE_MAX_LENGTH);
+    expect(presets.creditSubmissions.copy.body).toBe('Someone answered');
+  });
+
+  it('recovers from malformed copy of every shape', () => {
+    for (const bad of [null, 'nope', 42, [], { title: 7, body: false }]) {
+      const presets = normalizeNotificationPresets({ creditSubmissions: { copy: bad } });
+      expect(presets.creditSubmissions.copy).toEqual(
+        DEFAULT_NOTIFICATION_PRESETS.creditSubmissions.copy
+      );
+    }
+  });
+
+  it('ships enabled, so the feature works with zero admin edits', () => {
+    expect(DEFAULT_NOTIFICATION_PRESETS.creditSubmissions.enabled).toBe(true);
+  });
+});
