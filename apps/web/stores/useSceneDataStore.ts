@@ -10,6 +10,7 @@ import {
   isSceneRenderable,
   sceneEntryKey,
   shouldPersistScene,
+  shouldRevalidateOnLoad,
   trimSceneCacheEntries,
   withinPersistBudget,
   type SceneCacheEntry,
@@ -339,13 +340,29 @@ export const useSceneDataStore = create<SceneDataStore>((set, get) => ({
     const now = Date.now();
 
     if (!options?.force) {
+      // In-flight dedup stays FIRST and unconditional, ahead of the
+      // always-revalidate rule below: it is what keeps a StrictMode double
+      // mount, and a prefetch racing a real open, at one request.
       const existing = inFlight.get(key);
       if (existing) return existing as Promise<ScenePayloadMap[S] | null>;
+
+      // Scenes a public form writes into cannot trust their own freshness
+      // window (see SCENE_REVALIDATE_ON_LOAD). They still PAINT from cache —
+      // the entry is left in place and `isLoading` stays false, so nothing
+      // flickers — but the fetch below always runs. Prefetch passes are
+      // exempt, or the idle prefetch would re-fetch seconds after a real load
+      // and defeat the freshness window's whole purpose.
+      const alwaysRevalidate = !options?.prefetch && shouldRevalidateOnLoad(scene);
 
       const held = get().entries[key];
       // Fresh enough to skip the network entirely. Re-opening the same scene
       // within the window costs zero requests, which is the whole point.
-      if (held && isSceneFresh(held.savedAt, now) && isSceneRenderable(scene, held.savedAt, now)) {
+      if (
+        held &&
+        !alwaysRevalidate &&
+        isSceneFresh(held.savedAt, now) &&
+        isSceneRenderable(scene, held.savedAt, now)
+      ) {
         return held.data as ScenePayloadMap[S];
       }
 
@@ -361,7 +378,9 @@ export const useSceneDataStore = create<SceneDataStore>((set, get) => ({
               [key]: { data: persisted.data, savedAt: persisted.savedAt, isRefreshing: false },
             },
           }));
-          return persisted.data as ScenePayloadMap[S];
+          // Adopt for the instant paint either way, but only SHORT-CIRCUIT
+          // when this scene is allowed to trust its own freshness.
+          if (!alwaysRevalidate) return persisted.data as ScenePayloadMap[S];
         }
       }
     }

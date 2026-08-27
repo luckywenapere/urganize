@@ -57,6 +57,14 @@ export type ReleaseMetadataSnapshot = {
   releaseId: string;
   isrc: string;
   upc: string;
+  /**
+   * ISWC for the composition ("T-123456789-1"), issued by a collection
+   * society. Release-level and owner-entered, deliberately NOT asked of a
+   * collaborator on the public credits form: ISRC identifies the recording,
+   * UPC the release, and ISWC the song itself, so all three belong here.
+   * Added 2026-08-27.
+   */
+  iswc: string;
   primaryArtistName: string;
   releaseTitle: string;
   genre: string;

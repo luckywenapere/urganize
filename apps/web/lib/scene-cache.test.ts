@@ -13,6 +13,7 @@ import {
   releaseIdFromEntryKey,
   sceneEntryKey,
   shouldPersistScene,
+  shouldRevalidateOnLoad,
   trimSceneCacheEntries,
   withinPersistBudget,
   type SceneCacheEntry,
@@ -91,6 +92,25 @@ describe('persist policy', () => {
     expect(isCacheableScene('plan')).toBe(false);
     expect(shouldPersistScene('plan')).toBe(false);
     expect((SCENE_PREFETCH_ORDER as readonly string[]).includes('plan')).toBe(false);
+  });
+});
+
+describe('shouldRevalidateOnLoad', () => {
+  it('always revalidates metadata — a public form writes into it', () => {
+    // Collaborators submit credits through /credits/[token], so a
+    // fresh-looking cache entry can be missing an answer the owner is
+    // specifically looking for.
+    expect(shouldRevalidateOnLoad('metadata')).toBe(true);
+  });
+
+  it('leaves every other scene on the plain freshness window', () => {
+    // Deliberately narrow: the point of the cache is that tapping between
+    // scenes costs nothing, and every scene here changes only when the owner
+    // changes it. Adding one is a behaviour change, so this fails on purpose.
+    for (const scene of SCENE_NAMES) {
+      if (scene === 'metadata') continue;
+      expect(shouldRevalidateOnLoad(scene)).toBe(false);
+    }
   });
 });
 

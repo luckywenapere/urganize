@@ -11,7 +11,7 @@ import {
   toReleaseCreditSubmission,
 } from './_shared';
 
-const LINK_COLUMNS = 'id,release_id,share_token,created_at,updated_at';
+const LINK_COLUMNS = 'id,release_id,share_token,closed_at,created_at,updated_at';
 const SUBMISSION_COLUMNS =
   'id,release_id,legal_name,stage_name,roles,contribution,email,phone,country,songwriter_split,pro_affiliation,ipi_number,publisher_name,publisher_ipi,master_split,instagram_handle,x_handle,bio,confirmed_accurate,created_at,updated_at';
 
@@ -174,11 +174,20 @@ export async function PUT(
 
   // Regenerate = rotate the token on the existing row (an UPDATE, not a
   // delete-and-recreate). The old token stops resolving the instant this
-  // commits — founder decision: the link lives until regenerated — while
-  // every submission already collected stays exactly where it is.
+  // commits, while every submission already collected stays exactly where it
+  // is.
+  //
+  // closed_at is cleared here on purpose: "make me a new link" means the owner
+  // wants a working link, and a regenerated-but-still-closed link is a trap
+  // state nothing in the UI would explain. One mental model — Regenerate gives
+  // a fresh live link, Close pauses the link you have.
   const { data: updated, error: updateError } = await adminClient
     .from(RELEASE_CREDIT_LINKS_TABLE)
-    .update({ share_token: generateShareToken(), updated_at: new Date().toISOString() })
+    .update({
+      share_token: generateShareToken(),
+      closed_at: null,
+      updated_at: new Date().toISOString(),
+    })
     .eq('release_id', releaseId)
     .select(LINK_COLUMNS)
     .maybeSingle();
@@ -186,6 +195,72 @@ export async function PUT(
   if (updateError) {
     return NextResponse.json(
       { error: updateError.message || 'Could not regenerate the credits link.' },
+      { status: 500 }
+    );
+  }
+
+  if (!updated) {
+    return NextResponse.json({ error: 'No credits link exists yet for this release.' }, { status: 404 });
+  }
+
+  return NextResponse.json({ link: toReleaseCreditLink(updated as Record<string, unknown>) });
+}
+
+/**
+ * Close or reopen the link (founder spec, 2026-08-27).
+ *
+ * Body: `{ action: 'close' | 'reopen' }`. PATCH rather than a second PUT
+ * because this is a partial state change on the existing row, which is what
+ * the sibling metadata route already uses PATCH for.
+ *
+ * Closing does not touch the token or any submission: the same URL keeps
+ * resolving, and the public page renders a "this request is closed" message
+ * instead of the form (see lib/credits-server.ts). Idempotent — closing a
+ * closed link is a no-op update.
+ */
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ releaseId: string }> }
+) {
+  if (!isMetadataFeatureEnabled()) {
+    return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  }
+
+  const auth = await requireActiveAuthenticatedUser(request);
+  if ('error' in auth) return auth.error;
+
+  const { releaseId } = await context.params;
+  if (!releaseId) {
+    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+  }
+
+  const body = (await request.json().catch(() => ({}))) as { action?: unknown };
+  const action = String(body.action || '');
+  if (action !== 'close' && action !== 'reopen') {
+    return NextResponse.json({ error: "Action must be 'close' or 'reopen'." }, { status: 400 });
+  }
+
+  const adminClient = createAdminClient(auth.supabaseUrl);
+  if (!adminClient) {
+    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
+  }
+
+  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  if ('error' in ownership) return ownership.error;
+
+  const { data: updated, error: updateError } = await adminClient
+    .from(RELEASE_CREDIT_LINKS_TABLE)
+    .update({
+      closed_at: action === 'close' ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('release_id', releaseId)
+    .select(LINK_COLUMNS)
+    .maybeSingle();
+
+  if (updateError) {
+    return NextResponse.json(
+      { error: updateError.message || 'Could not update the credits link.' },
       { status: 500 }
     );
   }

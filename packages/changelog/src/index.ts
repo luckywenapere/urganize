@@ -20,6 +20,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.3.0",
+    date: "August 27, 2026",
+    highlights: [
+      "You can now close a credits link when you are done collecting, and open it again later. Anyone who opens a closed link sees a short note instead of the form.",
+      "If the same person fills in the form twice, their new answer replaces the old one. Before, you got two entries for one person and your shares added up wrong.",
+      "Writers and producers now have to enter their share, so you are not left chasing the one number you need.",
+      "Your song details have a new ISWC box, next to ISRC and UPC.",
+      "The credits form is easier to fill in on a phone, and new answers show up as soon as you open the page.",
+    ],
+  },
+  {
     version: "1.2.1",
     date: "August 27, 2026",
     highlights: [
