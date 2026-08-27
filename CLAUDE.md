@@ -4936,9 +4936,8 @@ page has never rendered. The owner UI needs an authenticated session this
 environment cannot mint, and there is no network route to app.urganize.app. All
 of it rests on unit tests plus traced call paths.
 
-**Phase 2 items the spec defers:** prefilling from a contributor's past release
-is the only one left. **Owner notification and the CSV export were both built
-2026-08-27 — see the two sections below.**
+**Phase 2 is complete as of 2026-08-27** — owner notification, the CSV export and
+the prefill, all three in the sections below.
 
 ### The owner notification (2026-08-27)
 
@@ -5069,6 +5068,67 @@ than colliding when a manager exports three releases in a sitting.
 
 **Changelog: shipped in v1.4.0** alongside the notification above rather than as
 its own version, since splitting them would have announced half a feature.
+
+### Prefill, on the contributor's own device (2026-08-27)
+
+Phase 2 item 3, and the one where **the spec's literal wording was the wrong
+thing to build.** It asked to prefill "if the same contributor (same email) has
+submitted on a past release in the workspace" — which means the public form asks
+the server what it knows about a typed email. That endpoint has no login, the
+share token is its only gate, and links get forwarded freely, so it would hand
+anyone holding a link a co-writer's legal name, IPI, PRO, publisher and phone
+for the price of guessing an email. IPI numbers are what royalty claims are made
+with. Put to the founder with three options; **he chose device-local**, so there
+is no server lookup and nothing to harvest. The cost is that switching devices
+means retyping, which is the right trade.
+
+**The field list is the feature, and what is absent matters more than what is
+there.** `lib/credit-prefill.ts` remembers identity, contact, publishing and
+socials. It NEVER remembers:
+
+- **Either split.** A 50% share on one song says nothing about the next, and a
+  silently pre-filled ownership share is the most dangerous autofill this domain
+  has — it could file a claim nobody typed. A hard line, not a trade-off.
+- **Roles.** They change per song AND drive which splits are required, so a
+  wrong prefill nobody notices files a wrong credit and demands the wrong
+  number.
+- **"What you did"**, which is about this song.
+- **The accuracy tick**, an attestation about THIS submission. It has to be
+  ticked again or it means nothing.
+
+Mutation-tested: adding splits and roles to the list fails five tests across the
+constant, the picker, the merge and the round trip.
+
+**Three mechanisms worth knowing:**
+
+1. **The notice is a mitigation, not polish.** Arriving at a PUBLIC form that
+   already knows your legal name is unsettling with nothing explaining it, and
+   on a shared studio or cafe machine the reader may not be the person it
+   remembers. So the form says whose details it filled in and offers "Not you?
+   Start fresh". The six-month age cap is the backstop for the machine nobody
+   comes back to.
+2. **It reads in a PRE-PAINT layout effect** (`useIsomorphicLayoutEffect`, the
+   `/onboarding` saved-draft precedent), not a plain `useEffect`: this page is
+   server-rendered, so the empty form is already on screen and a post-paint read
+   would show blank fields for a frame and then fill them. Reading during render
+   instead would be a hydration mismatch, so a setState in an effect is
+   unavoidable here. Note lint reports no finding only because the rule does not
+   track the aliased hook — the pattern is still setState-in-effect.
+3. **"Fill it in for someone else" clears the notice but does NOT forget the
+   stored details.** A different person is about to type, so the form must go
+   blank — but those are the first person's own details on their own device, and
+   they may want them on the next release. Two different things that look like
+   one.
+
+Storage goes through `lib/persisted-state.ts`, whose reads are already guarded
+(version, age, validator, try/catch) but whose **writes are not** — `setItem`
+throws on a full quota and in Safari private mode. Wrapped, because remembering
+details is a convenience that must never break a submission that already
+succeeded. First public page in the app to touch localStorage at all.
+
+**Not verified:** no real prefill has happened. The round trip is covered by 26
+unit tests against a stubbed localStorage (vitest runs node-only here and jsdom
+is not a dependency), but nothing has run in a browser.
 
 **Not verified:** no real submission has been exported. The button needs an
 authenticated session with real rows, which this environment cannot mint.

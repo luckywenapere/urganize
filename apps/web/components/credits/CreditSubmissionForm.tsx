@@ -1,8 +1,17 @@
 'use client';
 
 import { useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { Loader2 } from 'lucide-react';
 import { validateSubmissionSplits } from '@/lib/credit-submissions';
+import {
+  applyCreditPrefill,
+  describeCreditPrefill,
+  forgetCreditPrefill,
+  hasCreditPrefill,
+  loadCreditPrefill,
+  saveCreditPrefill,
+} from '@/lib/credit-prefill';
 import {
   RELEASE_CREDIT_ROLE_LABELS,
   RELEASE_CREDIT_ROLE_OPTIONS,
@@ -39,6 +48,13 @@ import {
 //     submit route, so the two can never disagree about them.
 //   - Submitting again with the same email UPDATES the earlier answer rather
 //     than adding a second one, and the success panel says so.
+//
+// 2026-08-27, prefill: the form remembers a contributor's own details ON THEIR
+// OWN DEVICE and fills them in next time. Never a server lookup — see the
+// header of lib/credit-prefill.ts for why that would leak a co-writer's IPI to
+// anyone holding the share link. Roles, both splits, "what you did" and the
+// accuracy tick are deliberately never remembered; that list is the important
+// part of the feature.
 
 const SURFACE = 'var(--credits-surface)';
 const STROKE = 'var(--credits-border)';
@@ -229,6 +245,33 @@ export function CreditSubmissionForm({
   const [submitted, setSubmitted] = useState(false);
   /** True when the server replaced an earlier answer from the same email. */
   const [replacedEarlier, setReplacedEarlier] = useState(false);
+  /** Whose details this browser remembered, or '' when nothing was filled in.
+   * Shown out loud: arriving at a public form that already knows your legal
+   * name is unsettling if nothing says why, and on a shared studio machine the
+   * person reading it may not be the person it remembers. */
+  const [prefilledFor, setPrefilledFor] = useState('');
+
+  // Pre-paint, once. This page is SERVER-RENDERED, so the empty form is on
+  // screen the moment the HTML lands, and the server cannot know what is in the
+  // visitor's browser storage — reading it in a plain useEffect would show the
+  // blank fields for a frame and then fill them in. A layout effect commits
+  // before the browser paints, which is the same window /onboarding uses to
+  // restore a saved draft without flashing step 1. Reading during render
+  // instead would be a hydration mismatch, so the setState here is unavoidable
+  // and carries the documented react-hooks/set-state-in-effect warning.
+  useIsomorphicLayoutEffect(() => {
+    const stored = loadCreditPrefill();
+    if (!hasCreditPrefill(stored) || !stored) return;
+    setInput((current) => applyCreditPrefill(current, stored));
+    setPrefilledFor(describeCreditPrefill(stored));
+  }, []);
+
+  const handleForgetPrefill = () => {
+    forgetCreditPrefill();
+    setInput(EMPTY_INPUT);
+    setPrefilledFor('');
+    setError('');
+  };
 
   const toggleRole = (role: ReleaseCreditRole) => {
     setInput((current) => ({
@@ -280,6 +323,9 @@ export function CreditSubmissionForm({
         setError(data.error || 'Could not submit. Please try again.');
         return;
       }
+      // Remember only after the server accepted it, so a rejected form never
+      // leaves details behind on the device.
+      saveCreditPrefill(input);
       setReplacedEarlier(data.updated === true);
       setSubmitted(true);
     } catch (err) {
@@ -304,7 +350,13 @@ export function CreditSubmissionForm({
         <button
           type="button"
           onClick={() => {
+            // Blank form, and the notice goes with it: a DIFFERENT person is
+            // about to type, so leaving "filled in for Ada" over an empty form
+            // would be wrong twice over. Deliberately does NOT call
+            // forgetCreditPrefill — those are the first person's own details on
+            // their own device, and they may want them on the next release.
             setInput(EMPTY_INPUT);
+            setPrefilledFor('');
             setSubmitted(false);
             setReplacedEarlier(false);
           }}
@@ -319,6 +371,31 @@ export function CreditSubmissionForm({
 
   return (
     <form onSubmit={handleSubmit} className="mt-10 space-y-10">
+      {/* Said out loud, and undoable. Two reasons this is not optional polish:
+          arriving at a PUBLIC form that already knows your legal name is
+          unsettling if nothing explains it, and on a shared studio or cafe
+          machine the person reading it may not be the person it remembers. */}
+      {prefilledFor ? (
+        <div
+          className="flex flex-col gap-3 border p-4 sm:flex-row sm:items-center sm:justify-between"
+          style={{ borderColor: STROKE }}
+        >
+          <p className="text-sm leading-relaxed" style={{ color: MUTED }}>
+            Filled in from the last time you used this form on this device, for{' '}
+            <span style={{ color: CREAM }}>{prefilledFor}</span>. Change anything that has
+            moved on.
+          </p>
+          <button
+            type="button"
+            onClick={handleForgetPrefill}
+            className="shrink-0 border px-3 py-2 text-sm"
+            style={{ borderColor: STROKE, color: CREAM }}
+          >
+            Not you? Start fresh
+          </button>
+        </div>
+      ) : null}
+
       <section className="space-y-4">
         <SectionHeading>1 · About you</SectionHeading>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
