@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.4.1",
+    date: "August 27, 2026",
+    highlights: [
+      "The credits form now remembers the person filling it in. Next time you send them a link, their name, email and publishing details are already there, so they only add what is new.",
+      "It remembers on their own phone or computer, never on ours, and it never fills in shares or what they did on the song. Those change with every song.",
+    ],
+  },
+  {
     version: "1.4.0",
     date: "August 27, 2026",
     highlights: [

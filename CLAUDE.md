@@ -5126,6 +5126,11 @@ throws on a full quota and in Safari private mode. Wrapped, because remembering
 details is a convenience that must never break a submission that already
 succeeded. First public page in the app to touch localStorage at all.
 
+**Changelog: shipped as v1.4.1** (2026-08-27). It landed after v1.4.0 had already
+gone out, so it got its own patch entry rather than being folded backwards into
+a released version — the ledger is a log, and rewriting a shipped entry would
+falsify it.
+
 **Not verified:** no real prefill has happened. The round trip is covered by 26
 unit tests against a stubbed localStorage (vitest runs node-only here and jsdom
 is not a dependency), but nothing has run in a browser.
