@@ -9,6 +9,7 @@ import {
   formatFileSize,
 } from '@/lib/asset-constants';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { prepareAvatarImage } from '@/lib/downscale-image';
 import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
 import {
   buildUploadFailureReport,
@@ -246,6 +247,21 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
     let step: UploadStep = 1;
     let status: number | undefined;
     try {
+      // Shrink before uploading. Byte size alone never caught the file that
+      // broke this: a 1.1 MB PNG at 12500x12500 passed every check and then no
+      // browser would decode it, leaving a broken box that never even fired an
+      // error event for the fallback below to catch. See lib/downscale-image.ts.
+      const prepared = await prepareAvatarImage(file);
+      if (!prepared) {
+        setLogoError('Could not read that image. Try a JPEG, or export the PNG again.');
+        return;
+      }
+      // From here the PREPARED file is the upload: its name, type and size all
+      // have to travel together, or the signed path, the bytes we PUT and what
+      // the server validated stop describing the same thing.
+      const upload = prepared.file;
+      const uploadMimeType = upload.type || mimeType;
+
       const token = await getAccessToken();
       if (!token) throw new Error('Session expired. Please sign in again.');
 
@@ -256,9 +272,9 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          file_name: file.name,
-          mime_type: mimeType,
-          file_size: file.size,
+          file_name: upload.name,
+          mime_type: uploadMimeType,
+          file_size: upload.size,
         }),
       });
       const uploadUrlPayload = (await uploadUrlResponse.json().catch(() => ({}))) as {
@@ -274,8 +290,8 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
       step = 2;
       const storageResponse = await fetch(uploadUrlPayload.upload_url, {
         method: 'PUT',
-        headers: { 'Content-Type': mimeType },
-        body: file,
+        headers: { 'Content-Type': uploadMimeType },
+        body: upload,
       });
       if (!storageResponse.ok) {
         status = storageResponse.status;
@@ -292,7 +308,7 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
         },
         body: JSON.stringify({
           storage_path: uploadUrlPayload.storage_path,
-          file_name: file.name,
+          file_name: upload.name,
         }),
       });
       const recordPayload = (await recordResponse.json().catch(() => ({}))) as {
