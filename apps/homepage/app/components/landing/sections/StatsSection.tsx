@@ -41,7 +41,7 @@ export function StatsSection() {
     <ScrollReveal>
       {/* The page's standard body beat, shared with WorkspaceShot and
           ThreeFeatures (not SectionShell's default py-32, which would open a
-          ~250px void under the hero video). This was the tighter 60/80 while
+          ~250px void under the hero). This was the tighter 60/80 while
           the page ran seven sections; it opened to 80/100 on 2026-08-25 when
           the before/after and playbook beats came out and five sections had
           to carry the same page. */}

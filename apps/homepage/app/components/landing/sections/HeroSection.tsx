@@ -1,8 +1,7 @@
 import { ProofLine } from "../ProofLine";
-import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { WaitlistForm } from "../WaitlistForm";
-import { YouTubeFacade } from "../YouTubeFacade";
+import { WatchDemo } from "../WatchDemo";
 import { wideContainerClass } from "./shared";
 
 export function HeroSection() {
@@ -59,15 +58,17 @@ export function HeroSection() {
             className="mt-2 w-full max-w-[30rem] border-t border-[color:var(--marketing-border)] pt-5"
           />
         </div>
-      </div>
 
-      <ScrollReveal>
-        <div className="mx-auto mt-14 w-full max-w-4xl sm:mt-16">
-          <div className="relative aspect-video w-full overflow-hidden rounded-xl">
-            <YouTubeFacade />
-          </div>
+        {/* The demo hides behind this button now (founder call, 2026-08-27):
+            the old full-width 16:9 facade took ~500px that visitors scrolled
+            straight past. WatchDemo opens the player in an overlay, so only
+            the people who actually want the demo see it. Fades in with the
+            CTA group (delay-3) rather than on scroll — it sits above the
+            fold with the form. */}
+        <div className="hero-fade-in hero-delay-3 mt-10">
+          <WatchDemo />
         </div>
-      </ScrollReveal>
+      </div>
     </SectionShell>
   );
 }
