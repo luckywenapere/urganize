@@ -518,8 +518,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       ) : null}
       {/* "What's new" (founder request, 2026-07-23): announces changelog
           entries this device hasn't seen yet, once per release, on signed-in
-          app surfaces only. */}
-      {isAuthenticated && !isAuthLoading && showWorkspaceChrome ? <WhatsNewModal /> : null}
+          app surfaces only.
+          TEMPORARILY DISABLED (founder request, 2026-08-27) — the `false &&`
+          below is the whole switch. Nothing else about the feature changed:
+          WhatsNewModal, the changelog ledger, and each device's seen-version
+          are untouched, so removing `false &&` turns it straight back on and
+          picks up wherever it left off. */}
+      {false && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
+        <WhatsNewModal />
+      ) : null}
       {/* Same gate as What's new: signed in, auth RESOLVED, and only on a
           route that renders chrome. showWorkspaceChrome already excludes a
           curator-only account, which has no releases or tasks to be notified
