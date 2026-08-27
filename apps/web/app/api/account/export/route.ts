@@ -166,7 +166,16 @@ export async function GET(request: NextRequest) {
 
   // Feature-scoped tables. Each may legitimately not exist in a given
   // environment, which is what buildSection's `unavailable` is for.
-  const [comments, outcomes, calendars, capturePages, plans, assets] = await Promise.all([
+  const [
+    comments,
+    outcomes,
+    calendars,
+    capturePages,
+    plans,
+    creditLinks,
+    creditSubmissions,
+    assets,
+  ] = await Promise.all([
     readSection(admin, { table: 'task_comments', column: 'task_id', values: taskIds }),
     readSection(admin, { table: 'task_outcomes', column: 'task_id', values: taskIds }),
     readSection(admin, { table: 'content_calendars', column: 'release_id', values: releaseIds }),
@@ -176,6 +185,22 @@ export async function GET(request: NextRequest) {
       values: releaseIds,
     }),
     readSection(admin, { table: 'release_plan_drafts', column: 'release_id', values: releaseIds }),
+    // Collaborator credits. Keyed on release_id like the other release-scoped
+    // tables above, and included because these are the publishing details a
+    // manager most needs in hand for a distributor handoff: legal names, IPI
+    // and PRO numbers, publishers, and the writing and recording splits. They
+    // were the one part of a release that deleting the account would destroy
+    // and the export did not hand back.
+    //
+    // share_token on the link row is deliberately NOT redacted — see
+    // REDACTED_KEYS in lib/account-export.ts: it is the user's own link,
+    // already visible in the app, and the export is useless without it.
+    readSection(admin, { table: 'release_credit_links', column: 'release_id', values: releaseIds }),
+    readSection(admin, {
+      table: 'release_credit_submissions',
+      column: 'release_id',
+      values: releaseIds,
+    }),
     withDownloadUrls(admin, assetsRaw),
   ]);
 
@@ -231,6 +256,8 @@ export async function GET(request: NextRequest) {
       notes,
       content_calendars: calendars,
       content_posts: posts,
+      credit_links: creditLinks,
+      credit_submissions: creditSubmissions,
       capture_pages: capturePages,
       capture_leads: captureLeads,
       rollout_plan_drafts: plans,

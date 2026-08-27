@@ -4940,10 +4940,49 @@ of it rests on unit tests plus traced call paths.
 notification on a new submission (nothing notifies today — the `notifications`
 table is task-scoped and cannot carry a credits event without a migration), CSV
 export of submissions (`lib/csv.ts` exists; the CaptureSection clipboard export
-is the precedent), and prefilling from a past release. Two adjacent findings
-worth queuing separately: `GET/PATCH /api/releases/[id]/metadata` has **no flag
-guard** while the credits routes do, and the account data export omits
-`release_credit_submissions` / `release_credit_links`.
+is the precedent), and prefilling from a past release.
+
+**The two adjacent findings this pass flagged were fixed the same day** (founder
+request), and both are invisible in production because the flag is on — no
+changelog entry or version bump, per the flag-off precedent:
+
+1. **`GET/PATCH /api/releases/[releaseId]/metadata` is gated now.** It was the
+   one handler on the metadata surface with no flag check, so a direct call could
+   read and write a release's distribution fields while every UI entry point to
+   them was dark. The reader is defined locally rather than imported from the
+   credits group's `_shared.ts`, matching how `predict-genre/route.ts` owns its
+   own — route groups read their flags themselves. **The body is exactly
+   `'Not found.'` on purpose**, because `isFlagGateOff` matches that string to
+   tell "feature off" apart from `ensureReleaseOwnership`'s `'Release not
+   found.'`; the two Chappi metadata tools now translate it into a plain refusal
+   instead of telling the user their release does not exist (the `create_note`
+   precedent, three call sites — `update_release_metadata` needs it on both its
+   read-then-merge GET and its PATCH).
+2. **`'metadata'` is flag-conditional in `SCENE_PREFETCH_ORDER`.** Adding the
+   gate above would have made the idle prefetch fire guaranteed 404s — but it was
+   already broken before that: the metadata fetcher hits `/metadata` AND
+   `/credits`, `/credits` has always 404'd with the flag off, and `readJson`
+   **throws** on a non-ok response. So with the flag off that prefetch already
+   spent two requests per scoped release and then threw. It now joins
+   calendar/capture/song/coverart in being conditional, which is what the
+   prefetch list's own comment says the pattern is for. Mutation-tested: making
+   it unconditional again fails the prefetch test.
+3. **The account data export now carries `credit_links` and
+   `credit_submissions`.** These are the publishing details a manager most needs
+   in hand for a distributor handoff (legal names, IPI and PRO numbers,
+   publishers, both splits), and they were the one part of a release that
+   deleting the account would destroy and the export did not hand back. Keyed on
+   `release_id` like the other release-scoped tables. `share_token` is
+   deliberately not redacted — `REDACTED_KEYS`' own comment already anticipated
+   credits: it is the user's own link and the export is useless without it. The
+   route's guard test still passes, so the open-route auth and the `select('*')`
+   rule are intact.
+
+**`predict-genre` was deliberately left alone.** It gates on its own
+`NEXT_PUBLIC_FEATURE_GENRE_PREDICTION` (off by default), its comment already
+records that it is "only meaningful alongside `NEXT_PUBLIC_FEATURE_METADATA`",
+and there is no UI path to it when metadata is off. Worth one line if anyone ever
+turns genre prediction on independently.
 
 ---
 
