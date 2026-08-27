@@ -229,6 +229,7 @@ export const toMetadataSnapshot = (row: Record<string, unknown> | null | undefin
     releaseId: String(row.release_id || ''),
     isrc: String(row.isrc || ''),
     upc: String(row.upc || ''),
+    iswc: String(row.iswc || ''),
     primaryArtistName: String(row.primary_artist_name || ''),
     releaseTitle: String(row.release_title || ''),
     genre: String(row.genre || ''),

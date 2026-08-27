@@ -33,6 +33,7 @@ export const toReleaseCreditLink = (row: Record<string, unknown>): ReleaseCredit
   id: String(row.id || ''),
   releaseId: String(row.release_id || ''),
   shareToken: String(row.share_token || ''),
+  closedAt: row.closed_at ? String(row.closed_at) : null,
   createdAt: String(row.created_at || ''),
   updatedAt: String(row.updated_at || ''),
 });

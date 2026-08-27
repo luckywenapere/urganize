@@ -52,6 +52,7 @@ export async function GET(
 type UpdateMetadataBody = {
   isrc?: unknown;
   upc?: unknown;
+  iswc?: unknown;
   genre?: unknown;
   subgenre?: unknown;
   language?: unknown;
@@ -68,7 +69,7 @@ const readOptionalString = (value: unknown): string | null => {
 };
 
 // Editable half of the metadata hub (URG-108): the release-level
-// distribution fields (ISRC, UPC, genre, subgenre, language, explicit,
+// distribution fields (ISRC, UPC, ISWC, genre, subgenre, language, explicit,
 // label, (P)/(C) lines). Full-replace on every save — the hub's form is
 // fully controlled and always submits its complete current state, so an
 // upsert keyed on release_id is simpler and more predictable than a partial
@@ -107,6 +108,7 @@ export async function PATCH(
         release_id: releaseId,
         isrc: readOptionalString(body.isrc),
         upc: readOptionalString(body.upc),
+        iswc: readOptionalString(body.iswc),
         genre: readOptionalString(body.genre),
         subgenre: readOptionalString(body.subgenre),
         language: readOptionalString(body.language),

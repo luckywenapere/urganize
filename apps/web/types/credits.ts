@@ -48,6 +48,10 @@ export interface ReleaseCreditLink {
   id: string;
   releaseId: string;
   shareToken: string;
+  /** When the owner closed the link, or null while it is open and accepting
+   * answers. A closed link still resolves: the public page shows a "this
+   * request is closed" message instead of the form. */
+  closedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

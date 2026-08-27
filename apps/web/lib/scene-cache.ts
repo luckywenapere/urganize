@@ -108,6 +108,31 @@ export const SCENE_FRESH_MS = 30_000;
 export const SCENE_PERSIST_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 /**
+ * Scenes whose payload changes WITHOUT the owner doing anything, because a
+ * public form writes into them server-side. For these a fresh-looking cache
+ * entry can still be wrong, so SCENE_FRESH_MS must not suppress the network
+ * call: they paint from cache exactly as before and then always revalidate in
+ * the background on a real (non-prefetch) load.
+ *
+ * `metadata` carries the collaborator credit submissions, and the spec is
+ * explicit that a new submission has to be there when the owner looks. Without
+ * this, a submission landing inside the 30s window was invisible even after a
+ * full page reload, because the disk-adoption path returns a still-fresh
+ * persisted copy with zero requests.
+ *
+ * `capture` has the identical shape of bug (fans post leads to a public page)
+ * and is deliberately NOT included yet — that scene is not what this pass was
+ * asked to fix, and adding it here later is a one-line change.
+ */
+export const SCENE_REVALIDATE_ON_LOAD: Partial<Record<SceneName, boolean>> = {
+  metadata: true,
+};
+
+export function shouldRevalidateOnLoad(scene: SceneName): boolean {
+  return SCENE_REVALIDATE_ON_LOAD[scene] === true;
+}
+
+/**
  * Beyond this age a MEMORY entry must not be rendered at all — the load blocks
  * on a refetch instead of painting-then-revalidating.
  *

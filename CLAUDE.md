@@ -4828,6 +4828,125 @@ the scene brings the release rails back.
 
 ---
 
+## The metadata collection link, audited then refined (2026-08-27, v1.3.0)
+
+Founder spec, two-phase: audit the credit-collection flow first, then close the
+gaps. **The feature already existed** — collaborator credit capture, built
+2026-07-31 (URG-108) and live behind `NEXT_PUBLIC_FEATURE_METADATA`. The audit
+found the whole spine working (one link per release, public no-login form,
+submissions attached to the release and listed for the owner, split totals shown
+plainly without blocking) and six real gaps. **No new flag**, and no scope
+expansion: this is the same surface, corrected.
+
+Founder decisions taken before building: **skip** the expected-contributor count
+("N answers" stands), **keep the 11 detailed roles** rather than collapsing to
+the spec's 5 (a superset, and collapsing would migrate real rows and lose
+precision distributors use), **no tier gating**. A contributor still only ever
+enters their own splits, which the spec preferred and the code already did.
+
+**One migration, `20260827100000_credits_link_close_and_email_upsert.sql`,
+deliberately covering all three schema changes in one file** — the feature is
+live and the code reads all three, so a partial hand-application leaves the app
+selecting columns that do not exist. **⚠️ Its section 2 DELETES duplicate rows**
+(keeping the newest per release+email) because the unique index cannot build
+otherwise.
+
+**Six things worth knowing before editing any of this:**
+
+1. **Closing a link is not revoking it, and that distinction is the feature.**
+   `release_credit_links.closed_at` (timestamptz, NULL = open, so every existing
+   row stays open with no backfill and reopen is just `= null`). The token still
+   resolves: `loadPublicCreditForm` now returns a discriminated union
+   (`ok` / `closed` / `missing`) and the public page renders "This request is
+   closed" with the release still named, rather than a 404. Everything else still
+   collapses to `missing` — a rotated-away token must never be distinguishable
+   from one that never existed. **Regenerate clears `closed_at`** on purpose: a
+   regenerated-but-still-closed link is a trap state nothing in the UI explains,
+   so Regenerate means "fresh live link" and Close means "pause the one I have".
+2. **The public POST refuses a closed link BEFORE reading the body**, at 403.
+   Someone who loaded the form while it was open and submits after must be told
+   the link closed, not nitpicked about a field.
+3. **Same-email resubmission updates instead of duplicating, and `.upsert()`
+   cannot do it.** supabase-js hands `onConflict` to PostgREST as a plain COLUMN
+   LIST, so it cannot target the partial expression index this needs
+   (`(release_id, lower(email)) where email is not null`). So the route
+   selects-then-updates-or-inserts, retrying an insert that fails `23505` as an
+   update. Matching happens in JS, never through `.ilike()` — `_` is a wildcard
+   and underscores are common in email local parts, so `john_doe@x.com` would
+   match `johnXdoe@x.com`. `created_at` is never touched (their place in the
+   owner's list is when they FIRST answered); the 100-submission cap applies to
+   the insert path only, since a correction adds no row.
+4. **The split rules live once, in `lib/credit-submissions.ts`, and are run by
+   both the form and the route** so the two cannot disagree — the
+   `asset-constants.ts` pattern. Required for writers (songwriter / composer /
+   lyricist) and producers; credit-only roles (engineer, vocalist, musician,
+   featured artist) are asked for nothing, because they are usually credited
+   without holding a share and demanding a number teaches people to invent one.
+   A second decimal place is **rejected, not rounded** — silently turning 33.33
+   into 33.3 changes a number a publisher gave them.
+5. **`SCENE_REVALIDATE_ON_LOAD` in `lib/scene-cache.ts` is why a submission is
+   never hidden.** The 30s freshness window meant a submission landing in that
+   window was invisible even after a full page reload (the disk-adoption path
+   returns a still-fresh persisted copy with zero requests). Metadata now always
+   revalidates in the background on a real open: it still paints from cache, so
+   nothing flickers, but the fetch always runs. **Prefetch passes are exempt** or
+   the idle prefetch would re-fetch seconds after a real load. In-flight dedup
+   stays first and unconditional. `capture` has the identical bug (fans post
+   leads to a public page) and is deliberately **not** included — a one-line
+   addition when someone wants it.
+6. **`patchScene` in `MetadataSection.tsx` reads the store at call time**, not
+   the render closure, precisely because of item 5: a background fetch can now
+   land between a render and a mutation resolving, and merging onto the older
+   copy would re-stamp superseded submissions as fresh.
+
+**Also fixed, each a real defect rather than polish:** every input on the public
+form was `text-sm`, which is **13px in this repo's preset** (it shifts the whole
+scale down — `text-base` is 14px, only `text-lg` clears iOS Safari's 16px
+zoom threshold), so the form zoomed the page on every field tap on the one device
+most collaborators open it on. `country` and `publisherIpi` were collected from
+day one and rendered **nowhere**, so an owner doing a distributor handoff could
+not tell they had them. **ISWC did not exist anywhere in the repo** — added to
+`release_metadata` and Step 1 (now 9 fields), release-level and owner-entered
+because ISRC identifies the recording, UPC the release and ISWC the song, so it
+is never asked of a collaborator. It also had to join `METADATA_FIELDS` in
+`lib/chappi/tool-families/metadata.ts` or an assistant metadata update would
+have nulled it, which is exactly the full-replace trap that file's header warns
+about. Em dashes removed from the user-facing copy on both public share pages.
+
+**Tests: the feature had ZERO and now has 67** across
+`lib/credit-submissions.test.ts`, `lib/credits-server.test.ts` and the
+scene-cache additions. **Mutation-tested rather than merely asserted:** making
+`requiredSplits` ignore writer roles, and dropping metadata from
+`SCENE_REVALIDATE_ON_LOAD`, each fail exactly the tests written to catch them.
+
+**Verified:** 1454 tests pass, `eslint .` at **byte-identical baseline**
+(3 errors / 68 warnings, all pre-existing in `WorkspaceView.tsx`, confirmed by
+linting a stashed tree), `next build` green **by exit code** in both flag states
+with `/auth`, `/onboarding`, `/settings` still `○ Static`. Runtime probes:
+flag off, every credits route (the new PATCH included) **404**s while the ungated
+`/api/releases` still **401**s — that discrimination is what proves the gate
+rather than a routing accident; flag on, the owner routes **401**. Note
+`/credits/<bad token>` answers the 404 body with HTTP **200**, the pre-existing
+`force-dynamic` quirk this file already records for epk/capture/credits.
+
+**NOT verified, and it is the whole risk surface:** nothing has run against a
+real database. The migration is unapplied here, so no link has been closed, no
+resubmission has replaced anything, no `23505` retry has fired, and the closed
+page has never rendered. The owner UI needs an authenticated session this
+environment cannot mint, and there is no network route to app.urganize.app. All
+of it rests on unit tests plus traced call paths.
+
+**Phase 2 items the spec defers and this pass did NOT build:** owner
+notification on a new submission (nothing notifies today — the `notifications`
+table is task-scoped and cannot carry a credits event without a migration), CSV
+export of submissions (`lib/csv.ts` exists; the CaptureSection clipboard export
+is the precedent), and prefilling from a past release. Two adjacent findings
+worth queuing separately: `GET/PATCH /api/releases/[id]/metadata` has **no flag
+guard** while the credits routes do, and the account data export omits
+`release_credit_submissions` / `release_credit_links`.
+
+---
+
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:
   - `Web` → https://app.urganize.app (builds `apps/web`)

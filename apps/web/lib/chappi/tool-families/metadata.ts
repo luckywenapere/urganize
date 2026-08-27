@@ -13,6 +13,7 @@ import { apiError, argString, callInternalApi, fail, type ChappiTool } from './s
 const METADATA_FIELDS = [
   'isrc',
   'upc',
+  'iswc',
   'genre',
   'subgenre',
   'language',
@@ -28,7 +29,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
     name: 'get_release_metadata',
     kind: 'read',
     description:
-      "Read a release's distribution details: ISRC, UPC, genre, subgenre, language, explicit flag, label name, and the (P)/(C) lines.",
+      "Read a release's distribution details: ISRC, UPC, ISWC, genre, subgenre, language, explicit flag, label name, and the (P)/(C) lines.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -66,6 +67,10 @@ export const METADATA_TOOLS: ChappiTool[] = [
         releaseId: { type: 'string' },
         isrc: { type: 'string', description: 'Recording code for the track.' },
         upc: { type: 'string', description: 'Barcode for the release.' },
+        iswc: {
+          type: 'string',
+          description: 'Composition code from the collection society, e.g. "T-123456789-1".',
+        },
         genre: { type: 'string' },
         subgenre: { type: 'string' },
         language: { type: 'string', description: 'Language of the lyrics.' },

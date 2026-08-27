@@ -45,15 +45,16 @@ export function ShareLinkCardSkeleton() {
   );
 }
 
-// Matches MetadataSection's real field count exactly — 8 fields, now ordered
-// easiest-first (Genre, Subgenre, Language, Label name, ISRC, UPC, ℗ line,
-// © line) — so the resolved form doesn't visibly grow past the placeholder
-// grid. Every field also carries a plain-English hint line under its input
-// (2026-08-13), which is why each row below reserves three blocks and the grid
-// gap matches the real form's `gap-4`.
-const METADATA_FIELD_COUNT = 8;
+// Matches MetadataSection's real field count exactly — 9 fields, ordered
+// easiest-first (Genre, Subgenre, Language, Label name, ISRC, UPC, ISWC,
+// ℗ line, © line) — so the resolved form doesn't visibly grow past the
+// placeholder grid. ISWC joined the form 2026-08-27; keep this in step with
+// COUNTED_METADATA_FIELDS in MetadataSection.tsx. Every field also carries a
+// plain-English hint line under its input (2026-08-13), which is why each row
+// below reserves three blocks and the grid gap matches the real form's `gap-4`.
+const METADATA_FIELD_COUNT = 9;
 
-/** The release-details distribution-metadata form: an 8-field 2-column grid
+/** The release-details distribution-metadata form: a 9-field 2-column grid
  * (label + input + hint per field) + an explicit-content checkbox row + a
  * Save button. */
 export function MetadataFieldsSkeleton() {

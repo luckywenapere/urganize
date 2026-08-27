@@ -8,6 +8,8 @@ import {
   Copy,
   ExternalLink,
   Loader2,
+  Lock,
+  LockOpen,
   RefreshCw,
   Sparkles,
   Trash2,
@@ -65,6 +67,26 @@ import { useSceneDataStore, type MetadataScenePayload } from '@/stores/useSceneD
 //     empty-state copy quietly lied during an error) — the whole scene is one
 //     fetch, so one error state covers it.
 //
+// ROUND THREE (2026-08-27, founder spec "Metadata Collection Link"). Four
+// things worth knowing before editing this file:
+//   - Step 2's link has THREE states, not two: no link / live / closed. Closing
+//     does not touch the token or any answer — the URL keeps resolving and the
+//     public page shows a "this request is closed" note instead of the form, so
+//     reopening brings the same link back. Regenerate still rotates the token
+//     AND clears the closed state, because "give me a new link" means the owner
+//     wants a working one.
+//   - `patchScene` reads the store at call time rather than the render closure.
+//     Metadata now always revalidates in the background on open
+//     (SCENE_REVALIDATE_ON_LOAD in lib/scene-cache.ts, so a submission that
+//     lands while the owner is looking is never hidden by the 30s freshness
+//     window), which means a fetch can resolve between a render and a mutation.
+//   - Every field the public form collects is now rendered in SubmissionCard.
+//     `country` and `publisherIpi` were captured from day one and shown
+//     nowhere, so an owner preparing a distributor handoff could not tell they
+//     had them.
+//   - Splits display at ONE decimal place, matching what the public form now
+//     accepts (lib/credit-submissions.ts). Legacy 2dp rows display rounded.
+//
 // NEXT_PUBLIC_ prefix so the value is inlined at build time for this client
 // component. The API routes guard the same flag server-side (404 when off).
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
@@ -87,6 +109,7 @@ async function getAccessToken(): Promise<string> {
 type MetadataFormState = {
   isrc: string;
   upc: string;
+  iswc: string;
   genre: string;
   subgenre: string;
   language: string;
@@ -99,6 +122,7 @@ type MetadataFormState = {
 const EMPTY_FORM: MetadataFormState = {
   isrc: '',
   upc: '',
+  iswc: '',
   genre: '',
   subgenre: '',
   language: '',
@@ -113,6 +137,7 @@ function toFormState(metadata: ReleaseMetadataSnapshot | null): MetadataFormStat
   return {
     isrc: metadata.isrc,
     upc: metadata.upc,
+    iswc: metadata.iswc,
     genre: metadata.genre,
     subgenre: metadata.subgenre,
     language: metadata.language,
@@ -123,28 +148,44 @@ function toFormState(metadata: ReleaseMetadataSnapshot | null): MetadataFormStat
   };
 }
 
+/** The blanks the Step 1 chip counts. The explicit checkbox is a yes/no rather
+ * than a blank to fill, so it stays out. */
+const COUNTED_METADATA_FIELDS = [
+  'genre',
+  'subgenre',
+  'language',
+  'labelName',
+  'isrc',
+  'upc',
+  'iswc',
+  'pLine',
+  'cLine',
+] as const satisfies readonly (keyof MetadataFormState)[];
+
+/** One decimal place, matching what the public form now accepts. Legacy rows
+ * stored with two decimals display rounded. */
 function formatPercent(value: number): string {
-  const rounded = Math.round(value * 100) / 100;
-  return `${rounded % 1 === 0 ? rounded : rounded.toFixed(2)}%`;
+  const rounded = Math.round(value * 10) / 10;
+  return `${rounded % 1 === 0 ? rounded : rounded.toFixed(1)}%`;
 }
 
-/** Splits have to add up to 100 — say so in words rather than leaving the
+/** Splits have to add up to 100, so say so in words rather than leaving the
  * reader to work out what "unclaimed" meant, or why 120% is a problem. */
 function describeSplitTotal(label: string, total: number): string {
-  const rounded = Math.round(total * 100) / 100;
+  const rounded = Math.round(total * 10) / 10;
   if (rounded === 100) return `${label} add up to 100%. Nothing missing.`;
   if (rounded > 100) {
-    return `${label} add up to ${formatPercent(total)} — that is ${formatPercent(
+    return `${label} add up to ${formatPercent(total)}. That is ${formatPercent(
       total - 100
     )} too much. They should total 100%.`;
   }
-  return `${label} add up to ${formatPercent(total)} — ${formatPercent(
+  return `${label} add up to ${formatPercent(total)}. ${formatPercent(
     100 - total
-  )} still missing. They should total 100%.`;
+  )} is still missing. They should total 100%.`;
 }
 
 function splitTotalTone(total: number): string {
-  return Math.round(total * 100) / 100 === 100 ? 'text-content-secondary' : 'text-status-warning';
+  return Math.round(total * 10) / 10 === 100 ? 'text-content-secondary' : 'text-status-warning';
 }
 
 /** Whether a split total needs a flag on the collapsed Step 3 chip — reuses
@@ -221,19 +262,37 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
   const shareUrl = link
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/credits/${link.shareToken}`
     : '';
+  /** A closed link still resolves: the public page shows a "this request is
+   * closed" message instead of the form, so the URL stays valid and reopening
+   * brings the same link back to life. */
+  const isLinkClosed = Boolean(link?.closedAt);
 
   /** Write-through helper: mutations return the authoritative row, so the
-   * cache is patched directly instead of costing another round trip. */
+   * cache is patched directly instead of costing another round trip.
+   *
+   * The base payload is read from the STORE at call time, not from the `data`
+   * captured when this callback was created. Metadata now always revalidates in
+   * the background on open (SCENE_REVALIDATE_ON_LOAD), so a fetch can land
+   * between a render and a mutation resolving — and merging onto the older
+   * closure copy would re-stamp superseded submissions as fresh. */
   const patchScene = useCallback(
-    (patch: Partial<MetadataScenePayload>) => {
+    (
+      patch:
+        | Partial<MetadataScenePayload>
+        | ((current: MetadataScenePayload) => Partial<MetadataScenePayload>)
+    ) => {
+      const held = useSceneDataStore.getState().getScene(releaseId, 'metadata');
+      const base: MetadataScenePayload = {
+        metadata: held?.metadata ?? null,
+        link: held?.link ?? null,
+        submissions: held?.submissions ?? [],
+      };
       setScene(releaseId, 'metadata', {
-        metadata: data?.metadata ?? null,
-        link: data?.link ?? null,
-        submissions: data?.submissions ?? [],
-        ...patch,
+        ...base,
+        ...(typeof patch === 'function' ? patch(base) : patch),
       });
     },
-    [data, releaseId, setScene]
+    [releaseId, setScene]
   );
 
   useEffect(() => {
@@ -392,6 +451,48 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
     }
   };
 
+  /**
+   * Close or reopen the link. No window.confirm on purpose: this repo reserves
+   * confirms for the irreversible (Regenerate kills a URL that may already be
+   * in someone's WhatsApp, Remove destroys an answer), and closing is one tap
+   * to undo with every submission untouched.
+   */
+  const handleToggleClosed = async (action: 'close' | 'reopen') => {
+    if (isMutatingLink) return;
+    setIsMutatingLink(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        onToast?.('Session expired. Please sign in again.', 'error');
+        return;
+      }
+      const res = await fetch(`/api/releases/${releaseId}/credits`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        link?: MetadataScenePayload['link'];
+        error?: string;
+      };
+      if (!res.ok || !data.link) {
+        onToast?.(data.error || 'Could not update the credits link.', 'error');
+        return;
+      }
+      patchScene({ link: data.link });
+      onToast?.(
+        action === 'close'
+          ? 'Link closed. No new answers can come in.'
+          : 'Link reopened. Answers can come in again.',
+        'success'
+      );
+    } catch (err) {
+      onToast?.(err instanceof Error ? err.message : 'Could not update the credits link.', 'error');
+    } finally {
+      setIsMutatingLink(false);
+    }
+  };
+
   const handleCopy = async () => {
     if (!shareUrl) return;
     try {
@@ -426,7 +527,9 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
         onToast?.(data.error || 'Could not remove the submission.', 'error');
         return;
       }
-      patchScene({ submissions: submissions.filter((item) => item.id !== submissionId) });
+      patchScene((current) => ({
+        submissions: current.submissions.filter((item) => item.id !== submissionId),
+      }));
       onToast?.('Submission removed.', 'success');
     } catch (err) {
       onToast?.(err instanceof Error ? err.message : 'Could not remove the submission.', 'error');
@@ -449,13 +552,10 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
     (hasAnySongwriterSplit && splitTotalIsOff(totalSongwriterSplit)) ||
     (hasAnyMasterSplit && splitTotalIsOff(totalMasterSplit));
 
-  // "N of 8 filled in" — the explicit checkbox is a yes/no, not a blank to
-  // fill, so it stays out of the count.
+  // "N of 9 filled in" — derived from COUNTED_METADATA_FIELDS so the count and
+  // the total can never disagree when a field is added.
   const filledFieldCount = useMemo(
-    () =>
-      [form.genre, form.subgenre, form.language, form.labelName, form.isrc, form.upc, form.pLine, form.cLine].filter(
-        (value) => value.trim() !== ''
-      ).length,
+    () => COUNTED_METADATA_FIELDS.filter((field) => String(form[field]).trim() !== '').length,
     [form]
   );
 
@@ -470,8 +570,8 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
           it — the interaction itself ("tap a step") is part of the 5th-grader
           bar, not just the vocabulary (founder feedback, round two, 2026-08-25). */}
       <p className="text-sm leading-relaxed text-content-secondary">
-        Everything music stores need for this song, in three steps. Tap a step to open it —
-        everything is optional.
+        Everything music stores need for this song, in three steps. Tap a step to open it. Nothing
+        here is required.
       </p>
 
       {loadError ? (
@@ -508,8 +608,14 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
                 {isLoading ? (
                   <SkeletonBlock className="h-3 w-20" />
                 ) : (
-                  <span className={`text-[11px] ${filledFieldCount === 8 ? 'text-brand' : 'text-content-tertiary'}`}>
-                    {filledFieldCount} of 8 filled in
+                  <span
+                    className={`text-[11px] ${
+                      filledFieldCount === COUNTED_METADATA_FIELDS.length
+                        ? 'text-brand'
+                        : 'text-content-tertiary'
+                    }`}
+                  >
+                    {filledFieldCount} of {COUNTED_METADATA_FIELDS.length} filled in
                   </span>
                 )}
                 <ChevronDown
@@ -524,7 +630,7 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
               <div id={detailsBodyId} className="p-4">
                 <p className="text-sm text-content-secondary">
                   Music stores like Spotify and Apple ask for these when a song goes out. Every field
-                  is optional — fill in what you know now and come back for the rest.
+                  is optional, so fill in what you know now and come back for the rest.
                 </p>
 
                 {isLoading ? (
@@ -603,6 +709,13 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
                       onChange={(v) => editForm((f) => ({ ...f, upc: v }))}
                     />
                     <Field
+                      label="ISWC"
+                      hint="The ID code for the song itself, not the recording. Your publisher or royalty society gives it to you. Leave blank if you don't have it yet."
+                      placeholder="T-123456789-1"
+                      value={form.iswc}
+                      onChange={(v) => editForm((f) => ({ ...f, iswc: v }))}
+                    />
+                    <Field
                       label="℗ line (who owns the recording)"
                       hint="The year, then whoever owns the recording."
                       placeholder="℗ 2026 Some Label"
@@ -660,8 +773,16 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
                 {isLoading ? (
                   <SkeletonBlock className="h-3 w-16" />
                 ) : (
-                  <span className={`text-[11px] ${link ? 'text-brand' : 'text-content-tertiary'}`}>
-                    {link ? 'Link is live' : 'No link yet'}
+                  <span
+                    className={`text-[11px] ${
+                      isLinkClosed
+                        ? 'text-status-warning'
+                        : link
+                          ? 'text-brand'
+                          : 'text-content-tertiary'
+                    }`}
+                  >
+                    {isLinkClosed ? 'Link is closed' : link ? 'Link is live' : 'No link yet'}
                   </span>
                 )}
                 <ChevronDown
@@ -675,9 +796,9 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
             {openSteps.credits ? (
               <div id={creditsBodyId} className="p-4">
                 <p className="text-sm text-content-secondary">
-                  Anyone who worked on this song — producers, writers, engineers — fills out one
-                  short form. Copy the link and send it to them on WhatsApp, text, or email. They
-                  don&rsquo;t need an account.
+                  Anyone who worked on this song, like producers, writers and engineers, fills out
+                  one short form. Copy the link and send it to them on WhatsApp, text or email. They
+                  don&rsquo;t need an account. One link works for everyone.
                 </p>
 
                 {isLoading ? (
@@ -753,6 +874,21 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
                         </a>
                         <button
                           type="button"
+                          onClick={() => void handleToggleClosed(isLinkClosed ? 'reopen' : 'close')}
+                          disabled={isMutatingLink}
+                          className="inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isMutatingLink ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : isLinkClosed ? (
+                            <LockOpen className="h-3.5 w-3.5" />
+                          ) : (
+                            <Lock className="h-3.5 w-3.5" />
+                          )}
+                          {isLinkClosed ? 'Reopen link' : 'Close link'}
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => void handleRegenerateLink()}
                           disabled={isMutatingLink}
                           className="inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-status-warning disabled:cursor-not-allowed disabled:opacity-60"
@@ -767,8 +903,9 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
                       </div>
                     </div>
                     <p className="mt-3 text-xs text-content-tertiary">
-                      Need a fresh link? Tap Regenerate: the old one stops working right away, and
-                      answers you already collected are safe.
+                      {isLinkClosed
+                        ? 'This link is closed. Anyone who opens it sees a short "this request is closed" note instead of the form. Tap Reopen link to start collecting again.'
+                        : 'Done collecting? Tap Close link and the form stops taking answers, without breaking the link. Regenerate instead if you need a brand new one: the old link stops working right away, and answers you already collected are safe.'}
                     </p>
                   </div>
                 )}
@@ -934,17 +1071,34 @@ function SubmissionCard({
   isDeleting: boolean;
   onDelete: () => void;
 }) {
-  const submittedDate = submission.createdAt
-    ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(
-        new Date(submission.createdAt)
-      )
-    : '';
+  const formatDate = (value: string): string =>
+    new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(
+      new Date(value)
+    );
 
-  const contactLine = [submission.email, submission.phone].filter(Boolean).join(' · ');
+  const submittedDate = submission.createdAt ? formatDate(submission.createdAt) : '';
+  // Resubmitting with the same email replaces the earlier answer, keeping
+  // created_at — so an updated row needs to say when it last changed, or the
+  // owner has no way to tell a correction from the original. A minute of slack
+  // absorbs the trigger writing updated_at a hair after created_at on insert.
+  const updatedDate =
+    submission.updatedAt &&
+    submission.createdAt &&
+    new Date(submission.updatedAt).getTime() - new Date(submission.createdAt).getTime() > 60_000
+      ? formatDate(submission.updatedAt)
+      : '';
+
+  // Every field the form collects is shown: country and the publisher's IPI
+  // were captured from the start and rendered nowhere, so an owner doing a
+  // distributor handoff had to guess they were missing.
+  const contactLine = [submission.email, submission.phone, submission.country]
+    .filter(Boolean)
+    .join(' · ');
   const publishingLine = [
     submission.proAffiliation && `PRO: ${submission.proAffiliation}`,
     submission.ipiNumber && `IPI: ${submission.ipiNumber}`,
     submission.publisherName && `Publisher: ${submission.publisherName}`,
+    submission.publisherIpi && `Publisher IPI: ${submission.publisherIpi}`,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -1015,6 +1169,7 @@ function SubmissionCard({
       {submittedDate ? (
         <p className="mt-3 text-[11px] uppercase tracking-[0.1em] text-content-tertiary">
           Submitted {submittedDate}
+          {updatedDate ? ` · updated ${updatedDate}` : ''}
         </p>
       ) : null}
     </div>
