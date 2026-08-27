@@ -4936,10 +4936,9 @@ page has never rendered. The owner UI needs an authenticated session this
 environment cannot mint, and there is no network route to app.urganize.app. All
 of it rests on unit tests plus traced call paths.
 
-**Phase 2 items the spec defers:** CSV export of submissions (`lib/csv.ts`
-exists; the CaptureSection clipboard export is the precedent) and prefilling from
-a past release. **Owner notification was built 2026-08-27 — see the section
-below.**
+**Phase 2 items the spec defers:** prefilling from a contributor's past release
+is the only one left. **Owner notification and the CSV export were both built
+2026-08-27 — see the two sections below.**
 
 ### The owner notification (2026-08-27)
 
@@ -5026,6 +5025,51 @@ until `RESEND_API_KEY` + `EMAIL_FROM` (or the VAPID pair) are set in Vercel. The
 entry lands when the first channel is configured, because until then it would
 announce something nobody receives. The admin section is internal-only and never
 earns one.
+
+### The submissions spreadsheet (2026-08-27)
+
+Phase 2 item 2. A "Download as spreadsheet" button in Step 3 of the Metadata
+scene. **Entirely client-side — no route, no second fetch, no migration, no
+flag** — because the scene already holds every submission in memory.
+
+**Three decisions worth keeping:**
+
+1. **Splits are RAW NUMBERS, never "50%". This is the whole point of the
+   file.** The reason to export splits is to total the column and see whether it
+   reaches 100, and neither Excel nor Sheets can sum a cell containing a percent
+   sign — so `"50%"` would make the export useless for its one job. A quoted
+   bare number is still coerced by both, so `lib/csv.ts`'s always-quote rule
+   costs nothing. An unanswered split stays EMPTY rather than becoming 0, because
+   a zero share is a real answer and conflating the two would silently change a
+   total. Mutation-tested: adding the percent sign back fails three tests.
+2. **Every column is printed even when blank**, the opposite of the notification
+   email, which drops blanks. A spreadsheet is where completeness beats
+   curation: a missing column breaks a formula, an empty cell does not.
+3. **Roles are semicolon-separated**, not comma. Every field is quoted so a
+   comma would be legal, but this is the column people split back apart by hand
+   and a comma list inside a comma file is a foot-gun there.
+
+It goes through `shareOrDownloadTextFile` (`lib/share-file.ts`) rather than a
+plain anchor, because a webview cannot download: native gets the share sheet, an
+old shell without the plugins gets a "use the web app" message instead of a
+silent no-op, and web gets a real file. The `DataExportSection` precedent,
+including its outcome copy. Escaping comes from `lib/csv.ts` per that module's
+own instruction that new code comes there — this is the first consumer to take
+it up, so the four private copies it complains about are unchanged and still
+four.
+
+Files: `lib/credit-submissions-csv.ts` (+ 16 tests), the button and handler in
+`MetadataSection.tsx`, and one prop threaded through `ReleaseScenePanel.tsx` so
+the filename can name the release (`midnight-ep-credits-2026-08-27.csv`) rather
+than colliding when a manager exports three releases in a sitting.
+
+**No changelog entry:** it needs `NEXT_PUBLIC_FEATURE_METADATA`, which IS on in
+production, so this one is genuinely live on merge — but it lands in the same
+ledger entry as the notification above, whenever that one's channel gets
+configured. Splitting them across two versions would announce half a feature.
+
+**Not verified:** no real submission has been exported. The button needs an
+authenticated session with real rows, which this environment cannot mint.
 
 **The two adjacent findings this pass flagged were fixed the same day** (founder
 request), and both are invisible in production because the flag is on — no

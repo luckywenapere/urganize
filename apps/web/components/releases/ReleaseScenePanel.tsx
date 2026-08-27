@@ -182,7 +182,9 @@ export function ReleaseScenePanel({
           on — this is why an inline open feels instant where the old route
           navigation did not. The sections carry an `mt-8` top margin of their
           own, which sits fine under the divider above. */}
-      {scene === 'metadata' ? <MetadataSection releaseId={release.id} onToast={onToast} /> : null}
+      {scene === 'metadata' ? (
+        <MetadataSection releaseId={release.id} releaseTitle={release.title} onToast={onToast} />
+      ) : null}
       {scene === 'song' ? <SongSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'coverart' ? <CoverArtSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'files' ? <AssetSection releaseId={release.id} onToast={onToast} /> : null}
