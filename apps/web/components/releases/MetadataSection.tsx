@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ClipboardList,
   Copy,
+  Download,
   ExternalLink,
   Loader2,
   Lock,
@@ -23,6 +24,11 @@ import {
   validateGenrePredictionUpload,
 } from '@/lib/genre-prediction';
 import { RELEASE_CREDIT_ROLE_LABELS } from '@/types/credits';
+import {
+  buildCreditSubmissionsCsv,
+  creditsCsvFileName,
+} from '@/lib/credit-submissions-csv';
+import { shareOrDownloadTextFile } from '@/lib/share-file';
 import { useSceneData } from './useSceneData';
 import { useSceneDataStore, type MetadataScenePayload } from '@/stores/useSceneDataStore';
 
@@ -199,10 +205,13 @@ type StepKey = 'details' | 'credits' | 'answers';
 
 type MetadataSectionProps = {
   releaseId: string;
+  /** Only used to name the exported spreadsheet. Optional so the scene keeps
+   * working for any caller that does not have it in hand. */
+  releaseTitle?: string;
   onToast?: (message: string, tone: 'success' | 'error' | 'warning') => void;
 };
 
-export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
+export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSectionProps) {
   // One cached scene covers both endpoints this section reads (metadata +
   // credits), fetched in parallel by the store. Cache-first, so re-opening
   // Metadata — or opening it after the workspace's idle prefetch has warmed
@@ -258,6 +267,7 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
 
   // --- Submissions -------------------------------------------------------------
   const [deletingId, setDeletingId] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
 
   const shareUrl = link
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/credits/${link.shareToken}`
@@ -500,6 +510,42 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
       setCopied(true);
     } catch {
       onToast?.('Could not copy — select the link and copy it manually.', 'warning');
+    }
+  };
+
+  /**
+   * Hand the owner every submission as a spreadsheet.
+   *
+   * Entirely client-side: the scene already holds all of them, so there is no
+   * route and no second fetch. Goes through shareOrDownloadTextFile rather than
+   * a plain anchor because a webview cannot download — on native it opens the
+   * share sheet, and on an old shell without the plugins it says so instead of
+   * doing nothing (the DataExportSection precedent).
+   */
+  const handleExportCsv = async () => {
+    if (isExporting || submissions.length === 0) return;
+    setIsExporting(true);
+    try {
+      const outcome = await shareOrDownloadTextFile({
+        contents: buildCreditSubmissionsCsv(submissions),
+        fileName: creditsCsvFileName(releaseTitle || '', new Date().toISOString()),
+        mimeType: 'text/csv;charset=utf-8',
+        title: 'Collaborator credits',
+      });
+      if (outcome === 'unsupported') {
+        onToast?.(
+          'This app version cannot save files. Open app.urganize.app in your browser and export from there.',
+          'warning'
+        );
+      } else if (outcome === 'downloaded') {
+        onToast?.('Credits downloaded as a spreadsheet.', 'success');
+      } else if (outcome === 'shared') {
+        onToast?.('Your spreadsheet is ready to save.', 'success');
+      }
+    } catch (err) {
+      onToast?.(err instanceof Error ? err.message : 'Could not build the spreadsheet.', 'error');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -973,7 +1019,26 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
                       </div>
                     )}
 
-                    <div className={`space-y-3 ${hasAnySongwriterSplit || hasAnyMasterSplit ? 'mt-4' : ''}`}>
+                    {/* Sits above the list rather than in the card header: it
+                        acts on ALL the answers, and the header is a toggle, so a
+                        button in there would fight the tap that opens the card. */}
+                    <div className="mt-4 flex">
+                      <button
+                        type="button"
+                        onClick={() => void handleExportCsv()}
+                        disabled={isExporting}
+                        className="inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isExporting ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Download className="h-3.5 w-3.5" />
+                        )}
+                        {isExporting ? 'Building…' : 'Download as spreadsheet'}
+                      </button>
+                    </div>
+
+                    <div className="mt-3 space-y-3">
                       {submissions.map((submission) => (
                         <SubmissionCard
                           key={submission.id}
