@@ -311,6 +311,12 @@ Current schedules, both daily and both approximate — Hobby precision is ±59 m
 - Route handlers: always `route.ts`. Per-domain helpers in `_shared.ts`.
 - DB columns: `snake_case`. TS types for DB rows: `camelCase`. (Legacy `Db*` prefixed types were removed — they drifted from the schema and were unused.)
 
+**Commit authorship (2026-08-27, founder call).** Every commit in this repo is authored **`Lucky Wenapere <luckydio10@gmail.com>`** — that address is the one GitHub resolves to the account, so it is what makes blame, the contribution graph and Vercel's per-deployment attribution read correctly. Three things hold that in place; do not remove any of them without replacing it:
+
+- **`.claude/settings.json`** carries `attribution` (`commit: ""`, `pr: ""`, `sessionUrl: false`), which suppresses the assistant's commit trailer, PR-description line and session link, and a `SessionStart` hook that sets the **repo-local** identity (`.git/config` only — never the machine's global config). A fresh container's global git identity is not this one, so the hook is what corrects it each session. Project hooks require the workspace-trust step, so on the very first session in a new clone it may not have run yet — check `git config --local user.email` before the first commit.
+- **Keep squash as the merge method** (already recorded under Deploy Configuration). Under squash, GitHub rewrites author → PR author and committer → `GitHub`, and re-signs the result — which is why `main` stays clean and verified. A merge commit or a rebase merge would land branch commits on `main` verbatim, carrying whatever identity and signature they were made with. That is the one way this regresses.
+- Commits already on `main` that carry an assistant trailer are history and stay as they are; removing them would mean rewriting and force-pushing the branch Vercel deploys from.
+
 ---
 
 ## Resolved v1 blockers
