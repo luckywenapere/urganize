@@ -5,6 +5,7 @@ import {
   isMetadataFeatureEnabled,
 } from '@/lib/credits-server';
 import { findSubmissionIdByEmail, validateSubmissionSplits } from '@/lib/credit-submissions';
+import { notifyCreditSubmission } from '@/lib/credit-notifications-server';
 import { RELEASE_CREDIT_ROLE_OPTIONS } from '@/types/credits';
 import type { CreditSubmissionInput, ReleaseCreditRole } from '@/types/credits';
 
@@ -219,6 +220,29 @@ export async function POST(
     if (!insertResult.data) {
       return NextResponse.json({ error: 'Could not submit your credit.' }, { status: 500 });
     }
+
+    // Tell the owner — INSERT path only, so a correction stays quiet. Awaited
+    // rather than fire-and-forget: an un-awaited promise can be killed the
+    // moment a serverless response returns. It never throws and never fails
+    // this submission (see lib/credit-notifications-server.ts).
+    await notifyCreditSubmission(client, {
+      ownerUserId,
+      releaseId,
+      submissionId: String(insertResult.data.id || ''),
+      legalName,
+      stageName: row.stage_name || '',
+      roles,
+      email,
+      phone: row.phone || '',
+      country: row.country || '',
+      songwriterSplit: splits.songwriterSplit,
+      masterSplit: splits.masterSplit,
+      proAffiliation: row.pro_affiliation || '',
+      ipiNumber: row.ipi_number || '',
+      publisherName: row.publisher_name || '',
+      publisherIpi: row.publisher_ipi || '',
+      contribution: row.contribution || '',
+    });
 
     return NextResponse.json({ ok: true, updated: false }, { status: 201 });
   } catch (error) {

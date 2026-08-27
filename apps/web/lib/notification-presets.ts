@@ -40,6 +40,17 @@ export type DeadlineTierCopy = {
 
 export type DeadlineTierKind = 'task_due_7d' | 'task_due_3d' | 'task_due_soon';
 
+/** Copy for "a collaborator just sent their credits" (2026-08-27). Unlike the
+ * three categories above, this one is EVENT-DRIVEN rather than scheduled: it
+ * fires inline from the public credits form, so there is no step list and no
+ * pool, just one title and body. */
+export type CreditSubmissionCopy = {
+  /** May contain `{releaseTitle}`. */
+  title: string;
+  /** May contain `{collaboratorName}` and `{releaseTitle}`. */
+  body: string;
+};
+
 export type NotificationPresets = {
   releaseReminders: {
     enabled: boolean;
@@ -52,6 +63,10 @@ export type NotificationPresets = {
   deadlineReminders: {
     enabled: boolean;
     copy: Record<DeadlineTierKind, DeadlineTierCopy>;
+  };
+  creditSubmissions: {
+    enabled: boolean;
+    copy: CreditSubmissionCopy;
   };
 };
 
@@ -125,6 +140,13 @@ export const DEFAULT_NOTIFICATION_PRESETS: NotificationPresets = {
       },
     },
   },
+  creditSubmissions: {
+    enabled: true,
+    copy: {
+      title: 'New credits for “{releaseTitle}”',
+      body: '{collaboratorName} sent their details. Tap to see what they filled in.',
+    },
+  },
 };
 
 function clampString(value: unknown, maxLength: number, fallback: string): string {
@@ -177,6 +199,10 @@ function normalizeDeadlineTierCopy(raw: unknown, fallback: DeadlineTierCopy): De
   };
 }
 
+/** The credit-submission copy has the same two fields as a deadline tier, so it
+ * reuses that normalizer rather than adding a byte-identical second one. */
+const normalizeCreditSubmissionCopy = normalizeDeadlineTierCopy;
+
 /** Validates an unknown value (typically app_settings.value_json) into a
  * complete NotificationPresets, filling every missing or malformed field
  * from DEFAULT_NOTIFICATION_PRESETS. Never throws. Garbage input (wrong
@@ -227,6 +253,11 @@ export function normalizeNotificationPresets(raw: unknown): NotificationPresets 
       ? (deadlineSource.copy as Record<string, unknown>)
       : {};
 
+  const creditSubmissionsSource =
+    source.creditSubmissions && typeof source.creditSubmissions === 'object'
+      ? (source.creditSubmissions as Record<string, unknown>)
+      : {};
+
   return {
     releaseReminders: {
       enabled: normalizeBoolean(releaseRemindersSource.enabled, DEFAULT_NOTIFICATION_PRESETS.releaseReminders.enabled),
@@ -252,6 +283,16 @@ export function normalizeNotificationPresets(raw: unknown): NotificationPresets 
           DEFAULT_NOTIFICATION_PRESETS.deadlineReminders.copy.task_due_soon
         ),
       },
+    },
+    creditSubmissions: {
+      enabled: normalizeBoolean(
+        creditSubmissionsSource.enabled,
+        DEFAULT_NOTIFICATION_PRESETS.creditSubmissions.enabled
+      ),
+      copy: normalizeCreditSubmissionCopy(
+        creditSubmissionsSource.copy,
+        DEFAULT_NOTIFICATION_PRESETS.creditSubmissions.copy
+      ),
     },
   };
 }

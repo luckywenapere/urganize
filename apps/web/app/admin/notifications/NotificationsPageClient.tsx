@@ -351,6 +351,83 @@ export default function NotificationsPageClient() {
         </button>
       </section>
 
+      {/* Credit submissions — the only EVENT-DRIVEN category here: the other
+          three are scheduled, this one fires the moment a collaborator submits
+          the public credits form. Hence one title and body rather than a step
+          list or a pool. */}
+      <section className="mt-6 rounded-lg border border-stroke-default bg-bg-surface p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold">Credit submissions</h2>
+            <p className="mt-1 text-xs text-content-tertiary">
+              Sent to the release owner the moment a collaborator sends their credits. Turning this
+              off stops the push and the email. Corrections never notify.
+            </p>
+          </div>
+          <CategoryToggle
+            enabled={presets.creditSubmissions.enabled}
+            onChange={(next) =>
+              setPresets({
+                ...presets,
+                creditSubmissions: { ...presets.creditSubmissions, enabled: next },
+              })
+            }
+          />
+        </div>
+
+        <div className="mt-4 rounded-lg border border-stroke-subtle p-4">
+          <p className="font-mono text-[10px] uppercase tracking-wide text-content-tertiary">
+            Push notification
+          </p>
+          <input
+            value={presets.creditSubmissions.copy.title}
+            onChange={(event) =>
+              setPresets({
+                ...presets,
+                creditSubmissions: {
+                  ...presets.creditSubmissions,
+                  copy: { ...presets.creditSubmissions.copy, title: event.target.value },
+                },
+              })
+            }
+            maxLength={80}
+            className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+          />
+          <textarea
+            value={presets.creditSubmissions.copy.body}
+            onChange={(event) =>
+              setPresets({
+                ...presets,
+                creditSubmissions: {
+                  ...presets.creditSubmissions,
+                  copy: { ...presets.creditSubmissions.copy, body: event.target.value },
+                },
+              })
+            }
+            maxLength={300}
+            rows={2}
+            className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+          />
+          <p className="mt-1 text-[11px] text-content-tertiary">
+            Use <code>{'{collaboratorName}'}</code> for who sent it and{' '}
+            <code>{'{releaseTitle}'}</code> for the release.
+          </p>
+          <p className="mt-2 text-[11px] text-content-tertiary">
+            The email that goes out alongside this is not editable here: it lists exactly what the
+            collaborator filled in, so it stays useful to forward to a distributor.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => void handleTest('creditSubmissions')}
+          disabled={testingCategory !== null}
+          className="motion-focus mt-4 text-sm font-medium text-brand hover:text-brand-hover disabled:opacity-50"
+        >
+          {testingCategory === 'creditSubmissions' ? 'Sending…' : 'Send test to me'}
+        </button>
+      </section>
+
       <div className="mt-8">
         <button
           type="button"
