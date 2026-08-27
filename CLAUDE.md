@@ -5019,12 +5019,16 @@ delivered.** No real database, no Resend key, no push subscription here. The
 500s a local probe returns are the placeholder Supabase URL failing upstream of
 this code (`"Could not resolve this link."`), not the notifier.
 
-**Changelog entry deliberately deferred**, the flag-flip precedent applied to a
-feature with no flag: the code runs on every submission but both channels no-op
-until `RESEND_API_KEY` + `EMAIL_FROM` (or the VAPID pair) are set in Vercel. The
-entry lands when the first channel is configured, because until then it would
-announce something nobody receives. The admin section is internal-only and never
-earns one.
+**Changelog entry: shipped as v1.4.0** (2026-08-27), covering this and the
+spreadsheet export below. It was deliberately held at merge — the flag-flip
+precedent applied to a feature with no flag, since both channels no-op until
+`RESEND_API_KEY` + `EMAIL_FROM` or the VAPID pair are set — and then released
+the same day when the founder confirmed those env vars have been set in Vercel
+for a long time. **That confirmation is the only evidence they are set: this
+sandbox cannot reach either urganize domain (the agent proxy answers 403 to
+CONNECT), so no probe backs it up.** If a notification never arrives, check
+those four env vars on the `Web` project before looking at this code. The admin
+section is internal-only and never earns an entry.
 
 ### The submissions spreadsheet (2026-08-27)
 
@@ -5063,10 +5067,8 @@ Files: `lib/credit-submissions-csv.ts` (+ 16 tests), the button and handler in
 the filename can name the release (`midnight-ep-credits-2026-08-27.csv`) rather
 than colliding when a manager exports three releases in a sitting.
 
-**No changelog entry:** it needs `NEXT_PUBLIC_FEATURE_METADATA`, which IS on in
-production, so this one is genuinely live on merge — but it lands in the same
-ledger entry as the notification above, whenever that one's channel gets
-configured. Splitting them across two versions would announce half a feature.
+**Changelog: shipped in v1.4.0** alongside the notification above rather than as
+its own version, since splitting them would have announced half a feature.
 
 **Not verified:** no real submission has been exported. The button needs an
 authenticated session with real rows, which this environment cannot mint.
