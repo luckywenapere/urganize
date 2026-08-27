@@ -39,21 +39,20 @@ const stats: Array<{
 export function StatsSection() {
   return (
     <ScrollReveal>
-      {/* Tight beat (WorkspaceShot's padding, not the default py-32): the
-          hero above already ends on pb-20/28 under the video, so a full-size
-          section gap here would open a ~250px void between the video and
-          these cards. */}
+      {/* The page's standard body beat, shared with WorkspaceShot and
+          ThreeFeatures (not SectionShell's default py-32, which would open a
+          ~250px void under the hero video). This was the tighter 60/80 while
+          the page ran seven sections; it opened to 80/100 on 2026-08-25 when
+          the before/after and playbook beats came out and five sections had
+          to carry the same page. */}
       <SectionShell
-        className="py-[60px] lg:py-[80px]"
+        className="py-[80px] lg:py-[100px]"
         containerClassName="max-w-[74rem] px-6 sm:px-8 lg:px-10"
       >
+        {/* No kicker (the "What you get" mono-label was cut 2026-08-25,
+            founder call) — the h2 carries the beat alone. */}
         <div className="mx-auto max-w-[52rem] text-center">
-          <p className="mono-label text-[var(--marketing-text-subtle)]">
-            What you get
-          </p>
-          <h2 className={`mt-6 ${centeredHeadlineClass}`}>
-            Built to move faster
-          </h2>
+          <h2 className={centeredHeadlineClass}>Built to move faster</h2>
         </div>
 
         {/* rounded-[1.5rem] bordered cards: the PricingTierCards treatment —

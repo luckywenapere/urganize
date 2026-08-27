@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ClipboardList, Inbox, PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
+import { SiInstagram, SiX } from "react-icons/si";
+import { openExternalUrl } from "@/lib/external-link";
 import { useAuthStore } from "@/lib/auth-store";
 import { useWorkspaceIdentityStore } from "@/stores/useWorkspaceIdentityStore";
 import { useReleaseStore } from "@/stores/useReleaseStore";
@@ -23,6 +25,16 @@ import { isReleaseActive } from "@/lib/release-activity";
 const SIDEBAR_COLLAPSED_KEY = "urganize.workspace.sidebar-collapsed";
 const SIDEBAR_COLLAPSED_VERSION = 1;
 const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
+
+// Urganize's own social profiles (both @urganize), shown in the card's footer
+// row (founder request, 2026-08-26). Buttons through openExternalUrl rather
+// than target="_blank" anchors so they open the system browser inside the
+// Capacitor shell — the same reasoning ShareLoginActions records. The marks
+// come from react-icons/si, the exact set the content calendar's platform
+// tabs already use, so the two surfaces can't drift on what X and Instagram
+// look like.
+const INSTAGRAM_URL = "https://instagram.com/urganize";
+const X_URL = "https://x.com/urganize";
 
 // Same flag TasksPanel's scene pill and MetadataSection read. At `lg`+ this
 // card is the primary entry point ("Collect metadata" below); TasksPanel's
@@ -424,18 +436,43 @@ export function WorkspaceIdentityPanel() {
           </Suspense>
         </nav>
 
-        {/* Collapse control, pinned to the base of the card (founder call,
-          2026-08-12). The nav above it is `flex-1`, so this row needs no
-          positioning of its own — it simply takes the space left over at the
-          bottom. It is a sibling of the identity <Link> rather than a child:
-          a <button> cannot nest inside an <a>. Right-aligned when expanded so
-          the left-pointing icon reads as "push the panel closed"; centered
-          when collapsed to sit over the icon column above it. */}
+        {/* Footer row, pinned to the base of the card (founder call,
+          2026-08-12): Urganize's social links on the left (founder request,
+          2026-08-26), the collapse control on the right. The nav above it is
+          `flex-1`, so this row needs no positioning of its own — it simply
+          takes the space left over at the bottom. It is a sibling of the
+          identity <Link> rather than a child: a <button> cannot nest inside
+          an <a>. The socials hide when collapsed (the 64px rail has room for
+          one control, and they're brand chrome, not navigation), which keeps
+          the collapsed layout exactly what it was: the centered collapse
+          button alone. */}
         <div
           className={`flex shrink-0 items-center border-t border-stroke-subtle p-2 ${
-            collapsed ? "justify-center" : "justify-end"
+            collapsed ? "justify-center" : "justify-between"
           }`}
         >
+          {!collapsed && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => void openExternalUrl(INSTAGRAM_URL)}
+                aria-label="Urganize on Instagram"
+                title="@urganize on Instagram"
+                className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+              >
+                <SiInstagram className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={() => void openExternalUrl(X_URL)}
+                aria-label="Urganize on X"
+                title="@urganize on X"
+                className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+              >
+                <SiX className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          )}
           <button
             type="button"
             onClick={toggleCollapsed}

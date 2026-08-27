@@ -43,7 +43,7 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "Every release runs the same way, whoever runs it.",
-    body: "Create a release and Urganize lays out the whole rollout. 64 activities across 11 weeks, from locking the master to pulling your first-week numbers. Your newest manager ships a release the same way your best one does, and anyone can edit or delete an activity that does not apply.",
+    body: "Create a release and Urganize lays out the whole rollout, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Your newest manager ships a release the same way your best one does, and anyone can edit or delete an activity that does not apply.",
     points: [
       "One template, shaped for each release",
       "Every activity dated around that release day",

@@ -15,10 +15,20 @@
 // tone-down, founder call) — files deleted, rebuild from git history if
 // either is ever wanted back. CommunitySection was REMOVED 2026-08-19
 // (founder call: nobody clicked it) — same deal, git history has it.
+// TransformationSection itself was REMOVED 2026-08-25 (founder call: too
+// bulky — every quoted voice survives elsewhere: zaddyfunds in the hero
+// ProofLine, adenaiye at the final CTA + /for-managers, tamuno on
+// /for-executives + /why-urganize, antoine on /for-managers). Its
+// content ledger (transformationPairs) stays in content/testimonials.ts
+// as the canonical owner of the before-strings /why-urganize mirrors.
+// TemplatePlanSection (the playbook excerpt: five template rows, the
+// +59 MORE footnote and the tasks screenshot) was REMOVED 2026-08-25
+// (founder call, same pass) — the 64-activities claim survives in the
+// hero lead and in full on /features, /why-urganize and all four
+// persona pages, and workspace-tasks.png is still used by /features and
+// /brand, so nothing was orphaned. Git history has the section.
 export { FinalCTASection } from "./sections/FinalCTASection";
 export { HeroSection } from "./sections/HeroSection";
 export { StatsSection } from "./sections/StatsSection";
-export { TemplatePlanSection } from "./sections/TemplatePlanSection";
 export { ThreeFeaturesSection } from "./sections/ThreeFeaturesSection";
-export { TransformationSection } from "./sections/TransformationSection";
 export { WorkspaceShotSection } from "./sections/WorkspaceShotSection";

@@ -768,9 +768,11 @@ their choice through Urganize consistently through MCP probably."*
 
 Every customer can now connect their own LLM client — claude.ai, Claude Desktop,
 ChatGPT, Claude Code, Cursor — to their own workspace, and take their release
-context with them. Built flag-off behind `NEXT_PUBLIC_FEATURE_MCP_CONNECT`;
-**not yet activated**. The founder-key path above is untouched, unflagged and
-independent: either, both, or neither may be switched on.
+context with them. Behind `NEXT_PUBLIC_FEATURE_MCP_CONNECT`, which is **ON in
+production since 2026-08-25** — the migration is applied and the OAuth flow is
+confirmed end to end (see Verified below; one tool call is the only step left).
+The founder-key path above is untouched, unflagged and independent: either, both,
+or neither may be switched on.
 
 **Not a scope expansion.** MCP shipped 2026-07-31 and this file recorded it as
 "a second access path to the already-sanctioned Chappi tool registry, not a new
@@ -964,32 +966,69 @@ routes 401. One real defect was found this way and fixed: `/api/oauth/token`
 answered `server_error` before `unsupported_grant_type`, telling a client the
 server was misconfigured for a request that was invalid to begin with.
 
-**NOT verified, and it is most of the interesting surface.** Nothing has run
-against a real database — the migration is unapplied — and this sandbox cannot
-mint a Supabase session or reach either urganize domain (the proxy answers 403 to
-CONNECT). So no client has registered, no consent screen has rendered, no code
-has been exchanged, no token has been refreshed or revoked, and the Settings list
-has never painted. It rests on unit tests, both-flag-state builds and route
-probes. **The one thing worth doing by hand before trusting it:** run
-`npx @modelcontextprotocol/inspector` against a local server, then add a real
-custom connector on claude.ai.
+**LIVE, and the OAuth flow is confirmed end to end (2026-08-25).** The founder
+applied the migration, set `NEXT_PUBLIC_FEATURE_MCP_CONNECT=true`, and connected
+`npx @modelcontextprotocol/inspector` to production successfully. That one
+connection exercises, against real tables: discovery through both `.well-known`
+documents, Dynamic Client Registration, the consent screen rendering and being
+approved, PKCE, the authorization-code exchange, the access token, and
+`tools/list`. It also proves the deploy genuinely rebuilt `apps/web` — a stale
+bundle would have 404'd discovery and the Inspector could not have started, which
+is the trap the activation checklist warns about.
+
+**Still NOT verified, and it is not a small remainder — NO TOOL HAS EVER BEEN
+CALLED.** So no context has actually been read out of this feature, and nothing
+has round-tripped through the internal-actor branch in
+`app/api/_shared/auth.ts` — which is where five of the thirteen allow-listed
+tools live, `create_note` among them. Its long-standing 401 is fixed in code and
+covered by a structural test, and has still never been exercised by a real
+request. Also untested: revoking in Settings → Account → Connected apps and
+confirming the next call fails (that list has never rendered), refresh-token
+rotation, which only happens an hour in, and both claude.ai and ChatGPT
+specifically. The next real check is one tool call — `get_workspace_context`
+answers most of it at once.
+
+### Adding a custom connector on claude.ai (2026-08-25)
+
+The founder could not find the option, so recording it rather than letting the
+next session re-derive it. Custom connectors still exist and are supported; two
+things get in the way:
+
+- **The path is Settings → Customize → Connectors → `+` → Add custom
+  connector.** Not Settings → Connectors, which is what this session told him
+  first and is the likely reason he could not find it.
+- **They require a PAID Claude plan.** Free accounts do not get them.
+
+Do not confuse this with submitting to the public connector *directory*, which
+does need a Team or Enterprise admin — that is publishing, and irrelevant to
+adding a private one. Note also that the July 2026 MCP spec update deprecated SSE
+in favour of a stateless HTTP request/response model, which is exactly the shape
+`/api/mcp` already serves (no session ids, plain JSON, GET is 405) — so nothing
+here is on the deprecated path.
+
+Either way claude.ai is one client's UI, not the feature: the Inspector, Claude
+Code, Cursor and any other OAuth-capable client connect today.
 
 ### Activation checklist
 
-1. Apply `20260825100000_mcp_oauth.sql`.
-2. Set `NEXT_PUBLIC_FEATURE_MCP_CONNECT=true` on the Vercel `Web` project **and
-   make sure the deploy rebuilds `apps/web`** — verify with
-   `npx turbo-ignore @urganize/web --fallback=<the commit Vercel last deployed>`
-   before trusting the flip.
-3. Changelog entry + version bump across all 10 `package.json` files, at the flip
-   rather than at merge (the EPK precedent).
-4. Probe production: `/.well-known/oauth-authorization-server` returns JSON, and
-   `POST /api/mcp` returns 401 with the `WWW-Authenticate` header. Do **not** try
-   to prove the flag by grepping the client bundle — both ternary branches
-   compile in, a false positive this repo has recorded twice.
-5. Connect end to end from claude.ai, ask it something about a real release, then
-   disconnect it in Settings → Account → Connected apps and confirm the next call
-   fails.
+1. ~~Apply `20260825100000_mcp_oauth.sql`~~ — done 2026-08-25.
+2. ~~Set `NEXT_PUBLIC_FEATURE_MCP_CONNECT=true` on the Vercel `Web` project~~ —
+   done, and the rebuild is confirmed by the Inspector connecting at all (a stale
+   bundle 404s discovery). If a future flip needs checking before anything can
+   connect, `npx turbo-ignore @urganize/web --fallback=<the commit Vercel last
+   deployed>` is the way.
+3. ~~Changelog entry + version bump across all 10 `package.json` files~~ — done
+   as v1.2.0, at the flip rather than at merge (the EPK precedent).
+4. ~~Probe production~~ — superseded: the Inspector connecting proves discovery
+   and the token exchange, which is strictly more than the curl probe showed. For
+   the record, do **not** try to prove the flag by grepping the client bundle —
+   both ternary branches compile in, a false positive this repo has recorded
+   twice.
+5. **OPEN, and the only thing left:** call one tool. `get_workspace_context`
+   covers the most ground in a single request — it is a read, so it also tells you
+   nothing about the five REST-proxied tools; `create_note` is the one to try
+   after it, since its fix has never run. Then disconnect in Settings → Account →
+   Connected apps and confirm the next call fails.
 
 Customer-facing setup guide: `docs/mcp-connect.md`.
 
@@ -2167,7 +2206,22 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-25 (**per-user MCP access, over OAuth 2.1** — see
+*Last updated: 2026-08-25 (**per-user MCP access is LIVE, and shipped as
+v1.2.0** — see "Per-user MCP access, over OAuth 2.1" above. The migration is
+applied, the flag is on, and the MCP Inspector connected to production
+successfully, which in one connection exercises discovery, Dynamic Client
+Registration, the consent screen, PKCE, the code exchange, the access token and
+tools/list against real tables — and incidentally proves the deploy rebuilt
+apps/web, the trap the checklist warns about. The ledger entry landed at the flip
+rather than at merge, per the EPK precedent. WHAT IS STILL UNTESTED IS NOT SMALL:
+no tool has ever been called, so nothing has round-tripped through the
+internal-actor branch where five of the thirteen allow-listed tools live —
+create_note among them, whose long-standing 401 this work fixed and which has
+never run for real. Revoke, the Settings list, refresh rotation and claude.ai
+itself are all still unexercised; one get_workspace_context call answers most of
+it. Also recorded: why the claude.ai connector menu was missing (paid plan, and
+the path is Settings → Customize → Connectors, not Settings → Connectors).
+Previously: **per-user MCP access, over OAuth 2.1** — see
 "Per-user MCP access, over OAuth 2.1" above. Founder ask: let all users take
 their context to any LLM of their choice. It is OAuth rather than a per-user
 token because of one external fact worth re-checking before anyone simplifies

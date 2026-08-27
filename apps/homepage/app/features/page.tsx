@@ -33,23 +33,28 @@ const features = [
   {
     kicker: "The plan",
     title: "A rollout plan, not a blank page.",
-    body: "Create a release and Urganize lays out the whole 11-week rollout. 64 activities, from locking the master to pulling your first-week numbers. Real managers wrote it and tested it. Edit or delete any activity.",
+    // Numbers are the live playbooks (CLAUDE.md, shipped v0.55.0): single
+    // 64 activities / 11 weeks, EP 90 / 16, album 113 / 21. The screenshot
+    // below shows the EP one, so the copy names all three rather than
+    // describing a single next to a 90-activity image.
+    body: "Create a release and Urganize lays out the whole rollout, written by real managers and sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Edit or delete any activity.",
     points: [
-      "8 weeks before the drop, 3 weeks after",
+      "Singles, EPs and albums each get their own playbook",
       "Every activity dated around your release day",
       // Never "reorder" — reordering has no UI (CLAUDE.md: the endpoint
       // was deleted 2026-07-10) and the honesty rule bans advertising it.
       "Edit or delete anything. It's your plan",
     ],
     // Real screenshot of the current release view (light and dark retaken
-    // together 2026-08-01, same release and scroll position in both). Same
-    // house rule as the landing page: if the UI changes meaningfully,
-    // retake BOTH the light and dark version — marketing imagery never
-    // lags the product.
+    // together 2026-08-25, founder-supplied, same release and scroll
+    // position in both — an EP, "Starlife", on the 90-activity EP playbook,
+    // with the UrgAns rail open). Same house rule as the landing page: if
+    // the UI changes meaningfully, retake BOTH the light and dark version —
+    // marketing imagery never lags the product.
     image: {
       src: "/images/product/workspace-tasks.png",
       darkSrc: "/images/product/workspace-tasks-dark.png",
-      alt: "A release open in Urganize: the progress bar at 1 of 64, the upcoming activities with owners and due dates on every row and the UrgAns assistant docked alongside them.",
+      alt: "A release open in Urganize: the Motion bar at 7 of 90, the week's activities each with an owner and a due date, and the UrgAns assistant open alongside asking what you want to get done today.",
     },
   },
 ] as const;
@@ -176,7 +181,7 @@ export default function FeaturesPage() {
                     dark={feature.image.darkSrc}
                     alt={feature.image.alt}
                     width={1920}
-                    height={970}
+                    height={973}
                     sizes="(min-width: 1088px) 1024px, 100vw"
                   />
                 </div>
