@@ -11,10 +11,33 @@ import {
   toMetadataSnapshot,
 } from '../../_shared';
 
+// Feature flag. This route is part of the metadata surface
+// (NEXT_PUBLIC_FEATURE_METADATA) and was the one handler in it with no gate:
+// the credits route group, the public /credits/[token] page and its POST route
+// all 404 when the flag is off, so a direct call could still read and write a
+// release's distribution fields through here while every UI entry point to
+// them was dark.
+//
+// Defined locally rather than imported from the credits route group's
+// _shared.ts, matching how predict-genre/route.ts owns its own flag reader:
+// route groups read their flags themselves, and a cross-group import of a
+// boolean would tie this handler to a sibling group's module.
+//
+// The body is exactly 'Not found.' on purpose. lib/chappi/tool-families/shared
+// .ts:isFlagGateOff matches that string to tell "the feature is off" apart
+// from ensureReleaseOwnership's 'Release not found.', so the assistant can
+// explain which one happened instead of reporting a missing release.
+const isMetadataFeatureEnabled = (): boolean =>
+  process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
+  if (!isMetadataFeatureEnabled()) {
+    return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  }
+
   const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
@@ -85,6 +108,10 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
+  if (!isMetadataFeatureEnabled()) {
+    return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  }
+
   const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 

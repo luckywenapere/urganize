@@ -37,6 +37,7 @@ export const SCENE_NAMES: readonly SceneName[] = [
 // Inlined at build time, same read every UI gate uses. The prefetch list must
 // respect it: with the flag off the calendar API routes 404, so prefetching
 // the scene burned one guaranteed-404 request per scoped release.
+const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
@@ -51,9 +52,16 @@ const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
  * would 404 on almost every release. It fetches its own draft directly.
  *
  * 'calendar' and 'capture' are present only when their feature flags are on,
- * for the same would-always-404 reason. */
+ * for the same would-always-404 reason.
+ *
+ * 'metadata' joined them 2026-08-27. It had been unconditional, but its fetcher
+ * hits /metadata AND /credits, and the credits route has always 404'd with the
+ * flag off — and readJson throws on a non-ok response. So with the flag off
+ * this prefetch already spent two requests per release and then threw; the
+ * metadata route is gated now too, which would have made it two guaranteed
+ * 404s. */
 export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
-  'metadata',
+  ...(METADATA_ENABLED ? (['metadata'] as const) : []),
   ...(COVER_ART_ENABLED ? (['coverart'] as const) : []),
   ...(SONG_UPLOAD_ENABLED ? (['song'] as const) : []),
   'files',

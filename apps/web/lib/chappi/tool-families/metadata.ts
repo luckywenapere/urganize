@@ -6,7 +6,20 @@
 // patch would therefore quietly erase the ISRC while setting the genre. Every
 // write here reads the current row and merges first.
 
-import { apiError, argString, callInternalApi, fail, type ChappiTool } from './shared';
+import {
+  apiError,
+  argString,
+  callInternalApi,
+  fail,
+  isFlagGateOff,
+  type ChappiTool,
+} from './shared';
+
+/** The metadata route 404s with 'Not found.' when NEXT_PUBLIC_FEATURE_METADATA
+ * is off. Without translating that, the model would report it the same way it
+ * reports ensureReleaseOwnership's 'Release not found.' and tell the user their
+ * release does not exist. The create_note precedent. */
+const METADATA_OFF = 'Release details are not switched on for this workspace.';
 
 /** The exact allowlist PATCH …/metadata accepts, in the order the form shows
  * them. Anything outside this is not writable through that route. */
@@ -41,6 +54,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
       const res = await callInternalApi(ctx, `/api/releases/${releaseId}/metadata`, {
         method: 'GET',
       });
+      if (isFlagGateOff(res)) return fail(METADATA_OFF);
       if (!res.ok) return fail(apiError(res, 'Could not load the release details.'));
 
       const metadata = (res.body.metadata ?? {}) as Record<string, unknown>;
@@ -98,6 +112,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
       const current = await callInternalApi(ctx, `/api/releases/${releaseId}/metadata`, {
         method: 'GET',
       });
+      if (isFlagGateOff(current)) return fail(METADATA_OFF);
       if (!current.ok) {
         return fail(apiError(current, 'That release was not found in your workspace.'));
       }
@@ -115,6 +130,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
         method: 'PATCH',
         body,
       });
+      if (isFlagGateOff(res)) return fail(METADATA_OFF);
       if (!res.ok) return fail(apiError(res, 'Could not save the release details.'));
 
       const names = [...changed, ...(explicitChanged ? ['explicit'] : [])];

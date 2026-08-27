@@ -72,12 +72,14 @@ describe('persist policy', () => {
     // rather than a snapshot, so it owns its own reads and writes. The
     // calendar joins the list only when its flag is on — with it off, its API
     // routes 404, so prefetching would burn a guaranteed-404 per release.
+    const metadataEnabled = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
     const contentCalendarEnabled = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
     const captureEnabled = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
     const songUploadEnabled = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
     const coverArtEnabled = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
     const cacheable = [...SCENE_NAMES]
       .filter(isCacheableScene)
+      .filter((scene) => scene !== 'metadata' || metadataEnabled)
       .filter((scene) => scene !== 'calendar' || contentCalendarEnabled)
       .filter((scene) => scene !== 'capture' || captureEnabled)
       .filter((scene) => scene !== 'song' || songUploadEnabled)
