@@ -5,9 +5,11 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { isFirstReleaseRequired } from '@/lib/first-release-required';
 
 /**
- * Live reading of `isFirstReleaseRequired` against the auth + release stores
- * (URG-217). Read by CreateReleaseModal (to drop its exits) and by the
- * dashboard landing surfaces (to auto-open it).
+ * Live reading of `isFirstReleaseRequired` against the auth + release stores.
+ * Read by useFirstReleasePrompt (the deferred, once-per-session nudge that
+ * offers the create modal — see lib/first-release-prompt.ts) and by
+ * CreateReleaseModal (for its warmer first-release copy only; the modal is
+ * always dismissible since 2026-08-28).
  *
  * Co-located with its primary consumer rather than in lib/, matching how
  * useReleaseScope sits in components/workspace/ — and keeping the store

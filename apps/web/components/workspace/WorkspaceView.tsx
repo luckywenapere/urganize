@@ -18,7 +18,7 @@ import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { SetReleaseDateCard } from '@/components/releases/SetReleaseDateCard';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
-import { useFirstReleaseRequired } from '@/components/releases/useFirstReleaseRequired';
+import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { TasksPanel } from './TasksPanel';
@@ -222,9 +222,10 @@ export function WorkspaceView() {
     // on that would look like zero releases rather than one.
     if (isInitialLoading || hasAutoScopedRef.current) return;
     // 0 or 2+ releases: the chance stays OPEN deliberately. A brand-new account
-    // has zero here and is handed the create modal; when its first release
-    // lands, isSingleRelease flips true and that account should still get its
-    // one auto-scope. Consuming the chance now would silently remove it.
+    // has zero here and is prompted to create one (deferred — see
+    // useFirstReleasePrompt); when its first release lands, isSingleRelease
+    // flips true and that account should still get its one auto-scope.
+    // Consuming the chance now would silently remove it.
     if (!isSingleRelease) return;
     // ARRIVED ALREADY SCOPED — a refresh, a bookmark, an UrgAns link, or the
     // /dashboard/releases/[releaseId] redirect stub. The convenience this effect
@@ -271,17 +272,14 @@ export function WorkspaceView() {
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
 
-  // URG-217: a user with zero releases can't do anything here, so the create
-  // modal opens itself and (in the modal) loses its exits until they create
-  // one. Only fires once the store has CONFIRMED zero releases — the predicate
-  // fails open while loading and on load errors, so a network blip can't wall
-  // anyone off. Deleting your last release re-triggers this by design.
-  const firstReleaseRequired = useFirstReleaseRequired();
-  useEffect(() => {
-    if (firstReleaseRequired) {
-      setIsCreateModalOpen(true);
-    }
-  }, [firstReleaseRequired]);
+  // The deferred first-release prompt (2026-08-28, founder call — supersedes
+  // URG-217's immediate open): a zero-release account sees the workspace
+  // first, then the create modal offers itself about half a minute in, once
+  // per browser session, and can be dismissed. Only arms once the store has
+  // CONFIRMED zero releases — the predicate fails open while loading and on
+  // load errors, so a network blip never prompts anyone. Deleting your last
+  // release re-arms the condition by design (once per session still holds).
+  useFirstReleasePrompt(() => setIsCreateModalOpen(true));
 
   const generateStatus = async () => {
     if (!scopedReleaseId) return;
