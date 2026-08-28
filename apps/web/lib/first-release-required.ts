@@ -1,15 +1,18 @@
 /**
- * "This user has no releases and must create one before using the app"
- * (URG-217).
+ * "This user has no releases yet" — the trigger condition for the deferred
+ * first-release prompt (originally URG-217's inescapable auto-open; softened
+ * 2026-08-28, founder call — see lib/first-release-prompt.ts).
  *
- * A user with zero releases has nothing to do in the product — every surface
+ * A user with zero releases has little to do in the product — every surface
  * (activities, files, calendar, press kit, metadata) hangs off a release. So
- * CreateReleaseModal drops its exits and the dashboard auto-opens it. This
- * predicate is the single gate for both behaviors.
+ * useFirstReleasePrompt offers the create modal a little while in, and
+ * CreateReleaseModal reads this for its warmer first-release copy. This
+ * predicate is the single condition for both.
  *
- * FAIL OPEN ON EVERY UNCERTAINTY. A wrong `true` locks someone out of the
- * product behind a modal they cannot dismiss, so anything short of positive
- * proof of "loaded successfully, genuinely zero" must return false.
+ * FAIL OPEN ON EVERY UNCERTAINTY. A wrong `true` interrupts someone with a
+ * prompt they didn't need (and used to wall them in entirely), so anything
+ * short of positive proof of "loaded successfully, genuinely zero" must
+ * return false.
  *
  * The trap this is written to avoid: `useReleaseStore.loadCommandCenter` sets
  * `isInitialLoading: false` on BOTH success and failure, leaving `releases`
@@ -28,9 +31,11 @@ export type FirstReleaseRequiredInput = {
   isAuthenticated: boolean;
   isAuthLoading: boolean;
   /** `profiles.onboarding_completed === true`. While onboarding is still in
-   * flight, FirstTimeOnboardingGate owns this moment: it already forces a
-   * first release at its step 3, and its z-9998 full-screen overlay plus its
-   * own body-scroll lock would fight ours if we opened underneath it. */
+   * flight, /onboarding owns this moment — its wizard creates the first
+   * release itself before completion is stamped (runPostSignupHandoff), so
+   * prompting mid-flow would talk over the flow that already does the job.
+   * (An earlier revision cited FirstTimeOnboardingGate here; that gate was
+   * deleted 2026-07-29.) */
   hasCompletedOnboarding: boolean;
   /** `useReleaseStore.isInitialLoading` — the command-center fetch hasn't
    * resolved yet, so a zero-length `releases` proves nothing. */
