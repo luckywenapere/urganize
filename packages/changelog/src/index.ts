@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.5.1",
+    date: "August 29, 2026",
+    highlights: [
+      "The assignee box shows your whole team again. If an activity was already assigned to someone, opening the box only showed that one person, so you could not hand the work to anybody else.",
+      "Tapping a box no longer zooms the page in on your phone. That was happening on almost every field in the app.",
+      "Fixed a rare case in the plan editor where moving past the assignee box could quietly clear who it was assigned to.",
+    ],
+  },
+  {
     version: "1.5.0",
     date: "August 29, 2026",
     highlights: [
