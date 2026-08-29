@@ -1,13 +1,11 @@
-import { NextResponse } from 'next/server';
-import { createAdminClient } from '@/app/api/_shared/auth';
 import { RELEASE_CREDIT_ROLE_OPTIONS } from '@/types/credits';
 import type { ReleaseCreditLink, ReleaseCreditRole, ReleaseCreditSubmission } from '@/types/credits';
 
 // Shared helpers for the release-credits route group (URG-108): table
-// constants, the feature flag check, row mappers, and the local ownership
-// check. No schema-missing fallback here on purpose: environments are
-// assumed migrated (CLAUDE.md "Patterns being deprecated in v1"); a missing
-// table surfaces as a normal 500. Mirrors the EPK route group exactly.
+// constants, the feature flag check, and row mappers. No schema-missing
+// fallback here on purpose: environments are assumed migrated (CLAUDE.md
+// "Patterns being deprecated in v1"); a missing table surfaces as a normal
+// 500. Access checks are the shared team-aware pair re-exported below.
 
 // Canonical auth helpers live in app/api/_shared/auth.ts; re-exported here so
 // the route group's import sites stay stable (the EPK route group convention).
@@ -17,6 +15,14 @@ export {
   requireAuthenticatedAdmin,
   createAdminClient,
 } from '@/app/api/_shared/auth';
+
+// Release access is the shared team-aware pair (whole-workspace visibility;
+// guests read-only on writes) — re-exported so this group's import sites
+// stay stable, same convention as the auth helpers above.
+export {
+  ensureReleaseTeamReadAccess,
+  ensureReleaseTeamWriteAccess,
+} from '@/lib/release-access-server';
 
 export const RELEASE_CREDIT_LINKS_TABLE = 'release_credit_links';
 export const RELEASE_CREDIT_SUBMISSIONS_TABLE = 'release_credit_submissions';
@@ -74,30 +80,3 @@ export const toReleaseCreditSubmission = (row: Record<string, unknown>): Release
   createdAt: String(row.created_at || ''),
   updatedAt: String(row.updated_at || ''),
 });
-
-// Local ownership check for this route group, mirroring the EPK one:
-// deliberately NOT the ensureReleaseOwnership in app/api/releases/_shared.ts,
-// whose module carries the deprecated schema-missing fallback helpers this
-// feature must stay away from (the guard test). Same contract: 404 (never
-// 403) when the release is missing or owned by someone else.
-export async function ensureReleaseOwnership(
-  adminClient: NonNullable<ReturnType<typeof createAdminClient>>,
-  releaseId: string,
-  userId: string
-): Promise<{ error: NextResponse } | { releaseId: string }> {
-  const { data: release, error } = await adminClient
-    .from('releases')
-    .select('id,owner_user_id')
-    .eq('id', releaseId)
-    .maybeSingle();
-
-  if (error) {
-    return { error: NextResponse.json({ error: error.message || 'Could not load release.' }, { status: 500 }) };
-  }
-
-  if (!release || String(release.owner_user_id || '') !== userId) {
-    return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
-  }
-
-  return { releaseId: String(release.id || '') };
-}

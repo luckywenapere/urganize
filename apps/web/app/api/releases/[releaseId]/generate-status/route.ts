@@ -4,6 +4,7 @@ import {
   requireActiveAuthenticatedUserOrInternal,
   isOptionalTableMissingError,
 } from '../../_shared';
+import { ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
 import { generatePlainTextAiOutput, isAiConfigured } from '@/lib/ai/provider';
 import {
   buildStatusMessages,
@@ -158,7 +159,14 @@ export async function POST(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  // --- Load release (owner check) ---------------------------------------------
+  // Team WRITE gate (uniform non-GET rule): any non-guest member may generate
+  // a status update; guests get the view-only 403 rather than spending AI
+  // tokens on a result they could not act on.
+  const access = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
+  if ('error' in access) return access.error;
+
+  // --- Load release fields the prompt needs (release_type is not on the
+  // shared access summary) -----------------------------------------------------
   const releaseResult = await adminClient
     .from(RELEASES_TABLE)
     .select('id,owner_user_id,title,artist_name,release_date,release_type')
@@ -175,7 +183,7 @@ export async function POST(
     );
   }
   const release = releaseResult.data as ReleaseRow | null;
-  if (!release || String(release.owner_user_id) !== auth.user.id) {
+  if (!release) {
     return NextResponse.json({ error: 'Release not found.' }, { status: 404 });
   }
 

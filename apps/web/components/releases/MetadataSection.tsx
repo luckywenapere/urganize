@@ -620,10 +620,14 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
         here is required.
       </p>
 
-      {loadError ? (
+      {loadError && !data ? (
         // One error box for the whole scene, not one per step: it is a single
         // fetch, and letting each step's body render its own copy of the form
-        // risks saving blanks over real data mid-error.
+        // risks saving blanks over real data mid-error. Blocking ONLY when
+        // there is nothing to show — with cached data on screen, the banner
+        // inside the cards branch below reports the failure instead of
+        // hiding a perfectly good payload behind it (the CuratorLoadError
+        // blocking-vs-banner split).
         <div className="flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-status-error">{loadError}</p>
           <button
@@ -636,6 +640,23 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
         </div>
       ) : (
         <div className="space-y-3">
+          {loadError ? (
+            // Stale-but-usable: the refresh failed but a cached payload is on
+            // screen (the store keeps it on a failed revalidate). Keep the
+            // cards; say so above them.
+            <div className="flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-status-error">
+                Couldn&rsquo;t refresh this page &mdash; showing what we have. {loadError}
+              </p>
+              <button
+                type="button"
+                onClick={() => void reloadScene()}
+                className="inline-flex h-8 shrink-0 items-center self-start border border-stroke-default bg-bg-elevated px-3 text-xs font-semibold text-content-primary hover:bg-bg-hover sm:self-auto"
+              >
+                Retry
+              </button>
+            </div>
+          ) : null}
           {/* Step 1: release details */}
           <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
             <button

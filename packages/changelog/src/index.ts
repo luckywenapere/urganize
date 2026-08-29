@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.4.4",
+    date: "August 29, 2026",
+    highlights: [
+      "Your teammates can now open a release's pages — Collect metadata, the calendar, the press kit and the rest. Before, those pages said \"Release not found.\" unless you were the person who created the release.",
+      "If the Collect metadata page can't refresh, you keep what already loaded and get a Retry button instead of the page going blank.",
+    ],
+  },
+  {
     version: "1.4.3",
     date: "August 29, 2026",
     highlights: [

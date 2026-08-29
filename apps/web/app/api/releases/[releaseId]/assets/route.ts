@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createAdminClient,
-  ensureReleaseOwnership,
   requireActiveAuthenticatedUser,
   isOptionalTableMissingError,
 } from '../../_shared';
+import { ensureReleaseTeamReadAccess, ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
 import {
   ASSET_SIGNED_URL_TTL_SECONDS,
   RELEASE_ASSETS_BUCKET,
@@ -63,7 +63,7 @@ export async function GET(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamReadAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const { data, error } = await adminClient
@@ -140,7 +140,7 @@ export async function POST(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const body = (await request.json().catch(() => null)) as AssetRecordBody | null;

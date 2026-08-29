@@ -353,6 +353,12 @@ type WorkspaceAccessContext = {
   artistScopeByOwnerId: Record<string, string>;
   /** Same scopes keyed by workspace id — for task/board checks. */
   artistScopeByWorkspaceId: Record<string, string>;
+  /** The caller's role in each owner's workspace, keyed by OWNER user id
+   * (first-wins on the owner-first membership sort above the primary pick).
+   * Missing key = no membership resolved — writers treat that as read-only,
+   * the same fail-closed rule as isReadOnlyWorkspaceMember. Consumed by
+   * lib/release-access-server.ts's guest gate. */
+  memberRoleByOwnerId: Record<string, string>;
 };
 
 const TASK_STATUS_SET = new Set<TaskStatus>([
@@ -972,6 +978,18 @@ async function resolveWorkspaceAccessContext(
     ])
   );
 
+  // The caller's role per workspace OWNER — zero extra queries, derived from
+  // the rows already loaded. First-wins over the owner-first membership sort,
+  // matching resolveReleaseTaskWorkspace's .find precedent for the
+  // multiple-workspaces-same-owner edge.
+  const memberRoleByOwnerId: Record<string, string> = {};
+  for (const member of memberships) {
+    const ownerId = workspaceById.get(member.workspaceId)?.owner_id || '';
+    if (ownerId && !(ownerId in memberRoleByOwnerId)) {
+      memberRoleByOwnerId[ownerId] = member.role;
+    }
+  }
+
   // Artist scopes — read in a SEPARATE, tolerant query so the app keeps
   // working before the artist_scope_id migration is applied (the main
   // membership select must never reference a column that may not exist).
@@ -1026,6 +1044,7 @@ async function resolveWorkspaceAccessContext(
       releaseOwnerIds,
       artistScopeByOwnerId,
       artistScopeByWorkspaceId,
+      memberRoleByOwnerId,
     },
     hasProvisionedOwnWorkspace,
   };
@@ -1050,6 +1069,7 @@ const EMPTY_WORKSPACE_ACCESS_CONTEXT: WorkspaceAccessContext = {
   releaseOwnerIds: [],
   artistScopeByOwnerId: {},
   artistScopeByWorkspaceId: {},
+  memberRoleByOwnerId: {},
 };
 
 /** Reads profiles.role. Never throws: an unreadable profile is treated as a

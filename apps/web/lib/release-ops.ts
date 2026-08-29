@@ -39,6 +39,19 @@ export type ReleaseSummary = {
   updatedAt: string;
 };
 
+export const toReleaseSummary = (row: Record<string, unknown>): ReleaseSummary => ({
+  id: String(row.id || ''),
+  ownerUserId: String(row.owner_user_id || ''),
+  artistId: String(row.artist_id || ''),
+  artistName: String(row.artist_name || ''),
+  title: String(row.title || ''),
+  slug: String(row.slug || ''),
+  status: (String(row.status || 'draft') as ReleaseSummary['status']) || 'draft',
+  description: String(row.description || ''),
+  createdAt: String(row.created_at || ''),
+  updatedAt: String(row.updated_at || ''),
+});
+
 export type ReleaseCollaborator = {
   id: string;
   releaseId: string;

@@ -1,5 +1,3 @@
-import { NextResponse } from 'next/server';
-import { createAdminClient } from '@/app/api/_shared/auth';
 import type { ReleaseEpk } from '@/types/epk';
 
 // Shared helpers for the EPK route group (URG-196): table constant, the
@@ -16,6 +14,14 @@ export {
   requireAuthenticatedAdmin,
   createAdminClient,
 } from '@/app/api/_shared/auth';
+
+// Release access is the shared team-aware pair (whole-workspace visibility;
+// guests read-only on writes) — re-exported so this group's import sites
+// stay stable, same convention as the auth helpers above.
+export {
+  ensureReleaseTeamReadAccess,
+  ensureReleaseTeamWriteAccess,
+} from '@/lib/release-access-server';
 
 export const RELEASE_EPKS_TABLE = 'release_epks';
 
@@ -35,30 +41,3 @@ export const toReleaseEpk = (row: Record<string, unknown>): ReleaseEpk => ({
   updatedAt: String(row.updated_at || ''),
 });
 
-// Local ownership check for this route group, mirroring the content-calendar
-// one: deliberately NOT the ensureReleaseOwnership in
-// app/api/releases/_shared.ts, whose module carries the deprecated
-// schema-missing fallback helpers this feature must stay away from (the
-// guard test). Same contract: 404 (never 403) when the release is missing or
-// owned by someone else.
-export async function ensureReleaseOwnership(
-  adminClient: NonNullable<ReturnType<typeof createAdminClient>>,
-  releaseId: string,
-  userId: string
-): Promise<{ error: NextResponse } | { releaseId: string }> {
-  const { data: release, error } = await adminClient
-    .from('releases')
-    .select('id,owner_user_id')
-    .eq('id', releaseId)
-    .maybeSingle();
-
-  if (error) {
-    return { error: NextResponse.json({ error: error.message || 'Could not load release.' }, { status: 500 }) };
-  }
-
-  if (!release || String(release.owner_user_id || '') !== userId) {
-    return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
-  }
-
-  return { releaseId: String(release.id || '') };
-}

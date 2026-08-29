@@ -440,6 +440,7 @@ export function WorkspaceView() {
     | 'releaseDate'
     | 'templatePending'
     | 'status'
+    | 'ownerUserId'
   > | null>(() => {
     if (!scopedReleaseId) return null;
     const found = releases.find((r) => r.id === scopedReleaseId);
@@ -455,8 +456,19 @@ export function WorkspaceView() {
       releaseDate: found.releaseDate,
       templatePending: found.templatePending,
       status: found.status,
+      // Gates the two OWNER-ONLY actions below (archive, set-date): both
+      // routes deliberately keep owner-only checks, so offering them to a
+      // teammate is a button that 404s on press.
+      ownerUserId: found.ownerUserId,
     };
   }, [scopedReleaseId, releases]);
+
+  // Whether the scoped release belongs to the signed-in user. Fails OPEN on
+  // missing data (legacy cache rows without ownerUserId, auth still
+  // resolving) — the ReleasesSection pattern: hiding an owner's own controls
+  // is worse than a teammate seeing a control the server refuses.
+  const scopedReleaseIsOwn =
+    !scopedReleaseSlim?.ownerUserId || !user?.id || scopedReleaseSlim.ownerUserId === user.id;
 
   // Differentiate browser tabs when a release is scoped, ported from the
   // removed release detail page — falls back to the default dashboard
@@ -611,7 +623,7 @@ export function WorkspaceView() {
   // one-way door.
   const isScopedArchived = !isReleaseActive(scopedReleaseSlim?.status);
   const archiveAction =
-    scopedReleaseId && (isRecapEligible || isScopedArchived)
+    scopedReleaseId && scopedReleaseIsOwn && (isRecapEligible || isScopedArchived)
       ? {
           label: isScopedArchived ? 'Restore release' : 'Archive release',
           onClick: () => setIsArchiveOpen(true),
@@ -649,7 +661,7 @@ export function WorkspaceView() {
   // activity list (URG-230). It reports its own success through the existing
   // workspace toast and unmounts on its own once the store reports a date.
   const setReleaseDateBanner =
-    !planBanner && scopedReleaseSlim && !scopedReleaseSlim.releaseDate ? (
+    !planBanner && scopedReleaseSlim && scopedReleaseIsOwn && !scopedReleaseSlim.releaseDate ? (
       <SetReleaseDateCard
         releaseId={scopedReleaseSlim.id}
         releaseTitle={scopedReleaseSlim.title}
