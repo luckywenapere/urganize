@@ -403,7 +403,20 @@ interface AuthState {
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: (nextPath?: string) => Promise<void>;
-  signup: (email: string, password: string, name: string, role: string, artistName?: string) => Promise<void>;
+  signup: (
+    email: string,
+    password: string,
+    name: string,
+    role: string,
+    artistName?: string,
+    options?: {
+      /** Invite token stashed into auth.user_metadata at signup so the
+       * server-side deferred claim (lib/invite-claims-server.ts) can finish
+       * the workspace join even when the accept POST after signup never
+       * completes — the account-created-but-never-joined dead end. */
+      pendingInviteToken?: string;
+    }
+  ) => Promise<void>;
   updateArtistName: (artistName: string) => Promise<void>;
   updateProfileName: (name: string) => Promise<void>;
   updateAskAfterTasks: (enabled: boolean) => Promise<void>;
@@ -696,7 +709,14 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      signup: async (email: string, password: string, name: string, role: string, artistName?: string) => {
+      signup: async (
+        email: string,
+        password: string,
+        name: string,
+        role: string,
+        artistName?: string,
+        options?: { pendingInviteToken?: string }
+      ) => {
         try {
           set({ isLoading: true, error: null });
           const normalizedArtistName = String(artistName || '').trim();
@@ -712,6 +732,10 @@ export const useAuthStore = create<AuthState>()(
                 name: name.trim(),
                 role,
                 artist_name: normalizedArtistName || undefined,
+                // Durable record of a not-yet-claimed workspace invite. The
+                // deferred claim in loadWorkspaceAccessContext reads and
+                // clears it — see lib/invite-claims-server.ts.
+                pending_invite_token: options?.pendingInviteToken?.trim() || undefined,
               },
             },
           });

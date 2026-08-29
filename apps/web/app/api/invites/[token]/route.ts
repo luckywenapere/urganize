@@ -5,7 +5,7 @@ import {
   looksLikeInviteLinkCode,
   verifyInviteLinkToken,
 } from '@/lib/invite-link';
-import { checkSeatAllowance, recordLimitHit } from '@/lib/seats-server';
+import { claimWorkspaceInvite, type InviteClaimResult } from '@/lib/invite-claims-server';
 
 // Public + authenticated endpoints for token-based invite acceptance.
 //
@@ -15,10 +15,13 @@ import { checkSeatAllowance, recordLimitHit } from '@/lib/seats-server';
 //                                 the user creates an account. Never leaks
 //                                 user_id, never returns the token itself.
 //
-//   POST /api/invites/[token]   → authenticated; links the current user to
-//                                 the pending workspace_members row by token.
-//                                 Uses the service-role admin client for the
-//                                 UPDATE because the user does not own the
+//   POST /api/invites/[token]   → authenticated; joins the caller via
+//                                 lib/invite-claims-server's claimWorkspaceInvite
+//                                 (the ONE implementation of the join, shared
+//                                 with the deferred claim in
+//                                 loadWorkspaceAccessContext — keep them on one
+//                                 implementation). Uses the service-role admin
+//                                 client because the caller does not own the
 //                                 row yet (user_id is NULL until acceptance).
 //
 // Why not put this behind the paywall? Invites are the entry path INTO a
@@ -50,31 +53,6 @@ const createAdmin = (config: SupabaseConfig): SupabaseClient =>
 
 function normalizeToken(raw: unknown): string {
   return String(raw || '').trim();
-}
-
-// Invitees join an EXISTING workspace — the first-time onboarding wizard
-// (FirstTimeOnboardingGate's "New Workspace" flow: tell us about your
-// release, create your first release) is wrong for them and, being a
-// non-dismissible full-screen takeover, traps them after acceptance.
-// Marking the profile complete here means every accept path (email
-// signup, Google, already-authed) lands the invitee straight on the
-// dashboard. Best-effort: a failure must never block the accept itself.
-async function markOnboardingComplete(admin: SupabaseClient, userId: string): Promise<void> {
-  try {
-    const result = await admin
-      .from(PROFILES_TABLE)
-      .update({
-        onboarding_completed: true,
-        onboarding_completed_at: new Date().toISOString(),
-      })
-      .eq('id', userId)
-      .eq('onboarding_completed', false);
-    if (result.error) {
-      console.error('[invites/token] onboarding-complete update error:', result.error.message);
-    }
-  } catch (error) {
-    console.error('[invites/token] onboarding-complete update threw:', error);
-  }
 }
 
 type InviteRow = {
@@ -167,111 +145,6 @@ async function loadLinkByCode(admin: SupabaseClient, code: string): Promise<Link
   } catch {
     return null;
   }
-}
-
-/** Shared multi-use JOIN for link-style invites (wl.* tokens and short
- * codes): idempotent for existing members; a colliding pending email-invite
- * row is activated instead of failing. */
-async function joinWorkspaceViaLink(
-  admin: SupabaseClient,
-  params: {
-    workspaceId: string;
-    userId: string;
-    email: string;
-    role: string;
-    artistScopeId: string | null;
-  }
-): Promise<NextResponse> {
-  const { workspaceId, userId, email, role, artistScopeId } = params;
-
-  const existingMembership = await admin
-    .from(WORKSPACE_MEMBERS_TABLE)
-    .select('id,status')
-    .eq('workspace_id', workspaceId)
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (existingMembership.data?.id) {
-    await markOnboardingComplete(admin, userId);
-    return NextResponse.json({ status: 'already_member', workspaceId });
-  }
-
-  // Seat cap. This is the enforcement point that matters most: one shareable
-  // link can be redeemed by many people, so capping only the per-email invite
-  // route would leave the ceiling trivially bypassable. Placed after the
-  // already-a-member return above, because an existing member occupies a seat
-  // already and re-entering changes no total.
-  //
-  // Note the tier is resolved from the WORKSPACE, not from the acting user: the
-  // person here is the invitee, and their own primary team is not the team they
-  // are joining. Fails open on an unreadable count or tier — refusing a
-  // teammate over a transient read failure is the worse mistake.
-  const seats = await checkSeatAllowance(admin, workspaceId);
-  if (!seats.allowed) {
-    await recordLimitHit(admin, {
-      workspaceId,
-      actorUserId: userId,
-      key: seats.key,
-      limit: seats.limit,
-      current: seats.current,
-    });
-    // The accept page renders `error` verbatim in its inline banner, so the
-    // invitee reads this string. It names the plan rather than blaming them,
-    // and points at the person who can fix it.
-    return NextResponse.json(
-      { error: `${seats.message} Ask the person who invited you to upgrade, then open this link again.` },
-      { status: 409 }
-    );
-  }
-
-  const nowIso = new Date().toISOString();
-  const insertPayload: Record<string, unknown> = {
-    workspace_id: workspaceId,
-    user_id: userId,
-    email,
-    role,
-    status: 'active',
-    invite_token: null,
-    invite_expires_at: null,
-    invited_at: nowIso,
-    joined_at: nowIso,
-    updated_at: nowIso,
-  };
-  // Artist links scope the joiner to that artist's releases. Only written
-  // when set so unscoped links work before the artist_scope_id migration.
-  if (artistScopeId) {
-    insertPayload.artist_scope_id = artistScopeId;
-  }
-  const insertResult = await admin.from(WORKSPACE_MEMBERS_TABLE).insert(insertPayload);
-
-  if (insertResult.error) {
-    // A pending email-invite row for the same address would collide on the
-    // (workspace_id, email) unique — activate that row instead.
-    if (email) {
-      const pendingResult = await admin
-        .from(WORKSPACE_MEMBERS_TABLE)
-        .update({
-          user_id: userId,
-          status: 'active',
-          joined_at: nowIso,
-          invite_token: null,
-          invite_expires_at: null,
-          updated_at: nowIso,
-        })
-        .eq('workspace_id', workspaceId)
-        .eq('email', email)
-        .is('user_id', null);
-      if (!pendingResult.error) {
-        await markOnboardingComplete(admin, userId);
-        return NextResponse.json({ status: 'accepted', workspaceId });
-      }
-    }
-    console.error('[invites/token] link join insert error:', insertResult.error.message);
-    return NextResponse.json({ error: 'Could not accept invite.' }, { status: 500 });
-  }
-
-  await markOnboardingComplete(admin, userId);
-  return NextResponse.json({ status: 'accepted', workspaceId });
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -405,133 +278,30 @@ export async function POST(
 
   const admin = createAdmin(config);
 
-  // Shareable LINK tokens (wl.*): verify the signature, then ADD the caller
-  // as an active member (multi-use — the token is not consumed). Idempotent
-  // for existing members.
-  if (isInviteLinkToken(token)) {
-    const verdict = verifyInviteLinkToken(token);
-    if (verdict.status === 'invalid') {
-      return NextResponse.json({ error: 'Invite not found.' }, { status: 404 });
-    }
-    if (verdict.status === 'expired') {
-      return NextResponse.json(
-        { error: 'This invite link has expired. Ask the workspace owner for a new one.' },
-        { status: 410 }
-      );
-    }
-
-    return joinWorkspaceViaLink(admin, {
-      workspaceId: verdict.workspaceId,
-      userId,
-      email: String(userResult.data.user.email || '').trim().toLowerCase(),
-      role: verdict.role,
-      artistScopeId: verdict.artistScopeId,
-    });
-  }
-
-  // Short /join/<code> links — same multi-use join semantics as wl.* tokens.
-  if (looksLikeInviteLinkCode(token)) {
-    const link = await loadLinkByCode(admin, token);
-    if (link) {
-      if (link.revoked_at || isExpired(link.expires_at)) {
-        return NextResponse.json(
-          { error: 'This invite link has expired. Ask the workspace owner for a new one.' },
-          { status: 410 }
-        );
-      }
-      return joinWorkspaceViaLink(admin, {
-        workspaceId: link.workspace_id,
-        userId,
-        email: String(userResult.data.user.email || '').trim().toLowerCase(),
-        role: link.role || 'member',
-        artistScopeId: link.artist_scope_id || null,
-      });
-    }
-    // No matching link row — fall through to the legacy member-row lookup.
-  }
-
-  const invite = await loadInvite(admin, token);
-  if (!invite) {
-    return NextResponse.json({ error: 'Invite not found.' }, { status: 404 });
-  }
-
-  if (invite.status === 'active' || invite.user_id) {
-    // Already accepted. If THIS user is the one it was already accepted by,
-    // treat as success (idempotent). Otherwise reject.
-    if (invite.user_id === userId) {
-      await markOnboardingComplete(admin, userId);
-      return NextResponse.json({
-        status: 'already_accepted',
-        workspaceId: invite.workspace_id,
-      });
-    }
-    return NextResponse.json(
-      { error: 'This invite has already been used.' },
-      { status: 410 }
-    );
-  }
-
-  if (isExpired(invite.invite_expires_at)) {
-    return NextResponse.json(
-      { error: 'This invite link has expired. Ask the workspace owner for a new one.' },
-      { status: 410 }
-    );
-  }
-
-  // Guard the (workspace_id, user_id) partial unique index — if the user
-  // is already a member of this workspace via another row, the UPDATE
-  // would fail. In that case nothing to do; report success.
-  const existingMembership = await admin
-    .from(WORKSPACE_MEMBERS_TABLE)
-    .select('id,status')
-    .eq('workspace_id', invite.workspace_id)
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (existingMembership.data?.id) {
-    // Still consume the token so the link is single-use even on the
-    // already-member edge case.
-    await admin
-      .from(WORKSPACE_MEMBERS_TABLE)
-      .update({
-        invite_token: null,
-        invite_expires_at: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', invite.id);
-
-    await markOnboardingComplete(admin, userId);
-    return NextResponse.json({
-      status: 'already_member',
-      workspaceId: invite.workspace_id,
-    });
-  }
-
-  const nowIso = new Date().toISOString();
-  const updateResult = await admin
-    .from(WORKSPACE_MEMBERS_TABLE)
-    .update({
-      user_id: userId,
-      status: 'active',
-      joined_at: invite.joined_at || nowIso,
-      // Clear the token so it can't be reused — single-use by construction.
-      invite_token: null,
-      invite_expires_at: null,
-      updated_at: nowIso,
-    })
-    .eq('id', invite.id);
-
-  if (updateResult.error) {
-    console.error('[invites/token] accept update error:', updateResult.error.message);
-    return NextResponse.json(
-      { error: 'Could not accept invite.' },
-      { status: 500 }
-    );
-  }
-
-  await markOnboardingComplete(admin, userId);
-  return NextResponse.json({
-    status: 'accepted',
-    workspaceId: invite.workspace_id,
+  const result = await claimWorkspaceInvite(admin, {
+    token,
+    userId,
+    email: String(userResult.data.user.email || '').trim().toLowerCase(),
   });
+  return claimResultToResponse(result);
+}
+
+/** Map the shared claim result onto this route's long-standing response
+ * shapes. The accept page only checks response.ok and renders `error`
+ * verbatim, so the status strings here are informational. */
+function claimResultToResponse(result: InviteClaimResult): NextResponse {
+  switch (result.outcome) {
+    case 'joined':
+      return NextResponse.json({ status: 'accepted', workspaceId: result.workspaceId });
+    case 'already_member':
+      return NextResponse.json({ status: 'already_member', workspaceId: result.workspaceId });
+    case 'rejected': {
+      const status =
+        result.reason === 'invalid' ? 404 : result.reason === 'seat_limit' ? 409 : 410;
+      return NextResponse.json({ error: result.message }, { status });
+    }
+    case 'error':
+    default:
+      return NextResponse.json({ error: 'Could not accept invite.' }, { status: 500 });
+  }
 }
