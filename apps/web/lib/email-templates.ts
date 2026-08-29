@@ -137,7 +137,7 @@ export type WelcomeEmailInput = {
  *  a support@ address because this is where the founder actually answers. */
 const FOUNDER_WHATSAPP_URL = 'https://wa.me/2347067367057';
 
-const APP_URL = 'https://app.urganize.app';
+export const APP_URL = 'https://app.urganize.app';
 
 /** First word of the stored name, if it plausibly reads as a name. An email
  *  handle like "lucky.wenapere" or a blank falls back to '' so the greeting
@@ -306,6 +306,160 @@ ${rowsHtml}
       </p>
     </div>
   </div>
+</div>
+</body>
+</html>`;
+
+  return { subject, html, text };
+}
+export type TaskAssignedEmailInput = {
+  /** The assignee's display name as stored on their profile. */
+  recipientName: string;
+  /** Who assigned it — a name when we have one, otherwise their email. */
+  assignerLabel: string;
+  taskTitle: string;
+  /** The release the activity belongs to; '' when it has none. */
+  releaseTitle: string;
+  /** Already formatted ("Fri, Sep 4"); '' when the activity has no due date. */
+  dueDateLabel: string;
+  /** 'Urgent' / 'High priority' for the two loud tiers, '' otherwise. */
+  priorityLabel: string;
+  /** First stretch of the activity's description; '' when there is none. */
+  note: string;
+  /** Absolute URL landing on the workspace scoped to the release. */
+  taskUrl: string;
+};
+
+/** "Fri, Sep 4" from a due_date value, in UTC so a date-only string never
+ * shifts a day. '' when absent or unparseable — the template drops it. */
+export function formatDueDateForEmail(raw: string | null | undefined): string {
+  const value = String(raw || '').trim();
+  if (!value) return '';
+  const ms = Date.parse(value);
+  if (!Number.isFinite(ms)) return '';
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(ms));
+}
+
+/** Only the two loud tiers earn a word in the email; everything else is
+ * noise a colleague would not bother writing down. */
+export function priorityLabelForEmail(raw: string | null | undefined): string {
+  const value = String(raw || '').trim().toLowerCase();
+  if (value === 'urgent') return 'Urgent';
+  if (value === 'high') return 'High priority';
+  return '';
+}
+
+/** First stretch of the description for the email card's note line: first
+ * non-empty line, capped. '' when there is nothing worth quoting. */
+export function noteExcerptForEmail(raw: string | null | undefined, maxLength = 160): string {
+  const firstLine =
+    String(raw || '')
+      .split('\n')
+      .map((line) => line.trim())
+      .find(Boolean) || '';
+  if (!firstLine) return '';
+  if (firstLine.length <= maxLength) return firstLine;
+  return `${firstLine.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+/**
+ * "You've been handed an activity" — sent to the assignee alongside the
+ * in-app + push notification (founder request, 2026-08-29).
+ *
+ * FOUNDER-NOTE REGISTER, deliberately, with one designed element. The brief
+ * was explicit: it must read as if a person wrote it, not as product mail.
+ * The welcome email above documents what makes mail read personal here (plain
+ * paragraphs, system font, white ground, no banner) and warns "do not brand
+ * this up" — this template follows that, in the ASSIGNER's voice, and the
+ * one structured piece is a small card carrying the activity itself (spring
+ * left border, the same accent the app uses), because the task details are
+ * the one part a colleague WOULD write down precisely. Everything around the
+ * card stays prose. If this ever grows a logo banner it has crossed back
+ * into the register the brief rejected.
+ *
+ * Pair it with sendEmail's fromLabel ("<assigner> via Urganize") so the inbox
+ * row itself reads as coming from the person.
+ */
+export function buildTaskAssignedEmail(input: TaskAssignedEmailInput): BuiltEmail {
+  const assigner = input.assignerLabel.trim() || 'Your teammate';
+  const taskTitle = input.taskTitle.trim() || 'An activity';
+  const release = input.releaseTitle.trim();
+  const due = input.dueDateLabel.trim();
+  const priority = input.priorityLabel.trim();
+  const note = input.note.trim();
+  const url = input.taskUrl;
+  const firstName = firstNameFrom(input.recipientName);
+  const greeting = firstName ? `Hey ${firstName},` : 'Hey,';
+
+  const subject = `${assigner} put "${taskTitle}" on your plate`;
+
+  const lead = release
+    ? `${assigner} just handed you this one, for ${release}:`
+    : `${assigner} just handed you this one:`;
+
+  // "Midnight EP · due Fri, Sep 4 · Urgent" — only the parts that exist.
+  const metaParts = [release, due ? `due ${due}` : '', priority].filter(Boolean);
+  const metaLine = metaParts.join(' · ');
+
+  const text = [
+    greeting,
+    '',
+    lead,
+    '',
+    `  ${taskTitle}`,
+    ...(metaLine ? [`  ${metaLine}`] : []),
+    ...(note ? [`  "${note}"`] : []),
+    '',
+    'Everything you need is on the activity itself: the details, the files',
+    'and where it sits in the plan.',
+    '',
+    'Open it here:',
+    url,
+    '',
+    `You are getting this because ${assigner} assigned the activity to you`,
+    'on Urganize.',
+  ].join('\n');
+
+  const p = `margin:0 0 18px;color:#1e2621;font-size:15px;line-height:1.65;`;
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#ffffff;">
+<div style="display:none;font-size:0;line-height:0;max-height:0;overflow:hidden;">
+${escapeHtml(`${assigner} assigned you ${taskTitle}${release ? ` for ${release}` : ''}.`)}
+</div>
+<div style="max-width:560px;margin:0 auto;padding:36px 24px;font-family:${FONT_STACK};">
+  <p style="${p}">${escapeHtml(greeting)}</p>
+  <p style="${p}">${escapeHtml(lead)}</p>
+  <div style="border-left:3px solid ${SPRING};background-color:${PAGE_BG};border-radius:0 12px 12px 0;padding:16px 20px;margin:0 0 22px;">
+    <p style="margin:0;color:${INK};font-size:17px;line-height:1.4;font-weight:700;letter-spacing:-0.2px;">${escapeHtml(taskTitle)}</p>${
+      metaLine
+        ? `\n    <p style="margin:6px 0 0;color:${MUTED_TEXT};font-size:13px;line-height:1.5;">${escapeHtml(metaLine)}</p>`
+        : ''
+    }${
+      note
+        ? `\n    <p style="margin:10px 0 0;color:${BODY_TEXT};font-size:14px;line-height:1.55;font-style:italic;">&ldquo;${escapeHtml(note)}&rdquo;</p>`
+        : ''
+    }
+  </div>
+  <p style="${p}">Everything you need is on the activity itself: the details, the files and where it sits in the plan.</p>
+  <a href="${escapeHtml(url)}"
+     style="display:inline-block;background-color:${SPRING};color:${INK};font-size:15px;font-weight:700;text-decoration:none;padding:12px 24px;border-radius:10px;">
+    Open the activity
+  </a>
+  <p style="margin:28px 0 0;color:${MUTED_TEXT};font-size:12px;line-height:1.6;">
+    You are getting this because ${escapeHtml(assigner)} assigned the activity to you on
+    <a href="${APP_URL}" style="color:${MUTED_TEXT};">Urganize</a>.
+  </p>
 </div>
 </body>
 </html>`;
