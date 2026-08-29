@@ -3,7 +3,7 @@ import {
   CAPTURE_PAGE_COLUMNS,
   RELEASE_CAPTURE_PAGES_TABLE,
   createAdminClient,
-  ensureReleaseOwnership,
+  ensureReleaseTeamWriteAccess,
   generateShareToken,
   isCaptureFeatureEnabled,
   requireActiveAuthenticatedUser,
@@ -43,7 +43,7 @@ export async function POST(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const { data: updated, error } = await adminClient

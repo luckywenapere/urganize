@@ -3,7 +3,8 @@ import {
   CONTENT_POSTS_TABLE,
   createAdminClient,
   ensureCalendarInRelease,
-  ensureReleaseOwnership,
+  ensureReleaseTeamReadAccess,
+  ensureReleaseTeamWriteAccess,
   isContentCalendarFeatureEnabled,
   isValidPostFormat,
   isValidPostPillar,
@@ -43,7 +44,7 @@ export async function GET(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamReadAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   // Tenancy boundary (hardening item 1): the calendar must belong to the
@@ -131,7 +132,7 @@ export async function POST(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const body = (await request.json().catch(() => null)) as PostCreateBody | null;
@@ -196,7 +197,10 @@ export async function POST(
   const insertResult = await adminClient
     .from(CONTENT_POSTS_TABLE)
     .insert({
-      owner_user_id: auth.user.id,
+      // The RELEASE owner, not the acting teammate: the row must survive the
+      // teammate's account (auth.users delete-cascade) and stay visible to
+      // the owner's RLS/export, which key on this column.
+      owner_user_id: ownership.release.ownerUserId,
       calendar_id: calendarId,
       release_id: releaseId,
       shared_group_id: null,

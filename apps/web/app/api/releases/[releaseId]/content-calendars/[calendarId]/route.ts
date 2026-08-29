@@ -3,7 +3,7 @@ import {
   CONTENT_CALENDARS_TABLE,
   createAdminClient,
   ensureCalendarInRelease,
-  ensureReleaseOwnership,
+  ensureReleaseTeamWriteAccess,
   isContentCalendarFeatureEnabled,
   requireActiveAuthenticatedUser,
   toContentCalendar,
@@ -39,7 +39,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   // Tenancy boundary (hardening item 1): the calendar must belong to the
@@ -104,7 +104,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   // The destructive variant that makes the tenancy check non-negotiable

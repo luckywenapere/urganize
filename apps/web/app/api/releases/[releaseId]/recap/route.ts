@@ -15,7 +15,8 @@ import {
   RECAP_COLUMNS,
   RELEASE_RECAPS_TABLE,
   createAdminClient,
-  ensureReleaseOwnership,
+  ensureReleaseTeamReadAccess,
+  ensureReleaseTeamWriteAccess,
   isRecapEligible,
   isRecapFeatureEnabled,
   parseRecapInputs,
@@ -113,7 +114,7 @@ export async function GET(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamReadAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const { data, error } = await adminClient
@@ -188,7 +189,7 @@ export async function POST(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
   const { release } = ownership;
 
@@ -303,7 +304,9 @@ export async function POST(
 
   const { data: inserted, error: insertError } = await adminClient
     .from(RELEASE_RECAPS_TABLE)
-    .insert({ owner_user_id: auth.user.id, release_id: releaseId, ...rowValues })
+    // owner_user_id is the RELEASE owner, not the acting teammate: the row
+    // must survive the teammate's account and stay on the owner's RLS/export.
+    .insert({ owner_user_id: release.ownerUserId, release_id: releaseId, ...rowValues })
     .select(RECAP_COLUMNS)
     .maybeSingle();
 
@@ -366,7 +369,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   // Idempotent: deleting an already-deleted recap is a success.

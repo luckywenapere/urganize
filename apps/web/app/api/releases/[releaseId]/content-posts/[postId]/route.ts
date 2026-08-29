@@ -3,7 +3,7 @@ import {
   CONTENT_POSTS_TABLE,
   createAdminClient,
   ensureCalendarInRelease,
-  ensureReleaseOwnership,
+  ensureReleaseTeamWriteAccess,
   isContentCalendarFeatureEnabled,
   isValidPostFormat,
   isValidPostPillar,
@@ -20,7 +20,7 @@ type RouteContext = { params: Promise<{ releaseId: string; postId: string }> };
 
 // 404 (never 403) when the post is missing or hangs off another release, so
 // probing cannot tell the difference. Release ownership is already proven by
-// ensureReleaseOwnership before this runs.
+// the release access check before this runs.
 async function loadPostInRelease(
   adminClient: NonNullable<ReturnType<typeof createAdminClient>>,
   postId: string,
@@ -76,7 +76,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const existing = await loadPostInRelease(adminClient, postId, releaseId);
@@ -234,7 +234,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const existing = await loadPostInRelease(adminClient, postId, releaseId);

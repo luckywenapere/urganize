@@ -31,6 +31,14 @@ export {
   createAdminClient,
 } from '@/app/api/_shared/auth';
 
+// Release access is the shared team-aware pair (whole-workspace visibility;
+// guests read-only on writes) — re-exported so this group's import sites
+// stay stable, same convention as the auth helpers above.
+export {
+  ensureReleaseTeamReadAccess,
+  ensureReleaseTeamWriteAccess,
+} from '@/lib/release-access-server';
+
 export const ASSETS_TABLE = 'assets';
 
 /**
@@ -55,33 +63,6 @@ export const notFoundResponse = (): NextResponse =>
   NextResponse.json({ error: 'Not found.' }, { status: 404 });
 
 type AdminClient = NonNullable<ReturnType<typeof createAdminClient>>;
-
-export async function ensureReleaseOwnership(
-  adminClient: AdminClient,
-  releaseId: string,
-  userId: string
-): Promise<{ error: NextResponse } | { releaseId: string; ownerUserId: string }> {
-  const { data: release, error } = await adminClient
-    .from('releases')
-    .select('id,owner_user_id')
-    .eq('id', releaseId)
-    .maybeSingle();
-
-  if (error) {
-    return {
-      error: NextResponse.json(
-        { error: error.message || 'Could not load release.' },
-        { status: 500 }
-      ),
-    };
-  }
-
-  if (!release || String(release.owner_user_id || '') !== userId) {
-    return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
-  }
-
-  return { releaseId: String(release.id || ''), ownerUserId: String(release.owner_user_id || '') };
-}
 
 type AssetRow = {
   id: string;
