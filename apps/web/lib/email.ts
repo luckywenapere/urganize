@@ -40,6 +40,12 @@ export type EmailMessage = {
    *  spam scoring and is what plain-text clients render. */
   html: string;
   text: string;
+  /** Optional display name overriding EMAIL_FROM's, e.g. "Lucky via Urganize".
+   *  Only the NAME half changes — the sending address always stays the
+   *  verified EMAIL_FROM one, so deliverability and DMARC are untouched.
+   *  The "X via Y" shape is the established way personal-feeling product
+   *  mail signals who acted (Docs, Notion); see composeFromHeader. */
+  fromLabel?: string;
 };
 
 export type EmailSendResult = {
@@ -67,6 +73,28 @@ export function isEmailConfigured(): boolean {
   return readConfig() !== null;
 }
 
+/** Builds the From header. Pure and exported for tests.
+ *
+ *  configuredFrom is EMAIL_FROM verbatim — either `Name <addr@domain>` or a
+ *  bare address. With a label, the ADDRESS is kept and only the display name
+ *  is replaced; the label is sanitised (no angle brackets, quotes or line
+ *  breaks — header-injection characters) and capped so a hostile profile
+ *  name cannot forge headers or overflow the field. A label that sanitises
+ *  to nothing falls back to the configured value unchanged. */
+export function composeFromHeader(configuredFrom: string, label?: string): string {
+  const cleanLabel = String(label || '')
+    .replace(/[<>"\r\n]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 60)
+    .trim();
+  if (!cleanLabel) return configuredFrom;
+  const match = configuredFrom.match(/<([^<>]+)>\s*$/);
+  const address = (match ? match[1] : configuredFrom).trim();
+  if (!address) return configuredFrom;
+  return `${cleanLabel} <${address}>`;
+}
+
 export async function sendEmail(message: EmailMessage): Promise<EmailSendResult> {
   const config = readConfig();
   if (!config) {
@@ -88,7 +116,7 @@ export async function sendEmail(message: EmailMessage): Promise<EmailSendResult>
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: config.from,
+        from: composeFromHeader(config.from, message.fromLabel),
         to: [message.to],
         subject: message.subject,
         html: message.html,

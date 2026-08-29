@@ -4,6 +4,7 @@ import {
   TASKS_TABLE,
   buildReadOnlyResponse,
   buildTaskSchemaResponse,
+  createTaskNotification,
   requireAuthenticatedAdmin,
   requireAuthenticatedAdminOrInternal,
   isTaskSchemaMissingError,
@@ -146,6 +147,26 @@ export async function POST(request: NextRequest) {
     const task = createdRow
       ? await loadTaskDetail(adminClient, createdRow as TaskRow, auth.user.id)
       : null;
+
+    // Creating an activity ALREADY assigned to a teammate is the same "you
+    // have new work" moment as reassigning one, and until 2026-08-29 it
+    // notified nobody — only the PATCH route's reassignment did. Same guard
+    // as there: never for the creator assigning to themself (which is also
+    // every template-instantiated task). createTaskNotification carries the
+    // bell row, the push mirror and the assignment email, and swallows its
+    // own failures.
+    const createdTaskId = String((createdRow as TaskRow | null)?.id || '');
+    const createdAssigneeId = String(
+      (createdRow as { assigned_to_user_id?: string } | null)?.assigned_to_user_id || ''
+    );
+    if (createdTaskId && createdAssigneeId && createdAssigneeId !== auth.user.id) {
+      void createTaskNotification(adminClient, {
+        userId: createdAssigneeId,
+        type: 'task_assigned',
+        taskId: createdTaskId,
+        actorId: auth.user.id,
+      });
+    }
 
     return NextResponse.json({ task });
   } catch (error) {
