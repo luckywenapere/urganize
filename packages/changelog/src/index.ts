@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.4.2",
+    date: "August 29, 2026",
+    highlights: [
+      "Invite links are dependable now. If a teammate created an account from your link but never landed in your workspace, that can no longer happen: they join automatically the next time they sign in.",
+      "Signing up on a weak connection used to leave a teammate stuck outside the team, so you could not assign them anything and they could not see your releases. Both are fixed by the same change.",
+    ],
+  },
+  {
     version: "1.4.1",
     date: "August 27, 2026",
     highlights: [

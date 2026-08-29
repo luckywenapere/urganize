@@ -36,6 +36,7 @@ import { getNotificationPresets } from '@/lib/notification-presets-server';
 import type { NotificationPresets } from '@/lib/notification-presets';
 import { TEAM_TRIAL_DAYS, isHardPaywallEnabled } from '@/lib/team-billing';
 import { logBillingEvent } from '@/lib/billing-events-server';
+import { claimPendingWorkspaceInvite } from '@/lib/invite-claims-server';
 
 export const WORKSPACES_TABLE = 'workspaces';
 export const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
@@ -1083,6 +1084,9 @@ export async function loadWorkspaceAccessContext(
   //      latency now hides behind the resolve instead of adding to it; when
   //      it does activate rows, we re-resolve so an invited user still sees
   //      their workspace on this same request rather than the next one.
+  //      The deferred TOKEN claim (claimPendingWorkspaceInvite) rides the
+  //      same Promise.all under the same contract: recover the membership,
+  //      then re-resolve on this same request.
   //   2. Resolve the context with reads only.
   //   3. Provision-on-miss: only a user whose OWN workspace + owner
   //      membership isn't intact (first-ever load, or a corrupted/missing
@@ -1096,19 +1100,28 @@ export async function loadWorkspaceAccessContext(
   //      /api/curator/activate-team — carries a team role here and provisions
   //      normally. The role read rides in the same Promise.all so its latency
   //      hides behind the resolve on the steady state.
-  const [activatedInvites, initialResolved, accountRole] = await Promise.all([
-    activatePendingWorkspaceInvitesForUser(adminClient, user),
-    resolveWorkspaceAccessContext(adminClient, user),
-    loadAccountRole(adminClient, user.id),
-  ]);
+  const [activatedInvites, claimedPendingInvite, initialResolved, accountRole] =
+    await Promise.all([
+      activatePendingWorkspaceInvitesForUser(adminClient, user),
+      // Deferred invite claim (lib/invite-claims-server.ts): finishes a join
+      // whose accept POST never completed — the account-created-but-never-
+      // joined dead end a real invited teammate hit. Zero queries on the
+      // steady state (no pending_invite_token in user_metadata), so it rides
+      // this hot path for free, exactly like the email-invite activation
+      // beside it.
+      claimPendingWorkspaceInvite(adminClient, user),
+      resolveWorkspaceAccessContext(adminClient, user),
+      loadAccountRole(adminClient, user.id),
+    ]);
 
   if (accountRole === 'curator') {
     return EMPTY_WORKSPACE_ACCESS_CONTEXT;
   }
 
-  let resolved = activatedInvites
-    ? await resolveWorkspaceAccessContext(adminClient, user)
-    : initialResolved;
+  let resolved =
+    activatedInvites || claimedPendingInvite
+      ? await resolveWorkspaceAccessContext(adminClient, user)
+      : initialResolved;
 
   if (!resolved.hasProvisionedOwnWorkspace) {
     try {
