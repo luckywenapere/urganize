@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.5.0",
+    date: "August 29, 2026",
+    highlights: [
+      "When you hand an activity to a teammate, they now get an email as well, not just a notification. It reads like a note from you, with the activity, the release and the due date, and a button that opens it.",
+      "This also works when you create an activity that is already assigned to someone. Before, that told nobody at all.",
+    ],
+  },
+  {
     version: "1.4.3",
     date: "August 29, 2026",
     highlights: [

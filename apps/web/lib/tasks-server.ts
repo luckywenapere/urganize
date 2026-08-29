@@ -36,6 +36,14 @@ import { getNotificationPresets } from '@/lib/notification-presets-server';
 import type { NotificationPresets } from '@/lib/notification-presets';
 import { TEAM_TRIAL_DAYS, isHardPaywallEnabled } from '@/lib/team-billing';
 import { logBillingEvent } from '@/lib/billing-events-server';
+import { sendEmail } from '@/lib/email';
+import {
+  APP_URL,
+  buildTaskAssignedEmail,
+  formatDueDateForEmail,
+  noteExcerptForEmail,
+  priorityLabelForEmail,
+} from '@/lib/email-templates';
 import { claimPendingWorkspaceInvite } from '@/lib/invite-claims-server';
 
 export const WORKSPACES_TABLE = 'workspaces';
@@ -1881,6 +1889,91 @@ export async function createTaskNotification(
   } catch (error) {
     console.error('[push] task notification push failed', error);
   }
+
+  // Email delivery — ASSIGNMENT ONLY (founder request, 2026-08-29): the push
+  // is a ping that only reaches devices with notifications enabled, and the
+  // bell is desktop-only, so an assignment could land silently for a teammate
+  // who has neither. Assignment is also the one event low-frequency and
+  // high-consequence enough to earn an inbox row; the due-date sweeps and
+  // status/comment events deliberately stay push+bell only. Rides the same
+  // dedup guard above (an early return means no email either), and like the
+  // push it must never fail the notification: sendEmail never throws and
+  // silently no-ops when RESEND_API_KEY/EMAIL_FROM are unset.
+  if (input.type === 'task_assigned') {
+    try {
+      await sendTaskAssignedEmail(adminClient, {
+        assigneeUserId: input.userId,
+        actorUserId: input.actorId || null,
+        taskId: input.taskId,
+      });
+    } catch (error) {
+      console.error('[email] task assignment email failed', error);
+    }
+  }
+}
+
+async function sendTaskAssignedEmail(
+  adminClient: SupabaseClient,
+  input: { assigneeUserId: string; actorUserId: string | null; taskId: string }
+): Promise<void> {
+  const [assigneeResult, actorResult, taskResult] = await Promise.all([
+    adminClient
+      .from('profiles')
+      .select('email,name')
+      .eq('id', input.assigneeUserId)
+      .maybeSingle(),
+    input.actorUserId
+      ? adminClient.from('profiles').select('email,name').eq('id', input.actorUserId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    adminClient
+      .from(TASKS_TABLE)
+      .select('title,description,due_date,priority,release_id')
+      .eq('id', input.taskId)
+      .maybeSingle(),
+  ]);
+
+  const assigneeEmail = String(assigneeResult.data?.email || '').trim();
+  if (!assigneeEmail) return;
+
+  const assignerLabel =
+    String(actorResult.data?.name || '').trim() ||
+    String(actorResult.data?.email || '').trim() ||
+    'Your teammate';
+
+  const task = taskResult.data as
+    | { title?: string; description?: string; due_date?: string; priority?: string; release_id?: string }
+    | null;
+  const releaseId = String(task?.release_id || '').trim();
+
+  let releaseTitle = '';
+  if (releaseId) {
+    const releaseResult = await adminClient
+      .from(RELEASES_TABLE)
+      .select('title')
+      .eq('id', releaseId)
+      .maybeSingle();
+    releaseTitle = String(releaseResult.data?.title || '').trim();
+  }
+
+  const message = buildTaskAssignedEmail({
+    recipientName: String(assigneeResult.data?.name || ''),
+    assignerLabel,
+    taskTitle: String(task?.title || ''),
+    releaseTitle,
+    dueDateLabel: formatDueDateForEmail(task?.due_date),
+    priorityLabel: priorityLabelForEmail(task?.priority),
+    note: noteExcerptForEmail(task?.description),
+    taskUrl: releaseId ? `${APP_URL}/dashboard?release=${releaseId}` : `${APP_URL}/dashboard`,
+  });
+
+  await sendEmail({
+    to: assigneeEmail,
+    subject: message.subject,
+    html: message.html,
+    text: message.text,
+    // The inbox row itself reads as coming from the person who assigned it.
+    fromLabel: `${assignerLabel} via Urganize`,
+  });
 }
 
 // Runs across every user's tasks in one pass — called from the

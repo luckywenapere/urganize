@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildCreditSubmissionEmail,
+  buildTaskAssignedEmail,
+  formatDueDateForEmail,
+  noteExcerptForEmail,
+  priorityLabelForEmail,
   buildWelcomeEmail,
   buildWorkspaceInviteEmail,
 } from './email-templates';
@@ -209,5 +213,148 @@ describe('buildCreditSubmissionEmail', () => {
     expect(email.html).not.toContain('var(--');
     expect(email.html).not.toContain('@font-face');
     expect(email.html).not.toContain('<style');
+  });
+});
+describe('buildTaskAssignedEmail', () => {
+  const base = {
+    recipientName: 'Tobi Adeyemi',
+    assignerLabel: 'Lucky Wenapere',
+    taskTitle: 'Shoot cover art',
+    releaseTitle: 'Midnight EP',
+    dueDateLabel: 'Fri, Sep 4',
+    priorityLabel: 'High priority',
+    note: 'Brief for the designer is in the files.',
+    taskUrl: 'https://app.urganize.app/dashboard?release=rel-1',
+  };
+
+  it('reads as a note from the assigner: subject names them and the activity', () => {
+    const built = buildTaskAssignedEmail(base);
+    expect(built.subject).toBe('Lucky Wenapere put "Shoot cover art" on your plate');
+  });
+
+  it('greets the assignee by first name and signs the footer with the assigner', () => {
+    const built = buildTaskAssignedEmail(base);
+    expect(built.text).toContain('Hey Tobi,');
+    expect(built.html).toContain('Hey Tobi,');
+    expect(built.html).toContain('Lucky Wenapere assigned the activity to you');
+  });
+
+  it('carries the card: title, release, due date and priority in one meta line', () => {
+    const built = buildTaskAssignedEmail(base);
+    expect(built.html).toContain('Shoot cover art');
+    expect(built.html).toContain('Midnight EP · due Fri, Sep 4 · High priority');
+    expect(built.text).toContain('Midnight EP · due Fri, Sep 4 · High priority');
+  });
+
+  it('quotes the note when present and drops the line entirely when absent', () => {
+    const withNote = buildTaskAssignedEmail(base);
+    expect(withNote.html).toContain('Brief for the designer is in the files.');
+    const without = buildTaskAssignedEmail({ ...base, note: '' });
+    expect(without.html).not.toContain('font-style:italic');
+  });
+
+  it('degrades cleanly with no release, due date or priority', () => {
+    const built = buildTaskAssignedEmail({
+      ...base,
+      releaseTitle: '',
+      dueDateLabel: '',
+      priorityLabel: '',
+      note: '',
+    });
+    expect(built.subject).toBe('Lucky Wenapere put "Shoot cover art" on your plate');
+    // The lead loses its "for <release>" clause and the meta line vanishes
+    // rather than rendering stray separators.
+    expect(built.text).toContain('Lucky Wenapere just handed you this one:');
+    expect(built.text).not.toContain(' · ');
+    expect(built.html).not.toContain(' · ');
+  });
+
+  it('falls back on every missing identity without reading as broken', () => {
+    const built = buildTaskAssignedEmail({
+      ...base,
+      recipientName: '',
+      assignerLabel: '',
+      taskTitle: '',
+    });
+    expect(built.subject).toBe('Your teammate put "An activity" on your plate');
+    expect(built.text).toContain('Hey,');
+  });
+
+  it('does not greet an email handle as a first name', () => {
+    const built = buildTaskAssignedEmail({ ...base, recipientName: 'tobi.adeyemi@x.com' });
+    expect(built.text).toContain('Hey,');
+    expect(built.text).not.toContain('Hey tobi');
+  });
+
+  it('escapes hostile titles and names in the HTML half', () => {
+    const built = buildTaskAssignedEmail({
+      ...base,
+      taskTitle: '<script>alert(1)</script>',
+      assignerLabel: 'A & B "Crew"',
+    });
+    expect(built.html).not.toContain('<script>');
+    expect(built.html).toContain('&lt;script&gt;');
+    expect(built.html).toContain('A &amp; B &quot;Crew&quot;');
+    // The plain-text half is not HTML and must stay readable verbatim.
+    expect(built.text).toContain('A & B "Crew"');
+  });
+
+  it('links to the activity in both halves', () => {
+    const built = buildTaskAssignedEmail(base);
+    expect(built.html).toContain('https://app.urganize.app/dashboard?release=rel-1');
+    expect(built.text).toContain('https://app.urganize.app/dashboard?release=rel-1');
+  });
+
+  it('has no logo banner: personal register, not product mail', () => {
+    // The invite/credits card templates open with an ink banner div; the
+    // founder-note register (welcome, this) must not. The brief for this
+    // email was explicitly "must not read as automated" — a banner is the
+    // marker that flips the register, so its absence is pinned.
+    const built = buildTaskAssignedEmail(base);
+    expect(built.html).not.toContain('background-color:#0d120e');
+  });
+});
+describe('formatDueDateForEmail', () => {
+  it('formats a date-only value without shifting a day (UTC)', () => {
+    expect(formatDueDateForEmail('2026-09-04')).toBe('Fri, Sep 4');
+  });
+
+  it('formats a full timestamp', () => {
+    expect(formatDueDateForEmail('2026-09-04T15:30:00Z')).toBe('Fri, Sep 4');
+  });
+
+  it('returns empty for absent or unparseable values', () => {
+    expect(formatDueDateForEmail(null)).toBe('');
+    expect(formatDueDateForEmail('')).toBe('');
+    expect(formatDueDateForEmail('not-a-date')).toBe('');
+  });
+});
+
+describe('priorityLabelForEmail', () => {
+  it('names only the two loud tiers', () => {
+    expect(priorityLabelForEmail('urgent')).toBe('Urgent');
+    expect(priorityLabelForEmail('high')).toBe('High priority');
+    expect(priorityLabelForEmail('medium')).toBe('');
+    expect(priorityLabelForEmail('low')).toBe('');
+    expect(priorityLabelForEmail(null)).toBe('');
+  });
+});
+
+describe('noteExcerptForEmail', () => {
+  it('takes the first non-empty line', () => {
+    expect(noteExcerptForEmail('\n\n  First real line.\nSecond line.')).toBe('First real line.');
+  });
+
+  it('caps long lines with an ellipsis', () => {
+    const long = 'x'.repeat(200);
+    const excerpt = noteExcerptForEmail(long);
+    expect(excerpt.length).toBeLessThanOrEqual(160);
+    expect(excerpt.endsWith('…')).toBe(true);
+  });
+
+  it('returns empty for blank descriptions', () => {
+    expect(noteExcerptForEmail('')).toBe('');
+    expect(noteExcerptForEmail('   \n  ')).toBe('');
+    expect(noteExcerptForEmail(null)).toBe('');
   });
 });
