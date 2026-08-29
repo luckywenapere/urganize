@@ -165,11 +165,14 @@ describe('composeFromHeader', () => {
   it('sends with the composed From when a fromLabel is given', async () => {
     vi.stubEnv('RESEND_API_KEY', 're_key');
     vi.stubEnv('EMAIL_FROM', 'Urganize <team@send.urganize.app>');
-    const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+    const fetchMock = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response('{}', { status: 200 })
+    );
     vi.stubGlobal('fetch', fetchMock);
     const { sendEmail } = await loadEmail();
     await sendEmail({ ...message, fromLabel: 'Lucky via Urganize' });
-    const body = JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string);
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body ?? '{}'));
     expect(body.from).toBe('Lucky via Urganize <team@send.urganize.app>');
     vi.unstubAllGlobals();
   });

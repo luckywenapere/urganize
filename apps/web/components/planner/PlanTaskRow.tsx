@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { CalendarClock, RotateCcw, Trash2, Undo2 } from 'lucide-react';
 
-import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
+import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';
 import type { WorkspaceMember } from '@/lib/tasks';
 import {
   computeTaskYmd,
@@ -54,14 +53,6 @@ export function PlanTaskRow({
   const dateYmd = releaseDate ? computeTaskYmd(releaseDate, task.offset_days) : null;
   const selectedMember =
     members.find((member) => member.userId && member.userId === task.assignee_user_id) || null;
-
-  // Seeded from the assignee this row actually has, not left blank. An
-  // unseeded input rendered the "Nobody yet" placeholder over an assigned
-  // activity, and — until the blur fix in TaskMemberCombobox — tabbing
-  // through the row committed that emptiness as a real unassign.
-  // `undefined` means "not edited yet", so a later edit still wins.
-  const [memberQueryDraft, setMemberQueryDraft] = useState<string | undefined>(undefined);
-  const memberQuery = memberQueryDraft ?? selectedMember?.name ?? '';
 
   if (task.removed) {
     return (
@@ -155,11 +146,9 @@ export function PlanTaskRow({
         </label>
 
         <div className="min-w-[10rem] flex-1">
-          <TaskMemberCombobox
+          <TaskMemberSelect
             members={members}
             selectedMember={selectedMember}
-            query={memberQuery}
-            onQueryChange={setMemberQueryDraft}
             onSelectMember={(member) => onChange({ assignee_user_id: member?.userId || null })}
             label="Assign someone"
             placeholder="Nobody yet"
