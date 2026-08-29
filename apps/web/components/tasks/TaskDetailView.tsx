@@ -5,7 +5,7 @@ import { CalendarDays, X } from 'lucide-react';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
-import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
+import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';
 import { ShareLoginActions } from '@/components/team/ShareLoginActions';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
@@ -136,7 +136,6 @@ export function TaskDetailView({
 }: TaskDetailViewProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [assigneeQuery, setAssigneeQuery] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState<WorkspaceMember | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
 
@@ -179,7 +178,6 @@ export function TaskDetailView({
     setTitle(task.title);
     setDescription(task.description || '');
     setSelectedAssignee(task.assignee || null);
-    setAssigneeQuery(task.assignee?.name || '');
     // Keyed on the task's id for the same reason as the invite reset below:
     // the drawer's async detail fetch (and every field save) hands back a new
     // `task` reference for the SAME activity, and re-seeding on that wiped
@@ -415,16 +413,13 @@ export function TaskDetailView({
             <div className={PROPERTY_ROW_CLASS}>
               <span className={PROPERTY_LABEL_CLASS}>Assignee</span>
               <div className="md:max-w-[300px]">
-                <TaskMemberCombobox
+                <TaskMemberSelect
                   density="compact"
                   members={members}
                   selectedMember={selectedAssignee}
-                  query={assigneeQuery}
-                  onQueryChange={setAssigneeQuery}
                   isLoading={isLoadingMembers}
                   onSelectMember={(member) => {
                     setSelectedAssignee(member);
-                    setAssigneeQuery(member?.name || '');
                     void onSavePatch({ assignedToUserId: member?.userId || null });
                   }}
                 />

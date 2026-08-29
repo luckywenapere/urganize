@@ -4,7 +4,7 @@ import { useEffect, useId, useRef } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { ReleaseCombobox } from '@/components/shared/ReleaseCombobox';
-import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
+import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';
 import { type ReleaseOption } from '@/lib/release-helpers';
 import { type WorkspaceMember } from '@/lib/tasks';
 
@@ -13,7 +13,6 @@ type TaskQuickCreateModalProps = {
   title: string;
   releaseQuery: string;
   selectedRelease: ReleaseOption | null;
-  assigneeQuery: string;
   selectedAssignee: WorkspaceMember | null;
   dueDate: string;
   releases: ReleaseOption[];
@@ -27,7 +26,6 @@ type TaskQuickCreateModalProps = {
   onTitleChange: (value: string) => void;
   onReleaseQueryChange: (value: string) => void;
   onSelectRelease: (release: ReleaseOption | null) => void;
-  onAssigneeQueryChange: (value: string) => void;
   onSelectAssignee: (member: WorkspaceMember | null) => void;
   onDueDateChange: (value: string) => void;
   /**
@@ -46,7 +44,6 @@ export function TaskQuickCreateModal({
   title,
   releaseQuery,
   selectedRelease,
-  assigneeQuery,
   selectedAssignee,
   dueDate,
   releases,
@@ -58,7 +55,6 @@ export function TaskQuickCreateModal({
   onTitleChange,
   onReleaseQueryChange,
   onSelectRelease,
-  onAssigneeQueryChange,
   onSelectAssignee,
   onDueDateChange,
   pendingReleaseId = null,
@@ -221,11 +217,9 @@ export function TaskQuickCreateModal({
               />
             </div>
 
-            <TaskMemberCombobox
+            <TaskMemberSelect
               members={members}
               selectedMember={selectedAssignee}
-              query={assigneeQuery}
-              onQueryChange={onAssigneeQueryChange}
               onSelectMember={onSelectAssignee}
             />
           </div>

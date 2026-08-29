@@ -256,54 +256,6 @@ export function getInitials(value: string): string {
   return parts.map((part) => part[0]?.toUpperCase() || '').join('');
 }
 
-/** Case- and whitespace-insensitive comparison key for picker matching. */
-function normalizeMemberValue(value: string): string {
-  return value.trim().toLowerCase();
-}
-
-/**
- * Which teammates a member picker should list for a given search string.
- *
- * Extracted from TaskMemberCombobox so the rule is testable: vitest runs in a
- * node environment here and collects only `lib/**` and `app/**`, so a
- * component test is not an option (vitest.config.ts, and CLAUDE.md's v1
- * testing posture). Same reasoning `lib/task-sections.test.ts` records.
- *
- * The load-bearing case is `queryEqualsSelection`. The picker's input doubles
- * as BOTH the display of the current assignee and the search box, so an
- * activity that already has an assignee arrives with that person's name in the
- * input. Filtering by it leaves the dropdown showing only the person already
- * assigned — exactly the bug reported 2026-08-29, where a manager opened an
- * activity assigned to himself and his teammate was missing from the list.
- * While the query is still just the seeded selection, treat the filter as
- * empty and offer everyone; the moment the text is edited, substring matching
- * resumes.
- *
- * `apps/web/components/shared/ReleaseCombobox.tsx` carries the identical guard
- * for the release picker, where this bug was found first. Those two are the
- * only implementations and should stay in step.
- */
-export function filterMembersForPicker(
-  members: WorkspaceMember[],
-  query: string,
-  selectedMember: WorkspaceMember | null
-): WorkspaceMember[] {
-  const normalizedQuery = normalizeMemberValue(query);
-  if (!normalizedQuery) {
-    return members;
-  }
-
-  const queryEqualsSelection =
-    selectedMember !== null && normalizeMemberValue(selectedMember.name) === normalizedQuery;
-  if (queryEqualsSelection) {
-    return members;
-  }
-
-  return members.filter((member) =>
-    `${member.name} ${member.email}`.toLowerCase().includes(normalizedQuery)
-  );
-}
-
 export function formatFileSize(value: number): string {
   if (!Number.isFinite(value) || value <= 0) {
     return '0 B';

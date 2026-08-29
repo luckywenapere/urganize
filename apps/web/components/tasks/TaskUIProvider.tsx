@@ -144,10 +144,6 @@ function toReleaseQuery(release: ReleaseOption | null): string {
   return release?.title || '';
 }
 
-function toAssigneeQuery(member: WorkspaceMember | null): string {
-  return member?.name || '';
-}
-
 export function useTaskUI() {
   const context = useContext(TaskUIContext);
   if (!context) {
@@ -182,7 +178,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const [quickTitle, setQuickTitle] = useState('');
   const [quickReleaseQuery, setQuickReleaseQuery] = useState('');
   const [quickSelectedRelease, setQuickSelectedRelease] = useState<ReleaseOption | null>(null);
-  const [quickAssigneeQuery, setQuickAssigneeQuery] = useState('');
   const [quickSelectedAssignee, setQuickSelectedAssignee] = useState<WorkspaceMember | null>(null);
   const [quickDueDate, setQuickDueDate] = useState('');
   const [isQuickSaving, setIsQuickSaving] = useState(false);
@@ -313,7 +308,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     setQuickTitle('');
     setQuickReleaseQuery('');
     setQuickSelectedRelease(null);
-    setQuickAssigneeQuery('');
     setQuickSelectedAssignee(null);
     setQuickDueDate('');
     setQuickCreateDefaults({});
@@ -694,7 +688,6 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         title={quickTitle}
         releaseQuery={quickReleaseQuery}
         selectedRelease={quickSelectedRelease}
-        assigneeQuery={quickAssigneeQuery}
         selectedAssignee={quickSelectedAssignee}
         dueDate={quickDueDate}
         releases={releases}
@@ -709,10 +702,8 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
           setQuickSelectedRelease(release);
           setQuickReleaseQuery(toReleaseQuery(release));
         }}
-        onAssigneeQueryChange={setQuickAssigneeQuery}
         onSelectAssignee={(member) => {
           setQuickSelectedAssignee(member);
-          setQuickAssigneeQuery(toAssigneeQuery(member));
         }}
         onDueDateChange={setQuickDueDate}
         pendingReleaseId={quickCreateDefaults.releaseId || null}

@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.5.3",
+    date: "August 29, 2026",
+    highlights: [
+      "Picking who does an activity is now a simple dropdown. Tap it and the list of your team opens — no keyboard pops up over it any more.",
+    ],
+  },
+  {
     version: "1.5.2",
     date: "August 29, 2026",
     highlights: [

@@ -2212,7 +2212,7 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-29 (**the assignee picker hid the team, and fields zoomed on tap — shipped as v1.5.2** — see "The assignee picker hid the team" near the end of this file. The picker filtered its list by the current assignee's name, so an already-assigned activity offered only that person; the guard now lives in filterMembersForPicker (lib/tasks.ts) and is the second copy of one ReleaseCombobox already carried — keep them in step. Blurring an empty box no longer unassigns, PlanTaskRow seeds its query, and TaskDetailView's seed effect is keyed on task?.id. Separately, one (pointer: coarse) rule sets form controls to 16px, since this project's type scale sits under iOS's auto-zoom threshold nearly everywhere; the !important is load-bearing against Tailwind specificity, and pinch/double-tap zoom were ALREADY closed by touch-action: pan-y. Same day, earlier: **the release scenes are team-aware, shipped as
+*Last updated: 2026-08-29 (**the assignee picker is a dropdown now — shipped as v1.5.3** — see "The assignee picker became a dropdown" near the end of this file. Its text input raised the phone keyboard over the list it was meant to show, so TaskMemberCombobox is deleted and TaskMemberSelect (a button over a role=listbox panel, the NoteReleasePicker pattern) replaces it at all three call sites. Search was dropped outright rather than hidden on mobile: Manager caps a team at four seats, and a viewport-conditional control means two code paths for one picker. It also deletes the bug class v1.5.2 had guarded — both of those defects existed only because the display and the filter were one field. Same day, earlier: **the assignee picker hid the team, and fields zoomed on tap — shipped as v1.5.2** — see "The assignee picker hid the team" near the end of this file. The picker filtered its list by the current assignee's name, so an already-assigned activity offered only that person; the guard now lives in filterMembersForPicker (lib/tasks.ts) and is the second copy of one ReleaseCombobox already carried — keep them in step. Blurring an empty box no longer unassigns, PlanTaskRow seeds its query, and TaskDetailView's seed effect is keyed on task?.id. Separately, one (pointer: coarse) rule sets form controls to 16px, since this project's type scale sits under iOS's auto-zoom threshold nearly everywhere; the !important is load-bearing against Tailwind specificity, and pinch/double-tap zoom were ALREADY closed by touch-action: pan-y. Same day, earlier: **the release scenes are team-aware, shipped as
 v1.5.1** — see "Scenes opened to the team: one release-access rule" above. A
 teammate opening Collect metadata on a release they could see everywhere got
 "Release not found.", because every scene route group carried an accidental
@@ -5665,6 +5665,58 @@ guard test and traced call paths. Worth one live pass: as a teammate, open
 Collect metadata and the Calendar on a shared release, save a metadata field,
 create the credits link (its row's `owner_user_id` must be the release owner),
 and as a guest confirm the view-only refusal on save.
+
+---
+
+## The assignee picker became a dropdown (2026-08-29, v1.5.3)
+
+Founder request, hours after v1.5.2: *"I don't think they should be able to
+type in that place. They should just open the dropdown... whenever I click on
+it, it just opens the keyboard and blocks the dropdown menu."*
+
+`TaskMemberCombobox` was a text input that doubled as a search box, so tapping
+it raised the phone keyboard over the very list being picked from. It is
+deleted; `components/tasks/TaskMemberSelect.tsx` replaces it — a button trigger
+over a `role="listbox"` panel, structurally `components/notes/NoteReleasePicker.tsx`
+(outside-click close, Escape closes only the menu and returns focus, options
+are real buttons so Tab and Enter work without roving focus).
+
+**Search was dropped outright rather than hidden on mobile, and that is the
+decision to re-read before adding it back.** The Manager tier caps a team at
+four seats (`packages/pricing`, `limits.seats`), so the list is a handful of
+people that a scrolling menu handles — principle 6, the case we have. A
+viewport-conditional control would also mean two code paths for one picker,
+which this file already records going wrong (the "three independently-correct
+viewport rules leaving a band with zero entry points" note under playlist
+pitching).
+
+**It deletes a bug class rather than guarding one.** Both defects fixed in
+v1.5.2 hours earlier — the seeded query filtering the list down to the current
+assignee, and an empty blur persisting a real unassign — existed *only* because
+the display and the filter were the same field. With no input, neither is
+reachable. `filterMembersForPicker` and its 12 tests went with the component;
+`ReleaseCombobox` keeps its own copy of that guard and is untouched, so the
+release picker still searches (a release list genuinely can be long).
+
+Preserved from the old component, deliberately: the "Unassigned" row as the
+explicit way to clear an assignee, invited-but-not-joined members rendering
+visible-but-disabled with "Pending invite" (assigning writes
+`assigned_to_user_id`, which needs a real user id), the
+`NEXT_PUBLIC_FEATURE_WORKSPACE` filter, and both densities. All three consumers
+(`TaskDetailView`, `TaskQuickCreateModal` via `TaskUIProvider`, `PlanTaskRow`)
+lost their `query` state entirely — that plumbing is gone, not merely unused.
+
+- **Verified:** 1649 tests pass, `eslint .` at **3 errors / 65 warnings** — one
+  warning BELOW the standing baseline, since the deleted component took its
+  `set-state-in-effect` finding with it — `tsc --noEmit` clean apart from the
+  pre-existing `confirmed-action.test.ts` errors, and `next build` green by exit
+  code with `/auth`, `/onboarding`, `/settings` still `○ Static`. The compiled
+  bundle was checked directly: `aria-haspopup`, `role="listbox"` and "Pending
+  invite" are present, and the old "Search teammates" placeholder is gone.
+- **Not verified:** not seen in a browser or on a phone — the picker needs an
+  authenticated session with a real teammate, which this sandbox cannot mint.
+  Worth one pass on each of the three surfaces, since the dropdown is
+  absolutely positioned inside a scrolling modal in two of them.
 
 ---
 
