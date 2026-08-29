@@ -559,6 +559,42 @@ body {
   touch-action: pan-x;
 }
 
+/* No zoom when a field is tapped (founder report, 2026-08-29: "the app does a
+   weird zooming thing... it should be stiff like a normal app everywhere").
+
+   iOS auto-zooms the page whenever a focused form control's text is under
+   16px. This project's type scale sits BELOW that line almost everywhere —
+   `text-sm` is 13px, `text-base` is 14px, and the shared `.input` class is
+   15px via `--text-base` — so nearly every field in the app triggered it.
+   Only `text-lg` (16px) clears the threshold; the same trap is recorded in
+   CLAUDE.md, where a search input had to be moved to `text-lg` for this exact
+   reason.
+
+   Three things here are deliberate:
+
+   1. `!important` IS LOAD-BEARING — do not remove it. Tailwind's `text-sm`
+      is a class selector and out-specifies a bare element selector, so
+      without it this rule silently does nothing and the bug quietly returns.
+   2. `(pointer: coarse)` rather than a width breakpoint: it targets the
+      touch devices that actually auto-zoom, including a landscape iPad and
+      the Capacitor shell (both wider than any phone breakpoint), and leaves
+      desktop rendering completely untouched.
+   3. One rule instead of editing ~130 form controls by hand, which would
+      regress the first time anyone adds an input.
+
+   The OTHER two ways a page can zoom — pinch and double-tap — are already
+   closed by `touch-action: pan-y` on `html`/`body` above (and `pan-x` on
+   `.overflow-x-auto`), since neither value admits a zoom gesture. This rule
+   is the remaining piece, because focus auto-zoom is not a touch gesture and
+   `touch-action` has no say over it. */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 html[data-theme='dark'] body {
   background: var(--bg-base);
 }

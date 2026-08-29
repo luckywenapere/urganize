@@ -180,7 +180,13 @@ export function TaskDetailView({
     setDescription(task.description || '');
     setSelectedAssignee(task.assignee || null);
     setAssigneeQuery(task.assignee?.name || '');
-  }, [task]);
+    // Keyed on the task's id for the same reason as the invite reset below:
+    // the drawer's async detail fetch (and every field save) hands back a new
+    // `task` reference for the SAME activity, and re-seeding on that wiped
+    // whatever the user was mid-way through typing — a title, or a teammate's
+    // name in the assignee search. Only switching activities should reseed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.id]);
 
   // Keyed on the task's id, not the whole `task` object: an unrelated field
   // save (status, due date, ...) gives the parent a new `task` reference for

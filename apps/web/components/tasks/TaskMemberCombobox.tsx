@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { getInitials, type WorkspaceMember } from '@/lib/tasks';
+import { filterMembersForPicker, getInitials, type WorkspaceMember } from '@/lib/tasks';
 
 type TaskMemberComboboxProps = {
   members: WorkspaceMember[];
@@ -72,18 +72,15 @@ export function TaskMemberCombobox({
         : members.filter((member) => member.status === 'active'),
     [members]
   );
-  const normalizedQuery = normalizeValue(query);
-
-  const filteredMembers = useMemo(() => {
-    if (!normalizedQuery) {
-      return visibleMembers;
-    }
-
-    return visibleMembers.filter((member) => {
-      const searchable = `${member.name} ${member.email}`.toLowerCase();
-      return searchable.includes(normalizedQuery);
-    });
-  }, [visibleMembers, normalizedQuery]);
+  // Filtering lives in lib/tasks.ts so it can be unit-tested (components are
+  // not collected by vitest here). It carries the guard this component was
+  // missing: when `query` is still just the seeded name of the CURRENT
+  // assignee, every other teammate must stay listed — see the function's
+  // docstring, and the identical guard in shared/ReleaseCombobox.tsx.
+  const filteredMembers = useMemo(
+    () => filterMembersForPicker(visibleMembers, query, selectedMember),
+    [visibleMembers, query, selectedMember]
+  );
 
   const items = useMemo(() => {
     return [null, ...filteredMembers] as Array<WorkspaceMember | null>;
@@ -128,8 +125,17 @@ export function TaskMemberCombobox({
         return;
       }
 
+      // An empty box on blur RESTORES the current assignee; it does not clear
+      // them. Committing null here persisted a real unassign, so tabbing
+      // through an assigned activity could silently drop its owner — and did,
+      // on every planner row, whose input was never seeded (2026-08-29).
+      // Clearing an assignee is the dropdown's explicit "Unassigned" row,
+      // which is unchanged. Matches ReleaseCombobox.handleBlur, which likewise
+      // only ever restores text.
       if (!query.trim()) {
-        commitSelection(null);
+        onQueryChange(selectedMember?.name || '');
+        setIsOpen(false);
+        setActiveIndex(-1);
         return;
       }
 
