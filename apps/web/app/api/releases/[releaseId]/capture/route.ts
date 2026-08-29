@@ -10,7 +10,8 @@ import {
   captureDraftToRow,
   createAdminClient,
   ensureGraphicAsset,
-  ensureReleaseOwnership,
+  ensureReleaseTeamReadAccess,
+  ensureReleaseTeamWriteAccess,
   generateShareToken,
   isCaptureFeatureEnabled,
   normalizeCaptureDraft,
@@ -52,7 +53,7 @@ export async function GET(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamReadAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const { data: page, error: pageError } = await adminClient
@@ -72,7 +73,7 @@ export async function GET(
   // same precedence lib/capture-server.ts uses (chosen asset, else the
   // release's cover art). Sent so the editor's checklist grades what a fan
   // would really see instead of guessing from the draft alone.
-  const hasGraphic = Boolean(page?.graphic_asset_id) || Boolean(ownership.artworkAssetId);
+  const hasGraphic = Boolean(page?.graphic_asset_id) || Boolean(ownership.release.artworkAssetId);
 
   // No page yet means no leads by definition — skip the query rather than
   // firing one that can only come back empty.
@@ -125,7 +126,7 @@ export async function POST(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   // Idempotent: an existing page is returned as-is so double-clicks and
@@ -150,12 +151,15 @@ export async function POST(
   // Pre-filled from the playbook, so a page created and shared without a single
   // edit already follows the rules it can follow without knowing the campaign.
   // The headline is deliberately left blank — see buildDefaultCaptureDraft.
-  const defaults = buildDefaultCaptureDraft(ownership.title);
+  const defaults = buildDefaultCaptureDraft(ownership.release.title);
 
   const { data: inserted, error: insertError } = await adminClient
     .from(RELEASE_CAPTURE_PAGES_TABLE)
     .insert({
-      owner_user_id: auth.user.id,
+      // The RELEASE owner, not the acting teammate: the row must survive the
+      // teammate's account (auth.users delete-cascade) and stay visible to
+      // the owner's RLS/export, which key on this column.
+      owner_user_id: ownership.release.ownerUserId,
       release_id: releaseId,
       share_token: generateShareToken(),
       ...captureDraftToRow({ ...EMPTY_CAPTURE_DRAFT, ...defaults }),
@@ -211,7 +215,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   // The one field that can point outside this release, so the one field that
@@ -270,7 +274,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   // Idempotent delete. This DOES take the collected emails with it (leads

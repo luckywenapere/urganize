@@ -4,7 +4,8 @@ import {
   RELEASE_CREDIT_LINKS_TABLE,
   RELEASE_CREDIT_SUBMISSIONS_TABLE,
   createAdminClient,
-  ensureReleaseOwnership,
+  ensureReleaseTeamReadAccess,
+  ensureReleaseTeamWriteAccess,
   isMetadataFeatureEnabled,
   requireActiveAuthenticatedUser,
   toReleaseCreditLink,
@@ -40,7 +41,7 @@ export async function GET(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamReadAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const [linkResult, submissionsResult] = await Promise.all([
@@ -94,7 +95,7 @@ export async function POST(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   // Idempotent: an existing link is returned as-is so double-clicks and
@@ -119,7 +120,12 @@ export async function POST(
   const { data: inserted, error: insertError } = await adminClient
     .from(RELEASE_CREDIT_LINKS_TABLE)
     .insert({
-      owner_user_id: auth.user.id,
+      // The RELEASE owner, not the acting teammate: this column denormalizes
+      // releases.owner_user_id (the migration says so) — the public POST
+      // propagates it into every submission, the owner-scoped RLS keys on
+      // it, and an auth.users delete-cascade would otherwise kill the
+      // release's link when a teammate's account goes.
+      owner_user_id: ownership.release.ownerUserId,
       release_id: releaseId,
       share_token: generateShareToken(),
     })
@@ -169,7 +175,7 @@ export async function PUT(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   // Regenerate = rotate the token on the existing row (an UPDATE, not a
@@ -245,7 +251,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const { data: updated, error: updateError } = await adminClient

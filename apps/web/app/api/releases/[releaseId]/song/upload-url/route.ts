@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createAdminClient,
-  ensureReleaseOwnership,
+  ensureReleaseTeamWriteAccess,
   isSongFeatureEnabled,
   notFoundResponse,
   requireActiveAuthenticatedUser,
@@ -41,7 +41,7 @@ export async function POST(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const body = (await request.json().catch(() => null)) as {

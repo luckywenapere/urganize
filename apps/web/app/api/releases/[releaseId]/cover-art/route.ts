@@ -4,7 +4,8 @@ import {
   COVER_ART_CATEGORY,
   RELEASES_TABLE,
   createAdminClient,
-  ensureReleaseOwnership,
+  ensureReleaseTeamReadAccess,
+  ensureReleaseTeamWriteAccess,
   isCoverArtFeatureEnabled,
   loadCurrentCoverArt,
   notFoundResponse,
@@ -45,7 +46,7 @@ export async function GET(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamReadAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const result = await loadCurrentCoverArt(adminClient, releaseId);
@@ -128,7 +129,7 @@ export async function POST(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const body = (await request.json().catch(() => null)) as RecordCoverArtBody | null;
@@ -202,7 +203,7 @@ export async function POST(
   const insertResult = await adminClient
     .from(ASSETS_TABLE)
     .insert({
-      owner_user_id: ownership.ownerUserId,
+      owner_user_id: ownership.release.ownerUserId,
       release_id: releaseId,
       task_id: null,
       uploaded_by: auth.user.id,
@@ -327,7 +328,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const current = await loadCurrentCoverArt(adminClient, releaseId);

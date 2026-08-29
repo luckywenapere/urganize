@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   RELEASE_CREDIT_SUBMISSIONS_TABLE,
   createAdminClient,
-  ensureReleaseOwnership,
+  ensureReleaseTeamWriteAccess,
   isMetadataFeatureEnabled,
   requireActiveAuthenticatedUser,
 } from '../../_shared';
@@ -28,7 +28,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   // Idempotent delete: removing an already-removed submission is a success.

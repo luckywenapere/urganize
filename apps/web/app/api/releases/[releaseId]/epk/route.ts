@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   RELEASE_EPKS_TABLE,
   createAdminClient,
-  ensureReleaseOwnership,
+  ensureReleaseTeamReadAccess,
+  ensureReleaseTeamWriteAccess,
   isEpkFeatureEnabled,
   requireActiveAuthenticatedUser,
   toReleaseEpk,
@@ -36,7 +37,7 @@ export async function GET(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamReadAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const { data, error } = await adminClient
@@ -73,7 +74,7 @@ export async function POST(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   // Idempotent: an existing EPK is returned as-is so double-clicks and
@@ -98,7 +99,10 @@ export async function POST(
   const { data: inserted, error: insertError } = await adminClient
     .from(RELEASE_EPKS_TABLE)
     .insert({
-      owner_user_id: auth.user.id,
+      // The RELEASE owner, not the acting teammate: the row must survive the
+      // teammate's account (auth.users delete-cascade) and stay visible to
+      // the owner's RLS/export, which key on this column.
+      owner_user_id: ownership.release.ownerUserId,
       release_id: releaseId,
       share_token: generateShareToken(),
     })
@@ -151,7 +155,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   // Idempotent revoke: deleting an already-revoked EPK is a success.

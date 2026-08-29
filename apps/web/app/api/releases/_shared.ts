@@ -7,11 +7,11 @@ import {
   RELEASE_EVENTS_TABLE,
   RELEASE_METADATA_TABLE,
   calculateReleaseReadiness,
+  toReleaseSummary,
   type ReleaseMetadataSnapshot,
   type ReleaseSummary,
 } from '@/lib/release-ops';
 import { createAdminClient } from '@/app/api/_shared/auth';
-import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
 
 export {
   ARTISTS_TABLE,
@@ -19,6 +19,7 @@ export {
   RELEASE_COLLABORATORS_TABLE,
   RELEASE_EVENTS_TABLE,
   RELEASE_METADATA_TABLE,
+  toReleaseSummary,
 };
 
 // Canonical auth helpers live in app/api/_shared/auth.ts; re-exported here
@@ -131,19 +132,14 @@ export async function ensureReleaseOpsSchema(
   return { ready: true as const };
 }
 
-export const toReleaseSummary = (row: Record<string, unknown>): ReleaseSummary => ({
-  id: String(row.id || ''),
-  ownerUserId: String(row.owner_user_id || ''),
-  artistId: String(row.artist_id || ''),
-  artistName: String(row.artist_name || ''),
-  title: String(row.title || ''),
-  slug: String(row.slug || ''),
-  status: (String(row.status || 'draft') as ReleaseSummary['status']) || 'draft',
-  description: String(row.description || ''),
-  createdAt: String(row.created_at || ''),
-  updatedAt: String(row.updated_at || ''),
-});
-
+/**
+ * OWNER-ONLY by recorded decision, not by accident: the release row itself
+ * stays the owner's to change — its PATCH/DELETE, archive, and schedule.
+ * Teammates work through activities and the scenes, whose route groups gate
+ * through lib/release-access-server.ts's team-aware pair instead. Do not
+ * reach for this helper in a new scene route group; the guard test
+ * (lib/release-access-guard.test.ts) bans it there.
+ */
 export async function ensureReleaseOwnership(
   adminClient: ReturnType<typeof createAdminClient>,
   releaseId: string,
@@ -174,53 +170,12 @@ export async function ensureReleaseOwnership(
   return { release: toReleaseSummary(release as Record<string, unknown>) };
 }
 
-/**
- * Read access for RELEASE detail: the owner OR any member of the owner's
- * workspace (whole-workspace visibility, founder decision 2026-07-23).
- * Mutating routes keep `ensureReleaseOwnership` — teammates work through
- * activities; the release object itself stays the owner's to change.
- */
-export async function ensureReleaseReadAccess(
-  adminClient: ReturnType<typeof createAdminClient>,
-  releaseId: string,
-  user: Parameters<typeof loadWorkspaceAccessContext>[1]
-) {
-  if (!adminClient) {
-    return { error: NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 }) };
-  }
-
-  const { data: release, error } = await adminClient
-    .from('releases')
-    .select('id,owner_user_id,artist_id,artist_name,title,slug,release_date,status,description,created_at,updated_at')
-    .eq('id', releaseId)
-    .maybeSingle();
-
-  if (error) {
-    if (isOptionalTableMissingError(error)) {
-      return { error: buildMissingTableResponse() };
-    }
-    return { error: NextResponse.json({ error: error.message || 'Could not load release.' }, { status: 500 }) };
-  }
-
-  const ownerId = String(release?.owner_user_id || '');
-  if (!release) {
-    return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
-  }
-
-  if (ownerId !== user.id) {
-    const access = await loadWorkspaceAccessContext(adminClient, user);
-    if (!access.releaseOwnerIds.includes(ownerId)) {
-      return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
-    }
-    // Artist-scoped members only see their own artist's releases.
-    const scope = access.artistScopeByOwnerId[ownerId];
-    if (scope && String((release as Record<string, unknown>).artist_id || '') !== scope) {
-      return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
-    }
-  }
-
-  return { release: toReleaseSummary(release as Record<string, unknown>) };
-}
+// Read access for RELEASE detail — the canonical team-aware implementation
+// moved to lib/release-access-server.ts (one team-read rule in the codebase);
+// aliased here so the existing [releaseId] GET import site stays stable, the
+// auth-consolidation precedent. Behavior delta, sanctioned ratchet direction:
+// a missing-table error here is now a plain 500, not the deprecated 501.
+export { ensureReleaseTeamReadAccess as ensureReleaseReadAccess } from '@/lib/release-access-server';
 
 export const toMetadataSnapshot = (row: Record<string, unknown> | null | undefined): ReleaseMetadataSnapshot | null => {
   if (!row) return null;

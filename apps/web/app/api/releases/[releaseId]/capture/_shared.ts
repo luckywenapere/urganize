@@ -28,6 +28,14 @@ export {
   createAdminClient,
 } from '@/app/api/_shared/auth';
 
+// Release access is the shared team-aware pair (whole-workspace visibility;
+// guests read-only on writes) — re-exported so this group's import sites
+// stay stable, same convention as the auth helpers above.
+export {
+  ensureReleaseTeamReadAccess,
+  ensureReleaseTeamWriteAccess,
+} from '@/lib/release-access-server';
+
 export const RELEASE_CAPTURE_PAGES_TABLE = 'release_capture_pages';
 export const RELEASE_CAPTURE_LEADS_TABLE = 'release_capture_leads';
 
@@ -136,47 +144,6 @@ export function captureDraftToRow(draft: CapturePageDraft): Record<string, unkno
     collect_name: draft.collectName,
     consent_note: draft.consentNote || null,
     is_paused: draft.isPaused,
-  };
-}
-
-// Local ownership check for this route group, mirroring the EPK one:
-// deliberately NOT the ensureReleaseOwnership in app/api/releases/_shared.ts,
-// whose module carries the deprecated schema-missing fallback helpers this
-// feature must stay away from (the guard test). Same contract: 404 (never
-// 403) when the release is missing or owned by someone else.
-export async function ensureReleaseOwnership(
-  adminClient: NonNullable<ReturnType<typeof createAdminClient>>,
-  releaseId: string,
-  userId: string
-): Promise<
-  { error: NextResponse } | { releaseId: string; title: string; artworkAssetId: string }
-> {
-  const { data: release, error } = await adminClient
-    .from('releases')
-    .select('id,owner_user_id,title,artwork_asset_id')
-    .eq('id', releaseId)
-    .maybeSingle();
-
-  if (error) {
-    return {
-      error: NextResponse.json(
-        { error: error.message || 'Could not load release.' },
-        { status: 500 }
-      ),
-    };
-  }
-
-  if (!release || String(release.owner_user_id || '') !== userId) {
-    return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
-  }
-
-  return {
-    releaseId: String(release.id || ''),
-    title: String(release.title || ''),
-    // Carried out of this lookup rather than re-queried: the GET needs it to
-    // tell the editor whether the public page will actually render an image,
-    // and the row is already in hand.
-    artworkAssetId: release.artwork_asset_id ? String(release.artwork_asset_id) : '',
   };
 }
 

@@ -29,6 +29,14 @@ export {
   createAdminClient,
 } from '@/app/api/_shared/auth';
 
+// Release access is the shared team-aware pair (whole-workspace visibility;
+// guests read-only on writes) — re-exported so this group's import sites
+// stay stable, same convention as the auth helpers above.
+export {
+  ensureReleaseTeamReadAccess,
+  ensureReleaseTeamWriteAccess,
+} from '@/lib/release-access-server';
+
 export const CONTENT_CALENDARS_TABLE = 'content_calendars';
 export const CONTENT_POSTS_TABLE = 'content_posts';
 
@@ -152,7 +160,7 @@ export const toContentPost = (row: Record<string, unknown>, sharedCount = 1): Co
 
 // THE tenancy boundary for every route that receives a calendarId (post
 // routes AND calendar PATCH/DELETE): the admin client bypasses RLS, and
-// ensureReleaseOwnership only covers the URL's releaseId, so the calendar
+// the release access check only covers the URL's releaseId, so the calendar
 // must additionally be proven to belong to that release. 404 (never 403) so
 // probing cannot distinguish "exists on another release" from "does not
 // exist". The returned calendar carries postCount 0; only the list endpoint
@@ -181,50 +189,6 @@ export async function ensureCalendarInRelease(
   }
 
   return { calendar: toContentCalendar(calendar as Record<string, unknown>) };
-}
-
-export interface ContentCalendarReleaseSummary {
-  id: string;
-  ownerUserId: string;
-  releaseDate: string | null;
-}
-
-// Local ownership check for this route group. Deliberately NOT the
-// ensureReleaseOwnership in app/api/releases/_shared.ts: that module carries
-// the deprecated schema-missing fallback helpers this feature must stay away
-// from (the guard test), and its summary omits release_date, which the posts
-// routes need for month resolution. Same contract otherwise: 404 (never 403)
-// when the release is missing or owned by someone else.
-export async function ensureReleaseOwnership(
-  adminClient: ReturnType<typeof createAdminClient>,
-  releaseId: string,
-  userId: string
-): Promise<{ error: NextResponse } | { release: ContentCalendarReleaseSummary }> {
-  if (!adminClient) {
-    return { error: NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 }) };
-  }
-
-  const { data: release, error } = await adminClient
-    .from('releases')
-    .select('id,owner_user_id,release_date')
-    .eq('id', releaseId)
-    .maybeSingle();
-
-  if (error) {
-    return { error: NextResponse.json({ error: error.message || 'Could not load release.' }, { status: 500 }) };
-  }
-
-  if (!release || String(release.owner_user_id || '') !== userId) {
-    return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
-  }
-
-  return {
-    release: {
-      id: String(release.id || ''),
-      ownerUserId: String(release.owner_user_id || ''),
-      releaseDate: release.release_date ? String(release.release_date) : null,
-    },
-  };
 }
 
 // Sibling counts for the "On N calendars" stamp: ONE grouped-in-code query
