@@ -742,10 +742,18 @@ export function WorkspaceView() {
   // resolveWorkspaceBackTarget owns every rejection — most importantly that a
   // previous location still scoping THIS release is not "back" at all. See it
   // for why that matters more than it looks.
+  // Read at CLICK time, never during render: window.location is the live URL
+  // even if a route change hasn't reached React yet, and a render-time copy
+  // would be exactly the stale value the "already here" rejection exists to
+  // catch. Same click-time-fresh-read pattern MobileNavBar's FAB uses.
   const resolveBackTarget = () =>
     resolveWorkspaceBackTarget({
       previous: readPreviousLocation(),
       scopedReleaseId,
+      currentUrl:
+        typeof window === 'undefined'
+          ? null
+          : `${window.location.pathname}${window.location.search}`,
     });
 
   const goBack = () => {

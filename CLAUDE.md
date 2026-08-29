@@ -2212,7 +2212,7 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-29 (**the assignee picker is a dropdown now — shipped as v1.5.3** — see "The assignee picker became a dropdown" near the end of this file. Its text input raised the phone keyboard over the list it was meant to show, so TaskMemberCombobox is deleted and TaskMemberSelect (a button over a role=listbox panel, the NoteReleasePicker pattern) replaces it at all three call sites. Search was dropped outright rather than hidden on mobile: Manager caps a team at four seats, and a viewport-conditional control means two code paths for one picker. It also deletes the bug class v1.5.2 had guarded — both of those defects existed only because the display and the filter were one field. Same day, earlier: **the assignee picker hid the team, and fields zoomed on tap — shipped as v1.5.2** — see "The assignee picker hid the team" near the end of this file. The picker filtered its list by the current assignee's name, so an already-assigned activity offered only that person; the guard now lives in filterMembersForPicker (lib/tasks.ts) and is the second copy of one ReleaseCombobox already carried — keep them in step. Blurring an empty box no longer unassigns, PlanTaskRow seeds its query, and TaskDetailView's seed effect is keyed on task?.id. Separately, one (pointer: coarse) rule sets form controls to 16px, since this project's type scale sits under iOS's auto-zoom threshold nearly everywhere; the !important is load-bearing against Tailwind specificity, and pinch/double-tap zoom were ALREADY closed by touch-action: pan-y. Same day, earlier: **the release scenes are team-aware, shipped as
+*Last updated: 2026-08-29 (**the release back arrow terminates now — shipped as v1.5.4** — see "It was still a trap: nav-history was one slot, not a stack" under "The workspace back arrow goes back now". The 2026-08-25 fix made the arrow do something; it did not make it terminate. lib/nav-history held a current+previous PAIR, and recording a navigation moves current into previous — so a back press pushed the previous page and simultaneously wrote the page it just left into the slot, sending the next press straight back. Two surfaces read that one slot (this arrow and Settings'), so the loop was one tap wide: release → Settings → back → release → back → Settings → forever. Same loop between any two workspace URLs — two releases reachable via UrgAns, the bell, a note chip or the desktop rails. It is a bounded stack now, and the rule that makes back terminate is that navigating to the entry directly BENEATH the top pops instead of pushing (it cannot tell our button from browser Back or an edge swipe, and must not). readPreviousLocation kept its signature, so neither call site changed and Settings is fixed by the same edit. Three things not to undo: only ONE step down counts as a pop; resolveWorkspaceBackTarget's same-release rejection STAYS, because scene switches replace and append with no matching pop; and the new "already here" rejection reads window.location at click time, never a render-time copy. Mutation-tested both guards. Deploy carries a deliberate one-tap degradation — open tabs hold the old keys, so the first press after deploy finds an empty trail and falls to its safe floor. Not pressed in a browser. Same day, earlier: **the assignee picker is a dropdown now — shipped as v1.5.3** — see "The assignee picker became a dropdown" near the end of this file. Its text input raised the phone keyboard over the list it was meant to show, so TaskMemberCombobox is deleted and TaskMemberSelect (a button over a role=listbox panel, the NoteReleasePicker pattern) replaces it at all three call sites. Search was dropped outright rather than hidden on mobile: Manager caps a team at four seats, and a viewport-conditional control means two code paths for one picker. It also deletes the bug class v1.5.2 had guarded — both of those defects existed only because the display and the filter were one field. Same day, earlier: **the assignee picker hid the team, and fields zoomed on tap — shipped as v1.5.2** — see "The assignee picker hid the team" near the end of this file. The picker filtered its list by the current assignee's name, so an already-assigned activity offered only that person; the guard now lives in filterMembersForPicker (lib/tasks.ts) and is the second copy of one ReleaseCombobox already carried — keep them in step. Blurring an empty box no longer unassigns, PlanTaskRow seeds its query, and TaskDetailView's seed effect is keyed on task?.id. Separately, one (pointer: coarse) rule sets form controls to 16px, since this project's type scale sits under iOS's auto-zoom threshold nearly everywhere; the !important is load-bearing against Tailwind specificity, and pinch/double-tap zoom were ALREADY closed by touch-action: pan-y. Same day, earlier: **the release scenes are team-aware, shipped as
 v1.5.1** — see "Scenes opened to the team: one release-access rule" above. A
 teammate opening Collect metadata on a release they could see everywhere got
 "Release not found.", because every scene route group carried an accidental
@@ -4684,6 +4684,82 @@ unit tests plus traced call paths. The auto-scope branch has no unit test at all
 since this repo does not test components. Worth one pass on a real account: from
 `?release=X&scene=coverart`, press back three times and expect Activities, then
 wherever you came from, and never a silent no-op.
+
+### It was still a trap: nav-history was one slot, not a stack (2026-08-29, v1.5.4)
+
+Founder, four days later, screenshot with the arrow circled: *"This back button
+gets stuck a lot right now I can't even go back."* The 2026-08-25 fix made the
+arrow DO something; it did not make it TERMINATE.
+
+**The whole cause is the data structure, and it is provable on paper.**
+`lib/nav-history.ts` held a `current` + `previous` PAIR, and `recordNavigation`
+moves `current` into `previous` on every route change. So a back press pushed the
+previous page and, in the same breath, wrote the page it had just left into the
+slot — making the very next back press come straight back. **Two surfaces read
+that one slot** (this arrow and `SettingsPageClient`'s), so the loop was one tap
+wide:
+
+```
+/dashboard?release=X  ->  /settings  ->  back  ->  /dashboard?release=X
+                      ->  back  ->  /settings  ->  back  ->  ... forever
+```
+
+The founder had been living in Settings → Teammates all week, which is why it was
+"a lot, right now". The same loop runs between any two workspace URLs: two
+different releases (reachable from UrgAns, the notification bell, a note's
+release chip, and the desktop rails), or a release and `/dashboard/notes`. The
+existing `scopesRelease` rejection caught exactly ONE instance of this shape —
+previous still scoping the SAME release — which is why it read as fixed.
+
+**`lib/nav-history.ts` is a bounded stack now** (`urganize.nav.stack`, cap 20),
+and the rule that makes back terminate is three lines in `nextNavigationStack`:
+navigating to the entry directly BENEATH the top **pops** instead of pushing. It
+cannot tell our button from the browser's Back or an edge swipe, and must not —
+all three are the same move. Every back press therefore shrinks the trail and the
+loop above reaches the catalog and stops. `readPreviousLocation` keeps its
+signature, so **neither back button's call site changed** and Settings is fixed by
+the same edit.
+
+Five things worth knowing before editing this:
+
+1. **The pop rule is the fix; mutation-tested.** Deleting that one line fails
+   exactly five tests, including both `terminates the ... loop` cases. The two
+   loops are pinned as end-to-end sequences rather than unit assertions, because
+   the defect was never in a single call — it was in what the calls did to each
+   other.
+2. **Only ONE step down counts as a pop.** A jump to an older entry pushes. The
+   narrow rule is precisely the "user went back one step" signal, and the cap
+   handles everything else; a "truncate to wherever it matches" rule would also
+   collapse legitimate forward revisits.
+3. **`resolveWorkspaceBackTarget`'s same-release rejection STAYS**, and is not
+   made redundant by the stack. Scene switches `replace`, which appends with no
+   matching pop, so the entry beneath the top can still be a scene of the release
+   being left. That guard is also why the trail can grow on replace at all —
+   hence the cap.
+4. **A third rejection was added: a target equal to the page you are already
+   on.** The trail cannot normally produce it (it never holds one URL twice in a
+   row), so this is insurance against a navigation that never reached
+   NavigationTracker's effect — the cost of being wrong there is the worst
+   possible outcome for this button, a tap that visibly does nothing. It reads
+   `window.location` at CLICK time, never a render-time copy (the MobileNavBar
+   FAB pattern).
+5. **Deploy carries a one-tap degradation, by design.** Open tabs hold the old
+   `urganize.nav.current` / `.previous` keys, which nothing reads any more, so the
+   first back press after the deploy finds an empty trail and falls to its floor
+   — the catalog for the workspace, `/dashboard` for Settings. Both are safe, and
+   the trail rebuilds from the next navigation. The old keys are deliberately not
+   migrated or cleaned up: sessionStorage is per-tab and dies with the tab.
+
+- **Verified:** 1665 tests (16 new in `lib/nav-history.test.ts`, which had 8 and
+  covered only the pure resolver), `eslint .` at the exact 3-error / 65-warning
+  baseline, `next build` green by exit code with `/auth`, `/onboarding` and
+  `/settings` still `○ Static`. Both new guards mutation-tested.
+- **Not verified:** not pressed in a browser — the workspace needs an
+  authenticated session this sandbox cannot mint, and there is no network route
+  to app.urganize.app. The storage round trip runs against a Map-backed
+  sessionStorage stub (the `lib/credit-prefill.test.ts` approach), not a real one.
+  Worth one pass on a phone: from a release go to Settings, press Back, then press
+  the release's arrow — it must reach the catalog, not return to Settings.
 
 ---
 
