@@ -2,13 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { useRouter } from 'next/navigation';
 import { AlertCircle, ArrowLeft, CalendarDays, Loader2, X } from 'lucide-react';
 import { Button, IconButton } from '@urganize/ui';
 import { BlankSheetIllustration, PlanIllustration } from '@/components/app/BrandIcons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { supabase } from '@/lib/supabase/client';
-import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useFirstReleaseRequired } from './useFirstReleaseRequired';
 import {
@@ -127,20 +125,17 @@ function validateReleaseDate(value: string): string {
 }
 
 export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseModalProps) {
-  const router = useRouter();
-  const logout = useAuthStore((state) => state.logout);
-  // MANDATORY MODE (URG-217). A user with zero releases has nothing to do in
-  // the product, so for them this modal loses every exit — no Escape, no
-  // backdrop click, no X, no Cancel — and creating a release is the only way
-  // forward. Signing out stays available (an invited teammate who shouldn't be
-  // creating releases, or anyone who needs to reach support, would otherwise
-  // have closing the browser tab as their only option).
-  //
-  // The predicate fails open on every uncertainty — see lib/first-release-required.ts.
-  const isMandatory = useFirstReleaseRequired();
+  // COPY ONLY. This modal is always dismissible — the wall URG-217 built here
+  // (no Escape, no backdrop, no X, no Cancel, a Sign out escape hatch) was
+  // removed 2026-08-28 (founder call): it trapped exactly the people it was
+  // built around, like an invited teammate who shouldn't be creating releases
+  // at all. The zero-release nudge now lives in useFirstReleasePrompt (a
+  // deferred, once-per-session open); dismissing lands on the "No releases
+  // yet" empty state, whose Create release button reopens this. The predicate
+  // is still read here so a first release keeps its warmer framing below.
+  const isFirstRelease = useFirstReleaseRequired();
   const titleInputRef = useRef<HTMLInputElement>(null);
   const cardRef = useRef<HTMLFormElement>(null);
-  const [isSigningOut, setIsSigningOut] = useState(false);
   const [title, setTitle] = useState('');
   const [releaseDate, setReleaseDate] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -189,18 +184,16 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
-      // Escape closes — except in mandatory mode, where there is no way out
-      // but creating a release (or signing out).
-      if (event.key === 'Escape' && !isSubmitting && !isMandatory) {
+      // Escape closes, unless a create is in flight.
+      if (event.key === 'Escape' && !isSubmitting) {
         onClose();
         return;
       }
 
-      // Mandatory mode also traps Tab inside the dialog. Without this, Tab
-      // reaches the topbar behind the overlay and a keyboard user can navigate
-      // straight out of a modal that is supposed to be inescapable. Same
-      // implementation as TaskQuickCreateModal's trap.
-      if (event.key === 'Tab' && isMandatory && cardRef.current) {
+      // Trap Tab inside the dialog: the page behind the overlay is inert to
+      // keyboard users, matching what the backdrop already communicates
+      // visually. Same implementation as TaskQuickCreateModal's trap.
+      if (event.key === 'Tab' && cardRef.current) {
         const focusables = Array.from(
           cardRef.current.querySelectorAll<HTMLElement>(
             'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
@@ -225,7 +218,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isMandatory, isSubmitting, onClose, open]);
+  }, [isSubmitting, onClose, open]);
 
   // Lock background scroll while the modal is open — the shared ref-counted
   // lock (lib/body-scroll-lock.ts) captures/restores overflow + scrollbar
@@ -297,22 +290,6 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
-  };
-
-  // The one escape from mandatory mode. Same sequence Settings uses.
-  const handleSignOut = async () => {
-    if (isSigningOut) return;
-    setIsSigningOut(true);
-    try {
-      await logout();
-      router.push('/auth');
-    } catch {
-      // Surface it in the modal's existing error slot rather than silently
-      // leaving a dead button — this is the only exit, so a failure here has
-      // to be visible.
-      setSubmitError('Could not sign out. Please try again.');
-      setIsSigningOut(false);
-    }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -390,23 +367,16 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
       className="fixed inset-x-0 top-0 z-[220] flex h-[100dvh] items-center justify-center bg-black/72 px-4 py-4 backdrop-blur-sm sm:py-8"
       role="presentation"
     >
-      {/* In mandatory mode this is a plain div, not a button: it still covers
-          the viewport so clicks can't reach the chrome underneath, but it must
-          not advertise a close affordance that does nothing. */}
-      {isMandatory ? (
-        <div className="absolute inset-0" aria-hidden="true" />
-      ) : (
-        <button
-          type="button"
-          aria-label="Close create release modal"
-          className="absolute inset-0"
-          onClick={() => {
-            if (!isSubmitting) {
-              onClose();
-            }
-          }}
-        />
-      )}
+      <button
+        type="button"
+        aria-label="Close create release modal"
+        className="absolute inset-0"
+        onClick={() => {
+          if (!isSubmitting) {
+            onClose();
+          }
+        }}
+      />
 
       <div
         role="dialog"
@@ -422,7 +392,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
           <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stroke-subtle p-4 sm:p-5">
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
-                {isMandatory ? 'Welcome to Urganize' : 'Create release'}
+                {isFirstRelease ? 'Welcome to Urganize' : 'Create release'}
                 {plan ? (
                   <button
                     type="button"
@@ -436,7 +406,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                 ) : null}
               </p>
               <h2 id="create-release-title" className="mt-2 font-display text-2xl font-semibold text-content-primary">
-                {isMandatory
+                {isFirstRelease
                   ? plan
                     ? 'Your first release'
                     : 'Create your first release'
@@ -447,36 +417,22 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
               {/* First-run context, echoing the onboarding wizard's own line
                   ("Every release gets a workspace.") so the two first-run
                   surfaces sound like one product. */}
-              {isMandatory ? (
+              {isFirstRelease ? (
                 <p className="mt-2 max-w-xl text-sm leading-6 text-content-secondary">
                   Every release gets its own workspace — activities, files, and your team in
                   one place. Start with this one and everything else follows.
                 </p>
               ) : null}
             </div>
-            {/* Mandatory mode swaps the close button for the sign-out escape.
-                It sits in the header (not the footer) so it's reachable on both
-                steps — the footer only renders once a plan is picked. */}
-            {isMandatory ? (
-              <button
-                type="button"
-                onClick={() => void handleSignOut()}
-                disabled={isSubmitting || isSigningOut}
-                className="motion-focus shrink-0 rounded-full px-2 py-1 text-xs font-medium text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary disabled:opacity-60"
-              >
-                {isSigningOut ? 'Signing out…' : 'Sign out'}
-              </button>
-            ) : (
-              <IconButton
-                type="button"
-                onClick={onClose}
-                disabled={isSubmitting}
-                aria-label="Close modal"
-                className="shrink-0 border-stroke-default bg-[rgb(var(--color-stroke)/0.02)]"
-              >
-                <X className="h-4 w-4" />
-              </IconButton>
-            )}
+            <IconButton
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              aria-label="Close modal"
+              className="shrink-0 border-stroke-default bg-[rgb(var(--color-stroke)/0.02)]"
+            >
+              <X className="h-4 w-4" />
+            </IconButton>
           </div>
 
           {/* Step 1 — the chooser (founder call, 2026-07-23): two option
@@ -643,11 +599,9 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
 
           {plan ? (
             <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-stroke-subtle p-4 sm:flex-row sm:justify-end sm:p-5">
-              {isMandatory ? null : (
-                <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
-                  Cancel
-                </Button>
-              )}
+              <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+                Cancel
+              </Button>
               <Button
                 type="submit"
                 disabled={!canSubmit}

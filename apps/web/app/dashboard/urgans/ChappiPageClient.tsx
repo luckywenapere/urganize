@@ -11,7 +11,7 @@ import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { ChappiPageSkeleton } from '@/components/loading/ChappiPageSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { usePlannerStore } from '@/stores/usePlannerStore';
-import { useFirstReleaseRequired } from '@/components/releases/useFirstReleaseRequired';
+import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
 import { FirstReleaseWin } from '@/components/workspace/FirstReleaseWin';
 import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
@@ -82,18 +82,13 @@ export default function ChappiPageClient() {
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
 
-  // URG-217 — same forced first-release flow as the workspace. Kept here even
-  // though the catalog is the landing surface again (2026-08-12): a
+  // The deferred first-release prompt — same hook as the workspace. Kept here
+  // even though the catalog is the landing surface again (2026-08-12): a
   // zero-release user can still arrive on this page from the topbar, the
-  // mobile nav or an installed PWA pointed at the old start_url, and the lock
-  // has to fire wherever they land. See WorkspaceView for the fail-open
-  // rationale.
-  const firstReleaseRequired = useFirstReleaseRequired();
-  useEffect(() => {
-    if (firstReleaseRequired) {
-      setIsCreateModalOpen(true);
-    }
-  }, [firstReleaseRequired]);
+  // mobile nav or an installed PWA pointed at the old start_url, and the
+  // prompt has to arm wherever they land. The sessionStorage countdown
+  // (lib/first-release-prompt.ts) is what makes the two surfaces one prompt.
+  useFirstReleasePrompt(() => setIsCreateModalOpen(true));
 
   if (!CHAPPI_ENABLED) return null;
 

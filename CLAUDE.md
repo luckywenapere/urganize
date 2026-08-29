@@ -1746,7 +1746,7 @@ Founder: the page was "a bit all over the place." It was **twelve sections in on
 - **The pill row fits on a phone, and the measurement method is the part worth keeping.** All four pills are on screen without scrolling at 375px (41.8px spare) and 360px (26.8px spare); below roughly 333px it scrolls, which is graceful and only reaches iPhone-SE-2016-era widths. The row keeps `overflow-x: auto` + `nowrap` as the fallback. Getting there took two wrong answers, both from bad measurement rather than bad layout, so: **`window.innerWidth` is not the layout width in this browser pane** (it reported 439 while `document.documentElement.clientWidth` was the true 375) — subtracting the two and calling the difference "container padding" invents ~64px of padding that does not exist. And **an open modal's scroll lock skews any width measurement**: `body` carried an inline `overflow: hidden; padding-right: 48px`, which made the row look 28px too narrow. Measure with `documentElement.clientWidth`, walk the real ancestor `padding` chain, and check no dialog is open. Actual chain below `sm`: AppShell's `<main>` `px-4` is the only horizontal padding, so available = viewport − 32.
 - **`px-2.5` below `sm` on the pills (with `sm:px-3`) is a deliberate divergence** from TasksPanel's shared pill class, and the only one. At `px-3` the four labels need ~323px, which clears 375px but leaves only ~5px at the 360px width much of Android reports; 2px less padding per side buys ~22px. `pillClass`'s comment records this so it is not "tidied" back to a single padding value.
 - ~~**Still missing, flagged not built:** there is **no billing/plan section in Settings at all**, yet `app/payment/callback/page.tsx` sends users here after a successful payment.~~ **Built 2026-08-13 (v0.52.0) — see "Settings gains a billing section" below.**
-- **Verified:** `pnpm test` (457) + `pnpm lint` (0 errors) + `pnpm build` green, `/settings` still `○ Static`. Browser-verified all four tabs render their intended sections, the URL contract (including `?tab=bogus` → Account and the clean-URL default), **zero history entries added across three tab switches**, the `#teammates` redirect landing on `?tab=team`, both themes resolving through the token system, and the pill measurements above. The skeleton's pill placeholders were sized per label (they were a uniform `w-24`, four of which came to 408px — a placeholder row that scrolled where the real one does not, then shifted every pill left when the labels arrived); the generated `sm:` variants were confirmed present in `(min-width: 640px)` blocks in the live stylesheet. Authenticated rendering required a throwaway dev-only route that seeded a fake user into the auth store, since there are no test credentials and this environment cannot mint a real Supabase session; that harness was deleted before the gates were re-run. **Note for the next person using that trick: a fake user with no releases trips `firstReleaseRequired`, so the create-release modal opens over the page and its scroll lock silently corrupts width measurements.**
+- **Verified:** `pnpm test` (457) + `pnpm lint` (0 errors) + `pnpm build` green, `/settings` still `○ Static`. Browser-verified all four tabs render their intended sections, the URL contract (including `?tab=bogus` → Account and the clean-URL default), **zero history entries added across three tab switches**, the `#teammates` redirect landing on `?tab=team`, both themes resolving through the token system, and the pill measurements above. The skeleton's pill placeholders were sized per label (they were a uniform `w-24`, four of which came to 408px — a placeholder row that scrolled where the real one does not, then shifted every pill left when the labels arrived); the generated `sm:` variants were confirmed present in `(min-width: 640px)` blocks in the live stylesheet. Authenticated rendering required a throwaway dev-only route that seeded a fake user into the auth store, since there are no test credentials and this environment cannot mint a real Supabase session; that harness was deleted before the gates were re-run. **Note for the next person using that trick: a fake user with no releases trips `firstReleaseRequired`, so the create-release modal opens over the page and its scroll lock silently corrupts width measurements.** [Correction 2026-08-28: the modal no longer opens instantly and is dismissible — the prompt now arms a ~30s deferred timer (see "First-release prompt: deferred and dismissible") — but seed a release or close the modal before measuring anyway; the scroll-lock trap is unchanged whenever any modal IS open.]
 
 ---
 
@@ -2212,7 +2212,20 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-29 (**invite acceptance is durable — shipped as v1.4.2** — see "Invite acceptance is durable now: the deferred claim" near the end of this file. A real invited teammate had an account and no membership, because the accept page creates the account first and joins second with nothing recording the pending join; the token now rides auth.user_metadata and loadWorkspaceAccessContext finishes the join on the first authenticated request. The join logic moved to the leaf-only lib/invite-claims-server.ts — ONE implementation shared by the accept route and the deferred claim; do not grow a second copy. Previously 2026-08-25: **per-user MCP access is LIVE, and shipped as
+*Last updated: 2026-08-29 (**invite acceptance is durable — shipped as v1.4.3** — see "Invite acceptance is durable now: the deferred claim" near the end of this file. A real invited teammate had an account and no membership, because the accept page creates the account first and joins second with nothing recording the pending join; the token now rides auth.user_metadata and loadWorkspaceAccessContext finishes the join on the first authenticated request. The join logic moved to the leaf-only lib/invite-claims-server.ts — ONE implementation shared by the accept route and the deferred claim; do not grow a second copy. Previously 2026-08-28: **the first-release pop-up is deferred and
+dismissible, shipped as v1.4.2** — see "First-release prompt: deferred and
+dismissible" above. A zero-release account now sees the workspace first; the
+create modal offers itself ~30s in, once per browser session, and every exit
+is back (URG-217's wall — no Escape/backdrop/X/Cancel, Sign out as the only
+way off — is consciously superseded, founder call). The countdown lives in
+sessionStorage so it spans /dashboard and /dashboard/urgans, the predicate
+still fails open while the prompt storage fails closed, and four fire-time
+guards keep it from stacking over another modal or talking over an UrgAns
+conversation. Nothing browser-verified — no session mintable here. Footer
+drift noted rather than absorbed: this footer sat at 2026-08-25 while the
+v1.3.0/v1.4.x credit-collection sections of 2026-08-27 were appended below
+without updating it; their own sections are the record. Previously:
+**per-user MCP access is LIVE, and shipped as
 v1.2.0** — see "Per-user MCP access, over OAuth 2.1" above. The migration is
 applied, the flag is on, and the MCP Inspector connected to production
 successfully, which in one connection exercises discovery, Dynamic Client
@@ -4591,7 +4604,8 @@ The ref's own comment described this bug as already fixed. It was, for arrivals
 where the auto-scope had actually run — which is not the arrival most people
 have. **The fix is one branch: arriving already scoped now spends the chance.**
 Note what it deliberately does NOT do: `!isSingleRelease` leaves the chance
-OPEN, because a zero-release account is handed the create modal and must still
+OPEN, because a zero-release account is prompted to create one (deferred and
+dismissible since 2026-08-28 — see "First-release prompt" below) and must still
 get its one auto-scope when that first release lands.
 
 ### The behaviour: one rule, three cases
@@ -5188,7 +5202,7 @@ turns genre prediction on independently.
 
 ---
 
-## Invite acceptance is durable now: the deferred claim (2026-08-29, v1.4.2)
+## Invite acceptance is durable now: the deferred claim (2026-08-29, v1.4.3)
 
 Founder report: a teammate used an invite link and created an account, but the
 founder could not assign him a task and was unsure he could see the workspace's
@@ -5263,6 +5277,105 @@ them reopen the same join link while signed in and press "Accept and join"
   claim's DB plumbing is exercised only through the route it was extracted
   from; worth one live pass: sign up from a join link with the network throttled
   so the accept POST fails, then sign in and confirm the workspace appears.
+
+---
+
+## First-release prompt: deferred and dismissible (2026-08-28, v1.4.2)
+
+Founder request: for accounts with zero releases, the create-release pop-up must
+not open the moment they land — "they have to log in first, look at how it looks
+before the pop-up comes up," with the trigger choice delegated ("time-based …
+or when they try to click on something … just decide"). His read was that the
+instant pop-up churns people who wanted to see the workspace first.
+
+**What changed, in one line: the URG-217 wall is gone.** The old mechanism was
+instant AND inescapable — `CreateReleaseModal` read `useFirstReleaseRequired`
+as `isMandatory` and dropped every exit (no Escape, no backdrop, no X, no
+Cancel; a Sign out button as the only way off), while two identical effects
+(`WorkspaceView`, `ChappiPageClient`) opened it the moment the store confirmed
+zero releases. Both halves had to move together: a pop-up that arrives 30
+seconds later but still cannot be closed contradicts "look before creating" —
+the wall IS the churn moment, just delayed. And because the modal read the hook
+itself, every instance was inescapable for a zero-release user however it was
+opened, including AppShell's manual one. Dismissal now lands on the existing
+"No releases yet" empty state, whose Create release button remains the standing
+CTA.
+
+**The trigger that won the evaluation: a 30s dwell timer, once per browser
+session.** First-interaction triggers punish exactly the exploring this exists
+to allow; exit intent is mouse-tracking theater that fails on phones; idle
+detection is the politest but needs global listeners nobody else has (principle
+6); never-auto-opening drops the activation nudge the founder explicitly kept.
+A settle delay has house precedent — `PushPermissionPrompt`'s `ASK_DELAY_MS`.
+
+**Five things worth knowing before editing this:**
+
+1. **The countdown lives in sessionStorage (`urganize.first-release.prompt`,
+   `{ armedAt, shownAt? }`) so it SPANS the two surfaces** that mount the hook
+   (`/dashboard` and `/dashboard/urgans`) instead of restarting on every
+   navigation — a per-mount timer would either never fire for a user hopping
+   pages or fire once per page. Per tab; a fresh session re-arms, so a
+   returning zero-release user gets one gentle re-prompt per visit. Pure
+   decision logic in `lib/first-release-prompt.ts` (unit-tested), timer + fire
+   guards in `components/releases/useFirstReleasePrompt.ts`.
+2. **The two modules fail in OPPOSITE directions, on purpose.** The predicate
+   (`lib/first-release-required.ts`) fails OPEN — uncertain ⇒ not required —
+   because a wrong `true` used to wall people in. The prompt storage fails
+   CLOSED — broken sessionStorage ⇒ never auto-open — because the only cost of
+   silence is that the offer never arrives, and the empty-state CTA stands.
+   `armPrompt` returning null on a failed write is load-bearing: arming a
+   timer without a stored `armedAt` would run a private countdown that
+   restarts on every mount.
+3. **Four fire-time guards, all failing toward not interrupting:** re-check
+   the predicate from live snapshots (a release created via UrgAns/MCP since
+   arming wins); a hidden tab defers to the next `visibilitychange`; another
+   modal holding the body scroll lock (WhatsNew, or a create modal the user
+   opened themselves seconds earlier — `isBodyScrollLocked()`, a new read-only
+   getter on `lib/body-scroll-lock.ts`) consumes the session's prompt
+   silently; an UrgAns conversation in progress (`messages.length > 0`, any of
+   its three surfaces) consumes silently — the assistant is itself an
+   activation path and must not be talked over. Mark-then-open, so a crash
+   between the two fails toward silence.
+4. **The modal keeps its first-release COPY, keyed on the renamed
+   `isFirstRelease` read** ("Welcome to Urganize / Create your first release /
+   Every release gets its own workspace…") — the wall and the timing were the
+   problem, not the framing. The Tab-trap was kept and made UNCONDITIONAL,
+   matching `TaskQuickCreateModal`'s identical trap (a dialog's backdrop
+   already communicates that the page behind is inert); the Sign out escape
+   hatch went with the wall it compensated for, along with `handleSignOut`
+   and the modal's `useRouter`/`useAuthStore` imports.
+5. **Who this actually serves:** the onboarding wizard creates the first
+   release before `onboarding_completed` is stamped, so the wizard path never
+   sees the prompt. The zero-release population is people who deleted their
+   last release (still re-arms by design), teammates invited into a team with
+   no releases yet (invite-accept stamps onboarding complete), and
+   artist-scoped members whose artist has no releases — the last two being
+   exactly the people the old modal's own docstring admitted "shouldn't be
+   creating releases" while offering them Sign out as the only exit. They now
+   get a dismissible offer; role-aware suppression is a plausible follow-up,
+   not this change.
+
+No new feature flag (the back-arrow/mobile-scene-nav/Collect-metadata
+precedent for founder-driven UX reworks of shipped surfaces); revert is git
+revert. No analytics on the prompt — `NEXT_PUBLIC_POSTHOG_KEY` is still unset
+in production, so an event would record nothing (the documented telemetry
+correction).
+
+**Verified:** the full vitest suite green including 11 new cases in
+`lib/first-release-prompt.test.ts` (the cross-navigation resume, the
+exactly-at-deadline fire, shownAt outranking everything, the clock-skew clamp,
+the junk-rejection contract, delay bounds, key namespace); `eslint .` — 0 new
+findings, and the change deletes three pre-existing warnings (the two
+auto-open `set-state-in-effect`s and one in the sign-out path); `next build`
+green by exit code with `/auth`, `/onboarding`, `/settings` still `○ Static`.
+**Not verified:** nothing rendered in a browser — the workspace needs an
+authenticated session this sandbox cannot mint. Worth one live pass: fresh
+zero-release account → workspace + empty state, no modal; prompt at ~30s;
+Escape/backdrop/X/Cancel all close it; no re-prompt that session while the CTA
+still opens it; a /dashboard ↔ /dashboard/urgans hop resumes the countdown
+rather than restarting it (seed
+`sessionStorage['urganize.first-release.prompt']='{"armedAt":0}'` to skip the
+wait).
 
 ---
 
