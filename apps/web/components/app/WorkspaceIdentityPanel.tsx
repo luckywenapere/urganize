@@ -12,6 +12,7 @@ import { useWorkspaceIdentityStore } from "@/stores/useWorkspaceIdentityStore";
 import { useReleaseStore } from "@/stores/useReleaseStore";
 import { useChappiStore } from "@/stores/useChappiStore";
 import { CatalogIcon, ChappiIcon, GearIcon, NotesIcon } from "@/components/app/BrandIcons";
+import { CalendarDays } from "lucide-react";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { readPersistedState, writePersistedState } from "@/lib/persisted-state";
 import { isReleaseActive } from "@/lib/release-activity";
@@ -59,6 +60,10 @@ type NavItem = {
 // and disappear together.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === "true";
 
+// Shows. Same flag AppTopbar reads for its own entry point, so the two cannot
+// disagree about whether the surface exists.
+const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === "true";
+
 // One account can be both a team running releases and a playlist owner, so this
 // card is where a dual account crosses back to its pitch inbox. Shown only when
 // the account actually owns a curator profile (auth store's hasCuratorProfile);
@@ -71,6 +76,10 @@ const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === "true";
 // to that field directly — these thin wrappers close the gap.
 function MetadataIcon({ className }: { className?: string }) {
   return <ClipboardList className={className} />;
+}
+
+function ShowsIcon({ className }: { className?: string }) {
+  return <CalendarDays className={className} aria-hidden="true" />;
 }
 
 function AdminIcon({ className }: { className?: string }) {
@@ -142,6 +151,20 @@ function buildNavItems(
             label: "Notes",
             Icon: NotesIcon,
             isActive: (pathname: string) => pathname === "/dashboard/notes",
+          },
+        ]
+      : []),
+    // Shows sit beside Notes as the other global surface: a release is not
+    // involved, so this is not a release scene and never carries ?release=.
+    // Prefix match rather than exact, because a show's own page lives one
+    // level deeper and should keep the rail lit.
+    ...(EVENTS_ENABLED
+      ? [
+          {
+            href: "/dashboard/shows",
+            label: "Shows",
+            Icon: ShowsIcon,
+            isActive: (pathname: string) => pathname.startsWith("/dashboard/shows"),
           },
         ]
       : []),

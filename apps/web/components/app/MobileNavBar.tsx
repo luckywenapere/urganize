@@ -3,7 +3,7 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Inbox, Music, Plus } from 'lucide-react';
+import { CalendarDays, Inbox, Music, Plus } from 'lucide-react';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
@@ -16,6 +16,7 @@ import { CatalogIcon, ChappiIcon, NotesIcon, ProfileIcon } from '@/components/ap
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
+const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 // Same flag that gates the `?scene=song` URL param, the Song pill in
 // TasksPanel and the /song API routes — so this tab cannot offer a surface
 // that does not exist.
@@ -133,7 +134,7 @@ function SongTab({ isHome }: { isHome: boolean }) {
  * (which retires on this same viewport range — see ChappiDock.tsx).
  *
  * Slots: Home (Catalog) · UrgAns · New release/New activity (center, filled) ·
- * Notes · You · Song. "You" is a direct Link to /settings rather than a
+ * Notes · Shows · You · Song. "You" is a direct Link to /settings rather than a
  * menu — the account actions (Settings, sign out) already live there, and a
  * menu on top of a menu (WorkspaceMenu still exists at lg+) would be one tap
  * for nothing. Song trails the bar rather than sitting beside the "+" — see
@@ -160,13 +161,14 @@ function SongTab({ isHome }: { isHome: boolean }) {
  * moment a release is scoped or another page is reached.
  *
  * WIDTH. Every slot is `flex-1` in a full-bleed `<ul>`, so the budget is the
- * viewport split evenly. Song and Pitches are now mutually exclusive (a dual
- * account gets Pitches and not Song), which caps the bar at SIX slots: Home,
- * UrgAns, +, Notes, You, and whichever of the two applies. 375 / 6 = ~62px,
- * against a widest label of "Pitches" at ~45px and a 48px center button, so
- * nothing wraps or clips. A SEVENTH slot would land at ~53px, which still
- * measured clear but leaves no room after it — an eighth needs a different
- * shape for this bar, not another `flex-1`.
+ * viewport split evenly. Song and Pitches are mutually exclusive (a dual
+ * account gets Pitches and not Song), so the ceiling is SEVEN slots: Home,
+ * UrgAns, +, Notes, Shows, You, and whichever of the two applies. 375 / 7 =
+ * ~53px, against a widest label of "Pitches" at ~45px and a 48px center
+ * button, so nothing wraps or clips — but there is no room after it. Shows
+ * (2026-08-30) took the last one. AN EIGHTH NEEDS A DIFFERENT SHAPE for this
+ * bar — an overflow sheet holding the optional global surfaces — not another
+ * `flex-1`.
  *
  * The bar shows on every route AppShell mounts it on, /dashboard/urgans
  * included — hiding it there would leave the assistant page with no way out
@@ -185,6 +187,7 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
   const isHome = pathname === '/dashboard';
   const isUrgAns = pathname === '/dashboard/urgans';
   const isNotes = pathname === '/dashboard/notes';
+  const isShows = pathname?.startsWith('/dashboard/shows') ?? false;
   const isSettings = pathname?.startsWith('/settings') ?? false;
   // Tri-state — `null` means the probe is still in flight, and it is null on
   // every fresh load (never persisted). TWO tabs read it, in opposite
@@ -308,6 +311,32 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
             >
               <NotesIcon className="h-5 w-5" />
               Notes
+            </Link>
+          </li>
+        ) : null}
+
+        {/* Shows — the other global surface, beside Notes and for the same
+            reason: a plain destination, no search params, so no Suspense
+            boundary. Prefix match, because a show's own page lives one level
+            deeper and should keep this lit.
+
+            It is the SEVENTH slot in the worst case, which is the ceiling this
+            bar's own width note names: Song and Pitches are mutually exclusive,
+            so no account ever gets both, and 375 / 7 = ~53px against a widest
+            label of "Pitches" at ~45px. That was already measured clear. An
+            EIGHTH would need a different shape for this bar — an overflow
+            sheet, not another `flex-1` — so this is the last tab that fits. */}
+        {EVENTS_ENABLED ? (
+          <li className="flex-1">
+            <Link
+              href="/dashboard/shows"
+              aria-current={isShows ? 'page' : undefined}
+              className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
+                isShows ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
+              }`}
+            >
+              <CalendarDays className="h-5 w-5" />
+              Shows
             </Link>
           </li>
         ) : null}

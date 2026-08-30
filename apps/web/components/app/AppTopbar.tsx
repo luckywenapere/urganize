@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Inbox, Plus } from 'lucide-react';
+import { CalendarDays, Inbox, Plus } from 'lucide-react';
 import { Logo } from '@urganize/ui';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -24,6 +24,10 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 // with the assistant, and burying them in that fragment would hide them
 // whenever the assistant is switched off.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
+
+// Shows. Same flag WorkspaceIdentityPanel reads for its own nav row, so the
+// two entry points cannot disagree about whether the surface exists.
+const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 
 // The crossing point into the playlist-owner side, for an account that holds
 // BOTH capabilities. Gated on the flag AND on the account actually owning a
@@ -493,6 +497,26 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             }`}
           >
             <NotesIcon className="h-[18px] w-[18px]" />
+          </Link>
+        ) : null}
+
+        {/* Shows — the other global surface, beside Notes and for the same
+            reason: an ordinary link rather than part of the Catalog/UrgAns
+            toggle pair. Prefix match, because a show's own page lives one
+            level deeper and should keep this lit. Reads no search params, so
+            it needs no Suspense boundary. */}
+        {EVENTS_ENABLED ? (
+          <Link
+            href="/dashboard/shows"
+            aria-label="Shows"
+            title="Shows"
+            className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
+              pathname?.startsWith('/dashboard/shows')
+                ? 'bg-brand/10 text-brand'
+                : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
+            }`}
+          >
+            <CalendarDays className="h-[18px] w-[18px]" aria-hidden />
           </Link>
         ) : null}
 
