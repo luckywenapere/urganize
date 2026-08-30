@@ -37,6 +37,19 @@ export type SetScopeOptions = {
    * `replace`) so filter-like click cycles don't pollute history.
    */
   push?: boolean;
+  /**
+   * Leave the outgoing release at Activities instead of remembering whatever
+   * scene it was showing.
+   *
+   * The workspace back arrow passes this, and it is what stops that arrow
+   * looping: an explicit "leave this release" must not be resumed into the
+   * scene it left, or the user taps the release again and lands straight back
+   * in the thing they were trying to get out of. Switching BETWEEN releases
+   * (rail cards, UrgAns links, a note's release chip) deliberately does not
+   * pass it — resuming each release where it was left is the whole point of
+   * lib/scene-memory.
+   */
+  forgetScene?: boolean;
 };
 
 export type ReleaseScope = {
@@ -77,7 +90,7 @@ export function useReleaseScope(): ReleaseScope {
         // hook are the two "release is changing" choke points, the same pair
         // SCENE_SCOPED_PARAMS already uses.
         if (previousReleaseId) {
-          const outgoingScene = params.get(SCENE_PARAM);
+          const outgoingScene = options?.forgetScene ? null : params.get(SCENE_PARAM);
           rememberScene(previousReleaseId, isSceneName(outgoingScene) ? outgoingScene : null);
         }
 

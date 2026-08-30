@@ -58,6 +58,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Chappi } from '@urganize/ui';
 import { useAuthStore } from '@/lib/auth-store';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { HOME_PATH } from '@/lib/home-path';
@@ -949,22 +950,29 @@ export default function OnboardingPage() {
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
       <div className="mx-auto w-full max-w-xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12 md:max-w-2xl">
-        {/* Brand / title */}
-        <div className="mb-6 sm:mb-8">
-          <p className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-brand">
-            Urganize
-          </p>
-          <h1 className="mt-1 font-display text-2xl font-semibold leading-tight text-content-primary sm:text-3xl">
-            Welcome aboard
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-content-secondary">
-            {isAuthedSetup
-              ? // The account already exists here (a Google sign-in that came
-                // straight from /auth), so "before we set up your workspace"
-                // would describe a step that already happened.
-                'A few questions and your first release is ready.'
-              : 'A few questions before we set up your workspace.'}
-          </p>
+        {/* Brand / title. Chappi introduces himself here and nowhere else in
+            the flow (mascot brief, 2026-08-30) — he sits beside the greeting
+            on the first screen and does not follow the user through the
+            questions.
+
+            The signup line no longer says "workspace". The model sheet bans
+            the word outright ("that word stays out of anything a customer
+            reads"), and the rule binds every string rendered next to him, so
+            putting him here forced the fix. Both branches now say the same
+            true thing; the authed-setup branch already did. */}
+        <div className="mb-6 flex items-start gap-4 sm:mb-8">
+          {step === 0 ? <Chappi pose="idle" size={96} className="-mt-2" /> : null}
+          <div className="min-w-0">
+            <p className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-brand">
+              Urganize
+            </p>
+            <h1 className="mt-1 font-display text-2xl font-semibold leading-tight text-content-primary sm:text-3xl">
+              Welcome aboard
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-content-secondary">
+              A few questions and your first release is ready.
+            </p>
+          </div>
         </div>
 
         {/* Signing up needs JavaScript. Say so instead of leaving the user

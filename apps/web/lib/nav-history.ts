@@ -16,9 +16,11 @@
 // The founder hit exactly that and reported "this back button gets stuck a lot,
 // I can't even go back". Two different releases loop the same way (UrgAns, a
 // note's release chip and the desktop rails can all move you between them), and
-// so does any page/release pair. `resolveWorkspaceBackTarget`'s same-release
-// guard below caught ONE instance of this shape; the data structure is what
-// caused it.
+// so does any page/release pair.
+//
+// (The workspace back arrow that report was about no longer reads this module
+// at all — see the note further down. Settings' back button still does, and the
+// stack is what keeps IT terminating.)
 //
 // With a stack, returning to the entry directly beneath the top POPS instead of
 // pushing (see recordNavigation), so back always shrinks the trail and always
@@ -91,88 +93,19 @@ export function readPreviousLocation(): string | null {
   return stack.length > 1 ? (stack[stack.length - 2] ?? null) : null;
 }
 
-/** Pages that must never be a back destination.
- *
- * Every one of them either bounces (the auth pages and /locked redirect an
- * authenticated team straight back into the app) or is a one-way flow step that
- * makes no sense to re-enter. Sending someone "back" to one is worse than not
- * moving them at all. */
-const NON_DESTINATION_PREFIXES = [
-  '/auth',
-  '/onboarding',
-  '/locked',
-  '/start-trial',
-  '/redeem',
-  '/invite',
-  '/join',
-  '/payment',
-] as const;
-
-/** Does this URL scope the given release in the workspace?
- *
- * Read off the query string rather than by substring match, so a release id
- * appearing anywhere else in the URL cannot produce a false positive. */
-function scopesRelease(url: string, releaseId: string): boolean {
-  const queryStart = url.indexOf('?');
-  if (queryStart === -1) return false;
-  try {
-    return new URLSearchParams(url.slice(queryStart + 1)).get('release') === releaseId;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Where the workspace's back arrow should go, or null for "no usable previous —
- * fall back to dropping the release scope".
- *
- * Called only when NO scene is open: with a scene open the arrow closes the
- * scene and never consults history at all, which is what makes scene-to-scene
- * ping-pong structurally impossible rather than merely guarded against.
- *
- * THREE REJECTIONS, and the first is the whole reason this function exists:
- *
- *  1. A PREVIOUS LOCATION THAT STILL SCOPES THE SAME RELEASE IS NOT "BACK".
- *     Scene switches `replace`, which appends to the trail without a matching
- *     pop, so the entry beneath the top can still be a scene of the release
- *     being left. Pushing it would re-open the thing the user just closed.
- *     Going back to the release you are trying to leave is not leaving it.
- *     This is the analogue of the Settings back button's
- *     `!previous.startsWith('/settings')` guard, which does not transfer
- *     directly because both URLs here share one pathname.
- *  2. A flow page (see NON_DESTINATION_PREFIXES).
- *  3. THE PAGE THE USER IS ALREADY ON. The trail cannot normally produce this
- *     — it never holds the same URL twice in a row — but a navigation that
- *     never reached NavigationTracker's effect would desync it, and the cost
- *     of being wrong here is the worst possible one for this button: a tap
- *     that visibly does nothing. Falling through to the scope drop always
- *     moves. Pass the live `window.location` value, not a render-time copy.
- *
- * The same-origin check mirrors readPreviousLocation's, because this is also
- * reachable with a value that never went through it.
- */
-export function resolveWorkspaceBackTarget(input: {
-  previous: string | null;
-  scopedReleaseId: string | null;
-  currentUrl?: string | null;
-}): string | null {
-  const previous = input.previous;
-  if (!previous) return null;
-  if (!previous.startsWith('/') || previous.startsWith('//')) return null;
-  if (input.currentUrl && previous === input.currentUrl) return null;
-
-  const path = previous.split('?')[0] ?? '';
-  if (
-    NON_DESTINATION_PREFIXES.some(
-      (prefix) => path === prefix || path.startsWith(`${prefix}/`)
-    )
-  ) {
-    return null;
-  }
-
-  if (input.scopedReleaseId && scopesRelease(previous, input.scopedReleaseId)) {
-    return null;
-  }
-
-  return previous;
-}
+// THE WORKSPACE BACK ARROW NO LONGER READS ANY OF THIS (2026-08-30).
+//
+// `resolveWorkspaceBackTarget` lived here until the founder rejected a
+// history-aware release back arrow outright: it now always leaves the release
+// for the catalog, so it needs no previous location, no rejections and no
+// scene special case. See WorkspaceView's `goBack` for the reasoning; git
+// history has the resolver if a smart destination is ever wanted again.
+//
+// SETTINGS IS THE ONLY CONSUMER LEFT, and it is a genuinely different button:
+// Settings is a place you visit from somewhere, so returning to that somewhere
+// is the whole point of it (founder request, 2026-07-23). It guards only
+// against landing back on `/settings`, so the flow-page rejection the deleted
+// resolver carried is gone with it — a Settings back CAN in principle land on
+// a page like `/auth` that bounces an authenticated user straight into the
+// app. Pre-existing rather than introduced here (the resolver never guarded
+// Settings), and worth a guard of its own if it ever shows up in practice.

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react';
 import { useRouter } from 'next/navigation';
+import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
 import {
   ArrowUp,
   Check,
@@ -715,7 +716,15 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     // is byte-for-byte the same layout as before.
     return (
       <div className="flex h-full min-h-0 flex-col px-2 text-center lg:justify-center">
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto lg:flex-none lg:overflow-visible">
+        {/* Chappi waits here while there is nothing to answer (mascot brief,
+            2026-08-30). He is stacked above the question inside the SAME
+            flex-1 region, which is the part that matters: the two-region
+            split below is what three rejected attempts landed on, so he
+            joins a region rather than becoming a third one. Page variant
+            only — the dock and rail keep the question alone, so an empty
+            state elsewhere on the screen is never competing with him. */}
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-y-auto lg:flex-none lg:overflow-visible">
+          <Chappi pose="idle" size={96} />
           <h1 className="font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
             What do you want to get done today?
           </h1>
@@ -866,9 +875,13 @@ function Transcript({
         )
       )}
 
+      {/* Chappi IS the loading state here — he replaces the spinner rather
+          than sitting beside one (mascot brief, 2026-08-30). He carries the
+          aria-label, so the row still announces itself; the visible word
+          stays for anyone who reads the transcript rather than the picture. */}
       {isThinking ? (
         <div className="flex items-center gap-2 text-sm text-content-tertiary">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          <Chappi pose="thinking" size={CHAPPI_MIN_SIZE} ariaLabel="UrgAns is thinking" />
           Thinking…
         </div>
       ) : null}

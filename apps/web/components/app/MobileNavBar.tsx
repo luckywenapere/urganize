@@ -1,23 +1,21 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { CalendarDays, Inbox, MoreHorizontal, Music, Plus } from 'lucide-react';
+import { CalendarDays, Inbox, Music, Plus } from 'lucide-react';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
+import { rememberScene } from '@/lib/scene-memory';
 import { CatalogIcon, ChappiIcon, NotesIcon, ProfileIcon } from '@/components/app/BrandIcons';
-import { MobileMoreSheet, type MoreNavItem } from '@/components/app/MobileMoreSheet';
 
 // Same flags AppTopbar reads — a tab only exists in the bar when its surface
 // exists at all.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
-// Shows. Global like Notes, so it lives in the overflow rather than as a tab —
-// see MobileMoreSheet for why the bar stopped growing.
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 // Same flag that gates the `?scene=song` URL param, the Song pill in
 // TasksPanel and the /song API routes — so this tab cannot offer a surface
@@ -48,13 +46,51 @@ function SongTabLink({ href, isActive }: { href: string; isActive: boolean }) {
   );
 }
 
+/** Home's markup. Same split as Song's, for the same reason: the Suspense
+ *  fallback and the resolved tab must stay pixel-identical. */
+function HomeTabLink({ isActive, onClick }: { isActive: boolean; onClick: () => void }) {
+  return (
+    <Link
+      href="/dashboard"
+      onClick={onClick}
+      aria-current={isActive ? 'page' : undefined}
+      className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
+        isActive ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
+      }`}
+    >
+      <CatalogIcon className="h-5 w-5" />
+      Home
+    </Link>
+  );
+}
+
+/**
+ * Hidden on the bare catalog — `/dashboard` with no `?release=` — because
+ * that is where the tap would land you already (founder call, 2026-08-30).
+ * Shown everywhere else, a scoped `/dashboard?release=<id>` included, so
+ * leaving a scoped release still has its own way back to the catalog.
+ *
+ * ISOLATED BEHIND ITS OWN SUSPENSE BOUNDARY for the reason SongTab's own
+ * header gives below: `useSearchParams` in a statically prerendered client
+ * component pulls the nearest boundary down with it, and this bar is mounted
+ * on `/settings` too, which must stay `○ Static`.
+ */
+function HomeTab({ isHome, onClick }: { isHome: boolean; onClick: () => void }) {
+  const searchParams = useSearchParams();
+  if (isHome && !searchParams.get('release')) return null;
+  return <HomeTabLink isActive={isHome} onClick={onClick} />;
+}
+
 /**
  * Song is a release SCENE, not a global page, so this tab is the one entry in
  * the bar whose destination depends on the URL: `?release=<id>&scene=song`
  * when a release is scoped, the catalog otherwise (which is where you pick
- * one). It is rendered in every case rather than appearing only while scoped —
- * a tab that comes and goes would reflow the whole bar on every scope change,
- * the same layout-shift the Pitches tab's tri-state read is written to avoid.
+ * one) — EXCEPT on the bare catalog itself, where that fallback link would
+ * just point back at the screen already on-screen, so it hides there too
+ * (the same bare-home rule as Home, above). Everywhere else it is rendered
+ * unconditionally rather than appearing only while scoped — a tab that comes
+ * and goes would reflow the whole bar on every scope change, the same
+ * layout-shift the Pitches tab's tri-state read is written to avoid.
  *
  * ISOLATED BEHIND ITS OWN SUSPENSE BOUNDARY, and that is not stylistic:
  * `useSearchParams` in a statically prerendered client component makes Next
@@ -69,7 +105,10 @@ function SongTab({ isHome }: { isHome: boolean }) {
   const searchParams = useSearchParams();
   const releaseId = searchParams.get('release');
 
-  if (!releaseId) return <SongTabLink href="/dashboard" isActive={false} />;
+  if (!releaseId) {
+    if (isHome) return null;
+    return <SongTabLink href="/dashboard" isActive={false} />;
+  }
 
   // Already on the workspace: keep its params, so opening Song does not throw
   // away the calendar's remembered tab and month (SCENE_SCOPED_PARAMS, which
@@ -95,10 +134,11 @@ function SongTab({ isHome }: { isHome: boolean }) {
  * (which retires on this same viewport range — see ChappiDock.tsx).
  *
  * Slots: Home (Catalog) · UrgAns · New release/New activity (center, filled) ·
- * Song · More · You. "You" is a direct Link to /settings rather than a
+ * Notes · Shows · You · Song. "You" is a direct Link to /settings rather than a
  * menu — the account actions (Settings, sign out) already live there, and a
  * menu on top of a menu (WorkspaceMenu still exists at lg+) would be one tap
- * for nothing.
+ * for nothing. Song trails the bar rather than sitting beside the "+" — see
+ * its own comment below for why the one tab that comes and goes belongs last.
  *
  * The center button is contextual as of 2026-08-17: when a release is
  * scoped (`/dashboard?release=<id>`), it opens the task quick-create modal
@@ -108,26 +148,27 @@ function SongTab({ isHome }: { isHome: boolean }) {
  * comment). Everywhere else — catalog view, or any other route — it keeps
  * opening "New release" exactly as before. See `handleFabClick` below.
  *
- * WIDTH, and why the bar stopped growing (2026-08-30). Every slot is `flex-1`
- * in a full-bleed `<ul>`, so each optional tab narrows the bar for everyone.
- * Four fixed slots plus Song, Notes and Pitches already reached the measured
- * ceiling of seven (375 / 7 = ~53px against a 48px centre button), and Shows
- * would have been the eighth — which squeezes that button rather than merely
- * looking tight. So the bar is now a FIXED SIX and the optional GLOBAL
- * surfaces (Shows, Notes, Playlist pitches) live behind More instead. Adding
- * another global destination means adding it to `moreItems`, never another
+ * Pitches appears only for a dual account (team + playlist owner) — a state
+ * currently held by a single partner. It earns the crowding because this bar
+ * is the only navigation a phone has: the topbar's own icons are
+ * `hidden lg:grid` under this flag and the identity card never renders below
+ * `lg`, so without it a dual account had to open a second tab to reach its own
+ * inbox.
+ *
+ * Home and Song both drop out on the bare catalog (`/dashboard` with no
+ * `?release=`) — see HomeTab's and SongTab's own headers for why. So the bar
+ * is shorter by two on the one screen it opens on, and fills back in the
+ * moment a release is scoped or another page is reached.
+ *
+ * WIDTH. Every slot is `flex-1` in a full-bleed `<ul>`, so the budget is the
+ * viewport split evenly. Song and Pitches are mutually exclusive (a dual
+ * account gets Pitches and not Song), so the ceiling is SEVEN slots: Home,
+ * UrgAns, +, Notes, Shows, You, and whichever of the two applies. 375 / 7 =
+ * ~53px, against a widest label of "Pitches" at ~45px and a 48px center
+ * button, so nothing wraps or clips — but there is no room after it. Shows
+ * (2026-08-30) took the last one. AN EIGHTH NEEDS A DIFFERENT SHAPE for this
+ * bar — an overflow sheet holding the optional global surfaces — not another
  * `flex-1`.
- *
- * Song is the one conditional tab that stayed, because the founder asked for
- * it by name (2026-08-30, "put song back in the bottom navigation bar"), and
- * because it is release-scoped rather than a global page.
- *
- * The trade this makes: Notes and Playlist pitches are one tap deeper than
- * they were. Notes is flag-off in production so nobody sees the change;
- * Pitches costs the one dual account a tap to reach its inbox. That is a
- * downgrade but not a dead end, which is the bar this feature has to clear —
- * the reason Pitches got a tab at all was that a phone had NO crossing to the
- * curator side, and More still provides one.
  *
  * The bar shows on every route AppShell mounts it on, /dashboard/urgans
  * included — hiding it there would leave the assistant page with no way out
@@ -146,51 +187,39 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
   const isHome = pathname === '/dashboard';
   const isUrgAns = pathname === '/dashboard/urgans';
   const isNotes = pathname === '/dashboard/notes';
+  const isShows = pathname?.startsWith('/dashboard/shows') ?? false;
   const isSettings = pathname?.startsWith('/settings') ?? false;
-  // Tri-state; null (probe in flight) keeps the tab out rather than letting it
-  // pop in and shift the other five mid-load.
+  // Tri-state — `null` means the probe is still in flight, and it is null on
+  // every fresh load (never persisted). TWO tabs read it, in opposite
+  // directions but on the same rule: only a CONFIRMED positive changes the
+  // bar. Pitches waits for `=== true` to appear; Song hides on `=== true` and
+  // shows otherwise. So while the answer is unknown both settle on the
+  // non-curator shape, which is what almost every account resolves to — the
+  // common case never shifts mid-load, and the one dual account absorbs a
+  // single reflow at the same instant Pitches arrives anyway.
   const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
-  const [isMoreOpen, setIsMoreOpen] = useState(false);
 
-  // Global destinations that are not one of the fixed tabs. Same flags the
-  // topbar and the identity card read, so the three entry points cannot
-  // disagree about whether a surface exists.
-  const moreItems: MoreNavItem[] = [
-    ...(EVENTS_ENABLED
-      ? [
-          {
-            href: '/dashboard/shows',
-            label: 'Shows',
-            Icon: ({ className }: { className?: string }) => (
-              <CalendarDays className={className} aria-hidden />
-            ),
-            isActive: pathname?.startsWith('/dashboard/shows') ?? false,
-          },
-        ]
-      : []),
-    ...(NOTES_ENABLED
-      ? [
-          {
-            href: '/dashboard/notes',
-            label: 'Notes',
-            Icon: NotesIcon,
-            isActive: isNotes,
-          },
-        ]
-      : []),
-    ...(PITCHING_ENABLED && hasCuratorProfile === true
-      ? [
-          {
-            href: '/curator',
-            label: 'Playlist pitches',
-            Icon: ({ className }: { className?: string }) => (
-              <Inbox className={className} aria-hidden />
-            ),
-            isActive: pathname?.startsWith('/curator') ?? false,
-          },
-        ]
-      : []),
-  ];
+  // Home while a release is scoped means "leave this release", exactly like the
+  // workspace back arrow — the founder asked for the two to match (2026-08-30:
+  // "clicking home while in task view should lead them to catalog view, same
+  // thing for that back button, always").
+  //
+  // The `<Link>` already does the leaving: `/dashboard` carries no query, so it
+  // drops `?release=` and `?scene=` together and lands on the catalog. What was
+  // missing is the other half of leaving — forgetting the scene the release was
+  // showing, so tapping that release again starts at Activities rather than
+  // resuming the scene the user just walked out of. WorkspaceView's goBack gets
+  // this from setScope's `forgetScene`; there is no setScope here, so it calls
+  // rememberScene directly. Same end state, one rule.
+  //
+  // Reads `?release=` fresh at click time for the reason SongTab's header
+  // gives: an answer on demand, not a subscription that would drag the whole
+  // bar behind a Suspense boundary.
+  const handleHomeClick = () => {
+    if (typeof window === 'undefined' || !isHome) return;
+    const releaseId = new URLSearchParams(window.location.search).get('release');
+    if (releaseId) rememberScene(releaseId, null);
+  };
 
   const handleUrgAnsClick = () => {
     // Carry the drilled-in release as the assistant's scope, mirroring
@@ -238,16 +267,9 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
     >
       <ul className="flex h-16 w-full items-stretch">
         <li className="flex-1">
-          <Link
-            href="/dashboard"
-            aria-current={isHome ? 'page' : undefined}
-            className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-              isHome ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
-            }`}
-          >
-            <CatalogIcon className="h-5 w-5" />
-            Home
-          </Link>
+          <Suspense fallback={<HomeTabLink isActive={isHome} onClick={handleHomeClick} />}>
+            <HomeTab isHome={isHome} onClick={handleHomeClick} />
+          </Suspense>
         </li>
 
         {CHAPPI_ENABLED ? (
@@ -278,44 +300,61 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
           </button>
         </li>
 
-        {/* Song sits immediately after the "+" (founder call, 2026-08-30) —
-            the two release-scoped controls in the bar, side by side, since
-            that button also acts on the scoped release. It was reachable on
-            mobile only from the folded "more" menu, which is a drawer behind a
-            hamburger. It STAYS in that menu as well, deliberately: this bar is
-            gated on NEXT_PUBLIC_FEATURE_MOBILE_NAV while the menu is not, so
-            removing it there would tie Song's mobile reachability to a second
-            flag and leave a band with no entry point at all — the exact
-            compounding failure recorded under "Crossing between the two
-            portals". */}
-        {SONG_UPLOAD_ENABLED ? (
+        {NOTES_ENABLED ? (
           <li className="flex-1">
-            <Suspense fallback={<SongTabLink href="/dashboard" isActive={false} />}>
-              <SongTab isHome={isHome} />
-            </Suspense>
+            <Link
+              href="/dashboard/notes"
+              aria-current={isNotes ? 'page' : undefined}
+              className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
+                isNotes ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
+              }`}
+            >
+              <NotesIcon className="h-5 w-5" />
+              Notes
+            </Link>
           </li>
         ) : null}
 
-        {/* Overflow. The bar is fixed at six slots because every optional tab
-            narrows it for everyone — four fixed plus Song, Notes and Pitches
-            already hit the measured seven-slot ceiling, and Shows would have
-            been the eighth. Global surfaces go in here now instead. */}
-        {moreItems.length > 0 ? (
+        {/* Shows — the other global surface, beside Notes and for the same
+            reason: a plain destination, no search params, so no Suspense
+            boundary. Prefix match, because a show's own page lives one level
+            deeper and should keep this lit.
+
+            It is the SEVENTH slot in the worst case, which is the ceiling this
+            bar's own width note names: Song and Pitches are mutually exclusive,
+            so no account ever gets both, and 375 / 7 = ~53px against a widest
+            label of "Pitches" at ~45px. That was already measured clear. An
+            EIGHTH would need a different shape for this bar — an overflow
+            sheet, not another `flex-1` — so this is the last tab that fits. */}
+        {EVENTS_ENABLED ? (
           <li className="flex-1">
-            <button
-              type="button"
-              onClick={() => setIsMoreOpen(true)}
-              aria-haspopup="dialog"
-              aria-expanded={isMoreOpen}
-              className={`flex h-full w-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-                moreItems.some((item) => item.isActive)
+            <Link
+              href="/dashboard/shows"
+              aria-current={isShows ? 'page' : undefined}
+              className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
+                isShows ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
+              }`}
+            >
+              <CalendarDays className="h-5 w-5" />
+              Shows
+            </Link>
+          </li>
+        ) : null}
+
+        {PITCHING_ENABLED && hasCuratorProfile === true ? (
+          <li className="flex-1">
+            <Link
+              href="/curator"
+              aria-current={pathname?.startsWith('/curator') ? 'page' : undefined}
+              className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
+                pathname?.startsWith('/curator')
                   ? 'text-brand'
                   : 'text-content-tertiary hover:text-content-secondary'
               }`}
             >
-              <MoreHorizontal className="h-5 w-5" aria-hidden />
-              More
-            </button>
+              <Inbox className="h-5 w-5" />
+              Pitches
+            </Link>
           </li>
         ) : null}
 
@@ -331,11 +370,37 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
             You
           </Link>
         </li>
-      </ul>
 
-      {isMoreOpen ? (
-        <MobileMoreSheet items={moreItems} onClose={() => setIsMoreOpen(false)} />
-      ) : null}
+        {/* Song is LAST, after You (founder call, 2026-08-30 — superseding the
+            same day's "immediately after the +", which put it between the plus
+            button and You). It is the only tab that comes and goes with the
+            scoped release, so trailing the bar means appearing and disappearing
+            shifts nothing: the four fixed tabs hold their positions and Song is
+            simply added to or removed from the end. In its former slot it
+            pushed You sideways every time a release was opened or left.
+
+            A DUAL ACCOUNT (team + playlist owner) never gets this tab at all
+            (founder call, 2026-08-30). That account is the only one carrying
+            Pitches, so it is the only one that would run seven slots, and it is
+            also the account least likely to be uploading masters from a phone.
+            Losing it here costs that account nothing: Song is still one tap
+            away in the folded "more" menu, which is exactly why that duplicate
+            is kept rather than tidied away.
+
+            It STAYS in the folded "more" menu for every account, deliberately:
+            this bar is gated on NEXT_PUBLIC_FEATURE_MOBILE_NAV while the menu
+            is not, so removing it there would tie Song's mobile reachability to
+            a second flag and leave a band with no entry point at all — the
+            exact compounding failure recorded under "Crossing between the two
+            portals". */}
+        {SONG_UPLOAD_ENABLED && hasCuratorProfile !== true ? (
+          <li className="flex-1">
+            <Suspense fallback={<SongTabLink href="/dashboard" isActive={false} />}>
+              <SongTab isHome={isHome} />
+            </Suspense>
+          </li>
+        ) : null}
+      </ul>
     </nav>
   );
 }
