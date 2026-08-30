@@ -29,6 +29,8 @@ const CREATABLE_RELEASE_TYPES = getAvailableReleaseTypes().filter(
 );
 const SHOW_TYPE_PICKER = CREATABLE_RELEASE_TYPES.length > 1;
 
+type WorkspaceArtistOption = { id: string; name: string };
+
 const RELEASE_TYPE_LABELS: Record<DbReleaseType, string> = {
   single: 'Single',
   ep: 'EP',
@@ -151,6 +153,19 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
   // was implicitly before the picker existed.
   const [releaseType, setReleaseType] = useState<DbReleaseType>('single');
 
+  // WHOSE release this is. Loaded on open rather than held in a store, because
+  // the roster changes in Settings and a cached copy would offer an artist that
+  // was just renamed.
+  //
+  // FAILS OPEN in the strongest sense: an empty list, a failed fetch and a
+  // still-loading fetch all render no picker and send no artistId, which drops
+  // straight back to the implicit-artist path the server has always had. So a
+  // one-artist team sees exactly what it saw before this existed, and a broken
+  // fetch cannot block release creation.
+  const [artists, setArtists] = useState<WorkspaceArtistOption[]>([]);
+  const [artistId, setArtistId] = useState('');
+  const showArtistPicker = artists.length > 1;
+
   // Portal mount-guard. The modal renders into document.body via createPortal
   // to escape AppShell's `lazy-fade` wrapper, which carries a `transform` —
   // any transformed ancestor turns `position: fixed` into "fixed relative to
@@ -166,7 +181,44 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     if (open) {
       setPlan(null);
       setReleaseType('single');
+      setArtistId('');
     }
+  }, [open]);
+
+  // Load the roster on open. Never surfaces an error: see the fail-open note on
+  // the `artists` state.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const accessToken = await getAccessToken();
+        if (!accessToken) return;
+        const response = await fetch('/api/workspace/artists', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          cache: 'no-store',
+        });
+        if (!response.ok) return;
+        const payload = (await response.json().catch(() => ({}))) as {
+          artists?: WorkspaceArtistOption[];
+        };
+        if (cancelled) return;
+        const list = Array.isArray(payload.artists) ? payload.artists : [];
+        setArtists(list);
+        // Preselect the team's original artist, which is the first row and the
+        // one the server would have chosen anyway. So the picker changes what
+        // is VISIBLE, never what a manager gets by leaving it alone.
+        if (list.length > 1) setArtistId(list[0]?.id ?? '');
+      } catch {
+        // Offline or mid-deploy. No picker, implicit artist, as before.
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   useEffect(() => {
@@ -319,6 +371,9 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
           title: title.trim() || undefined,
           releaseDate: releaseDate || undefined,
           releaseType,
+          // Omitted unless the picker actually rendered, so a one-artist team
+          // keeps taking the server's implicit-artist path untouched.
+          artistId: showArtistPicker && artistId ? artistId : undefined,
           source: 'dashboard',
           plan: plan || 'template',
         }),
@@ -492,6 +547,33 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                   Deliberately not part of step 1, which asks a different
                   question (rollout plan vs blank); a blank EP is legitimate and
                   should still stamp the row's type. */}
+              {/* WHOSE release. Above the type picker because it is the more
+                  fundamental question, and above the date for the same reason
+                  the type picker is. Renders only when the team has more than
+                  one artist — the release-type picker's precedent exactly: no
+                  control until there is a real choice, so every one-artist team
+                  sees the form it saw before rosters existed. A <select>
+                  rather than a radio row because a roster can be long, unlike
+                  the three fixed release types. */}
+              {showArtistPicker ? (
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-content-primary">
+                    Artist
+                  </span>
+                  <select
+                    value={artistId}
+                    onChange={(event) => setArtistId(event.target.value)}
+                    className="w-full rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                  >
+                    {artists.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
               {SHOW_TYPE_PICKER ? (
                 <div role="radiogroup" aria-label="Release type">
                   <span className="mb-2 block text-sm font-medium text-content-primary">

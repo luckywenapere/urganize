@@ -31,7 +31,11 @@ import { getTemplate } from '@/lib/release-templates/loader';
 import type { ReleaseType } from '@/lib/release-templates/types';
 import { loadCoverArtUrlMap } from '@/lib/cover-art';
 import { loadWorkspaceLogoFallbackUrl } from '@/lib/workspace-logo';
-import { getWorkspaceArtist, isWorkspaceFeatureEnabled } from '@/lib/artists-server';
+import {
+  checkArtistAllowance,
+  getWorkspaceArtist,
+  isWorkspaceFeatureEnabled,
+} from '@/lib/artists-server';
 import { type ReleaseCreatedSource } from '@/lib/analytics';
 import {
   captureServerAnalyticsEvent,
@@ -459,6 +463,29 @@ export async function POST(request: NextRequest) {
         artistIdToUse = String(existingArtistResult.data.id);
         artistName = String(existingArtistResult.data.name || artistName);
       } else {
+        // THE SECOND ARTIST CREATION POINT. Naming an artist we have not seen
+        // mints one, so this path has to respect the roster ceiling exactly as
+        // POST /api/workspace/artists does — capping only the button in
+        // Settings would leave the API wide open, which is the hole the seat
+        // cap had to close across two routes.
+        //
+        // Only reachable with a workspace resolved; without one the insert
+        // produces a row excluded from the partial unique index and there is no
+        // roster to count against, so it falls through uncapped as before.
+        if (workspaceIdForArtist) {
+          const allowance = await checkArtistAllowance(adminClient, workspaceIdForArtist);
+          if (!allowance.allowed) {
+            await recordLimitHit(adminClient, {
+              workspaceId: workspaceIdForArtist,
+              actorUserId: auth.user.id,
+              key: allowance.key,
+              limit: allowance.limit,
+              current: allowance.current,
+            });
+            return NextResponse.json({ error: allowance.message }, { status: 409 });
+          }
+        }
+
         const insertArtistResult = await adminClient
           .from(ARTISTS_TABLE)
           .insert({

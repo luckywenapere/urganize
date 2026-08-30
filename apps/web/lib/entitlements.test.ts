@@ -483,6 +483,28 @@ describe('the seat cap is reachable, and only for a team that bought Manager', (
     expect(rejectedAsUnknownPlan(false)).toBe(true);
   });
 
+  // The artists ceiling became enforceable on 2026-08-30, when rosters shipped.
+  // Until then nothing in the product could add a second artist, so the number
+  // was published and gated nothing.
+  it('caps a paying Manager team at its fifth artist', () => {
+    const tier = resolveTeamTier({ state: 'paid', ownerPlan: 'manager' });
+    expect(checkLimit({ tier, key: 'artists', current: 4 }).allowed).toBe(true);
+    const blocked = checkLimit({ tier, key: 'artists', current: 5 });
+    expect(blocked.allowed).toBe(false);
+    if (blocked.allowed) throw new Error('expected blocked');
+    expect(blocked.message).toContain('5');
+    // The published line and the refusal have to agree, or a manager reads one
+    // number on the pricing page and meets another in the product.
+    expect(tierHighlights('manager')[0]).toContain('5');
+  });
+
+  it('never caps artists on the tiers that advertise unlimited', () => {
+    for (const tier of ['label', 'enterprise'] as const) {
+      expect(isUnlimited(resolveEntitlements(tier).artists), `${tier} artists`).toBe(true);
+      expect(checkLimit({ tier, key: 'artists', current: 999 }).allowed).toBe(true);
+    }
+  });
+
   it('caps a paying Manager team at its fourth seat, so the fifth invite is refused', () => {
     const tier = resolveTeamTier({ state: 'paid', ownerPlan: 'manager' });
     expect(tier).toBe('manager');
@@ -510,6 +532,7 @@ describe('the seat cap is reachable, and only for a team that bought Manager', (
     for (const plan of LEGACY_WRITABLE_PLANS) {
       const tier = resolveTeamTier({ state: 'paid', ownerPlan: plan });
       const entitlements = resolveEntitlements(tier);
+      expect(isUnlimited(entitlements.artists), `${plan} -> ${tier} artists`).toBe(true);
       expect(isUnlimited(entitlements.seats), `${plan} -> ${tier} seats`).toBe(true);
       expect(isUnlimited(entitlements.active_releases), `${plan} -> ${tier} releases`).toBe(true);
       expect(

@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
+import { checkLimit, type LimitVerdict } from '@/lib/entitlements';
+import { getWorkspaceTier } from '@/lib/team-billing-server';
 
 export const ARTISTS_TABLE = 'artists';
 export const RELEASES_TABLE = 'releases';
@@ -13,15 +15,183 @@ export type WorkspaceArtist = {
   slug: string;
 };
 
+const ARTIST_COLUMNS = 'id,workspace_id,owner_user_id,name,slug';
+
+function toWorkspaceArtist(row: Record<string, unknown>): WorkspaceArtist {
+  return {
+    id: String(row.id),
+    workspaceId: String(row.workspace_id || ''),
+    ownerUserId: String(row.owner_user_id || ''),
+    name: String(row.name || ''),
+    slug: String(row.slug || ''),
+  };
+}
+
 /**
- * Returns the workspace's single artist row, or null when none exists.
+ * Every artist on a team, oldest first.
  *
- * Workspace-scoped artists are the Phase 1+2 model. The v1 UI soft-limits to
- * one artist per workspace; until a "many artists per workspace" UI lands,
- * callers should treat workspace_id as the unique key and use `.maybeSingle`
- * semantics. `.order('created_at')` is added so that, in the legacy state
- * where a workspace has multiple artists, we return the oldest one
- * deterministically rather than racing on physical row order.
+ * Oldest-first is load-bearing rather than cosmetic: the first row is the
+ * team's original artist, which is what `getWorkspaceArtist` has always
+ * returned and what the implicit-artist path on release creation still falls
+ * back to. Reordering this would silently change which artist an API call that
+ * names none is filed under.
+ *
+ * Returns [] on any read failure. Callers render an empty roster rather than an
+ * error, matching how `getWorkspaceArtist` has always swallowed its errors —
+ * and the caller that matters (Settings) has its own error surface anyway.
+ */
+export async function listWorkspaceArtists(
+  adminClient: SupabaseClient,
+  workspaceId: string
+): Promise<WorkspaceArtist[]> {
+  if (!workspaceId) return [];
+  const { data, error } = await adminClient
+    .from(ARTISTS_TABLE)
+    .select(ARTIST_COLUMNS)
+    .eq('workspace_id', workspaceId)
+    .order('created_at', { ascending: true });
+
+  if (error || !Array.isArray(data)) return [];
+  return data.map((row) => toWorkspaceArtist(row as Record<string, unknown>));
+}
+
+/**
+ * How many artists a team has, or null when it cannot be read.
+ *
+ * Null means "do not enforce", exactly as `countTeamSeats` documents: turning a
+ * transient database blip into a team that cannot add an artist is worse than
+ * briefly allowing one too many.
+ */
+export async function countWorkspaceArtists(
+  adminClient: SupabaseClient,
+  workspaceId: string
+): Promise<number | null> {
+  if (!workspaceId) return null;
+  try {
+    const { count, error } = await adminClient
+      .from(ARTISTS_TABLE)
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId);
+    if (error) {
+      console.error('[artists] could not count workspace artists:', error.message);
+      return null;
+    }
+    return count ?? 0;
+  } catch (error) {
+    console.error('[artists] could not count workspace artists:', error);
+    return null;
+  }
+}
+
+/**
+ * Is this team allowed one more artist?
+ *
+ * Shared by BOTH places an artist can be created, which is the entire point:
+ * `POST /api/workspace/artists` is the one a person uses, and the
+ * lookup-or-create branch inside `POST /api/releases` will mint an artist for
+ * any caller that sends a name we have not seen. Capping only the first leaves
+ * the second open — the exact hole the seat cap had to close across two routes,
+ * and the reason this lives beside the counter rather than in a route file.
+ *
+ * FAILS OPEN twice, deliberately, mirroring `checkSeatAllowance`: an
+ * unresolvable tier and an unreadable count both return allowed, because
+ * refusing on a database blip is worse than briefly allowing one artist too
+ * many.
+ */
+export async function checkArtistAllowance(
+  adminClient: SupabaseClient,
+  workspaceId: string
+): Promise<LimitVerdict> {
+  const allowed: LimitVerdict = { allowed: true, limit: null, current: 0, remaining: null };
+
+  const tier = await getWorkspaceTier(workspaceId);
+  if (!tier) return allowed;
+
+  const current = await countWorkspaceArtists(adminClient, workspaceId);
+  if (current === null) return allowed;
+
+  return checkLimit({ tier, key: 'artists', current });
+}
+
+/**
+ * Adds an artist to a team.
+ *
+ * Does NOT check the tier ceiling — that is the route's job, because the two
+ * creation points (this, and the lookup-or-create inside `POST /api/releases`)
+ * need to report a refusal differently. Mixing the cap in here would make the
+ * cheaper of those two paths silently authoritative.
+ *
+ * The `conflict` flag mirrors `renameWorkspaceArtist`: the partial unique index
+ * on (workspace_id, slug) is the real guard, the pre-check is only there to
+ * produce a readable message, and 23505 is the backstop for the race between
+ * them.
+ */
+export async function createWorkspaceArtist(
+  adminClient: SupabaseClient,
+  input: { workspaceId: string; ownerUserId: string; name: string }
+): Promise<{ data: WorkspaceArtist | null; error: string | null; conflict?: boolean }> {
+  const trimmed = input.name.trim();
+  if (!trimmed) {
+    return { data: null, error: 'Artist name cannot be empty.' };
+  }
+  if (trimmed.length > 120) {
+    return { data: null, error: 'Artist name must be 120 characters or fewer.' };
+  }
+
+  const slug = normalizeReleaseSlug(trimmed) || `artist-${Date.now()}`;
+
+  const existing = await adminClient
+    .from(ARTISTS_TABLE)
+    .select('id')
+    .eq('workspace_id', input.workspaceId)
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (existing.data) {
+    return {
+      data: null,
+      error: `An artist named "${trimmed}" is already on your roster.`,
+      conflict: true,
+    };
+  }
+
+  const inserted = await adminClient
+    .from(ARTISTS_TABLE)
+    .insert({
+      owner_user_id: input.ownerUserId,
+      workspace_id: input.workspaceId,
+      name: trimmed,
+      slug,
+      updated_at: new Date().toISOString(),
+    })
+    .select(ARTIST_COLUMNS)
+    .single();
+
+  if (inserted.error || !inserted.data) {
+    const code = String((inserted.error as { code?: string } | null)?.code || '');
+    if (code === '23505') {
+      return {
+        data: null,
+        error: `An artist named "${trimmed}" is already on your roster.`,
+        conflict: true,
+      };
+    }
+    return { data: null, error: inserted.error?.message || 'Could not add artist.' };
+  }
+
+  return { data: toWorkspaceArtist(inserted.data as Record<string, unknown>), error: null };
+}
+
+/**
+ * Returns the workspace's FIRST artist row, or null when none exists.
+ *
+ * This predates multi-artist and is deliberately kept: it is the fallback for
+ * an API caller that creates a release without naming an artist, and it backs
+ * the identity card's unscoped read. `.order('created_at')` means "the team's
+ * original artist" rather than a race on physical row order — which was written
+ * as a defensive measure and became the actual contract when rosters landed.
+ *
+ * Anything that needs the whole roster wants `listWorkspaceArtists`.
  */
 export async function getWorkspaceArtist(
   adminClient: SupabaseClient,
@@ -29,7 +199,7 @@ export async function getWorkspaceArtist(
 ): Promise<WorkspaceArtist | null> {
   const { data, error } = await adminClient
     .from(ARTISTS_TABLE)
-    .select('id,workspace_id,owner_user_id,name,slug')
+    .select(ARTIST_COLUMNS)
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: true })
     .limit(1)
@@ -37,13 +207,7 @@ export async function getWorkspaceArtist(
 
   if (error || !data) return null;
 
-  return {
-    id: String(data.id),
-    workspaceId: String(data.workspace_id || ''),
-    ownerUserId: String(data.owner_user_id || ''),
-    name: String(data.name || ''),
-    slug: String(data.slug || ''),
-  };
+  return toWorkspaceArtist(data as Record<string, unknown>);
 }
 
 type RenameResult = {
