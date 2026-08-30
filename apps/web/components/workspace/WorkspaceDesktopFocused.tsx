@@ -59,6 +59,7 @@ type WorkspaceDesktopFocusedProps = {
   panelStatusUpdateAction?: TaskPanelAction | null;
   panelRecapAction?: TaskPanelAction | null;
   panelArchiveAction?: TaskPanelAction | null;
+  panelChangeArtistAction?: TaskPanelAction | null;
   /** Forwarded verbatim to TasksPanel's `sceneContent` — a release scene
    * (Metadata / Calendar / Files / Press kit) that replaces the activity
    * buckets in this centre column while it's open (2026-08-05). */
@@ -103,6 +104,7 @@ export function WorkspaceDesktopFocused({
   panelStatusUpdateAction,
   panelRecapAction,
   panelArchiveAction,
+  panelChangeArtistAction,
   panelSceneContent,
   panelActivitiesBanner,
   panelBannerReplacesEmptyState,
@@ -210,6 +212,7 @@ export function WorkspaceDesktopFocused({
             statusUpdateAction={panelStatusUpdateAction}
             recapAction={panelRecapAction}
             archiveAction={panelArchiveAction}
+            changeArtistAction={panelChangeArtistAction}
             sceneContent={panelSceneContent}
             activitiesBanner={panelActivitiesBanner}
             bannerReplacesEmptyState={panelBannerReplacesEmptyState}

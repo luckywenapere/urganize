@@ -2212,7 +2212,7 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-30 (**the install offer comes before the notification ask, built flag-off** — see ""Put us on your Home Screen", then notifications" near the end of this file. Founder brief: once someone is observed browsing the app's tabs, offer the install low on the screen where a thumb reaches, and only if they turn it down should the notification prompt follow. Not a scope expansion and no migration — the Android banner, the push card and an installable manifest all already shipped; what was missing was an iOS offer, a behavioural trigger, and any ordering between the two asks. Four things a later change will be tempted to get wrong, all argued there: THE iOS CARD CAN ONLY TEACH, because Apple routes Add to Home Screen through the share sheet and no API on any page can open it, so a primary button that "installs" would be a control that visibly does nothing; on iOS the ordering is FORCED rather than preferred, since Notification and PushManager are exposed only to Home Screen apps and isPushSupported() is false in a Safari tab; the hold costs an ask in a session where the user never browsed enough, and that is the right trade rather than a regression, because a browser grants exactly one permission prompt per origin forever and spending it on a drive-by visitor is how an origin gets Blocked for good; and lib/install-prompt.ts fails CLOSED on both counts — broken storage means no card AND isInstallPromptOwed() answers false, so it can never mute the notification ask behind an install prompt that will never arrive, which is also why markInstallPromptSettled guards its write but does NOT make the subscriber notification conditional on it (writePersistedState does not wrap setItem). AndroidAppBanner stands down when the flag is on — both point Android at the same /download page. Mutation-tested four ways; 1706 tests, lint at the exact 3/65 baseline, and next build green by exit code in both flag states. NOTHING HAS RENDERED IN A BROWSER on any phone — no session is mintable here and there is no route to either urganize domain — so the layout, the iOS steps against a real share sheet and the decline-to-notification hand-off all rest on unit tests and traced call paths; and do not try to prove the flag by grepping the client chunks, since dynamic() emits the card's chunk in both states. Previously, the same day: **a Solo tier on /pricing, and the first self-serve CTAs there** — see "A Solo tier, and the first self-serve CTAs on /pricing" near the end of this file. The ladder is Solo → Manager → Label → Group: Solo is ₦8,000/mo (₦80,000/yr) for one artist, two people, one release at a time and 40 UrgAns actions a month, and Manager moves up a rung to "two or more artists" with a 5-artist ceiling. Solo and Manager now send visitors to a free trial at APP_SIGNUP_URL (which is /onboarding, never login-only /auth) while Label keeps "Book a demo" and Group "Let's talk" — that NARROWS rather than deletes the 2026-08-24 "every CTA on this page is a capture" rule, and the header's "Join the waitlist" became "Start free trial" for the same reason, with every in-body waitlist form left where it was. Two things not to misread. SOLO IS NOT ON SALE: absent from SelfServeTierId, no Paystack Plan, and in neither subscriptions plan CHECK, so nothing can write it and no team can resolve onto it — the tripwire for the day that changes is pointed at resolveCheckoutPurchase rather than at a constant array, which is the lesson from the 2026-08-24 miss. And limits.artists is DECLARED, NOT ENFORCEABLE, because nothing in the product can add a second artist to a team (one artists row per workspace, no artist input on the create modal), so "Up to 5 artists" is a knowing exception to the standing do-not-market-multi-artist note, raised with the founder's brief and shipped as asked; the number still lives in @urganize/pricing so the page quotes the field a future check will read. No changelog entry or version bump — everything a user sees is apps/homepage, which the app-only scope rule excludes. Nothing was seen in a browser; the four-across row at ≥1280px is the one thing worth a look. Previously, 2026-08-29: **the release back arrow terminates now — shipped as v1.5.4** — see "It was still a trap: nav-history was one slot, not a stack" under "The workspace back arrow goes back now". The 2026-08-25 fix made the arrow do something; it did not make it terminate. lib/nav-history held a current+previous PAIR, and recording a navigation moves current into previous — so a back press pushed the previous page and simultaneously wrote the page it just left into the slot, sending the next press straight back. Two surfaces read that one slot (this arrow and Settings'), so the loop was one tap wide: release → Settings → back → release → back → Settings → forever. Same loop between any two workspace URLs — two releases reachable via UrgAns, the bell, a note chip or the desktop rails. It is a bounded stack now, and the rule that makes back terminate is that navigating to the entry directly BENEATH the top pops instead of pushing (it cannot tell our button from browser Back or an edge swipe, and must not). readPreviousLocation kept its signature, so neither call site changed and Settings is fixed by the same edit. Three things not to undo: only ONE step down counts as a pop; resolveWorkspaceBackTarget's same-release rejection STAYS, because scene switches replace and append with no matching pop; and the new "already here" rejection reads window.location at click time, never a render-time copy. Mutation-tested both guards. Deploy carries a deliberate one-tap degradation — open tabs hold the old keys, so the first press after deploy finds an empty trail and falls to its safe floor. Not pressed in a browser. Same day, earlier: **the assignee picker is a dropdown now — shipped as v1.5.3** — see "The assignee picker became a dropdown" near the end of this file. Its text input raised the phone keyboard over the list it was meant to show, so TaskMemberCombobox is deleted and TaskMemberSelect (a button over a role=listbox panel, the NoteReleasePicker pattern) replaces it at all three call sites. Search was dropped outright rather than hidden on mobile: Manager caps a team at four seats, and a viewport-conditional control means two code paths for one picker. It also deletes the bug class v1.5.2 had guarded — both of those defects existed only because the display and the filter were one field. Same day, earlier: **the assignee picker hid the team, and fields zoomed on tap — shipped as v1.5.2** — see "The assignee picker hid the team" near the end of this file. The picker filtered its list by the current assignee's name, so an already-assigned activity offered only that person; the guard now lives in filterMembersForPicker (lib/tasks.ts) and is the second copy of one ReleaseCombobox already carried — keep them in step. Blurring an empty box no longer unassigns, PlanTaskRow seeds its query, and TaskDetailView's seed effect is keyed on task?.id. Separately, one (pointer: coarse) rule sets form controls to 16px, since this project's type scale sits under iOS's auto-zoom threshold nearly everywhere; the !important is load-bearing against Tailwind specificity, and pinch/double-tap zoom were ALREADY closed by touch-action: pan-y. Same day, earlier: **the release scenes are team-aware, shipped as
+*Last updated: 2026-08-30 (**the install offer comes before the notification ask, built flag-off** — see ""Put us on your Home Screen", then notifications" near the end of this file. Founder brief: once someone is observed browsing the app's tabs, offer the install low on the screen where a thumb reaches, and only if they turn it down should the notification prompt follow. Not a scope expansion and no migration — the Android banner, the push card and an installable manifest all already shipped; what was missing was an iOS offer, a behavioural trigger, and any ordering between the two asks. Four things a later change will be tempted to get wrong, all argued there: THE iOS CARD CAN ONLY TEACH, because Apple routes Add to Home Screen through the share sheet and no API on any page can open it, so a primary button that "installs" would be a control that visibly does nothing; on iOS the ordering is FORCED rather than preferred, since Notification and PushManager are exposed only to Home Screen apps and isPushSupported() is false in a Safari tab; the hold costs an ask in a session where the user never browsed enough, and that is the right trade rather than a regression, because a browser grants exactly one permission prompt per origin forever and spending it on a drive-by visitor is how an origin gets Blocked for good; and lib/install-prompt.ts fails CLOSED on both counts — broken storage means no card AND isInstallPromptOwed() answers false, so it can never mute the notification ask behind an install prompt that will never arrive, which is also why markInstallPromptSettled guards its write but does NOT make the subscriber notification conditional on it (writePersistedState does not wrap setItem). AndroidAppBanner stands down when the flag is on — both point Android at the same /download page. Mutation-tested four ways; 1706 tests, lint at the exact 3/65 baseline, and next build green by exit code in both flag states. NOTHING HAS RENDERED IN A BROWSER on any phone — no session is mintable here and there is no route to either urganize domain — so the layout, the iOS steps against a real share sheet and the decline-to-notification hand-off all rest on unit tests and traced call paths; and do not try to prove the flag by grepping the client chunks, since dynamic() emits the card's chunk in both states. Footer drift noted rather than absorbed: v1.6.0 ("Artist rosters") and v1.7.0 ("Moving a release to a different artist") both landed the same day and appended their own sections without updating this footer, so it skips from here to the entry below — their sections are the record. Previously, the same day: **a Solo tier on /pricing, and the first self-serve CTAs there** — see "A Solo tier, and the first self-serve CTAs on /pricing" near the end of this file. The ladder is Solo → Manager → Label → Group: Solo is ₦8,000/mo (₦80,000/yr) for one artist, two people, one release at a time and 40 UrgAns actions a month, and Manager moves up a rung to "two or more artists" with a 5-artist ceiling. Solo and Manager now send visitors to a free trial at APP_SIGNUP_URL (which is /onboarding, never login-only /auth) while Label keeps "Book a demo" and Group "Let's talk" — that NARROWS rather than deletes the 2026-08-24 "every CTA on this page is a capture" rule, and the header's "Join the waitlist" became "Start free trial" for the same reason, with every in-body waitlist form left where it was. Two things not to misread. SOLO IS NOT ON SALE: absent from SelfServeTierId, no Paystack Plan, and in neither subscriptions plan CHECK, so nothing can write it and no team can resolve onto it — the tripwire for the day that changes is pointed at resolveCheckoutPurchase rather than at a constant array, which is the lesson from the 2026-08-24 miss. And limits.artists is DECLARED, NOT ENFORCEABLE, because nothing in the product can add a second artist to a team (one artists row per workspace, no artist input on the create modal), so "Up to 5 artists" is a knowing exception to the standing do-not-market-multi-artist note, raised with the founder's brief and shipped as asked; the number still lives in @urganize/pricing so the page quotes the field a future check will read. No changelog entry or version bump — everything a user sees is apps/homepage, which the app-only scope rule excludes. Nothing was seen in a browser; the four-across row at ≥1280px is the one thing worth a look. Previously, 2026-08-29: **the release back arrow terminates now — shipped as v1.5.4** — see "It was still a trap: nav-history was one slot, not a stack" under "The workspace back arrow goes back now". The 2026-08-25 fix made the arrow do something; it did not make it terminate. lib/nav-history held a current+previous PAIR, and recording a navigation moves current into previous — so a back press pushed the previous page and simultaneously wrote the page it just left into the slot, sending the next press straight back. Two surfaces read that one slot (this arrow and Settings'), so the loop was one tap wide: release → Settings → back → release → back → Settings → forever. Same loop between any two workspace URLs — two releases reachable via UrgAns, the bell, a note chip or the desktop rails. It is a bounded stack now, and the rule that makes back terminate is that navigating to the entry directly BENEATH the top pops instead of pushing (it cannot tell our button from browser Back or an edge swipe, and must not). readPreviousLocation kept its signature, so neither call site changed and Settings is fixed by the same edit. Three things not to undo: only ONE step down counts as a pop; resolveWorkspaceBackTarget's same-release rejection STAYS, because scene switches replace and append with no matching pop; and the new "already here" rejection reads window.location at click time, never a render-time copy. Mutation-tested both guards. Deploy carries a deliberate one-tap degradation — open tabs hold the old keys, so the first press after deploy finds an empty trail and falls to its safe floor. Not pressed in a browser. Same day, earlier: **the assignee picker is a dropdown now — shipped as v1.5.3** — see "The assignee picker became a dropdown" near the end of this file. Its text input raised the phone keyboard over the list it was meant to show, so TaskMemberCombobox is deleted and TaskMemberSelect (a button over a role=listbox panel, the NoteReleasePicker pattern) replaces it at all three call sites. Search was dropped outright rather than hidden on mobile: Manager caps a team at four seats, and a viewport-conditional control means two code paths for one picker. It also deletes the bug class v1.5.2 had guarded — both of those defects existed only because the display and the filter were one field. Same day, earlier: **the assignee picker hid the team, and fields zoomed on tap — shipped as v1.5.2** — see "The assignee picker hid the team" near the end of this file. The picker filtered its list by the current assignee's name, so an already-assigned activity offered only that person; the guard now lives in filterMembersForPicker (lib/tasks.ts) and is the second copy of one ReleaseCombobox already carried — keep them in step. Blurring an empty box no longer unassigns, PlanTaskRow seeds its query, and TaskDetailView's seed effect is keyed on task?.id. Separately, one (pointer: coarse) rule sets form controls to 16px, since this project's type scale sits under iOS's auto-zoom threshold nearly everywhere; the !important is load-bearing against Tailwind specificity, and pinch/double-tap zoom were ALREADY closed by touch-action: pan-y. Same day, earlier: **the release scenes are team-aware, shipped as
 v1.5.1** — see "Scenes opened to the team: one release-access rule" above. A
 teammate opening Collect metadata on a release they could see everywhere got
 "Release not found.", because every scene route group carried an accidental
@@ -5969,9 +5969,10 @@ work it would take. Three things turned out to be already built:
 - **There is deliberately no DELETE.** Removing an artist needs an answer for
   their releases, and `artist_scope_id` is `ON DELETE SET NULL`, so deleting one
   silently upgrades a teammate scoped to them into seeing everything. Neither
-  belongs in a route handler. **Existing releases stay with their original
-  artist when a second is added** (founder call) — nothing moves, and there is
-  no reassign-a-release path.
+  belongs in a route handler. See "Moving a release" below for the analysis, and
+  for the finding that decides the delete design when it is built.
+  **Existing releases stay with their original artist when a second is added**
+  (founder call) — nothing moves on its own.
 - **Verified:** 1682 tests (11 new in `lib/artists-server.test.ts`, plus artist
   ceiling coverage in `entitlements.test.ts` including that no pre-tier plan is
   newly capped), `eslint .` at the exact 3-error / 65-warning baseline, and
@@ -5988,6 +5989,125 @@ work it would take. Three things turned out to be already built:
   one live pass: add a second artist in Settings, create a release and confirm
   the picker appears and files it correctly, invite someone scoped to the new
   artist, and confirm they see only that artist's releases.
+
+---
+
+## Moving a release to a different artist (2026-08-30, v1.7.0)
+
+The correction for a mistake the roster made possible. The create-release
+picker preselects the first artist, so filing a release under the wrong one
+became reachable on 2026-08-30 with no way to fix it short of deleting the
+release. `POST /api/releases/[releaseId]/artist` is that fix. **No migration.**
+
+**Five things worth knowing before editing this:**
+
+1. **The write set is the whole correctness story: the link plus TWO cached
+   names.** `releases.artist_id`, `releases.artist_name` and
+   `release_metadata.primary_artist_name` — the same three places
+   `renameWorkspaceArtist` touches, and they must stay in step. Dropping either
+   cache does not throw; the release just shows the old artist's name everywhere
+   while being filed under the new one, which is worse than an error because
+   nothing looks wrong. Both are mutation-tested in `lib/artists-server.test.ts`.
+2. **A DEDICATED ROUTE, and the reason is stronger than the archive route's.**
+   The release PATCH is a full-row replace that DELIBERATELY refuses to touch the
+   artist: with the workspace flag on it ignores `body.artistName` and rewrites
+   the existing value, precisely so the edit form cannot desync the cached name
+   from the link. Accepting an artist there would reopen what that guard exists
+   to prevent.
+3. **OWNER-ONLY, which is a decision rather than copied convention.** Every other
+   release-scene route group became team-aware in v1.5.1, but moving a release
+   CHANGES WHO CAN SEE IT — an artist-scoped teammate sees exactly the releases
+   whose `artist_id` matches their scope, so this hands the release to one
+   person's view and takes it from another's. It belongs with the other
+   owner-only release-row mutations (PATCH, DELETE, schedule, archive), and the
+   dialog says the visibility part out loud before the confirm button.
+4. **`stores/useArtistRosterStore.ts` is the shared roster**, and it exists
+   because three surfaces needed the same list: the create-release picker, the
+   "Change artist" action's visibility rule, and the dialog. It also RETIRES the
+   per-open fetch the modal shipped with a day earlier. **Deliberately not folded
+   into `useWorkspaceIdentityStore`** even though that carries `artistCount` from
+   the same endpoint: the identity card is behind
+   `NEXT_PUBLIC_FEATURE_IDENTITY_PANEL`, which defaults OFF, so reading the
+   roster from it would make the picker vanish in a default deployment.
+5. **Everything still fails open.** An empty or unloaded roster hides the action
+   and the picker, which is the pre-roster behaviour; the action additionally
+   requires more than one artist, so a one-artist team never sees a control that
+   could only tell it no.
+
+- The route validates the target against the CALLER'S roster rather than reading
+  the artist row and comparing workspaces after, so an artist on another team is
+  indistinguishable from one that does not exist — the rename route's shape.
+  `primaryWorkspaceId` is safe here despite resolving to a JOINED team for
+  someone who owns no releases: this caller owns THIS release.
+- Reassigning to the current artist returns `changed: false` rather than writing.
+- Fixed in passing: the release PATCH still pointed at `/api/workspace/artist`,
+  deleted the day before.
+
+### The delete analysis, recorded so it is not re-derived
+
+**`releases.artist_id` IS NOT DECLARED IN ANY MIGRATION.** The only mention
+across `supabase/migrations/` is a plpgsql local variable; the column exists in
+production and `20260602010000` sets it NOT NULL, but its original definition —
+**including its foreign key to `artists`** — was never captured.
+Pre-reconciliation drift. Anything that ever recreates this column must
+re-declare that constraint, or it vanishes silently.
+
+**ANSWERED against production, 2026-08-30, and the answer was a third case
+neither prediction covered.** The constraint is
+`releases_artist_id_fkey` with `confdeltype = 'n'` — **`ON DELETE SET NULL`** —
+**while the column itself is NOT NULL.** Those two contradict each other, and
+that contradiction IS the current behaviour:
+
+- **An artist with no releases deletes cleanly.**
+- **An artist WITH releases cannot be deleted at all.** Postgres fires the SET
+  NULL, the resulting UPDATE violates the not-null constraint, and the whole
+  DELETE aborts. Nothing is orphaned and nothing is destroyed — so the safe
+  outcome holds, **but by accident**, and it surfaces as a raw not-null
+  violation rather than anything a user can act on.
+
+**THE LANDMINE, and the reason this is written down.** The foreign key DECLARES
+set-null as the intent; only the column's NOT NULL is stopping it. Relax that
+NOT NULL — or recreate the column without it, which the drift above makes easy —
+and every one of those refusals silently becomes a real set-null on live
+releases, with no error anywhere. A null `artist_id` then fails every
+`=== scope` comparison, so artist-scoped teammates lose those releases without a
+trace, and nothing on screen looks wrong because the artist NAME is cached on
+the release row. Do not treat the current refusal as a guarantee.
+
+**The recommended rule when it is built, unchanged by the answer above but now
+better founded: allow delete only for an artist with no releases AND nobody
+scoped to them.** Cascading would destroy release history behind a button
+labelled "delete artist"; reassigning-on-delete hides a data decision inside a
+delete. Both refusals are things a manager can act on, and the scoped-member
+check is what closes the `workspace_members.artist_scope_id` privacy hole (also
+`ON DELETE SET NULL`, where null means FULL visibility — so deleting an artist
+silently promotes a teammate scoped to them).
+
+**Two things that build should also do**, both following from the finding above:
+check the releases condition IN CODE so the refusal is a sentence rather than a
+not-null violation; and ship a migration changing
+`releases_artist_id_fkey` to **`ON DELETE RESTRICT`**, so the declared intent
+matches the column and the accidental refusal becomes a guaranteed one. That
+migration is also the moment to put the column and its constraint into version
+control for the first time.
+
+Note the honest scope: a typo is a rename, and an artist who left still has
+releases, so delete is really "undo adding one by mistake" — which the artists
+ceiling makes worth having, since on Manager a stray artist permanently costs one
+of five slots.
+
+- **Verified:** 1687 tests (5 new, both cached writes mutation-tested), `eslint .`
+  at **3 errors / 66 warnings** — the one warning above the standing baseline is
+  `ChangeReleaseArtistDialog`'s portal mount guard, byte-for-byte the finding
+  `ArchiveReleaseDialog` and `DeleteReleaseDialog` already carry. `next build`
+  green **by exit code** with `/auth`, `/onboarding` and `/settings` still
+  `○ Static`. Runtime probe: the route 401s unauthenticated (so auth precedes any
+  release read) and 405s a GET.
+- **Not verified:** nothing has run against a real database — no release has
+  actually been moved, and the dialog has never rendered. Worth one live pass:
+  move a release, confirm the catalog card, the scoped header and the identity
+  card all show the new artist without a reload, and that a teammate scoped to
+  the old artist stops seeing it.
 
 ---
 

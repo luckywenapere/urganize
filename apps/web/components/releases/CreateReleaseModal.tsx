@@ -8,6 +8,7 @@ import { BlankSheetIllustration, PlanIllustration } from '@/components/app/Brand
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { useFirstReleaseRequired } from './useFirstReleaseRequired';
 import {
   getAvailableReleaseTypes,
@@ -28,8 +29,6 @@ const CREATABLE_RELEASE_TYPES = getAvailableReleaseTypes().filter(
   (releaseType): releaseType is DbReleaseType => releaseType !== 'music_video'
 );
 const SHOW_TYPE_PICKER = CREATABLE_RELEASE_TYPES.length > 1;
-
-type WorkspaceArtistOption = { id: string; name: string };
 
 const RELEASE_TYPE_LABELS: Record<DbReleaseType, string> = {
   single: 'Single',
@@ -153,18 +152,25 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
   // was implicitly before the picker existed.
   const [releaseType, setReleaseType] = useState<DbReleaseType>('single');
 
-  // WHOSE release this is. Loaded on open rather than held in a store, because
-  // the roster changes in Settings and a cached copy would offer an artist that
-  // was just renamed.
+  // WHOSE release this is. Read from the shared roster store rather than
+  // fetched here: this modal opens often, and it shipped with a per-open fetch
+  // that the store's recency guard now collapses to one request.
   //
   // FAILS OPEN in the strongest sense: an empty list, a failed fetch and a
-  // still-loading fetch all render no picker and send no artistId, which drops
+  // still-loading one all render no picker and send no artistId, which drops
   // straight back to the implicit-artist path the server has always had. So a
   // one-artist team sees exactly what it saw before this existed, and a broken
   // fetch cannot block release creation.
-  const [artists, setArtists] = useState<WorkspaceArtistOption[]>([]);
+  const artists = useArtistRosterStore((state) => state.artists);
+  const loadRoster = useArtistRosterStore((state) => state.load);
   const [artistId, setArtistId] = useState('');
   const showArtistPicker = artists.length > 1;
+  // DERIVED, not seeded by an effect: an empty choice falls through to the
+  // team's original artist, which is the first row and the one the server would
+  // have picked anyway. So the picker changes what is VISIBLE, never what a
+  // manager gets by leaving it alone — and a roster that arrives after the
+  // modal opened seeds itself with no cascading render.
+  const selectedArtistId = artistId || (showArtistPicker ? (artists[0]?.id ?? '') : '');
 
   // Portal mount-guard. The modal renders into document.body via createPortal
   // to escape AppShell's `lazy-fade` wrapper, which carries a `transform` —
@@ -185,41 +191,12 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
     }
   }, [open]);
 
-  // Load the roster on open. Never surfaces an error: see the fail-open note on
-  // the `artists` state.
+  // Refresh the roster on open. The store's recency guard makes this free on a
+  // reopen, and it never surfaces an error — see the fail-open note above.
   useEffect(() => {
     if (!open) return;
-    let cancelled = false;
-
-    const load = async () => {
-      try {
-        const accessToken = await getAccessToken();
-        if (!accessToken) return;
-        const response = await fetch('/api/workspace/artists', {
-          headers: { Authorization: `Bearer ${accessToken}` },
-          cache: 'no-store',
-        });
-        if (!response.ok) return;
-        const payload = (await response.json().catch(() => ({}))) as {
-          artists?: WorkspaceArtistOption[];
-        };
-        if (cancelled) return;
-        const list = Array.isArray(payload.artists) ? payload.artists : [];
-        setArtists(list);
-        // Preselect the team's original artist, which is the first row and the
-        // one the server would have chosen anyway. So the picker changes what
-        // is VISIBLE, never what a manager gets by leaving it alone.
-        if (list.length > 1) setArtistId(list[0]?.id ?? '');
-      } catch {
-        // Offline or mid-deploy. No picker, implicit artist, as before.
-      }
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
+    void loadRoster();
+  }, [open, loadRoster]);
 
   useEffect(() => {
     if (!open || !plan) {
@@ -373,7 +350,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
           releaseType,
           // Omitted unless the picker actually rendered, so a one-artist team
           // keeps taking the server's implicit-artist path untouched.
-          artistId: showArtistPicker && artistId ? artistId : undefined,
+          artistId: showArtistPicker && selectedArtistId ? selectedArtistId : undefined,
           source: 'dashboard',
           plan: plan || 'template',
         }),
@@ -561,7 +538,7 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                     Artist
                   </span>
                   <select
-                    value={artistId}
+                    value={selectedArtistId}
                     onChange={(event) => setArtistId(event.target.value)}
                     className="w-full rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
                   >
