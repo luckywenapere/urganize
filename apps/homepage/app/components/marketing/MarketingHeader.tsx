@@ -26,17 +26,28 @@ export function MarketingHeader() {
     <>
       <header className="fixed inset-x-0 top-0 z-50 border-b border-[color:var(--marketing-border)] bg-[var(--marketing-bg)]/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-[84rem] items-center justify-between gap-6 px-6 py-4 sm:px-8 lg:px-10">
+          {/* The wordmark's viewBox is cropped to the ink (see the comment in
+              the SVG), so items-center alone lands it on the same centreline as
+              Product, Log in, the CTA and the toggle. It used to be cropped
+              here instead, with overflow-hidden and a negative margin, which
+              left it a few pixels high. The h-11/h-12 on the link is what sets
+              the header's row height, so it stays: dropping it would shrink the
+              bar out from under the fixed spacer below.
+
+              The heights are the pre-crop rendered size to the pixel, so the
+              logo looks exactly as it did — this change moved it, it did not
+              resize it. */}
           <Link
             href="/"
-            className="flex h-11 shrink-0 items-center overflow-hidden sm:h-12"
+            className="flex h-11 shrink-0 items-center sm:h-12"
             aria-label="Urganize home"
           >
             <Image
               src="/images/urganize-logo.svg"
               alt="Urganize"
-              width={680}
-              height={144}
-              className="marketing-wordmark mt-[-0.55rem] h-20 w-auto max-w-none sm:mt-[-0.7rem] sm:h-24"
+              width={7726}
+              height={1766}
+              className="marketing-wordmark h-[13px] w-auto sm:h-[15px]"
               priority
             />
           </Link>
