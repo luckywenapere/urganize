@@ -31,7 +31,6 @@ import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
-import { readPreviousLocation, resolveWorkspaceBackTarget } from '@/lib/nav-history';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
 import { ArchiveReleaseDialog } from '@/components/workspace/ArchiveReleaseDialog';
@@ -752,57 +751,49 @@ export function WorkspaceView() {
     }
   };
 
-  // THE BACK ARROW. One rule, three cases, in order:
+  // THE BACK ARROW. ONE destination: the catalog. It leaves the release —
+  // scene open or not, however the user got here — and that is all it does.
   //
-  //   1. A SCENE IS OPEN -> close the scene. Lands on Activities for the same
-  //      release, and never consults history. This is what makes scene-to-scene
-  //      ping-pong structurally impossible rather than merely guarded against,
-  //      and it is why one stray tap can never throw someone out of a release
-  //      they were part-way through.
-  //   2. NO SCENE -> go to where they actually were, via lib/nav-history — the
-  //      same per-tab record the Settings back button has used since 2026-07-23,
-  //      which stores the previous in-app URL query string and all. `push`, like
-  //      Settings, so this is a real forward move rather than a rewrite of the
-  //      entry they are on.
-  //   3. NOTHING USABLE -> drop the release scope, which is what this button did
-  //      unconditionally before and is still the right floor.
+  // This REPLACES the history-aware rule of 2026-08-25 (close the scene first,
+  // otherwise the previous in-app URL from lib/nav-history, otherwise drop the
+  // scope), which the founder rejected on 2026-08-30: "this back button is
+  // failing again … clicking home while in task view should lead them to
+  // catalog view, same thing for that back button, always." Two reasons worth
+  // keeping, so nobody rebuilds the clever version:
   //
-  // NOT router.back(), and that is not an oversight: a legacy-route redirect can
-  // make a scene URL the FIRST history entry in a tab, so back() would eject the
-  // user out of the app entirely. Recorded at useSceneOverlay.closeScene, and the
-  // stub it names is real (app/dashboard/releases/[releaseId]/page.tsx). Nothing
-  // in this app calls router.back() anywhere.
+  //   * IT LIVES IN THE RELEASE HEADER, beside the release title and above the
+  //     scene tabs. Its position already says "leave this release"; the tabs
+  //     are what manage the inside of one. A control whose destination depends
+  //     on invisible state reads as broken even when each individual case is
+  //     defensible — and several were genuinely not the catalog: the previous
+  //     location could be another release, UrgAns, Notes or Settings, and a
+  //     trail 20 deep drops the catalog off the bottom entirely. That is the
+  //     unpredictability being reported, not a single reproducible case.
+  //   * BROWSER BACK AND THE EDGE SWIPE ALREADY DO HISTORY. Duplicating them
+  //     in a chrome button bought nothing and made both feel unreliable.
   //
-  // resolveWorkspaceBackTarget owns every rejection — most importantly that a
-  // previous location still scoping THIS release is not "back" at all. See it
-  // for why that matters more than it looks.
-  // Read at CLICK time, never during render: window.location is the live URL
-  // even if a route change hasn't reached React yet, and a render-time copy
-  // would be exactly the stale value the "already here" rejection exists to
-  // catch. Same click-time-fresh-read pattern MobileNavBar's FAB uses.
-  const resolveBackTarget = () =>
-    resolveWorkspaceBackTarget({
-      previous: readPreviousLocation(),
-      scopedReleaseId,
-      currentUrl:
-        typeof window === 'undefined'
-          ? null
-          : `${window.location.pathname}${window.location.search}`,
-    });
-
+  // Closing a scene without leaving the release is still a tap: every scene's
+  // own entry point is a toggle (the lit mobile top tab, the lit desktop pill),
+  // and desktop additionally carries a dedicated "Activities" button in
+  // TasksPanel's header row.
+  //
+  // Still NOT router.back(), for the reason it never was: a legacy-route
+  // redirect can make a scene URL the FIRST history entry in a tab, so back()
+  // would eject the user out of the app entirely. Recorded at
+  // useSceneOverlay.closeScene, and the stub it names is real
+  // (app/dashboard/releases/[releaseId]/page.tsx). Nothing in this app calls
+  // router.back() anywhere.
+  //
+  // `forgetScene` is what stops this looping — see SetScopeOptions. Without it
+  // backing out of, say, Cover art records Cover art as where the release was
+  // left, so tapping that release again drops the user straight back into the
+  // scene they just walked out of.
+  //
+  // `replace`, the hook's default: leaving is a return to the at-rest view, not
+  // a forward move, and desktop deselects must not grow history with duplicate
+  // catalog entries.
   const goBack = () => {
-    if (activeScene) {
-      closeScene();
-      return;
-    }
-    const target = resolveBackTarget();
-    if (target) {
-      router.push(target);
-      return;
-    }
-    // Replace-not-push so desktop deselects don't grow history with a
-    // duplicate at-rest entry.
-    setScope(null);
+    setScope(null, { forgetScene: true });
   };
 
   const handleMobileBack = () => {
@@ -812,18 +803,13 @@ export function WorkspaceView() {
     }
   };
 
-  // What the arrow SAYS, matched to what it will actually do. The old label,
-  // "Back to all releases", is now true in only one of the three cases, and a
-  // screen reader announcing the wrong destination is worse than a vague one.
-  //
-  // Deliberately derived from `activeScene` ALONE, not from resolveBackTarget():
-  // that reads sessionStorage, and a storage read during render gives the server
-  // and the client different text for the same attribute. The button does not
-  // appear in the server output today (the skeleton gate holds while
-  // authLoading), so it would not mismatch in practice — but a label is not
-  // worth depending on that. "Back" is vague and never wrong; the old label was
-  // specific and usually wrong.
-  const backLabel = activeScene ? 'Back to activities' : 'Back';
+  // What the arrow SAYS, matched to what it does. It had two behaviours between
+  // 2026-08-25 and 2026-08-30 and so had to settle for a vague "Back"; with one
+  // destination the specific label is true again, in every state, which is what
+  // a screen reader needs. A constant also keeps this out of the class of bugs
+  // where a label is derived from storage during render and disagrees between
+  // the server and the client.
+  const backLabel = 'Back to all releases';
 
   // ONE skeleton, rendered here (not as a route-segment Suspense fallback).
   // SSR serializes the skeleton into the HTML response; hydration re-renders
@@ -968,10 +954,11 @@ export function WorkspaceView() {
                       start a fresh one). The prior isSingleRelease-gated hide
                       left single-release workspaces with no way out at all.
 
-                      Same three-case handler as the desktop arrow, deliberately:
-                      the complaint that started this ("the back button is not
-                      working") applies identically on a phone, and letting the
-                      two diverge is how this file has drifted before. */}
+                      Same handler as the desktop arrow, deliberately: every
+                      complaint about this button so far ("not working",
+                      "gets stuck", "failing again") arrived as a phone
+                      screenshot, and letting the two diverge is how this file
+                      has drifted before. */}
                   <button
                     type="button"
                     onClick={handleMobileBack}
