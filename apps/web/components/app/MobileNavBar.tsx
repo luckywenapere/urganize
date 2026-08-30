@@ -160,12 +160,13 @@ function SongTab({ isHome }: { isHome: boolean }) {
  * moment a release is scoped or another page is reached.
  *
  * WIDTH. Every slot is `flex-1` in a full-bleed `<ul>`, so the budget is the
- * viewport split evenly. The worst case is all four optional tabs at once
- * (Song + Notes + Pitches, seven slots): 375 / 7 = ~53px, against a widest
- * label of "Pitches" at ~45px and a 48px center button, so nothing wraps or
- * clips. Production today runs five or six (fewer still on the bare catalog,
- * where Home and Song are gone). An EIGHTH slot would not fit — that bar
- * needs a different shape, not another `flex-1`.
+ * viewport split evenly. Song and Pitches are now mutually exclusive (a dual
+ * account gets Pitches and not Song), which caps the bar at SIX slots: Home,
+ * UrgAns, +, Notes, You, and whichever of the two applies. 375 / 6 = ~62px,
+ * against a widest label of "Pitches" at ~45px and a 48px center button, so
+ * nothing wraps or clips. A SEVENTH slot would land at ~53px, which still
+ * measured clear but leaves no room after it — an eighth needs a different
+ * shape for this bar, not another `flex-1`.
  *
  * The bar shows on every route AppShell mounts it on, /dashboard/urgans
  * included — hiding it there would leave the assistant page with no way out
@@ -185,8 +186,14 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
   const isUrgAns = pathname === '/dashboard/urgans';
   const isNotes = pathname === '/dashboard/notes';
   const isSettings = pathname?.startsWith('/settings') ?? false;
-  // Tri-state; null (probe in flight) keeps the tab out rather than letting it
-  // pop in and shift the other five mid-load.
+  // Tri-state — `null` means the probe is still in flight, and it is null on
+  // every fresh load (never persisted). TWO tabs read it, in opposite
+  // directions but on the same rule: only a CONFIRMED positive changes the
+  // bar. Pitches waits for `=== true` to appear; Song hides on `=== true` and
+  // shows otherwise. So while the answer is unknown both settle on the
+  // non-curator shape, which is what almost every account resolves to — the
+  // common case never shifts mid-load, and the one dual account absorbs a
+  // single reflow at the same instant Pitches arrives anyway.
   const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
 
   // Home while a release is scoped means "leave this release", exactly like the
@@ -343,13 +350,21 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
             simply added to or removed from the end. In its former slot it
             pushed You sideways every time a release was opened or left.
 
-            It STAYS in the folded "more" menu as well, deliberately: this bar
-            is gated on NEXT_PUBLIC_FEATURE_MOBILE_NAV while the menu is not, so
-            removing it there would tie Song's mobile reachability to a second
-            flag and leave a band with no entry point at all — the exact
-            compounding failure recorded under "Crossing between the two
+            A DUAL ACCOUNT (team + playlist owner) never gets this tab at all
+            (founder call, 2026-08-30). That account is the only one carrying
+            Pitches, so it is the only one that would run seven slots, and it is
+            also the account least likely to be uploading masters from a phone.
+            Losing it here costs that account nothing: Song is still one tap
+            away in the folded "more" menu, which is exactly why that duplicate
+            is kept rather than tidied away.
+
+            It STAYS in the folded "more" menu for every account, deliberately:
+            this bar is gated on NEXT_PUBLIC_FEATURE_MOBILE_NAV while the menu
+            is not, so removing it there would tie Song's mobile reachability to
+            a second flag and leave a band with no entry point at all — the
+            exact compounding failure recorded under "Crossing between the two
             portals". */}
-        {SONG_UPLOAD_ENABLED ? (
+        {SONG_UPLOAD_ENABLED && hasCuratorProfile !== true ? (
           <li className="flex-1">
             <Suspense fallback={<SongTabLink href="/dashboard" isActive={false} />}>
               <SongTab isHome={isHome} />
