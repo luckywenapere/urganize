@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import Link from 'next/link';
+import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
 import {
   CalendarDays,
   ChevronDown,
@@ -942,6 +943,17 @@ export function TasksPanel({
         {!bannerReplacesEmptyState &&
         sectionOrder.every((sectionKey) => sections[sectionKey].length === 0) ? (
           <div className="px-1 py-6 text-center">
+            {/* The mascot only joins the SCOPED wording, and that is the
+                guard rather than a style choice: with no releases at all the
+                releases column is empty too and already shows him, so
+                pairing him with "No activities yet." would put two on one
+                screen. No release scoped means no release list beside this
+                one that could be full. */}
+            {scopedRelease ? (
+              <div className="mb-3 flex justify-center">
+                <Chappi pose="resting" size={CHAPPI_MIN_SIZE} />
+              </div>
+            ) : null}
             <p className="text-sm text-content-secondary">
               {scopedRelease ? 'No activities for this release yet.' : 'No activities yet.'}
             </p>

@@ -35,6 +35,7 @@ export function WorkspaceDesktopGrid({
     <section className="workspace-mode-enter space-y-4">
       {releases.length === 0 ? (
         <EmptyState
+          mascot="resting"
           title="No releases yet"
           description="Create your first release to start planning activities."
           action={
