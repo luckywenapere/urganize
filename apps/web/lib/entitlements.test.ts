@@ -27,7 +27,14 @@ import {
   resolveTeamTier,
 } from './entitlements';
 
+// The tiers a visitor SEES. Copy and ordering rules apply to these.
 const TIERS = PRICING_TIER_ORDER;
+
+// Every tier that EXISTS, display-retired ones included. Structural checks use
+// this: `enterprise` came off PRICING_TIER_ORDER on 2026-08-30 but its
+// definition and entitlements are still live for any stored row, so testing
+// only the displayed set would quietly stop covering it.
+const ALL_TIERS = Object.keys(PRICING_TIERS) as PricingTierId[];
 
 // THE ONE THAT MUST NEVER GO GREEN BY BEING DELETED.
 //
@@ -127,34 +134,21 @@ describe('the tier table matches what is published', () => {
 
   it('declares an entitlement for every tier, with no gaps', () => {
     const keys = Object.keys(ENTITLEMENTS.manager).sort();
-    for (const tier of TIERS) {
+    for (const tier of ALL_TIERS) {
       expect(Object.keys(ENTITLEMENTS[tier]).sort(), `${tier} keys`).toEqual(keys);
     }
   });
 });
 
-// The migration story depends on these two prices being the same number. Label
-// reuses the Paystack Plan objects that today's monthly/annual point at, so if
-// one moves and the other does not, checkout advertises one figure and charges
-// another — the gap this repo has shipped four times.
-describe('Label is priced identically to the live plans it inherits', () => {
-  it('matches monthly', () => {
-    expect(getTierPrice('label', 'monthly')?.amount).toBe(BILLING_PLANS.monthly.prices.NGN.amount);
-    expect(getTierPrice('label', 'monthly')?.minorUnit).toBe(
-      BILLING_PLANS.monthly.prices.NGN.minorUnit
-    );
-  });
-
-  it('matches annual', () => {
-    expect(getTierPrice('label', 'annual')?.amount).toBe(BILLING_PLANS.annual.prices.NGN.amount);
-    expect(getTierPrice('label', 'annual')?.minorUnit).toBe(
-      BILLING_PLANS.annual.prices.NGN.minorUnit
-    );
-  });
-
-  // Regression guard: the LIVE paywall renders BILLING_PLANS, so this PR must
-  // not have moved it. If this fails, a real checkout's advertised price moved.
-  it('leaves the live plan amounts untouched at NGN 80,000 / 800,000', () => {
+// Label used to be pinned to these amounts, because its tier prices had to
+// equal the live monthly/annual Plans it shared. Label went sales-led on
+// 2026-08-30 and carries no prices at all, so the pinning tests went with them
+// — but the guard below matters MORE now, not less: those Plan objects still
+// renew every live monthly, annual and Label subscription.
+describe('the live plan amounts', () => {
+  // Regression guard: the LIVE paywall renders BILLING_PLANS, so no pricing
+  // edit may move it. If this fails, a real checkout's advertised price moved.
+  it('are untouched at NGN 80,000 / 800,000', () => {
     expect(BILLING_PLANS.monthly.prices.NGN.amount).toBe(80_000);
     expect(BILLING_PLANS.annual.prices.NGN.amount).toBe(800_000);
   });
@@ -165,18 +159,22 @@ describe('tier prices and the sales-led tier', () => {
   // right is the kind of inversion this repo has shipped before (Annual once
   // exceeded Label in Naira), and it makes the whole table look unconsidered.
   it('prices the tiers in ascending order, left to right', () => {
+    // Two priced cards since 2026-08-30, then a conversation. Derived from the
+    // order rather than named, so this keeps holding if a tier is added.
+    const priced = PRICING_TIER_ORDER.filter((tier) => !PRICING_TIERS[tier].contactSales);
+    expect(priced.length).toBeGreaterThan(1);
     for (const interval of ['monthly', 'annual'] as const) {
-      const solo = getTierPrice('solo', interval)?.amount ?? 0;
-      const manager = getTierPrice('manager', interval)?.amount ?? 0;
-      const label = getTierPrice('label', interval)?.amount ?? 0;
-      expect(solo, `solo/${interval}`).toBeGreaterThan(0);
-      expect(solo, `solo/${interval}`).toBeLessThan(manager);
-      expect(manager, `manager/${interval}`).toBeLessThan(label);
+      let previous = 0;
+      for (const tier of priced) {
+        const amount = getTierPrice(tier, interval)?.amount ?? 0;
+        expect(amount, `${tier}/${interval}`).toBeGreaterThan(previous);
+        previous = amount;
+      }
     }
   });
 
   it('holds the 2-months-free ratio on every priced tier', () => {
-    for (const tier of ['solo', 'manager', 'label'] as const) {
+    for (const tier of ['solo', 'manager'] as const) {
       const monthly = getTierPrice(tier, 'monthly')?.amount ?? 0;
       const annual = getTierPrice(tier, 'annual')?.amount ?? 0;
       expect(annual, `${tier} annual`).toBe(monthly * 10);
@@ -185,11 +183,17 @@ describe('tier prices and the sales-led tier', () => {
 
   // Never render a price for a tier we quote by hand. Returning null forces the
   // caller into the "Let's talk" branch instead of formatting a zero.
-  it('has no price at all for enterprise', () => {
-    expect(PRICING_TIERS.enterprise.contactSales).toBe(true);
-    expect(PRICING_TIERS.enterprise.prices).toBeUndefined();
-    expect(getTierPrice('enterprise', 'monthly')).toBeNull();
-    expect(getTierPrice('enterprise', 'annual')).toBeNull();
+  it('has no price at all on any sales-led tier', () => {
+    // Label joined enterprise here on 2026-08-30. Written over every
+    // contactSales tier rather than naming one, so a future sales-led tier
+    // cannot ship still carrying an amount.
+    const salesLed = ALL_TIERS.filter((tier) => PRICING_TIERS[tier].contactSales);
+    expect(salesLed).toEqual(['label', 'enterprise']);
+    for (const tier of salesLed) {
+      expect(PRICING_TIERS[tier].prices, `${tier} prices`).toBeUndefined();
+      expect(getTierPrice(tier, 'monthly'), `${tier}/monthly`).toBeNull();
+      expect(getTierPrice(tier, 'annual'), `${tier}/annual`).toBeNull();
+    }
   });
 
   // The stored id and the customer-facing name deliberately differ for the
@@ -203,19 +207,28 @@ describe('tier prices and the sales-led tier', () => {
   it('calls the sales-led tier Group while keeping the enterprise id', () => {
     expect(PRICING_TIERS.enterprise.id).toBe('enterprise');
     expect(PRICING_TIERS.enterprise.label).toBe('Group');
-    // No tier displays the old name anywhere.
-    for (const tier of TIERS) {
+    // No tier displays the old name anywhere, retired ones included.
+    for (const tier of ALL_TIERS) {
       expect(PRICING_TIERS[tier].label).not.toMatch(/enterprise/i);
     }
   });
 
   it('recommends exactly one tier, and it is the one we sell', () => {
+    // Moved from Label to Manager on 2026-08-30: Label became sales-led, so
+    // Manager is the only tier a visitor can actually buy — pointing at a card
+    // with no checkout behind it would be the worst of both.
     const recommended = TIERS.filter((tier) => PRICING_TIERS[tier].recommended);
-    expect(recommended).toEqual(['label']);
+    expect(recommended).toEqual(['manager']);
+    expect(PRICING_TIERS.manager.contactSales).toBeUndefined();
   });
 
   it('orders the cards cheapest first, ending at the sales-led tier', () => {
-    expect(PRICING_TIER_ORDER).toEqual(['solo', 'manager', 'label', 'enterprise']);
+    // Group (id `enterprise`) was retired from display 2026-08-30. Its
+    // DEFINITION deliberately survives so a stored row still resolves, which is
+    // exactly why this asserts the order rather than the tier table.
+    expect(PRICING_TIER_ORDER).toEqual(['solo', 'manager', 'label']);
+    expect(PRICING_TIER_ORDER).not.toContain('enterprise');
+    expect(PRICING_TIERS.enterprise).toBeDefined();
   });
 
   it('carries a price for every interval on every self-serve tier', () => {
@@ -664,8 +677,8 @@ describe('public tier copy tells the truth', () => {
   it('phrases the annual saving in months and never as a percentage', () => {
     expect(annualSavingCopy('solo')).toBe('2 months free');
     expect(annualSavingCopy('manager')).toBe('2 months free');
-    expect(annualSavingCopy('label')).toBe('2 months free');
-    // No annual price to save against.
+    // No annual price to save against on a sales-led tier.
+    expect(annualSavingCopy('label')).toBeNull();
     expect(annualSavingCopy('enterprise')).toBeNull();
   });
 
