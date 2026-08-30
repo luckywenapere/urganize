@@ -68,18 +68,19 @@ export function PricingPageClient() {
             </div>
 
             <h1 className="hero-fade-in hero-delay-1 mb-8 text-5xl font-black leading-[0.95] tracking-tighter sm:text-6xl md:text-7xl">
-              Priced by the size
+              One price.
               <br />
-              <span className="text-[var(--marketing-accent)]">of your roster.</span>
+              <span className="text-[var(--marketing-accent)]">Your whole team.</span>
             </h1>
 
-            {/* Reworded 2026-08-30 with the self-serve CTAs. The old line said
-                every team starts with a demo, which two of the four cards below
-                now contradict. */}
+            {/* Plain-language pass 2026-08-30. The headline used to be "Priced
+                by the size of your roster" — true, but an abstract construction
+                where the concrete promise (one price, not per person) was buried
+                in the lead below it. The lead keeps the locked positioning
+                sentence and drops what the headline now says. */}
             <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
-              Urganize is the AI workspace for music executives. One price covers
-              your whole team. Start on your own with a free trial, or let us set
-              your roster up with you.
+              Urganize is the AI workspace for music executives. Start free on
+              your own, or let us set your roster up with you.
             </p>
 
             <div className="hero-fade-in hero-delay-3 mt-10">
@@ -90,13 +91,14 @@ export function PricingPageClient() {
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--marketing-text-subtle)]">
                 Built for music executives working with ambitious artists.
               </p>
-              {/* Mirrors the homepage FinalCTA's Founding Member line — the
-                  two pages must never disagree about the offer. Every claim
-                  is founder-supplied (2026-08 brief); update or remove the
-                  moment it stops being true. */}
+              {/* This page's OWN Founding Member line. It used to mirror the
+                  homepage FinalCTA's, which was cut 2026-08-25 — so the
+                  never-disagree rule between the two pages no longer applies
+                  and this is the only place the offer appears. Founder-supplied
+                  (2026-08 brief); update or remove the moment it stops being
+                  true. */}
               <p className="mt-3 text-sm leading-6 text-[var(--marketing-text-muted)]">
-                Founding Members: capped at 10 teams, price locked for life.
-                Still open.
+                Only 10 founding spots. Your price never goes up. Still open.
               </p>
             </div>
           </div>
@@ -105,25 +107,36 @@ export function PricingPageClient() {
         <PricingTierCards />
 
         {/* WHAT A DEMO LOOKS LIKE — plain-language expectations so "demo"
-            doesn't read as a sales gauntlet. Three short beats. */}
+            doesn't read as a sales gauntlet. Three short beats.
+            
+            The heading was added 2026-08-30: with Solo and Manager now starting
+            a trial instead, these cards describe only the Label path, and
+            unlabelled they read as three steps everyone has to go through. */}
         <section className="relative px-6 pb-20">
+          <div className="mx-auto mb-10 max-w-4xl text-center">
+            <ScrollReveal>
+              <h2 className="text-3xl font-black tracking-tight md:text-4xl">
+                How a demo works
+              </h2>
+            </ScrollReveal>
+          </div>
           <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-3">
             {(
               [
                 {
                   step: "01",
                   title: "You reach out",
-                  body: "One email. Tell us who you manage and what's coming up on your calendar.",
+                  body: "Send us one email. Tell us who you manage and what is coming up.",
                 },
                 {
                   step: "02",
-                  title: "We run one together",
-                  body: "A short call where we run one of your actual releases through Urganize with you.",
+                  title: "We try it together",
+                  body: "On a short call, we put one of your real releases into Urganize with you.",
                 },
                 {
                   step: "03",
                   title: "You start planning",
-                  body: "If it fits, we set your team up ourselves. Releases, rollout plans and activities, ready to go.",
+                  body: "If it fits, we set your team up ourselves. Your releases and plans, ready to go.",
                 },
               ] as const
             ).map((item) => (
@@ -154,8 +167,8 @@ export function PricingPageClient() {
                 Not ready to talk yet?
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[var(--marketing-text-muted)]">
-                Leave your email and we&apos;ll get in touch when the time is
-                right for your team.
+                Leave your email. We&apos;ll reach out when the time is right
+                for your team.
               </p>
             </ScrollReveal>
             <div className="mt-8">

@@ -25,13 +25,13 @@ import { APP_SIGNUP_URL } from "@/lib/app-urls";
 // (four separate occasions of a page quoting one figure while checkout charged
 // another, all recorded in CLAUDE.md).
 //
-// THE TWO LOWEST TIERS SELL THEMSELVES; THE TWO HIGHEST START A CONVERSATION
+// THE TWO PRICED TIERS SELL THEMSELVES; THE SALES-LED ONE STARTS A CONVERSATION
 // (founder call, 2026-08-30). This narrows the 2026-08-24 rule that every CTA
 // on this page was a capture, and it splits on who can be served without us in
 // the room: a manager on Solo or Manager can sign up, get the free team trial
 // and run a release alone, while a roster deal is still scoped and set up by
-// hand. So Solo and Manager send people to the trial, Label keeps "Book a demo"
-// and Group keeps "Let's talk".
+// hand. So Solo and Manager send people to the trial and Label says "Let's
+// talk". (Group said the same until it came off the page the same day.)
 //
 // The trial CTA points at APP_SIGNUP_URL, which is /onboarding rather than
 // /auth: apps/web's /auth is LOGIN-ONLY and has no signup form, so pointing a
@@ -66,14 +66,19 @@ export function PricingTierCards() {
   // on monthly would show everybody the higher-looking number first.
   const [interval, setInterval] = useState<BillingInterval>("annual");
 
-  const saving = annualSavingCopy("label");
+  // Derived from the first tier that still HAS a price, never a named one.
+  // This read `annualSavingCopy("label")` until 2026-08-30, when Label went
+  // sales-led and lost its prices — which silently returned null and took the
+  // "2 months free" badge off the page altogether.
+  const firstPricedTier = PRICING_TIER_ORDER.find((tierId) => !getTier(tierId).contactSales);
+  const saving = firstPricedTier ? annualSavingCopy(firstPricedTier) : null;
 
   return (
     <section className="relative px-6 pb-20">
-      {/* max-w-6xl, up from 5xl, because there are four cards now: at 5xl the
-          four-across row left each card too narrow for "₦800,000/yr" to sit on
-          one line. */}
-      <div className="mx-auto max-w-6xl">
+      {/* max-w-5xl for three cards. It went to 6xl when there were four across
+          (₦800,000/yr would not sit on one line at 5xl); Group came off the page
+          2026-08-30, so the wider container just thinned three cards out. */}
+      <div className="mx-auto max-w-5xl">
         {/* Interval switch. Above the cards, because it reprices every one of
             them and asking for it afterwards would move the numbers under the
             reader's cursor. */}
@@ -112,12 +117,12 @@ export function PricingTierCards() {
           ) : null}
         </div>
 
-        {/* Four cards, three steps: one column on a phone (which is where most
-            of this traffic reads it), two from sm, four only at xl. Deliberately
-            NOT four from md — at 768px that is ~170px a card, which wraps the
-            price and every ceiling line. Two comfortable columns beat four
-            cramped ones. */}
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        {/* Three cards: one column on a phone (where most of this traffic reads
+            it), three from lg. No two-column step, because three cards across
+            two columns orphans the third on its own row. Kept off md for the
+            old reason — at 768px a third of the row wraps the price and every
+            ceiling line. */}
+        <div className="grid gap-6 lg:grid-cols-3">
           {PRICING_TIER_ORDER.map((tierId) => {
             const tier = getTier(tierId);
             const price = formatTierCyclePrice(tierId, interval);
@@ -193,9 +198,9 @@ export function PricingTierCards() {
             /signup page says the same) — if either changes, all three move
             together. */}
         <p className="mt-8 text-center text-xs leading-6 text-[var(--marketing-text-subtle)]">
-          Prices are in Naira and cover your whole team, not each person. Annual
-          plans are billed once a year. The trial runs 14 days for your whole
-          team and needs no card.
+          Prices are in Naira. One price covers your whole team, not each person.
+          Annual plans are paid once a year. The free trial lasts 14 days and
+          needs no card.
         </p>
       </div>
     </section>
