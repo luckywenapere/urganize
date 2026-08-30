@@ -133,10 +133,11 @@ function SongTab({ isHome }: { isHome: boolean }) {
  * (which retires on this same viewport range — see ChappiDock.tsx).
  *
  * Slots: Home (Catalog) · UrgAns · New release/New activity (center, filled) ·
- * Song · Notes · You. "You" is a direct Link to /settings rather than a
+ * Notes · You · Song. "You" is a direct Link to /settings rather than a
  * menu — the account actions (Settings, sign out) already live there, and a
  * menu on top of a menu (WorkspaceMenu still exists at lg+) would be one tap
- * for nothing.
+ * for nothing. Song trails the bar rather than sitting beside the "+" — see
+ * its own comment below for why the one tab that comes and goes belongs last.
  *
  * The center button is contextual as of 2026-08-17: when a release is
  * scoped (`/dashboard?release=<id>`), it opens the task quick-create modal
@@ -289,24 +290,6 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
           </button>
         </li>
 
-        {/* Song sits immediately after the "+" (founder call, 2026-08-30) —
-            the two release-scoped controls in the bar, side by side, since
-            that button also acts on the scoped release. It was reachable on
-            mobile only from the folded "more" menu, which is a drawer behind a
-            hamburger. It STAYS in that menu as well, deliberately: this bar is
-            gated on NEXT_PUBLIC_FEATURE_MOBILE_NAV while the menu is not, so
-            removing it there would tie Song's mobile reachability to a second
-            flag and leave a band with no entry point at all — the exact
-            compounding failure recorded under "Crossing between the two
-            portals". */}
-        {SONG_UPLOAD_ENABLED ? (
-          <li className="flex-1">
-            <Suspense fallback={<SongTabLink href="/dashboard" isActive={false} />}>
-              <SongTab isHome={isHome} />
-            </Suspense>
-          </li>
-        ) : null}
-
         {NOTES_ENABLED ? (
           <li className="flex-1">
             <Link
@@ -351,6 +334,28 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
             You
           </Link>
         </li>
+
+        {/* Song is LAST, after You (founder call, 2026-08-30 — superseding the
+            same day's "immediately after the +", which put it between the plus
+            button and You). It is the only tab that comes and goes with the
+            scoped release, so trailing the bar means appearing and disappearing
+            shifts nothing: the four fixed tabs hold their positions and Song is
+            simply added to or removed from the end. In its former slot it
+            pushed You sideways every time a release was opened or left.
+
+            It STAYS in the folded "more" menu as well, deliberately: this bar
+            is gated on NEXT_PUBLIC_FEATURE_MOBILE_NAV while the menu is not, so
+            removing it there would tie Song's mobile reachability to a second
+            flag and leave a band with no entry point at all — the exact
+            compounding failure recorded under "Crossing between the two
+            portals". */}
+        {SONG_UPLOAD_ENABLED ? (
+          <li className="flex-1">
+            <Suspense fallback={<SongTabLink href="/dashboard" isActive={false} />}>
+              <SongTab isHome={isHome} />
+            </Suspense>
+          </li>
+        ) : null}
       </ul>
     </nav>
   );
