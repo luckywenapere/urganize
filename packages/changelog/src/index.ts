@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.8.0",
+    date: "August 30, 2026",
+    highlights: [
+      "You can remove an artist you added by mistake. It only works if they have no releases and nobody is limited to seeing them, and it tells you which one is in the way.",
+    ],
+  },
+  {
     version: "1.7.0",
     date: "August 30, 2026",
     highlights: [

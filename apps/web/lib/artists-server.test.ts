@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   countWorkspaceArtists,
+  describeArtistDeletionBlock,
   listWorkspaceArtists,
   reassignReleaseArtist,
 } from './artists-server';
@@ -197,5 +198,47 @@ describe('reassignReleaseArtist', () => {
     const stub = stubReassignClient({ metadataError: { message: 'nope' } });
     const result = await reassignReleaseArtist(stub.client, { releaseId: 'r1', artist: ARTIST });
     expect(result.error).toBeNull();
+  });
+});
+
+describe('describeArtistDeletionBlock', () => {
+  it('allows a removal that loses nothing', () => {
+    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 0 })).toBeNull();
+  });
+
+  // FAILS CLOSED, unlike every other count in this module. Being wrong here
+  // destroys a link or widens someone's access; being wrong the other way just
+  // makes a manager retry.
+  it('refuses when it could not read what would be lost', () => {
+    const message = describeArtistDeletionBlock(null);
+    expect(message).not.toBeNull();
+    expect(message).toMatch(/try again/i);
+  });
+
+  it('names how many releases are in the way, and what to do', () => {
+    const message = describeArtistDeletionBlock({ releases: 3, scopedMembers: 0 }) ?? '';
+    expect(message).toContain('3');
+    expect(message).toMatch(/move/i);
+  });
+
+  // The quieter harm, and the one nothing in the database stops:
+  // artist_scope_id is ON DELETE SET NULL and NULL means FULL visibility, so a
+  // silent removal promotes a scoped teammate to seeing every release. The copy
+  // has to say that, not just refuse.
+  it('says what happens to a scoped teammate rather than only refusing', () => {
+    const message = describeArtistDeletionBlock({ releases: 0, scopedMembers: 2 }) ?? '';
+    expect(message).toContain('2');
+    expect(message).toMatch(/every release/i);
+  });
+
+  it('covers both blockers in one message when both apply', () => {
+    const message = describeArtistDeletionBlock({ releases: 1, scopedMembers: 1 }) ?? '';
+    expect(message).toMatch(/release/i);
+    expect(message).toMatch(/access/i);
+  });
+
+  it('reads naturally for one of each', () => {
+    expect(describeArtistDeletionBlock({ releases: 1, scopedMembers: 0 })).toContain('1 release.');
+    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 1 })).toContain('1 person');
   });
 });

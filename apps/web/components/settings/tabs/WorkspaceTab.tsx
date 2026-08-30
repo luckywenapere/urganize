@@ -67,11 +67,13 @@ export function WorkspaceTab({ workspace }: WorkspaceTabProps) {
           artistLimit={workspace.artistLimit}
           isLoading={workspace.isLoadingArtists}
           savingArtistId={workspace.savingArtistId}
+          removingArtistId={workspace.removingArtistId}
           isAdding={workspace.isAddingArtist}
           message={workspace.artistMessage}
           error={workspace.artistError}
           onRename={workspace.renameArtist}
           onAdd={workspace.addArtist}
+          onRemove={workspace.removeArtist}
         />
       )}
 

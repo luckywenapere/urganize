@@ -5966,13 +5966,10 @@ work it would take. Three things turned out to be already built:
   written by copying that route's error handling, which CLAUDE.md already
   records as a grandfathered baseline rather than a template. Second time that
   exact mistake has been caught by that test.
-- **There is deliberately no DELETE.** Removing an artist needs an answer for
-  their releases, and `artist_scope_id` is `ON DELETE SET NULL`, so deleting one
-  silently upgrades a teammate scoped to them into seeing everything. Neither
-  belongs in a route handler. See "Moving a release" below for the analysis, and
-  for the finding that decides the delete design when it is built.
-  **Existing releases stay with their original artist when a second is added**
-  (founder call) — nothing moves on its own.
+- **DELETE shipped 2026-08-30 (v1.8.0)** and only ever removes an artist
+  attached to nothing — see "Removing an artist" below. **Existing releases stay
+  with their original artist when a second is added** (founder call): nothing
+  moves on its own, and nothing is moved by a delete either.
 - **Verified:** 1682 tests (11 new in `lib/artists-server.test.ts`, plus artist
   ceiling coverage in `entitlements.test.ts` including that no pre-tier plan is
   newly capped), `eslint .` at the exact 3-error / 65-warning baseline, and
@@ -6043,7 +6040,7 @@ release. `POST /api/releases/[releaseId]/artist` is that fix. **No migration.**
 - Fixed in passing: the release PATCH still pointed at `/api/workspace/artist`,
   deleted the day before.
 
-### The delete analysis, recorded so it is not re-derived
+### The delete analysis, and what was built from it (v1.8.0)
 
 **`releases.artist_id` IS NOT DECLARED IN ANY MIGRATION.** The only mention
 across `supabase/migrations/` is a plpgsql local variable; the column exists in
@@ -6083,31 +6080,69 @@ check is what closes the `workspace_members.artist_scope_id` privacy hole (also
 `ON DELETE SET NULL`, where null means FULL visibility — so deleting an artist
 silently promotes a teammate scoped to them).
 
-**Two things that build should also do**, both following from the finding above:
-check the releases condition IN CODE so the refusal is a sentence rather than a
-not-null violation; and ship a migration changing
-`releases_artist_id_fkey` to **`ON DELETE RESTRICT`**, so the declared intent
-matches the column and the accidental refusal becomes a guaranteed one. That
-migration is also the moment to put the column and its constraint into version
-control for the first time.
-
 Note the honest scope: a typo is a rename, and an artist who left still has
 releases, so delete is really "undo adding one by mistake" — which the artists
 ceiling makes worth having, since on Manager a stray artist permanently costs one
 of five slots.
 
-- **Verified:** 1687 tests (5 new, both cached writes mutation-tested), `eslint .`
+**BUILT 2026-08-30 as `DELETE /api/workspace/artists/[artistId]` plus a Remove
+control on each Settings roster row.** Four things worth knowing:
+
+1. **THREE refusals, and each is a different kind of harm.** Releases (the
+   database refuses too, now explicitly — see the migration below — but this
+   makes it a sentence naming the number). Teammates scoped to this artist,
+   which **nothing in the database stops** and is the quieter harm, since
+   `artist_scope_id` is `ON DELETE SET NULL` and NULL means FULL visibility. And
+   the LAST artist on a roster, which is not about integrity at all: that delete
+   would succeed, but a team with no artist has no implicit artist for release
+   creation to fall back on, so the next release would silently mint one from
+   the owner's name.
+2. **`countArtistDeletionBlockers` FAILS CLOSED**, deliberately unlike every
+   other count in `artists-server.ts`. An unreadable count refuses the delete,
+   because being wrong here destroys a link or widens someone's access — neither
+   undoable — while being wrong the other way just makes a manager retry.
+3. **`describeArtistDeletionBlock` is pure so the copy is testable**, and every
+   refusal names a number AND says what to do about it. The scoped-member
+   sentence says what would otherwise happen ("or they will start seeing every
+   release") rather than only refusing. Mutation-tested both ways: failing open
+   on an unreadable count, and ignoring scoped members, each fail exactly the
+   tests written for them.
+4. **`window.confirm`, not a bespoke dialog** — the opposite call from
+   `ChangeReleaseArtistDialog`. The server refuses every removal that would
+   actually lose something, so what reaches the prompt can only remove an artist
+   attached to nothing: it is a slip guard, not a decision point, and it matches
+   what `MetadataSection` already uses for the same weight of action.
+
+**Migration `20260830100000_releases_artist_id_restrict.sql`** re-declares
+`releases_artist_id_fkey` as `ON DELETE RESTRICT` and is **the first time
+`releases.artist_id`'s constraint has ever been in version control**. It is not
+destructive and backfills nothing: it only changes what happens on a delete that
+already could not succeed. The `if exists` on the drop makes it safe on an
+environment built purely from migrations, where the constraint never existed —
+which is exactly the drift it documents. It ends in a `do $$` block that raises
+if the action is not `r`, so the intent cannot quietly slip again.
+**Needs applying to production**; until it is, the refusal stays the accidental
+not-null one, and the app-level checks are doing the real work either way.
+
+- **Verified (reassignment, and re-run with delete):** 1693 tests (11 new across
+  both; the two cached writes and the two refusal properties all
+  mutation-tested), `eslint .`
   at **3 errors / 66 warnings** — the one warning above the standing baseline is
   `ChangeReleaseArtistDialog`'s portal mount guard, byte-for-byte the finding
   `ArchiveReleaseDialog` and `DeleteReleaseDialog` already carry. `next build`
   green **by exit code** with `/auth`, `/onboarding` and `/settings` still
   `○ Static`. Runtime probe: the route 401s unauthenticated (so auth precedes any
   release read) and 405s a GET.
+  Runtime probes both ways on the roster route: workspace flag ON, DELETE and
+  PATCH 401 unauthenticated; flag OFF both 404 while the ungated `/api/releases`
+  still 401s.
 - **Not verified:** nothing has run against a real database — no release has
-  actually been moved, and the dialog has never rendered. Worth one live pass:
-  move a release, confirm the catalog card, the scoped header and the identity
-  card all show the new artist without a reload, and that a teammate scoped to
-  the old artist stops seeing it.
+  actually been moved, no artist removed, and neither the dialog nor the Remove
+  control has rendered. The migration is unapplied. Worth one live pass: move a
+  release and confirm the catalog card, the scoped header and the identity card
+  all update without a reload; then try removing an artist who has releases
+  (expect a sentence naming the count), one with a teammate scoped to them, the
+  last one on the roster, and finally a spare with nothing attached.
 
 ---
 
