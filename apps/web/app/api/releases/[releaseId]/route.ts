@@ -231,11 +231,13 @@ export async function PATCH(
     const title = trimString(body?.title);
     const releaseDate = trimString(body?.releaseDate);
     const description = trimString(body?.description);
-    // Workspace-scoped artists are renamed via PATCH /api/workspace/artist
+    // Artists are renamed via PATCH /api/workspace/artists/[artistId]
     // (renameWorkspaceArtist), which updates artists.name and write-throughs
-    // the cache on every release. The release-edit path must not mutate the
-    // releases.artist_name cache directly — when the workspace flag is on,
-    // ignore body.artistName entirely and keep the existing release value.
+    // the cache on every release; a release is MOVED to a different artist via
+    // POST /api/releases/[releaseId]/artist. The release-edit path must not
+    // mutate the releases.artist_name cache directly — when the workspace flag
+    // is on, ignore body.artistName entirely and keep the existing value, or
+    // the cached name silently desyncs from artist_id.
     const artistName = isWorkspaceFeatureEnabled()
       ? ownership.release.artistName
       : trimString(body?.artistName) || ownership.release.artistName;

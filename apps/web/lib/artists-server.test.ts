@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { countWorkspaceArtists, listWorkspaceArtists } from './artists-server';
+import {
+  countWorkspaceArtists,
+  listWorkspaceArtists,
+  reassignReleaseArtist,
+} from './artists-server';
 
 // Mirrors lib/seats-server.test.ts: the DB-touching helpers are covered by
 // stubbing the exact query shape each one builds, which is enough to pin the
@@ -111,5 +115,87 @@ describe('listWorkspaceArtists', () => {
     expect(await listWorkspaceArtists(client, 'ws-1')).toEqual([
       { id: 'a1', workspaceId: '', ownerUserId: '', name: '', slug: '' },
     ]);
+  });
+});
+
+/**
+ * Stub for reassignReleaseArtist, which touches TWO tables:
+ *   releases:         .update().eq('id').select('id').maybeSingle()
+ *   release_metadata: .update().eq('release_id')
+ * Records the payload written to each so the three-write contract can be
+ * asserted rather than assumed.
+ */
+function stubReassignClient(options?: {
+  releaseResult?: { data?: unknown; error?: { message: string } };
+  metadataError?: { message: string };
+}) {
+  const releaseResult = options?.releaseResult ?? { data: { id: 'r1' } };
+  const writes: Record<string, Record<string, unknown>> = {};
+  const filters: Record<string, [string, string]> = {};
+
+  const from = vi.fn((table: string) => ({
+    update: (payload: Record<string, unknown>) => {
+      writes[table] = payload;
+      return {
+        eq: (column: string, value: string) => {
+          filters[table] = [column, value];
+          return {
+            select: () => ({ maybeSingle: () => Promise.resolve(releaseResult) }),
+            // release_metadata terminates at .eq(), so it must be awaitable.
+            then: (resolve: (v: unknown) => unknown) =>
+              resolve({ error: options?.metadataError ?? null }),
+          };
+        },
+      };
+    },
+  }));
+
+  return { client: { from } as unknown as SupabaseClient, writes, filters, from };
+}
+
+const ARTIST = { id: 'a2', workspaceId: 'ws-1', ownerUserId: 'u1', name: 'Odumodu', slug: 'odumodu' };
+
+describe('reassignReleaseArtist', () => {
+  // THE CONTRACT. Missing either cached name would not throw — the release
+  // would just show the old artist everywhere while being filed under the new
+  // one, which is worse than an error because nothing would look wrong.
+  it('writes the link and BOTH cached names', async () => {
+    const stub = stubReassignClient();
+    const result = await reassignReleaseArtist(stub.client, { releaseId: 'r1', artist: ARTIST });
+
+    expect(result.error).toBeNull();
+    expect(stub.writes.releases).toMatchObject({
+      artist_id: 'a2',
+      artist_name: 'Odumodu',
+    });
+    expect(stub.writes.release_metadata).toMatchObject({ primary_artist_name: 'Odumodu' });
+  });
+
+  it('scopes each write to the one release', async () => {
+    const stub = stubReassignClient();
+    await reassignReleaseArtist(stub.client, { releaseId: 'r1', artist: ARTIST });
+    expect(stub.filters.releases).toEqual(['id', 'r1']);
+    expect(stub.filters.release_metadata).toEqual(['release_id', 'r1']);
+  });
+
+  it('reports a missing release rather than silently succeeding', async () => {
+    const stub = stubReassignClient({ releaseResult: { data: null } });
+    const result = await reassignReleaseArtist(stub.client, { releaseId: 'gone', artist: ARTIST });
+    expect(result.error).toBe('Release not found.');
+  });
+
+  it('surfaces a failed release write', async () => {
+    const stub = stubReassignClient({ releaseResult: { error: { message: 'connection reset' } } });
+    const result = await reassignReleaseArtist(stub.client, { releaseId: 'r1', artist: ARTIST });
+    expect(result.error).toBe('connection reset');
+  });
+
+  // The sidecar is a second copy of a name the release row already carries, so
+  // failing the whole request over it would tell the user nothing moved when
+  // the link and the visible label both did. Same call the rename path makes.
+  it('still succeeds when only the metadata sidecar fails', async () => {
+    const stub = stubReassignClient({ metadataError: { message: 'nope' } });
+    const result = await reassignReleaseArtist(stub.client, { releaseId: 'r1', artist: ARTIST });
+    expect(result.error).toBeNull();
   });
 });
