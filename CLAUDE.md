@@ -6384,11 +6384,18 @@ shape everything else are repeated below.
 
 **Two things block the flag flip, and neither is a code problem:**
 
-1. **No mobile entry point.** Shows is in the topbar and the identity card,
-   both `lg`+ only. It is deliberately NOT in `MobileNavBar`, which is measured
-   at seven slots maximum — an eighth overflows the centre button. Solving this
-   needs a decision about what that bar looks like with more than seven things
-   in it, not another `flex-1`.
+1. ~~No mobile entry point.~~ **RESOLVED 2026-08-30: the bottom bar gained an
+   overflow.** Neither a top menu nor the existing hamburger could host it —
+   with `NEXT_PUBLIC_FEATURE_MOBILE_NAV` on the topbar keeps only a centred
+   logo and the help menu (that flag exists precisely to move nav OUT of the
+   hardest-to-reach corner), and the one hamburger is release-scoped inside
+   TasksPanel and does not render on `/settings`. So the bar is now a FIXED SIX
+   — Home · UrgAns · + · Song · More · You — with the optional global surfaces
+   (Shows, Notes, Playlist pitches) behind More. See `MobileMoreSheet.tsx`. The
+   trade, stated plainly: Notes and Pitches are one tap deeper than they were.
+   Notes is flag-off in production so nobody sees it; Pitches costs the one
+   dual account a tap, which is a downgrade but not the dead end that got it a
+   tab in the first place.
 2. **WAV downloads are blocked on Supabase billing, not on us.** The 40 MiB
    per-file audio ceiling exists because the free plan refuses uploads over
    50 MB. A studio master at 24-bit/48kHz runs ~16 MiB PER MINUTE and is

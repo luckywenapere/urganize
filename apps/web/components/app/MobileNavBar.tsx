@@ -1,20 +1,24 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Inbox, Music, Plus } from 'lucide-react';
+import { CalendarDays, Inbox, MoreHorizontal, Music, Plus } from 'lucide-react';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { CatalogIcon, ChappiIcon, NotesIcon, ProfileIcon } from '@/components/app/BrandIcons';
+import { MobileMoreSheet, type MoreNavItem } from '@/components/app/MobileMoreSheet';
 
 // Same flags AppTopbar reads — a tab only exists in the bar when its surface
 // exists at all.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
+// Shows. Global like Notes, so it lives in the overflow rather than as a tab —
+// see MobileMoreSheet for why the bar stopped growing.
+const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 // Same flag that gates the `?scene=song` URL param, the Song pill in
 // TasksPanel and the /song API routes — so this tab cannot offer a surface
 // that does not exist.
@@ -91,7 +95,7 @@ function SongTab({ isHome }: { isHome: boolean }) {
  * (which retires on this same viewport range — see ChappiDock.tsx).
  *
  * Slots: Home (Catalog) · UrgAns · New release/New activity (center, filled) ·
- * Song · Notes · You. "You" is a direct Link to /settings rather than a
+ * Song · More · You. "You" is a direct Link to /settings rather than a
  * menu — the account actions (Settings, sign out) already live there, and a
  * menu on top of a menu (WorkspaceMenu still exists at lg+) would be one tap
  * for nothing.
@@ -104,19 +108,26 @@ function SongTab({ isHome }: { isHome: boolean }) {
  * comment). Everywhere else — catalog view, or any other route — it keeps
  * opening "New release" exactly as before. See `handleFabClick` below.
  *
- * Pitches appears only for a dual account (team + playlist owner) — a state
- * currently held by a single partner. It earns the crowding because this bar
- * is the only navigation a phone has: the topbar's own icons are
- * `hidden lg:grid` under this flag and the identity card never renders below
- * `lg`, so without it a dual account had to open a second tab to reach its own
- * inbox.
+ * WIDTH, and why the bar stopped growing (2026-08-30). Every slot is `flex-1`
+ * in a full-bleed `<ul>`, so each optional tab narrows the bar for everyone.
+ * Four fixed slots plus Song, Notes and Pitches already reached the measured
+ * ceiling of seven (375 / 7 = ~53px against a 48px centre button), and Shows
+ * would have been the eighth — which squeezes that button rather than merely
+ * looking tight. So the bar is now a FIXED SIX and the optional GLOBAL
+ * surfaces (Shows, Notes, Playlist pitches) live behind More instead. Adding
+ * another global destination means adding it to `moreItems`, never another
+ * `flex-1`.
  *
- * WIDTH. Every slot is `flex-1` in a full-bleed `<ul>`, so the budget is the
- * viewport split evenly. The worst case is all four optional tabs at once
- * (Song + Notes + Pitches, seven slots): 375 / 7 = ~53px, against a widest
- * label of "Pitches" at ~45px and a 48px center button, so nothing wraps or
- * clips. Production today runs five or six. An EIGHTH slot would not fit —
- * that bar needs a different shape, not another `flex-1`.
+ * Song is the one conditional tab that stayed, because the founder asked for
+ * it by name (2026-08-30, "put song back in the bottom navigation bar"), and
+ * because it is release-scoped rather than a global page.
+ *
+ * The trade this makes: Notes and Playlist pitches are one tap deeper than
+ * they were. Notes is flag-off in production so nobody sees the change;
+ * Pitches costs the one dual account a tap to reach its inbox. That is a
+ * downgrade but not a dead end, which is the bar this feature has to clear —
+ * the reason Pitches got a tab at all was that a phone had NO crossing to the
+ * curator side, and More still provides one.
  *
  * The bar shows on every route AppShell mounts it on, /dashboard/urgans
  * included — hiding it there would leave the assistant page with no way out
@@ -139,6 +150,47 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
   // Tri-state; null (probe in flight) keeps the tab out rather than letting it
   // pop in and shift the other five mid-load.
   const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+
+  // Global destinations that are not one of the fixed tabs. Same flags the
+  // topbar and the identity card read, so the three entry points cannot
+  // disagree about whether a surface exists.
+  const moreItems: MoreNavItem[] = [
+    ...(EVENTS_ENABLED
+      ? [
+          {
+            href: '/dashboard/shows',
+            label: 'Shows',
+            Icon: ({ className }: { className?: string }) => (
+              <CalendarDays className={className} aria-hidden />
+            ),
+            isActive: pathname?.startsWith('/dashboard/shows') ?? false,
+          },
+        ]
+      : []),
+    ...(NOTES_ENABLED
+      ? [
+          {
+            href: '/dashboard/notes',
+            label: 'Notes',
+            Icon: NotesIcon,
+            isActive: isNotes,
+          },
+        ]
+      : []),
+    ...(PITCHING_ENABLED && hasCuratorProfile === true
+      ? [
+          {
+            href: '/curator',
+            label: 'Playlist pitches',
+            Icon: ({ className }: { className?: string }) => (
+              <Inbox className={className} aria-hidden />
+            ),
+            isActive: pathname?.startsWith('/curator') ?? false,
+          },
+        ]
+      : []),
+  ];
 
   const handleUrgAnsClick = () => {
     // Carry the drilled-in release as the assistant's scope, mirroring
@@ -244,35 +296,26 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
           </li>
         ) : null}
 
-        {NOTES_ENABLED ? (
+        {/* Overflow. The bar is fixed at six slots because every optional tab
+            narrows it for everyone — four fixed plus Song, Notes and Pitches
+            already hit the measured seven-slot ceiling, and Shows would have
+            been the eighth. Global surfaces go in here now instead. */}
+        {moreItems.length > 0 ? (
           <li className="flex-1">
-            <Link
-              href="/dashboard/notes"
-              aria-current={isNotes ? 'page' : undefined}
-              className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-                isNotes ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
-              }`}
-            >
-              <NotesIcon className="h-5 w-5" />
-              Notes
-            </Link>
-          </li>
-        ) : null}
-
-        {PITCHING_ENABLED && hasCuratorProfile === true ? (
-          <li className="flex-1">
-            <Link
-              href="/curator"
-              aria-current={pathname?.startsWith('/curator') ? 'page' : undefined}
-              className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-                pathname?.startsWith('/curator')
+            <button
+              type="button"
+              onClick={() => setIsMoreOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={isMoreOpen}
+              className={`flex h-full w-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
+                moreItems.some((item) => item.isActive)
                   ? 'text-brand'
                   : 'text-content-tertiary hover:text-content-secondary'
               }`}
             >
-              <Inbox className="h-5 w-5" />
-              Pitches
-            </Link>
+              <MoreHorizontal className="h-5 w-5" aria-hidden />
+              More
+            </button>
           </li>
         ) : null}
 
@@ -289,6 +332,10 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
           </Link>
         </li>
       </ul>
+
+      {isMoreOpen ? (
+        <MobileMoreSheet items={moreItems} onClose={() => setIsMoreOpen(false)} />
+      ) : null}
     </nav>
   );
 }
