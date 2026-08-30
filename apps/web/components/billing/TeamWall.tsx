@@ -50,18 +50,24 @@ const PLAN_ORDER = ['annual', 'monthly'] as const;
 
 const PRICING_V2 = isPricingV2Enabled();
 
-/** The self-serve tiers the wall offers. Group (id `enterprise`) is absent on
- *  purpose: the
- *  full-weight "Talk to us" card beside the picker IS its path, and a third
- *  radio that cannot check out would be a dead end sitting next to the real one.
+/** The self-serve tiers the wall offers. A sales-led tier is absent on purpose:
+ *  the full-weight "Talk to us" card beside the picker IS its path, and a radio
+ *  that cannot check out would be a dead end sitting next to the real one.
  *  Exactly the reasoning that kept the legacy contactSales plan out of
- *  PLAN_ORDER above. */
-const WALL_TIERS: readonly PricingTierId[] = ['manager', 'label'] as const;
+ *  PLAN_ORDER above.
+ *
+ *  MANAGER ALONE since 2026-08-30 (founder call): Label joined Group as
+ *  sales-led, and Solo is not purchasable yet (no Paystack Plan, absent from
+ *  SelfServeTierId). One radio is honest rather than odd — the interval toggle
+ *  above it is the real choice on this screen, and the talk-to-us card covers
+ *  every team too big for Manager's ceilings. Keep this in step with
+ *  `isSelfServeTier`: a tier offered here that checkout refuses is a dead end. */
+const WALL_TIERS: readonly PricingTierId[] = ['manager'] as const;
 
-/** Which tier a returning owner lands on. The flagship rather than the entry
- *  tier, matching the legacy picker defaulting to annual: it is what most teams
- *  buy, and starting on the cheaper one reads as steering. */
-const DEFAULT_TIER: PricingTierId = 'label';
+/** Which tier a returning owner lands on. The only self-serve tier there is,
+ *  as of 2026-08-30 — it must stay a member of WALL_TIERS, or the wall opens
+ *  with nothing selected. */
+const DEFAULT_TIER: PricingTierId = 'manager';
 
 const VALUE_LINES = [
   'Every release, task and file exactly where you left it.',

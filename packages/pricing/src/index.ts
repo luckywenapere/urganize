@@ -216,18 +216,19 @@ export function formatPlanCyclePrice(
 // billable monthly or annually. A tier is what you buy; an interval is how
 // often you pay for it.
 //
-// LABEL'S PRICES ARE DELIBERATELY IDENTICAL TO THE LIVE monthly/annual
-// AMOUNTS (₦80,000 / ₦800,000), and that is what makes this migration cheap:
-//   - monthly → label @ monthly, annual → label @ annual, same figures
-//     against the SAME Paystack Plan objects. No existing or in-flight
-//     subscriber changes price.
-//   - Only MANAGER needs new Plan objects minted. See the ops note below.
-//   - Today's `label` tier above is contactSales and unreachable (it is
-//     absent from subscriptions_plan_check and PAYSTACK_PLAN_LABEL_* is
-//     unset, so checkout 500s before the CHECK could reject it). It maps
-//     onto `enterprise` here, which is the same offer under a clearer name.
-// A unit test pins Label's amounts to BILLING_PLANS' so the two cannot drift
-// apart while they share Plan objects.
+// HISTORICAL, and worth keeping because it explains the shape of the live
+// data: at the pricing-v2 launch LABEL'S PRICES WERE DELIBERATELY IDENTICAL TO
+// THE LIVE monthly/annual AMOUNTS (₦80,000 / ₦800,000) — monthly → label @
+// monthly, annual → label @ annual, the same figures against the SAME Paystack
+// Plan objects — so that no existing or in-flight subscriber changed price and
+// only MANAGER needed new Plan objects minted.
+//
+// SUPERSEDED 2026-08-30 (founder call): Label is sales-led now and carries no
+// prices at all, so the pinning test that guarded that equality is gone with
+// them. Anyone already subscribed on `label` is unaffected — a renewal reads
+// `subscriptions.billing_interval` plus BILLING_PLANS, never this tier's
+// amounts, and `isRecurringPlan` still accepts 'label'. MANAGER is now the
+// only tier with a Plan object in play.
 //
 // NGN only, matching the launch decision. USD is absent rather than zero:
 // USD checkout has never worked (the Paystack account offers NGN only in
@@ -348,17 +349,38 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
       'Export everything you put in, any time',
       'Email support',
     ],
+    // Moved here from Label 2026-08-30 (founder call), in the same pass that
+    // made Label sales-led. It is now the only self-serve tier a visitor can
+    // actually buy, so it is also the one to point at.
+    recommended: true,
   },
+  // SALES-LED SINCE 2026-08-30 (founder call). Label used to be the flagship
+  // self-serve tier at ₦80,000 / ₦800,000 and carried `recommended`; it now
+  // occupies the slot Group held — no price displayed, no card checkout, a
+  // "Let's talk" CTA on both surfaces.
+  //
+  // Its prices are GONE rather than retained, per the `prices` field doc: a
+  // sales-led tier carries none so no caller can render a figure we never
+  // quoted. Nothing needed them — a Label renewal reads
+  // `subscriptions.billing_interval` and BILLING_PLANS, not this tier's
+  // amounts, so existing Label subscribers keep renewing at what they signed
+  // for. What DOES change for them: `isContactSalesPlan` now answers true, so
+  // a lapsed Label subscriber is pointed at the mailto instead of a checkout,
+  // and `plan-change.ts` refuses a self-serve move to or from Label. Both are
+  // the intended behaviour of a sales-led tier, but they are behaviour
+  // changes for anyone already on it.
+  //
+  // `label` MUST keep unlimited limits: `resolveTeamTier` fails open to this
+  // tier for a walled, legacy or unrecognised plan, so capping it here would
+  // silently cap teams the resolver could not identify.
+  //
+  // `isRecurringPlan` in apps/web deliberately still accepts 'label' — that is
+  // what keeps a live Label subscription extending at each renewal. Do not
+  // "tidy" it out to match this flag.
   label: {
     id: 'label',
     label: 'Label',
     audience: 'For a label or a team running a roster.',
-    prices: {
-      // Identical to BILLING_PLANS.monthly / .annual on purpose — see the
-      // block comment above. Pinned by a test.
-      monthly: { amount: 80_000, minorUnit: 80_000_00 },
-      annual: { amount: 800_000, minorUnit: 800_000_00 },
-    },
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
     perks: [
       'Everything in Manager',
@@ -366,8 +388,20 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
       'We set your roster up with you',
       'WhatsApp support, answered same day',
     ],
-    recommended: true,
+    contactSales: true,
   },
+  // RETIRED FROM DISPLAY 2026-08-30 (founder call): Group is off both pricing
+  // surfaces — it is absent from PRICING_TIER_ORDER below and from the wall's
+  // WALL_TIERS, so no visitor sees it. Label took over the sales-led slot.
+  //
+  // The DEFINITION deliberately stays. `enterprise` is allowed by
+  // subscriptions_plan_check and may already sit on a row, and ENTITLEMENTS
+  // keys off every PricingTierId — so deleting it would need a migration and
+  // would leave a stored row unresolvable, for no gain. This is exactly how
+  // the legacy BILLING_PLANS.label entry is handled: kept so the data still
+  // resolves, never rendered. Re-displaying it is one line in
+  // PRICING_TIER_ORDER.
+  //
   // DISPLAY NAME vs ID: this tier is called "Group" everywhere a customer can
   // read it, and its id stays `enterprise`. Renamed 2026-08-24 (founder call)
   // — "Enterprise" is B2B software jargon that means nothing to a label head,
@@ -402,12 +436,17 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
 
 /** Card order on the pricing page: cheapest first, up to the sales-led tier.
  *  Solo leads and Manager sits one step above it, so the jump the ladder is
- *  built around (one artist to a roster) is the first thing a visitor reads. */
+ *  built around (one artist to a roster) is the first thing a visitor reads.
+ *
+ *  THREE cards since 2026-08-30 (founder call). `enterprise` (Group) is
+ *  deliberately absent — see the note on its definition above; the tier still
+ *  exists in code so stored rows resolve, it simply is not offered. Label is
+ *  the one sales-led card now, so the ladder reads: two prices, then a
+ *  conversation. */
 export const PRICING_TIER_ORDER: readonly PricingTierId[] = [
   'solo',
   'manager',
   'label',
-  'enterprise',
 ] as const;
 
 /** Annual is billed as ten months, so two are free. Used for the saving copy,

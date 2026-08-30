@@ -35,11 +35,17 @@ import {
  */
 export type RecurringPlanId = BillingPlanId | 'manager';
 
-/** The tiers a customer can actually buy without talking to us. */
-export type SelfServeTierId = Extract<PricingTierId, 'manager' | 'label'>;
+/** The tiers a customer can actually buy without talking to us.
+ *
+ * MANAGER ONLY since 2026-08-30 (founder call): Label became sales-led, so its
+ * card checkout is gone and Solo is not purchasable yet. Note this is about
+ * NEW purchases — an existing Label subscription still renews, because
+ * `isRecurringPlan` below still accepts 'label'. The two lists answer
+ * different questions and are meant to disagree here. */
+export type SelfServeTierId = Extract<PricingTierId, 'manager'>;
 
 export function isSelfServeTier(value: unknown): value is SelfServeTierId {
-  return value === 'manager' || value === 'label';
+  return value === 'manager';
 }
 
 /**
@@ -121,11 +127,31 @@ const PLAN_CODE_ENV_VAR: Record<BillingPlanId, Record<PricingCurrencyCode, strin
 // env vars are set, a Manager checkout returns the "plan not configured" 500 —
 // which is the correct failure: it refuses rather than charging a Plan that
 // bills the wrong term.
+// Label's entry moved to RETIRED_TIER_PLAN_CODE_ENV_VAR on 2026-08-30 when it
+// became sales-led: no longer purchasable, so it must not be reachable from
+// checkout, but its live subscriptions still renew and are still validated.
 const TIER_PLAN_CODE_ENV_VAR: Record<SelfServeTierId, Record<BillingInterval, string>> = {
   manager: {
     monthly: 'PAYSTACK_PLAN_MANAGER_MONTHLY_NGN',
     annual: 'PAYSTACK_PLAN_MANAGER_ANNUAL_NGN',
   },
+};
+
+/**
+ * Tiers we no longer sell but still renew. Read ONLY by
+ * `planCodeMatchesSubscription`, never by checkout — that separation is the
+ * point: a retired tier must be impossible to buy while its existing
+ * subscriptions stay judged against the Plans they were actually sold on.
+ *
+ * Label maps to the LIVE monthly/annual Plans, not PAYSTACK_PLAN_LABEL_* — its
+ * tier prices were identical to those plans by design, so that is what its
+ * subscribers are really billed against. PAYSTACK_PLAN_LABEL_NGN holds a
+ * mislabeled ₦750,000 Plan from an earlier attempt and must never be used here.
+ *
+ * Keyed loosely by string because these ids are precisely the ones no longer in
+ * SelfServeTierId.
+ */
+const RETIRED_TIER_PLAN_CODE_ENV_VAR: Record<string, Record<BillingInterval, string>> = {
   label: {
     monthly: 'PAYSTACK_PLAN_MONTHLY_NGN',
     annual: 'PAYSTACK_PLAN_ANNUAL_NGN',
@@ -194,12 +220,23 @@ export function planCodeMatchesSubscription(input: {
   if (!incoming) return true;
 
   const expected: Array<string | null> = [];
+  const retired = RETIRED_TIER_PLAN_CODE_ENV_VAR[input.plan];
   if (isSelfServeTier(input.plan)) {
     const interval = resolveBillingInterval({
       plan: input.plan,
       storedInterval: input.storedInterval,
     });
     expected.push(getTierPaystackPlanCode(input.plan, interval));
+  } else if (retired) {
+    // A tier we stopped selling but still renew. Judged interval-sensitively,
+    // exactly as it was while it was on sale — dropping to the legacy branch
+    // below would read PAYSTACK_PLAN_LABEL_* (never set), find nothing
+    // configured, and quietly stop checking these renewals at all.
+    const interval = resolveBillingInterval({
+      plan: input.plan,
+      storedInterval: input.storedInterval,
+    });
+    expected.push(readPlanCodeEnv(retired[interval]));
   } else if (input.plan === 'monthly' || input.plan === 'annual' || input.plan === 'label') {
     for (const currency of ['NGN', 'USD'] as const) {
       expected.push(getPaystackPlanCode(input.plan, currency));
@@ -301,6 +338,14 @@ export const RECURRING_PLAN_IDS: readonly RecurringPlanId[] = [
  *
  * 'enterprise' stays out: it is invoiced by hand, has no Paystack plan code, and
  * an enterprise row's expires_at is set by an admin, not by a charge event.
+ *
+ * 'label' STAYS IN, even though Label became sales-led on 2026-08-30 and is no
+ * longer in `SelfServeTierId`. It was self-serve for the whole pricing-v2
+ * launch window, so live `label` subscriptions exist against real Paystack
+ * Plans; dropping it here would silently stop extending them at their next
+ * renewal — the precise failure this comment block was written about. Whether a
+ * tier can be BOUGHT today and whether an existing subscription RENEWS are
+ * different questions.
  */
 export function isRecurringPlan(plan: string): plan is RecurringPlanId {
   return plan === 'monthly' || plan === 'annual' || plan === 'label' || plan === 'manager';
