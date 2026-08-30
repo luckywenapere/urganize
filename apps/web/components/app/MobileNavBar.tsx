@@ -127,6 +127,52 @@ function SongTab({ isHome }: { isHome: boolean }) {
   );
 }
 
+/** "You"'s markup. Same split as Home's and Song's, for the same reason: the
+ *  Suspense fallback and the resolved tab must stay pixel-identical. */
+function YouTabLink({ isActive }: { isActive: boolean }) {
+  return (
+    <Link
+      href="/settings"
+      aria-current={isActive ? 'page' : undefined}
+      className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
+        isActive ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
+      }`}
+    >
+      <ProfileIcon className="h-5 w-5" />
+      You
+    </Link>
+  );
+}
+
+/**
+ * Settings belongs to the home surface, not to the work (founder call,
+ * 2026-08-30, from screenshots of a scoped release and the assistant page).
+ * So this renders in exactly two places: the bare catalog — `/dashboard` with
+ * no `?release=`, where the bar is at its emptiest anyway — and `/settings`
+ * itself, where it is the lit tab.
+ *
+ * Settings itself is why the `isSettings` branch exists rather than the rule
+ * being a plain "catalog only": the tab would otherwise be one that can never
+ * light up, since you cannot be on the catalog and in Settings at once.
+ *
+ * The cost, stated plainly: from a scoped release or the assistant, Settings
+ * is two taps (Home, then You) rather than one. That is the trade the founder
+ * chose, and the bar is the ONLY route to Settings on a phone — the topbar's
+ * own icons are `hidden lg:grid` under this flag — so it must keep rendering
+ * on the catalog. Do not narrow this further without leaving Settings a way in.
+ *
+ * ISOLATED BEHIND ITS OWN SUSPENSE BOUNDARY, for the reason SongTab's header
+ * gives: `useSearchParams` in a statically prerendered client component pulls
+ * the nearest boundary down with it, and this bar is mounted on `/settings`,
+ * which must stay `○ Static`.
+ */
+function YouTab({ isHome, isSettings }: { isHome: boolean; isSettings: boolean }) {
+  const searchParams = useSearchParams();
+  if (isSettings) return <YouTabLink isActive />;
+  if (isHome && !searchParams.get('release')) return <YouTabLink isActive={false} />;
+  return null;
+}
+
 /**
  * Bottom tab bar, below lg only (NEXT_PUBLIC_FEATURE_MOBILE_NAV). Moves the
  * topbar's nav icons and the "New release" CTA down to where a thumb
@@ -134,10 +180,11 @@ function SongTab({ isHome }: { isHome: boolean }) {
  * (which retires on this same viewport range — see ChappiDock.tsx).
  *
  * Slots: Home (Catalog) · UrgAns · New release/New activity (center, filled) ·
- * Notes · Shows · You · Song. "You" is a direct Link to /settings rather than a
- * menu — the account actions (Settings, sign out) already live there, and a
+ * Notes · Shows · You · Song. "You" is a direct Link to /settings rather than
+ * a menu — the account actions (Settings, sign out) already live there, and a
  * menu on top of a menu (WorkspaceMenu still exists at lg+) would be one tap
- * for nothing. Song trails the bar rather than sitting beside the "+" — see
+ * for nothing. It renders only on the catalog and in Settings; see YouTab.
+ * Song trails the bar rather than sitting beside the "+" — see
  * its own comment below for why the one tab that comes and goes belongs last.
  *
  * The center button is contextual as of 2026-08-17: when a release is
@@ -160,15 +207,22 @@ function SongTab({ isHome }: { isHome: boolean }) {
  * is shorter by two on the one screen it opens on, and fills back in the
  * moment a release is scoped or another page is reached.
  *
+ * You runs the OPPOSITE way: it renders only on that bare catalog and on
+ * `/settings`, and is absent from every working view. See YouTab's header.
+ * The two rules are complementary rather than in tension — the catalog trades
+ * Home and Song away for You, so no view ever carries all three.
+ *
  * WIDTH. Every slot is `flex-1` in a full-bleed `<ul>`, so the budget is the
  * viewport split evenly. Song and Pitches are mutually exclusive (a dual
- * account gets Pitches and not Song), so the ceiling is SEVEN slots: Home,
- * UrgAns, +, Notes, Shows, You, and whichever of the two applies. 375 / 7 =
- * ~53px, against a widest label of "Pitches" at ~45px and a 48px center
- * button, so nothing wraps or clips — but there is no room after it. Shows
- * (2026-08-30) took the last one. AN EIGHTH NEEDS A DIFFERENT SHAPE for this
- * bar — an overflow sheet holding the optional global surfaces — not another
- * `flex-1`.
+ * account gets Pitches and not Song), and You is now absent from every view
+ * that carries Home and Song, so the ceiling is SIX slots: Home, UrgAns, +,
+ * Notes, Shows, and whichever of Song/Pitches applies. 375 / 6 = ~62px,
+ * against a widest label of "Pitches" at ~45px and a 48px center button.
+ *
+ * A SEVENTH lands at ~53px, which measured clear but leaves nothing after it,
+ * so treat six as the working ceiling and seven as the hard one. AN EIGHTH
+ * NEEDS A DIFFERENT SHAPE for this bar — an overflow sheet holding the
+ * optional global surfaces — not another `flex-1`.
  *
  * The bar shows on every route AppShell mounts it on, /dashboard/urgans
  * included — hiding it there would leave the assistant page with no way out
@@ -359,16 +413,9 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
         ) : null}
 
         <li className="flex-1">
-          <Link
-            href="/settings"
-            aria-current={isSettings ? 'page' : undefined}
-            className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-              isSettings ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
-            }`}
-          >
-            <ProfileIcon className="h-5 w-5" />
-            You
-          </Link>
+          <Suspense fallback={isSettings ? <YouTabLink isActive /> : null}>
+            <YouTab isHome={isHome} isSettings={isSettings} />
+          </Suspense>
         </li>
 
         {/* Song is LAST, after You (founder call, 2026-08-30 — superseding the
