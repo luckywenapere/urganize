@@ -1,8 +1,9 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Inbox, Plus } from 'lucide-react';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { Inbox, Music, Plus } from 'lucide-react';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
@@ -14,6 +15,10 @@ import { CatalogIcon, ChappiIcon, NotesIcon, ProfileIcon } from '@/components/ap
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
+// Same flag that gates the `?scene=song` URL param, the Song pill in
+// TasksPanel and the /song API routes — so this tab cannot offer a surface
+// that does not exist.
+const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
 
 type MobileNavBarProps = {
   /** Opens the CreateReleaseModal AppShell owns — the same instance the
@@ -21,14 +26,72 @@ type MobileNavBarProps = {
   onNewRelease: () => void;
 };
 
+/** The Song tab's markup. Shared so the Suspense fallback below and the
+ *  resolved tab cannot drift apart in size, spacing or colour — the
+ *  `ArtistLine` split in WorkspaceIdentityPanel, for the same reason. */
+function SongTabLink({ href, isActive }: { href: string; isActive: boolean }) {
+  return (
+    <Link
+      href={href}
+      aria-current={isActive ? 'page' : undefined}
+      className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
+        isActive ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
+      }`}
+    >
+      <Music className="h-5 w-5" />
+      Song
+    </Link>
+  );
+}
+
+/**
+ * Song is a release SCENE, not a global page, so this tab is the one entry in
+ * the bar whose destination depends on the URL: `?release=<id>&scene=song`
+ * when a release is scoped, the catalog otherwise (which is where you pick
+ * one). It is rendered in every case rather than appearing only while scoped —
+ * a tab that comes and goes would reflow the whole bar on every scope change,
+ * the same layout-shift the Pitches tab's tri-state read is written to avoid.
+ *
+ * ISOLATED BEHIND ITS OWN SUSPENSE BOUNDARY, and that is not stylistic:
+ * `useSearchParams` in a statically prerendered client component makes Next
+ * bail out to the nearest boundary, and this bar is mounted app-wide by
+ * AppShell — including on `/settings`, which must stay `○ Static`. Contained
+ * here, only this one tab waits. Do not lift the hook into the bar itself.
+ * (This is also why the two click handlers below read `window.location.search`
+ * at click time instead: they need an answer once, on demand, not a
+ * subscription.)
+ */
+function SongTab({ isHome }: { isHome: boolean }) {
+  const searchParams = useSearchParams();
+  const releaseId = searchParams.get('release');
+
+  if (!releaseId) return <SongTabLink href="/dashboard" isActive={false} />;
+
+  // Already on the workspace: keep its params, so opening Song does not throw
+  // away the calendar's remembered tab and month (SCENE_SCOPED_PARAMS, which
+  // deliberately survive a scene closing). From anywhere else — the notes page
+  // carries `?release=` too — build a clean URL rather than dragging that
+  // page's own params across.
+  const params = isHome ? new URLSearchParams(searchParams.toString()) : new URLSearchParams();
+  params.set('release', releaseId);
+  params.set('scene', 'song');
+
+  return (
+    <SongTabLink
+      href={`/dashboard?${params.toString()}`}
+      isActive={isHome && searchParams.get('scene') === 'song'}
+    />
+  );
+}
+
 /**
  * Bottom tab bar, below lg only (NEXT_PUBLIC_FEATURE_MOBILE_NAV). Moves the
  * topbar's nav icons and the "New release" CTA down to where a thumb
  * actually reaches on a phone, and stands in for the ChappiDock launcher
  * (which retires on this same viewport range — see ChappiDock.tsx).
  *
- * Five slots: Home (Catalog) · UrgAns · New release/New activity (center,
- * filled) · Notes · You. "You" is a direct Link to /settings rather than a
+ * Slots: Home (Catalog) · UrgAns · New release/New activity (center, filled) ·
+ * Song · Notes · You. "You" is a direct Link to /settings rather than a
  * menu — the account actions (Settings, sign out) already live there, and a
  * menu on top of a menu (WorkspaceMenu still exists at lg+) would be one tap
  * for nothing.
@@ -41,13 +104,19 @@ type MobileNavBarProps = {
  * comment). Everywhere else — catalog view, or any other route — it keeps
  * opening "New release" exactly as before. See `handleFabClick` below.
  *
- * A SIXTH slot, Pitches, appears only for a dual account (team + playlist
- * owner) — a state currently held by a single partner. It earns the crowding
- * because this bar is the only navigation a phone has: the topbar's own icons
- * are `hidden lg:grid` under this flag and the identity card never renders
- * below `lg`, so without it a dual account had to open a second tab to reach
- * its own inbox. Six slots still clear a 375px bar (~62px each, and "Pitches"
- * measures ~45px at 11px).
+ * Pitches appears only for a dual account (team + playlist owner) — a state
+ * currently held by a single partner. It earns the crowding because this bar
+ * is the only navigation a phone has: the topbar's own icons are
+ * `hidden lg:grid` under this flag and the identity card never renders below
+ * `lg`, so without it a dual account had to open a second tab to reach its own
+ * inbox.
+ *
+ * WIDTH. Every slot is `flex-1` in a full-bleed `<ul>`, so the budget is the
+ * viewport split evenly. The worst case is all four optional tabs at once
+ * (Song + Notes + Pitches, seven slots): 375 / 7 = ~53px, against a widest
+ * label of "Pitches" at ~45px and a 48px center button, so nothing wraps or
+ * clips. Production today runs five or six. An EIGHTH slot would not fit —
+ * that bar needs a different shape, not another `flex-1`.
  *
  * The bar shows on every route AppShell mounts it on, /dashboard/urgans
  * included — hiding it there would leave the assistant page with no way out
@@ -156,6 +225,24 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
             <Plus className="h-5 w-5" />
           </button>
         </li>
+
+        {/* Song sits immediately after the "+" (founder call, 2026-08-30) —
+            the two release-scoped controls in the bar, side by side, since
+            that button also acts on the scoped release. It was reachable on
+            mobile only from the folded "more" menu, which is a drawer behind a
+            hamburger. It STAYS in that menu as well, deliberately: this bar is
+            gated on NEXT_PUBLIC_FEATURE_MOBILE_NAV while the menu is not, so
+            removing it there would tie Song's mobile reachability to a second
+            flag and leave a band with no entry point at all — the exact
+            compounding failure recorded under "Crossing between the two
+            portals". */}
+        {SONG_UPLOAD_ENABLED ? (
+          <li className="flex-1">
+            <Suspense fallback={<SongTabLink href="/dashboard" isActive={false} />}>
+              <SongTab isHome={isHome} />
+            </Suspense>
+          </li>
+        ) : null}
 
         {NOTES_ENABLED ? (
           <li className="flex-1">

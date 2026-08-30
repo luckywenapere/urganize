@@ -2182,6 +2182,50 @@ way), not a new store or a new prop threaded through `AppShell`. No new
 flag, no migration, no ledger entry (internal chrome rework, not a v1 scope
 item).
 
+### Song became a bottom-bar tab (2026-08-30)
+
+Founder: on mobile, put Song in the bottom navigation bar, after the plus
+button and before "You" — "it's currently hidden inside the menu." It was
+reachable on a phone only from the folded "more" drawer. Same class of change
+as the pass above (chrome repositioning, no new flag, no migration, **no
+ledger entry**), so the same rules apply; four things about it are worth
+knowing:
+
+1. **`MobileNavBar` now reads `useSearchParams`, and it MUST stay inside its
+   own `<Suspense>`.** Song is a release SCENE, not a global page, so this is
+   the one tab whose destination depends on the URL. That hook in a statically
+   prerendered client component bails out to the nearest boundary, and this bar
+   is mounted app-wide by `AppShell` including on `/settings` — the
+   `ScopedArtistLine` pattern in `WorkspaceIdentityPanel`, for the identical
+   reason. Verified: `/auth`, `/onboarding` and `/settings` are still
+   `○ Static` in both flag states. Do not lift the hook into the bar body; the
+   two click handlers deliberately read `window.location.search` at click time
+   instead, and that is not an inconsistency — they need one answer on demand,
+   this tab needs a subscription.
+2. **The tab renders in every case, scoped or not** — `?release=<id>&scene=song`
+   when a release is scoped, the catalog otherwise (which is where you pick
+   one). A tab that appeared only while scoped would reflow the whole bar on
+   every scope change, which is the same layout shift the Pitches tri-state
+   read already avoids.
+3. **It STAYS in the folded menu — this is an addition, not the MOVE that
+   Calendar and Press kit made.** The bar is gated on
+   `NEXT_PUBLIC_FEATURE_MOBILE_NAV` and the folded menu is not, so emptying the
+   menu would tie Song's mobile reachability to a second flag and leave a
+   viewport/flag band with no entry point at all — the compounding failure
+   recorded under "Crossing between the two portals", which this repo has
+   already shipped once.
+4. **Seven slots is the ceiling, and it is now measured rather than assumed.**
+   All four optional tabs at once (Song + Notes + Pitches) gives 375 / 7 =
+   ~53px per slot against a widest label of "Pitches" at ~45px and a 48px
+   center button. An eighth needs a different shape for that bar, not another
+   `flex-1`.
+
+**Not verified:** nothing rendered on a phone — this sandbox cannot mint an
+authenticated session and has no route to app.urganize.app — so the tab rests
+on the build gates plus the compiled bundle carrying it. Note the usual trap
+applies here too: grepping the client chunks for "Song" proves nothing about
+the flag, since both ternary branches compile in.
+
 **Verified:** `vitest run` (687 passing, unchanged — no test exercises this
 mobile chrome directly), `eslint .` (0 errors, 59 warnings — unchanged
 baseline), and `next build` green with every relevant pill flag ON and with
