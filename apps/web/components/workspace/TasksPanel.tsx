@@ -16,6 +16,7 @@ import {
   NotebookPen,
   Archive,
   PartyPopper,
+  Users,
   Plus,
   Radio,
   Search,
@@ -242,6 +243,7 @@ type TasksPanelProps = {
   /** Shelve a finished release, or restore an archived one. Modal-shaped like
    *  recap, so it lives in the same two places. */
   archiveAction?: TaskPanelAction | null;
+  changeArtistAction?: TaskPanelAction | null;
   /**
    * When set, replaces the activity buckets with this content while keeping the
    * header row of pills above it (2026-08-05, founder call). That row is the
@@ -299,6 +301,7 @@ export function TasksPanel({
   statusUpdateAction,
   recapAction,
   archiveAction,
+  changeArtistAction,
   sceneContent,
   activitiesBanner,
   bannerReplacesEmptyState = false,
@@ -679,6 +682,13 @@ export function TasksPanel({
     </button>
   ) : null;
 
+  const changeArtistButton = changeArtistAction ? (
+    <button type="button" onClick={changeArtistAction.onClick} className={neutralPillClass}>
+      <Users className="h-3.5 w-3.5" aria-hidden="true" />
+      {changeArtistAction.label}
+    </button>
+  ) : null;
+
   /**
    * Mobile top tabs (2026-08-16, founder request via screenshot reference).
    * The permanent, always-visible entry points on a phone: Calendar,
@@ -785,6 +795,18 @@ export function TasksPanel({
           disabled: archiveAction.disabled,
         }
       : null,
+    // Same reasoning as archive and recap: a modal, never a lit tab. It also
+    // belongs with them because all three are corrective or terminal actions
+    // rather than places to work.
+    changeArtistAction
+      ? {
+          key: 'change-artist',
+          label: changeArtistAction.label,
+          icon: Users,
+          onClick: changeArtistAction.onClick,
+          disabled: changeArtistAction.disabled,
+        }
+      : null,
     EPK_ENABLED && scopedRelease
       ? {
           key: 'epk',
@@ -850,6 +872,7 @@ export function TasksPanel({
         {notesPill}
         {statusUpdateButton}
         {recapButton}
+        {changeArtistButton}
         {archiveButton}
       </div>
 

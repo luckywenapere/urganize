@@ -5969,9 +5969,10 @@ work it would take. Three things turned out to be already built:
 - **There is deliberately no DELETE.** Removing an artist needs an answer for
   their releases, and `artist_scope_id` is `ON DELETE SET NULL`, so deleting one
   silently upgrades a teammate scoped to them into seeing everything. Neither
-  belongs in a route handler. **Existing releases stay with their original
-  artist when a second is added** (founder call) — nothing moves, and there is
-  no reassign-a-release path.
+  belongs in a route handler. See "Moving a release" below for the analysis, and
+  for the finding that decides the delete design when it is built.
+  **Existing releases stay with their original artist when a second is added**
+  (founder call) — nothing moves on its own.
 - **Verified:** 1682 tests (11 new in `lib/artists-server.test.ts`, plus artist
   ceiling coverage in `entitlements.test.ts` including that no pre-tier plan is
   newly capped), `eslint .` at the exact 3-error / 65-warning baseline, and
@@ -5988,6 +5989,125 @@ work it would take. Three things turned out to be already built:
   one live pass: add a second artist in Settings, create a release and confirm
   the picker appears and files it correctly, invite someone scoped to the new
   artist, and confirm they see only that artist's releases.
+
+---
+
+## Moving a release to a different artist (2026-08-30, v1.7.0)
+
+The correction for a mistake the roster made possible. The create-release
+picker preselects the first artist, so filing a release under the wrong one
+became reachable on 2026-08-30 with no way to fix it short of deleting the
+release. `POST /api/releases/[releaseId]/artist` is that fix. **No migration.**
+
+**Five things worth knowing before editing this:**
+
+1. **The write set is the whole correctness story: the link plus TWO cached
+   names.** `releases.artist_id`, `releases.artist_name` and
+   `release_metadata.primary_artist_name` — the same three places
+   `renameWorkspaceArtist` touches, and they must stay in step. Dropping either
+   cache does not throw; the release just shows the old artist's name everywhere
+   while being filed under the new one, which is worse than an error because
+   nothing looks wrong. Both are mutation-tested in `lib/artists-server.test.ts`.
+2. **A DEDICATED ROUTE, and the reason is stronger than the archive route's.**
+   The release PATCH is a full-row replace that DELIBERATELY refuses to touch the
+   artist: with the workspace flag on it ignores `body.artistName` and rewrites
+   the existing value, precisely so the edit form cannot desync the cached name
+   from the link. Accepting an artist there would reopen what that guard exists
+   to prevent.
+3. **OWNER-ONLY, which is a decision rather than copied convention.** Every other
+   release-scene route group became team-aware in v1.5.1, but moving a release
+   CHANGES WHO CAN SEE IT — an artist-scoped teammate sees exactly the releases
+   whose `artist_id` matches their scope, so this hands the release to one
+   person's view and takes it from another's. It belongs with the other
+   owner-only release-row mutations (PATCH, DELETE, schedule, archive), and the
+   dialog says the visibility part out loud before the confirm button.
+4. **`stores/useArtistRosterStore.ts` is the shared roster**, and it exists
+   because three surfaces needed the same list: the create-release picker, the
+   "Change artist" action's visibility rule, and the dialog. It also RETIRES the
+   per-open fetch the modal shipped with a day earlier. **Deliberately not folded
+   into `useWorkspaceIdentityStore`** even though that carries `artistCount` from
+   the same endpoint: the identity card is behind
+   `NEXT_PUBLIC_FEATURE_IDENTITY_PANEL`, which defaults OFF, so reading the
+   roster from it would make the picker vanish in a default deployment.
+5. **Everything still fails open.** An empty or unloaded roster hides the action
+   and the picker, which is the pre-roster behaviour; the action additionally
+   requires more than one artist, so a one-artist team never sees a control that
+   could only tell it no.
+
+- The route validates the target against the CALLER'S roster rather than reading
+  the artist row and comparing workspaces after, so an artist on another team is
+  indistinguishable from one that does not exist — the rename route's shape.
+  `primaryWorkspaceId` is safe here despite resolving to a JOINED team for
+  someone who owns no releases: this caller owns THIS release.
+- Reassigning to the current artist returns `changed: false` rather than writing.
+- Fixed in passing: the release PATCH still pointed at `/api/workspace/artist`,
+  deleted the day before.
+
+### The delete analysis, recorded so it is not re-derived
+
+**`releases.artist_id` IS NOT DECLARED IN ANY MIGRATION.** The only mention
+across `supabase/migrations/` is a plpgsql local variable; the column exists in
+production and `20260602010000` sets it NOT NULL, but its original definition —
+**including its foreign key to `artists`** — was never captured.
+Pre-reconciliation drift. Anything that ever recreates this column must
+re-declare that constraint, or it vanishes silently.
+
+**ANSWERED against production, 2026-08-30, and the answer was a third case
+neither prediction covered.** The constraint is
+`releases_artist_id_fkey` with `confdeltype = 'n'` — **`ON DELETE SET NULL`** —
+**while the column itself is NOT NULL.** Those two contradict each other, and
+that contradiction IS the current behaviour:
+
+- **An artist with no releases deletes cleanly.**
+- **An artist WITH releases cannot be deleted at all.** Postgres fires the SET
+  NULL, the resulting UPDATE violates the not-null constraint, and the whole
+  DELETE aborts. Nothing is orphaned and nothing is destroyed — so the safe
+  outcome holds, **but by accident**, and it surfaces as a raw not-null
+  violation rather than anything a user can act on.
+
+**THE LANDMINE, and the reason this is written down.** The foreign key DECLARES
+set-null as the intent; only the column's NOT NULL is stopping it. Relax that
+NOT NULL — or recreate the column without it, which the drift above makes easy —
+and every one of those refusals silently becomes a real set-null on live
+releases, with no error anywhere. A null `artist_id` then fails every
+`=== scope` comparison, so artist-scoped teammates lose those releases without a
+trace, and nothing on screen looks wrong because the artist NAME is cached on
+the release row. Do not treat the current refusal as a guarantee.
+
+**The recommended rule when it is built, unchanged by the answer above but now
+better founded: allow delete only for an artist with no releases AND nobody
+scoped to them.** Cascading would destroy release history behind a button
+labelled "delete artist"; reassigning-on-delete hides a data decision inside a
+delete. Both refusals are things a manager can act on, and the scoped-member
+check is what closes the `workspace_members.artist_scope_id` privacy hole (also
+`ON DELETE SET NULL`, where null means FULL visibility — so deleting an artist
+silently promotes a teammate scoped to them).
+
+**Two things that build should also do**, both following from the finding above:
+check the releases condition IN CODE so the refusal is a sentence rather than a
+not-null violation; and ship a migration changing
+`releases_artist_id_fkey` to **`ON DELETE RESTRICT`**, so the declared intent
+matches the column and the accidental refusal becomes a guaranteed one. That
+migration is also the moment to put the column and its constraint into version
+control for the first time.
+
+Note the honest scope: a typo is a rename, and an artist who left still has
+releases, so delete is really "undo adding one by mistake" — which the artists
+ceiling makes worth having, since on Manager a stray artist permanently costs one
+of five slots.
+
+- **Verified:** 1687 tests (5 new, both cached writes mutation-tested), `eslint .`
+  at **3 errors / 66 warnings** — the one warning above the standing baseline is
+  `ChangeReleaseArtistDialog`'s portal mount guard, byte-for-byte the finding
+  `ArchiveReleaseDialog` and `DeleteReleaseDialog` already carry. `next build`
+  green **by exit code** with `/auth`, `/onboarding` and `/settings` still
+  `○ Static`. Runtime probe: the route 401s unauthenticated (so auth precedes any
+  release read) and 405s a GET.
+- **Not verified:** nothing has run against a real database — no release has
+  actually been moved, and the dialog has never rendered. Worth one live pass:
+  move a release, confirm the catalog card, the scoped header and the identity
+  card all show the new artist without a reload, and that a teammate scoped to
+  the old artist stops seeing it.
 
 ---
 

@@ -34,6 +34,8 @@ import { readPreviousLocation, resolveWorkspaceBackTarget } from '@/lib/nav-hist
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
 import { ArchiveReleaseDialog } from '@/components/workspace/ArchiveReleaseDialog';
+import { ChangeReleaseArtistDialog } from '@/components/workspace/ChangeReleaseArtistDialog';
+import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { isReleaseActive } from '@/lib/release-activity';
 import { isRecapEligible as isRecapEligibleForRelease } from '@/lib/recap-eligibility';
 
@@ -176,6 +178,13 @@ export function WorkspaceView() {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isRecapOpen, setIsRecapOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const [isChangeArtistOpen, setIsChangeArtistOpen] = useState(false);
+
+  // The roster decides whether "Change artist" is worth offering at all. Read
+  // from the shared store (not the identity store, which is behind a flag that
+  // defaults off) and loaded once per session by the effect below.
+  const rosterArtists = useArtistRosterStore((state) => state.artists);
+  const loadArtistRoster = useArtistRosterStore((state) => state.load);
   const [isGeneratingStatus, setIsGeneratingStatus] = useState(false);
   const [statusUpdate, setStatusUpdate] = useState('');
   // The counts behind the generated paragraph, shown as tiles above it so the
@@ -259,6 +268,14 @@ export function WorkspaceView() {
   useEffect(() => {
     void loadCommandCenter();
   }, [loadCommandCenter]);
+
+  // Same shape, and same reasoning: the store reads its own bearer token, and
+  // its recency guard collapses this to a no-op on every navigation after the
+  // first. Failing leaves the roster empty, which reads as "one artist" and
+  // simply hides the Change artist action — never an error.
+  useEffect(() => {
+    void loadArtistRoster();
+  }, [loadArtistRoster]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -435,6 +452,7 @@ export function WorkspaceView() {
     Release,
     | 'id'
     | 'title'
+    | 'artistId'
     | 'artistName'
     | 'releaseType'
     | 'releaseDate'
@@ -448,6 +466,9 @@ export function WorkspaceView() {
     return {
       id: found.id,
       title: found.title,
+      // Feeds the change-artist dialog, which needs the CURRENT link to know
+      // what a move is moving away from.
+      artistId: found.artistId,
       artistName: found.artistName,
       // Feeds the per-playbook runway copy in SetReleaseDateCard and
       // NewReleaseGuide, which would otherwise quote single's 8 weeks at an
@@ -628,6 +649,18 @@ export function WorkspaceView() {
           label: isScopedArchived ? 'Restore release' : 'Archive release',
           onClick: () => setIsArchiveOpen(true),
         }
+      : null;
+
+  // Moving a release to another artist. Offered only when there is somewhere to
+  // move it TO — the create-release picker's rule, so a one-artist team never
+  // sees a control that can only tell it no.
+  //
+  // Owner-only for the same reason archive is, and a sharper one: this changes
+  // who can see the release, because an artist-scoped teammate sees exactly the
+  // releases whose artist matches their scope.
+  const changeArtistAction =
+    scopedReleaseId && scopedReleaseIsOwn && rosterArtists.length > 1
+      ? { label: 'Change artist', onClick: () => setIsChangeArtistOpen(true) }
       : null;
 
   // The Plan pill only exists while there is something to open: no activities
@@ -1003,6 +1036,7 @@ export function WorkspaceView() {
                   statusUpdateAction={statusUpdateAction}
                   recapAction={recapAction}
                   archiveAction={archiveAction}
+                  changeArtistAction={changeArtistAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
                   activitiesBanner={planBanner ?? setReleaseDateBanner}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
@@ -1047,6 +1081,7 @@ export function WorkspaceView() {
                 panelStatusUpdateAction={statusUpdateAction}
                 panelRecapAction={recapAction}
                 panelArchiveAction={archiveAction}
+                panelChangeArtistAction={changeArtistAction}
                 panelSceneContent={isDesktopViewport ? scenePanel : undefined}
                 panelActivitiesBanner={planBanner ?? setReleaseDateBanner}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
@@ -1177,6 +1212,20 @@ export function WorkspaceView() {
           });
           // Force-refresh so the catalog grid and the identity card's active
           // count both reflect it without a reload.
+          void loadCommandCenter({ force: true });
+        }}
+      />
+
+      <ChangeReleaseArtistDialog
+        open={isChangeArtistOpen}
+        release={scopedReleaseSlim}
+        onClose={() => setIsChangeArtistOpen(false)}
+        onChanged={(_releaseId, artistName) => {
+          setIsChangeArtistOpen(false);
+          setToast({ message: `Moved to ${artistName}.`, tone: 'success' });
+          // Force-refresh: the release card, the scoped header and the identity
+          // card's artist line all read the cached name, so without this they
+          // keep showing the old artist until a reload.
           void loadCommandCenter({ force: true });
         }}
       />

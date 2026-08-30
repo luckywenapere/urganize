@@ -382,6 +382,66 @@ export async function renameWorkspaceArtist(
 }
 
 /**
+ * Files one release under a different artist.
+ *
+ * WRITES THE SAME THREE PLACES A RENAME DOES, plus the link itself — and that
+ * set is the whole correctness story, so keep it in step with
+ * `renameWorkspaceArtist` above:
+ *   - releases.artist_id (the link; everything that decides visibility reads
+ *     this and nothing else)
+ *   - releases.artist_name (the denormalized cache every card and public page
+ *     renders)
+ *   - release_metadata.primary_artist_name (the same cache on the sidecar)
+ *
+ * Leaving either cache behind would not throw. The release would simply show
+ * the old artist's name everywhere while being filed under the new one, which
+ * is worse than an error because nothing would look wrong.
+ *
+ * THIS CHANGES WHO CAN SEE THE RELEASE. An artist-scoped teammate sees exactly
+ * the releases whose artist_id matches their scope, so moving a release grants
+ * it to one person's view and removes it from another's. That is why the route
+ * calling this is owner-only and says so before it runs.
+ *
+ * Authorization is the caller's job: this trusts that `releaseId` is owned by
+ * the actor and `artistId` is on their roster.
+ */
+export async function reassignReleaseArtist(
+  adminClient: SupabaseClient,
+  input: { releaseId: string; artist: WorkspaceArtist }
+): Promise<{ error: string | null }> {
+  const now = new Date().toISOString();
+
+  const updateRelease = await adminClient
+    .from(RELEASES_TABLE)
+    .update({
+      artist_id: input.artist.id,
+      artist_name: input.artist.name,
+      updated_at: now,
+    })
+    .eq('id', input.releaseId)
+    .select('id')
+    .maybeSingle();
+
+  if (updateRelease.error) {
+    return { error: updateRelease.error.message || 'Could not move the release.' };
+  }
+  if (!updateRelease.data) {
+    return { error: 'Release not found.' };
+  }
+
+  // Best-effort, exactly as the rename path treats it: the sidecar is a second
+  // copy of a name the release row already carries, and failing the whole
+  // request over it would leave the user thinking nothing moved when the link
+  // and the visible label both did.
+  await adminClient
+    .from(RELEASE_METADATA_TABLE)
+    .update({ primary_artist_name: input.artist.name, updated_at: now })
+    .eq('release_id', input.releaseId);
+
+  return { error: null };
+}
+
+/**
  * True when the workspace-consolidation feature flag is enabled at runtime.
  * Mirrors the inline `process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true'`
  * pattern used elsewhere (app/dashboard/page.tsx, the modal/topbar gates).
