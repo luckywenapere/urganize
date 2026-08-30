@@ -234,7 +234,7 @@ export function formatPlanCyclePrice(
 // plan creation), and carrying a USD figure here is how the currency toggle
 // ended up advertising two prices that were not the same offer.
 
-export type PricingTierId = 'manager' | 'label' | 'enterprise';
+export type PricingTierId = 'solo' | 'manager' | 'label' | 'enterprise';
 export type BillingInterval = 'monthly' | 'annual';
 
 export type TierPrice = {
@@ -258,6 +258,18 @@ export type TierPrice = {
  * quotes, and the resolution logic around them has to stay where vitest
  * collects it. */
 export type TierLimits = {
+  /** Artists on the roster.
+   *
+   *  DECLARED, NOT YET ENFORCED, and the honest reason is that the product has
+   *  no way to add a second artist: a workspace resolves ONE artist row
+   *  (`getWorkspaceArtist`), the create-release modal collects no artist input,
+   *  and the one-artist limit is a UI fact rather than a schema one. So Solo's
+   *  ceiling of 1 is what every account already gets, and the higher numbers
+   *  describe the offer this ladder is sold on rather than a switch anyone can
+   *  flip today. It lives here anyway, with the enforced ceilings, so the page
+   *  quotes the same field a future check will read — a literal in the card copy
+   *  is how a published number drifts from a real one. */
+  artists: number | null;
   /** Active team members. */
   seats: number | null;
   /** Releases still being worked — not archived, not released. */
@@ -294,15 +306,42 @@ export type PricingTierDefinition = {
 };
 
 export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
+  // The entry tier (added 2026-08-30, founder call). Manager used to sit here
+  // and read "one or two artists"; Solo takes the one-artist half of that so the
+  // ladder starts at a price a single manager can say yes to on their own, and
+  // Manager becomes the step up rather than the front door.
+  //
+  // NOT PURCHASABLE YET, and that is deliberate rather than an oversight — the
+  // same staging Manager itself shipped in. `solo` is absent from
+  // `SelfServeTierId` in apps/web, has no Paystack Plan object, and is not in
+  // `subscriptions_plan_check`, so nothing can write it to a subscription row
+  // and no team can resolve onto it. Its CTA is the free team trial, which
+  // needs no plan code. Making it buyable is a migration plus two minted Plans
+  // plus their env vars — see the note in apps/web/lib/billing-plans.ts.
+  solo: {
+    id: 'solo',
+    label: 'Solo',
+    audience: 'For a manager running one artist.',
+    prices: {
+      monthly: { amount: 8_000, minorUnit: 8_000_00 },
+      annual: { amount: 80_000, minorUnit: 80_000_00 },
+    },
+    limits: { artists: 1, seats: 2, activeReleases: 1, urgansMonthlyActions: 40 },
+    perks: [
+      'Files, credits and press kits on every release',
+      'Export everything you put in, any time',
+      'Email support',
+    ],
+  },
   manager: {
     id: 'manager',
     label: 'Manager',
-    audience: 'For an independent manager running one or two artists.',
+    audience: 'For a manager running two or more artists.',
     prices: {
       monthly: { amount: 35_000, minorUnit: 35_000_00 },
       annual: { amount: 350_000, minorUnit: 350_000_00 },
     },
-    limits: { seats: 4, activeReleases: 3, urgansMonthlyActions: 150 },
+    limits: { artists: 5, seats: 4, activeReleases: 3, urgansMonthlyActions: 150 },
     perks: [
       'The full 11-week rollout plan, written by hand',
       'Files, credits and press kits on every release',
@@ -320,7 +359,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
       monthly: { amount: 80_000, minorUnit: 80_000_00 },
       annual: { amount: 800_000, minorUnit: 800_000_00 },
     },
-    limits: { seats: null, activeReleases: null, urgansMonthlyActions: null },
+    limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
     perks: [
       'Everything in Manager',
       'Save your own rollout templates',
@@ -347,7 +386,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     audience: 'For distributors and groups operating several labels.',
     // No prices at all: a Group deal is quoted per contract and invoiced by
     // hand. There is no Paystack plan code for it.
-    limits: { seats: null, activeReleases: null, urgansMonthlyActions: null },
+    limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
     // Only what is built. `sso` and `sub_teams` are declared in the entitlement
     // map and read by NOTHING, so they are deliberately not listed here — see
     // the note on `perks`.
@@ -361,8 +400,11 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   },
 };
 
-/** Card order on the pricing page: entry point, the tier we sell, sales-led. */
+/** Card order on the pricing page: cheapest first, up to the sales-led tier.
+ *  Solo leads and Manager sits one step above it, so the jump the ladder is
+ *  built around (one artist to a roster) is the first thing a visitor reads. */
 export const PRICING_TIER_ORDER: readonly PricingTierId[] = [
+  'solo',
   'manager',
   'label',
   'enterprise',
@@ -400,6 +442,19 @@ export function tierHighlights(id: PricingTierId): string[] {
   const { limits, perks } = PRICING_TIERS[id];
   const lines: string[] = [];
 
+  // Roster size leads, because it is the question a manager answers about
+  // themselves before any other number on the card means anything.
+  //
+  // "1 artist" is exact and "Up to 5 artists" is a ceiling you grow into, which
+  // is why the two are phrased differently rather than normalised: the entry
+  // tier states what you get, the tier above states how far you can go.
+  lines.push(
+    limits.artists === null
+      ? 'Unlimited artists'
+      : limits.artists === 1
+        ? '1 artist'
+        : `Up to ${limits.artists} artists`
+  );
   lines.push(
     limits.seats === null
       ? 'Unlimited team members'
@@ -424,7 +479,12 @@ export function getTier(id: PricingTierId): PricingTierDefinition {
 }
 
 export function isPricingTierId(value: unknown): value is PricingTierId {
-  return value === 'manager' || value === 'label' || value === 'enterprise';
+  return (
+    value === 'solo' ||
+    value === 'manager' ||
+    value === 'label' ||
+    value === 'enterprise'
+  );
 }
 
 export function isBillingInterval(value: unknown): value is BillingInterval {

@@ -66,6 +66,28 @@ describe('the tier table matches what is published', () => {
     expect(manager.urgans_monthly_actions).toBe(150);
   });
 
+  it('caps Solo at exactly 1 artist, 2 seats, 1 active release and 40 assistant actions', () => {
+    const solo = resolveEntitlements('solo');
+    expect(solo.artists).toBe(1);
+    expect(solo.seats).toBe(2);
+    expect(solo.active_releases).toBe(1);
+    expect(solo.urgans_monthly_actions).toBe(40);
+  });
+
+  // The ladder is the reason Solo exists: one artist, then a roster, then no
+  // ceiling. If two rungs ever read the same, the middle card stops earning its
+  // place on the page.
+  it('widens every ceiling as the ladder goes up', () => {
+    for (const key of ['artists', 'seats', 'active_releases', 'urgans_monthly_actions'] as const) {
+      const solo = resolveEntitlements('solo')[key];
+      const manager = resolveEntitlements('manager')[key];
+      expect(typeof solo, `solo ${key}`).toBe('number');
+      expect(typeof manager, `manager ${key}`).toBe('number');
+      expect(solo as number, `${key} solo < manager`).toBeLessThan(manager as number);
+      expect(resolveEntitlements('label')[key], `label ${key}`).toBeNull();
+    }
+  });
+
   // Seats are never capped above the entry tier. A seat wall pushes half the
   // release back into WhatsApp and churns the account, which is the opposite of
   // what a coordination product is for.
@@ -139,16 +161,22 @@ describe('Label is priced identically to the live plans it inherits', () => {
 });
 
 describe('tier prices and the sales-led tier', () => {
-  it('prices Manager below Label on both intervals', () => {
+  // The ladder has to read as a ladder. A card priced above the one to its
+  // right is the kind of inversion this repo has shipped before (Annual once
+  // exceeded Label in Naira), and it makes the whole table look unconsidered.
+  it('prices the tiers in ascending order, left to right', () => {
     for (const interval of ['monthly', 'annual'] as const) {
+      const solo = getTierPrice('solo', interval)?.amount ?? 0;
       const manager = getTierPrice('manager', interval)?.amount ?? 0;
       const label = getTierPrice('label', interval)?.amount ?? 0;
-      expect(manager).toBeLessThan(label);
+      expect(solo, `solo/${interval}`).toBeGreaterThan(0);
+      expect(solo, `solo/${interval}`).toBeLessThan(manager);
+      expect(manager, `manager/${interval}`).toBeLessThan(label);
     }
   });
 
-  it('holds the 2-months-free ratio on both priced tiers', () => {
-    for (const tier of ['manager', 'label'] as const) {
+  it('holds the 2-months-free ratio on every priced tier', () => {
+    for (const tier of ['solo', 'manager', 'label'] as const) {
       const monthly = getTierPrice(tier, 'monthly')?.amount ?? 0;
       const annual = getTierPrice(tier, 'annual')?.amount ?? 0;
       expect(annual, `${tier} annual`).toBe(monthly * 10);
@@ -186,8 +214,8 @@ describe('tier prices and the sales-led tier', () => {
     expect(recommended).toEqual(['label']);
   });
 
-  it('orders the cards entry point, flagship, sales-led', () => {
-    expect(PRICING_TIER_ORDER).toEqual(['manager', 'label', 'enterprise']);
+  it('orders the cards cheapest first, ending at the sales-led tier', () => {
+    expect(PRICING_TIER_ORDER).toEqual(['solo', 'manager', 'label', 'enterprise']);
   });
 
   it('carries a price for every interval on every self-serve tier', () => {
@@ -497,6 +525,26 @@ describe('the seat cap is reachable, and only for a team that bought Manager', (
     expect(ADMIN_ASSIGNABLE_PLANS).not.toContain('manager');
   });
 
+  // SOLO IS ON THE PRICING PAGE BUT NOT ON SALE, and this is the tripwire for
+  // the day that changes. It is the tightest ceiling in the table (1 release, 2
+  // seats), so it is the one tier where switching it on without minting its
+  // Paystack Plans and widening subscriptions_plan_check would be felt
+  // immediately. Pointed at the checkout DECISION rather than at a constant
+  // array, for the reason this whole block exists: the last tripwire watched
+  // arrays and missed a new branch.
+  it('does not sell Solo yet, in either flag state', () => {
+    for (const pricingV2 of [true, false]) {
+      const result = resolveCheckoutPurchase({
+        plan: 'solo',
+        currency: 'NGN',
+        interval: 'monthly',
+        pricingV2,
+      });
+      expect(result.ok, `pricingV2=${pricingV2}`).toBe(false);
+    }
+    expect(ADMIN_ASSIGNABLE_PLANS).not.toContain('solo');
+  });
+
   // A trial is full access by definition, so an evaluating team never meets the
   // ceiling — even though its owner may already carry a manager plan row.
   it('does not cap a team that is still trialling', () => {
@@ -516,6 +564,7 @@ describe('countable ceilings are derived, not duplicated', () => {
   it('reads every ceiling straight off the shared tier limits', () => {
     for (const tier of PRICING_TIER_ORDER) {
       const limits = PRICING_TIERS[tier].limits;
+      expect(ENTITLEMENTS[tier].artists).toBe(limits.artists);
       expect(ENTITLEMENTS[tier].seats).toBe(limits.seats);
       expect(ENTITLEMENTS[tier].active_releases).toBe(limits.activeReleases);
       expect(ENTITLEMENTS[tier].urgans_monthly_actions).toBe(limits.urgansMonthlyActions);
@@ -545,11 +594,23 @@ describe('tierHighlights', () => {
 
   it('says unlimited where there is no ceiling, and quotes no number', () => {
     const lines = tierHighlights('label');
-    const ceilingLines = lines.slice(0, 3);
+    const ceilingLines = lines.slice(0, 4);
     for (const line of ceilingLines) {
       expect(line.toLowerCase()).toContain('unlimited');
       expect(line).not.toMatch(/\d/);
     }
+  });
+
+  // The roster line leads every card and is built from `limits.artists`, so a
+  // re-cut tier cannot leave "Up to 5 artists" sitting on a card that no longer
+  // means it.
+  it('leads with the roster size, taken from the limit', () => {
+    expect(tierHighlights('solo')[0]).toBe('1 artist');
+    expect(tierHighlights('manager')[0]).toBe(
+      `Up to ${PRICING_TIERS.manager.limits.artists} artists`
+    );
+    expect(tierHighlights('label')[0]).toBe('Unlimited artists');
+    expect(tierHighlights('enterprise')[0]).toBe('Unlimited artists');
   });
 
   it('includes every perk after the ceilings', () => {
@@ -578,19 +639,23 @@ describe('public tier copy tells the truth', () => {
   });
 
   it('phrases the annual saving in months and never as a percentage', () => {
+    expect(annualSavingCopy('solo')).toBe('2 months free');
     expect(annualSavingCopy('manager')).toBe('2 months free');
     expect(annualSavingCopy('label')).toBe('2 months free');
     // No annual price to save against.
     expect(annualSavingCopy('enterprise')).toBeNull();
   });
 
-  it('carries no percentage and no em dash anywhere in the tier copy', () => {
-    // The pricing spec forbids a percentage saving, and the marketing copy
-    // rules forbid em dashes in house copy.
+  it('carries no percentage, no em dash and no "workspace" in the tier copy', () => {
+    // The pricing spec forbids a percentage saving, the marketing copy rules
+    // forbid em dashes in house copy, and "workspace" is banned from tier copy
+    // specifically: it is what WE call the thing, not what a manager calls the
+    // place their releases live.
     for (const tier of PRICING_TIER_ORDER) {
       const copy = [PRICING_TIERS[tier].audience, ...tierHighlights(tier)].join(' ');
-      expect(copy).not.toContain('%');
-      expect(copy).not.toContain('\u2014');
+      expect(copy, tier).not.toContain('%');
+      expect(copy, tier).not.toContain('\u2014');
+      expect(copy.toLowerCase(), tier).not.toContain('workspace');
     }
   });
 });

@@ -2,15 +2,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { ProductMenu } from "./ProductMenu";
 import { ThemeToggle } from "./ThemeToggle";
+import { APP_SIGNUP_URL } from "@/lib/app-urls";
 
 // One header for every marketing page. Product pages (Features, Pricing, Why
 // Urganize, Privacy) live in the ProductMenu dropdown — their ONLY home;
 // they're deliberately not in the footer (URG-161).
 //
-// Funnel note (founder call, 2026-08-09): the waitlist-only funnel
-// (URG-125 + URG-136) no longer holds — signup is a direct path again, via
-// /signup in the ProductMenu. The inline waitlist capture stays in the page
-// body; signup is an additional door, not a replacement for it.
+// Funnel note (founder calls, 2026-08-09 then 2026-08-30): the waitlist-only
+// funnel (URG-125 + URG-136) no longer holds. Signup became a direct path again
+// via /signup in the ProductMenu, and the header's primary button now starts a
+// free trial outright, because the two lowest pricing tiers are self-serve. The
+// inline waitlist capture stays in the page bodies for anyone not ready to
+// start; it is a second door now, not the only one.
 //
 // Login points at /login on THIS domain rather than jumping straight to
 // app.urganize.app. That costs a returning user one click, bought
@@ -46,19 +49,23 @@ export function MarketingHeader() {
             >
               Log in
             </Link>
-            {/* The header's one primary CTA (added 2026-08-13): before this,
-                the signup path was buried in the ProductMenu dropdown and
-                every conversion depended on the visitor reaching an in-body
-                form. Anchors to the hero form on the homepage from every
-                marketing page. Below sm, "Log in" steps aside for it — the
-                waitlist is the funnel; returning users still have Log in via
-                the ProductMenu. */}
-            <Link
-              href="/#waitlist"
+            {/* The header's one primary CTA (added 2026-08-13). It pointed at
+                the homepage waitlist form until 2026-08-30, when the two lowest
+                tiers went self-serve: a visitor who can sign up and start a free
+                trial today should not be asked to join a queue instead. The
+                waitlist forms stay in the page bodies for anyone not ready.
+                Below sm, "Log in" steps aside for it; returning users still have
+                Log in via the ProductMenu.
+
+                A plain <a>, not next/link: this leaves the marketing domain for
+                the product app. APP_SIGNUP_URL is /onboarding, NOT /auth, which
+                is login-only — see lib/app-urls.ts. */}
+            <a
+              href={APP_SIGNUP_URL}
               className="inline-flex shrink-0 items-center justify-center rounded-full bg-[var(--marketing-primary)] px-4 py-2 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)] sm:px-5 sm:py-2.5"
             >
-              Join the waitlist
-            </Link>
+              Start free trial
+            </a>
             <ThemeToggle />
           </div>
         </div>

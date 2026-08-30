@@ -39,6 +39,8 @@ export type Limit = number | typeof UNLIMITED;
 export type SupportChannel = 'email' | 'whatsapp_24h' | 'sla';
 
 export type Entitlements = {
+  /** Artists on the roster. DECLARATIVE ONLY today — see below. */
+  artists: Limit;
   /** Active team members. UNLIMITED on label and enterprise: this is a
    *  coordination product, and a seat wall pushes half the release back into
    *  WhatsApp and churns the account. */
@@ -74,6 +76,15 @@ export type Entitlements = {
 // behind NEXT_PUBLIC_FEATURE_DATA_EXPORT. That route is deliberately NOT behind
 // the paywall and has its own guard test — see lib/account-export.ts.)
 //
+// `artists` is DECLARATIVE ONLY, and it is not close to enforceable: nothing in
+// the product can add a second artist to a team. A workspace resolves ONE artist
+// row (`getWorkspaceArtist`), the create-release modal collects no artist input,
+// and every release on a team points at that same row — the one-artist rule is a
+// UI fact, not a schema one. So this key records the published ladder and gates
+// nothing, and it is deliberately absent from `CountableLimitKey` so `checkLimit`
+// cannot be pointed at it by accident. Enforcing it means building multi-artist
+// support first, at which point the number to read is already here.
+//
 // `rollout_template_custom_save` is STILL DECLARATIVE ONLY, and reading it to
 // gate anything would gate a feature that does not exist: rollout templates are
 // static TypeScript in lib/release-templates, and `release_plan_drafts` is
@@ -108,7 +119,29 @@ export type Entitlements = {
 const limitsOf = (tier: PricingTierId) => PRICING_TIERS[tier].limits;
 
 export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
+  // Solo (2026-08-30). Inert today for the same reason Manager was when it
+  // landed, and one reason more: no code path can write `solo` to
+  // subscriptions.plan (it is absent from SelfServeTierId AND from
+  // subscriptions_plan_check), so resolveTeamTier can never return it and none
+  // of these ceilings can bite a real team. When Solo becomes buyable, these
+  // are the numbers that start applying.
+  solo: {
+    artists: limitsOf('solo').artists,
+    seats: limitsOf('solo').seats,
+    active_releases: limitsOf('solo').activeReleases,
+    rollout_template_default: true,
+    rollout_template_custom_save: false,
+    urgans_monthly_actions: limitsOf('solo').urgansMonthlyActions,
+    urgans_priority: false,
+    file_attachments: true,
+    data_export: true,
+    concierge_onboarding: false,
+    support_channel: 'email',
+    sso: false,
+    sub_teams: false,
+  },
   manager: {
+    artists: limitsOf('manager').artists,
     seats: limitsOf('manager').seats,
     active_releases: limitsOf('manager').activeReleases,
     rollout_template_default: true,
@@ -123,6 +156,7 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sub_teams: false,
   },
   label: {
+    artists: limitsOf('label').artists,
     seats: limitsOf('label').seats,
     active_releases: limitsOf('label').activeReleases,
     rollout_template_default: true,
@@ -137,6 +171,7 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sub_teams: false,
   },
   enterprise: {
+    artists: limitsOf('enterprise').artists,
     seats: limitsOf('enterprise').seats,
     active_releases: limitsOf('enterprise').activeReleases,
     rollout_template_default: true,
