@@ -101,9 +101,16 @@ function HomeTab({ isHome, onClick }: { isHome: boolean; onClick: () => void }) 
  * at click time instead: they need an answer once, on demand, not a
  * subscription.)
  */
-function SongTab({ isHome }: { isHome: boolean }) {
+function SongTab({ isHome, isSettings }: { isHome: boolean; isSettings: boolean }) {
   const searchParams = useSearchParams();
   const releaseId = searchParams.get('release');
+
+  // Settings is the ACCOUNT surface, and Song is a release scene — so it has
+  // no business here (founder call, 2026-08-30). It would only ever render as
+  // the pick-a-release fallback below, pointing at the catalog, which is a tab
+  // that leaves the page you are on to go and choose something else. You is
+  // the tab that belongs on this view, and it is the one that lights up.
+  if (isSettings) return null;
 
   if (!releaseId) {
     if (isHome) return null;
@@ -211,6 +218,11 @@ function YouTab({ isHome, isSettings }: { isHome: boolean; isSettings: boolean }
  * `/settings`, and is absent from every working view. See YouTab's header.
  * The two rules are complementary rather than in tension — the catalog trades
  * Home and Song away for You, so no view ever carries all three.
+ *
+ * `/settings` drops Song as well (founder call, 2026-08-30): it is the ACCOUNT
+ * surface, so the release-scene tab has no business on it, and there it could
+ * only ever be the pick-a-release fallback pointing back at the catalog. So
+ * that view is Home · UrgAns · + · Shows · You — five slots, with You lit.
  *
  * WIDTH. Every slot is `flex-1` in a full-bleed `<ul>`, so the budget is the
  * viewport split evenly. Song and Pitches are mutually exclusive (a dual
@@ -440,10 +452,14 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
             a second flag and leave a band with no entry point at all — the
             exact compounding failure recorded under "Crossing between the two
             portals". */}
-        {SONG_UPLOAD_ENABLED && hasCuratorProfile !== true ? (
+        {SONG_UPLOAD_ENABLED && hasCuratorProfile !== true && !isSettings ? (
           <li className="flex-1">
+            {/* The `!isSettings` gate is on the SLOT, not just inside SongTab,
+                so the Suspense fallback cannot flash the tab in and straight
+                back out on a view it never belongs on. SongTab bails on it too
+                — the gate that matters is the one nearest the decision. */}
             <Suspense fallback={<SongTabLink href="/dashboard" isActive={false} />}>
-              <SongTab isHome={isHome} />
+              <SongTab isHome={isHome} isSettings={isSettings} />
             </Suspense>
           </li>
         ) : null}
