@@ -49,15 +49,17 @@ The six features that constitute v1:
 
 **Scope expansion (2026-08-14):** a sixteenth surface, **fan email capture**, was consciously sanctioned by the founder. It moves nothing off the out-of-scope list below, and the two nearest lines are worth naming because the distinction is the whole reason this is buildable: **"pre-save campaigns" is NOT crossed** — nothing calls a DSP, and the destination is a plain URL the manager types, so this is a link-and-a-graphic page, not a pre-save mechanism; **"listener profile generation" is NOT crossed** — a lead is an email address on one release's page, never merged across releases and never enriched. It honors the release-spine principle: a capture page exists only for a release. Per release, the owner authors one public page (`/capture/[token]`) with a graphic, a headline, an incentive line and a destination link; a fan gives an email and the link is revealed **on the same screen**, and the collected emails come back in-app for export. Storage and display only — nothing in this product sends email, and there is no ESP integration. **The documented conversion knowledge is the point of the feature, not decoration:** `lib/capture-playbook/` is a hand-written, version-controlled markdown source plus a deterministic TS grader (the `release-templates` discipline applied to a surface that could easily have been a prompt), and it grades the page live as the manager writes it. **No AI anywhere in it** — a model asked "is this headline good" answers differently every time and cannot be tested. Flag-gated behind `NEXT_PUBLIC_FEATURE_CAPTURE` (default off; every capture API route 404s and the public page 404s when off). This is the tenth sanctioned expansion — the "do not exceed" rule still holds for everything else.
 
+**Scope expansion (2026-08-30):** a seventeenth surface, **events** — shows, setlists and DJ packs — was consciously sanctioned by the founder. **It is the largest expansion so far and the only one that moves THREE lines off the out-of-scope list at once**: standalone events, touring / live show coordination, and a song library as its own entity. It also does something none of the previous sixteen did — it gives the release a SIBLING. Release and Event are peers, both hanging off the artist, and **the Song is the join between them**: the row a rollout is built around is the row dragged into a setlist. Principle 1 is amended accordingly (see the note there), and this is the one expansion that should be re-read before anyone cites the release spine as settled. The reasoning the founder gave: shows happen year round and releases do not, so the product is opened during a rollout and closed for the eight weeks between — a manager runs a show out of a WhatsApp thread, a voice note and a Drive folder the DJ cannot open on his phone, and the two things that break are the DJ arriving without the tracks and a 38 minute set built for a 25 minute slot. Nine tables, all flag-gated behind `NEXT_PUBLIC_FEATURE_EVENTS` (default off; every route 404s and the public pack page reports itself unavailable when off). Full detail in "Events" under Working notes, and the six load-bearing schema decisions in the header of `supabase/migrations/20260830120000_events.sql`. This is the eleventh sanctioned expansion — the "do not exceed" rule still holds for everything else.
+
 **Out of scope for v1, no exceptions:**
 
-- Standalone events (events not tied to a release)
+- Standalone events (events not tied to a release) — **EXCEPTION (2026-08-30): now built as the events surface.** The founder consciously moved this line; a show hangs off the artist, not off a release. This is the fifth sanctioned exception to this list, and one of three moved by the same decision (see "Scope expansion (2026-08-30)" above) — do not read it as license to add other items from this list.
 - Notes / idea capture / voice memos / track ideas — **EXCEPTION (2026-08-09): text notes are now being built as the Notes surface.** The founder consciously moved this line; see "Scope expansion (2026-08-09)" above. Global quick capture with an optional release link, private to the owner, at `/dashboard/notes`. **Voice memos and track-idea audio are NOT covered by this exception and stay out of scope.** This is the fourth sanctioned exception to this list (Chappi below was the first, the metadata hub above the second, native mobile apps below the third) — do not read it as license to add other items from this list.
 - Folders as a feature
 - Royalty splits / split sheet automation beyond storage
 - Sync licensing
 - Merch
-- Touring / live show coordination
+- Touring / live show coordination — **EXCEPTION (2026-08-30), and a NARROW one.** Events cover a single show: its run of show, its setlists and the pack sent to the DJ. Guest lists, budgets, settlements, travel and multi-day festival routing were all named as non-goals in the spec and stay out — that is the line that stops this becoming a touring module.
 - Native mobile apps (iOS, Android) — **EXCEPTION (2026-07-21; recorded here 2026-08-07): now being built as a Capacitor native shell around the existing web app.** The founder consciously moved this line; see "Scope expansion (2026-07-21...)" above for the full decision and `docs/mobile/capacitor-audit.md` for the technical audit. This is the third sanctioned exception to this list (Chappi below was the first, the metadata hub above the second, Notes above the fourth) — do not read it as license to add other items from this list.
 - Third-party music platform integrations (DistroKid, Spotify, Apple Music, Instagram, etc.)
 - Notifications inbox (transactional email is fine; in-app inbox is v2)
@@ -67,7 +69,7 @@ The six features that constitute v1:
 - Listener profile generation
 - Credit submissions / shareable credit links — **EXCEPTION (2026-07-31): now being built as the release metadata hub's collaborator credit capture.** The founder consciously moved this line; one shareable, no-login link per release lets collaborators submit publishing/distribution credits through a public form, landing on the in-app Metadata page (see "Scope expansion (2026-07-31)" above). Storage and display only — no automation, no signing. This is the second sanctioned exception to THIS list (Chappi below was the first; native mobile apps below is the third, Notes above the fourth) — do not read it as license to add other items from this list.
 - AI chat / general-purpose AI assistant — **EXCEPTION (2026-07-13): now being built as Chappi.** The founder consciously moved this line; Chappi is the conversational AI front door, at its own dedicated page (`/dashboard/urgans`, see "Chappi — conversational AI front door" under AI integration). This was the first sanctioned exception to this list — the metadata hub above is the second, native mobile apps above is the third, Notes above is the fourth; do not read any of these as license to add other items from this list.
-- Track / song library as separate entities (assets cover this for v1)
+- Track / song library as separate entities (assets cover this for v1) — **EXCEPTION (2026-08-30): `songs` and `song_versions` are now real tables.** Assets genuinely could not cover it: `assets_scope_check` requires every row to belong to a release or a task, and a back-catalog song belongs to neither, so serving the event side through `assets` would have meant weakening that constraint for every existing asset. Nothing about a song is duplicated from the release side — it is the join between the two.
 - Collaborators directory as a standalone feature (assignees on tasks is enough)
 
 When a feature request lands that's on this "out of scope" list — even if it's a small ask, even if a user wants it — the answer is *v2*. Do not add it to v1 to be helpful. The discipline of saying no is the product strategy.
@@ -78,7 +80,7 @@ When a feature request lands that's on this "out of scope" list — even if it's
 
 These are the principles that govern v1 build decisions. When in doubt, return to these.
 
-1. **The release is the spine.** Every feature serves a release. If you find yourself building something that doesn't tie back to a specific release, stop and ask whether it belongs in v1. **The workspace's scoped release view (`/dashboard?release=<id>`) is where the product converges** — the standalone release detail page (`/dashboard/releases/[releaseId]`) that used to hold this role was removed 2026-08-04 (founder call) and its content (Activities, Motion progress, Tailor plan, Generate status update, the one-time getting-started guide) absorbed into the workspace. The workspace is the single navigational + working surface; new features attach to the release (via a scoped-header pill, same as Metadata/Calendar/Files/Press kit), not to standalone surfaces.
+1. **The release is the spine.** Every feature serves a release. If you find yourself building something that doesn't tie back to a specific release, stop and ask whether it belongs in v1. **The workspace's scoped release view (`/dashboard?release=<id>`) is where the product converges** — the standalone release detail page (`/dashboard/releases/[releaseId]`) that used to hold this role was removed 2026-08-04 (founder call) and its content (Activities, Motion progress, Tailor plan, Generate status update, the one-time getting-started guide) absorbed into the workspace. The workspace is the single navigational + working surface; new features attach to the release (via a scoped-header pill, same as Metadata/Calendar/Files/Press kit), not to standalone surfaces. **AMENDED 2026-08-30: the release now has a sibling.** Events (shows) hang off the ARTIST, not off a release, and the Song is the join between the two — so "does this tie back to a release?" is no longer the whole test. The rest of this principle is unchanged and still binds everything release-shaped: a metadata hub, a press kit, a content calendar and a capture page are all still release scenes, and a new feature that IS about a release still attaches to the workspace rather than growing its own page. What changed is that "it does not tie back to a release" is now a question with two possible right answers instead of one, and the second one is a founder call, not a default (see "Scope expansion (2026-08-30)").
 
 2. **Templates carry domain knowledge; AI is a removable polish layer.** Hand-crafted release templates are the product's IP. AI adjusts them and writes prose around them. If AI failed tomorrow, the product would still work — users pick a template, get a plan, edit it, run their release. Build it so AI is *removable* without the product dying. (Exception under active build: **Chappi**, the conversational front door — see AI integration. It's a conscious expansion of the AI surface, but still honors this principle's spirit: Chappi degrades to a deterministic command bar + action chips when no model is configured.)
 
@@ -6306,6 +6308,123 @@ different questions.
   Android confirm the top banner is gone, that "Get the app" reaches
   `/download`, and that "Not now" is followed about a second later by the
   notification ask.
+
+
+---
+
+## Events: shows, setlists and DJ packs (2026-08-30)
+
+The eleventh sanctioned scope expansion, and the one that gave the release a
+sibling (see the 2026-08-30 note in "v1 scope" and the amendment to Principle
+1). Phase 1 is complete in code behind `NEXT_PUBLIC_FEATURE_EVENTS` (default
+off); **not yet activated, and two things below block flipping it.**
+
+**What it is:** a show carries a venue, a set time, a slot length and a run of
+show; one or more setlists are built against that slot with a live running
+total; the songs' files go out to the DJ as a pack, one unguessable link per
+recipient, with read receipts back.
+
+**Schema:** `20260830120000_events.sql` — nine tables and four enums.
+**Applied to production 2026-08-30.** Its header carries six load-bearing
+decisions and is the thing to read before changing anything here; the two that
+shape everything else are repeated below.
+
+### Seven things worth knowing before editing this
+
+1. **Song versions carry their OWN storage and do not reuse `assets`.** That
+   table's `assets_scope_check` requires every row to belong to a release or a
+   task — the release spine enforced in Postgres — and a back-catalog song
+   belongs to neither. Weakening that constraint to serve the event side would
+   degrade it for every existing asset, so `song_versions` got its own columns
+   in the same private bucket instead, under a `song/<songId>/…` prefix that
+   cannot collide (every release asset path starts with a release UUID).
+2. **ONE access rule, three object types.** Shows, sets and songs all resolve
+   through `decideReleaseAccess` — named for releases but generic in fact: it
+   reads an owner id and an artist id, which is exactly what each of these
+   carries. Cloning it per route group is how eleven release scenes spent a
+   year drifting apart (see "Scenes opened to the team"); do not start a
+   twelfth.
+3. **Every row is stamped with the ARTIST'S or SHOW'S owner, never the acting
+   teammate.** Every account owns a personal workspace, so a show created by a
+   teammate and owned by them would sit where nobody else can read it and the
+   team owner would never see the date they were told about. Same rule the
+   release scenes follow for child rows.
+4. **The running total refuses to say a set fits when it cannot know.**
+   `summarizeSetlist` may report OVER on a partial set (unknowns can only add)
+   but never ON TIME or comfortably UNDER. An unmeasured item resolves to
+   `null`, never `0` — counting it as zero would silently shorten every set
+   containing a song nobody has timed, which is the failure this whole surface
+   exists to prevent. Both properties are mutation-tested.
+5. **Per-recipient tokens ARE the read-receipt feature.** One shared URL can
+   tell you somebody opened a pack; it can never tell you which somebody, and
+   "the DJ has them, the engineer does not" is the only version of that
+   question worth answering. The passcode is per-pack and opt-in (founder
+   call); the token is per-recipient and is the only access control.
+6. **Downloads go through our own route, never a storage URL.** Two reasons
+   and both matter: the download has to be logged, and the file has to land as
+   `01 Dorian - Lagos Nights (Clean)[102BPM][Am].mp3`. A signed Supabase URL
+   arrives as a UUID, which is exactly what makes a pack useless in a dark
+   booth. The leading number is what puts the folder in running order when a
+   DJ drags it into Rekordbox.
+7. **Revoking a recipient is SOFT, and the access log outlives them.** The log
+   is the only deterrent on an unreleased track, so deleting the recipient row
+   would blank the name beside every download they already made — hence
+   `on delete set null` plus denormalized names. Note the log has a SELECT
+   policy and no write policy at all: rows are written by the public route on
+   behalf of someone with no session, and nothing in the product should let a
+   signed-in user manufacture or erase a download record.
+
+**Deliberate shortfalls against the spec, both founder calls to make:**
+
+- **Reorder is up/down buttons, not drag.** Native HTML5 drag does not work on
+  touch at all and this is used on a phone backstage; a real drag means a new
+  dependency. Buttons work everywhere and are keyboard-reachable.
+- **"Download all as a zip" is not built.** There is no archiver in this repo
+  and the data export declined to add one on purpose. Per-track download works.
+
+**Two things block the flag flip, and neither is a code problem:**
+
+1. **No mobile entry point.** Shows is in the topbar and the identity card,
+   both `lg`+ only. It is deliberately NOT in `MobileNavBar`, which is measured
+   at seven slots maximum — an eighth overflows the centre button. Solving this
+   needs a decision about what that bar looks like with more than seven things
+   in it, not another `flex-1`.
+2. **WAV downloads are blocked on Supabase billing, not on us.** The 40 MiB
+   per-file audio ceiling exists because the free plan refuses uploads over
+   50 MB. A studio master at 24-bit/48kHz runs ~16 MiB PER MINUTE and is
+   rejected outright; a 4 minute WAV at 44.1/16 is ~38 MiB and only just fits.
+   So packs can offer MP3 today and cannot offer WAV until that plan changes.
+   The spec's WAV toggle is not buildable before then.
+
+**Verified:** 1793 tests passing (including 27 on the events lib, 33 on the
+setlist module and 15 on the pack logic); `eslint .` at 3 errors / 70 warnings
+against a 3/66 baseline, the four new ones all the documented React-19
+`set-state-in-effect` downgrade (three fetch-on-mount, one portal mount guard);
+`next build` green by exit code in both flag states with `/auth`, `/onboarding`
+and `/settings` still `○ Static`. Runtime probes in both states, rebuilding
+between them: flag off every route 404s while an ungated control still 401s and
+the public page reports itself unavailable; flag on they 401 and a bad token
+resolves to nothing. The migration was applied to a scratch Postgres 16 and
+every documented delete rule exercised with real rows — both halves of the
+setlist shape constraint, all three restrict FKs refusing independently, the
+release set-null keeping the song, and the log surviving recipient removal.
+
+**NOT verified, and it is most of the surface:** nothing has run against the
+production database or a real Supabase Storage bucket. No show has been booked,
+no file uploaded, no pack sent, no link opened by a real DJ. This sandbox
+cannot mint an authenticated session and has no network route to
+app.urganize.app, so all of it rests on unit tests, the scratch-Postgres apply
+and traced call paths.
+
+**Activation checklist:** (1) the migration is already applied; (2) solve the
+mobile entry point; (3) set `NEXT_PUBLIC_FEATURE_EVENTS=true` in Vercel `Web`
+**and make sure the deploy actually rebuilds `apps/web`** — `NEXT_PUBLIC_*` is
+inlined at build time, and the EP/album flip records `turbo-ignore` skipping a
+web build whose commit touched only `package.json` files; (4) changelog entry +
+minor version bump across all `package.json` files at the flip, not at merge
+(the EPK precedent); (5) verify end to end with a real date — book a show,
+build a set that runs over, upload an MP3, send it to yourself, and confirm the
+receipt flips from "Not opened" to "Downloaded".
 
 ---
 
