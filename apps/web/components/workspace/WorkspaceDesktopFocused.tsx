@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/lib/tasks';
 import { WorkspaceReleaseCard } from './WorkspaceReleaseCard';
@@ -159,6 +160,7 @@ export function WorkspaceDesktopFocused({
           <span className="shrink-0 font-mono text-[11px] font-semibold text-content-primary">
             {tasksDone}/{tasksTotal}
           </span>
+          <ReleaseDeliveredMark total={tasksTotal} done={tasksDone} />
         </div>
       </div>
 

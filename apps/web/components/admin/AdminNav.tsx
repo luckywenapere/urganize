@@ -11,6 +11,7 @@ import {
   ListMusic,
   Mic,
   Radio,
+  Smile,
   TrendingUp,
   Users,
   Building2,
@@ -52,6 +53,9 @@ const ITEMS: Array<{
   { key: 'waitlist', label: 'Waitlist', icon: Users, href: '/admin/waitlist' },
   { key: 'growth', label: 'Growth', icon: TrendingUp, href: '/admin/growth' },
   { key: 'interviews', label: 'Interviews', icon: Mic, href: '/admin/interviews' },
+  // The mascot's model sheet, rendered from the shared component. Reads no
+  // data, so unlike its neighbours it has no backing API acting as the guard.
+  { key: 'chappi', label: 'Chappi', icon: Smile, href: '/admin/chappi' },
 ];
 
 export function AdminNav() {

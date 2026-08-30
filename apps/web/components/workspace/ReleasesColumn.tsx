@@ -53,6 +53,7 @@ export function ReleasesColumn({
 
       {releases.length === 0 ? (
         <EmptyState
+          mascot="resting"
           title="No releases yet"
           description="Create your first release to start planning activities."
           action={
