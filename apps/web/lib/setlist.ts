@@ -298,3 +298,254 @@ export function buildPackFileName(input: PackFileNameInput): string {
   const extension = (input.extension ?? '').replace(/^\.+/, '').toLowerCase();
   return extension ? `${name}.${sanitizeFilePart(extension)}` : name;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Write validation
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Lives beside the maths on purpose: what a caller is allowed to store and what
+// the running total does with it are the same question, and splitting them is
+// how a duration that passes validation ends up counted as zero.
+
+export const SETLIST_ITEM_TYPES: readonly SetlistItemType[] = [
+  'song',
+  'talk',
+  'interlude',
+  'break',
+];
+
+export const isSetlistItemType = (value: unknown): value is SetlistItemType =>
+  typeof value === 'string' && (SETLIST_ITEM_TYPES as readonly string[]).includes(value);
+
+export const MAX_SETLIST_NAME_LENGTH = 80;
+export const MAX_CUE_NOTE_LENGTH = 400;
+export const MAX_ITEM_LABEL_LENGTH = 120;
+
+/** Twenty minutes. A single item longer than that is a typo (2000 seconds
+ *  entered as 20000), not a song — and one bad number silently doubles a set. */
+export const MAX_ITEM_DURATION_SECONDS = 20 * 60;
+
+export type SetlistFieldError = { field: string; message: string };
+
+export type SetlistItemInput = {
+  itemType?: unknown;
+  songId?: unknown;
+  songVersionId?: unknown;
+  durationSeconds?: unknown;
+  cueNote?: unknown;
+  label?: unknown;
+  position?: unknown;
+};
+
+export type SetlistItemColumns = {
+  item_type?: SetlistItemType;
+  song_id?: string | null;
+  song_version_id?: string | null;
+  duration_seconds?: number | null;
+  cue_note?: string | null;
+  label?: string | null;
+  position?: number;
+};
+
+const optionalText = (
+  value: unknown,
+  max: number
+): { ok: true; value: string | null } | { ok: false } => {
+  if (value === null) return { ok: true, value: null };
+  if (typeof value !== 'string') return { ok: false };
+  const trimmed = value.trim();
+  if (trimmed.length > max) return { ok: false };
+  return { ok: true, value: trimmed || null };
+};
+
+function parseSetlistItemFields(
+  input: SetlistItemInput,
+  requireType: boolean
+): { errors: SetlistFieldError[]; columns: SetlistItemColumns } {
+  const errors: SetlistFieldError[] = [];
+  const columns: SetlistItemColumns = {};
+  const has = (key: keyof SetlistItemInput) =>
+    Object.prototype.hasOwnProperty.call(input, key);
+
+  if (has('itemType') || requireType) {
+    if (!isSetlistItemType(input.itemType)) {
+      errors.push({ field: 'itemType', message: 'That is not something a set can contain.' });
+    } else {
+      columns.item_type = input.itemType;
+    }
+  }
+
+  if (has('songId')) {
+    if (input.songId === null) {
+      columns.song_id = null;
+    } else if (typeof input.songId !== 'string' || !input.songId.trim()) {
+      errors.push({ field: 'songId', message: 'Pick a song.' });
+    } else {
+      columns.song_id = input.songId.trim();
+    }
+  }
+
+  if (has('songVersionId')) {
+    if (input.songVersionId === null) {
+      columns.song_version_id = null;
+    } else if (typeof input.songVersionId !== 'string' || !input.songVersionId.trim()) {
+      errors.push({ field: 'songVersionId', message: 'Pick a version.' });
+    } else {
+      columns.song_version_id = input.songVersionId.trim();
+    }
+  }
+
+  if (has('durationSeconds')) {
+    const raw = input.durationSeconds;
+    if (raw === null) {
+      // Deliberately allowed: clearing an override falls back to the version,
+      // then the song, then "still needs a length".
+      columns.duration_seconds = null;
+    } else if (
+      typeof raw !== 'number' ||
+      !Number.isInteger(raw) ||
+      raw <= 0 ||
+      raw > MAX_ITEM_DURATION_SECONDS
+    ) {
+      errors.push({
+        field: 'durationSeconds',
+        message: 'How long is it? Give a length in seconds, under twenty minutes.',
+      });
+    } else {
+      columns.duration_seconds = raw;
+    }
+  }
+
+  if (has('cueNote')) {
+    const parsed = optionalText(input.cueNote, MAX_CUE_NOTE_LENGTH);
+    if (!parsed.ok) {
+      errors.push({ field: 'cueNote', message: 'That cue note is too long.' });
+    } else {
+      columns.cue_note = parsed.value;
+    }
+  }
+
+  if (has('label')) {
+    const parsed = optionalText(input.label, MAX_ITEM_LABEL_LENGTH);
+    if (!parsed.ok) {
+      errors.push({ field: 'label', message: 'That label is too long.' });
+    } else {
+      columns.label = parsed.value;
+    }
+  }
+
+  if (has('position')) {
+    const raw = input.position;
+    if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 0) {
+      errors.push({ field: 'position', message: 'That is not a place in the set.' });
+    } else {
+      columns.position = raw;
+    }
+  }
+
+  return { errors, columns };
+}
+
+/**
+ * Enforces the same shape the database CHECK enforces
+ * (`setlist_items_song_shape`): a song item names a song, and nothing else may.
+ *
+ * Duplicated here on purpose rather than left to Postgres — the constraint is
+ * the backstop that guarantees it, this is what turns a violation into a
+ * sentence a manager can act on instead of a 500.
+ */
+function checkSongShape(
+  itemType: SetlistItemType | undefined,
+  columns: SetlistItemColumns
+): SetlistFieldError | null {
+  if (!itemType) return null;
+
+  if (itemType === 'song') {
+    if (!columns.song_id) {
+      return { field: 'songId', message: 'Pick a song for this slot.' };
+    }
+    return null;
+  }
+
+  if (columns.song_id || columns.song_version_id) {
+    return {
+      field: 'songId',
+      message: 'Only a song slot can carry a song.',
+    };
+  }
+  return null;
+}
+
+export function parseSetlistItemCreate(input: SetlistItemInput): {
+  errors: SetlistFieldError[];
+  columns: SetlistItemColumns;
+} {
+  const withDefault: SetlistItemInput = { itemType: 'song', ...input };
+  const result = parseSetlistItemFields(withDefault, true);
+
+  const shapeError = checkSongShape(result.columns.item_type, result.columns);
+  if (shapeError) result.errors.push(shapeError);
+
+  // A non-song item has no song to borrow a length from, so it must arrive
+  // with one or it would silently count as zero.
+  if (
+    result.errors.length === 0 &&
+    result.columns.item_type !== 'song' &&
+    result.columns.duration_seconds == null
+  ) {
+    result.errors.push({
+      field: 'durationSeconds',
+      message: 'How long is this? Nothing else can tell us.',
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Patch is sparse, like the event patch — only what was sent is written.
+ *
+ * `currentType` is required because the shape rule spans fields: changing a
+ * song slot to a break has to clear the song, and validating the patch alone
+ * cannot see that. Callers pass the stored row's type when the patch omits it.
+ */
+export function parseSetlistItemPatch(
+  input: SetlistItemInput,
+  currentType: SetlistItemType
+): { errors: SetlistFieldError[]; columns: SetlistItemColumns } {
+  const result = parseSetlistItemFields(input, false);
+  if (result.errors.length > 0) return result;
+
+  if (Object.keys(result.columns).length === 0) {
+    return { errors: [{ field: 'body', message: 'Nothing to save.' }], columns: {} };
+  }
+
+  const nextType = result.columns.item_type ?? currentType;
+
+  if (nextType !== 'song') {
+    // Switching a song slot to a break clears the song rather than refusing:
+    // the intent is plain, and leaving it set would violate the database
+    // CHECK (setlist_items_song_shape).
+    result.columns.song_id = null;
+    result.columns.song_version_id = null;
+  } else if (currentType !== 'song' && !result.columns.song_id) {
+    // Becoming a song slot needs a song named in the same patch — the stored
+    // row has none to fall back on.
+    result.errors.push({ field: 'songId', message: 'Pick a song for this slot.' });
+  } else if (result.columns.song_id === null) {
+    // Explicitly clearing the song on a slot that stays a song.
+    result.errors.push({ field: 'songId', message: 'A song slot needs a song.' });
+  }
+
+  return result;
+}
+
+export function parseSetlistName(value: unknown): { error: string } | { name: string } {
+  if (typeof value !== 'string') return { error: 'Give the set a name.' };
+  const trimmed = value.trim();
+  if (!trimmed) return { error: 'Give the set a name.' };
+  if (trimmed.length > MAX_SETLIST_NAME_LENGTH) {
+    return { error: `Keep the name under ${MAX_SETLIST_NAME_LENGTH} characters.` };
+  }
+  return { name: trimmed };
+}

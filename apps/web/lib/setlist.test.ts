@@ -4,6 +4,9 @@ import {
   buildPackFileName,
   describeSetlistFit,
   formatDuration,
+  parseSetlistItemCreate,
+  parseSetlistItemPatch,
+  parseSetlistName,
   resolveItemDuration,
   summarizeSetlist,
   type SetlistSummaryItem,
@@ -206,5 +209,91 @@ describe('buildPackFileName', () => {
     expect(buildPackFileName({ position: 1, artistName: 'A', songTitle: 'T', extension: '.MP3' })).toBe(
       '01 A - T.mp3'
     );
+  });
+});
+
+describe('parseSetlistItemCreate', () => {
+  it('defaults to a song slot and demands a song for it', () => {
+    expect(parseSetlistItemCreate({ songId: 'song-1' }).errors).toEqual([]);
+    expect(parseSetlistItemCreate({ songId: 'song-1' }).columns.item_type).toBe('song');
+    expect(parseSetlistItemCreate({}).errors.map((e) => e.field)).toContain('songId');
+  });
+
+  // Mirrors the database CHECK (setlist_items_song_shape). Duplicated in code
+  // so a violation reads as a sentence rather than a 500.
+  it('refuses a song on a slot that is not a song', () => {
+    const result = parseSetlistItemCreate({ itemType: 'talk', songId: 'song-1', durationSeconds: 60 });
+    expect(result.errors.map((e) => e.field)).toContain('songId');
+  });
+
+  // A break has no song to borrow a length from, so it must bring one or it
+  // would silently count as zero in the running total.
+  it('demands a length for anything that is not a song', () => {
+    expect(parseSetlistItemCreate({ itemType: 'talk' }).errors.map((e) => e.field)).toContain(
+      'durationSeconds'
+    );
+    expect(parseSetlistItemCreate({ itemType: 'talk', durationSeconds: 90 }).errors).toEqual([]);
+  });
+
+  it('lets a song slot omit a length, because the song can supply one', () => {
+    expect(parseSetlistItemCreate({ songId: 'song-1' }).columns.duration_seconds).toBeUndefined();
+  });
+
+  it('rejects a duration that is obviously a typo', () => {
+    expect(
+      parseSetlistItemCreate({ itemType: 'talk', durationSeconds: 20000 }).errors.map((e) => e.field)
+    ).toContain('durationSeconds');
+    expect(
+      parseSetlistItemCreate({ itemType: 'talk', durationSeconds: 0 }).errors.map((e) => e.field)
+    ).toContain('durationSeconds');
+  });
+});
+
+describe('parseSetlistItemPatch', () => {
+  it('writes only what was sent', () => {
+    const result = parseSetlistItemPatch({ cueNote: 'Drop the beat' }, 'song');
+    expect(result.errors).toEqual([]);
+    expect(Object.keys(result.columns)).toEqual(['cue_note']);
+  });
+
+  it('refuses an empty patch', () => {
+    expect(parseSetlistItemPatch({}, 'song').errors.map((e) => e.field)).toContain('body');
+  });
+
+  it('clears the song when a song slot becomes a break', () => {
+    const result = parseSetlistItemPatch({ itemType: 'break', durationSeconds: 60 }, 'song');
+    expect(result.errors).toEqual([]);
+    expect(result.columns.song_id).toBeNull();
+    expect(result.columns.song_version_id).toBeNull();
+  });
+
+  it('demands a song when a break becomes a song slot', () => {
+    expect(parseSetlistItemPatch({ itemType: 'song' }, 'break').errors.map((e) => e.field)).toContain(
+      'songId'
+    );
+    expect(parseSetlistItemPatch({ itemType: 'song', songId: 's1' }, 'break').errors).toEqual([]);
+  });
+
+  it('refuses to clear the song on a slot that stays a song', () => {
+    expect(parseSetlistItemPatch({ songId: null }, 'song').errors.map((e) => e.field)).toContain(
+      'songId'
+    );
+  });
+
+  // Clearing an override is legitimate: it falls back to the version, then the
+  // song, then "still needs a length".
+  it('allows clearing a duration override', () => {
+    const result = parseSetlistItemPatch({ durationSeconds: null }, 'song');
+    expect(result.errors).toEqual([]);
+    expect(result.columns.duration_seconds).toBeNull();
+  });
+});
+
+describe('parseSetlistName', () => {
+  it('trims and requires a name', () => {
+    expect(parseSetlistName('  Main set  ')).toEqual({ name: 'Main set' });
+    expect(parseSetlistName('   ')).toHaveProperty('error');
+    expect(parseSetlistName(null)).toHaveProperty('error');
+    expect(parseSetlistName('x'.repeat(200))).toHaveProperty('error');
   });
 });

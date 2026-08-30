@@ -25,6 +25,14 @@ export const EVENTS_TABLE = 'events';
 export const RUN_OF_SHOW_TABLE = 'event_run_of_show';
 export const SETLISTS_TABLE = 'setlists';
 export const SETLIST_ITEMS_TABLE = 'setlist_items';
+export const SONGS_TABLE = 'songs';
+export const SONG_VERSIONS_TABLE = 'song_versions';
+
+export const SONG_COLUMNS =
+  'id,owner_user_id,artist_id,release_id,title,duration_seconds,musical_key,bpm,notes,created_at,updated_at';
+
+export const SONG_VERSION_COLUMNS =
+  'id,song_id,label,file_name,file_size,mime_type,storage_bucket,storage_path,duration_seconds,created_at';
 
 export const EVENT_COLUMNS =
   'id,owner_user_id,artist_id,title,venue_name,city,country,timezone,set_start_at,' +
@@ -56,6 +64,10 @@ export const eventsDisabledResponse = () =>
  * would report the feature as unavailable instead of the show as missing.
  */
 export const EVENT_NOT_FOUND_MESSAGE = 'Show not found.';
+
+/** Same two constraints as EVENT_NOT_FOUND_MESSAGE: never a 403 that confirms
+ *  existence, and never the exact string 'Not found.'. */
+export const SETLIST_NOT_FOUND_MESSAGE = 'Set not found.';
 
 export const toShowEvent = (
   row: Record<string, unknown>,
@@ -162,4 +174,72 @@ export async function ensureEventAccess(
   }
 
   return { event: row, ownerUserId, artistId };
+}
+
+export const SETLIST_COLUMNS = 'id,owner_user_id,event_id,name,created_at,updated_at';
+
+export const SETLIST_ITEM_COLUMNS =
+  'id,setlist_id,item_type,song_id,song_version_id,position,duration_seconds,cue_note,label';
+
+export type SetlistAccessResult =
+  | { error: NextResponse }
+  | {
+      setlist: Record<string, unknown>;
+      eventId: string;
+      event: Record<string, unknown>;
+      ownerUserId: string;
+      artistId: string;
+    };
+
+/**
+ * Who may touch a setlist: whoever may touch its show.
+ *
+ * Resolves the parent and delegates, rather than carrying its own rule. Two
+ * reads instead of a join, which at one team's scale costs nothing and keeps
+ * the access decision in exactly one place — the thing eleven release route
+ * groups spent a year not doing.
+ */
+export async function ensureSetlistAccess(
+  adminClient: SupabaseClient | null,
+  setlistId: string,
+  user: User,
+  write: boolean
+): Promise<SetlistAccessResult> {
+  if (!adminClient) {
+    return {
+      error: NextResponse.json({ error: 'Server environment is not configured.' }, { status: 500 }),
+    };
+  }
+
+  const { data, error } = await adminClient
+    .from(SETLISTS_TABLE)
+    .select(SETLIST_COLUMNS)
+    .eq('id', setlistId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      error: NextResponse.json(
+        { error: error.message || 'Could not load the set.' },
+        { status: 500 }
+      ),
+    };
+  }
+  if (!data) {
+    return { error: NextResponse.json({ error: SETLIST_NOT_FOUND_MESSAGE }, { status: 404 }) };
+  }
+
+  const setlist = asRow(data);
+  const eventId = String(setlist.event_id || '');
+
+  const eventAccess = await ensureEventAccess(adminClient, eventId, user, write);
+  if ('error' in eventAccess) return eventAccess;
+
+  return {
+    setlist,
+    eventId,
+    event: eventAccess.event,
+    ownerUserId: eventAccess.ownerUserId,
+    artistId: eventAccess.artistId,
+  };
 }
