@@ -10,9 +10,11 @@ import {
   getTier,
   tierHighlights,
   type BillingInterval,
+  type PricingTierId,
 } from "@urganize/pricing";
+import { APP_SIGNUP_URL } from "@/lib/app-urls";
 
-// The three-column price table.
+// The price table.
 //
 // EVERY NUMBER ON THIS PAGE COMES OUT OF @urganize/pricing, and none of it is
 // written here. The prices come from the tier definitions and the ceilings come
@@ -23,17 +25,31 @@ import {
 // (four separate occasions of a page quoting one figure while checkout charged
 // another, all recorded in CLAUDE.md).
 //
-// EVERY CTA IS A CAPTURE, NOT A CHECKOUT (founder call, 2026-08-24). The
-// marketing site does not sell; it starts a conversation. So a priced card
-// books a demo and the sales-led card emails us, and the waitlist section below
-// this one stays exactly where it was. Nothing here links to app.urganize.app,
-// which would reopen the self-serve funnel the founder closed deliberately.
+// THE TWO LOWEST TIERS SELL THEMSELVES; THE TWO HIGHEST START A CONVERSATION
+// (founder call, 2026-08-30). This narrows the 2026-08-24 rule that every CTA
+// on this page was a capture, and it splits on who can be served without us in
+// the room: a manager on Solo or Manager can sign up, get the free team trial
+// and run a release alone, while a roster deal is still scoped and set up by
+// hand. So Solo and Manager send people to the trial, Label keeps "Book a demo"
+// and Group keeps "Let's talk".
+//
+// The trial CTA points at APP_SIGNUP_URL, which is /onboarding rather than
+// /auth: apps/web's /auth is LOGIN-ONLY and has no signup form, so pointing a
+// "start" CTA there lands people on a page with no way to create an account.
+// The constant is the single definition of that, shared with the header and the
+// /signup page.
 //
 // The mailto subject names the tier the visitor was looking at. That is not
 // decoration: it is the only signal the founder gets about which plan someone
 // came in on, and it costs nothing to carry.
 
 const INTERVALS: readonly BillingInterval[] = ["monthly", "annual"] as const;
+
+/** Tiers a visitor can start on their own. Everything else talks to us first. */
+const SELF_SERVE_TIERS: ReadonlySet<PricingTierId> = new Set<PricingTierId>([
+  "solo",
+  "manager",
+]);
 
 const INTERVAL_LABEL: Record<BillingInterval, string> = {
   monthly: "Monthly",
@@ -54,8 +70,13 @@ export function PricingTierCards() {
 
   return (
     <section className="relative px-6 pb-20">
-      <div className="mx-auto max-w-5xl">
-        {/* Interval switch. Above the cards, because it reprices all three. */}
+      {/* max-w-6xl, up from 5xl, because there are four cards now: at 5xl the
+          four-across row left each card too narrow for "₦800,000/yr" to sit on
+          one line. */}
+      <div className="mx-auto max-w-6xl">
+        {/* Interval switch. Above the cards, because it reprices every one of
+            them and asking for it afterwards would move the numbers under the
+            reader's cursor. */}
         <div className="mb-10 flex flex-col items-center gap-3">
           <div
             role="radiogroup"
@@ -91,11 +112,17 @@ export function PricingTierCards() {
           ) : null}
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        {/* Four cards, three steps: one column on a phone (which is where most
+            of this traffic reads it), two from sm, four only at xl. Deliberately
+            NOT four from md — at 768px that is ~170px a card, which wraps the
+            price and every ceiling line. Two comfortable columns beat four
+            cramped ones. */}
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           {PRICING_TIER_ORDER.map((tierId) => {
             const tier = getTier(tierId);
             const price = formatTierCyclePrice(tierId, interval);
             const highlights = tierHighlights(tierId);
+            const selfServe = SELF_SERVE_TIERS.has(tierId);
             return (
               <div
                 key={tierId}
@@ -143,23 +170,32 @@ export function PricingTierCards() {
                 </ul>
 
                 <a
-                  href={mailtoFor(tier.label)}
+                  href={selfServe ? APP_SIGNUP_URL : mailtoFor(tier.label)}
                   className={`mt-8 inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium tracking-[-0.02em] transition-colors ${
                     tier.recommended
                       ? "bg-[var(--marketing-primary)] text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)]"
                       : "border border-[var(--marketing-border)] text-[var(--marketing-text)] hover:border-[var(--marketing-accent)]/50"
                   }`}
                 >
-                  {tier.contactSales ? "Let's talk" : "Book a demo"}
+                  {selfServe
+                    ? "Start free trial"
+                    : tier.contactSales
+                      ? "Let's talk"
+                      : "Book a demo"}
                 </a>
               </div>
             );
           })}
         </div>
 
+        {/* The trial terms belong beside the button that starts one. 14 days and
+            no card are the shipped terms (TEAM_TRIAL_DAYS in apps/web, and the
+            /signup page says the same) — if either changes, all three move
+            together. */}
         <p className="mt-8 text-center text-xs leading-6 text-[var(--marketing-text-subtle)]">
           Prices are in Naira and cover your whole team, not each person. Annual
-          plans are billed once a year.
+          plans are billed once a year. The trial runs 14 days for your whole
+          team and needs no card.
         </p>
       </div>
     </section>

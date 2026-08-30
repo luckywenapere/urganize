@@ -2212,7 +2212,7 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-29 (**the release back arrow terminates now — shipped as v1.5.4** — see "It was still a trap: nav-history was one slot, not a stack" under "The workspace back arrow goes back now". The 2026-08-25 fix made the arrow do something; it did not make it terminate. lib/nav-history held a current+previous PAIR, and recording a navigation moves current into previous — so a back press pushed the previous page and simultaneously wrote the page it just left into the slot, sending the next press straight back. Two surfaces read that one slot (this arrow and Settings'), so the loop was one tap wide: release → Settings → back → release → back → Settings → forever. Same loop between any two workspace URLs — two releases reachable via UrgAns, the bell, a note chip or the desktop rails. It is a bounded stack now, and the rule that makes back terminate is that navigating to the entry directly BENEATH the top pops instead of pushing (it cannot tell our button from browser Back or an edge swipe, and must not). readPreviousLocation kept its signature, so neither call site changed and Settings is fixed by the same edit. Three things not to undo: only ONE step down counts as a pop; resolveWorkspaceBackTarget's same-release rejection STAYS, because scene switches replace and append with no matching pop; and the new "already here" rejection reads window.location at click time, never a render-time copy. Mutation-tested both guards. Deploy carries a deliberate one-tap degradation — open tabs hold the old keys, so the first press after deploy finds an empty trail and falls to its safe floor. Not pressed in a browser. Same day, earlier: **the assignee picker is a dropdown now — shipped as v1.5.3** — see "The assignee picker became a dropdown" near the end of this file. Its text input raised the phone keyboard over the list it was meant to show, so TaskMemberCombobox is deleted and TaskMemberSelect (a button over a role=listbox panel, the NoteReleasePicker pattern) replaces it at all three call sites. Search was dropped outright rather than hidden on mobile: Manager caps a team at four seats, and a viewport-conditional control means two code paths for one picker. It also deletes the bug class v1.5.2 had guarded — both of those defects existed only because the display and the filter were one field. Same day, earlier: **the assignee picker hid the team, and fields zoomed on tap — shipped as v1.5.2** — see "The assignee picker hid the team" near the end of this file. The picker filtered its list by the current assignee's name, so an already-assigned activity offered only that person; the guard now lives in filterMembersForPicker (lib/tasks.ts) and is the second copy of one ReleaseCombobox already carried — keep them in step. Blurring an empty box no longer unassigns, PlanTaskRow seeds its query, and TaskDetailView's seed effect is keyed on task?.id. Separately, one (pointer: coarse) rule sets form controls to 16px, since this project's type scale sits under iOS's auto-zoom threshold nearly everywhere; the !important is load-bearing against Tailwind specificity, and pinch/double-tap zoom were ALREADY closed by touch-action: pan-y. Same day, earlier: **the release scenes are team-aware, shipped as
+*Last updated: 2026-08-30 (**a Solo tier on /pricing, and the first self-serve CTAs there** — see "A Solo tier, and the first self-serve CTAs on /pricing" near the end of this file. The ladder is Solo → Manager → Label → Group: Solo is ₦8,000/mo (₦80,000/yr) for one artist, two people, one release at a time and 40 UrgAns actions a month, and Manager moves up a rung to "two or more artists" with a 5-artist ceiling. Solo and Manager now send visitors to a free trial at APP_SIGNUP_URL (which is /onboarding, never login-only /auth) while Label keeps "Book a demo" and Group "Let's talk" — that NARROWS rather than deletes the 2026-08-24 "every CTA on this page is a capture" rule, and the header's "Join the waitlist" became "Start free trial" for the same reason, with every in-body waitlist form left where it was. Two things not to misread. SOLO IS NOT ON SALE: absent from SelfServeTierId, no Paystack Plan, and in neither subscriptions plan CHECK, so nothing can write it and no team can resolve onto it — the tripwire for the day that changes is pointed at resolveCheckoutPurchase rather than at a constant array, which is the lesson from the 2026-08-24 miss. And limits.artists is DECLARED, NOT ENFORCEABLE, because nothing in the product can add a second artist to a team (one artists row per workspace, no artist input on the create modal), so "Up to 5 artists" is a knowing exception to the standing do-not-market-multi-artist note, raised with the founder's brief and shipped as asked; the number still lives in @urganize/pricing so the page quotes the field a future check will read. No changelog entry or version bump — everything a user sees is apps/homepage, which the app-only scope rule excludes. Nothing was seen in a browser; the four-across row at ≥1280px is the one thing worth a look. Previously, 2026-08-29: **the release back arrow terminates now — shipped as v1.5.4** — see "It was still a trap: nav-history was one slot, not a stack" under "The workspace back arrow goes back now". The 2026-08-25 fix made the arrow do something; it did not make it terminate. lib/nav-history held a current+previous PAIR, and recording a navigation moves current into previous — so a back press pushed the previous page and simultaneously wrote the page it just left into the slot, sending the next press straight back. Two surfaces read that one slot (this arrow and Settings'), so the loop was one tap wide: release → Settings → back → release → back → Settings → forever. Same loop between any two workspace URLs — two releases reachable via UrgAns, the bell, a note chip or the desktop rails. It is a bounded stack now, and the rule that makes back terminate is that navigating to the entry directly BENEATH the top pops instead of pushing (it cannot tell our button from browser Back or an edge swipe, and must not). readPreviousLocation kept its signature, so neither call site changed and Settings is fixed by the same edit. Three things not to undo: only ONE step down counts as a pop; resolveWorkspaceBackTarget's same-release rejection STAYS, because scene switches replace and append with no matching pop; and the new "already here" rejection reads window.location at click time, never a render-time copy. Mutation-tested both guards. Deploy carries a deliberate one-tap degradation — open tabs hold the old keys, so the first press after deploy finds an empty trail and falls to its safe floor. Not pressed in a browser. Same day, earlier: **the assignee picker is a dropdown now — shipped as v1.5.3** — see "The assignee picker became a dropdown" near the end of this file. Its text input raised the phone keyboard over the list it was meant to show, so TaskMemberCombobox is deleted and TaskMemberSelect (a button over a role=listbox panel, the NoteReleasePicker pattern) replaces it at all three call sites. Search was dropped outright rather than hidden on mobile: Manager caps a team at four seats, and a viewport-conditional control means two code paths for one picker. It also deletes the bug class v1.5.2 had guarded — both of those defects existed only because the display and the filter were one field. Same day, earlier: **the assignee picker hid the team, and fields zoomed on tap — shipped as v1.5.2** — see "The assignee picker hid the team" near the end of this file. The picker filtered its list by the current assignee's name, so an already-assigned activity offered only that person; the guard now lives in filterMembersForPicker (lib/tasks.ts) and is the second copy of one ReleaseCombobox already carried — keep them in step. Blurring an empty box no longer unassigns, PlanTaskRow seeds its query, and TaskDetailView's seed effect is keyed on task?.id. Separately, one (pointer: coarse) rule sets form controls to 16px, since this project's type scale sits under iOS's auto-zoom threshold nearly everywhere; the !important is load-bearing against Tailwind specificity, and pinch/double-tap zoom were ALREADY closed by touch-action: pan-y. Same day, earlier: **the release scenes are team-aware, shipped as
 v1.5.1** — see "Scenes opened to the team: one release-access rule" above. A
 teammate opening Collect metadata on a release they could see everywhere got
 "Release not found.", because every scene route group carried an accidental
@@ -5793,6 +5793,102 @@ lost their `query` state entirely — that plumbing is gone, not merely unused.
   authenticated session with a real teammate, which this sandbox cannot mint.
   Worth one pass on each of the three surfaces, since the dropdown is
   absolutely positioned inside a scrolling modal in two of them.
+
+---
+
+## A Solo tier, and the first self-serve CTAs on /pricing (2026-08-30)
+
+Founder call: add a fourth, cheapest tier; move Manager one rung up; let the two
+lowest tiers sign themselves up. The ladder is now **Solo → Manager → Label →
+Group**, and Manager stops being the front door.
+
+- **Solo:** ₦8,000/mo, ₦80,000/yr (the same 10× "2 months free" ratio every rung
+  holds). 1 artist, 2 people, 1 release at a time, 40 UrgAns actions a month,
+  plus files/credits/press kits, export and email support.
+- **Manager:** audience moves from "one or two artists" to "two or more", and it
+  gains an artist ceiling of 5. Prices, seats, releases and actions untouched.
+
+**No changelog entry and no version bump.** Everything a user can see is on
+`apps/homepage`, which the Versioning section's app-only scope rule excludes
+("pricing display updates count as marketing"). The `apps/web` half is inert —
+see the next point.
+
+**Six things worth knowing before editing this:**
+
+1. **SOLO IS ON THE PRICING PAGE BUT NOT ON SALE, deliberately** — the same
+   staging Manager itself shipped in. It is absent from `SelfServeTierId`, has no
+   Paystack Plan object, and is **not in `subscriptions_plan_check` or
+   `subscriptions_pending_plan_check`**, so nothing can write `solo` to a
+   subscription row, `resolveTeamTier` can never return it, and none of its
+   ceilings can bite a real team. Its CTA is the free team trial, which needs no
+   plan code. `entitlements.test.ts` carries the tripwire, pointed at
+   `resolveCheckoutPurchase` rather than at a constant array — the lesson from
+   2026-08-24, when the previous tripwire watched two arrays and missed `manager`
+   becoming purchasable through a third branch. **Selling Solo means a migration
+   widening BOTH plan constraints, two minted Plans, their env vars, and adding
+   it to `SelfServeTierId` + `isRecurringPlan`** (skip that last one and renewals
+   silently stop extending — a hazard this file already records twice).
+2. **`limits.artists` is DECLARED AND NOT ENFORCEABLE, and "Up to 5 artists" is
+   the one claim on this page that outruns the product.** Nothing can add a
+   second artist to a team: a workspace resolves ONE `artists` row
+   (`getWorkspaceArtist`), the create-release modal collects no artist input, and
+   every release points at that same row — the one-artist rule is a UI fact, not
+   a schema one (the schema has always permitted many). So Solo's ceiling of 1 is
+   what every account already gets, and Manager's 5 describes the offer rather
+   than a switch anyone can flip. **This is a knowing exception to the standing
+   "do not market multi-artist until the UI limit is lifted" note in the
+   workspace-scoped-artists section**, raised with the founder's brief and shipped
+   as asked; lifting the limit is listing UI plus an "add artist" affordance, no
+   migration. It is kept out of `CountableLimitKey` so `checkLimit` cannot be
+   pointed at it by accident.
+3. **The number still lives in `@urganize/pricing`, not in the card copy.**
+   `artists` joined `TierLimits` beside the three enforced ceilings and
+   `tierHighlights` derives its line, so the page quotes the same field a future
+   check will read. A literal "5 artists" in JSX is exactly how a published
+   figure drifts from a real one — the failure this repo has shipped four times
+   with prices. `apps/homepage` cannot import from `apps/web`, which is why the
+   countable limits live in the shared package at all.
+4. **"1 artist" and "Up to 5 artists" are phrased differently on purpose.** The
+   entry tier states what you get; the tier above states how far you can go.
+   Normalising them would lose that, and the founder wrote both strings.
+5. **The self-serve split is by who can be served without us in the room.** Solo
+   and Manager send people to `APP_SIGNUP_URL`; Label keeps "Book a demo" and
+   Group keeps "Let's talk", because a roster is still set up by hand. This
+   NARROWS, and does not delete, the 2026-08-24 "every CTA on this page is a
+   capture" rule — that comment is rewritten in place rather than left to
+   contradict the code. The header's "Join the waitlist" became "Start free
+   trial" for the same reason; the in-body waitlist forms all stay.
+   **`APP_SIGNUP_URL` is `/onboarding`, never `/auth`** — `/auth` is login-only
+   and has no signup form, so a "start" CTA pointed there lands people on a page
+   with no way to create an account.
+6. **Four cards go 1 → 2 → 4 columns** (`sm:grid-cols-2 xl:grid-cols-4`,
+   container widened to `max-w-6xl`). Deliberately not four from `md`: at 768px
+   that is ~170px a card, which wraps the price and every ceiling line. Below
+   `sm` it still stacks to one column, which is where most of this traffic reads
+   it.
+
+Also reworded: the hero's "we still set every team up ourselves, so start with a
+demo" line, which two of the four cards now contradict, and the footnote under
+the cards, which states the trial terms (14 days, no card) beside the button that
+starts one — the same terms `/signup` and `TEAM_TRIAL_DAYS` carry, so all three
+move together.
+
+- **Verified:** 1669 tests (4 new), `eslint .` at the exact baselines in both
+  apps (web 3 errors / 65 warnings, all pre-existing in `WorkspaceView.tsx`;
+  homepage 0 / 2), and `next build` green **by exit code** for both apps with
+  `/pricing`, `/auth`, `/onboarding` and `/settings` all still `○ Static`. The
+  prerendered `/pricing` HTML was parsed rather than trusted: cards in the order
+  Solo, Manager, Label, Group; CTA anchors resolving to onboarding, onboarding,
+  the Label mailto and the Group mailto; "Join the waitlist" gone from every
+  page's header. Compiled CSS confirms `sm:grid-cols-2` at 40rem and
+  `xl:grid-cols-4` at 80rem, and every tier amount is in the client bundle
+  (`8e3`/`8e4` for Solo), which is what makes the interval toggle real for it.
+- **Not verified:** nothing was seen in a browser, so the four-across row at
+  ≥1280px has never been laid out for real — that is the one thing worth a look,
+  since it is the width where the price string is tightest. This sandbox cannot
+  reach either urganize domain (the proxy answers 403 to CONNECT), so the signup
+  destination is confirmed from `lib/app-urls.ts` and the `/onboarding` route
+  existing and server-rendering its real form, not from opening it.
 
 ---
 

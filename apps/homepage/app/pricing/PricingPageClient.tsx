@@ -73,16 +73,20 @@ export function PricingPageClient() {
               <span className="text-[var(--marketing-accent)]">of your roster.</span>
             </h1>
 
+            {/* Reworded 2026-08-30 with the self-serve CTAs. The old line said
+                every team starts with a demo, which two of the four cards below
+                now contradict. */}
             <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
               Urganize is the AI workspace for music executives. One price covers
-              your whole team. We still set every team up ourselves, so start
-              with a demo and we will take it from there.
+              your whole team. Start on your own with a free trial, or let us set
+              your roster up with you.
             </p>
 
             <div className="hero-fade-in hero-delay-3 mt-10">
-              {/* NO hero CTA, deliberately: each of the three cards below
-                  carries "Book a demo" already, and a fourth identical button up
-                  here reads as one button repeated rather than as a choice. */}
+              {/* NO hero CTA, deliberately: every card below already carries
+                  its own, and one more button up here reads as a button
+                  repeated rather than as a choice. The header's "Start free
+                  trial" is on screen throughout anyway. */}
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--marketing-text-subtle)]">
                 Built for music executives working with ambitious artists.
               </p>
