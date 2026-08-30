@@ -1,8 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <!-- Creator: CorelDRAW -->
-<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="8.5in" height="11in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
-viewBox="0 0 8500 11000"
+<!-- viewBox cropped to the wordmark (2026-08-30). CorelDRAW exported this on a
+     full 8500x11000 letter page with the glyphs floating dead-centre, so the
+     intrinsic box was ~6x taller than the ink. Every consumer had to crop it
+     back with overflow-hidden plus a hand-tuned negative margin, and that
+     tuning left the header wordmark sitting several pixels above the centreline
+     of the nav beside it. The box is the ink now, so plain flex centring works.
+     Paths are untouched; only the viewBox and the root width/height changed.
+     NOTE: public/brand/urganize-logo.svg is the press-kit download and is
+     deliberately left uncropped, so it stays byte-consistent with the logo ZIP
+     beside it. Do not copy that file over this one. -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="7726" height="1766" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="387 4617 7726 1766"
  xmlns:xlink="http://www.w3.org/1999/xlink"
  xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
  <defs>
