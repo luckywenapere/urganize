@@ -5837,10 +5837,16 @@ see the next point.
    what every account already gets, and Manager's 5 describes the offer rather
    than a switch anyone can flip. **This is a knowing exception to the standing
    "do not market multi-artist until the UI limit is lifted" note in the
-   workspace-scoped-artists section**, raised with the founder's brief and shipped
-   as asked; lifting the limit is listing UI plus an "add artist" affordance, no
-   migration. It is kept out of `CountableLimitKey` so `checkLimit` cannot be
-   pointed at it by accident.
+   workspace-scoped-artists section** — raised with the founder before merge and
+   shipped as asked, with the founder's answer being **"ship it, and build
+   multi-artist next"**, so the claim is meant to be caught up with rather than
+   left standing. **That build is the outstanding follow-up to this section.**
+   It is UI only: the schema has permitted many artists per workspace since
+   2026-06-02 (partial unique index on `(workspace_id, slug)`), so it needs a
+   listing surface plus an "add artist" affordance plus artist input on the
+   create-release path, and no migration. The ceiling to enforce once it exists
+   is already here as `limits.artists`. Until then it is kept out of
+   `CountableLimitKey` so `checkLimit` cannot be pointed at it by accident.
 3. **The number still lives in `@urganize/pricing`, not in the card copy.**
    `artists` joined `TierLimits` beside the three enforced ceilings and
    `tierHighlights` derives its line, so the page quotes the same field a future
