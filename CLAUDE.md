@@ -2212,7 +2212,7 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-30 (**a Solo tier on /pricing, and the first self-serve CTAs there** — see "A Solo tier, and the first self-serve CTAs on /pricing" near the end of this file. The ladder is Solo → Manager → Label → Group: Solo is ₦8,000/mo (₦80,000/yr) for one artist, two people, one release at a time and 40 UrgAns actions a month, and Manager moves up a rung to "two or more artists" with a 5-artist ceiling. Solo and Manager now send visitors to a free trial at APP_SIGNUP_URL (which is /onboarding, never login-only /auth) while Label keeps "Book a demo" and Group "Let's talk" — that NARROWS rather than deletes the 2026-08-24 "every CTA on this page is a capture" rule, and the header's "Join the waitlist" became "Start free trial" for the same reason, with every in-body waitlist form left where it was. Two things not to misread. SOLO IS NOT ON SALE: absent from SelfServeTierId, no Paystack Plan, and in neither subscriptions plan CHECK, so nothing can write it and no team can resolve onto it — the tripwire for the day that changes is pointed at resolveCheckoutPurchase rather than at a constant array, which is the lesson from the 2026-08-24 miss. And limits.artists is DECLARED, NOT ENFORCEABLE, because nothing in the product can add a second artist to a team (one artists row per workspace, no artist input on the create modal), so "Up to 5 artists" is a knowing exception to the standing do-not-market-multi-artist note, raised with the founder's brief and shipped as asked; the number still lives in @urganize/pricing so the page quotes the field a future check will read. No changelog entry or version bump — everything a user sees is apps/homepage, which the app-only scope rule excludes. Nothing was seen in a browser; the four-across row at ≥1280px is the one thing worth a look. Previously, 2026-08-29: **the release back arrow terminates now — shipped as v1.5.4** — see "It was still a trap: nav-history was one slot, not a stack" under "The workspace back arrow goes back now". The 2026-08-25 fix made the arrow do something; it did not make it terminate. lib/nav-history held a current+previous PAIR, and recording a navigation moves current into previous — so a back press pushed the previous page and simultaneously wrote the page it just left into the slot, sending the next press straight back. Two surfaces read that one slot (this arrow and Settings'), so the loop was one tap wide: release → Settings → back → release → back → Settings → forever. Same loop between any two workspace URLs — two releases reachable via UrgAns, the bell, a note chip or the desktop rails. It is a bounded stack now, and the rule that makes back terminate is that navigating to the entry directly BENEATH the top pops instead of pushing (it cannot tell our button from browser Back or an edge swipe, and must not). readPreviousLocation kept its signature, so neither call site changed and Settings is fixed by the same edit. Three things not to undo: only ONE step down counts as a pop; resolveWorkspaceBackTarget's same-release rejection STAYS, because scene switches replace and append with no matching pop; and the new "already here" rejection reads window.location at click time, never a render-time copy. Mutation-tested both guards. Deploy carries a deliberate one-tap degradation — open tabs hold the old keys, so the first press after deploy finds an empty trail and falls to its safe floor. Not pressed in a browser. Same day, earlier: **the assignee picker is a dropdown now — shipped as v1.5.3** — see "The assignee picker became a dropdown" near the end of this file. Its text input raised the phone keyboard over the list it was meant to show, so TaskMemberCombobox is deleted and TaskMemberSelect (a button over a role=listbox panel, the NoteReleasePicker pattern) replaces it at all three call sites. Search was dropped outright rather than hidden on mobile: Manager caps a team at four seats, and a viewport-conditional control means two code paths for one picker. It also deletes the bug class v1.5.2 had guarded — both of those defects existed only because the display and the filter were one field. Same day, earlier: **the assignee picker hid the team, and fields zoomed on tap — shipped as v1.5.2** — see "The assignee picker hid the team" near the end of this file. The picker filtered its list by the current assignee's name, so an already-assigned activity offered only that person; the guard now lives in filterMembersForPicker (lib/tasks.ts) and is the second copy of one ReleaseCombobox already carried — keep them in step. Blurring an empty box no longer unassigns, PlanTaskRow seeds its query, and TaskDetailView's seed effect is keyed on task?.id. Separately, one (pointer: coarse) rule sets form controls to 16px, since this project's type scale sits under iOS's auto-zoom threshold nearly everywhere; the !important is load-bearing against Tailwind specificity, and pinch/double-tap zoom were ALREADY closed by touch-action: pan-y. Same day, earlier: **the release scenes are team-aware, shipped as
+*Last updated: 2026-08-30 (**the install offer comes before the notification ask, built flag-off** — see ""Put us on your Home Screen", then notifications" near the end of this file. Founder brief: once someone is observed browsing the app's tabs, offer the install low on the screen where a thumb reaches, and only if they turn it down should the notification prompt follow. Not a scope expansion and no migration — the Android banner, the push card and an installable manifest all already shipped; what was missing was an iOS offer, a behavioural trigger, and any ordering between the two asks. Four things a later change will be tempted to get wrong, all argued there: THE iOS CARD CAN ONLY TEACH, because Apple routes Add to Home Screen through the share sheet and no API on any page can open it, so a primary button that "installs" would be a control that visibly does nothing; on iOS the ordering is FORCED rather than preferred, since Notification and PushManager are exposed only to Home Screen apps and isPushSupported() is false in a Safari tab; the hold costs an ask in a session where the user never browsed enough, and that is the right trade rather than a regression, because a browser grants exactly one permission prompt per origin forever and spending it on a drive-by visitor is how an origin gets Blocked for good; and lib/install-prompt.ts fails CLOSED on both counts — broken storage means no card AND isInstallPromptOwed() answers false, so it can never mute the notification ask behind an install prompt that will never arrive, which is also why markInstallPromptSettled guards its write but does NOT make the subscriber notification conditional on it (writePersistedState does not wrap setItem). AndroidAppBanner stands down when the flag is on — both point Android at the same /download page. Mutation-tested four ways; 1706 tests, lint at the exact 3/65 baseline, and next build green by exit code in both flag states. NOTHING HAS RENDERED IN A BROWSER on any phone — no session is mintable here and there is no route to either urganize domain — so the layout, the iOS steps against a real share sheet and the decline-to-notification hand-off all rest on unit tests and traced call paths; and do not try to prove the flag by grepping the client chunks, since dynamic() emits the card's chunk in both states. Previously, the same day: **a Solo tier on /pricing, and the first self-serve CTAs there** — see "A Solo tier, and the first self-serve CTAs on /pricing" near the end of this file. The ladder is Solo → Manager → Label → Group: Solo is ₦8,000/mo (₦80,000/yr) for one artist, two people, one release at a time and 40 UrgAns actions a month, and Manager moves up a rung to "two or more artists" with a 5-artist ceiling. Solo and Manager now send visitors to a free trial at APP_SIGNUP_URL (which is /onboarding, never login-only /auth) while Label keeps "Book a demo" and Group "Let's talk" — that NARROWS rather than deletes the 2026-08-24 "every CTA on this page is a capture" rule, and the header's "Join the waitlist" became "Start free trial" for the same reason, with every in-body waitlist form left where it was. Two things not to misread. SOLO IS NOT ON SALE: absent from SelfServeTierId, no Paystack Plan, and in neither subscriptions plan CHECK, so nothing can write it and no team can resolve onto it — the tripwire for the day that changes is pointed at resolveCheckoutPurchase rather than at a constant array, which is the lesson from the 2026-08-24 miss. And limits.artists is DECLARED, NOT ENFORCEABLE, because nothing in the product can add a second artist to a team (one artists row per workspace, no artist input on the create modal), so "Up to 5 artists" is a knowing exception to the standing do-not-market-multi-artist note, raised with the founder's brief and shipped as asked; the number still lives in @urganize/pricing so the page quotes the field a future check will read. No changelog entry or version bump — everything a user sees is apps/homepage, which the app-only scope rule excludes. Nothing was seen in a browser; the four-across row at ≥1280px is the one thing worth a look. Previously, 2026-08-29: **the release back arrow terminates now — shipped as v1.5.4** — see "It was still a trap: nav-history was one slot, not a stack" under "The workspace back arrow goes back now". The 2026-08-25 fix made the arrow do something; it did not make it terminate. lib/nav-history held a current+previous PAIR, and recording a navigation moves current into previous — so a back press pushed the previous page and simultaneously wrote the page it just left into the slot, sending the next press straight back. Two surfaces read that one slot (this arrow and Settings'), so the loop was one tap wide: release → Settings → back → release → back → Settings → forever. Same loop between any two workspace URLs — two releases reachable via UrgAns, the bell, a note chip or the desktop rails. It is a bounded stack now, and the rule that makes back terminate is that navigating to the entry directly BENEATH the top pops instead of pushing (it cannot tell our button from browser Back or an edge swipe, and must not). readPreviousLocation kept its signature, so neither call site changed and Settings is fixed by the same edit. Three things not to undo: only ONE step down counts as a pop; resolveWorkspaceBackTarget's same-release rejection STAYS, because scene switches replace and append with no matching pop; and the new "already here" rejection reads window.location at click time, never a render-time copy. Mutation-tested both guards. Deploy carries a deliberate one-tap degradation — open tabs hold the old keys, so the first press after deploy finds an empty trail and falls to its safe floor. Not pressed in a browser. Same day, earlier: **the assignee picker is a dropdown now — shipped as v1.5.3** — see "The assignee picker became a dropdown" near the end of this file. Its text input raised the phone keyboard over the list it was meant to show, so TaskMemberCombobox is deleted and TaskMemberSelect (a button over a role=listbox panel, the NoteReleasePicker pattern) replaces it at all three call sites. Search was dropped outright rather than hidden on mobile: Manager caps a team at four seats, and a viewport-conditional control means two code paths for one picker. It also deletes the bug class v1.5.2 had guarded — both of those defects existed only because the display and the filter were one field. Same day, earlier: **the assignee picker hid the team, and fields zoomed on tap — shipped as v1.5.2** — see "The assignee picker hid the team" near the end of this file. The picker filtered its list by the current assignee's name, so an already-assigned activity offered only that person; the guard now lives in filterMembersForPicker (lib/tasks.ts) and is the second copy of one ReleaseCombobox already carried — keep them in step. Blurring an empty box no longer unassigns, PlanTaskRow seeds its query, and TaskDetailView's seed effect is keyed on task?.id. Separately, one (pointer: coarse) rule sets form controls to 16px, since this project's type scale sits under iOS's auto-zoom threshold nearly everywhere; the !important is load-bearing against Tailwind specificity, and pinch/double-tap zoom were ALREADY closed by touch-action: pan-y. Same day, earlier: **the release scenes are team-aware, shipped as
 v1.5.1** — see "Scenes opened to the team: one release-access rule" above. A
 teammate opening Collect metadata on a release they could see everywhere got
 "Release not found.", because every scene route group carried an accidental
@@ -5988,6 +5988,125 @@ work it would take. Three things turned out to be already built:
   one live pass: add a second artist in Settings, create a release and confirm
   the picker appears and files it correctly, invite someone scoped to the new
   artist, and confirm they see only that artist's releases.
+
+---
+
+## "Put us on your Home Screen", then notifications (2026-08-30)
+
+Founder request: when a user is observed browsing through the different tabs
+of the app, offer them the install — the PWA on iOS, the Android app on
+Android — low on the screen where a thumb reaches; and if they turn it down,
+*then* ask about notifications.
+
+**Not a scope expansion, and no migration.** Every piece it coordinates
+already shipped: `AndroidAppBanner` (2026-08, top banner → `/download`),
+`PushPermissionPrompt` (2026-08-21, bottom card, 6s after load),
+`app/manifest.ts` (installable since the push work), and
+`isAndroidBrowser()`. What did not exist was an iOS install offer, a
+behavioural trigger, and any ordering between the two asks. Behind
+`NEXT_PUBLIC_FEATURE_INSTALL_PROMPT`, default `false`; **not yet activated**.
+
+**The trigger is behaviour, not a timer** (the founder's words, and the better
+signal anyway): three DISTINCT app surfaces in one session — the landing page
+plus two deliberate moves. `lib/first-release-prompt.ts` is the timer-shaped
+sibling and they deliberately share no mechanism, because they answer
+different questions.
+
+**Seven things worth knowing before editing this:**
+
+1. **The iOS card can only ever TEACH.** There is no `beforeinstallprompt` on
+   iOS and no API of any kind that opens Add to Home Screen — Apple routes it
+   through the share sheet, which no page can reach. So the iOS variant is two
+   numbered steps and a button that only acknowledges them. Wiring a primary
+   button that "installs" would be a control that visibly does nothing, the
+   exact failure `PushPermissionPrompt`'s own header warns about for the
+   permission dialog.
+2. **On iOS the ordering is forced, not preferred.** Apple exposes
+   `Notification` and `PushManager` ONLY to Home Screen web apps, so in a
+   Safari tab `isPushSupported()` is false and the push effect returns before
+   it ever reaches the hold. Install-then-notifications is the only sequence
+   that can work there. On Android and desktop both asks are possible and the
+   founder's rule applies as written — the notification ask follows a
+   **decline**, and an accept suppresses it.
+3. **The hold costs an ask, and that is the right trade rather than a
+   regression.** An Android-browser user who never opens three surfaces gets
+   no notification ask that session. A browser grants exactly ONE permission
+   prompt per origin, forever — spending it on someone who opened one page and
+   left is how an origin gets Blocked for good, which `lib/push-prompt.ts`
+   already documents as unrecoverable. Deferring to a session where they
+   actually used the app improves the ask.
+4. **`lib/install-prompt.ts` fails CLOSED on BOTH counts, and the second is
+   the subtle one.** Broken storage means no card (cost: silence). It also
+   means `isInstallPromptOwed()` answers false, so a storage failure can never
+   hold the notification prompt hostage behind an install prompt that will
+   never arrive. `markInstallPromptSettled` is the mirror image: its write is
+   wrapped and the subscriber notification is NOT conditional on it, because
+   `writePersistedState` does not guard `setItem` (Safari private mode, full
+   quota) and an unguarded throw would abandon the dismissal half-done —
+   card still up, notification ask never released. Losing the record costs one
+   repeat offer; losing the signal costs the ask entirely.
+5. **`resolveInstallVariant` answers "already installed" BEFORE it sniffs the
+   user agent**, and a test pins that: an installed iOS Home Screen app is
+   still an iOS user agent, and the reversed order tells it to install the
+   thing it is already running inside. Note `isStandaloneDisplay()` is a
+   different question from `isNativePlatform()` — Home Screen vs the Capacitor
+   shell — and both mean "no offer".
+6. **A different release is NOT a different tab.** `installViewKey` counts
+   `?scene=` and `/settings?tab=` as their own surfaces (they genuinely swap
+   the working surface) but deliberately not `?release=`, or the card would
+   fire at someone flicking through their own catalog. The counted paths are
+   an allow-list (`/dashboard`, `/settings`, `/admin`): three bounced flow
+   steps through `/auth` and `/onboarding` are not browsing.
+7. **`AndroidAppBanner` stands down when this flag is on.** Both point Android
+   at the same `/download` page, and two asks for one thing is one too many.
+   The newer one wins because it is the brief — bottom of the screen, and only
+   once the visitor has looked around, rather than a top banner on arrival.
+   Flag off, that banner behaves exactly as it does today.
+
+- **Where it lives:** `lib/install-prompt.ts` (counting, decision, storage,
+  and two tiny subscriptions rather than a store — the `body-scroll-lock.ts`
+  precedent for cross-component state that is not really UI state),
+  `components/app/InstallAppPrompt.tsx`, plus `isIOSBrowser()` /
+  `isStandaloneDisplay()` in `lib/platform.ts`. `NavigationTracker` records
+  the views: piggy-backed rather than given its own effect, because it already
+  owns the one Suspense boundary that can read `searchParams` from
+  layout-level chrome — and the record call is itself flag-gated so a flag-off
+  build performs no extra storage writes on the shell's hottest effect.
+- **It shares `PushPermissionPrompt`'s exact slot** (`z-[140]`, the same
+  `bottomClass` clearing `MobileNavBar`), which is safe precisely because the
+  two can never be on screen together: the notification ask holds until this
+  card is answered.
+- **Verified:** the full suite (1706 passing, 30 env-gated skips, 24 of them
+  new in `lib/install-prompt.test.ts`), `eslint .` at the exact measured
+  baseline (3 errors / 65 warnings, all pre-existing in `WorkspaceView.tsx`),
+  and `next build` green **by exit code** in BOTH flag states with `/auth`,
+  `/onboarding` and `/settings` still `○ Static`. **Mutation-tested rather
+  than merely asserted:** checking iOS before "already installed", counting
+  `?release=` as a surface, ignoring the settled record, and moving the
+  settled notification inside the `try` each fail exactly the test written to
+  catch them.
+- **Not verified, and it is most of the risk surface:** nothing has rendered
+  in a browser, on any phone. This sandbox cannot mint an authenticated
+  session and has no network route to either urganize domain, so the card's
+  layout, the iOS instructions against a real share sheet, the Android link,
+  and the whole hand-off from decline to the notification ask rest on unit
+  tests plus traced call paths. Do NOT try to prove the flag state by grepping
+  the client chunks — `dynamic()` emits the card's chunk in both states, the
+  same false positive this file records for "Fan capture" and "Press kit".
+- **Activation checklist:** (1) nothing to migrate — set
+  `NEXT_PUBLIC_FEATURE_INSTALL_PROMPT=true` on the Vercel `Web` project **and
+  confirm the deploy actually rebuilt `apps/web`** (`npx turbo-ignore
+  @urganize/web --fallback=<the commit Vercel last deployed>`);
+  `NEXT_PUBLIC_FEATURE_PUSH_PROMPT` should be on too, or the second half of
+  the sequence does not exist. (2) Changelog entry + minor version bump across
+  all `package.json` files at the flip, not at merge (the EPK precedent).
+  (3) Verify on a real phone, which is the only place this can be verified:
+  on an iPhone in Safari open three surfaces and confirm the card appears low
+  on the screen with the Add to Home Screen steps, then add it and confirm the
+  installed app never offers again and DOES ask about notifications; on
+  Android confirm the top banner is gone, that "Get the app" reaches
+  `/download`, and that "Not now" is followed about a second later by the
+  notification ask.
 
 ---
 

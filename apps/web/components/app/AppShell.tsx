@@ -82,6 +82,13 @@ const PushPermissionPrompt = dynamic(
   () => import('@/components/app/PushPermissionPrompt').then((m) => m.PushPermissionPrompt),
   { ssr: false }
 );
+// The install offer that precedes it. Same dynamic + flag-gated treatment,
+// and it must stay client-only: every branch it takes depends on reading the
+// user agent and the display mode.
+const InstallAppPrompt = dynamic(
+  () => import('@/components/app/InstallAppPrompt').then((m) => m.InstallAppPrompt),
+  { ssr: false }
+);
 // NOTE: the release scenes (Metadata / Calendar / Files / Press kit) are NOT
 // mounted here. They were briefly overlay windows mounted app-wide from this
 // file (2026-08-04), but the founder corrected that to an inline panel that
@@ -127,6 +134,14 @@ const ANDROID_APP_BANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_ANDROID_APP_B
 // PushPermissionPrompt.tsx for why the ask is a card and why its BUTTON, not
 // this mount, is what opens the OS prompt.
 const PUSH_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PUSH_PROMPT === 'true';
+
+// "You've had a look around — put us on your Home Screen" (founder request,
+// 2026-08-30). Offered once someone has opened three distinct surfaces in a
+// session, at the bottom of the screen where a thumb reaches, and the
+// notification ask above follows only if this one is turned down. See
+// lib/install-prompt.ts for the counting and InstallAppPrompt.tsx for why
+// iOS can only ever be taught rather than triggered.
+const INSTALL_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_INSTALL_PROMPT === 'true';
 
 // Once-per-session arming for the side rail: landing on the assistant page
 // (the post-auth front door when the flag is on — see lib/home-path.ts)
@@ -371,7 +386,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     // provider is available for any future "save succeeded" / "upload failed"
     // moments that currently render inline toast boxes.
     <ToastProvider>
-    {ANDROID_APP_BANNER_ENABLED ? (
+    {/* Stands down when the install prompt is on: both point Android at the
+        same /download page, and two asks for one thing is one too many. The
+        newer one wins because it is the founder's brief — bottom of the
+        screen where a thumb reaches, and only once the visitor has actually
+        looked around, rather than a top banner on arrival. */}
+    {ANDROID_APP_BANNER_ENABLED && !INSTALL_PROMPT_ENABLED ? (
       <ErrorBoundary name="android-app-banner" onError={reportBoundaryError}>
         <AndroidAppBanner />
       </ErrorBoundary>
@@ -533,6 +553,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           about. */}
       {PUSH_PROMPT_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <PushPermissionPrompt />
+      ) : null}
+      {/* Same gate again, and the same slot at the bottom of the screen — the
+          two never collide because the notification ask holds itself until
+          this one has been answered (see the install-owed branch in
+          PushPermissionPrompt). Signed-in only: "browsing through the tabs"
+          is not a thing a signed-out visitor on /auth is doing. */}
+      {INSTALL_PROMPT_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
+        <InstallAppPrompt />
       ) : null}
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
       {/* FirstTimeOnboardingGate was mounted here until 2026-07-29 (URG-191).
