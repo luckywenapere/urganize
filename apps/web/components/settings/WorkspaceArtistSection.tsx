@@ -13,11 +13,13 @@ type WorkspaceArtistSectionProps = {
   artistLimit: number | null;
   isLoading: boolean;
   savingArtistId: string | null;
+  removingArtistId: string | null;
   isAdding: boolean;
   message: string;
   error: string;
   onRename: (artistId: string, name: string) => void;
   onAdd: (name: string) => void;
+  onRemove: (artistId: string) => void;
 };
 
 const inputClass =
@@ -38,13 +40,20 @@ const inputClass =
 function ArtistRow({
   artist,
   isSaving,
+  isRemoving,
+  canRemove,
   disabled,
   onRename,
+  onRemove,
 }: {
   artist: WorkspaceArtist;
   isSaving: boolean;
+  isRemoving: boolean;
+  /** False for the last artist on the roster — the server refuses that too. */
+  canRemove: boolean;
   disabled: boolean;
   onRename: (artistId: string, name: string) => void;
+  onRemove: (artistId: string) => void;
 }) {
   const [draft, setDraft] = useState<string | undefined>(undefined);
   // Derived, never seeded by an effect: a background refetch hands back a new
@@ -78,6 +87,28 @@ function ArtistRow({
       >
         {isSaving ? 'Saving…' : 'Save'}
       </button>
+      {canRemove ? (
+        <button
+          type="button"
+          onClick={() => {
+            // window.confirm rather than a bespoke dialog: the server refuses
+            // every removal that would actually lose something, so what is left
+            // here can only ever remove an artist attached to nothing. The
+            // prompt is a slip guard, not a decision point.
+            if (
+              window.confirm(
+                `Remove ${artist.name}? This only works if they have no releases and nobody is limited to seeing them.`
+              )
+            ) {
+              onRemove(artist.id);
+            }
+          }}
+          disabled={disabled || isRemoving}
+          className="shrink-0 whitespace-nowrap rounded-lg border border-stroke-subtle px-3 py-2 text-sm font-semibold text-content-secondary hover:border-status-error hover:text-status-error disabled:opacity-50"
+        >
+          {isRemoving ? 'Removing…' : 'Remove'}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -87,11 +118,13 @@ export function WorkspaceArtistSection({
   artistLimit,
   isLoading,
   savingArtistId,
+  removingArtistId,
   isAdding,
   message,
   error,
   onRename,
   onAdd,
+  onRemove,
 }: WorkspaceArtistSectionProps) {
   const [newName, setNewName] = useState('');
 
@@ -138,8 +171,14 @@ export function WorkspaceArtistSection({
                   key={artist.id}
                   artist={artist}
                   isSaving={savingArtistId === artist.id}
-                  disabled={savingArtistId !== null && savingArtistId !== artist.id}
+                  isRemoving={removingArtistId === artist.id}
+                  canRemove={count > 1}
+                  disabled={
+                    (savingArtistId !== null && savingArtistId !== artist.id) ||
+                    (removingArtistId !== null && removingArtistId !== artist.id)
+                  }
                   onRename={onRename}
+                  onRemove={onRemove}
                 />
               ))}
             </div>

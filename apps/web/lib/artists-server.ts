@@ -441,6 +441,130 @@ export async function reassignReleaseArtist(
   return { error: null };
 }
 
+export type ArtistDeletionBlocker = {
+  /** Releases still filed under this artist. */
+  releases: number;
+  /** Teammates who can only see this artist's releases. */
+  scopedMembers: number;
+};
+
+/**
+ * What deleting this artist would take with it.
+ *
+ * BOTH COUNTS ARE REFUSALS, not warnings, and each is a different kind of harm:
+ *
+ *   releases — the database would refuse anyway (releases_artist_id_fkey is ON
+ *     DELETE RESTRICT as of 20260830100000), but as a raw constraint error. This
+ *     is what turns that into a sentence naming the number. Before that
+ *     migration the constraint was ON DELETE SET NULL against a NOT NULL column,
+ *     so the refusal was an accident of two settings contradicting each other —
+ *     see the migration header.
+ *
+ *   scopedMembers — nothing in the database stops this one, and it is the
+ *     quieter harm. `workspace_members.artist_scope_id` is ON DELETE SET NULL,
+ *     and NULL there means FULL WORKSPACE VISIBILITY. So deleting an artist
+ *     silently promotes everyone scoped to them from "sees one artist" to "sees
+ *     everything", with no screen anywhere mentioning it.
+ *
+ * FAILS CLOSED, unlike every other count in this module. An unreadable count
+ * returns null and the caller must refuse: the cost of being wrong here is
+ * destroying a link or widening someone's access, neither of which is undoable,
+ * whereas the cost of a spurious refusal is that a manager retries.
+ */
+export async function countArtistDeletionBlockers(
+  adminClient: SupabaseClient,
+  artistId: string
+): Promise<ArtistDeletionBlocker | null> {
+  if (!artistId) return null;
+  try {
+    const [releases, members] = await Promise.all([
+      adminClient
+        .from(RELEASES_TABLE)
+        .select('id', { count: 'exact', head: true })
+        .eq('artist_id', artistId),
+      adminClient
+        .from('workspace_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('artist_scope_id', artistId)
+        .neq('status', 'removed'),
+    ]);
+
+    if (releases.error || members.error) {
+      console.error(
+        '[artists] could not count deletion blockers:',
+        releases.error?.message || members.error?.message
+      );
+      return null;
+    }
+
+    return {
+      releases: releases.count ?? 0,
+      scopedMembers: members.count ?? 0,
+    };
+  } catch (error) {
+    console.error('[artists] could not count deletion blockers:', error);
+    return null;
+  }
+}
+
+/**
+ * The refusal message for a blocked delete, or null when it may proceed.
+ *
+ * Pure, so the wording is testable. Every sentence names a number the manager
+ * can act on and says what to do about it — a refusal a user cannot resolve is
+ * worse than no button at all.
+ */
+export function describeArtistDeletionBlock(
+  blockers: ArtistDeletionBlocker | null
+): string | null {
+  if (!blockers) {
+    return 'Could not check what this artist is attached to. Try again.';
+  }
+
+  const { releases, scopedMembers } = blockers;
+  if (releases > 0 && scopedMembers > 0) {
+    return `This artist has ${releases} ${releases === 1 ? 'release' : 'releases'} and ${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} who can only see them. Move the ${releases === 1 ? 'release' : 'releases'} and change that access first.`;
+  }
+  if (releases > 0) {
+    return `This artist has ${releases} ${releases === 1 ? 'release' : 'releases'}. Move ${releases === 1 ? 'it' : 'them'} to another artist first, or archive ${releases === 1 ? 'it' : 'them'}.`;
+  }
+  if (scopedMembers > 0) {
+    return `${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} can only see this artist. Change their access first, or they will start seeing every release.`;
+  }
+  return null;
+}
+
+/**
+ * Removes an artist. The caller must have authorized it AND confirmed there is
+ * nothing to lose — see countArtistDeletionBlockers.
+ *
+ * Scoped to the workspace as well as the id so the write itself cannot reach
+ * another team's row, matching how the archive route re-asserts ownership on
+ * its UPDATE.
+ */
+export async function deleteWorkspaceArtist(
+  adminClient: SupabaseClient,
+  input: { artistId: string; workspaceId: string }
+): Promise<{ error: string | null }> {
+  const { error } = await adminClient
+    .from(ARTISTS_TABLE)
+    .delete()
+    .eq('id', input.artistId)
+    .eq('workspace_id', input.workspaceId);
+
+  if (error) {
+    // 23503 = foreign_key_violation: the RESTRICT backstop fired, which means a
+    // release was filed under this artist between our check and this delete.
+    const code = String((error as { code?: string }).code || '');
+    if (code === '23503') {
+      return { error: 'This artist has releases now. Move them first.' };
+    }
+    return { error: error.message || 'Could not remove this artist.' };
+  }
+
+  return { error: null };
+}
+
 /**
  * True when the workspace-consolidation feature flag is enabled at runtime.
  * Mirrors the inline `process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true'`

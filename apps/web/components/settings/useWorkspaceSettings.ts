@@ -87,8 +87,11 @@ export type WorkspaceSettingsState = {
   isAddingArtist: boolean;
   artistMessage: string;
   artistError: string;
+  /** The artist currently being removed, so only that row shows its state. */
+  removingArtistId: string | null;
   renameArtist: (artistId: string, name: string) => void;
   addArtist: (name: string) => void;
+  removeArtist: (artistId: string) => void;
 };
 
 /**
@@ -108,6 +111,7 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
   const [isLoadingArtists, setIsLoadingArtists] = useState(false);
   const [savingArtistId, setSavingArtistId] = useState<string | null>(null);
   const [isAddingArtist, setIsAddingArtist] = useState(false);
+  const [removingArtistId, setRemovingArtistId] = useState<string | null>(null);
   const [artistMessage, setArtistMessage] = useState('');
   const [artistError, setArtistError] = useState('');
   const [artistPrimed, setArtistPrimed] = useState(false);
@@ -486,6 +490,37 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
     }
   };
 
+  const removeArtist = async (artistId: string) => {
+    if (!userId) return;
+    const current = (artists ?? []).find((entry) => entry.id === artistId);
+    if (!current) return;
+
+    setArtistError('');
+    setArtistMessage('');
+    setRemovingArtistId(artistId);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch(`/api/workspace/artists/${encodeURIComponent(artistId)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        // The server's refusals name a number and say what to do about it
+        // ("has 3 releases. Move them first"), so they are surfaced verbatim
+        // rather than replaced with a generic failure.
+        throw new Error(payload.error || 'Could not remove this artist.');
+      }
+      commitRoster((artists ?? []).filter((entry) => entry.id !== artistId));
+      setArtistMessage(`${current.name} removed.`);
+    } catch (err) {
+      setArtistError(errorMessage(err, 'Could not remove this artist.'));
+    } finally {
+      setRemovingArtistId(null);
+    }
+  };
+
   return {
     nameInput,
     setNameInput,
@@ -507,8 +542,10 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
     isAddingArtist,
     artistMessage,
     artistError,
+    removingArtistId,
     renameArtist: (artistId: string, name: string) => void renameArtist(artistId, name),
     addArtist: (name: string) => void addArtist(name),
+    removeArtist: (artistId: string) => void removeArtist(artistId),
   };
 }
 
