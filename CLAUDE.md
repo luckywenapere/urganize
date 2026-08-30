@@ -2256,7 +2256,7 @@ exercised on a real device.
 
 ---
 
-*Last updated: 2026-08-30 (**the install offer comes before the notification ask, built flag-off** — see ""Put us on your Home Screen", then notifications" near the end of this file. Founder brief: once someone is observed browsing the app's tabs, offer the install low on the screen where a thumb reaches, and only if they turn it down should the notification prompt follow. Not a scope expansion and no migration — the Android banner, the push card and an installable manifest all already shipped; what was missing was an iOS offer, a behavioural trigger, and any ordering between the two asks. Four things a later change will be tempted to get wrong, all argued there: THE iOS CARD CAN ONLY TEACH, because Apple routes Add to Home Screen through the share sheet and no API on any page can open it, so a primary button that "installs" would be a control that visibly does nothing; on iOS the ordering is FORCED rather than preferred, since Notification and PushManager are exposed only to Home Screen apps and isPushSupported() is false in a Safari tab; the hold costs an ask in a session where the user never browsed enough, and that is the right trade rather than a regression, because a browser grants exactly one permission prompt per origin forever and spending it on a drive-by visitor is how an origin gets Blocked for good; and lib/install-prompt.ts fails CLOSED on both counts — broken storage means no card AND isInstallPromptOwed() answers false, so it can never mute the notification ask behind an install prompt that will never arrive, which is also why markInstallPromptSettled guards its write but does NOT make the subscriber notification conditional on it (writePersistedState does not wrap setItem). AndroidAppBanner stands down when the flag is on — both point Android at the same /download page. Mutation-tested four ways; 1706 tests, lint at the exact 3/65 baseline, and next build green by exit code in both flag states. NOTHING HAS RENDERED IN A BROWSER on any phone — no session is mintable here and there is no route to either urganize domain — so the layout, the iOS steps against a real share sheet and the decline-to-notification hand-off all rest on unit tests and traced call paths; and do not try to prove the flag by grepping the client chunks, since dynamic() emits the card's chunk in both states. Footer drift noted rather than absorbed: v1.6.0 ("Artist rosters") and v1.7.0 ("Moving a release to a different artist") both landed the same day and appended their own sections without updating this footer, so it skips from here to the entry below — their sections are the record. Previously, the same day: **a Solo tier on /pricing, and the first self-serve CTAs there** — see "A Solo tier, and the first self-serve CTAs on /pricing" near the end of this file. The ladder is Solo → Manager → Label → Group: Solo is ₦8,000/mo (₦80,000/yr) for one artist, two people, one release at a time and 40 UrgAns actions a month, and Manager moves up a rung to "two or more artists" with a 5-artist ceiling. Solo and Manager now send visitors to a free trial at APP_SIGNUP_URL (which is /onboarding, never login-only /auth) while Label keeps "Book a demo" and Group "Let's talk" — that NARROWS rather than deletes the 2026-08-24 "every CTA on this page is a capture" rule, and the header's "Join the waitlist" became "Start free trial" for the same reason, with every in-body waitlist form left where it was. Two things not to misread. SOLO IS NOT ON SALE: absent from SelfServeTierId, no Paystack Plan, and in neither subscriptions plan CHECK, so nothing can write it and no team can resolve onto it — the tripwire for the day that changes is pointed at resolveCheckoutPurchase rather than at a constant array, which is the lesson from the 2026-08-24 miss. And limits.artists is DECLARED, NOT ENFORCEABLE, because nothing in the product can add a second artist to a team (one artists row per workspace, no artist input on the create modal), so "Up to 5 artists" is a knowing exception to the standing do-not-market-multi-artist note, raised with the founder's brief and shipped as asked; the number still lives in @urganize/pricing so the page quotes the field a future check will read. No changelog entry or version bump — everything a user sees is apps/homepage, which the app-only scope rule excludes. Nothing was seen in a browser; the four-across row at ≥1280px is the one thing worth a look. Previously, 2026-08-29: **the release back arrow terminates now — shipped as v1.5.4** — see "It was still a trap: nav-history was one slot, not a stack" under "The workspace back arrow goes back now". The 2026-08-25 fix made the arrow do something; it did not make it terminate. lib/nav-history held a current+previous PAIR, and recording a navigation moves current into previous — so a back press pushed the previous page and simultaneously wrote the page it just left into the slot, sending the next press straight back. Two surfaces read that one slot (this arrow and Settings'), so the loop was one tap wide: release → Settings → back → release → back → Settings → forever. Same loop between any two workspace URLs — two releases reachable via UrgAns, the bell, a note chip or the desktop rails. It is a bounded stack now, and the rule that makes back terminate is that navigating to the entry directly BENEATH the top pops instead of pushing (it cannot tell our button from browser Back or an edge swipe, and must not). readPreviousLocation kept its signature, so neither call site changed and Settings is fixed by the same edit. Three things not to undo: only ONE step down counts as a pop; resolveWorkspaceBackTarget's same-release rejection STAYS, because scene switches replace and append with no matching pop; and the new "already here" rejection reads window.location at click time, never a render-time copy. Mutation-tested both guards. Deploy carries a deliberate one-tap degradation — open tabs hold the old keys, so the first press after deploy finds an empty trail and falls to its safe floor. Not pressed in a browser. Same day, earlier: **the assignee picker is a dropdown now — shipped as v1.5.3** — see "The assignee picker became a dropdown" near the end of this file. Its text input raised the phone keyboard over the list it was meant to show, so TaskMemberCombobox is deleted and TaskMemberSelect (a button over a role=listbox panel, the NoteReleasePicker pattern) replaces it at all three call sites. Search was dropped outright rather than hidden on mobile: Manager caps a team at four seats, and a viewport-conditional control means two code paths for one picker. It also deletes the bug class v1.5.2 had guarded — both of those defects existed only because the display and the filter were one field. Same day, earlier: **the assignee picker hid the team, and fields zoomed on tap — shipped as v1.5.2** — see "The assignee picker hid the team" near the end of this file. The picker filtered its list by the current assignee's name, so an already-assigned activity offered only that person; the guard now lives in filterMembersForPicker (lib/tasks.ts) and is the second copy of one ReleaseCombobox already carried — keep them in step. Blurring an empty box no longer unassigns, PlanTaskRow seeds its query, and TaskDetailView's seed effect is keyed on task?.id. Separately, one (pointer: coarse) rule sets form controls to 16px, since this project's type scale sits under iOS's auto-zoom threshold nearly everywhere; the !important is load-bearing against Tailwind specificity, and pinch/double-tap zoom were ALREADY closed by touch-action: pan-y. Same day, earlier: **the release scenes are team-aware, shipped as
+*Last updated: 2026-08-30 (**Chappi, the mascot, is in the product — shipped as v1.9.0** — see "Chappi, the mascot" near the end of this file. One shared component in packages/ui, six poses copied verbatim from chappi-model-sheet-v1.html, wired to real states: thinking replaces the UrgAns spinner, idle waits on the assistant's empty landing and beside the onboarding greeting, resting sits on the releases/activities/notes empty states, and celebrating turns up when Motion reaches done/done. Not a scope expansion, no flag, no migration, no new dependency. Seven things a later change will be tempted to get wrong, all argued there; the five sharpest: THE HANDS ARE ONE MITTEN placed by the sheet's own transform strings rather than twelve baked paths, which is what makes "a pose differs only in eyes, mouth and hand transforms" literally true in the code; the hover SHADOW is part of him (the sheet's part 05, and the reason the hover gap is a stated proportion), rides inside the float group, and its blur is static; that blur filter needs a per-instance id, which is the ONLY reason the component is use client, because a shared literal id breaks every later instance the moment the first unmounts and two Chappis sit in the DOM wherever this repo splits mobile and desktop by CSS; the plain data therefore lives in chappi-constants.ts, since a client module's exports reach a Server Component as opaque references and /admin/chappi rendered its nav and nothing else the first time this was tried; and EmptyState's mascot prop is opt-in per call site because an account with no releases has TWO empty states on screen at once, which is also why TasksPanel only shows him alongside the scoped wording. The viewBox is the sheet's pose box with the hero's lower edge plus overflow:visible, because neither box the sheet draws contains every pose — its own pointing card clips the raised hand. On our dark theme his hood disappears and that is CORRECT: bg-base is byte-identical to ink, so he reads as a floating cream face exactly as the sheet's own pose cards render him, and no glow container is used in-app. One copy fix the sheet forced: it bans "workspace" in anything a customer reads, so onboarding's signup line now matches the authed-setup one. pointing and carrying are built and previewed at /admin/chappi but placed nowhere — they are for marketing. Rendered in a real headless Chromium and compared side by side against the sheet's own pose grid; THE FOUR AUTHENTICATED PLACEMENTS HAVE NEVER RENDERED — no session is mintable here — so they rest on the component being proven plus traced call paths. Previously, the same day: **the install offer comes before the notification ask, built flag-off** — see ""Put us on your Home Screen", then notifications" near the end of this file. Founder brief: once someone is observed browsing the app's tabs, offer the install low on the screen where a thumb reaches, and only if they turn it down should the notification prompt follow. Not a scope expansion and no migration — the Android banner, the push card and an installable manifest all already shipped; what was missing was an iOS offer, a behavioural trigger, and any ordering between the two asks. Four things a later change will be tempted to get wrong, all argued there: THE iOS CARD CAN ONLY TEACH, because Apple routes Add to Home Screen through the share sheet and no API on any page can open it, so a primary button that "installs" would be a control that visibly does nothing; on iOS the ordering is FORCED rather than preferred, since Notification and PushManager are exposed only to Home Screen apps and isPushSupported() is false in a Safari tab; the hold costs an ask in a session where the user never browsed enough, and that is the right trade rather than a regression, because a browser grants exactly one permission prompt per origin forever and spending it on a drive-by visitor is how an origin gets Blocked for good; and lib/install-prompt.ts fails CLOSED on both counts — broken storage means no card AND isInstallPromptOwed() answers false, so it can never mute the notification ask behind an install prompt that will never arrive, which is also why markInstallPromptSettled guards its write but does NOT make the subscriber notification conditional on it (writePersistedState does not wrap setItem). AndroidAppBanner stands down when the flag is on — both point Android at the same /download page. Mutation-tested four ways; 1706 tests, lint at the exact 3/65 baseline, and next build green by exit code in both flag states. NOTHING HAS RENDERED IN A BROWSER on any phone — no session is mintable here and there is no route to either urganize domain — so the layout, the iOS steps against a real share sheet and the decline-to-notification hand-off all rest on unit tests and traced call paths; and do not try to prove the flag by grepping the client chunks, since dynamic() emits the card's chunk in both states. Footer drift noted rather than absorbed: v1.6.0 ("Artist rosters") and v1.7.0 ("Moving a release to a different artist") both landed the same day and appended their own sections without updating this footer, so it skips from here to the entry below — their sections are the record. Previously, the same day: **a Solo tier on /pricing, and the first self-serve CTAs there** — see "A Solo tier, and the first self-serve CTAs on /pricing" near the end of this file. The ladder is Solo → Manager → Label → Group: Solo is ₦8,000/mo (₦80,000/yr) for one artist, two people, one release at a time and 40 UrgAns actions a month, and Manager moves up a rung to "two or more artists" with a 5-artist ceiling. Solo and Manager now send visitors to a free trial at APP_SIGNUP_URL (which is /onboarding, never login-only /auth) while Label keeps "Book a demo" and Group "Let's talk" — that NARROWS rather than deletes the 2026-08-24 "every CTA on this page is a capture" rule, and the header's "Join the waitlist" became "Start free trial" for the same reason, with every in-body waitlist form left where it was. Two things not to misread. SOLO IS NOT ON SALE: absent from SelfServeTierId, no Paystack Plan, and in neither subscriptions plan CHECK, so nothing can write it and no team can resolve onto it — the tripwire for the day that changes is pointed at resolveCheckoutPurchase rather than at a constant array, which is the lesson from the 2026-08-24 miss. And limits.artists is DECLARED, NOT ENFORCEABLE, because nothing in the product can add a second artist to a team (one artists row per workspace, no artist input on the create modal), so "Up to 5 artists" is a knowing exception to the standing do-not-market-multi-artist note, raised with the founder's brief and shipped as asked; the number still lives in @urganize/pricing so the page quotes the field a future check will read. No changelog entry or version bump — everything a user sees is apps/homepage, which the app-only scope rule excludes. Nothing was seen in a browser; the four-across row at ≥1280px is the one thing worth a look. Previously, 2026-08-29: **the release back arrow terminates now — shipped as v1.5.4** — see "It was still a trap: nav-history was one slot, not a stack" under "The workspace back arrow goes back now". The 2026-08-25 fix made the arrow do something; it did not make it terminate. lib/nav-history held a current+previous PAIR, and recording a navigation moves current into previous — so a back press pushed the previous page and simultaneously wrote the page it just left into the slot, sending the next press straight back. Two surfaces read that one slot (this arrow and Settings'), so the loop was one tap wide: release → Settings → back → release → back → Settings → forever. Same loop between any two workspace URLs — two releases reachable via UrgAns, the bell, a note chip or the desktop rails. It is a bounded stack now, and the rule that makes back terminate is that navigating to the entry directly BENEATH the top pops instead of pushing (it cannot tell our button from browser Back or an edge swipe, and must not). readPreviousLocation kept its signature, so neither call site changed and Settings is fixed by the same edit. Three things not to undo: only ONE step down counts as a pop; resolveWorkspaceBackTarget's same-release rejection STAYS, because scene switches replace and append with no matching pop; and the new "already here" rejection reads window.location at click time, never a render-time copy. Mutation-tested both guards. Deploy carries a deliberate one-tap degradation — open tabs hold the old keys, so the first press after deploy finds an empty trail and falls to its safe floor. Not pressed in a browser. Same day, earlier: **the assignee picker is a dropdown now — shipped as v1.5.3** — see "The assignee picker became a dropdown" near the end of this file. Its text input raised the phone keyboard over the list it was meant to show, so TaskMemberCombobox is deleted and TaskMemberSelect (a button over a role=listbox panel, the NoteReleasePicker pattern) replaces it at all three call sites. Search was dropped outright rather than hidden on mobile: Manager caps a team at four seats, and a viewport-conditional control means two code paths for one picker. It also deletes the bug class v1.5.2 had guarded — both of those defects existed only because the display and the filter were one field. Same day, earlier: **the assignee picker hid the team, and fields zoomed on tap — shipped as v1.5.2** — see "The assignee picker hid the team" near the end of this file. The picker filtered its list by the current assignee's name, so an already-assigned activity offered only that person; the guard now lives in filterMembersForPicker (lib/tasks.ts) and is the second copy of one ReleaseCombobox already carried — keep them in step. Blurring an empty box no longer unassigns, PlanTaskRow seeds its query, and TaskDetailView's seed effect is keyed on task?.id. Separately, one (pointer: coarse) rule sets form controls to 16px, since this project's type scale sits under iOS's auto-zoom threshold nearly everywhere; the !important is load-bearing against Tailwind specificity, and pinch/double-tap zoom were ALREADY closed by touch-action: pan-y. Same day, earlier: **the release scenes are team-aware, shipped as
 v1.5.1** — see "Scenes opened to the team: one release-access rule" above. A
 teammate opening Collect metadata on a release they could see everywhere got
 "Release not found.", because every scene route group carried an accidental
@@ -6308,6 +6308,120 @@ different questions.
   notification ask.
 
 ---
+
+---
+
+## Chappi, the mascot (2026-08-30, v1.9.0)
+
+The character from `chappi-model-sheet-v1.html` (Draft 01, Aug 2026), built as
+one shared component and wired to real states. **Not a scope expansion:**
+nothing new is stored, no route is added that a customer reaches, and no line
+moves off the out-of-scope list — this is chrome on surfaces that already
+shipped, the same footing as the mobile scene-nav rework and the
+Collect-metadata cards. **No feature flag** (the same founder-driven-UX-rework
+precedent), no migration, and no new dependency.
+
+`packages/ui/src/Chappi.tsx` plus `chappi-constants.ts`, both exported from the
+package index. Six poses — idle, pointing, thinking, celebrating, carrying,
+resting.
+
+**Every path, transform, colour and weight is copied from the sheet.** Nothing
+is redrawn and nothing is approximated, so the proportions it states hold
+exactly: outline 0.047 H = 7, mouth 0.054 H = 8, ear cup 0.31 H = 46, eye width
+0.23 H = 34, eye centres 0.38 H = 56, body 1.70 H = 252, eye line 58% of body,
+mouth line 77%, hover gap tip-to-shadow 0.23 H = 34, smallest legible size 64px
+wide. If the sheet is revised, re-copy from it rather than nudging numbers.
+
+**Seven things worth knowing before editing this:**
+
+1. **The hands are ONE mitten placed by the sheet's own transform strings**
+   (`translate(76,250) rotate(-12)`, and so on), not twelve baked paths. The
+   sheet says a pose differs only in eyes, mouth and hand TRANSFORMS, and
+   keeping them as transforms is what makes that literally true in the code —
+   a new pose is three strings, which is the whole reason he has no arms.
+2. **The shadow is part of him, not decoration.** `<ellipse cx=200 cy=372
+   rx=76 ry=13>` at 45% black under a `feGaussianBlur` — the sheet's part 05,
+   "he hovers, one shadow ellipse drops him onto any surface", and the reason
+   the hover gap is a stated proportion. It rides INSIDE the float group, as
+   in the sheet, and its blur is static: nothing here animates a filter.
+3. **That filter is the only reason the component is `'use client'`.** An SVG
+   filter needs an id, and the id has to be per instance: a shared literal
+   works until the FIRST instance unmounts, at which point every later one
+   silently loses its blur and hardens into a black ellipse — and two Chappis
+   sit in the DOM at once wherever this repo splits mobile and desktop
+   branches by CSS. `useId` is the fix and `useId` is a hook.
+4. **Which is why the plain data lives in `chappi-constants.ts`.** A client
+   module's exports reach a Server Component as opaque client references, not
+   values, so a server-rendered page importing `CHAPPI_POSES` from
+   `Chappi.tsx` gets a proxy it cannot map over. `/admin/chappi` is exactly
+   that case and it broke the first time this was tried — the page rendered
+   its nav and nothing else. Keep new constants in the constants file.
+5. **The viewBox is the sheet's pose box with the hero's lower edge**, and
+   `overflow: visible` on top. Neither box the sheet draws contains every
+   pose: the pose box (`66 60 268 330`) crops the shadow's blur, and BOTH
+   crop pointing's raised hand, which reaches x≈357 — visibly clipped in the
+   sheet's own pointing card. Every pose shares this one box deliberately, so
+   swapping one for another cannot resize him or shift the layout around him.
+6. **`EmptyState`'s `mascot` prop is opt-in per call site, and that is a
+   correctness guard rather than a style choice.** That component backs eight
+   empty states and two can be on screen at once: an account with no releases
+   has an empty releases column AND an empty activity list. Rendering him
+   inside `EmptyState` unconditionally would put two on one screen. For the
+   same reason `TasksPanel` shows him only alongside the SCOPED wording — no
+   release scoped means no release list beside it that could be full.
+7. **Celebrating sits on the Motion readout, deliberately NOT in a toast or a
+   sheet.** Task completion already has a three-way contest for the one bottom
+   surface (cover art ask, then the check-in, then the undo toast — see
+   `useTaskStore.completeTask`), and a fourth claimant would either lose every
+   time or push a real question off screen. `ReleaseDeliveredMark` holds the
+   "every activity done" rule ONCE so the mobile strip (`WorkspaceView`) and
+   the desktop one (`WorkspaceDesktopFocused`) cannot disagree. A release with
+   no activities is not delivered: 0 of 0 is empty, not finished.
+
+**On our dark theme his hood disappears, and that is correct.** `bg-bg-base` in
+dark is `rgb(13,18,14)` — byte-identical to the ink he is outlined in — so he
+reads as a floating cream face with the spring ear rings marking the hood. That
+is exactly how the sheet's own pose cards render him (`#101710`, flat, no
+glow), so no glow container is used at any in-app placement. `CHAPPI_GLOW` is
+the sheet's hero stage gradient, exported for a surface that wants that
+treatment; note it is a dark green wash, NOT flat forest, because forest at
+full strength behind an ink hood fights the outline it is meant to reveal.
+
+**Where he is wired:** thinking replaces the `Loader2` spinner in the UrgAns
+transcript (page, dock and rail); idle on the assistant page's empty landing
+(page variant only, joining the existing `flex-1` region rather than becoming a
+third one — the two-region split is what three rejected attempts landed on) and
+beside the onboarding greeting on step 0; resting on the releases empty state
+(mobile column and desktop grid), the scoped activities empty state and the
+notes empty state; celebrating at 100% Motion. `pointing` and `carrying` are
+built and previewed but placed nowhere — they are for marketing surfaces.
+
+**One copy fix the sheet forced.** Its voice rules bind every string rendered
+next to him, and one of them is that he never says "workspace" ("that word
+stays out of anything a customer reads"). Onboarding's signup branch said "A
+few questions before we set up your workspace." Both branches now say the
+authed-setup branch's line, which was already true and already clean.
+
+**Preview:** `/admin/chappi` — all six poses at 64, 96 and 160, the dark
+surface with the stage gradient, and a static row. Internal, like the rest of
+`/admin`; it reads no data, so unlike its neighbours it has no backing API
+acting as the guard.
+
+- **Verified:** 1718 tests, `eslint .` at the exact measured baseline (3 errors
+  / 66 warnings, all pre-existing in `WorkspaceView.tsx`, confirmed by linting a
+  stashed tree), homepage lint clean, and `next build` green **by exit code**
+  for both apps with `/auth`, `/onboarding`, `/settings` and `/admin/chappi` all
+  `○ Static`. Rendered in a real headless Chromium and compared side by side
+  against the sheet's own pose grid, served locally and screenshotted: all six
+  poses match, on both the cream and the dark ground, with the onboarding
+  placement checked at 900 and 375.
+- **Not verified:** the four authenticated placements — the UrgAns thinking row,
+  the assistant empty landing, the two empty states and the delivered mark —
+  have never rendered, because this sandbox cannot mint a session and has no
+  route to app.urganize.app. They rest on the component being proven, the build,
+  and traced call paths. Worth one pass: ask UrgAns something and watch the
+  spinner row, then finish the last activity on a release and check the Motion
+  strip.
 
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:

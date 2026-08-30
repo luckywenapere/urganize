@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -1026,6 +1027,10 @@ export function WorkspaceView() {
                     <span className="shrink-0 font-mono text-[11px] font-semibold text-content-primary">
                       {scopedTasks.filter((t) => t.status === 'done').length}/{scopedTasks.length}
                     </span>
+                    <ReleaseDeliveredMark
+                      total={scopedTasks.length}
+                      done={scopedTasks.filter((t) => t.status === 'done').length}
+                    />
                   </div>
                 )}
                 {newReleaseGuideBanner}
