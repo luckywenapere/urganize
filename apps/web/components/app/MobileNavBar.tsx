@@ -45,13 +45,51 @@ function SongTabLink({ href, isActive }: { href: string; isActive: boolean }) {
   );
 }
 
+/** Home's markup. Same split as Song's, for the same reason: the Suspense
+ *  fallback and the resolved tab must stay pixel-identical. */
+function HomeTabLink({ isActive, onClick }: { isActive: boolean; onClick: () => void }) {
+  return (
+    <Link
+      href="/dashboard"
+      onClick={onClick}
+      aria-current={isActive ? 'page' : undefined}
+      className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
+        isActive ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
+      }`}
+    >
+      <CatalogIcon className="h-5 w-5" />
+      Home
+    </Link>
+  );
+}
+
+/**
+ * Hidden on the bare catalog — `/dashboard` with no `?release=` — because
+ * that is where the tap would land you already (founder call, 2026-08-30).
+ * Shown everywhere else, a scoped `/dashboard?release=<id>` included, so
+ * leaving a scoped release still has its own way back to the catalog.
+ *
+ * ISOLATED BEHIND ITS OWN SUSPENSE BOUNDARY for the reason SongTab's own
+ * header gives below: `useSearchParams` in a statically prerendered client
+ * component pulls the nearest boundary down with it, and this bar is mounted
+ * on `/settings` too, which must stay `○ Static`.
+ */
+function HomeTab({ isHome, onClick }: { isHome: boolean; onClick: () => void }) {
+  const searchParams = useSearchParams();
+  if (isHome && !searchParams.get('release')) return null;
+  return <HomeTabLink isActive={isHome} onClick={onClick} />;
+}
+
 /**
  * Song is a release SCENE, not a global page, so this tab is the one entry in
  * the bar whose destination depends on the URL: `?release=<id>&scene=song`
  * when a release is scoped, the catalog otherwise (which is where you pick
- * one). It is rendered in every case rather than appearing only while scoped —
- * a tab that comes and goes would reflow the whole bar on every scope change,
- * the same layout-shift the Pitches tab's tri-state read is written to avoid.
+ * one) — EXCEPT on the bare catalog itself, where that fallback link would
+ * just point back at the screen already on-screen, so it hides there too
+ * (the same bare-home rule as Home, above). Everywhere else it is rendered
+ * unconditionally rather than appearing only while scoped — a tab that comes
+ * and goes would reflow the whole bar on every scope change, the same
+ * layout-shift the Pitches tab's tri-state read is written to avoid.
  *
  * ISOLATED BEHIND ITS OWN SUSPENSE BOUNDARY, and that is not stylistic:
  * `useSearchParams` in a statically prerendered client component makes Next
@@ -66,7 +104,10 @@ function SongTab({ isHome }: { isHome: boolean }) {
   const searchParams = useSearchParams();
   const releaseId = searchParams.get('release');
 
-  if (!releaseId) return <SongTabLink href="/dashboard" isActive={false} />;
+  if (!releaseId) {
+    if (isHome) return null;
+    return <SongTabLink href="/dashboard" isActive={false} />;
+  }
 
   // Already on the workspace: keep its params, so opening Song does not throw
   // away the calendar's remembered tab and month (SCENE_SCOPED_PARAMS, which
@@ -112,12 +153,18 @@ function SongTab({ isHome }: { isHome: boolean }) {
  * `lg`, so without it a dual account had to open a second tab to reach its own
  * inbox.
  *
+ * Home and Song both drop out on the bare catalog (`/dashboard` with no
+ * `?release=`) — see HomeTab's and SongTab's own headers for why. So the bar
+ * is shorter by two on the one screen it opens on, and fills back in the
+ * moment a release is scoped or another page is reached.
+ *
  * WIDTH. Every slot is `flex-1` in a full-bleed `<ul>`, so the budget is the
  * viewport split evenly. The worst case is all four optional tabs at once
  * (Song + Notes + Pitches, seven slots): 375 / 7 = ~53px, against a widest
  * label of "Pitches" at ~45px and a 48px center button, so nothing wraps or
- * clips. Production today runs five or six. An EIGHTH slot would not fit —
- * that bar needs a different shape, not another `flex-1`.
+ * clips. Production today runs five or six (fewer still on the bare catalog,
+ * where Home and Song are gone). An EIGHTH slot would not fit — that bar
+ * needs a different shape, not another `flex-1`.
  *
  * The bar shows on every route AppShell mounts it on, /dashboard/urgans
  * included — hiding it there would leave the assistant page with no way out
@@ -209,17 +256,9 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
     >
       <ul className="flex h-16 w-full items-stretch">
         <li className="flex-1">
-          <Link
-            href="/dashboard"
-            onClick={handleHomeClick}
-            aria-current={isHome ? 'page' : undefined}
-            className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-              isHome ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
-            }`}
-          >
-            <CatalogIcon className="h-5 w-5" />
-            Home
-          </Link>
+          <Suspense fallback={<HomeTabLink isActive={isHome} onClick={handleHomeClick} />}>
+            <HomeTab isHome={isHome} onClick={handleHomeClick} />
+          </Suspense>
         </li>
 
         {CHAPPI_ENABLED ? (
