@@ -243,3 +243,70 @@ export async function ensureSetlistAccess(
     artistId: eventAccess.artistId,
   };
 }
+
+export type SongAccessResult =
+  | { error: NextResponse }
+  | { song: Record<string, unknown>; ownerUserId: string; artistId: string };
+
+/** Same two constraints as the other not-found strings. */
+export const SONG_NOT_FOUND_MESSAGE = 'Song not found.';
+
+/**
+ * Who may touch a song: whoever may touch its artist's work.
+ *
+ * A song has no release, so decideReleaseAccess is fed the song's own owner
+ * and artist — the two fields the rule actually reads. Same rule, third object
+ * type (see ensureEventAccess for why this is reused rather than cloned).
+ */
+export async function ensureSongAccess(
+  adminClient: SupabaseClient | null,
+  songId: string,
+  user: User,
+  write: boolean
+): Promise<SongAccessResult> {
+  if (!adminClient) {
+    return {
+      error: NextResponse.json({ error: 'Server environment is not configured.' }, { status: 500 }),
+    };
+  }
+
+  const { data, error } = await adminClient
+    .from(SONGS_TABLE)
+    .select(SONG_COLUMNS)
+    .eq('id', songId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      error: NextResponse.json(
+        { error: error.message || 'Could not load the song.' },
+        { status: 500 }
+      ),
+    };
+  }
+  if (!data) {
+    return { error: NextResponse.json({ error: SONG_NOT_FOUND_MESSAGE }, { status: 404 }) };
+  }
+
+  const song = asRow(data);
+  const ownerUserId = String(song.owner_user_id || '');
+  const artistId = String(song.artist_id || '');
+
+  const access = await loadWorkspaceAccessContext(adminClient, user);
+  const decision = decideReleaseAccess({
+    releaseOwnerId: ownerUserId,
+    releaseArtistId: artistId,
+    userId: user.id,
+    access,
+    write,
+  });
+
+  if (decision === 'not_found') {
+    return { error: NextResponse.json({ error: SONG_NOT_FOUND_MESSAGE }, { status: 404 }) };
+  }
+  if (decision === 'read_only') {
+    return { error: buildReadOnlyResponse() };
+  }
+
+  return { song, ownerUserId, artistId };
+}

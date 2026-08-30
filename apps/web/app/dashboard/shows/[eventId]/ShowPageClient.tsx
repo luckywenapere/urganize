@@ -7,6 +7,7 @@ import { ArrowLeft, CalendarDays, MapPin, Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { EVENT_STATUS_COPY, formatShowDateTime, shortTimezoneLabel } from '@/lib/events';
 import { SetlistBuilder } from '@/components/events/SetlistBuilder';
+import { DjPackPanel } from '@/components/events/DjPackPanel';
 import type { RunOfShowItem, Setlist, ShowEvent } from '@/types/events';
 
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
@@ -236,12 +237,21 @@ export default function ShowPageClient() {
 
         <div className="mt-4">
           {activeSetlist ? (
-            <SetlistBuilder
-              key={activeSetlist.id}
-              setlistId={activeSetlist.id}
-              artistId={event.artistId}
-              setLengthMinutes={event.setLengthMinutes}
-            />
+            <>
+              <SetlistBuilder
+                key={activeSetlist.id}
+                setlistId={activeSetlist.id}
+                artistId={event.artistId}
+                setLengthMinutes={event.setLengthMinutes}
+              />
+              <div className="mt-6">
+                <DjPackPanel
+                  key={`pack-${activeSetlist.id}`}
+                  setlistId={activeSetlist.id}
+                  showTitle={event.title}
+                />
+              </div>
+            </>
           ) : (
             <p className="rounded-xl border border-dashed border-stroke-default p-6 text-center text-sm text-content-secondary">
               No set built yet. Start one and the running total will tell you whether it fits the{' '}
