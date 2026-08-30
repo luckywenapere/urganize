@@ -26,15 +26,23 @@ import {
   PUSH_PROMPT_SNOOZE_VERSION,
   pushPromptSnoozeKey,
 } from '@/lib/push-prompt';
+import { isInstallPromptOwed, subscribeInstallPromptSettled } from '@/lib/install-prompt';
 
 const NATIVE_PUSH_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NATIVE_PUSH === 'true';
 const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
+const INSTALL_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_INSTALL_PROMPT === 'true';
 
 /** Let the app settle before asking. A permission card that lands in the same
  * frame as the dashboard reads as a toll gate. Not a fix for the overlap with
  * the other first-login surface (WhatsNewModal) — the z-tier below is that —
  * just good manners. */
 const ASK_DELAY_MS = 6000;
+
+/** Shorter than ASK_DELAY_MS on purpose: this one follows a card the user
+ * just dismissed, so it is a continuation rather than an arrival, and six
+ * seconds of nothing would read as the dismissal having done something. Long
+ * enough that the two cards do not appear to swap in the same frame. */
+const INSTALL_HANDOFF_DELAY_MS = 900;
 
 const isTrue = (value: unknown): value is true => value === true;
 
@@ -98,6 +106,13 @@ export function PushPermissionPrompt() {
 
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let unsubscribe: (() => void) | undefined;
+
+    const showAfter = (delayMs: number) => {
+      timer = setTimeout(() => {
+        if (!cancelled) setIsVisible(true);
+      }, delayMs);
+    };
 
     void (async () => {
       let status: PushStatus;
@@ -126,9 +141,26 @@ export function PushPermissionPrompt() {
       const decision = decidePushPrompt({ status, permission, snoozed });
 
       if (decision === 'ask') {
-        timer = setTimeout(() => {
-          if (!cancelled) setIsVisible(true);
-        }, ASK_DELAY_MS);
+        // SEQUENCING (founder request, 2026-08-30): where an install is on
+        // offer, that card goes first and this one follows only if it is
+        // turned down. Holding costs an ask in a session where the user never
+        // browsed enough to be offered the install — and that is the right
+        // trade rather than a regression, because a browser grants exactly
+        // one permission prompt per origin, forever: spending it on someone
+        // who opened one page and left is how an origin gets Blocked for
+        // good. On iOS the order is not even a preference — Apple exposes
+        // Notification only to Home Screen apps, so isPushSupported() is
+        // false in a Safari tab and this effect has already returned above.
+        if (INSTALL_PROMPT_ENABLED && isInstallPromptOwed()) {
+          unsubscribe = subscribeInstallPromptSettled((outcome) => {
+            unsubscribe?.();
+            unsubscribe = undefined;
+            if (cancelled || outcome !== 'declined') return;
+            showAfter(INSTALL_HANDOFF_DELAY_MS);
+          });
+          return;
+        }
+        showAfter(ASK_DELAY_MS);
         return;
       }
 
@@ -148,6 +180,7 @@ export function PushPermissionPrompt() {
     return () => {
       cancelled = true;
       if (timer) clearTimeout(timer);
+      unsubscribe?.();
     };
   }, [native, userId]);
 

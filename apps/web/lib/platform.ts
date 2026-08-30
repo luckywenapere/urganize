@@ -39,3 +39,45 @@ export function isAndroidBrowser(): boolean {
   if (isNativePlatform()) return false;
   return /Android/i.test(window.navigator.userAgent);
 }
+
+/**
+ * True only for a plain iOS browser tab — the mirror of isAndroidBrowser(),
+ * and used for the same job: steering a mobile-web visitor toward an
+ * installed app. Never true inside the Capacitor native shell.
+ *
+ * iPadOS 13+ is the reason this is not a one-line UA test: it reports itself
+ * as "Macintosh" specifically so sites stop serving it the phone layout, so
+ * the only reliable tell is a Mac platform string with a touch screen —
+ * desktop Safari reports maxTouchPoints 0.
+ */
+export function isIOSBrowser(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (isNativePlatform()) return false;
+  const nav = window.navigator;
+  if (/iPad|iPhone|iPod/i.test(nav.userAgent)) return true;
+  return nav.platform === 'MacIntel' && nav.maxTouchPoints > 1;
+}
+
+/**
+ * Is this page running as an INSTALLED app rather than a browser tab?
+ *
+ * Two checks because the two platforms answer differently: `display-mode`
+ * is the standard (Android/Chrome, and iOS 16.4+ Home Screen apps), while
+ * `navigator.standalone` is the non-standard Safari property that has
+ * reported this since long before the media query did. Either being true is
+ * enough; matchMedia is guarded because it throws on an unsupported query
+ * string in some older engines.
+ *
+ * NOT the same question as isNativePlatform(): that one asks "are we inside
+ * the Capacitor shell", this asks "did the user add us to their Home Screen".
+ */
+export function isStandaloneDisplay(): boolean {
+  if (typeof window === 'undefined') return false;
+  const iosStandalone = (window.navigator as Navigator & { standalone?: boolean }).standalone;
+  if (iosStandalone === true) return true;
+  try {
+    return window.matchMedia('(display-mode: standalone)').matches;
+  } catch {
+    return false;
+  }
+}
