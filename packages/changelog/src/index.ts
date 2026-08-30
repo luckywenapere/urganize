@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.8.1",
+    date: "August 30, 2026",
+    highlights: [
+      "The back arrow next to a release name now always takes you to your list of releases. It used to guess where you came from, and it guessed wrong a lot.",
+    ],
+  },
+  {
     version: "1.8.0",
     date: "August 30, 2026",
     highlights: [

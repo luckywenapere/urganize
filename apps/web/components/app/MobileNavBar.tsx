@@ -8,6 +8,7 @@ import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
+import { rememberScene } from '@/lib/scene-memory';
 import { CatalogIcon, ChappiIcon, NotesIcon, ProfileIcon } from '@/components/app/BrandIcons';
 
 // Same flags AppTopbar reads — a tab only exists in the bar when its surface
@@ -140,6 +141,28 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
   // pop in and shift the other five mid-load.
   const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
 
+  // Home while a release is scoped means "leave this release", exactly like the
+  // workspace back arrow — the founder asked for the two to match (2026-08-30:
+  // "clicking home while in task view should lead them to catalog view, same
+  // thing for that back button, always").
+  //
+  // The `<Link>` already does the leaving: `/dashboard` carries no query, so it
+  // drops `?release=` and `?scene=` together and lands on the catalog. What was
+  // missing is the other half of leaving — forgetting the scene the release was
+  // showing, so tapping that release again starts at Activities rather than
+  // resuming the scene the user just walked out of. WorkspaceView's goBack gets
+  // this from setScope's `forgetScene`; there is no setScope here, so it calls
+  // rememberScene directly. Same end state, one rule.
+  //
+  // Reads `?release=` fresh at click time for the reason SongTab's header
+  // gives: an answer on demand, not a subscription that would drag the whole
+  // bar behind a Suspense boundary.
+  const handleHomeClick = () => {
+    if (typeof window === 'undefined' || !isHome) return;
+    const releaseId = new URLSearchParams(window.location.search).get('release');
+    if (releaseId) rememberScene(releaseId, null);
+  };
+
   const handleUrgAnsClick = () => {
     // Carry the drilled-in release as the assistant's scope, mirroring
     // ChappiTopbarAction's stacked (below-lg) branch — this bar only ever
@@ -188,6 +211,7 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
         <li className="flex-1">
           <Link
             href="/dashboard"
+            onClick={handleHomeClick}
             aria-current={isHome ? 'page' : undefined}
             className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
               isHome ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
