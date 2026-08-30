@@ -6048,27 +6048,53 @@ release. `POST /api/releases/[releaseId]/artist` is that fix. **No migration.**
 **`releases.artist_id` IS NOT DECLARED IN ANY MIGRATION.** The only mention
 across `supabase/migrations/` is a plpgsql local variable; the column exists in
 production and `20260602010000` sets it NOT NULL, but its original definition —
-**including whether it carries a foreign key to `artists`** — was never captured.
-Pre-reconciliation drift, and it decides the delete design:
+**including its foreign key to `artists`** — was never captured.
+Pre-reconciliation drift. Anything that ever recreates this column must
+re-declare that constraint, or it vanishes silently.
 
-- **With a foreign key**, Postgres already refuses to delete an artist who has
-  releases, and the app only needs to say so politely.
-- **Without one**, the delete succeeds and leaves releases pointing at a dead id.
-  Nothing looks broken (the name is cached on the release) but a scoped teammate
-  silently loses them and they can never be re-filed, because that artist is off
-  the roster. Settle it with:
-  `select conname, confdeltype from pg_constraint where conrelid =
-  'public.releases'::regclass and confrelid = 'public.artists'::regclass;`
+**ANSWERED against production, 2026-08-30, and the answer was a third case
+neither prediction covered.** The constraint is
+`releases_artist_id_fkey` with `confdeltype = 'n'` — **`ON DELETE SET NULL`** —
+**while the column itself is NOT NULL.** Those two contradict each other, and
+that contradiction IS the current behaviour:
 
-**The recommended rule when it is built: allow delete only for an artist with no
-releases AND nobody scoped to them.** Cascading would destroy release history
-behind a button labelled "delete artist"; reassigning-on-delete hides a data
-decision inside a delete. Both refusals are things a manager can act on, and the
-scoped-member check is what closes the `ON DELETE SET NULL` privacy hole. Note
-the honest scope: a typo is a rename, and an artist who left still has releases,
-so delete is really "undo adding one by mistake" — which the artists ceiling
-makes worth having, since on Manager a stray artist permanently costs one of five
-slots.
+- **An artist with no releases deletes cleanly.**
+- **An artist WITH releases cannot be deleted at all.** Postgres fires the SET
+  NULL, the resulting UPDATE violates the not-null constraint, and the whole
+  DELETE aborts. Nothing is orphaned and nothing is destroyed — so the safe
+  outcome holds, **but by accident**, and it surfaces as a raw not-null
+  violation rather than anything a user can act on.
+
+**THE LANDMINE, and the reason this is written down.** The foreign key DECLARES
+set-null as the intent; only the column's NOT NULL is stopping it. Relax that
+NOT NULL — or recreate the column without it, which the drift above makes easy —
+and every one of those refusals silently becomes a real set-null on live
+releases, with no error anywhere. A null `artist_id` then fails every
+`=== scope` comparison, so artist-scoped teammates lose those releases without a
+trace, and nothing on screen looks wrong because the artist NAME is cached on
+the release row. Do not treat the current refusal as a guarantee.
+
+**The recommended rule when it is built, unchanged by the answer above but now
+better founded: allow delete only for an artist with no releases AND nobody
+scoped to them.** Cascading would destroy release history behind a button
+labelled "delete artist"; reassigning-on-delete hides a data decision inside a
+delete. Both refusals are things a manager can act on, and the scoped-member
+check is what closes the `workspace_members.artist_scope_id` privacy hole (also
+`ON DELETE SET NULL`, where null means FULL visibility — so deleting an artist
+silently promotes a teammate scoped to them).
+
+**Two things that build should also do**, both following from the finding above:
+check the releases condition IN CODE so the refusal is a sentence rather than a
+not-null violation; and ship a migration changing
+`releases_artist_id_fkey` to **`ON DELETE RESTRICT`**, so the declared intent
+matches the column and the accidental refusal becomes a guaranteed one. That
+migration is also the moment to put the column and its constraint into version
+control for the first time.
+
+Note the honest scope: a typo is a rename, and an artist who left still has
+releases, so delete is really "undo adding one by mistake" — which the artists
+ceiling makes worth having, since on Manager a stray artist permanently costs one
+of five slots.
 
 - **Verified:** 1687 tests (5 new, both cached writes mutation-tested), `eslint .`
   at **3 errors / 66 warnings** — the one warning above the standing baseline is
