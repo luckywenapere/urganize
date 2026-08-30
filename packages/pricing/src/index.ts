@@ -344,7 +344,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     },
     limits: { artists: 5, seats: 4, activeReleases: 3, urgansMonthlyActions: 150 },
     perks: [
-      'The full 11-week rollout plan, written by hand',
+      'A full rollout plan, written by real managers',
       'Files, credits and press kits on every release',
       'Export everything you put in, any time',
       'Email support',
