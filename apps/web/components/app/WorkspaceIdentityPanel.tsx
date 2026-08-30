@@ -194,9 +194,42 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === "true";
  * hides it at lg-xl while the UrgAns rail is open (see the width-budget note
  * there) since two rails plus main would squeeze the center content.
  */
+/** One line of muted text under the team name. Shared so the Suspense fallback
+ *  and the resolved line cannot drift apart in size or colour. */
+function ArtistLine({ label }: { label: string }) {
+  if (!label) return null;
+  return (
+    <p className="mt-0.5 truncate text-xs text-content-secondary" title={label}>
+      {label}
+    </p>
+  );
+}
+
+/**
+ * Names the artist of whichever release you are looking at (founder call,
+ * 2026-08-30). Before rosters this line was always the team's one artist, which
+ * stops being a useful thing to say the moment a team has three.
+ *
+ * ISOLATED BEHIND ITS OWN SUSPENSE BOUNDARY, and that is not stylistic:
+ * `useSearchParams` in a statically prerendered client component makes Next
+ * bail out to the nearest boundary, and this card is mounted app-wide by
+ * AppShell — including on `/settings`, which must stay `○ Static`. Contained
+ * here, only this line waits. Do not lift the hook into the panel itself; that
+ * un-prerenders every page the card appears on, which is the documented trap
+ * `/auth` had to be dug out of.
+ */
+function ScopedArtistLine({ fallbackLabel }: { fallbackLabel: string }) {
+  const searchParams = useSearchParams();
+  const releases = useReleaseStore((state) => state.releases);
+  const scopedId = searchParams.get("release");
+  const scoped = scopedId ? releases.find((release) => release.id === scopedId) : null;
+  return <ArtistLine label={scoped?.artistName?.trim() || fallbackLabel} />;
+}
+
 export function WorkspaceIdentityPanel() {
   const name = useWorkspaceIdentityStore((state) => state.name);
   const artist = useWorkspaceIdentityStore((state) => state.artist);
+  const artistCount = useWorkspaceIdentityStore((state) => state.artistCount);
   const memberCount = useWorkspaceIdentityStore((state) => state.memberCount);
   const logo = useWorkspaceIdentityStore((state) => state.logo);
   const isAdmin = useWorkspaceIdentityStore((state) => state.isAdmin);
@@ -263,6 +296,12 @@ export function WorkspaceIdentityPanel() {
   const activeReleaseCount = releases.filter((release) =>
     isReleaseActive(release.status),
   ).length;
+
+  // What this line says when no release is scoped. One artist keeps naming
+  // them, which is what this card has always done; several says how many,
+  // because naming just the first would read as "the team's artist".
+  const rosterLabel =
+    artistCount > 1 ? `${artistCount} artists` : (artist?.name ?? "");
 
   const showSkeleton = !hydrated;
 
@@ -380,14 +419,9 @@ export function WorkspaceIdentityPanel() {
               >
                 {name || "Your workspace"}
               </p>
-              {artist ? (
-                <p
-                  className="mt-0.5 truncate text-xs text-content-secondary"
-                  title={artist.name}
-                >
-                  {artist.name}
-                </p>
-              ) : null}
+              <Suspense fallback={<ArtistLine label={rosterLabel} />}>
+                <ScopedArtistLine fallbackLabel={rosterLabel} />
+              </Suspense>
 
               <p className="mt-3 text-[11px] text-content-tertiary">
                 {memberCount} teammate{memberCount === 1 ? "" : "s"} ·{" "}

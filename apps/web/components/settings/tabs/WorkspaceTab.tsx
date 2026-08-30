@@ -63,14 +63,15 @@ export function WorkspaceTab({ workspace }: WorkspaceTabProps) {
 
       {WORKSPACE_FEATURE_ENABLED && (
         <WorkspaceArtistSection
-          artist={workspace.artist}
-          input={workspace.artistInput}
-          onInputChange={workspace.setArtistInput}
-          isLoading={workspace.isLoadingArtist}
-          isSaving={workspace.isSavingArtist}
+          artists={workspace.artists}
+          artistLimit={workspace.artistLimit}
+          isLoading={workspace.isLoadingArtists}
+          savingArtistId={workspace.savingArtistId}
+          isAdding={workspace.isAddingArtist}
           message={workspace.artistMessage}
           error={workspace.artistError}
-          onSave={workspace.saveArtist}
+          onRename={workspace.renameArtist}
+          onAdd={workspace.addArtist}
         />
       )}
 

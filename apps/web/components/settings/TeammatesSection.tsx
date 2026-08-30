@@ -22,6 +22,8 @@ type TeammatesSectionProps = {
    *  tier has one; an unresolvable tier is null too, so the badge and the
    *  disabled states simply do not appear. */
   seatLimit?: number | null;
+  /** The team's real roster, for scoping an artist invite. */
+  artists?: { id: string; name: string }[];
 };
 
 /**
@@ -37,6 +39,7 @@ export function TeammatesSection({
   onTeammatesChange,
   onRefetch,
   seatLimit = null,
+  artists,
 }: TeammatesSectionProps) {
   const user = useAuthStore((state) => state.user);
   // getRolePermissions returns a fresh object each call -- select the
@@ -53,11 +56,18 @@ export function TeammatesSection({
   const seatsUsed = teammates.length;
   const atSeatLimit = seatLimit !== null && seatsUsed >= seatLimit;
 
-  // Distinct artists on the roster, derived from the releases already in the
-  // store — the picker for ARTIST invites (an artist only sees their own
-  // releases; founder decision, 2026-07-23).
+  // The picker for ARTIST invites (an artist only sees their own releases;
+  // founder decision, 2026-07-23).
+  //
+  // READS THE REAL ROSTER, and falling back to deriving it from releases is a
+  // regression, not a simplification. It was derived that way until 2026-08-30,
+  // which meant an artist with no releases yet could not be scoped to at all —
+  // and that is exactly the artist you have just added and are about to invite.
+  // Releases remain the fallback only for a team whose roster has not loaded,
+  // so the picker never empties for someone who could use it a moment ago.
   const releases = useReleaseStore((state) => state.releases);
   const rosterArtists = useMemo(() => {
+    if (artists && artists.length > 0) return artists;
     const byId = new Map<string, string>();
     for (const release of releases) {
       if (release.artistId && !byId.has(release.artistId)) {
@@ -65,7 +75,7 @@ export function TeammatesSection({
       }
     }
     return Array.from(byId, ([id, name]) => ({ id, name }));
-  }, [releases]);
+  }, [artists, releases]);
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('viewer');

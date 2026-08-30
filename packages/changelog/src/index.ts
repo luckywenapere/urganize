@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.6.0",
+    date: "August 30, 2026",
+    highlights: [
+      "You can work with more than one artist now. Add them in Settings, and pick who a release is for when you create it.",
+      "Invite an artist and they only see their own releases. You can now do that for an artist who has no releases yet.",
+    ],
+  },
+  {
     version: "1.5.4",
     date: "August 29, 2026",
     highlights: [

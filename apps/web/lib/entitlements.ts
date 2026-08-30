@@ -39,7 +39,7 @@ export type Limit = number | typeof UNLIMITED;
 export type SupportChannel = 'email' | 'whatsapp_24h' | 'sla';
 
 export type Entitlements = {
-  /** Artists on the roster. DECLARATIVE ONLY today — see below. */
+  /** Artists on the roster. */
   artists: Limit;
   /** Active team members. UNLIMITED on label and enterprise: this is a
    *  coordination product, and a seat wall pushes half the release back into
@@ -76,14 +76,14 @@ export type Entitlements = {
 // behind NEXT_PUBLIC_FEATURE_DATA_EXPORT. That route is deliberately NOT behind
 // the paywall and has its own guard test — see lib/account-export.ts.)
 //
-// `artists` is DECLARATIVE ONLY, and it is not close to enforceable: nothing in
-// the product can add a second artist to a team. A workspace resolves ONE artist
-// row (`getWorkspaceArtist`), the create-release modal collects no artist input,
-// and every release on a team points at that same row — the one-artist rule is a
-// UI fact, not a schema one. So this key records the published ladder and gates
-// nothing, and it is deliberately absent from `CountableLimitKey` so `checkLimit`
-// cannot be pointed at it by accident. Enforcing it means building multi-artist
-// support first, at which point the number to read is already here.
+// `artists` IS ENFORCED as of 2026-08-30, when rosters shipped. It was declared
+// a week earlier with the Solo tier and gated nothing, because until then no
+// code path could add a second artist to a team. Two things about it worth
+// knowing here: like seats, it has TWO creation points (POST
+// /api/workspace/artists and the lookup-or-create branch inside POST
+// /api/releases), and capping only the first would leave the second open; and
+// it is the only ceiling whose count is not what the user sees listed, because
+// an artist with no releases yet still occupies a slot.
 //
 // `rollout_template_custom_save` is STILL DECLARATIVE ONLY, and reading it to
 // gate anything would gate a feature that does not exist: rollout templates are
@@ -294,7 +294,11 @@ export function resolveTeamTier(input: {
 /** The entitlement keys that carry a countable ceiling. Deliberately not every
  * key: the booleans are checked directly, and a limit only needs this shape
  * when there is a number to compare and copy to write. */
-export type CountableLimitKey = 'seats' | 'active_releases' | 'urgans_monthly_actions';
+export type CountableLimitKey =
+  | 'artists'
+  | 'seats'
+  | 'active_releases'
+  | 'urgans_monthly_actions';
 
 export type LimitVerdict =
   | { allowed: true; limit: Limit; current: number; remaining: number | null }
@@ -322,6 +326,8 @@ const tierLabel = (tier: PricingTierId): string => PRICING_TIERS[tier].label;
  */
 function limitMessage(key: CountableLimitKey, limit: number, tierLabel: string): string {
   switch (key) {
+    case 'artists':
+      return `${tierLabel} plans cover ${limit} ${limit === 1 ? 'artist' : 'artists'}. Upgrade to Label for unlimited artists.`;
     case 'seats':
       return `${tierLabel} plans include ${limit} people. Upgrade to Label for unlimited team members.`;
     case 'active_releases':

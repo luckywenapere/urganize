@@ -644,7 +644,7 @@ The artist data model is changing from "owner-scoped, free-text duplicates every
 - **`releases.artist_name`** is a write-through read-cache. UI surfaces (workspace card, scope pill, task drawer, release detail header) keep reading it because it is denormalized on the release row and avoids the join. Never mutate it directly — it gets clobbered on the next rename. Mutate through `artist_id`.
 - **`artists.owner_user_id`** is retained for the destruction model (`ON DELETE CASCADE` to `auth.users`), the existing RLS pattern, and three lookup paths in `app/api/releases/route.ts`. A follow-up will repoint those at `workspace_id` and drop `owner_user_id`.
 - **`profiles.artist_name`** is retired as an artist source. The legacy "Artist profile" editor in Settings writes to it but no longer feeds any new code path. **The column still has four live readers** (`components/support/SupportChat.tsx`, `app/api/admin/pricing-validation/route.ts`, `components/onboarding/useOnboardingWizard.ts` (the `firstName` derivation), plus the read-gate at `lib/auth-store.ts:454`). The column drop is staged in `supabase/migrations/99999999_artists_workspace_cleanup_DO_NOT_APPLY_YET.sql` and gated on those four readers being removed first.
-- **One-artist-per-workspace is UI-only.** The schema permits multiple artists per workspace (partial unique index allows many rows with NULL `workspace_id`; nothing prevents multiple non-NULL `workspace_id` rows with distinct slugs). Adding an "add another artist" affordance and listing UI lifts the limit without a migration.
+- ~~**One-artist-per-workspace is UI-only.**~~ **LIFTED 2026-08-30 — a team can hold several artists; see "Artist rosters" below.** This entry predicted the shape of that change exactly ("adding an 'add another artist' affordance and listing UI lifts the limit without a migration"), and that is what it took: no migration, because the schema has permitted many artists per workspace since Migration 2's partial unique index on `(workspace_id, slug)`.
 
 **Implicit-artist release create:** Behind the flag, `CreateReleaseModal` does not collect any artist input. `POST /api/releases` resolves the workspace (`ensureOwnedWorkspace`), looks up `getWorkspaceArtist(workspace.id)`, and uses that artist's id + name. If no workspace artist exists yet, the legacy lookup-or-create branch still fires but scopes the new artist row to the workspace via `workspace_id`. The implicit path is the new normal; the lookup-or-create branch is the recovery seam for first-release-in-new-workspace.
 
@@ -5835,18 +5835,15 @@ see the next point.
    every release points at that same row — the one-artist rule is a UI fact, not
    a schema one (the schema has always permitted many). So Solo's ceiling of 1 is
    what every account already gets, and Manager's 5 describes the offer rather
-   than a switch anyone can flip. **This is a knowing exception to the standing
-   "do not market multi-artist until the UI limit is lifted" note in the
-   workspace-scoped-artists section** — raised with the founder before merge and
-   shipped as asked, with the founder's answer being **"ship it, and build
-   multi-artist next"**, so the claim is meant to be caught up with rather than
-   left standing. **That build is the outstanding follow-up to this section.**
-   It is UI only: the schema has permitted many artists per workspace since
-   2026-06-02 (partial unique index on `(workspace_id, slug)`), so it needs a
-   listing surface plus an "add artist" affordance plus artist input on the
-   create-release path, and no migration. The ceiling to enforce once it exists
-   is already here as `limits.artists`. Until then it is kept out of
-   `CountableLimitKey` so `checkLimit` cannot be pointed at it by accident.
+   than a switch anyone can flip. It was a knowing exception to the standing
+   "do not market multi-artist until the UI limit is lifted" note — raised with
+   the founder before merge and shipped as asked, with the answer being "ship
+   it, and build multi-artist next". **That follow-up SHIPPED the same day —
+   see "Artist rosters" below — so this claim is true now**, and `artists` moved
+   from declarative to a real `CountableLimitKey` enforced at both creation
+   points. Left as written because the staging is the reusable part: a number
+   can be published one day and enforced the next precisely because it lived in
+   `limits` rather than in the card copy.
 3. **The number still lives in `@urganize/pricing`, not in the card copy.**
    `artists` joined `TierLimits` beside the three enforced ceilings and
    `tierHighlights` derives its line, so the page quotes the same field a future
@@ -5895,6 +5892,102 @@ move together.
   reach either urganize domain (the proxy answers 403 to CONNECT), so the signup
   destination is confirmed from `lib/app-urls.ts` and the `/onboarding` route
   existing and server-rendering its real form, not from opening it.
+
+---
+
+## Artist rosters (2026-08-30, v1.6.0)
+
+A team can hold several artists. Founder call, taken the same day the Solo tier
+advertised "Up to 5 artists" against a product that could not do it — the claim
+and the capability are back in step.
+
+**Not a scope expansion**, and barely a build: **no migration**. The schema has
+allowed many artists per workspace since Migration 2 (2026-06-02) swapped the
+artists unique index to a partial `(workspace_id, slug)`, and the
+workspace-scoped-artists section had predicted this exact change down to the
+work it would take. Three things turned out to be already built:
+
+- **`POST /api/releases` has always accepted an artist** — an `artistId`
+  authorised against workspace MEMBERSHIP (not just ownership), or an
+  `artistName` it looks up or creates. The create-release modal simply never
+  sent one, so the API half of "pick an artist" existed and was unreachable.
+- **Artist-scoped teammates already work, and were always multi-artist.**
+  `workspace_members.artist_scope_id` shipped 2026-07-23 and is enforced in
+  `decideReleaseAccess` (so eleven scene route groups plus the single-release
+  GET), `loadWorkspaceMembers`' task reads, the release list and the command
+  centre. It was near-pointless while a team had one artist.
+- **`getWorkspaceArtist`'s `.order('created_at').limit(1)`** was written as a
+  defensive tiebreak and quietly became the contract: the first row is the
+  team's original artist.
+
+**Six things worth knowing before editing this:**
+
+1. **The artists ceiling has TWO creation points, and capping one is capping
+   none.** `POST /api/workspace/artists` is the one a person uses;
+   the lookup-or-create branch inside `POST /api/releases` mints an artist for
+   any caller that names one we have not seen. Both call `checkArtistAllowance`.
+   This is the seat cap's lesson applied before it could bite rather than after.
+2. **Oldest-first ordering is a contract, not a display choice.** It decides
+   which artist an API call that names none is filed under, and which artist the
+   identity card falls back to. Mutation-tested: reversing it fails exactly one
+   named test.
+3. **Everything about the roster fails open.** An unreadable count, an
+   unresolvable tier, a failed roster fetch in the modal and a failed fetch in
+   Settings all degrade to the pre-roster behaviour rather than to an error. The
+   modal case is the sharpest: no roster means no picker and no `artistId`,
+   which drops straight back onto the server's implicit-artist path, so a
+   broken fetch can never block release creation.
+4. **The picker renders only when there is more than one artist**, the
+   release-type picker's precedent exactly. A one-artist team sees the form it
+   saw before this existed, and it preselects the first artist — the one the
+   server would have chosen anyway — so the picker changes what is VISIBLE,
+   never what a manager gets by leaving it alone.
+5. **The artist-scope invite picker reads the real roster now.** It derived its
+   list from existing RELEASES, so an artist with no releases yet could not be
+   scoped to — which is every artist you have just added and are about to invite
+   someone to. Releases remain the fallback only while the roster is loading, so
+   the picker never empties for someone who could use it a moment ago. This is
+   what makes "an artist only sees their own releases" reachable; the
+   enforcement behind it needed no change.
+6. **The identity card names the artist of whichever release you are looking
+   at** (founder call), falling back to the one artist's name, or to a count
+   once there are several — naming just the first would read as "the team's
+   artist". The `?release=` read sits in its own child component behind a
+   Suspense boundary, matching what that file already does for its nav:
+   `useSearchParams` in a statically prerendered client component bails out to
+   the nearest boundary, and this card is mounted app-wide including on
+   `/settings`, which must stay `○ Static`. **Do not lift that hook into the
+   panel body.**
+
+- **`/api/workspace/artist` (singular) is deleted**, not deprecated: it had one
+  consumer, which now reads the plural route. Its schema-missing-fallback
+  baseline entry was ratcheted out of `schema-fallback-guard.test.ts` — and that
+  guard earned its keep here, failing the build when the new routes were first
+  written by copying that route's error handling, which CLAUDE.md already
+  records as a grandfathered baseline rather than a template. Second time that
+  exact mistake has been caught by that test.
+- **There is deliberately no DELETE.** Removing an artist needs an answer for
+  their releases, and `artist_scope_id` is `ON DELETE SET NULL`, so deleting one
+  silently upgrades a teammate scoped to them into seeing everything. Neither
+  belongs in a route handler. **Existing releases stay with their original
+  artist when a second is added** (founder call) — nothing moves, and there is
+  no reassign-a-release path.
+- **Verified:** 1682 tests (11 new in `lib/artists-server.test.ts`, plus artist
+  ceiling coverage in `entitlements.test.ts` including that no pre-tier plan is
+  newly capped), `eslint .` at the exact 3-error / 65-warning baseline, and
+  `next build` green **by exit code** with `/auth`, `/onboarding` and
+  `/settings` still `○ Static`. Runtime probes in both flag states, rebuilding
+  between them: workspace flag ON, `/api/workspace/artists` 401s
+  unauthenticated and `/artists/[artistId]` 405s a GET (PATCH only); flag OFF it
+  404s while the ungated `/api/releases` still 401s — that discrimination is
+  what proves the gate rather than a routing accident. Two mutation tests, on
+  the roster ordering and on the counter's fail-open.
+- **Not verified:** nothing has run against a real database, so no artist has
+  actually been added, renamed, picked on a release, or scoped to an invite.
+  The owner UI needs an authenticated session this sandbox cannot mint. Worth
+  one live pass: add a second artist in Settings, create a release and confirm
+  the picker appears and files it correctly, invite someone scoped to the new
+  artist, and confirm they see only that artist's releases.
 
 ---
 

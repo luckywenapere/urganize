@@ -201,6 +201,7 @@ export default function SettingsPage() {
               onTeammatesChange={teammates.setTeammates}
               onRefetch={teammates.refetch}
               seatLimit={teammates.seatLimit}
+              artists={workspace.artists}
             />
           )}
           {activeTab === 'notifications' && <NotificationsTab />}
