@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { CalendarDays, Inbox, Plus } from 'lucide-react';
+import { Inbox, MicVocal, Plus } from 'lucide-react';
 import { Logo } from '@urganize/ui';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -553,7 +553,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
                 : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
             }`}
           >
-            <CalendarDays className="h-[18px] w-[18px]" aria-hidden />
+            <MicVocal className="h-[18px] w-[18px]" aria-hidden />
           </Link>
         ) : null}
 

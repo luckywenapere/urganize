@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.11.3",
+    date: "August 31, 2026",
+    highlights: [
+      "Shows has its own microphone icon now. It used to share the calendar icon with your content calendar, so on a big screen the two were hard to tell apart.",
+      "The content calendar is now just called Content.",
+    ],
+  },
+  {
     version: "1.11.2",
     date: "August 31, 2026",
     highlights: [
