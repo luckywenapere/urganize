@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.12.0",
+    date: "August 31, 2026",
+    highlights: [
+      "On your phone, the search button now searches your activities. Type a few letters and tap the one you want. It used to only look through the menu's own eight buttons, so it could never find an activity.",
+      "The menu button opens just the menu. The search box is gone from it, because search has its own place now.",
+    ],
+  },
+  {
     version: "1.11.3",
     date: "August 31, 2026",
     highlights: [
