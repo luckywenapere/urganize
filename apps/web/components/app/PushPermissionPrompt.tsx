@@ -143,14 +143,14 @@ export function PushPermissionPrompt() {
       if (decision === 'ask') {
         // SEQUENCING (founder request, 2026-08-30): where an install is on
         // offer, that card goes first and this one follows only if it is
-        // turned down. Holding costs an ask in a session where the user never
-        // browsed enough to be offered the install — and that is the right
-        // trade rather than a regression, because a browser grants exactly
-        // one permission prompt per origin, forever: spending it on someone
-        // who opened one page and left is how an origin gets Blocked for
-        // good. On iOS the order is not even a preference — Apple exposes
-        // Notification only to Home Screen apps, so isPushSupported() is
-        // false in a Safari tab and this effect has already returned above.
+        // turned down. Holding costs an ask in a visit the user leaves before
+        // the install card's minute is up — and that is the right trade
+        // rather than a regression, because a browser grants exactly one
+        // permission prompt per origin, forever: spending it on someone who
+        // opened one page and left is how an origin gets Blocked for good. On
+        // iOS the order is not even a preference — Apple exposes Notification
+        // only to Home Screen apps, so isPushSupported() is false in a Safari
+        // tab and this effect has already returned above.
         if (INSTALL_PROMPT_ENABLED && isInstallPromptOwed()) {
           unsubscribe = subscribeInstallPromptSettled((outcome) => {
             unsubscribe?.();

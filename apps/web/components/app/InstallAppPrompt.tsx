@@ -1,15 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Share, Smartphone, X } from 'lucide-react';
+import { MonitorDown, Share, Smartphone, X } from 'lucide-react';
 import {
   INSTALL_PROMPT_DELAY_MS,
+  armInstallPrompt,
   decideInstallPrompt,
+  markInstallPromptShown,
   markInstallPromptSettled,
-  readInstallPromptSettled,
-  readInstallPromptViews,
+  promptDeferredInstall,
+  readInstallPromptAccepted,
+  readInstallPromptState,
   resolveDeviceInstallVariant,
-  subscribeInstallPromptViews,
+  subscribeInstallAvailability,
   type InstallPromptOutcome,
   type InstallPromptVariant,
 } from '@/lib/install-prompt';
@@ -29,71 +32,126 @@ const ANDROID_DOWNLOAD_URL = 'https://urganize.app/download';
  * defined by nothing but a 6%-opacity border, and border-transparent keeps
  * the two buttons the same height. */
 const dismissButtonClass =
-  'motion-focus motion-press rounded-lg border border-transparent px-4 py-2 text-sm font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary';
+  'motion-focus motion-press rounded-lg border border-transparent px-4 py-2 text-sm font-semibold text-content-secondary hover:bg-bg-hover hover:text-content-primary disabled:opacity-60';
 
 const primaryButtonClass =
-  'motion-focus motion-press flex-1 rounded-lg border border-transparent bg-brand px-4 py-2 text-center text-sm font-semibold text-content-inverse hover:bg-brand-hover';
+  'motion-focus motion-press flex-1 rounded-lg border border-transparent bg-brand px-4 py-2 text-center text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60';
+
+const COPY: Record<
+  Exclude<InstallPromptVariant, null>,
+  { title: string; body: string; action: string }
+> = {
+  ios: {
+    title: 'Keep Urganize on your Home Screen',
+    body: 'It opens full screen, straight to your work — and it is the only way an iPhone will let us send you reminders.',
+    action: 'Got it',
+  },
+  android: {
+    title: 'Get the Urganize app',
+    body: 'The app opens faster than the browser and can send you reminders when work is due.',
+    action: 'Get the app',
+  },
+  desktop: {
+    title: 'Install Urganize',
+    body: 'It opens in its own window without the browser bar, and sits with your other apps.',
+    action: 'Install',
+  },
+};
 
 /**
- * "You've had a look around — put us on your Home Screen" (founder request,
- * 2026-08-30). Flag: NEXT_PUBLIC_FEATURE_INSTALL_PROMPT.
+ * "Put us on your Home Screen" — the install offer (founder request
+ * 2026-08-30, retriggered and widened 2026-08-31). Flag:
+ * NEXT_PUBLIC_FEATURE_INSTALL_PROMPT.
  *
- * Offered once someone has opened three distinct surfaces in a session —
- * the founder's "observed to be browsing through the different tabs" — and
- * answered once per device. lib/install-prompt.ts holds the counting, the
- * decision and the fail-closed storage rules.
+ * Offered a minute into every visit, once per visit, on any device that has
+ * an install to take. lib/install-prompt.ts holds the countdown, the
+ * once-per-visit rule, the durable accept and the fail-closed storage rules —
+ * including why the trigger stopped being behavioural on 2026-08-31.
  *
- * WHY THE iOS SIDE ONLY TEACHES. There is no beforeinstallprompt on iOS and
- * no API of any kind that opens Add to Home Screen: Apple routes it through
- * the share sheet and nothing on the page can reach it. So the iOS card is
- * instructions, and the button only acknowledges them. Pretending otherwise
- * would mean a primary button that visibly does nothing — the failure
- * PushPermissionPrompt's own header warns about for the permission dialog.
+ * WHY THE THREE VARIANTS ARE THREE DIFFERENT THINGS, and why none of them can
+ * be collapsed into the others:
  *
- * WHY ANDROID IS A LINK AND NOT A PWA INSTALL. There is a real Android build
- * (apps/mobile, distributed as an APK from the marketing site). Offering the
- * web app's install banner instead would put a second-best copy in front of
- * someone who can have the actual app, and it is what the founder asked for
- * in as many words.
+ *  - iOS can only ever be TAUGHT. There is no beforeinstallprompt on iOS and
+ *    no API of any kind that opens Add to Home Screen: Apple routes it through
+ *    the share sheet and nothing on the page can reach it. So the iOS card is
+ *    instructions and its button only acknowledges them. Pretending otherwise
+ *    would mean a primary button that visibly does nothing — the failure
+ *    PushPermissionPrompt's own header warns about for the permission dialog.
+ *
+ *  - Android gets a LINK, not a web install. There is a real Android build
+ *    (apps/mobile, distributed as an APK from the marketing site). Offering
+ *    the browser's PWA install instead would put a second-best copy in front
+ *    of someone who can have the actual app.
+ *
+ *  - Desktop is the only one the browser will actually do for us, and it is
+ *    offered ONLY once beforeinstallprompt has genuinely arrived. A desktop
+ *    Safari or Firefox visitor is shown nothing rather than a button that
+ *    cannot work — the same rule as the iOS branch, reached from the other
+ *    direction.
  *
  * SLOT SHARED WITH PushPermissionPrompt, deliberately: bottom of the screen
- * where a thumb reaches, clear of the mobile nav bar, z-[140] so anything
- * the user deliberately opens covers it. The two never overlap because the
+ * where a thumb reaches, clear of the mobile nav bar, z-[140] so anything the
+ * user deliberately opens covers it. The two never overlap because the
  * notification ask waits for this one to be answered — see the install-owed
  * branch in PushPermissionPrompt.
  */
 export function InstallAppPrompt() {
   const [variant, setVariant] = useState<InstallPromptVariant>(null);
+  const [isWorking, setIsWorking] = useState(false);
 
   useEffect(() => {
-    // Device capability and the stored answer are both read once per mount;
-    // the view count is what changes as the session goes on.
-    const deviceVariant = resolveDeviceInstallVariant();
-    if (deviceVariant === null) return;
-    if (readInstallPromptSettled() !== null) return;
-
-    let timer: ReturnType<typeof setTimeout> | undefined;
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
-    const evaluate = (views: string[]) => {
-      if (cancelled || timer) return;
-      const decision = decideInstallPrompt({
-        viewCount: views.length,
-        variant: deviceVariant,
-        settled: false,
-      });
-      if (decision !== 'fire') return;
-      timer = setTimeout(() => {
-        if (!cancelled) setVariant(deviceVariant);
-      }, INSTALL_PROMPT_DELAY_MS);
+    const fire = () => {
+      timer = undefined;
+      if (cancelled) return;
+      // Re-read the device at fire time rather than trusting the value the
+      // countdown started with: a desktop browser may have handed us its
+      // install offer in the meantime, and an iOS visitor may have added us
+      // to their Home Screen while the minute ran.
+      const fireVariant = resolveDeviceInstallVariant();
+      if (fireVariant === null || readInstallPromptAccepted()) return;
+      // Spend this visit's offer at FIRE time, not when it is answered:
+      // leaving app chrome unmounts this card, and coming back must not
+      // produce a second one.
+      markInstallPromptShown(Date.now());
+      setVariant(fireVariant);
     };
 
-    // Evaluate what is already stored before subscribing: this component
-    // mounts on the first chrome-bearing page, but a reload part-way through
-    // a session comes back with the threshold already met, and waiting for a
-    // fourth navigation to notice would be wrong.
-    evaluate(readInstallPromptViews());
-    const unsubscribe = subscribeInstallPromptViews(evaluate);
+    const schedule = (delayMs: number) => {
+      timer = setTimeout(fire, delayMs);
+    };
+
+    const evaluate = () => {
+      if (cancelled || timer) return;
+      const decision = decideInstallPrompt({
+        state: readInstallPromptState(),
+        now: Date.now(),
+        variant: resolveDeviceInstallVariant(),
+        accepted: readInstallPromptAccepted(),
+      });
+
+      if (decision.action === 'skip') return;
+      if (decision.action === 'arm') {
+        // A failed write means no countdown can be remembered, so running a
+        // private one would restart it on every mount. Stay quiet instead.
+        if (!armInstallPrompt(Date.now())) return;
+        schedule(INSTALL_PROMPT_DELAY_MS);
+        return;
+      }
+      if (decision.action === 'wait') {
+        schedule(decision.remainingMs);
+        return;
+      }
+      schedule(0);
+    };
+
+    evaluate();
+    // A desktop browser decides we are installable a beat after load, so the
+    // first evaluate above can legitimately find nothing to offer. Re-running
+    // on that signal is what makes the desktop half work at all.
+    const unsubscribe = subscribeInstallAvailability(evaluate);
 
     return () => {
       cancelled = true;
@@ -113,10 +171,25 @@ export function InstallAppPrompt() {
 
   const settle = (outcome: InstallPromptOutcome) => {
     setVariant(null);
-    markInstallPromptSettled(outcome);
+    markInstallPromptSettled(outcome, Date.now());
   };
 
-  const isIOS = variant === 'ios';
+  const handleDesktopInstall = async () => {
+    setIsWorking(true);
+    try {
+      const outcome = await promptDeferredInstall();
+      // 'unavailable' is treated as a decline rather than swallowed: the
+      // browser withdrew the offer, so the card must close and the
+      // notification ask must be released rather than waiting on an answer
+      // that can no longer be given.
+      settle(outcome === 'accepted' ? 'accepted' : 'declined');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const copy = COPY[variant];
+  const Icon = variant === 'ios' ? Share : variant === 'android' ? Smartphone : MonitorDown;
 
   return (
     <div
@@ -131,21 +204,13 @@ export function InstallAppPrompt() {
             className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand/15"
             aria-hidden="true"
           >
-            {isIOS ? (
-              <Share className="h-4 w-4 text-brand" />
-            ) : (
-              <Smartphone className="h-4 w-4 text-brand" />
-            )}
+            <Icon className="h-4 w-4 text-brand" />
           </span>
           <div className="min-w-0 flex-1">
             <p id="install-prompt-title" className="text-sm font-semibold text-content-primary">
-              {isIOS ? 'Keep Urganize on your Home Screen' : 'Get the Urganize app'}
+              {copy.title}
             </p>
-            <p className="mt-1 text-sm leading-6 text-content-secondary">
-              {isIOS
-                ? 'It opens full screen, straight to your work — and it is the only way an iPhone will let us send you reminders.'
-                : 'The app opens faster than the browser and can send you reminders when work is due.'}
-            </p>
+            <p className="mt-1 text-sm leading-6 text-content-secondary">{copy.body}</p>
           </div>
           <button
             type="button"
@@ -157,7 +222,7 @@ export function InstallAppPrompt() {
           </button>
         </div>
 
-        {isIOS ? (
+        {variant === 'ios' ? (
           <ol className="mt-3 space-y-1.5 text-sm leading-6 text-content-secondary">
             <li className="flex gap-2">
               <span className="text-content-tertiary" aria-hidden="true">
@@ -181,11 +246,7 @@ export function InstallAppPrompt() {
         ) : null}
 
         <div className="mt-4 flex items-center gap-2">
-          {isIOS ? (
-            <button type="button" onClick={() => settle('accepted')} className={primaryButtonClass}>
-              Got it
-            </button>
-          ) : (
+          {variant === 'android' ? (
             <a
               href={ANDROID_DOWNLOAD_URL}
               target="_blank"
@@ -193,10 +254,26 @@ export function InstallAppPrompt() {
               onClick={() => settle('accepted')}
               className={primaryButtonClass}
             >
-              Get the app
+              {copy.action}
             </a>
+          ) : (
+            <button
+              type="button"
+              disabled={isWorking}
+              onClick={
+                variant === 'desktop' ? () => void handleDesktopInstall() : () => settle('accepted')
+              }
+              className={primaryButtonClass}
+            >
+              {isWorking ? 'Installing…' : copy.action}
+            </button>
           )}
-          <button type="button" onClick={() => settle('declined')} className={dismissButtonClass}>
+          <button
+            type="button"
+            onClick={() => settle('declined')}
+            disabled={isWorking}
+            className={dismissButtonClass}
+          >
             Not now
           </button>
         </div>
