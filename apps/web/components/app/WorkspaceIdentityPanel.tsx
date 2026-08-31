@@ -38,7 +38,7 @@ const INSTAGRAM_URL = "https://instagram.com/urganize";
 const X_URL = "https://x.com/urganize";
 
 // Same flag TasksPanel's scene pill and MetadataSection read. At `lg`+ this
-// card is the primary entry point ("Collect metadata" below); TasksPanel's
+// card is the primary entry point ("Metadata" below); TasksPanel's
 // own pill keeps a below-`lg` copy alive, since this card never renders on
 // small viewports and dropping the pill there with no replacement would make
 // Metadata unreachable on phones/tablets (2026-08-12).
@@ -124,7 +124,7 @@ const SETTINGS_ITEM: NavItem = {
 
 /**
  * Built per-render (not a module constant like the old NAV_ITEMS) because the
- * "Collect metadata" entry needs runtime state: it targets the release
+ * "Metadata" entry needs runtime state: it targets the release
  * currently scoped in the URL, so it can't be a static href like its
  * neighbours. Added here 2026-08-12 as this card's persistent home for the
  * feature — Metadata is release-scoped, so unlike Catalog/UrgAns/Notes this
@@ -185,7 +185,7 @@ function buildNavItems(
       ? [
           {
             href: `/dashboard?release=${scopedReleaseId}&scene=metadata`,
-            label: "Collect metadata",
+            label: "Metadata",
             Icon: MetadataIcon,
             isActive: (pathname: string) => pathname === "/dashboard" && activeScene === "metadata",
           },
@@ -476,7 +476,7 @@ export function WorkspaceIdentityPanel() {
           className="flex min-h-0 flex-1 flex-col border-t border-stroke-subtle p-2"
         >
           {/* WorkspaceNavLinks needs useSearchParams (to find the currently
-            scoped release for "Collect metadata"), and this panel is mounted
+            scoped release for "Metadata"), and this panel is mounted
             from layout-level chrome (AppShell) rather than a page — same
             reason AppTopbar's ContextTitle/CatalogTopbarAction/ChappiTopbarAction
             each get their own Suspense boundary. Fallback renders the nav

@@ -39,13 +39,13 @@ import { useSceneOverlay, type SceneName } from './useSceneOverlay';
 import { resolveActiveScene } from '@/lib/scene-cache';
 
 // Metadata entry point (URG-108). This flag also gates the identity panel's
-// "Collect metadata" nav item (WorkspaceIdentityPanel) — the two must never
+// "Metadata" nav item (WorkspaceIdentityPanel) — the two must never
 // disagree about whether the feature exists, only about WHICH surface shows
 // it at a given viewport.
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 
 // Mirrors AppShell's own gate for the identity card, which is what hosts the
-// "Collect metadata" nav item this pill defers to at wide widths. Read here
+// "Metadata" nav item this pill defers to at wide widths. Read here
 // because the pill may only step aside where that card actually renders —
 // both flags default to false and are independent of METADATA above, so
 // without this check a metadata-on / identity-panel-off environment (the
@@ -481,7 +481,7 @@ export function TasksPanel({
     ) : null;
 
   // Metadata (URG-108). Desktop: NARROW widths only, since the identity
-  // panel's "Collect metadata" nav item is this release's persistent entry
+  // panel's "Metadata" nav item is this release's persistent entry
   // point at wide widths (WorkspaceIdentityPanel) and two controls for one
   // scene is noise — see METADATA_PILL_HIDE_CLASS above for exactly where it
   // retreats. Mobile (2026-08-16): one of the three permanent top tabs
@@ -511,7 +511,7 @@ export function TasksPanel({
         className={`${pillClass('metadata')} ${METADATA_PILL_HIDE_CLASS}`}
       >
         <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
-        Collect metadata
+        Metadata
       </button>
     ) : null;
 
@@ -549,7 +549,7 @@ export function TasksPanel({
 
   // Playlist pitching: browse curator playlists and send this release's
   // song, with each curator's answer shown beside it. Mobile (2026-08-17):
-  // one of the three top tabs, alongside Calendar and Collect metadata —
+  // one of the top tabs, alongside Calendar and Metadata —
   // pitching is frequent enough to earn a permanent, always-visible spot
   // rather than the folded menu (it was its own standalone pill until this
   // date, when Recap took that row's other slot instead — see the top-tabs
@@ -713,8 +713,8 @@ export function TasksPanel({
 
   /**
    * Mobile top tabs (2026-08-16, founder request via screenshot reference).
-   * The permanent, always-visible entry points on a phone: Calendar,
-   * Collect metadata, Pitch. Unlike the desktop footer's outbound pair,
+   * The permanent, always-visible entry points on a phone: Timeline,
+   * Calendar, Metadata, Pitch. Unlike the desktop footer's outbound pair,
    * these do NOT hide while a scene is open — the whole point of a tab strip
    * is that every tab stays reachable and the active one is highlighted,
    * matching the reference (all tabs visible, "Logs" lit).
@@ -908,13 +908,15 @@ export function TasksPanel({
           folded menu (it opens a modal, not a scene, so it never lit up like
           its neighbours here), and Pitch moved up from the standalone
           base-dock row into this strip instead, since it IS a scene toggle
-          like Calendar and Collect metadata and reads naturally alongside
+          like Calendar and Metadata and reads naturally alongside
           them.
 
           Horizontally scrollable with the same gutter-matching bleed the old
-          dock used (`-mx-4 px-4` stepping up at sm/md): even three pills
-          including the long "Collect metadata" label don't reliably fit a
-          375px screen, and a strip that scrolls beats one that wraps for a
+          dock used (`-mx-4 px-4` stepping up at sm/md): the strip carries four
+          tabs once Timeline is on (2026-08-30) and still doesn't reliably fit
+          a 375px screen, which offers ~343px against roughly 356px of tabs —
+          the 2026-08-31 rename to "Metadata" bought about 50px and was not
+          enough on its own. A strip that scrolls beats one that wraps for a
           tab bar — wrapping would make the "always visible, tap to switch"
           read of a tab bar collapse into something that looks like the pill
           dock underneath it. */}
@@ -1116,7 +1118,7 @@ export function TasksPanel({
           The row used to also carry two permanent standalone pills — New
           activity/Activities and Pitch — removed 2026-08-17: Pitch moved up
           into the top-tabs strip above (it's a scene toggle like Calendar
-          and Collect metadata, so it belongs there now), and New activity
+          and Metadata, so it belongs there now), and New activity
           was retired outright — the center "+" in `MobileNavBar` opens
           Quick Create directly when a release is scoped, so a second,
           release-scoped entry point for the same action here was redundant.
