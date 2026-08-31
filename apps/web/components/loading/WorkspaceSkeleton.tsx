@@ -293,10 +293,12 @@ function TasksPanelSkeleton() {
     // would make the row jump for every release that has a plan already, which
     // is most of them. Same trade the recap pill documents above.
   ];
-  // The pills both layouts share (New activity, Metadata, then one per enabled
-  // flag), reserved once and rendered into both containers below — exactly as
-  // the real component builds `primaryPills` once and feeds it to the desktop
-  // header row and the mobile dock. Only one of the two is ever displayed.
+  // The header row's pills (New activity, Timeline, Metadata, then one per
+  // enabled flag). DESKTOP ONLY — the real buttons these stand in for stopped
+  // rendering below `lg` on 2026-08-31, when the mobile top tabs were folded
+  // into the release menu, so there is no second container to feed. (This
+  // comment described them as shared by "both layouts" for a while after the
+  // real component had already stopped doing that.)
   const primaryPillBlocks = (
     <>
       <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
@@ -332,8 +334,11 @@ function TasksPanelSkeleton() {
   const extraActionPillBlocks = STATUS_UPDATE_ENABLED ? (
     <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
   ) : null;
-  // Calendar / Press kit / Fan capture — the panel's outbound group. A
-  // desktop-only footer row at lg+, the tail of the mobile dock below it.
+  // Calendar / Press kit / Fan capture — the panel's outbound group, a
+  // desktop-only footer row at lg+. It used to describe itself as also being
+  // "the tail of the mobile dock"; the dock has carried no pills since
+  // 2026-08-17 and, since 2026-08-31, these three reach a phone only through
+  // the release menu, which reserves nothing per entry.
   // NO pill in this row carries a Beta tag any more (Calendar lost its stamp
   // 2026-08-15, the other two on 2026-08-16), so each width is now just its
   // label: px-3 + a 14px icon + gap-1.5 + the text at 12px semibold. Widths
@@ -399,40 +404,20 @@ function TasksPanelSkeleton() {
           {outboundPillBlocks}
         </div>
       ) : null}
-      {/* Mobile top tabs (below `lg`) — 2026-08-16 redesign. Calendar,
-          Metadata, Pitch: all three are flag+scope-known (unlike Recap,
-          which moved OUT to the folded menu 2026-08-17 — see the base dock
-          below — because its eligibility depends on release/task data this
-          skeleton renders before it has), so all three are fully reservable
-          here. Widths match the desktop outbound/primary placeholders for
-          the same labels, and the wrapper's scroll/bleed classes match the
-          real row byte-for-byte so the reserved footprint sits exactly
-          where the real one lands. */}
-      {CONTENT_CALENDAR_ENABLED || METADATA_ENABLED || PITCHING_ENABLED ? (
-        <div className="-mx-4 flex shrink-0 gap-2 overflow-x-auto px-4 pb-3 pt-1 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden">
-          {CONTENT_CALENDAR_ENABLED ? (
-            <SkeletonBlock className="h-8 w-20 shrink-0 rounded-full" />
-          ) : null}
-          {METADATA_ENABLED ? (
-            <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" />
-          ) : null}
-          {PITCHING_ENABLED ? (
-            <SkeletonBlock className="h-8 w-16 shrink-0 rounded-full" />
-          ) : null}
-        </div>
-      ) : null}
-      {/* Mobile base dock (below `lg`) — 2026-08-16 redesign, now (2026-08-17)
-          just the two icon-button placeholders for the search/menu controls
-          that reveal the folded "more" menu (Plan / Cover art / Song / Files
-          / Status update / Recap / Press kit / Fan capture). The row used to
-          also reserve New activity and Pitch as permanent standalone pills —
-          both gone: Pitch moved up into the top-tabs strip above (now
-          reserved there instead, see above), and New activity was retired
-          outright (superseded by MobileNavBar's center "+", which this
-          skeleton has no reason to reserve for since it isn't part of this
-          panel). No border or background of its own (2026-08-17 correction:
-          the row used to carry both, which read as a boxed rectangle sitting
-          under the pills).
+      {/* The mobile top-tabs strip reserved here (Content / Metadata / Pitch,
+          plus Timeline once that flag landed) went away with the real row on
+          2026-08-31 — founder call, everything moved into the release menu at
+          the base of the panel. Nothing replaces its footprint: the panel's
+          body simply starts higher on a phone now. */}
+      {/* Mobile base dock (below `lg`) — the two icon-button placeholders for
+          the search and menu controls. The row used to also reserve New
+          activity and Pitch as permanent standalone pills; both went in
+          2026-08-17 (Pitch to the top tabs, then — with those gone — into the
+          menu; New activity retired outright, superseded by MobileNavBar's
+          center "+", which this skeleton has no reason to reserve for since it
+          isn't part of this panel). No border or background of its own
+          (2026-08-17 correction: the row used to carry both, which read as a
+          boxed rectangle sitting under the pills).
 
           The two controls are reserved on DIFFERENT rules as of 2026-08-31,
           when they stopped opening the same panel (see TasksPanel's base-dock
@@ -445,17 +430,25 @@ function TasksPanelSkeleton() {
             planner's plan-first flow) briefly reserves one 32px circle that
             never arrives, the same magnitude of imprecision Plan and Recap
             already accept below.
-          - MORE keeps the flag-known check. Plan and Recap are excluded from
-            it the same way Plan is excluded from `pillWidths` above: whether
-            either renders depends on release/draft/task data this skeleton
-            doesn't have yet, and the other six decide whether the menu
-            belongs here at all. */}
+          - THE MENU keeps a flag-known check, but it now spans every release
+            surface rather than the six that were folded away — Timeline,
+            Content, Pitch and Metadata joined the list the day the top tabs
+            were removed, so leaving them out of this condition would have
+            un-reserved the trigger in exactly the flag combination production
+            runs (calendar + metadata on, the asset flags off). Plan and Recap
+            stay excluded for the reason Plan is excluded from `pillWidths`
+            above: whether either renders depends on release/draft/task data
+            this skeleton doesn't have yet. */}
       <div
         className={`sticky z-20 -mx-4 flex items-center gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
-          {COVER_ART_ENABLED ||
+          {TIMELINE_ENABLED ||
+          CONTENT_CALENDAR_ENABLED ||
+          PITCHING_ENABLED ||
+          METADATA_ENABLED ||
+          COVER_ART_ENABLED ||
           SONG_UPLOAD_ENABLED ||
           FILES_ENABLED ||
           STATUS_UPDATE_ENABLED ||
