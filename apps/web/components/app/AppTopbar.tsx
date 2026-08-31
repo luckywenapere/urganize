@@ -8,6 +8,7 @@ import { CalendarDays, Inbox, Plus } from 'lucide-react';
 import { Logo } from '@urganize/ui';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
+import { forgetSceneForCurrentRelease } from '@/lib/scene-memory';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
@@ -238,6 +239,12 @@ function CatalogTopbarAction() {
   return (
     <Link
       href="/dashboard"
+      // Leaving a release forgets its scene, so tapping it again starts at
+      // Activities rather than the scene the user just walked out of. The
+      // fourth surface that does this, alongside the workspace back arrow,
+      // MobileNavBar's Home tab and the side menu's Catalog row — see
+      // forgetSceneForCurrentRelease. No-ops when nothing is scoped.
+      onClick={forgetSceneForCurrentRelease}
       aria-label="Workspace"
       title="Workspace"
       className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${

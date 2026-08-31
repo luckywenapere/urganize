@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ClipboardList, Inbox, PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
+import { ChevronDown, ClipboardList, Inbox, PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
 import { SiInstagram, SiX } from "react-icons/si";
 import { openExternalUrl } from "@/lib/external-link";
 import { useAuthStore } from "@/lib/auth-store";
@@ -16,6 +16,7 @@ import { CalendarDays } from "lucide-react";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { readPersistedState, writePersistedState } from "@/lib/persisted-state";
 import { isReleaseActive } from "@/lib/release-activity";
+import { forgetSceneForCurrentRelease } from "@/lib/scene-memory";
 
 // Collapsed state — same lib/persisted-state pattern as the UrgAns rail's
 // RAIL_OPEN_KEY, and for the same reason: pure UI-chrome state, so a reload
@@ -46,14 +47,34 @@ const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === "true";
 
 // The card's nav (URG-229). Same three global surfaces the topbar exposes,
 // using the SAME hand-drawn marks (BrandIcons) so the two entry points read
-// as one system. Active matching mirrors AppTopbar's: exact for /dashboard so
-// a scoped release (?release=) still counts as the catalog, prefix for the
-// others. Admin is appended separately below — it's visibility-gated.
+// as one system. Active matching mirrors AppTopbar's — including, since
+// 2026-08-31, its `isAtRest` treatment of the catalog: a scoped release no
+// longer counts as being ON the catalog. See the Catalog item for why that
+// reversed. Prefix matching for the others. Admin is appended separately
+// below — it's visibility-gated.
+type NavChild = {
+  /** The release this row scopes to — also its key. */
+  releaseId: string;
+  label: string;
+  /** Resolved in buildNavItems, which is the only place that holds the scoped
+   *  id, so the list renderer stays free of useSearchParams (it doubles as the
+   *  Suspense fallback, and reading params there would defeat the boundary). */
+  isActive: boolean;
+};
+
 type NavItem = {
   href: string;
   label: string;
   Icon: (props: { className?: string }) => React.ReactElement;
   isActive: (pathname: string) => boolean;
+  /** Rows nested under this one behind a chevron (founder call, 2026-08-31 —
+   *  Catalog is the only item with any). Never rendered in the collapsed icon
+   *  rail: a 64px column has no room for a second level, the same reason the
+   *  Beta pill folds into the tooltip there. */
+  children?: NavChild[];
+  /** Side effect to run as the row is followed. Only Catalog sets one — see
+   *  forgetScopedReleaseScene. */
+  onNavigate?: () => void;
   /** Marks a surface that shipped flag-off and hasn't been used against a real
    *  team yet (founder call, 2026-08-31 — Shows is the first to carry this
    *  since the app-wide Beta cleanup on 2026-08-16; that cleanup dropped the
@@ -135,14 +156,32 @@ const SETTINGS_ITEM: NavItem = {
 function buildNavItems(
   scopedReleaseId: string | null,
   activeScene: string | null,
-  hasCuratorProfile: boolean
+  hasCuratorProfile: boolean,
+  releases: { id: string; title: string }[]
 ): NavItem[] {
   return [
     {
       href: "/dashboard",
       label: "Catalog",
       Icon: CatalogIcon,
-      isActive: (pathname: string) => pathname === "/dashboard",
+      // Only the BARE catalog counts (founder report, 2026-08-31: "catalog
+      // doesn't open the catalog view once it's in a particular release").
+      // This used to be a plain `pathname === "/dashboard"`, deliberately, so
+      // that a scoped release still lit the row — the reasoning being that a
+      // release is a view within the catalog. From the user's seat that reads
+      // as "you are already here", which is the wrong thing to say about the
+      // one control whose job is to get you OUT of a release. AppTopbar's
+      // `isAtRest` has always drawn the line here; the two agree now.
+      isActive: (pathname: string) => pathname === "/dashboard" && !scopedReleaseId,
+      // Leaving a release forgets its scene, so tapping it again lands on
+      // Activities rather than the thing you were getting out of. Same family
+      // as the back arrow and MobileNavBar's Home tab — see the helper.
+      onNavigate: forgetSceneForCurrentRelease,
+      children: releases.map((release) => ({
+        releaseId: release.id,
+        label: release.title,
+        isActive: release.id === scopedReleaseId,
+      })),
     },
     {
       href: "/dashboard/urgans",
@@ -486,7 +525,7 @@ export function WorkspaceIdentityPanel() {
           <Suspense
             fallback={
               <WorkspaceNavList
-                navItems={buildNavItems(null, null, hasCuratorProfile === true)}
+                navItems={buildNavItems(null, null, hasCuratorProfile === true, releases)}
                 pathname={pathname}
                 isAdmin={isAdmin}
                 collapsed={collapsed}
@@ -498,6 +537,7 @@ export function WorkspaceIdentityPanel() {
               isAdmin={isAdmin}
               collapsed={collapsed}
               hasCuratorProfile={hasCuratorProfile === true}
+              releases={releases}
             />
           </Suspense>
         </nav>
@@ -568,11 +608,13 @@ function WorkspaceNavLinks({
   isAdmin,
   collapsed,
   hasCuratorProfile,
+  releases,
 }: {
   pathname: string | null;
   isAdmin: boolean;
   collapsed: boolean;
   hasCuratorProfile: boolean;
+  releases: { id: string; title: string }[];
 }) {
   const searchParams = useSearchParams();
   // Same `?release=` / `?scene=` params useReleaseScope / useSceneOverlay own
@@ -580,7 +622,7 @@ function WorkspaceNavLinks({
   // needs them to build one nav href, not to read or write scene state.
   const scopedReleaseId = searchParams.get("release");
   const activeScene = searchParams.get("scene");
-  const navItems = buildNavItems(scopedReleaseId, activeScene, hasCuratorProfile);
+  const navItems = buildNavItems(scopedReleaseId, activeScene, hasCuratorProfile, releases);
   return (
     <WorkspaceNavList
       navItems={navItems}
@@ -604,9 +646,12 @@ const navRowClass = (active: boolean, collapsed: boolean) =>
       : "text-content-secondary hover:bg-bg-hover hover:text-content-primary"
   }`;
 
-/** Plain render of the nav rows — no hooks of its own, so it doubles as the
- * Suspense fallback (called directly with a release-less item list) and the
- * resolved output (via WorkspaceNavLinks above). Renders the scrolling list of
+/** Plain render of the nav rows — reads NO search params, which is what lets it
+ * double as the Suspense fallback (called directly with a release-less item
+ * list) as well as the resolved output (via WorkspaceNavLinks above). It does
+ * hold one piece of local state for the expanded sub-list, which is fine in a
+ * fallback; what must never appear here is useSearchParams, since that is the
+ * bailout this boundary exists to contain. Renders the scrolling list of
  * release surfaces plus the pinned Admin/Settings group at the base; the two
  * are direct flex children of the <nav> above, so this component's fragment
  * has to stay transparent (no wrapper element). */
@@ -621,23 +666,36 @@ function WorkspaceNavList({
   isAdmin: boolean;
   collapsed: boolean;
 }) {
-  const renderRow = ({ href, label, Icon, isActive, beta }: NavItem) => {
+  // Which row's sub-list is open, by href — at most one at a time, and shut on
+  // arrival. Deliberately NOT persisted and not auto-opened for the scoped
+  // release: the founder asked for an arrow you open, and a nav that expands
+  // itself on every load buries Settings below a roster on a short viewport.
+  const [expandedHref, setExpandedHref] = useState<string | null>(null);
+  const renderRow = ({ href, label, Icon, isActive, beta, children, onNavigate }: NavItem) => {
     const active = isActive(pathname || "");
     // Collapsed has no room for a visible pill (icon-only), so the signal
     // folds into the same text that already stands in for the label there —
     // the tooltip and the sr-only span, both one string, so neither can drift
     // from the other the way a separate aria-label would.
     const collapsedLabel = beta ? `${label} (Beta)` : label;
-    return (
+    // A 64px icon rail cannot show a second level, so the collapsed card drops
+    // the whole sub-list rather than shrinking it — same call the Beta pill
+    // makes. Nothing is lost: the row still navigates to the catalog.
+    const subItems = collapsed ? [] : (children ?? []);
+    const expanded = expandedHref === href;
+    const subListId = `workspace-nav-sub-${href.replace(/[^a-zA-Z0-9]+/g, "-")}`;
+
+    const link = (
       <Link
         key={href}
         href={href}
+        onClick={onNavigate}
         aria-current={active ? "page" : undefined}
         title={collapsed ? collapsedLabel : undefined}
-        className={navRowClass(active, collapsed)}
+        className={`${navRowClass(active, collapsed)}${subItems.length > 0 ? " min-w-0 flex-1" : ""}`}
       >
         <Icon className="h-4 w-4 shrink-0" />
-        <span className={collapsed ? "sr-only" : undefined}>
+        <span className={collapsed ? "sr-only" : "truncate"}>
           {collapsed ? collapsedLabel : label}
         </span>
         {beta && !collapsed ? (
@@ -646,6 +704,60 @@ function WorkspaceNavList({
           </span>
         ) : null}
       </Link>
+    );
+
+    // Every row without children renders exactly what it always did — the
+    // wrapper below is Catalog's alone, so this change cannot move any other
+    // row by a pixel.
+    if (subItems.length === 0) return link;
+
+    return (
+      <div key={href}>
+        <div className="flex items-center gap-1">
+          {link}
+          {/* A sibling of the link, never inside it: a <button> cannot nest in
+              an <a>, the same constraint the footer's collapse control and the
+              identity block already work around. Rotation matches TasksPanel's
+              activity buckets (-rotate-90 when shut) so the two collapsibles
+              in this app read the same way. */}
+          <button
+            type="button"
+            onClick={() => setExpandedHref(expanded ? null : href)}
+            aria-expanded={expanded}
+            aria-controls={subListId}
+            aria-label={expanded ? `Hide ${label.toLowerCase()} list` : `Show ${label.toLowerCase()} list`}
+            title={expanded ? "Hide releases" : "Show releases"}
+            className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          >
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${expanded ? "" : "-rotate-90"}`}
+              aria-hidden="true"
+            />
+          </button>
+        </div>
+        {expanded ? (
+          <ul id={subListId} className="mb-0.5 ml-4 border-l border-stroke-subtle pl-2">
+            {subItems.map((child) => (
+              <li key={child.releaseId}>
+                <Link
+                  href={`/dashboard?release=${child.releaseId}`}
+                  aria-current={child.isActive ? "page" : undefined}
+                  // The full name, since the visible one is truncated to the
+                  // card's 240px.
+                  title={child.label}
+                  className={`motion-focus mb-0.5 block truncate rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
+                    child.isActive
+                      ? "bg-brand/10 text-brand"
+                      : "text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                  }`}
+                >
+                  {child.label || "Untitled release"}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
     );
   };
 
