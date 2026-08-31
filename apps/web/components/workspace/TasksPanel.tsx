@@ -112,6 +112,12 @@ const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 // note below for why it isn't one of the four permanent tabs.
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 
+// Timeline entry point (2026-08-30). Same flag gates the ?scene=timeline URL
+// param in lib/scene-cache.ts, so a stale bookmark reads as no-scene when it
+// is off. The scene has no API routes to gate — it lays itself out from the
+// activities this panel already has in props.
+const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
+
 // Notes entry point: same flag AppTopbar and the identity panel read.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 
@@ -481,6 +487,21 @@ export function TasksPanel({
   // retreats. Mobile (2026-08-16): one of the three permanent top tabs
   // (Calendar / Metadata / Pitch as of 2026-08-17), where that hide class is
   // always inert (it only ever fires at/above `lg`).
+  // Timeline sits closest to Activities in both rows: it is the same activities
+  // seen a different way, so it reads as a view switch rather than another
+  // release surface.
+  const timelineButton =
+    TIMELINE_ENABLED && scopedRelease ? (
+      <button
+        type="button"
+        onClick={() => toggleScene('timeline', scopedRelease.id)}
+        aria-pressed={activeScene === 'timeline'}
+        className={pillClass('timeline')}
+      >
+        Timeline
+      </button>
+    ) : null;
+
   const metadataButton =
     METADATA_ENABLED && scopedRelease ? (
       <button
@@ -711,7 +732,7 @@ export function TasksPanel({
    * already lives.
    */
   const hasMobileTopTabs = Boolean(
-    scopedRelease && (calendarButton || metadataButton || pitchButton)
+    scopedRelease && (timelineButton || calendarButton || metadataButton || pitchButton)
   );
 
   // The folded "more" menu (2026-08-16; Press kit and Recap added
@@ -865,6 +886,7 @@ export function TasksPanel({
       <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex">
         {activitiesToggleButton}
         {planButton}
+        {timelineButton}
         {metadataButton}
         {coverArtButton}
         {songButton}
@@ -898,6 +920,7 @@ export function TasksPanel({
           dock underneath it. */}
       {hasMobileTopTabs ? (
         <div className="-mx-4 flex shrink-0 gap-2 overflow-x-auto px-4 pb-3 pt-1 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden">
+          {timelineButton}
           {calendarButton}
           {metadataButton}
           {pitchButton}

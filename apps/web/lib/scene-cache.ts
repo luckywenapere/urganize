@@ -20,7 +20,8 @@ export type SceneName =
   | 'plan'
   | 'capture'
   | 'song'
-  | 'coverart';
+  | 'coverart'
+  | 'timeline';
 
 export const SCENE_NAMES: readonly SceneName[] = [
   'metadata',
@@ -32,6 +33,7 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'capture',
   'song',
   'coverart',
+  'timeline',
 ];
 
 // Inlined at build time, same read every UI gate uses. The prefetch list must
@@ -42,6 +44,7 @@ const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDA
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
 const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
+const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
 
 /** Prefetch order: most-likely-opened first, so a user who taps a pill mid-
  * prefetch is most likely to find their scene already warm.
@@ -88,7 +91,7 @@ export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
  * and a layout decision computed two ways is the bug class this consolidation
  * exists to end.
  *
- * DELIBERATELY ONLY FOUR FLAGS. metadata / files / epk / pitch / plan are NOT
+ * DELIBERATELY ONLY FIVE FLAGS. metadata / files / epk / pitch / plan are NOT
  * gated here, matching the behaviour this replaces exactly: those scenes gate
  * themselves inside ReleaseScenePanel and their own pills, and adding them here
  * would change which scenes render rather than just consolidating the check.
@@ -102,6 +105,7 @@ export function resolveActiveScene(rawParam: string | null): SceneName | null {
   if (scene === 'capture' && !CAPTURE_ENABLED) return null;
   if (scene === 'song' && !SONG_UPLOAD_ENABLED) return null;
   if (scene === 'coverart' && !COVER_ART_ENABLED) return null;
+  if (scene === 'timeline' && !TIMELINE_ENABLED) return null;
   return scene;
 }
 
@@ -170,11 +174,16 @@ export const SCENE_HARD_EXPIRY_MS: Partial<Record<SceneName, number>> = {
  * editable document rather than a snapshot. Keeping it out of this type means
  * the store cannot be given a meaningless fetcher for it, and the compiler
  * enforces that rather than a comment.
+ *
+ * 'timeline' is out for the opposite reason: it fetches NOTHING. It is laid out
+ * entirely from the activities TasksPanel already has in props, so there is no
+ * payload to cache, no route to prefetch, and a fetcher for it would have to
+ * invent a request that does not exist.
  */
-export type CacheableSceneName = Exclude<SceneName, 'plan'>;
+export type CacheableSceneName = Exclude<SceneName, 'plan' | 'timeline'>;
 
 export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName =>
-  scene !== 'plan';
+  scene !== 'plan' && scene !== 'timeline';
 
 /**
  * Which scenes may touch localStorage.
@@ -205,6 +214,10 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   // restart and would be guaranteed expired by the next visit.
   song: false,
   coverart: false,
+  // Nothing to persist: the timeline is laid out from the activities the
+  // workspace already holds, so it has no payload of its own. See
+  // CacheableSceneName.
+  timeline: false,
 };
 
 /** How many releases' scenes to keep on disk. A manager works a couple of
