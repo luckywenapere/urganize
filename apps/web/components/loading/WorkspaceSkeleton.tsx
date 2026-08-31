@@ -138,6 +138,26 @@ export function WorkspaceSkeleton() {
       <div
         className={`flex min-h-0 min-w-0 flex-1 flex-col pt-6 sm:px-6 lg:block lg:px-0 lg:pt-0 ${isFocused ? 'pb-0 lg:pb-0' : 'pb-6 sm:pb-24'}`}
       >
+          {/* The catalog's "Search release" bar (2026-08-31). Reserved on the
+              same rule the real one renders on — the catalog is showing AND
+              there is a release to find — and the wrapper classes are
+              byte-identical to ReleaseSearchBar's so nothing shifts when data
+              lands. Its count line ("3 of 9 releases") is NOT reserved: it only
+              appears while a query is being typed, which cannot be true on the
+              first paint.
+
+              `knownCount` hydrates in an effect, so an SSR paint reserves
+              nothing here and the bar arrives with the count — the same
+              tradeoff every other count-aware shape in this file makes, and it
+              is the honest direction: reserving a bar for an account that turns
+              out to have no releases would push the "No releases yet" state
+              down the page. */}
+          {!isFocused && knownCount > 0 ? (
+            <div className="mb-4 w-full shrink-0 lg:mx-auto lg:max-w-md">
+              <SkeletonBlock className="h-11 w-full rounded-full" />
+            </div>
+          ) : null}
+
           <section className="flex min-h-0 flex-1 flex-col lg:hidden">
             {isFocused ? (
               <MobileFocusedSkeleton />

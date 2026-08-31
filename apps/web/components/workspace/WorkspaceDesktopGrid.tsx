@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { Plus } from 'lucide-react';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { WorkspaceReleaseCard } from './WorkspaceReleaseCard';
@@ -9,6 +10,12 @@ type WorkspaceDesktopGridProps = {
   releases: ReleaseCardData[];
   onSelect: (releaseId: string) => void;
   onCreateRelease: () => void;
+  /**
+   * Replaces the built-in "No releases yet" state when `releases` is empty —
+   * see the same prop on ReleasesColumn for why. WorkspaceView passes the same
+   * node to both, so the phone and the desktop word a search miss identically.
+   */
+  emptyState?: ReactNode;
 };
 
 /**
@@ -27,13 +34,16 @@ export function WorkspaceDesktopGrid({
   releases,
   onSelect,
   onCreateRelease,
+  emptyState,
 }: WorkspaceDesktopGridProps) {
   return (
     // No "Releases" eyebrow (founder call, 2026-07-23): the centered grid
     // IS the page — a left-anchored label over a centered row read as
     // misaligned, and the topbar already orients the user.
     <section className="workspace-mode-enter space-y-4">
-      {releases.length === 0 ? (
+      {releases.length === 0 && emptyState ? (
+        emptyState
+      ) : releases.length === 0 ? (
         <EmptyState
           mascot="resting"
           title="No releases yet"
