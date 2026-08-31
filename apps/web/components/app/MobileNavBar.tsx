@@ -28,15 +28,28 @@ type MobileNavBarProps = {
   onNewRelease: () => void;
 };
 
+/**
+ * A hidden tab's RESERVED space (founder call, 2026-08-31).
+ *
+ * Home and Song each drop out on their own view, and without this the tabs
+ * beside them slide across to fill the gap — so UrgAns and Shows sat in one
+ * place on the catalog and another on a scoped release, and jumped every time
+ * you moved between the two. Holding the slot open keeps every tab at a fixed
+ * x position across every view, which is what makes the bar feel still.
+ *
+ * So a "hidden" tab here means invisible, not absent. `aria-hidden` plus no
+ * children keeps it out of the accessibility tree, so screen readers and
+ * keyboard focus skip it exactly as if it were not rendered.
+ */
+function EmptyTabSlot() {
+  return <li className="flex-1" aria-hidden />;
+}
+
 /** The Song tab's whole SLOT, `<li>` included. Shared so the Suspense fallback
  *  below and the resolved tab cannot drift apart in size, spacing or colour —
- *  the `ArtistLine` split in WorkspaceIdentityPanel, for the same reason.
- *
- *  The `<li>` lives in HERE rather than in the bar, and that is what makes a
- *  hidden tab actually disappear: a `flex-1` list item left standing around a
- *  component that returned null still claims its share of the row, so the bar
- *  kept a blank gap where Home or Song used to be and pushed the centre button
- *  off the midpoint. Returning null from the whole slot removes the space too. */
+ *  the `ArtistLine` split in WorkspaceIdentityPanel, for the same reason. The
+ *  `<li>` lives in here rather than in the bar so a tab and its placeholder
+ *  are interchangeable at the same position in the list. */
 function SongTabLink({ href, isActive }: { href: string; isActive: boolean }) {
   return (
     <li className="flex-1">
@@ -87,7 +100,7 @@ function HomeTabLink({ isActive, onClick }: { isActive: boolean; onClick: () => 
  */
 function HomeTab({ isHome, onClick }: { isHome: boolean; onClick: () => void }) {
   const searchParams = useSearchParams();
-  if (isHome && !searchParams.get('release')) return null;
+  if (isHome && !searchParams.get('release')) return <EmptyTabSlot />;
   return <HomeTabLink isActive={isHome} onClick={onClick} />;
 }
 
@@ -120,10 +133,10 @@ function SongTab({ isHome, isSettings }: { isHome: boolean; isSettings: boolean 
   // the pick-a-release fallback below, pointing at the catalog, which is a tab
   // that leaves the page you are on to go and choose something else. You is
   // the tab that belongs on this view, and it is the one that lights up.
-  if (isSettings) return null;
+  if (isSettings) return <EmptyTabSlot />;
 
   if (!releaseId) {
-    if (isHome) return null;
+    if (isHome) return <EmptyTabSlot />;
     return <SongTabLink href="/dashboard" isActive={false} />;
   }
 
@@ -183,21 +196,31 @@ function SongTab({ isHome, isSettings }: { isHome: boolean; isSettings: boolean 
  * surface, so the release-scene tab has no business on it, and there it could
  * only ever be the pick-a-release fallback pointing back at the catalog.
  *
- * So, per view: the catalog is UrgAns · + · Shows; a scoped release, the
- * assistant, Notes and Shows are Home · UrgAns · + · Shows · Song; `/settings`
- * is Home · UrgAns · + · Shows.
+ * So, per view — with `·` marking a slot held open rather than closed up:
+ * the catalog is · UrgAns · + · Shows ·; a scoped release, the assistant,
+ * Notes and Shows are Home · UrgAns · + · Shows · Song; `/settings` is
+ * Home · UrgAns · + · Shows ·.
  *
- * LAYOUT. Two `flex-1` regions flank a fixed-width centre, so the "+" sits on
- * the bar's exact midpoint on every one of those views. That is deliberate and
- * replaced a single row of equal `flex-1` slots, which only centred the button
- * when the tabs happened to split evenly around it — and they never reliably
- * do, since Home, Song and Pitches each come and go on their own rule. Two
- * things go wrong if this is flattened back: the button drifts (it sat at ~42%
- * on the assistant page), and a hidden tab leaves a blank gap, because a
- * `flex-1` `<li>` wrapped around a component that returned null still claims
- * its share. Each tab therefore renders its OWN `<li>`, or nothing at all.
+ * LAYOUT, and it answers two separate questions — do not collapse them.
  *
- * WIDTH. Within a region the tabs split it evenly. Song and Pitches are
+ * Where the BUTTON sits: two `flex-1` regions flank a fixed-width centre, so
+ * it lands on the bar's exact midpoint, `(W - 64) / 2 + 32`, on every view
+ * whatever each side holds. This replaced a single row of equal slots, which
+ * only centred it when the tabs happened to split evenly around it — and they
+ * never reliably do, since Home, Song and Pitches each come and go on their
+ * own rule. It sat at ~42% on the assistant page.
+ *
+ * Where the TABS sit: a tab that hides keeps its slot (EmptyTabSlot), so every
+ * tab holds one x position across every view. Letting the row close up instead
+ * meant UrgAns and Shows slid inward on the catalog and jumped back out on a
+ * scoped release — the bar rearranging itself under a thumb that is already
+ * moving toward a target. Reserving the space costs a little width on the
+ * catalog and buys stillness everywhere, which is the trade the founder chose.
+ *
+ * WIDTH. Within a region the tabs split it evenly, and because a hidden tab
+ * still holds its slot, that split is the SAME on every view for a given
+ * account — so the measurement below is the worst case and the only case.
+ * Song and Pitches are
  * mutually exclusive (a dual account gets Pitches and not Song), so the
  * ceiling is FIVE tabs plus the button: Home, UrgAns, Notes, Shows, and
  * whichever of Song/Pitches applies. With the 64px centre, a 375px phone gives
@@ -430,12 +453,19 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
             a second flag and leave a band with no entry point at all — the
             exact compounding failure recorded under "Crossing between the two
             portals". */}
-        {/* The `!isSettings` gate is out here, not just inside SongTab, so the
-            Suspense fallback cannot flash the tab in and straight back out on a
-            view it never belongs on. SongTab bails on it too — the gate that
-            matters is the one nearest the decision. */}
-        {SONG_UPLOAD_ENABLED && hasCuratorProfile !== true && !isSettings ? (
-          <Suspense fallback={<SongTabLink href="/dashboard" isActive={false} />}>
+        {/* The flag and the dual-account rule decide whether this slot EXISTS
+            at all; those are fixed per account, so dropping it entirely costs
+            no stability. Which view you are on decides only whether it is
+            VISIBLE, and that is SongTab's business — it reserves the space
+            instead (see EmptyTabSlot). The Settings fallback matches, so the
+            tab cannot flash in and straight back out on a view it never
+            belongs on. */}
+        {SONG_UPLOAD_ENABLED && hasCuratorProfile !== true ? (
+          <Suspense
+            fallback={
+              isSettings ? <EmptyTabSlot /> : <SongTabLink href="/dashboard" isActive={false} />
+            }
+          >
             <SongTab isHome={isHome} isSettings={isSettings} />
           </Suspense>
         ) : null}
