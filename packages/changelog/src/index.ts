@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.10.1",
+    date: "August 31, 2026",
+    highlights: [
+      "If the app reloads itself after we ship an update, it now takes you to the page you tapped instead of dropping you back where you started.",
+    ],
+  },
+  {
     version: "1.10.0",
     date: "August 31, 2026",
     highlights: [
