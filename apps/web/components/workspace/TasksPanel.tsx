@@ -625,8 +625,12 @@ export function TasksPanel({
       aria-pressed={activeScene === 'calendar'}
       className={pillClass('calendar')}
     >
+      {/* Keeps the calendar glyph: this scene IS a month grid of planned
+          posts, so the icon is right even though the label shortened. What
+          changed is Shows, which was using this same glyph for a live date
+          and now uses a microphone. */}
       <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-      Calendar
+      Content
     </button>
   ) : null;
 

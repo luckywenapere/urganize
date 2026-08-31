@@ -287,9 +287,11 @@ function TasksPanelSkeleton() {
           real pill computes (see TasksPanel.tsx's METADATA_PILL_HIDE_CLASS:
           empty when the identity panel is flagged off, else xl/lg depending
           on Chappi) so the reserved footprint matches at every breakpoint.
-          w-24 since the 2026-08-31 rename from "Collect metadata": the label
-          is now the same eight characters as Calendar, in the same pill with
-          the same icon, so it reserves the same width. */}
+          w-24 since the 2026-08-31 rename from "Collect metadata" — eight
+          characters in a pill with a 14px icon. It used to be described as
+          "the same width as Calendar"; that pill's label shortened to
+          "Content" later the same day, so Metadata is now the wider of the
+          two and keeps w-24 on its own merit. */}
       {METADATA_ENABLED ? (
         <SkeletonBlock className={`h-8 w-24 shrink-0 rounded-full ${METADATA_PILL_HIDE_CLASS}`} />
       ) : null}
@@ -314,14 +316,19 @@ function TasksPanelSkeleton() {
   // desktop-only footer row at lg+, the tail of the mobile dock below it.
   // NO pill in this row carries a Beta tag any more (Calendar lost its stamp
   // 2026-08-15, the other two on 2026-08-16), so each width is now just its
-  // label: px-3 + a 14px icon + gap-1.5 + the text at 12px semibold. That puts
-  // Calendar and Press kit level, with Fan capture one step up as the longest
-  // label. Widths are per-label rather than uniform, and each rounds DOWN to
-  // the nearest step: a placeholder wider than the real pill shifts every
-  // neighbour left when the labels arrive.
+  // label: px-3 + a 14px icon + gap-1.5 + the text at 12px semibold. Widths
+  // are per-label rather than uniform, and each rounds DOWN to the nearest
+  // step: a placeholder wider than the real pill shifts every neighbour left
+  // when the labels arrive, where a narrower one shifts them right, which is
+  // the tolerated direction.
+  //
+  // Content (was "Calendar" until 2026-08-31) is the shortest of the three at
+  // seven characters and steps down to w-20 accordingly — at w-24 it would
+  // have been the one case this row forbids, a placeholder wider than the pill
+  // it stands in for. Press kit keeps w-24, Fan capture w-28 as the longest.
   const outboundPillBlocks = (
     <>
-      {CONTENT_CALENDAR_ENABLED ? <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" /> : null}
+      {CONTENT_CALENDAR_ENABLED ? <SkeletonBlock className="h-8 w-20 shrink-0 rounded-full" /> : null}
       {EPK_ENABLED ? <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" /> : null}
       {CAPTURE_ENABLED ? <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" /> : null}
     </>
@@ -384,7 +391,7 @@ function TasksPanelSkeleton() {
       {CONTENT_CALENDAR_ENABLED || METADATA_ENABLED || PITCHING_ENABLED ? (
         <div className="-mx-4 flex shrink-0 gap-2 overflow-x-auto px-4 pb-3 pt-1 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden">
           {CONTENT_CALENDAR_ENABLED ? (
-            <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" />
+            <SkeletonBlock className="h-8 w-20 shrink-0 rounded-full" />
           ) : null}
           {METADATA_ENABLED ? (
             <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" />

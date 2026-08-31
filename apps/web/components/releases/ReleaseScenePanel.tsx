@@ -48,7 +48,10 @@ const SCENE_LABELS: Record<SceneName, string> = {
   metadata: 'Metadata',
   files: 'Files',
   epk: 'Press kit',
-  calendar: 'Content calendar',
+  // "Content", not "Content calendar" (founder call, 2026-08-31). Shortened
+  // so it stops reading as a second calendar next to Shows, which used the
+  // same icon until that icon became a microphone in the same pass.
+  calendar: 'Content',
   pitch: 'Playlist pitches',
   plan: 'Plan',
   capture: 'Fan capture',

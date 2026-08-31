@@ -3,7 +3,7 @@
 import { Suspense, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { CalendarDays, Inbox, Music, Plus } from 'lucide-react';
+import { Inbox, MicVocal, Music, Plus } from 'lucide-react';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
@@ -441,7 +441,7 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
           <NavTab
             href="/dashboard/shows"
             label="Shows"
-            Icon={CalendarDays}
+            Icon={MicVocal}
             isActive={isShows}
           />
         ) : null}

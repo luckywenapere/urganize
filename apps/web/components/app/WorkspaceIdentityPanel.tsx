@@ -12,7 +12,7 @@ import { useWorkspaceIdentityStore } from "@/stores/useWorkspaceIdentityStore";
 import { useReleaseStore } from "@/stores/useReleaseStore";
 import { useChappiStore } from "@/stores/useChappiStore";
 import { CatalogIcon, ChappiIcon, GearIcon, NotesIcon } from "@/components/app/BrandIcons";
-import { CalendarDays } from "lucide-react";
+import { MicVocal } from "lucide-react";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { readPersistedState, writePersistedState } from "@/lib/persisted-state";
 import { isReleaseActive } from "@/lib/release-activity";
@@ -107,8 +107,13 @@ function MetadataIcon({ className }: { className?: string }) {
   return <ClipboardList className={className} />;
 }
 
+// A handheld stage microphone, not a calendar (founder call, 2026-08-31: on
+// desktop this row and the workspace's Content pill were showing the same
+// glyph). `MicVocal` is the performer's mic rather than `Mic`'s podcast
+// condenser, which is the right read for a live show. Note `Mic2` is only a
+// deprecated alias of this same icon — do not reach for it.
 function ShowsIcon({ className }: { className?: string }) {
-  return <CalendarDays className={className} aria-hidden="true" />;
+  return <MicVocal className={className} aria-hidden="true" />;
 }
 
 function AdminIcon({ className }: { className?: string }) {
