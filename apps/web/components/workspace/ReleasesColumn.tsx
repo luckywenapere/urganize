@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { Plus } from 'lucide-react';
 import type { Release } from '@/types/releases';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -27,6 +28,17 @@ type ReleasesColumnProps = {
   /** Opens the create-release modal. Surfaces as a full-width button below
    * sm where the AppTopbar's "New release" button is hidden. */
   onCreateRelease: () => void;
+  /**
+   * Replaces the built-in "No releases yet" state when `releases` is empty.
+   *
+   * Exists because the catalog's search bar filters this list, and an empty
+   * FILTERED list is not an empty catalog — telling someone with nine releases
+   * to "create your first release" because they mistyped a search would be a
+   * lie. WorkspaceView builds the no-match node once and hands the same one to
+   * this component and to WorkspaceDesktopGrid, so the two cannot word it
+   * differently.
+   */
+  emptyState?: ReactNode;
 };
 
 export function ReleasesColumn({
@@ -34,6 +46,7 @@ export function ReleasesColumn({
   scopedReleaseId,
   onSelect,
   onCreateRelease,
+  emptyState,
 }: ReleasesColumnProps) {
   return (
     <section className="space-y-3">
@@ -51,7 +64,9 @@ export function ReleasesColumn({
         </button>
       ) : null}
 
-      {releases.length === 0 ? (
+      {releases.length === 0 && emptyState ? (
+        emptyState
+      ) : releases.length === 0 ? (
         <EmptyState
           mascot="resting"
           title="No releases yet"

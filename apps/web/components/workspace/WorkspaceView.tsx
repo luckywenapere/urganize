@@ -38,6 +38,9 @@ import { ChangeReleaseArtistDialog } from '@/components/workspace/ChangeReleaseA
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { isReleaseActive } from '@/lib/release-activity';
 import { isRecapEligible as isRecapEligibleForRelease } from '@/lib/recap-eligibility';
+import { searchReleases } from '@/lib/release-search';
+import { ReleaseSearchBar } from './ReleaseSearchBar';
+import { EmptyState } from '@/components/shared/EmptyState';
 
 const TASKS_PANEL_ID = 'workspace-tasks';
 
@@ -537,6 +540,44 @@ export function WorkspaceView() {
   // path uses `scopedReleaseSlim` directly for the same reason.
   const isDesktopFocusedMode = Boolean(scopedReleaseId && selectedCard);
 
+  // The catalog's "Search release" bar (2026-08-31, founder request).
+  //
+  // The filter is applied ONLY to the two catalog surfaces below. It must never
+  // touch `releaseCards` itself, which also feeds `selectedCard`, `leftRail`
+  // and `rightRail` — filtering those would make a scoped release vanish from
+  // its own focused view while someone typed, and empty the rails beside it.
+  const [releaseQuery, setReleaseQuery] = useState('');
+  const catalogReleases = useMemo(
+    () => searchReleases(releaseCards, releaseQuery),
+    [releaseCards, releaseQuery]
+  );
+  // The bar shows whenever the catalog is the thing on screen. The two branches
+  // fall back to the catalog on slightly different conditions (mobile needs the
+  // release to resolve, desktop needs its card too), so this reads as "neither
+  // branch is showing a focused release" rather than duplicating either test.
+  const showCatalogSearch =
+    releaseCards.length > 0 && !(scopedReleaseId && scopedReleaseSlim) && !isDesktopFocusedMode;
+  // One node, handed to both catalog surfaces, so a search miss cannot be
+  // worded two ways. Without it both components fall through to their built-in
+  // "No releases yet / create your first release" state, which is a lie to
+  // someone who has nine releases and mistyped.
+  const catalogNoMatchState =
+    releaseQuery.trim().length > 0 && catalogReleases.length === 0 ? (
+      <EmptyState
+        title="No releases match that"
+        description="Try a different word, or clear the search to see everything."
+        action={
+          <button
+            type="button"
+            onClick={() => setReleaseQuery('')}
+            className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-4 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+          >
+            Clear search
+          </button>
+        }
+      />
+    ) : undefined;
+
   /** Open the intake for the scoped release. */
   const openPlanIntake = () => {
     if (!scopedReleaseId) return;
@@ -938,6 +979,28 @@ export function WorkspaceView() {
             </div>
           ) : null}
 
+          {/* The catalog's search bar (2026-08-31, founder request). Rendered
+              ONCE here, above BOTH viewport branches, rather than inside each —
+              it is the same control doing the same job at every width, and the
+              two branches are separate DOM subtrees (`lg:hidden` /
+              `hidden lg:block`), so one bar in each would be two copies of the
+              markup and two copies of the state to keep in step.
+
+              Gated on the catalog actually being on screen AND on there being
+              a release to find: searching an empty catalog is meaningless, and
+              the "No releases yet" state already owns that screen. Note this
+              is deliberately NOT gated on a release count threshold — the ask
+              was for a bar at the top of the catalog, and hiding it below some
+              number of releases would be second-guessing that. */}
+          {showCatalogSearch ? (
+            <ReleaseSearchBar
+              value={releaseQuery}
+              onChange={setReleaseQuery}
+              matchCount={catalogReleases.length}
+              totalCount={releaseCards.length}
+            />
+          ) : null}
+
           {/* ====================================================================
               MOBILE (< lg): drill-down. Level 1 shows the release list; Level 2
               shows back header + TasksPanel for the scoped release (Files and
@@ -1046,10 +1109,11 @@ export function WorkspaceView() {
               </>
             ) : (
               <ReleasesColumn
-                releases={releaseCards}
+                releases={catalogReleases}
                 scopedReleaseId={scopedReleaseId}
                 onSelect={handleSelect}
                 onCreateRelease={() => setIsCreateModalOpen(true)}
+                emptyState={catalogNoMatchState}
               />
             )}
           </div>
@@ -1084,9 +1148,10 @@ export function WorkspaceView() {
               />
             ) : (
               <WorkspaceDesktopGrid
-                releases={releaseCards}
+                releases={catalogReleases}
                 onSelect={handleSelect}
                 onCreateRelease={() => setIsCreateModalOpen(true)}
+                emptyState={catalogNoMatchState}
               />
             )}
           </div>

@@ -2,8 +2,10 @@
 
 import { useEffect, useId, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
 import {
+  ArrowRight,
   CalendarDays,
   ChevronDown,
   ClipboardList,
@@ -33,6 +35,9 @@ import {
   type TaskSectionKey,
 } from '@/lib/tasks';
 import { matchesSearchTerms, parseSearchTerms, searchTasks } from '@/lib/task-search';
+import { appPageHaystack, buildAppPages, type AppPage } from '@/lib/app-pages';
+import { forgetSceneForCurrentRelease } from '@/lib/scene-memory';
+import { useAuthStore } from '@/lib/auth-store';
 import type { Release } from '@/types/releases';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { TaskRow } from '@/components/tasks/TaskRow';
@@ -350,6 +355,17 @@ export function TasksPanel({
   // openTask opens the global task detail pop-up mounted by TaskUIProvider —
   // this panel stays where it is underneath the modal.
   const { openTask, openQuickCreate } = useTaskUI();
+
+  // For the search surface's Pages group. `useRouter` only — deliberately NOT
+  // `useSearchParams`, which in a statically prerendered client component bails
+  // out to the nearest Suspense boundary; the scoped release reaches this
+  // component as a prop, and the one place that needs the live URL
+  // (forgetSceneForCurrentRelease) reads it at click time.
+  const router = useRouter();
+  // Tri-state, and null must stay "not yet" rather than "no" — buildAppPages
+  // handles that, and the cost of being wrong here is only that the crossing
+  // is briefly unsearchable for a dual account.
+  const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
 
   // The pills below swap this panel's body between the activity buckets and a
   // release scene (Calendar / Files / Press kit), in place — they
@@ -905,20 +921,35 @@ export function TasksPanel({
     return map;
   }, [sections]);
 
-  // One query, two kinds of result: the release's activities (the point of the
-  // 2026-08-31 change — sixty-odd rows that were previously unsearchable) and
-  // the release tools the folded menu holds. Terms are parsed once so both
-  // halves answer the same question.
+  // One query, THREE kinds of result: the release's activities (the point of
+  // the 2026-08-31 split — sixty-odd rows that were previously unsearchable),
+  // the release tools the folded menu holds, and the app's own pages (added
+  // the same day — "that search should be able to search for any page at
+  // all"). Terms are parsed once so all three answer the same question.
   const searchTerms = parseSearchTerms(searchQuery);
   const taskMatches = searchTasks(tasks, searchQuery);
   const toolMatches =
     searchTerms.length > 0
       ? moreMenuActions.filter((action) => matchesSearchTerms(action.label, searchTerms))
       : [];
-  const hasSearchResults = taskMatches.results.length > 0 || toolMatches.length > 0;
-  // Headings exist to tell the two kinds of result apart, so with only one
-  // kind on screen they are noise — the reference screenshot has none at all.
-  const showSearchGroupHeadings = taskMatches.results.length > 0 && toolMatches.length > 0;
+  // Rebuilt per render rather than memoized, matching moreMenuActionsRaw above
+  // and for a weaker version of the same reason: it is a handful of literals
+  // and one store read, so a stale-closure risk is not worth trading for.
+  const pageMatches =
+    searchTerms.length > 0
+      ? buildAppPages({ hasCuratorProfile }).filter((page) =>
+          matchesSearchTerms(appPageHaystack(page), searchTerms)
+        )
+      : [];
+  const hasSearchResults =
+    taskMatches.results.length > 0 || toolMatches.length > 0 || pageMatches.length > 0;
+  // Headings exist to tell the kinds of result apart, so with only one kind on
+  // screen they are noise — the reference screenshot has none at all.
+  const searchGroupCount =
+    (taskMatches.results.length > 0 ? 1 : 0) +
+    (toolMatches.length > 0 ? 1 : 0) +
+    (pageMatches.length > 0 ? 1 : 0);
+  const showSearchGroupHeadings = searchGroupCount > 1;
 
   // The dock's own presence rule. Search needs activities to search; the menu
   // needs actions to list. Either alone is enough to render the row, so a
@@ -933,6 +964,18 @@ export function TasksPanel({
 
   const handleMoreMenuSelect = (action: MoreMenuAction) => {
     action.onClick();
+    closeMobilePanels();
+  };
+
+  const handleSearchPageSelect = (page: AppPage) => {
+    // The catalog is an EXIT from the scoped release, so it takes the same
+    // step the back arrow, MobileNavBar's Home tab, the side menu's Catalog
+    // row and the topbar's Catalog icon all take — otherwise coming back to
+    // this release would resume the scene the user just navigated away from.
+    // Every other page is somewhere you go and return from, where resuming the
+    // scene is exactly what scene memory is for.
+    if (page.leavesRelease) forgetSceneForCurrentRelease();
+    router.push(page.href);
     closeMobilePanels();
   };
 
@@ -1202,8 +1245,12 @@ export function TasksPanel({
           has sixty of. Now they are two surfaces:
 
             hamburger -> the menu, and only the menu. No field in it at all.
-            search    -> a field over real results: matching activities first,
-                         then any release tool whose name matches.
+            search    -> a field over real results, in three groups: matching
+                         activities, then any release tool whose name matches,
+                         then the app's own pages (Catalog, UrgAns, Notes,
+                         Shows, Settings, the curator crossing — see
+                         lib/app-pages.ts, which carries the keywords that make
+                         "billing" find Settings).
 
           Both live in the same slot above the trigger row and are mutually
           exclusive (see `openMobilePanel`). The panel sits at the BOTTOM of
@@ -1332,8 +1379,8 @@ export function TasksPanel({
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 autoFocus
-                placeholder="Search activities…"
-                aria-label="Search activities"
+                placeholder="Search…"
+                aria-label="Search activities, tools and pages"
                 className="motion-focus h-9 w-full rounded-full border border-stroke-default bg-bg-elevated pl-9 pr-10 text-lg text-content-primary placeholder:text-content-tertiary"
               />
               <button
@@ -1352,7 +1399,7 @@ export function TasksPanel({
               // here would make the search surface indistinguishable from the
               // menu the founder asked to separate it from.
               <p className="px-2 py-3 text-center text-xs text-content-tertiary">
-                Type to find an activity.
+                Type to find an activity, a tool or a page.
               </p>
             ) : !hasSearchResults ? (
               <p className="px-2 py-3 text-center text-xs text-content-tertiary">No matches.</p>
@@ -1427,6 +1474,31 @@ export function TasksPanel({
                               aria-hidden="true"
                             />
                             {action.label}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+
+                {pageMatches.length > 0 ? (
+                  <>
+                    {showSearchGroupHeadings ? (
+                      <p className={SEARCH_GROUP_HEADING_CLASS}>Pages</p>
+                    ) : null}
+                    <ul>
+                      {pageMatches.map((page) => (
+                        <li key={page.key}>
+                          <button
+                            type="button"
+                            onClick={() => handleSearchPageSelect(page)}
+                            className="motion-focus flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm text-content-primary transition-colors hover:bg-bg-hover"
+                          >
+                            <ArrowRight
+                              className="h-4 w-4 shrink-0 text-content-tertiary"
+                              aria-hidden="true"
+                            />
+                            {page.label}
                           </button>
                         </li>
                       ))}

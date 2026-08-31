@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.13.0",
+    date: "August 31, 2026",
+    highlights: [
+      "Your catalog has a search bar at the top now, on your phone and on your computer. Type part of a release name or an artist name to find it.",
+      "The search on your phone also finds pages now, not just activities. Type \"billing\" and it takes you to Settings.",
+    ],
+  },
+  {
     version: "1.12.0",
     date: "August 31, 2026",
     highlights: [
