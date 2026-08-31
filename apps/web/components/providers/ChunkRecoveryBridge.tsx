@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   CHUNK_RELOAD_STORAGE_KEY,
   isChunkLoadError,
+  isInAppNavigationClick,
   nextReloadRecord,
   parseReloadRecord,
+  resolveRecoveryTarget,
   shouldReload,
+  type NavigationIntent,
 } from '@/lib/chunk-recovery';
 
 /**
@@ -31,10 +34,54 @@ import {
  * never become a reload loop. The proper fix is Vercel Skew Protection, which
  * keeps an old client's assets resolvable; this is the fallback for the window
  * that protection does not cover.
+ *
+ * It also RESUMES the navigation rather than reloading the page being left
+ * (2026-08-31). The failure is a navigation, so if the router had not yet
+ * committed the new URL, a plain reload silently ate the user's click — they
+ * tapped a link and got a refresh, still standing where they started. So the
+ * last in-app link click is recorded here and resolveRecoveryTarget decides
+ * where the recovery lands, falling back to the old plain reload for every
+ * uncertainty.
  */
 export function ChunkRecoveryBridge() {
+  // The last in-app link the user clicked. A recovery uses it to RESUME the
+  // navigation that died rather than reloading the page they were leaving —
+  // see resolveRecoveryTarget, which falls back to a plain reload whenever the
+  // intent is stale, cross-origin or already the current page. A ref, not
+  // state: nothing renders from it, and a re-render must not clear it.
+  const intentRef = useRef<NavigationIntent | null>(null);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // CAPTURE phase, deliberately: Next's Link calls preventDefault() to route
+    // client-side, so by the bubble phase every real in-app click already
+    // looks cancelled — which is exactly the set we need to record.
+    const onClick = (event: MouseEvent) => {
+      const eventTarget = event.target;
+      const anchor = eventTarget instanceof Element ? eventTarget.closest('a') : null;
+      // instanceof rather than a truthiness check: closest('a') also matches an
+      // SVG <a>, whose `href` is an SVGAnimatedString rather than a string.
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      // getAttribute, not .href — an <a> with no href resolves .href to the
+      // current page, which would record a bogus intent for a button-ish link.
+      if (!anchor.getAttribute('href')) return;
+
+      const click = {
+        href: anchor.href,
+        target: anchor.getAttribute('target'),
+        hasDownload: anchor.hasAttribute('download'),
+        modified:
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey ||
+          event.button !== 0,
+      };
+      if (!isInAppNavigationClick(click, window.location.href)) return;
+
+      intentRef.current = { href: click.href, at: Date.now() };
+    };
 
     const recover = () => {
       let record = { at: 0, attempts: 0 };
@@ -61,6 +108,17 @@ export function ChunkRecoveryBridge() {
         // loop is not reachable in practice.
       }
 
+      // Resume the navigation when we know what it was; otherwise reload where
+      // we stand, which is what this did before and is still correct whenever
+      // the failure was not a link click (a lazy component on this page, or a
+      // programmatic router.push we cannot observe).
+      const target = resolveRecoveryTarget(window.location.href, intentRef.current, now);
+      if (target) {
+        console.warn('[chunk-recovery] stale build detected — resuming navigation to', target);
+        window.location.assign(target);
+        return;
+      }
+
       console.warn('[chunk-recovery] stale build detected — reloading to pick up the new one');
       window.location.reload();
     };
@@ -72,9 +130,11 @@ export function ChunkRecoveryBridge() {
       if (isChunkLoadError(event.reason)) recover();
     };
 
+    document.addEventListener('click', onClick, true);
     window.addEventListener('error', onError);
     window.addEventListener('unhandledrejection', onRejection);
     return () => {
+      document.removeEventListener('click', onClick, true);
       window.removeEventListener('error', onError);
       window.removeEventListener('unhandledrejection', onRejection);
     };
