@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { recallScene, rememberScene, resetSceneMemory } from './scene-memory';
+import {
+  forgetSceneForCurrentRelease,
+  recallScene,
+  rememberScene,
+  resetSceneMemory,
+} from './scene-memory';
 
 function createMemoryStorage() {
   const store = new Map<string, string>();
@@ -143,6 +148,62 @@ describe('resetSceneMemory', () => {
 
   it('is a no-op when nothing was ever stored', () => {
     expect(() => resetSceneMemory()).not.toThrow();
+  });
+});
+
+// The shared "leave this release" step, used by all four exits that are plain
+// <Link>s to /dashboard and so never reach setScope: the workspace back arrow's
+// sibling controls — MobileNavBar's Home tab, the side menu's Catalog row and
+// the topbar's Catalog icon. It reads the live url rather than a render-time
+// copy, which is the part worth pinning: every caller is a click handler in
+// layout chrome that does not re-render on a scope change.
+describe('forgetSceneForCurrentRelease', () => {
+  function stubLocation(search: string) {
+    vi.stubGlobal('window', { localStorage: storage, location: { search } });
+  }
+
+  it('forgets the scene of the release the url has scoped', () => {
+    stubSession('user-1');
+    rememberScene('release-1', 'metadata');
+    expect(recallScene('release-1')).toBe('metadata');
+
+    stubLocation('?release=release-1&scene=metadata');
+    forgetSceneForCurrentRelease();
+    expect(recallScene('release-1')).toBeNull();
+  });
+
+  it('leaves every OTHER release alone', () => {
+    stubSession('user-1');
+    rememberScene('release-1', 'metadata');
+    rememberScene('release-2', 'calendar');
+
+    stubLocation('?release=release-1');
+    forgetSceneForCurrentRelease();
+    expect(recallScene('release-1')).toBeNull();
+    expect(recallScene('release-2')).toBe('calendar');
+  });
+
+  it('is a no-op when no release is scoped — the catalog, Notes, Settings', () => {
+    stubSession('user-1');
+    rememberScene('release-1', 'metadata');
+
+    stubLocation('');
+    expect(() => forgetSceneForCurrentRelease()).not.toThrow();
+    expect(recallScene('release-1')).toBe('metadata');
+  });
+
+  it('is a no-op for an empty release param', () => {
+    stubSession('user-1');
+    rememberScene('release-1', 'metadata');
+
+    stubLocation('?release=');
+    forgetSceneForCurrentRelease();
+    expect(recallScene('release-1')).toBe('metadata');
+  });
+
+  it('does not throw on the server, where there is no window', () => {
+    vi.stubGlobal('window', undefined);
+    expect(() => forgetSceneForCurrentRelease()).not.toThrow();
   });
 });
 

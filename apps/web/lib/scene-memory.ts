@@ -113,6 +113,33 @@ export function rememberScene(releaseId: string, scene: SceneName | null): void 
 }
 
 /**
+ * Forget the scene of whichever release the CURRENT url has scoped, so coming
+ * back to it lands on Activities.
+ *
+ * This is what every "leave this release" control does on its way out — the
+ * workspace back arrow (through SetScopeOptions.forgetScene), MobileNavBar's
+ * Home tab, the side menu's Catalog row, and the topbar's Catalog icon. Those
+ * last three are plain <Link>s to /dashboard, so they never reach setScope and
+ * have to say it themselves; this exists so they say it once rather than three
+ * times, which is how the first two drifted apart from the third to begin with.
+ *
+ * Reads the url at CALL time on purpose. Every caller is a click handler in
+ * layout-level chrome, and scoping a release is a same-pathname `replace` that
+ * none of that chrome subscribes to — a render-time copy would go stale on the
+ * one transition that matters most.
+ */
+export function forgetSceneForCurrentRelease(): void {
+  if (typeof window === 'undefined') return;
+  let releaseId: string | null = null;
+  try {
+    releaseId = new URLSearchParams(window.location.search).get('release');
+  } catch {
+    return;
+  }
+  if (releaseId) rememberScene(releaseId, null);
+}
+
+/**
  * Wipe every release's remembered scene. Called from the auth store's
  * SIGNED_OUT handler, alongside resetSceneData() — logging out and back in
  * (even in the same tab, same or different account) must always start every

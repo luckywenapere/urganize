@@ -8,7 +8,7 @@ import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
-import { rememberScene } from '@/lib/scene-memory';
+import { forgetSceneForCurrentRelease } from '@/lib/scene-memory';
 import { CatalogIcon, ChappiIcon, NotesIcon } from '@/components/app/BrandIcons';
 
 // Same flags AppTopbar reads — a tab only exists in the bar when its surface
@@ -268,16 +268,17 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
   // missing is the other half of leaving — forgetting the scene the release was
   // showing, so tapping that release again starts at Activities rather than
   // resuming the scene the user just walked out of. WorkspaceView's goBack gets
-  // this from setScope's `forgetScene`; there is no setScope here, so it calls
-  // rememberScene directly. Same end state, one rule.
+  // this from setScope's `forgetScene`; there is no setScope here, so it goes
+  // through the shared helper — which the side menu's Catalog row and the
+  // topbar's Catalog icon also use, since all four are the same move made from
+  // four different surfaces. Same end state, one rule.
   //
-  // Reads `?release=` fresh at click time for the reason SongTab's header
-  // gives: an answer on demand, not a subscription that would drag the whole
-  // bar behind a Suspense boundary.
+  // That helper reads `?release=` fresh at call time for the reason SongTab's
+  // header gives: an answer on demand, not a subscription that would drag the
+  // whole bar behind a Suspense boundary.
   const handleHomeClick = () => {
-    if (typeof window === 'undefined' || !isHome) return;
-    const releaseId = new URLSearchParams(window.location.search).get('release');
-    if (releaseId) rememberScene(releaseId, null);
+    if (!isHome) return;
+    forgetSceneForCurrentRelease();
   };
 
   const handleUrgAnsClick = () => {
