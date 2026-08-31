@@ -88,7 +88,8 @@ const PushPermissionPrompt = dynamic(
 );
 // The install offer that precedes it. Same dynamic + flag-gated treatment,
 // and it must stay client-only: every branch it takes depends on reading the
-// user agent and the display mode.
+// user agent, the display mode, and whether the browser has offered us an
+// install of its own.
 const InstallAppPrompt = dynamic(
   () => import('@/components/app/InstallAppPrompt').then((m) => m.InstallAppPrompt),
   { ssr: false }
@@ -139,12 +140,12 @@ const ANDROID_APP_BANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_ANDROID_APP_B
 // this mount, is what opens the OS prompt.
 const PUSH_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PUSH_PROMPT === 'true';
 
-// "You've had a look around — put us on your Home Screen" (founder request,
-// 2026-08-30). Offered once someone has opened three distinct surfaces in a
-// session, at the bottom of the screen where a thumb reaches, and the
-// notification ask above follows only if this one is turned down. See
-// lib/install-prompt.ts for the counting and InstallAppPrompt.tsx for why
-// iOS can only ever be taught rather than triggered.
+// "Put us on your Home Screen" (founder request 2026-08-30, retriggered
+// 2026-08-31). Offered a minute into every visit, once per visit, at the
+// bottom of the screen where a thumb reaches, and the notification ask above
+// follows only if this one is turned down. See lib/install-prompt.ts for the
+// countdown and the once-per-visit rule, and InstallAppPrompt.tsx for why the
+// three platforms need three different mechanisms.
 const INSTALL_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_INSTALL_PROMPT === 'true';
 
 // Once-per-session arming for the side rail: landing on the assistant page
@@ -571,8 +572,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Same gate again, and the same slot at the bottom of the screen — the
           two never collide because the notification ask holds itself until
           this one has been answered (see the install-owed branch in
-          PushPermissionPrompt). Signed-in only: "browsing through the tabs"
-          is not a thing a signed-out visitor on /auth is doing. */}
+          PushPermissionPrompt). Signed-in chrome only: the minute is meant to
+          be a minute of using the app, not a minute spent on /auth. */}
       {INSTALL_PROMPT_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <InstallAppPrompt />
       ) : null}

@@ -1,23 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  INSTALL_PROMPT_MIN_VIEWS,
-  INSTALL_PROMPT_VIEWS_KEY,
+  INSTALL_PROMPT_DELAY_MS,
+  INSTALL_PROMPT_STATE_KEY,
+  armInstallPrompt,
   decideInstallPrompt,
-  installViewKey,
   isInstallPromptOwed,
+  isInstallPromptState,
+  markInstallPromptAccepted,
   markInstallPromptSettled,
-  nextInstallViewList,
-  readInstallPromptSettled,
-  readInstallPromptViews,
-  recordInstallPromptView,
+  markInstallPromptShown,
+  readInstallPromptAccepted,
+  readInstallPromptState,
   resolveInstallVariant,
   subscribeInstallPromptSettled,
-  subscribeInstallPromptViews,
 } from './install-prompt';
 
 // vitest runs node here, so the two Storages are stubbed. Deliberately real
-// objects rather than mocks: readInstallPromptViews has to survive genuine
+// objects rather than mocks: readInstallPromptState has to survive genuine
 // round trips through JSON, and the throw cases below need setItem to throw
 // the way a private-mode browser actually does.
 function makeStorage(overrides: { setItem?: () => never } = {}) {
@@ -37,14 +37,19 @@ function makeStorage(overrides: { setItem?: () => never } = {}) {
   };
 }
 
-function installStorages(overrides: { setItem?: () => never } = {}) {
+/** `ua` picks the device: 'node' is a desktop browser, 'iPhone' an iOS tab. */
+function installStorages(
+  overrides: { setItem?: () => never; ua?: string; standalone?: boolean } = {}
+) {
   const session = makeStorage(overrides);
   const local = makeStorage(overrides);
+  const ua = overrides.ua ?? 'node';
   vi.stubGlobal('window', {
     sessionStorage: session,
     localStorage: local,
-    navigator: { userAgent: 'node', platform: '', maxTouchPoints: 0 },
-    matchMedia: () => ({ matches: false }),
+    navigator: { userAgent: ua, platform: '', maxTouchPoints: 0 },
+    matchMedia: () => ({ matches: overrides.standalone === true }),
+    addEventListener: () => {},
   });
   return { session, local };
 }
@@ -53,84 +58,39 @@ beforeEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('installViewKey', () => {
-  it('counts the app surfaces', () => {
-    expect(installViewKey('/dashboard')).toBe('/dashboard');
-    expect(installViewKey('/dashboard/urgans')).toBe('/dashboard/urgans');
-    expect(installViewKey('/dashboard/notes')).toBe('/dashboard/notes');
-    expect(installViewKey('/settings')).toBe('/settings');
-    expect(installViewKey('/admin/waitlist')).toBe('/admin/waitlist');
-  });
-
-  it('ignores flow pages, public pages and the curator side — three bounced flow steps are not browsing', () => {
-    for (const url of [
-      '/auth',
-      '/auth/callback',
-      '/onboarding',
-      '/start-trial',
-      '/locked',
-      '/curator',
-      '/credits/abc',
-      '/epk/abc',
-      '/capture/abc',
-      '/',
-    ]) {
-      expect(installViewKey(url), url).toBeNull();
-    }
-  });
-
-  it('treats a scene and a settings tab as their own surfaces', () => {
-    expect(installViewKey('/dashboard?release=r1&scene=calendar')).toBe('/dashboard#calendar');
-    expect(installViewKey('/dashboard?release=r1&scene=metadata')).toBe('/dashboard#metadata');
-    expect(installViewKey('/settings?tab=team')).toBe('/settings#team');
-  });
-
-  it('does NOT treat a different release as a different surface', () => {
-    // Flicking through your own catalog is one tab showing other contents.
-    expect(installViewKey('/dashboard?release=r1')).toBe('/dashboard');
-    expect(installViewKey('/dashboard?release=r2')).toBe('/dashboard');
-  });
-
-  it('rejects anything that is not a same-app relative path', () => {
-    expect(installViewKey('//evil.example/dashboard')).toBeNull();
-    expect(installViewKey('https://evil.example/dashboard')).toBeNull();
-    expect(installViewKey('')).toBeNull();
-    expect(installViewKey(undefined as unknown as string)).toBeNull();
-  });
-
-  it('falls back to the path when the query string is unparseable', () => {
-    expect(installViewKey('/dashboard?%')).toBe('/dashboard');
-  });
-});
-
-describe('nextInstallViewList', () => {
-  it('appends a new surface and ignores a repeat', () => {
-    expect(nextInstallViewList([], '/dashboard')).toEqual(['/dashboard']);
-    expect(nextInstallViewList(['/dashboard'], '/settings')).toEqual(['/dashboard', '/settings']);
-    expect(nextInstallViewList(['/dashboard'], '/dashboard')).toEqual(['/dashboard']);
-  });
-
-  it('caps the list so a long session cannot grow storage without bound', () => {
-    let views: string[] = [];
-    for (let i = 0; i < 40; i += 1) views = nextInstallViewList(views, `/dashboard/${i}`);
-    expect(views.length).toBeLessThanOrEqual(12);
-    expect(views[views.length - 1]).toBe('/dashboard/39');
-  });
-});
-
 describe('resolveInstallVariant', () => {
-  const base = { native: false, standalone: false, ios: false, android: false };
+  const base = {
+    native: false,
+    standalone: false,
+    ios: false,
+    android: false,
+    canPromptInstall: false,
+  };
 
-  it('offers the Home Screen steps on an iOS browser tab', () => {
+  it('teaches Add to Home Screen on an iOS browser tab', () => {
     expect(resolveInstallVariant({ ...base, ios: true })).toBe('ios');
   });
 
-  it('offers the app on an Android browser tab', () => {
+  it('points an Android browser tab at the real app', () => {
     expect(resolveInstallVariant({ ...base, android: true })).toBe('android');
   });
 
-  it('offers nothing on a desktop browser', () => {
+  it('offers the browser install on a desktop browser that has handed us one', () => {
+    expect(resolveInstallVariant({ ...base, canPromptInstall: true })).toBe('desktop');
+  });
+
+  it('offers NOTHING on a desktop browser that has not — a button that cannot install is worse than no card', () => {
+    // Desktop Safari and Firefox never fire beforeinstallprompt.
     expect(resolveInstallVariant(base)).toBeNull();
+  });
+
+  it('keeps Android on the real app even when the browser also offers a web install', () => {
+    // Chrome on Android fires beforeinstallprompt too. Reaching the desktop
+    // branch there would put a second-best web install in front of someone
+    // who can have the APK.
+    expect(resolveInstallVariant({ ...base, android: true, canPromptInstall: true })).toBe(
+      'android'
+    );
   });
 
   it('offers nothing once installed, whichever way it is already installed', () => {
@@ -141,138 +101,337 @@ describe('resolveInstallVariant', () => {
     expect(resolveInstallVariant({ ...base, android: true, standalone: true })).toBeNull();
     expect(resolveInstallVariant({ ...base, ios: true, native: true })).toBeNull();
     expect(resolveInstallVariant({ ...base, android: true, native: true })).toBeNull();
+    expect(
+      resolveInstallVariant({ ...base, canPromptInstall: true, standalone: true })
+    ).toBeNull();
   });
 });
 
 describe('decideInstallPrompt', () => {
-  it('waits below the threshold and fires at it', () => {
-    expect(decideInstallPrompt({ viewCount: 1, variant: 'ios', settled: false })).toBe('wait');
+  const now = 1_700_000_000_000;
+  const base = { variant: 'ios' as const, accepted: false };
+
+  it('arms on a first visit with nothing stored', () => {
+    expect(decideInstallPrompt({ ...base, state: null, now })).toEqual({ action: 'arm' });
+  });
+
+  it('waits out the remaining minute, then fires', () => {
+    expect(decideInstallPrompt({ ...base, state: { armedAt: now }, now })).toEqual({
+      action: 'wait',
+      remainingMs: INSTALL_PROMPT_DELAY_MS,
+    });
+    expect(
+      decideInstallPrompt({ ...base, state: { armedAt: now - 20_000 }, now })
+    ).toEqual({ action: 'wait', remainingMs: INSTALL_PROMPT_DELAY_MS - 20_000 });
+    expect(
+      decideInstallPrompt({ ...base, state: { armedAt: now - INSTALL_PROMPT_DELAY_MS }, now })
+    ).toEqual({ action: 'fire' });
+    expect(decideInstallPrompt({ ...base, state: { armedAt: now - 600_000 }, now })).toEqual({
+      action: 'fire',
+    });
+  });
+
+  it('is once per visit — shownAt outranks the clock', () => {
+    // The card marks itself shown when it FIRES, so leaving app chrome and
+    // coming back must not produce a second one.
     expect(
       decideInstallPrompt({
-        viewCount: INSTALL_PROMPT_MIN_VIEWS - 1,
-        variant: 'ios',
-        settled: false,
+        ...base,
+        state: { armedAt: now - 600_000, shownAt: now - 500_000 },
+        now,
       })
-    ).toBe('wait');
+    ).toEqual({ action: 'skip' });
+  });
+
+  it('skips a device with nothing to offer, however long it waits', () => {
     expect(
-      decideInstallPrompt({ viewCount: INSTALL_PROMPT_MIN_VIEWS, variant: 'ios', settled: false })
-    ).toBe('fire');
-    expect(decideInstallPrompt({ viewCount: 99, variant: 'android', settled: false })).toBe('fire');
+      decideInstallPrompt({ ...base, variant: null, state: { armedAt: now - 600_000 }, now })
+    ).toEqual({ action: 'skip' });
   });
 
-  it('skips a device with no install to offer, however much it browses', () => {
-    expect(decideInstallPrompt({ viewCount: 99, variant: null, settled: false })).toBe('skip');
+  it('skips a device that already took the install', () => {
+    expect(
+      decideInstallPrompt({ ...base, accepted: true, state: { armedAt: now - 600_000 }, now })
+    ).toEqual({ action: 'skip' });
+    // Accepted outranks even a fresh visit, which is what makes the accept
+    // durable across sessions while a decline is not.
+    expect(decideInstallPrompt({ ...base, accepted: true, state: null, now })).toEqual({
+      action: 'skip',
+    });
   });
 
-  it('skips a device that already answered', () => {
-    expect(decideInstallPrompt({ viewCount: 99, variant: 'ios', settled: true })).toBe('skip');
+  it('clamps a future armedAt to a full minute rather than trusting a bad clock', () => {
+    // Clock skew or hand-edited storage must never produce an hour-long
+    // ambush.
+    expect(decideInstallPrompt({ ...base, state: { armedAt: now + 86_400_000 }, now })).toEqual({
+      action: 'wait',
+      remainingMs: INSTALL_PROMPT_DELAY_MS,
+    });
   });
 });
 
-describe('recordInstallPromptView', () => {
-  it('stores distinct surfaces and notifies subscribers only when the count moves', () => {
+describe('isInstallPromptState', () => {
+  it('accepts the two real shapes and rejects everything else', () => {
+    expect(isInstallPromptState({ armedAt: 1 })).toBe(true);
+    expect(isInstallPromptState({ armedAt: 1, shownAt: 2 })).toBe(true);
+    expect(isInstallPromptState(null)).toBe(false);
+    expect(isInstallPromptState({})).toBe(false);
+    expect(isInstallPromptState({ armedAt: 'soon' })).toBe(false);
+    expect(isInstallPromptState({ armedAt: Number.NaN })).toBe(false);
+    expect(isInstallPromptState({ armedAt: 1, shownAt: 'later' })).toBe(false);
+  });
+});
+
+describe('storage', () => {
+  it('round-trips the countdown and the spent offer', () => {
     installStorages();
-    const seen: string[][] = [];
-    const unsubscribe = subscribeInstallPromptViews((views) => seen.push(views));
+    expect(readInstallPromptState()).toBeNull();
 
-    recordInstallPromptView('/dashboard');
-    recordInstallPromptView('/dashboard'); // repeat — no notification
-    recordInstallPromptView('/auth'); // not a tab — no notification
-    recordInstallPromptView('/settings?tab=team');
+    expect(armInstallPrompt(1000)).toEqual({ armedAt: 1000 });
+    expect(readInstallPromptState()).toEqual({ armedAt: 1000 });
 
-    expect(readInstallPromptViews()).toEqual(['/dashboard', '/settings#team']);
-    expect(seen).toHaveLength(2);
-    unsubscribe();
-
-    recordInstallPromptView('/dashboard/notes');
-    expect(seen).toHaveLength(2); // unsubscribed
-    expect(readInstallPromptViews()).toHaveLength(3);
+    markInstallPromptShown(2000);
+    expect(readInstallPromptState()).toEqual({ armedAt: 1000, shownAt: 2000 });
   });
 
-  it('does not notify when the write itself fails — a subscriber must never act on a count that was not stored', () => {
+  it('returns null from armInstallPrompt when the write fails, so no caller runs a private countdown', () => {
     installStorages({
       setItem: () => {
         throw new Error('QuotaExceededError');
       },
     });
-    const seen: string[][] = [];
-    const unsubscribe = subscribeInstallPromptViews((views) => seen.push(views));
-    recordInstallPromptView('/dashboard');
-    expect(seen).toEqual([]);
-    expect(readInstallPromptViews()).toEqual([]);
-    unsubscribe();
+    expect(armInstallPrompt(1000)).toBeNull();
   });
 
   it('treats junk in storage as no history at all', () => {
     const { session } = installStorages();
-    session._map.set(INSTALL_PROMPT_VIEWS_KEY, '{"not":"an array"}');
-    expect(readInstallPromptViews()).toEqual([]);
-    session._map.set(INSTALL_PROMPT_VIEWS_KEY, 'not json');
-    expect(readInstallPromptViews()).toEqual([]);
-    session._map.set(INSTALL_PROMPT_VIEWS_KEY, '["/dashboard", 7, null]');
-    expect(readInstallPromptViews()).toEqual(['/dashboard']);
+    session._map.set(INSTALL_PROMPT_STATE_KEY, 'not json');
+    expect(readInstallPromptState()).toBeNull();
+    session._map.set(INSTALL_PROMPT_STATE_KEY, '{"armedAt":"soon"}');
+    expect(readInstallPromptState()).toBeNull();
+    session._map.set(INSTALL_PROMPT_STATE_KEY, '[]');
+    expect(readInstallPromptState()).toBeNull();
   });
-});
 
-describe('markInstallPromptSettled', () => {
-  it('records the answer and hands the outcome to subscribers', () => {
+  it('keeps the accept durable and separate from the visit record', () => {
     installStorages();
-    const seen: string[] = [];
-    const unsubscribe = subscribeInstallPromptSettled((outcome) => seen.push(outcome));
-
-    markInstallPromptSettled('declined');
-    expect(seen).toEqual(['declined']);
-    expect(readInstallPromptSettled()).toBe('declined');
-    unsubscribe();
+    expect(readInstallPromptAccepted()).toBe(false);
+    markInstallPromptAccepted();
+    expect(readInstallPromptAccepted()).toBe(true);
+    // The accept lives in localStorage; the visit record in sessionStorage.
+    expect(readInstallPromptState()).toBeNull();
   });
 
-  it('keeps accepted and declined distinct — the notification ask only follows a decline', () => {
-    installStorages();
-    markInstallPromptSettled('accepted');
-    expect(readInstallPromptSettled()).toBe('accepted');
-  });
-
-  it('still notifies when the write throws — losing the record costs one repeat offer, losing the signal costs the notification ask entirely', () => {
-    // writePersistedState does not guard setItem, so this is a real throw
-    // (full quota, Safari private mode), not a hypothetical one.
-    installStorages({
-      setItem: () => {
-        throw new Error('QuotaExceededError');
-      },
-    });
-    const seen: string[] = [];
-    const unsubscribe = subscribeInstallPromptSettled((outcome) => seen.push(outcome));
-
-    expect(() => markInstallPromptSettled('declined')).not.toThrow();
-    expect(seen).toEqual(['declined']);
-    expect(readInstallPromptSettled()).toBeNull();
-    unsubscribe();
-  });
-});
-
-describe('isInstallPromptOwed', () => {
-  it('is false on a device with no install to offer (desktop), so the notification ask is never held', () => {
-    installStorages();
-    expect(isInstallPromptOwed()).toBe(false);
-  });
-
-  it('is false once the device has answered', () => {
-    installStorages();
-    vi.stubGlobal('window', {
-      ...(globalThis as unknown as { window: Window }).window,
-      navigator: { userAgent: 'iPhone', platform: 'iPhone', maxTouchPoints: 5 },
-    });
-    markInstallPromptSettled('declined');
-    expect(isInstallPromptOwed()).toBe(false);
-  });
-
-  it('is false when storage is unusable — a broken store must never mute the notification ask forever', () => {
-    // The fail-closed pairing this module leads with: no card AND no hold.
+  it('does not throw when the accept cannot be written', () => {
     installStorages({
       setItem: () => {
         throw new Error('SecurityError');
       },
     });
+    expect(() => markInstallPromptAccepted()).not.toThrow();
+    expect(readInstallPromptAccepted()).toBe(false);
+  });
+});
+
+describe('markInstallPromptSettled', () => {
+  it('spends the visit and hands the outcome to subscribers', () => {
+    installStorages();
+    const seen: string[] = [];
+    const unsubscribe = subscribeInstallPromptSettled((outcome) => seen.push(outcome));
+
+    markInstallPromptSettled('declined', 5000);
+    expect(seen).toEqual(['declined']);
+    expect(readInstallPromptState()?.shownAt).toBe(5000);
+    // A decline is NOT durable — that is what makes the next visit ask again.
+    expect(readInstallPromptAccepted()).toBe(false);
+    unsubscribe();
+  });
+
+  it('makes an accept durable, so the next visit does not ask again', () => {
+    installStorages();
+    markInstallPromptSettled('accepted', 5000);
+    expect(readInstallPromptAccepted()).toBe(true);
+  });
+
+  it('still notifies when the writes throw — losing the record costs one repeat offer, losing the signal costs the notification ask entirely', () => {
+    installStorages({
+      setItem: () => {
+        throw new Error('QuotaExceededError');
+      },
+    });
+    const seen: string[] = [];
+    const unsubscribe = subscribeInstallPromptSettled((outcome) => seen.push(outcome));
+
+    expect(() => markInstallPromptSettled('declined', 5000)).not.toThrow();
+    expect(seen).toEqual(['declined']);
+    unsubscribe();
+  });
+});
+
+describe('isInstallPromptOwed', () => {
+  it('is true on a device that has an install coming this visit', () => {
+    installStorages({ ua: 'iPhone' });
+    expect(isInstallPromptOwed()).toBe(true);
+  });
+
+  it('is false on a device with no install to offer, so the notification ask is never held', () => {
+    // A desktop browser that never fired beforeinstallprompt.
+    installStorages();
     expect(isInstallPromptOwed()).toBe(false);
+  });
+
+  it('is false once the device has accepted', () => {
+    installStorages({ ua: 'iPhone' });
+    markInstallPromptAccepted();
+    expect(isInstallPromptOwed()).toBe(false);
+  });
+
+  it('is false once this visit has already been offered the card', () => {
+    installStorages({ ua: 'iPhone' });
+    markInstallPromptShown(1000);
+    expect(isInstallPromptOwed()).toBe(false);
+  });
+
+  it('is false when the session store cannot be written — a broken store must never mute the notification ask forever', () => {
+    // The fail-closed pairing this module leads with: no card AND no hold.
+    // Note the store still READS fine here, which is exactly Safari's private
+    // mode — so this can only be caught by probing with a real write.
+    installStorages({
+      ua: 'iPhone',
+      setItem: () => {
+        throw new Error('SecurityError');
+      },
+    });
+    expect(isInstallPromptOwed()).toBe(false);
+  });
+
+  it('is false on an installed Home Screen app even though it is still an iOS user agent', () => {
+    installStorages({ ua: 'iPhone', standalone: true });
+    expect(isInstallPromptOwed()).toBe(false);
+  });
+});
+
+describe('the browser install offer', () => {
+  type Listener = (event: unknown) => void;
+
+  /** A fresh module per case: the deferred event and the "capture started"
+   * latch are module-level by design (the listener must be attachable once,
+   * from an eagerly-loaded module), so they cannot be reset any other way. */
+  async function freshModule(overrides: { ua?: string } = {}) {
+    vi.resetModules();
+    const listeners = new Map<string, Listener>();
+    const session = makeStorage();
+    const local = makeStorage();
+    vi.stubGlobal('window', {
+      sessionStorage: session,
+      localStorage: local,
+      navigator: { userAgent: overrides.ua ?? 'node', platform: '', maxTouchPoints: 0 },
+      matchMedia: () => ({ matches: false }),
+      addEventListener: (name: string, listener: Listener) => listeners.set(name, listener),
+    });
+    const mod = await import('./install-prompt');
+    return { mod, listeners };
+  }
+
+  function makeEvent(outcome: 'accepted' | 'dismissed') {
+    let prevented = false;
+    return {
+      event: {
+        preventDefault: () => {
+          prevented = true;
+        },
+        prompt: () => Promise.resolve(),
+        userChoice: Promise.resolve({ outcome }),
+      },
+      wasPrevented: () => prevented,
+    };
+  }
+
+  it('captures the browser offer, suppresses the browser mini-infobar, and tells subscribers', async () => {
+    const { mod, listeners } = await freshModule();
+    mod.startInstallPromptCapture();
+    expect(mod.canPromptDeferredInstall()).toBe(false);
+
+    let notified = 0;
+    const unsubscribe = mod.subscribeInstallAvailability(() => {
+      notified += 1;
+    });
+
+    const { event, wasPrevented } = makeEvent('accepted');
+    listeners.get('beforeinstallprompt')?.(event);
+
+    expect(wasPrevented()).toBe(true);
+    expect(mod.canPromptDeferredInstall()).toBe(true);
+    expect(notified).toBe(1);
+    // Only now does a desktop browser have an install worth offering.
+    expect(mod.resolveDeviceInstallVariant()).toBe('desktop');
+    unsubscribe();
+  });
+
+  it('attaches its listeners once, however many times it is called', async () => {
+    const { mod, listeners } = await freshModule();
+    mod.startInstallPromptCapture();
+    const first = listeners.get('beforeinstallprompt');
+    mod.startInstallPromptCapture();
+    mod.startInstallPromptCapture();
+    expect(listeners.get('beforeinstallprompt')).toBe(first);
+  });
+
+  it('runs the install and reports what the user chose', async () => {
+    const { mod, listeners } = await freshModule();
+    mod.startInstallPromptCapture();
+    listeners.get('beforeinstallprompt')?.(makeEvent('accepted').event);
+    await expect(mod.promptDeferredInstall()).resolves.toBe('accepted');
+  });
+
+  it('reports a dismissal as a dismissal', async () => {
+    const { mod, listeners } = await freshModule();
+    mod.startInstallPromptCapture();
+    listeners.get('beforeinstallprompt')?.(makeEvent('dismissed').event);
+    await expect(mod.promptDeferredInstall()).resolves.toBe('dismissed');
+  });
+
+  it('is one shot — a second call reports unavailable rather than throwing at the user', async () => {
+    // Chrome refuses a second prompt() on the same event, so the reference is
+    // dropped before it is used.
+    const { mod, listeners } = await freshModule();
+    mod.startInstallPromptCapture();
+    listeners.get('beforeinstallprompt')?.(makeEvent('accepted').event);
+    await mod.promptDeferredInstall();
+    expect(mod.canPromptDeferredInstall()).toBe(false);
+    await expect(mod.promptDeferredInstall()).resolves.toBe('unavailable');
+  });
+
+  it('reports unavailable when nothing was ever captured', async () => {
+    const { mod } = await freshModule();
+    mod.startInstallPromptCapture();
+    await expect(mod.promptDeferredInstall()).resolves.toBe('unavailable');
+  });
+
+  it('reports unavailable rather than throwing when the browser flow itself fails', async () => {
+    const { mod, listeners } = await freshModule();
+    mod.startInstallPromptCapture();
+    listeners.get('beforeinstallprompt')?.({
+      preventDefault: () => {},
+      prompt: () => Promise.reject(new Error('InvalidStateError')),
+      userChoice: Promise.resolve({ outcome: 'accepted' }),
+    });
+    await expect(mod.promptDeferredInstall()).resolves.toBe('unavailable');
+  });
+
+  it('treats an observed install as a durable accept, so a browser tab stops asking too', async () => {
+    // The one install we can actually see happen. isStandaloneDisplay() stays
+    // false in the tab the install was started from, so without this the card
+    // would come back next visit on the very device that just installed.
+    const { mod, listeners } = await freshModule();
+    mod.startInstallPromptCapture();
+    listeners.get('beforeinstallprompt')?.(makeEvent('accepted').event);
+    expect(mod.readInstallPromptAccepted()).toBe(false);
+
+    listeners.get('appinstalled')?.({});
+
+    expect(mod.readInstallPromptAccepted()).toBe(true);
+    expect(mod.canPromptDeferredInstall()).toBe(false);
+    expect(mod.isInstallPromptOwed()).toBe(false);
   });
 });
