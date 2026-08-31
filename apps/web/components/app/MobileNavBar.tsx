@@ -9,7 +9,7 @@ import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { rememberScene } from '@/lib/scene-memory';
-import { CatalogIcon, ChappiIcon, NotesIcon, ProfileIcon } from '@/components/app/BrandIcons';
+import { CatalogIcon, ChappiIcon, NotesIcon } from '@/components/app/BrandIcons';
 
 // Same flags AppTopbar reads — a tab only exists in the bar when its surface
 // exists at all.
@@ -28,21 +28,29 @@ type MobileNavBarProps = {
   onNewRelease: () => void;
 };
 
-/** The Song tab's markup. Shared so the Suspense fallback below and the
- *  resolved tab cannot drift apart in size, spacing or colour — the
- *  `ArtistLine` split in WorkspaceIdentityPanel, for the same reason. */
+/** The Song tab's whole SLOT, `<li>` included. Shared so the Suspense fallback
+ *  below and the resolved tab cannot drift apart in size, spacing or colour —
+ *  the `ArtistLine` split in WorkspaceIdentityPanel, for the same reason.
+ *
+ *  The `<li>` lives in HERE rather than in the bar, and that is what makes a
+ *  hidden tab actually disappear: a `flex-1` list item left standing around a
+ *  component that returned null still claims its share of the row, so the bar
+ *  kept a blank gap where Home or Song used to be and pushed the centre button
+ *  off the midpoint. Returning null from the whole slot removes the space too. */
 function SongTabLink({ href, isActive }: { href: string; isActive: boolean }) {
   return (
-    <Link
-      href={href}
-      aria-current={isActive ? 'page' : undefined}
-      className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-        isActive ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
-      }`}
-    >
-      <Music className="h-5 w-5" />
-      Song
-    </Link>
+    <li className="flex-1">
+      <Link
+        href={href}
+        aria-current={isActive ? 'page' : undefined}
+        className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
+          isActive ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
+        }`}
+      >
+        <Music className="h-5 w-5" />
+        Song
+      </Link>
+    </li>
   );
 }
 
@@ -50,17 +58,19 @@ function SongTabLink({ href, isActive }: { href: string; isActive: boolean }) {
  *  fallback and the resolved tab must stay pixel-identical. */
 function HomeTabLink({ isActive, onClick }: { isActive: boolean; onClick: () => void }) {
   return (
-    <Link
-      href="/dashboard"
-      onClick={onClick}
-      aria-current={isActive ? 'page' : undefined}
-      className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-        isActive ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
-      }`}
-    >
-      <CatalogIcon className="h-5 w-5" />
-      Home
-    </Link>
+    <li className="flex-1">
+      <Link
+        href="/dashboard"
+        onClick={onClick}
+        aria-current={isActive ? 'page' : undefined}
+        className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
+          isActive ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
+        }`}
+      >
+        <CatalogIcon className="h-5 w-5" />
+        Home
+      </Link>
+    </li>
   );
 }
 
@@ -134,65 +144,20 @@ function SongTab({ isHome, isSettings }: { isHome: boolean; isSettings: boolean 
   );
 }
 
-/** "You"'s markup. Same split as Home's and Song's, for the same reason: the
- *  Suspense fallback and the resolved tab must stay pixel-identical. */
-function YouTabLink({ isActive }: { isActive: boolean }) {
-  return (
-    <Link
-      href="/settings"
-      aria-current={isActive ? 'page' : undefined}
-      className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-        isActive ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
-      }`}
-    >
-      <ProfileIcon className="h-5 w-5" />
-      You
-    </Link>
-  );
-}
-
-/**
- * Settings belongs to the home surface, not to the work (founder call,
- * 2026-08-30, from screenshots of a scoped release and the assistant page).
- * So this renders in exactly two places: the bare catalog — `/dashboard` with
- * no `?release=`, where the bar is at its emptiest anyway — and `/settings`
- * itself, where it is the lit tab.
- *
- * Settings itself is why the `isSettings` branch exists rather than the rule
- * being a plain "catalog only": the tab would otherwise be one that can never
- * light up, since you cannot be on the catalog and in Settings at once.
- *
- * The cost, stated plainly: from a scoped release or the assistant, Settings
- * is two taps (Home, then You) rather than one. That is the trade the founder
- * chose, and the bar is the ONLY route to Settings on a phone — the topbar's
- * own icons are `hidden lg:grid` under this flag — so it must keep rendering
- * on the catalog. Do not narrow this further without leaving Settings a way in.
- *
- * ISOLATED BEHIND ITS OWN SUSPENSE BOUNDARY, for the reason SongTab's header
- * gives: `useSearchParams` in a statically prerendered client component pulls
- * the nearest boundary down with it, and this bar is mounted on `/settings`,
- * which must stay `○ Static`.
- */
-function YouTab({ isHome, isSettings }: { isHome: boolean; isSettings: boolean }) {
-  const searchParams = useSearchParams();
-  if (isSettings) return <YouTabLink isActive />;
-  if (isHome && !searchParams.get('release')) return <YouTabLink isActive={false} />;
-  return null;
-}
-
 /**
  * Bottom tab bar, below lg only (NEXT_PUBLIC_FEATURE_MOBILE_NAV). Moves the
  * topbar's nav icons and the "New release" CTA down to where a thumb
  * actually reaches on a phone, and stands in for the ChappiDock launcher
  * (which retires on this same viewport range — see ChappiDock.tsx).
  *
- * Slots: Home (Catalog) · UrgAns · New release/New activity (center, filled) ·
- * Notes · Shows · You · Song. "You" is a direct Link to /settings rather than
- * a menu — the account actions (Settings, sign out) already live there, and a
- * menu on top of a menu (WorkspaceMenu still exists at lg+) would be one tap
- * for nothing. It renders only on the catalog and in Settings; see YouTab.
- * Song trails the bar rather than sitting beside the "+" — see
- * its own comment below for why the one tab that comes and goes belongs last.
+ * Slots: Home (Catalog) · UrgAns · New release/New activity (centre, filled) ·
+ * Notes · Shows · Song. Song trails the bar rather than sitting beside the "+"
+ * — see its own comment below for why the one tab that comes and goes belongs
+ * last.
+ *
+ * "You" is NOT here. It moved to the topbar's top-left corner on 2026-08-31
+ * (founder call) so this bar reads as four tabs around a centred button. That
+ * link is the only route to Settings on a phone; see AppTopbar.
  *
  * The center button is contextual as of 2026-08-17: when a release is
  * scoped (`/dashboard?release=<id>`), it opens the task quick-create modal
@@ -214,27 +179,32 @@ function YouTab({ isHome, isSettings }: { isHome: boolean; isSettings: boolean }
  * is shorter by two on the one screen it opens on, and fills back in the
  * moment a release is scoped or another page is reached.
  *
- * You runs the OPPOSITE way: it renders only on that bare catalog and on
- * `/settings`, and is absent from every working view. See YouTab's header.
- * The two rules are complementary rather than in tension — the catalog trades
- * Home and Song away for You, so no view ever carries all three.
- *
  * `/settings` drops Song as well (founder call, 2026-08-30): it is the ACCOUNT
  * surface, so the release-scene tab has no business on it, and there it could
- * only ever be the pick-a-release fallback pointing back at the catalog. So
- * that view is Home · UrgAns · + · Shows · You — five slots, with You lit.
+ * only ever be the pick-a-release fallback pointing back at the catalog.
  *
- * WIDTH. Every slot is `flex-1` in a full-bleed `<ul>`, so the budget is the
- * viewport split evenly. Song and Pitches are mutually exclusive (a dual
- * account gets Pitches and not Song), and You is now absent from every view
- * that carries Home and Song, so the ceiling is SIX slots: Home, UrgAns, +,
- * Notes, Shows, and whichever of Song/Pitches applies. 375 / 6 = ~62px,
- * against a widest label of "Pitches" at ~45px and a 48px center button.
+ * So, per view: the catalog is UrgAns · + · Shows; a scoped release, the
+ * assistant, Notes and Shows are Home · UrgAns · + · Shows · Song; `/settings`
+ * is Home · UrgAns · + · Shows.
  *
- * A SEVENTH lands at ~53px, which measured clear but leaves nothing after it,
- * so treat six as the working ceiling and seven as the hard one. AN EIGHTH
- * NEEDS A DIFFERENT SHAPE for this bar — an overflow sheet holding the
- * optional global surfaces — not another `flex-1`.
+ * LAYOUT. Two `flex-1` regions flank a fixed-width centre, so the "+" sits on
+ * the bar's exact midpoint on every one of those views. That is deliberate and
+ * replaced a single row of equal `flex-1` slots, which only centred the button
+ * when the tabs happened to split evenly around it — and they never reliably
+ * do, since Home, Song and Pitches each come and go on their own rule. Two
+ * things go wrong if this is flattened back: the button drifts (it sat at ~42%
+ * on the assistant page), and a hidden tab leaves a blank gap, because a
+ * `flex-1` `<li>` wrapped around a component that returned null still claims
+ * its share. Each tab therefore renders its OWN `<li>`, or nothing at all.
+ *
+ * WIDTH. Within a region the tabs split it evenly. Song and Pitches are
+ * mutually exclusive (a dual account gets Pitches and not Song), so the
+ * ceiling is FIVE tabs plus the button: Home, UrgAns, Notes, Shows, and
+ * whichever of Song/Pitches applies. With the 64px centre, a 375px phone gives
+ * each side ~155px, so a three-tab region is ~52px against a widest label of
+ * "Pitches" at ~45px. That is the hard ceiling. A SIXTH TAB NEEDS A DIFFERENT
+ * SHAPE — an overflow sheet holding the optional global surfaces — not another
+ * `flex-1`.
  *
  * The bar shows on every route AppShell mounts it on, /dashboard/urgans
  * included — hiding it there would leave the assistant page with no way out
@@ -331,40 +301,54 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
         keyboardOpen ? 'hidden' : ''
       }`}
     >
-      <ul className="flex h-16 w-full items-stretch">
-        <li className="flex-1">
+      <div className="flex h-16 w-full items-stretch">
+        {/* LEFT REGION. `flex-1`, and its twin on the right is too, so the
+            fixed-width centre between them lands on the bar's exact midpoint
+            whatever each side happens to hold. That is what makes the centring
+            structural instead of an accident of counting: before this, every
+            tab was one `flex-1` slot in a single row, so the button was only
+            centred when the tabs happened to split evenly around it — and they
+            do not, since Home, Song and Pitches each come and go on their own
+            rule. On the assistant page it sat at ~42%. */}
+        <ul className="flex flex-1 items-stretch">
           <Suspense fallback={<HomeTabLink isActive={isHome} onClick={handleHomeClick} />}>
             <HomeTab isHome={isHome} onClick={handleHomeClick} />
           </Suspense>
-        </li>
 
-        {CHAPPI_ENABLED ? (
-          <li className="flex-1">
-            <Link
-              href="/dashboard/urgans"
-              onClick={handleUrgAnsClick}
-              aria-current={isUrgAns ? 'page' : undefined}
-              className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-                isUrgAns ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
-              }`}
-            >
-              <ChappiIcon className="h-5 w-5" />
-              UrgAns
-            </Link>
-          </li>
-        ) : null}
+          {CHAPPI_ENABLED ? (
+            <li className="flex-1">
+              <Link
+                href="/dashboard/urgans"
+                onClick={handleUrgAnsClick}
+                aria-current={isUrgAns ? 'page' : undefined}
+                className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
+                  isUrgAns ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
+                }`}
+              >
+                <ChappiIcon className="h-5 w-5" />
+                UrgAns
+              </Link>
+            </li>
+          ) : null}
+        </ul>
 
-        <li className="flex-1">
+        {/* CENTRE. Deliberately outside both lists: it is an ACTION, not a
+            destination, so it never belonged among a list of nav links. Fixed
+            width is what the two regions measure against. */}
+        <div className="flex w-16 shrink-0 items-center justify-center">
           <button
             type="button"
             onClick={handleFabClick}
             aria-label="New release"
             title="New release"
-            className="motion-focus motion-press mx-auto grid h-12 w-12 place-items-center self-center rounded-full border border-brand/25 bg-brand text-content-inverse shadow-[0_18px_36px_-28px_rgb(var(--color-brand)/0.55)] hover:bg-brand-hover"
+            className="motion-focus motion-press grid h-12 w-12 place-items-center rounded-full border border-brand/25 bg-brand text-content-inverse shadow-[0_18px_36px_-28px_rgb(var(--color-brand)/0.55)] hover:bg-brand-hover"
           >
             <Plus className="h-5 w-5" />
           </button>
-        </li>
+        </div>
+
+        {/* RIGHT REGION. */}
+        <ul className="flex flex-1 items-stretch">
 
         {NOTES_ENABLED ? (
           <li className="flex-1">
@@ -424,19 +408,13 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
           </li>
         ) : null}
 
-        <li className="flex-1">
-          <Suspense fallback={isSettings ? <YouTabLink isActive /> : null}>
-            <YouTab isHome={isHome} isSettings={isSettings} />
-          </Suspense>
-        </li>
-
-        {/* Song is LAST, after You (founder call, 2026-08-30 — superseding the
-            same day's "immediately after the +", which put it between the plus
-            button and You). It is the only tab that comes and goes with the
-            scoped release, so trailing the bar means appearing and disappearing
-            shifts nothing: the four fixed tabs hold their positions and Song is
-            simply added to or removed from the end. In its former slot it
-            pushed You sideways every time a release was opened or left.
+        {/* Song is LAST (founder call, 2026-08-30 — superseding the same day's
+            "immediately after the +"). It is the only tab that comes and goes
+            with the scoped release, so trailing the bar means appearing and
+            disappearing shifts nothing: the tabs before it hold their positions
+            and Song is simply added to or removed from the end. In its former
+            slot it pushed its neighbours sideways every time a release was
+            opened or left.
 
             A DUAL ACCOUNT (team + playlist owner) never gets this tab at all
             (founder call, 2026-08-30). That account is the only one carrying
@@ -452,18 +430,17 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
             a second flag and leave a band with no entry point at all — the
             exact compounding failure recorded under "Crossing between the two
             portals". */}
+        {/* The `!isSettings` gate is out here, not just inside SongTab, so the
+            Suspense fallback cannot flash the tab in and straight back out on a
+            view it never belongs on. SongTab bails on it too — the gate that
+            matters is the one nearest the decision. */}
         {SONG_UPLOAD_ENABLED && hasCuratorProfile !== true && !isSettings ? (
-          <li className="flex-1">
-            {/* The `!isSettings` gate is on the SLOT, not just inside SongTab,
-                so the Suspense fallback cannot flash the tab in and straight
-                back out on a view it never belongs on. SongTab bails on it too
-                — the gate that matters is the one nearest the decision. */}
-            <Suspense fallback={<SongTabLink href="/dashboard" isActive={false} />}>
-              <SongTab isHome={isHome} isSettings={isSettings} />
-            </Suspense>
-          </li>
+          <Suspense fallback={<SongTabLink href="/dashboard" isActive={false} />}>
+            <SongTab isHome={isHome} isSettings={isSettings} />
+          </Suspense>
         ) : null}
-      </ul>
+        </ul>
+      </div>
     </nav>
   );
 }
