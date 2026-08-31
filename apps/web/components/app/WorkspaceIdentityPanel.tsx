@@ -54,6 +54,14 @@ type NavItem = {
   label: string;
   Icon: (props: { className?: string }) => React.ReactElement;
   isActive: (pathname: string) => boolean;
+  /** Marks a surface that shipped flag-off and hasn't been used against a real
+   *  team yet (founder call, 2026-08-31 — Shows is the first to carry this
+   *  since the app-wide Beta cleanup on 2026-08-16; that cleanup dropped the
+   *  stamp everywhere, it did not retire the pattern). Renders the same pill
+   *  Press kit and Fan capture used to carry, folded into the collapsed
+   *  state's tooltip since there's no room for it there. Sparing — most nav
+   *  items should not set this. */
+  beta?: boolean;
 };
 
 // Same flag AppTopbar reads for its Notes icon — the two entry points appear
@@ -165,6 +173,7 @@ function buildNavItems(
             label: "Shows",
             Icon: ShowsIcon,
             isActive: (pathname: string) => pathname.startsWith("/dashboard/shows"),
+            beta: true,
           },
         ]
       : []),
@@ -612,18 +621,30 @@ function WorkspaceNavList({
   isAdmin: boolean;
   collapsed: boolean;
 }) {
-  const renderRow = ({ href, label, Icon, isActive }: NavItem) => {
+  const renderRow = ({ href, label, Icon, isActive, beta }: NavItem) => {
     const active = isActive(pathname || "");
+    // Collapsed has no room for a visible pill (icon-only), so the signal
+    // folds into the same text that already stands in for the label there —
+    // the tooltip and the sr-only span, both one string, so neither can drift
+    // from the other the way a separate aria-label would.
+    const collapsedLabel = beta ? `${label} (Beta)` : label;
     return (
       <Link
         key={href}
         href={href}
         aria-current={active ? "page" : undefined}
-        title={collapsed ? label : undefined}
+        title={collapsed ? collapsedLabel : undefined}
         className={navRowClass(active, collapsed)}
       >
         <Icon className="h-4 w-4 shrink-0" />
-        <span className={collapsed ? "sr-only" : undefined}>{label}</span>
+        <span className={collapsed ? "sr-only" : undefined}>
+          {collapsed ? collapsedLabel : label}
+        </span>
+        {beta && !collapsed ? (
+          <span className="shrink-0 rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+            Beta
+          </span>
+        ) : null}
       </Link>
     );
   };
