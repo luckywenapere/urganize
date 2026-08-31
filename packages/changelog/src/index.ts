@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.11.2",
+    date: "August 31, 2026",
+    highlights: [
+      "UrgAns opens on your phone again. The notifications button we added earlier today was stopping it, so we have taken that button back out and will put it back once it works properly.",
+    ],
+  },
+  {
     version: "1.11.1",
     date: "August 31, 2026",
     highlights: [

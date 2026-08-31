@@ -7064,6 +7064,47 @@ is a recorded problem.
   open the assistant, tap the bell, and confirm the panel opens upward and
   clears the bar.
 
+### REVERTED the same day: two live bells broke the assistant page (v1.11.2)
+
+Founder, minutes after the flip: *"urgans is not opening anymore on mobile
+view."* **The notifications tab is out; the icons-only half stayed.**
+
+**The mechanism, and it is the thing to read before re-landing this.** The
+topbar's bell is wrapped in `<div className="hidden lg:block">` — that is CSS,
+so below `lg` the component still **MOUNTS and still runs its effects**. Adding
+a second instance in the bar therefore gave `/dashboard/urgans` on mobile TWO
+live bells, each calling `supabase.channel(`notifications:${'${userId}'}`)` on the
+**same topic** and each fetching `/api/notifications`. Duplicate realtime
+subscriptions to one topic are not something supabase-js promises anything sane
+about, and **this app has no error boundaries anywhere** (its own Known issues
+entry says so), so a throw in that effect takes the page down instead of
+surfacing. It could only happen on that one route, because the bar renders Song
+everywhere else — which matches the report's scope exactly.
+
+**Honest limit on the diagnosis:** the mechanism was confirmed by reading (the
+CSS-hide, the shared topic, the missing boundaries), not by reproducing it — no
+session is mintable here. The revert was chosen over a speculative fix because
+it restores a known-good state in one deploy.
+
+**Re-landing it needs ONE live subscription, not two.** Hoist the fetch and the
+channel into a shared store (`useNotificationsStore`) so any number of triggers
+render against one subscription. **Do NOT just gate the second instance on a
+viewport check:** that still leaves two independent fetches and two toasts for
+one event in any state where both are mounted, and it trades a CSS gate for a
+hydration-sensitive JS one. The `placement` prop was reverted too rather than
+left inert — an untested code path nothing calls is worse than no path.
+
+Two smaller lessons worth keeping:
+
+- **`hidden lg:block` is not "not mounted".** Several surfaces in this app use
+  CSS to hide chrome per viewport (the topbar nav icons, `WorkspaceMenu`, this
+  bell). Any of them that owns a subscription, a fetch or a timer is still
+  paying for it on the viewport where it is invisible — and is still there to
+  collide with a second instance.
+- The v1.11.1 ledger entry promising notifications on mobile is **left as
+  written**; v1.11.2 corrects it in the log rather than rewriting history,
+  which is how this changelog works.
+
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:
   - `Web` → https://app.urganize.app (builds `apps/web`)

@@ -10,7 +10,6 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { forgetSceneForCurrentRelease } from '@/lib/scene-memory';
 import { CatalogIcon, ChappiIcon, NotesIcon } from '@/components/app/BrandIcons';
-import { NotificationsBell } from '@/components/app/NotificationsBell';
 
 // Same flags AppTopbar reads — a tab only exists in the bar when its surface
 // exists at all.
@@ -128,29 +127,6 @@ function HomeTabLink({ isActive, onClick }: { isActive: boolean; onClick: () => 
   );
 }
 
-/**
- * The notifications tab — the bell itself, in bar placement (founder call,
- * 2026-08-31: show notifications here instead of Song on the assistant page).
- *
- * It is the SAME component the topbar renders, not a reimplementation: it
- * already owns the fetch, the unread badge, the peek-vs-read model and the
- * row-tap navigation. The topbar hid it below `lg` for exactly one stated
- * reason — "MobileNavBar has no notifications tab to move it to" — so this is
- * that deferral being closed rather than a new surface. Nothing new is stored
- * and no route is added, which also keeps it clear of the "in-app inbox is v2"
- * scope line: this is the built bell, finally reachable on a phone.
- *
- * The bell renders null when its own workspace flag is off or the user is not
- * authenticated, so the `<li>` can come back empty — which is fine, and is the
- * EmptyTabSlot shape anyway: the slot holds its width either way.
- */
-function NotificationsTab() {
-  return (
-    <li className="flex-1">
-      <NotificationsBell placement="bar" />
-    </li>
-  );
-}
 
 /**
  * Hidden on the bare catalog — `/dashboard` with no `?release=` — because
@@ -229,11 +205,10 @@ function SongTab({ isHome, isSettings }: { isHome: boolean; isSettings: boolean 
  * (which retires on this same viewport range — see ChappiDock.tsx).
  *
  * Slots: Home (Catalog) · UrgAns · New release/New activity (centre, filled) ·
- * Notes · Shows · Song-or-Notifications. The trailing slot holds Notifications
- * on the assistant page and Song everywhere else (founder call, 2026-08-31) —
- * a swap, so nothing moves; see its own comment below. Song trails the bar
- * rather than sitting beside the "+" because it is the one tab that comes and
- * goes with the scoped release.
+ * Notes · Shows · Song. Song trails the bar rather than sitting beside the "+"
+ * because it is the one tab that comes and goes with the scoped release. (A
+ * Notifications tab briefly shared that slot on 2026-08-31 and was reverted
+ * the same day — see the trailing slot's own comment for the mechanism.)
  *
  * ICONS ONLY — every tab's label is `sr-only` (founder call, 2026-08-31), to
  * save width. See tabClass above for why the strings are kept rather than
@@ -269,8 +244,7 @@ function SongTab({ isHome, isSettings }: { isHome: boolean; isSettings: boolean 
  *
  * So, per view — with `·` marking a slot held open rather than closed up:
  * the catalog is · UrgAns · + · Notes · Shows ·; a scoped release, Notes and
- * Shows are Home · UrgAns · + · Notes · Shows · Song; the assistant is
- * Home · UrgAns · + · Notes · Shows · Notifications; `/settings` is
+ * Shows are Home · UrgAns · + · Notes · Shows · Song; `/settings` is
  * Home · UrgAns · + · Notes · Shows ·.
  *
  * LAYOUT, and it answers two separate questions — do not collapse them.
@@ -292,9 +266,9 @@ function SongTab({ isHome, isSettings }: { isHome: boolean; isSettings: boolean 
  * WIDTH. Within a region the tabs split it evenly, and because a hidden tab
  * still holds its slot, that split is the SAME on every view for a given
  * account — so the measurement below is the worst case and the only case.
- * The trailing slot is one slot whichever of Song / Notifications / Pitches
- * fills it, so the ceiling is FIVE tabs plus the button: Home, UrgAns, Notes,
- * Shows, and that trailing one. With the 64px centre, a 375px phone gives each
+ * Song and Pitches are mutually exclusive (a dual account gets Pitches and
+ * not Song), so the ceiling is FIVE tabs plus the button: Home, UrgAns, Notes,
+ * Shows, and whichever of Song/Pitches applies. With the 64px centre, a 375px phone gives each
  * side ~155px, so a three-tab region is ~52px per tab.
  *
  * Since 2026-08-31 that number is measured against a 20px GLYPH rather than a
@@ -510,44 +484,35 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
             instead (see EmptyTabSlot). The Settings fallback matches, so the
             tab cannot flash in and straight back out on a view it never
             belongs on. */}
-        {/* THE TRAILING SLOT, and it now holds one of two things.
+        {/* THE TRAILING SLOT — Song, as it was before 2026-08-31.
 
-            On the assistant page it is Notifications; everywhere else it is
-            Song (founder call, 2026-08-31: "in UrgAns view instead of showing
-            song show notifications"). A SWAP, not an addition — the slot's
-            width and position are identical either way, so moving to and from
-            the assistant page changes what this tab IS without moving any tab,
-            which is the stillness rule the rest of this bar is built around.
+            A Notifications tab briefly lived here on the assistant page, and it
+            is REVERTED (2026-08-31) because it broke that page on mobile.
 
-            Whether the slot EXISTS is still an account-level question, not a
-            view-level one: `hasCuratorProfile !== true`, since a dual account
-            carries Pitches here instead. That is fixed per account, so
-            dropping it entirely costs no stability. What changed is that it no
-            longer depends on the SONG flag — notifications have nothing to do
-            with song upload, so with that flag off the slot still exists and
-            simply holds Notifications on the assistant page and an
-            EmptyTabSlot elsewhere.
+            THE MECHANISM, so nobody re-lands it the same way: the topbar's own
+            bell is wrapped in `hidden lg:block`, which is CSS — the component
+            still MOUNTS below `lg` and still runs its effects. Adding a second
+            instance here therefore gave the assistant page TWO live bells, each
+            calling `supabase.channel(\`notifications:${'${userId}'}\`)` on the same
+            topic and each fetching /api/notifications. Duplicate realtime
+            subscriptions to one topic are not something supabase-js promises
+            anything sane about, and with no error boundaries anywhere in this
+            app (see CLAUDE.md's Known issues) a throw in that effect takes the
+            page down rather than surfacing.
 
-            KNOWN LIMIT, stated rather than papered over: a dual account gets
-            no notifications tab, because it has no trailing slot to swap. That
-            is one partner account today, and the alternative — a tab that
-            appears only on the assistant page — would move Pitches every time
-            they opened the assistant, which is exactly the jumping this bar
-            was fixed to stop. Their bell is still on desktop. */}
-        {hasCuratorProfile !== true ? (
-          isUrgAns ? (
-            <NotificationsTab />
-          ) : SONG_UPLOAD_ENABLED ? (
-            <Suspense
-              fallback={
-                isSettings ? <EmptyTabSlot /> : <SongTabLink href="/dashboard" isActive={false} />
-              }
-            >
-              <SongTab isHome={isHome} isSettings={isSettings} />
-            </Suspense>
-          ) : (
-            <EmptyTabSlot />
-          )
+            Re-landing it needs ONE live subscription, not two — hoist the
+            notifications fetch + channel into a shared store so any number of
+            triggers can render against it. Do not simply gate the second
+            instance on a viewport check: that leaves two independent fetches
+            and two toasts for one event the moment both are ever visible. */}
+        {SONG_UPLOAD_ENABLED && hasCuratorProfile !== true ? (
+          <Suspense
+            fallback={
+              isSettings ? <EmptyTabSlot /> : <SongTabLink href="/dashboard" isActive={false} />
+            }
+          >
+            <SongTab isHome={isHome} isSettings={isSettings} />
+          </Suspense>
         ) : null}
         </ul>
       </div>
