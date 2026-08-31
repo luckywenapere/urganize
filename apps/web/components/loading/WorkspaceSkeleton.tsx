@@ -286,9 +286,12 @@ function TasksPanelSkeleton() {
       {/* Metadata — narrow widths only, carrying the SAME hide class the
           real pill computes (see TasksPanel.tsx's METADATA_PILL_HIDE_CLASS:
           empty when the identity panel is flagged off, else xl/lg depending
-          on Chappi) so the reserved footprint matches at every breakpoint. */}
+          on Chappi) so the reserved footprint matches at every breakpoint.
+          w-24 since the 2026-08-31 rename from "Collect metadata": the label
+          is now the same eight characters as Calendar, in the same pill with
+          the same icon, so it reserves the same width. */}
       {METADATA_ENABLED ? (
-        <SkeletonBlock className={`h-8 w-36 shrink-0 rounded-full ${METADATA_PILL_HIDE_CLASS}`} />
+        <SkeletonBlock className={`h-8 w-24 shrink-0 rounded-full ${METADATA_PILL_HIDE_CLASS}`} />
       ) : null}
       {pillWidths.map((width, index) => (
         <SkeletonBlock key={`pill-${index}`} className={`h-8 ${width} shrink-0 rounded-full`} />
@@ -384,7 +387,7 @@ function TasksPanelSkeleton() {
             <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" />
           ) : null}
           {METADATA_ENABLED ? (
-            <SkeletonBlock className="h-8 w-36 shrink-0 rounded-full" />
+            <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" />
           ) : null}
           {PITCHING_ENABLED ? (
             <SkeletonBlock className="h-8 w-16 shrink-0 rounded-full" />
