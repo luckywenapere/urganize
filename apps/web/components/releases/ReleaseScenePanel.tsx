@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { Release } from '@/types/releases';
+import type { Task } from '@/types/tasks';
 import type { SceneName } from '@/components/workspace/useSceneOverlay';
 import { captureFeatureDiscoveryByName } from '@/lib/analytics';
 import { MetadataSection } from '@/components/releases/MetadataSection';
@@ -14,6 +15,7 @@ import { CoverArtSection } from '@/components/releases/CoverArtSection';
 import { CalendarScene } from '@/components/content-calendar/CalendarScene';
 import { PitchScene } from '@/components/pitching/PitchScene';
 import { PlanScene } from '@/components/planner/PlanScene';
+import { TimelineScene } from '@/components/releases/TimelineScene';
 import { calendarFontVariables } from '@/components/content-calendar/calendar-fonts';
 
 /**
@@ -52,6 +54,7 @@ const SCENE_LABELS: Record<SceneName, string> = {
   capture: 'Fan capture',
   song: 'Song',
   coverart: 'Cover art',
+  timeline: 'Timeline',
 };
 
 type ReleaseScenePanelProps = {
@@ -62,6 +65,15 @@ type ReleaseScenePanelProps = {
   /** Activities already on this release, so the plan scene can say that
    * approving adds to them rather than replacing them. */
   existingTaskCount?: number;
+  /** The scoped release's activities. Only the Timeline scene reads these:
+   * unlike every other scene it fetches nothing, laying itself out from the
+   * rows the workspace is already holding. */
+  tasks?: Task[];
+  /** Open the activity detail pop-up. Timeline clicks route here rather than
+   * building a second editing surface. */
+  onOpenTask?: (taskId: string) => void;
+  /** A timeline drag changed an activity's date; re-read the workspace. */
+  onTaskRescheduled?: () => void;
   /** The plan was approved: its tasks now exist. */
   onPlanApproved?: () => void;
   /** Start the intake, for a plan scene reached without a draft. */
@@ -91,6 +103,9 @@ export function ReleaseScenePanel({
   onClose,
   onToast,
   existingTaskCount = 0,
+  tasks = [],
+  onOpenTask,
+  onTaskRescheduled,
   onPlanApproved,
   onStartPlanIntake,
 }: ReleaseScenePanelProps) {
@@ -191,6 +206,15 @@ export function ReleaseScenePanel({
       {scene === 'epk' ? <EpkSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'pitch' ? <PitchScene release={release} onToast={onToast} /> : null}
       {scene === 'capture' ? <CaptureSection releaseId={release.id} onToast={onToast} /> : null}
+      {scene === 'timeline' ? (
+        <TimelineScene
+          release={release}
+          tasks={tasks}
+          onOpenTask={onOpenTask ?? (() => {})}
+          onToast={onToast}
+          onRescheduled={onTaskRescheduled ?? (() => {})}
+        />
+      ) : null}
     </section>
   );
 }

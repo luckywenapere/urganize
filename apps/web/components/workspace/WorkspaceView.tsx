@@ -143,7 +143,7 @@ export function WorkspaceView() {
   // Same global quick-create TasksPanel's header pill opens — the date card's
   // "add an activity yourself" action routes here so both entry points land
   // in one modal (URG-233).
-  const { openQuickCreate } = useTaskUI();
+  const { openQuickCreate, openTask } = useTaskUI();
   const isRailOpen = useChappiStore((state) => state.railOpen);
   // The intake modal is mounted once by AppShell; this opens it.
   const openIntake = usePlannerStore((state) => state.openIntake);
@@ -557,6 +557,9 @@ export function WorkspaceView() {
         onClose={closeScene}
         onToast={(message, tone) => setToast({ message, tone })}
         existingTaskCount={scopedTasks.length}
+        tasks={scopedTasks}
+        onOpenTask={openTask}
+        onTaskRescheduled={() => void loadCommandCenter({ force: true })}
         onPlanApproved={() => {
           setHasPlanDraft(false);
           closeScene();

@@ -95,6 +95,16 @@ describe('persist policy', () => {
     expect(shouldPersistScene('plan')).toBe(false);
     expect((SCENE_PREFETCH_ORDER as readonly string[]).includes('plan')).toBe(false);
   });
+
+  it('keeps the timeline scene out of the cache entirely', () => {
+    // The opposite reason to the plan scene's: this one fetches NOTHING. It is
+    // laid out from activities TasksPanel already has in props, so there is no
+    // payload to cache and a fetcher for it would have to invent a request that
+    // does not exist.
+    expect(isCacheableScene('timeline')).toBe(false);
+    expect(shouldPersistScene('timeline')).toBe(false);
+    expect((SCENE_PREFETCH_ORDER as readonly string[]).includes('timeline')).toBe(false);
+  });
 });
 
 describe('shouldRevalidateOnLoad', () => {
@@ -262,6 +272,7 @@ async function loadResolver(flagsOn: boolean) {
     'NEXT_PUBLIC_FEATURE_CAPTURE',
     'NEXT_PUBLIC_FEATURE_SONG_UPLOAD',
     'NEXT_PUBLIC_FEATURE_COVER_ART',
+    'NEXT_PUBLIC_FEATURE_TIMELINE',
   ]) {
     vi.stubEnv(flag, flagsOn ? 'true' : 'false');
   }
@@ -291,9 +302,9 @@ describe('resolveActiveScene', () => {
     }
   });
 
-  it('treats the four flag-gated scenes as closed when their flags are off', async () => {
+  it('treats the five flag-gated scenes as closed when their flags are off', async () => {
     const { resolveActiveScene } = await loadResolver(false);
-    for (const scene of ['calendar', 'capture', 'song', 'coverart']) {
+    for (const scene of ['calendar', 'capture', 'song', 'coverart', 'timeline']) {
       expect(resolveActiveScene(scene)).toBeNull();
     }
   });

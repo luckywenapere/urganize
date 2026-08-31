@@ -377,6 +377,48 @@ html[data-theme='light'] .cc-island {
   }
 }
 
+/* Timeline scene (2026-08-30). Same container-query mechanism as the calendar
+   above, and for the same recorded reason: the UrgAns rail and the identity
+   card are AppShell flex siblings that narrow the centre column without
+   narrowing the viewport, so a `lg:` gate would hand a 13-week grid ~450px and
+   squeeze every week column to nothing. Width is the question, so width is
+   what gets asked.
+
+   The threshold is lower than the calendar's 45rem: a month grid needs seven
+   readable day cells with post titles in them, whereas this needs only enough
+   room for ~13 week columns carrying dots and bars. 34rem is where the week
+   headings stop colliding.
+
+   Below it the scene renders the vertical week-by-week list, which is the
+   documented mobile behaviour rather than a degraded desktop view. */
+.tl-scene-container {
+  container-type: inline-size;
+}
+.tl-grid-view {
+  display: none;
+}
+.tl-list-view {
+  display: block;
+}
+@container (min-width: 34rem) {
+  .tl-grid-view {
+    display: block;
+  }
+  .tl-list-view {
+    display: none;
+  }
+}
+@supports not (container-type: inline-size) {
+  @media (min-width: 1024px) {
+    .tl-grid-view {
+      display: block;
+    }
+    .tl-list-view {
+      display: none;
+    }
+  }
+}
+
 /* Public EPK island (URG-196). Same single-source-of-truth pattern as
    .cc-island above, but deliberately DARK-LOCKED — no light override: a
    press kit is a branded artifact sent outside the product, so every

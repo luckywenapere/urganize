@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.10.0",
+    date: "August 31, 2026",
+    highlights: [
+      "See a whole release on one screen. Every activity sits on a week line with today marked, so you can tell what is late and what is coming without reading a list.",
+      "Drag an activity to another week to move it. On a phone you get the same week-by-week view to read.",
+    ],
+  },
+  {
     version: "1.9.1",
     date: "August 30, 2026",
     highlights: [

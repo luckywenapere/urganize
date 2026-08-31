@@ -43,6 +43,12 @@ const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 // it is reserved in the header row and deliberately not in the mobile dock.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 
+// Timeline (2026-08-30) sits right before Metadata in the real desktop header
+// row and leads the mobile top-tabs strip. Reserved unconditionally under its
+// flag — unlike Plan and Recap, whether it renders depends only on a release
+// being scoped, which this skeleton already knows.
+const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
+
 // Same flag AppTopbar/ChappiDock read. The UrgAns side rail renders itself
 // beside AppShell's <main> (URG-210) — including while this skeleton shows —
 // so the skeleton no longer reserves a panel slot of its own; it only needs
@@ -274,6 +280,9 @@ function TasksPanelSkeleton() {
   const primaryPillBlocks = (
     <>
       <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
+      {TIMELINE_ENABLED ? (
+        <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" />
+      ) : null}
       {/* Metadata — narrow widths only, carrying the SAME hide class the
           real pill computes (see TasksPanel.tsx's METADATA_PILL_HIDE_CLASS:
           empty when the identity panel is flagged off, else xl/lg depending
