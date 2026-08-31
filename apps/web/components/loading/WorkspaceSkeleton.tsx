@@ -412,26 +412,38 @@ function TasksPanelSkeleton() {
           skeleton has no reason to reserve for since it isn't part of this
           panel). No border or background of its own (2026-08-17 correction:
           the row used to carry both, which read as a boxed rectangle sitting
-          under the pills). The icon buttons are reserved whenever any
-          FLAG-known folded item exists — Plan and Recap are both excluded
-          from that check the same way Plan is excluded from `pillWidths`
-          above: whether either renders depends on release/draft/task data
-          this skeleton doesn't have yet, and the other six are enough to
-          decide whether the controls belong here at all. */}
+          under the pills).
+
+          The two controls are reserved on DIFFERENT rules as of 2026-08-31,
+          when they stopped opening the same panel (see TasksPanel's base-dock
+          block):
+
+          - SEARCH is unconditional. It renders whenever the release has any
+            activity, and a playbook release has 64-113 of them, so "always"
+            is a far better guess than any flag combination — the skeleton has
+            no task data to check. A genuinely activity-less release (the
+            planner's plan-first flow) briefly reserves one 32px circle that
+            never arrives, the same magnitude of imprecision Plan and Recap
+            already accept below.
+          - MORE keeps the flag-known check. Plan and Recap are excluded from
+            it the same way Plan is excluded from `pillWidths` above: whether
+            either renders depends on release/draft/task data this skeleton
+            doesn't have yet, and the other six decide whether the menu
+            belongs here at all. */}
       <div
         className={`sticky z-20 -mx-4 flex items-center gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
-        {COVER_ART_ENABLED ||
-        SONG_UPLOAD_ENABLED ||
-        FILES_ENABLED ||
-        STATUS_UPDATE_ENABLED ||
-        EPK_ENABLED ||
-        CAPTURE_ENABLED ? (
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
+          {COVER_ART_ENABLED ||
+          SONG_UPLOAD_ENABLED ||
+          FILES_ENABLED ||
+          STATUS_UPDATE_ENABLED ||
+          EPK_ENABLED ||
+          CAPTURE_ENABLED ? (
             <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
-            <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </div>
   );
