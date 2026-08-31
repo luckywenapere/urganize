@@ -54,7 +54,22 @@ async function getAccessToken(): Promise<string> {
  * "task not in the local store" by falling back to a fetch (the inline note
  * at TaskUIProvider.tsx:282-284 calls this exact path out).
  */
-export function NotificationsBell() {
+export type NotificationsBellPlacement = 'topbar' | 'bar';
+
+export function NotificationsBell({
+  placement = 'topbar',
+}: {
+  /**
+   * Where this instance is mounted, which changes the trigger's shape and
+   * which way the panel opens. Defaults to 'topbar' so the original call site
+   * needs no argument.
+   *
+   * 'bar' is MobileNavBar's notifications tab (2026-08-31). It exists because
+   * the topbar hid this bell below `lg` for one stated reason — "MobileNavBar
+   * has no notifications tab to move it to" — and now it has one.
+   */
+  placement?: NotificationsBellPlacement;
+} = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -353,9 +368,29 @@ export function NotificationsBell() {
   // 40px-square trigger and the dropdown still shows the exact list.
   const badgeLabel = unreadCount > 9 ? '9+' : String(unreadCount);
   const hasUnread = unreadCount > 0;
+  const isBar = placement === 'bar';
+
+  const badge = hasUnread ? (
+    <span
+      aria-hidden="true"
+      className={`absolute grid min-h-[18px] min-w-[18px] place-items-center rounded-full border border-bg-base bg-brand px-1 text-[10px] font-semibold leading-none text-content-inverse ${
+        isBar ? '-right-2 -top-1.5' : '-right-1 -top-1'
+      }`}
+    >
+      {badgeLabel}
+    </span>
+  ) : null;
 
   return (
-    <div className="relative">
+    // In 'bar' placement this wrapper must NOT be positioned. The panel below
+    // is `absolute`, and leaving no positioned ancestor between it and the
+    // <nav> is what makes it resolve against the BAR — which is exactly where
+    // an upward-opening panel wants to measure from. (MobileNavBar's
+    // backdrop-blur already makes that nav a containing block for `fixed`
+    // descendants too, so a `fixed` panel would land against the 64px bar
+    // rather than the viewport. Using `absolute` turns that into the
+    // mechanism instead of a trap, and needs no portal.)
+    <div className={isBar ? 'flex h-full w-full' : 'relative'}>
       <button
         ref={triggerRef}
         type="button"
@@ -365,17 +400,28 @@ export function NotificationsBell() {
         aria-label={
           hasUnread ? `Notifications, ${unreadCount} unread` : 'Notifications'
         }
-        className="motion-focus motion-press relative grid h-10 w-10 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+        className={
+          isBar
+            ? `motion-focus flex h-full w-full flex-col items-center justify-center transition-colors ${
+                isOpen ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
+              }`
+            : 'motion-focus motion-press relative grid h-10 w-10 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary'
+        }
       >
-        <SignalIcon className="h-[18px] w-[18px]" />
-        {hasUnread ? (
-          <span
-            aria-hidden="true"
-            className="absolute -right-1 -top-1 grid min-h-[18px] min-w-[18px] place-items-center rounded-full border border-bg-base bg-brand px-1 text-[10px] font-semibold leading-none text-content-inverse"
-          >
-            {badgeLabel}
+        {isBar ? (
+          // The badge hangs off the ICON here, not the button: the bar tab is
+          // the full 64px height of the bar, so a badge pinned to the button's
+          // top corner would float far above the glyph it belongs to.
+          <span className="relative grid place-items-center">
+            <SignalIcon className="h-5 w-5" />
+            {badge}
           </span>
-        ) : null}
+        ) : (
+          <>
+            <SignalIcon className="h-[18px] w-[18px]" />
+            {badge}
+          </>
+        )}
       </button>
 
       {isOpen ? (
@@ -391,7 +437,20 @@ export function NotificationsBell() {
           // panel; it's full-width and viewport-pinned, so the math is the
           // same. From `sm` up it reverts to the WorkspaceMenu-style
           // trigger-anchored dropdown.
-          className="animate-menu-down fixed inset-x-4 top-[4.5rem] z-50 origin-top-right rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]"
+          className={
+            isBar
+              ? // Opens UPWARD, off the top edge of the bar, at every width the
+                // bar renders at (`lg:hidden`, so up to 1024px). Deliberately
+                // not the topbar's `sm:`-and-up trigger-anchored branch below:
+                // anchored `top-full` from a bottom-bar tab would open the
+                // panel downward, off the bottom of the screen. The list is
+                // already capped at 360px so the panel cannot outgrow a phone.
+                // No origin-* here: .animate-menu-up already sets its own
+                // transform-origin, and adding one is a same-specificity
+                // conflict decided by stylesheet order rather than intent.
+                'animate-menu-up absolute bottom-full left-4 right-4 z-50 mb-2 rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]'
+              : 'animate-menu-down fixed inset-x-4 top-[4.5rem] z-50 origin-top-right rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]'
+          }
         >
           <div className="flex items-center justify-between gap-3 border-b border-stroke-subtle px-3 py-3">
             {/* No Beta pill here (founder call, 2026-07-23). The Settings row

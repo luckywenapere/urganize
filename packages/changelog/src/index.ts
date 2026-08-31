@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.11.1",
+    date: "August 31, 2026",
+    highlights: [
+      "The bottom menu on your phone shows icons only now, with no words under them, so the buttons are bigger and easier to hit.",
+      "Your notifications are on your phone at last. Open UrgAns and tap the bell in the bottom menu to see them.",
+    ],
+  },
+  {
     version: "1.11.0",
     date: "August 31, 2026",
     highlights: [
