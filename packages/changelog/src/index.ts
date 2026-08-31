@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.10.2",
+    date: "August 31, 2026",
+    highlights: [
+      "Notes and Shows now open straight away instead of loading when you tap them. The app gets them ready in the background while you read, the same way it already did for your catalog and UrgAns.",
+    ],
+  },
+  {
     version: "1.10.1",
     date: "August 31, 2026",
     highlights: [

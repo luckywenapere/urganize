@@ -28,12 +28,16 @@ import { CapacitorPushBridge } from '@/components/providers/CapacitorPushBridge'
 import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
 import { registerPushServiceWorker } from '@/lib/push';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
+import { buildPrefetchRoutes } from '@/lib/prefetch-routes';
 import { CURATOR_HOME_PATH } from '@/lib/home-path';
 
-/** The only routes a signed-in user navigates between. Deliberately short —
- * every entry costs a speculative request, and prefetching pages nobody opens
- * is exactly the kind of waste this work is trying to remove. */
-const PREFETCHED_ROUTES = ['/dashboard', '/dashboard/urgans', '/settings'];
+// The prefetch list moved to lib/prefetch-routes.ts (2026-08-31) so it can be
+// flag- and account-aware and unit-tested. It used to be three hardcoded
+// entries here, which had drifted: the identity card and the mobile bar had
+// since grown Notes, Shows and the curator crossing, so three primary
+// destinations were cold on every load. The "deliberately short" principle
+// still holds and is argued in that module — it is every destination the nav
+// offers, not the whole app.
 
 // None of these are needed for first paint — the onboarding wizard, the
 // create-release modal, and the floating support widgets used to be
@@ -216,6 +220,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   // who also runs releases) carries a team role and gets the full app — it
   // reaches its inbox through the identity card's "Playlist pitches" entry.
   const isCuratorAccount = user?.role === 'curator';
+  // Tri-state (null = the probe has not answered). Used only to decide whether
+  // to warm the /curator crossing — see lib/prefetch-routes, which treats null
+  // as "not yet" rather than "no".
+  const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
   const showWorkspaceChrome =
     (isAuthenticated || isAuthLoading) &&
     (isDashboardRoute || isSettingsRoute) &&
@@ -316,19 +324,23 @@ export function AppShell({ children }: { children: ReactNode }) {
     useChappiStore.getState().setRailOpen(true);
   }, [isAuthenticated, isAuthLoading, isCuratorAccount, isDashboardRoute, isSettingsRoute]);
 
-  // Warm the route chunks for the app's three real destinations while the
-  // browser is idle. These pages are thin server wrappers over big client
-  // components, so what a prefetch actually buys is the JS chunk landing in
-  // cache before the click — on a slow link that's the whole difference
-  // between an instant switch and a skeleton. Once per mount, and skipped on
-  // Data Saver / 2g (see lib/connection.ts). Prefetch is a no-op in dev.
+  // Warm the route chunks for every destination the nav offers while the
+  // browser is idle, so a tap is instant instead of a skeleton. Skipped on
+  // Data Saver / 2g (see lib/connection.ts), and a no-op in dev.
+  //
+  // Which routes, and why not all of them, is argued in lib/prefetch-routes.
+  //
+  // Re-runs when hasCuratorProfile resolves, which is the point of having it
+  // in the deps: a dual account's /curator crossing is unknown on first paint
+  // and gets warmed once the probe answers. Safe to re-run because
+  // router.prefetch is idempotent — an already-cached route costs nothing.
   useEffect(() => {
     if (!isAuthenticated || isAuthLoading) return;
-    // Nothing in PREFETCHED_ROUTES is reachable by a curator.
+    // A curator-only account reaches none of these; it has its own shell.
     if (isCuratorAccount) return;
     if (!shouldBackgroundPrefetch()) return;
     return runWhenIdle(() => {
-      for (const route of PREFETCHED_ROUTES) {
+      for (const route of buildPrefetchRoutes({ hasCuratorProfile })) {
         try {
           router.prefetch(route);
         } catch {
@@ -336,7 +348,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         }
       }
     });
-  }, [isAuthLoading, isAuthenticated, isCuratorAccount, router]);
+  }, [hasCuratorProfile, isAuthLoading, isAuthenticated, isCuratorAccount, router]);
 
   // Register the push service worker once per load. Registration alone never
   // prompts for permission — the prompt only fires when the user explicitly
