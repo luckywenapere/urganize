@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { CalendarDays, Inbox, Music, Plus } from 'lucide-react';
@@ -10,6 +10,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { forgetSceneForCurrentRelease } from '@/lib/scene-memory';
 import { CatalogIcon, ChappiIcon, NotesIcon } from '@/components/app/BrandIcons';
+import { NotificationsBell } from '@/components/app/NotificationsBell';
 
 // Same flags AppTopbar reads — a tab only exists in the bar when its surface
 // exists at all.
@@ -45,44 +46,108 @@ function EmptyTabSlot() {
   return <li className="flex-1" aria-hidden />;
 }
 
+/**
+ * One tab's look, shared by every destination in the bar (2026-08-31). It used
+ * to be five inline copies of the same class string, which is the drift this
+ * file keeps having to correct elsewhere.
+ *
+ * LABELS ARE `sr-only` — icons only, to save width (founder call). The string
+ * is kept rather than deleted so the accessible name survives: a bar of five
+ * unlabelled icon links would announce as five links with no names. Keeping
+ * one copy per tab also means the visible icon and the announced name cannot
+ * drift apart, the reasoning WorkspaceIdentityPanel's collapsed rail already
+ * uses for its own icon-only state.
+ *
+ * Dropping the labels also retires the width ceiling this bar was measured
+ * against: that ceiling was set by the widest LABEL ("Pitches", ~45px), and a
+ * 20px glyph in a ~52px slot has room to spare. The seven-slot limit recorded
+ * below is now a touch-target question, not a text one.
+ */
+function tabClass(isActive: boolean): string {
+  return `flex h-full w-full flex-col items-center justify-center transition-colors ${
+    isActive ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
+  }`;
+}
+
+/** Icon components come from two families — hand-drawn BrandIcons return
+ *  ReactElement, lucide-react types its own as ReactElement | null — so this
+ *  is deliberately widened to ReactNode rather than making every lucide icon
+ *  need a wrapper (the `MetadataIcon` problem, recorded in CLAUDE.md). */
+type TabIcon = (props: { className?: string }) => ReactNode;
+
+/** A plain destination tab: `<li>` included, so a tab and an EmptyTabSlot are
+ *  interchangeable at the same position in the list. */
+function NavTab({
+  href,
+  label,
+  Icon,
+  isActive,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  Icon: TabIcon;
+  isActive: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <li className="flex-1">
+      <Link
+        href={href}
+        onClick={onClick}
+        aria-current={isActive ? 'page' : undefined}
+        className={tabClass(isActive)}
+      >
+        <Icon className="h-5 w-5" />
+        <span className="sr-only">{label}</span>
+      </Link>
+    </li>
+  );
+}
+
 /** The Song tab's whole SLOT, `<li>` included. Shared so the Suspense fallback
  *  below and the resolved tab cannot drift apart in size, spacing or colour —
  *  the `ArtistLine` split in WorkspaceIdentityPanel, for the same reason. The
  *  `<li>` lives in here rather than in the bar so a tab and its placeholder
  *  are interchangeable at the same position in the list. */
 function SongTabLink({ href, isActive }: { href: string; isActive: boolean }) {
-  return (
-    <li className="flex-1">
-      <Link
-        href={href}
-        aria-current={isActive ? 'page' : undefined}
-        className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-          isActive ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
-        }`}
-      >
-        <Music className="h-5 w-5" />
-        Song
-      </Link>
-    </li>
-  );
+  return <NavTab href={href} label="Song" Icon={Music} isActive={isActive} />;
 }
 
 /** Home's markup. Same split as Song's, for the same reason: the Suspense
  *  fallback and the resolved tab must stay pixel-identical. */
 function HomeTabLink({ isActive, onClick }: { isActive: boolean; onClick: () => void }) {
   return (
+    <NavTab
+      href="/dashboard"
+      label="Home"
+      Icon={CatalogIcon}
+      isActive={isActive}
+      onClick={onClick}
+    />
+  );
+}
+
+/**
+ * The notifications tab — the bell itself, in bar placement (founder call,
+ * 2026-08-31: show notifications here instead of Song on the assistant page).
+ *
+ * It is the SAME component the topbar renders, not a reimplementation: it
+ * already owns the fetch, the unread badge, the peek-vs-read model and the
+ * row-tap navigation. The topbar hid it below `lg` for exactly one stated
+ * reason — "MobileNavBar has no notifications tab to move it to" — so this is
+ * that deferral being closed rather than a new surface. Nothing new is stored
+ * and no route is added, which also keeps it clear of the "in-app inbox is v2"
+ * scope line: this is the built bell, finally reachable on a phone.
+ *
+ * The bell renders null when its own workspace flag is off or the user is not
+ * authenticated, so the `<li>` can come back empty — which is fine, and is the
+ * EmptyTabSlot shape anyway: the slot holds its width either way.
+ */
+function NotificationsTab() {
+  return (
     <li className="flex-1">
-      <Link
-        href="/dashboard"
-        onClick={onClick}
-        aria-current={isActive ? 'page' : undefined}
-        className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-          isActive ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
-        }`}
-      >
-        <CatalogIcon className="h-5 w-5" />
-        Home
-      </Link>
+      <NotificationsBell placement="bar" />
     </li>
   );
 }
@@ -164,9 +229,15 @@ function SongTab({ isHome, isSettings }: { isHome: boolean; isSettings: boolean 
  * (which retires on this same viewport range — see ChappiDock.tsx).
  *
  * Slots: Home (Catalog) · UrgAns · New release/New activity (centre, filled) ·
- * Notes · Shows · Song. Song trails the bar rather than sitting beside the "+"
- * — see its own comment below for why the one tab that comes and goes belongs
- * last.
+ * Notes · Shows · Song-or-Notifications. The trailing slot holds Notifications
+ * on the assistant page and Song everywhere else (founder call, 2026-08-31) —
+ * a swap, so nothing moves; see its own comment below. Song trails the bar
+ * rather than sitting beside the "+" because it is the one tab that comes and
+ * goes with the scoped release.
+ *
+ * ICONS ONLY — every tab's label is `sr-only` (founder call, 2026-08-31), to
+ * save width. See tabClass above for why the strings are kept rather than
+ * deleted, and for what that does to the width ceiling below.
  *
  * "You" is NOT here. It moved to the topbar's top-left corner on 2026-08-31
  * (founder call) so this bar reads as four tabs around a centred button. That
@@ -197,9 +268,10 @@ function SongTab({ isHome, isSettings }: { isHome: boolean; isSettings: boolean 
  * only ever be the pick-a-release fallback pointing back at the catalog.
  *
  * So, per view — with `·` marking a slot held open rather than closed up:
- * the catalog is · UrgAns · + · Shows ·; a scoped release, the assistant,
- * Notes and Shows are Home · UrgAns · + · Shows · Song; `/settings` is
- * Home · UrgAns · + · Shows ·.
+ * the catalog is · UrgAns · + · Notes · Shows ·; a scoped release, Notes and
+ * Shows are Home · UrgAns · + · Notes · Shows · Song; the assistant is
+ * Home · UrgAns · + · Notes · Shows · Notifications; `/settings` is
+ * Home · UrgAns · + · Notes · Shows ·.
  *
  * LAYOUT, and it answers two separate questions — do not collapse them.
  *
@@ -220,14 +292,17 @@ function SongTab({ isHome, isSettings }: { isHome: boolean; isSettings: boolean 
  * WIDTH. Within a region the tabs split it evenly, and because a hidden tab
  * still holds its slot, that split is the SAME on every view for a given
  * account — so the measurement below is the worst case and the only case.
- * Song and Pitches are
- * mutually exclusive (a dual account gets Pitches and not Song), so the
- * ceiling is FIVE tabs plus the button: Home, UrgAns, Notes, Shows, and
- * whichever of Song/Pitches applies. With the 64px centre, a 375px phone gives
- * each side ~155px, so a three-tab region is ~52px against a widest label of
- * "Pitches" at ~45px. That is the hard ceiling. A SIXTH TAB NEEDS A DIFFERENT
- * SHAPE — an overflow sheet holding the optional global surfaces — not another
- * `flex-1`.
+ * The trailing slot is one slot whichever of Song / Notifications / Pitches
+ * fills it, so the ceiling is FIVE tabs plus the button: Home, UrgAns, Notes,
+ * Shows, and that trailing one. With the 64px centre, a 375px phone gives each
+ * side ~155px, so a three-tab region is ~52px per tab.
+ *
+ * Since 2026-08-31 that number is measured against a 20px GLYPH rather than a
+ * ~45px label, so the constraint is now the touch target (~44px recommended)
+ * and not the text. There is real headroom that there was not before. A sixth
+ * tab is still a deliberate decision rather than a free one — at ~44px a
+ * four-tab region is at the edge — but it is no longer the hard stop it was,
+ * and the overflow sheet is the shape to reach for beyond that.
  *
  * The bar shows on every route AppShell mounts it on, /dashboard/urgans
  * included — hiding it there would leave the assistant page with no way out
@@ -340,19 +415,13 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
           </Suspense>
 
           {CHAPPI_ENABLED ? (
-            <li className="flex-1">
-              <Link
-                href="/dashboard/urgans"
-                onClick={handleUrgAnsClick}
-                aria-current={isUrgAns ? 'page' : undefined}
-                className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-                  isUrgAns ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
-                }`}
-              >
-                <ChappiIcon className="h-5 w-5" />
-                UrgAns
-              </Link>
-            </li>
+            <NavTab
+              href="/dashboard/urgans"
+              label="UrgAns"
+              Icon={ChappiIcon}
+              isActive={isUrgAns}
+              onClick={handleUrgAnsClick}
+            />
           ) : null}
         </ul>
 
@@ -375,18 +444,12 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
         <ul className="flex flex-1 items-stretch">
 
         {NOTES_ENABLED ? (
-          <li className="flex-1">
-            <Link
-              href="/dashboard/notes"
-              aria-current={isNotes ? 'page' : undefined}
-              className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-                isNotes ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
-              }`}
-            >
-              <NotesIcon className="h-5 w-5" />
-              Notes
-            </Link>
-          </li>
+          <NavTab
+            href="/dashboard/notes"
+            label="Notes"
+            Icon={NotesIcon}
+            isActive={isNotes}
+          />
         ) : null}
 
         {/* Shows — the other global surface, beside Notes and for the same
@@ -401,35 +464,21 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
             EIGHTH would need a different shape for this bar — an overflow
             sheet, not another `flex-1` — so this is the last tab that fits. */}
         {EVENTS_ENABLED ? (
-          <li className="flex-1">
-            <Link
-              href="/dashboard/shows"
-              aria-current={isShows ? 'page' : undefined}
-              className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-                isShows ? 'text-brand' : 'text-content-tertiary hover:text-content-secondary'
-              }`}
-            >
-              <CalendarDays className="h-5 w-5" />
-              Shows
-            </Link>
-          </li>
+          <NavTab
+            href="/dashboard/shows"
+            label="Shows"
+            Icon={CalendarDays}
+            isActive={isShows}
+          />
         ) : null}
 
         {PITCHING_ENABLED && hasCuratorProfile === true ? (
-          <li className="flex-1">
-            <Link
-              href="/curator"
-              aria-current={pathname?.startsWith('/curator') ? 'page' : undefined}
-              className={`flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-                pathname?.startsWith('/curator')
-                  ? 'text-brand'
-                  : 'text-content-tertiary hover:text-content-secondary'
-              }`}
-            >
-              <Inbox className="h-5 w-5" />
-              Pitches
-            </Link>
-          </li>
+          <NavTab
+            href="/curator"
+            label="Pitches"
+            Icon={Inbox}
+            isActive={pathname?.startsWith('/curator') ?? false}
+          />
         ) : null}
 
         {/* Song is LAST (founder call, 2026-08-30 — superseding the same day's
@@ -461,14 +510,44 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
             instead (see EmptyTabSlot). The Settings fallback matches, so the
             tab cannot flash in and straight back out on a view it never
             belongs on. */}
-        {SONG_UPLOAD_ENABLED && hasCuratorProfile !== true ? (
-          <Suspense
-            fallback={
-              isSettings ? <EmptyTabSlot /> : <SongTabLink href="/dashboard" isActive={false} />
-            }
-          >
-            <SongTab isHome={isHome} isSettings={isSettings} />
-          </Suspense>
+        {/* THE TRAILING SLOT, and it now holds one of two things.
+
+            On the assistant page it is Notifications; everywhere else it is
+            Song (founder call, 2026-08-31: "in UrgAns view instead of showing
+            song show notifications"). A SWAP, not an addition — the slot's
+            width and position are identical either way, so moving to and from
+            the assistant page changes what this tab IS without moving any tab,
+            which is the stillness rule the rest of this bar is built around.
+
+            Whether the slot EXISTS is still an account-level question, not a
+            view-level one: `hasCuratorProfile !== true`, since a dual account
+            carries Pitches here instead. That is fixed per account, so
+            dropping it entirely costs no stability. What changed is that it no
+            longer depends on the SONG flag — notifications have nothing to do
+            with song upload, so with that flag off the slot still exists and
+            simply holds Notifications on the assistant page and an
+            EmptyTabSlot elsewhere.
+
+            KNOWN LIMIT, stated rather than papered over: a dual account gets
+            no notifications tab, because it has no trailing slot to swap. That
+            is one partner account today, and the alternative — a tab that
+            appears only on the assistant page — would move Pitches every time
+            they opened the assistant, which is exactly the jumping this bar
+            was fixed to stop. Their bell is still on desktop. */}
+        {hasCuratorProfile !== true ? (
+          isUrgAns ? (
+            <NotificationsTab />
+          ) : SONG_UPLOAD_ENABLED ? (
+            <Suspense
+              fallback={
+                isSettings ? <EmptyTabSlot /> : <SongTabLink href="/dashboard" isActive={false} />
+              }
+            >
+              <SongTab isHome={isHome} isSettings={isSettings} />
+            </Suspense>
+          ) : (
+            <EmptyTabSlot />
+          )
         ) : null}
         </ul>
       </div>
