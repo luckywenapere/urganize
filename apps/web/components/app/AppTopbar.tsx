@@ -11,7 +11,7 @@ import { useChappiStore } from '@/stores/useChappiStore';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
-import { CatalogIcon, ChappiIcon, NotesIcon } from '@/components/app/BrandIcons';
+import { CatalogIcon, ChappiIcon, NotesIcon, ProfileIcon } from '@/components/app/BrandIcons';
 import { useAuthStore } from '@/lib/auth-store';
 
 // Same flag ChappiPageClient reads. Inlined at build time (NEXT_PUBLIC_
@@ -396,6 +396,36 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           className="motion-focus absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity hover:opacity-80 lg:hidden"
         >
           <Logo size="sm" priority className="opacity-90" />
+        </Link>
+
+        {/* Mobile: the account link, anchored top-LEFT (founder call,
+            2026-08-31). It used to be a "You" tab in MobileNavBar; moving it up
+            here is what leaves that bar four tabs around a centred "+".
+
+            Top-left is the one corner of this row that was empty below lg — the
+            logo is absolutely positioned at the centre and so takes part in no
+            flex flow, and the right cluster is the bell and help. It is a plain
+            Link to /settings rather than WorkspaceMenu (which stays lg-only):
+            the account actions already live on that page, and a menu opening
+            over a thumb at the top of a phone is worse than one tap through.
+
+            THIS IS THE ONLY ROUTE TO SETTINGS ON A PHONE — the nav icons and
+            WorkspaceMenu are both `hidden lg:grid`/`hidden lg:block` under
+            NEXT_PUBLIC_FEATURE_MOBILE_NAV — so it renders on every chrome page
+            unconditionally. Do not make it conditional without leaving another
+            way in. */}
+        <Link
+          href="/settings"
+          aria-label="You"
+          title="You"
+          aria-current={pathname?.startsWith('/settings') ? 'page' : undefined}
+          className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors lg:hidden ${
+            pathname?.startsWith('/settings')
+              ? 'bg-brand/10 text-brand'
+              : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
+          }`}
+        >
+          <ProfileIcon className="h-[18px] w-[18px]" aria-hidden />
         </Link>
 
         {/* Desktop: logo anchored left, as before. Links back to /dashboard
