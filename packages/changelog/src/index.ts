@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.14.0",
+    date: "August 31, 2026",
+    highlights: [
+      "On your phone, the row of buttons above your activities is gone. Everything it held is in the menu button at the bottom of the screen, along with everything that was already there.",
+      "The menu is in order of what you use most, so the things you open every week are at the top. The one you have open is highlighted.",
+    ],
+  },
+  {
     version: "1.13.0",
     date: "August 31, 2026",
     highlights: [
