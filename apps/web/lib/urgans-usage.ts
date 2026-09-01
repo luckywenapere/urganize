@@ -20,14 +20,20 @@
 // drifts: the same inputs always produce the same window, and the answer is
 // recomputed on every call rather than carried forward.
 //
-// Founder call: MONTHLY windows for everyone, anchored to the billing day. An
-// annual subscriber gets 150 actions each month on their billing day, not 150
-// for the whole year — the entitlement is named `urgans_monthly_actions` and
-// 150-per-year on the plan we most want people on would be a mis-sale.
+// Founder call, reaffirmed 2026-09-01: MONTHLY windows for everyone, anchored to
+// the billing day. An annual subscriber gets their tier's monthly allowance on
+// each billing day, not one year's worth in January — the entitlement is named
+// `urgans_monthly_actions`, and a year's budget spendable in a week on the plan
+// we most want people on would be a mis-sale.
 //
-// Only a team resolving to the `manager` tier needs a window at all. Trial,
-// grace, comped, walled, founding and legacy teams all resolve to `label`,
-// which is uncapped, so every awkward case is moot by construction.
+// A calendar-month reset was considered and rejected in the same pass: it is
+// marginally easier to explain, but it hands whoever buys on the 28th a
+// three-day first month, and the copy already promises "these reset when your
+// billing period does".
+//
+// Only a team on a CAPPED tier needs a window at all — `solo` or `manager`.
+// Trial, grace, comped, walled, founding and legacy teams all resolve to
+// `label`, which is uncapped, so every awkward case is moot by construction.
 
 /** Day-of-month the window turns over on, when no anchor can be read. The 1st
  * is the least surprising default and matches what a user would assume. */

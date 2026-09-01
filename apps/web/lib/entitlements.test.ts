@@ -9,7 +9,7 @@ import {
   tierHighlights,
 } from '@urganize/pricing';
 import { ADMIN_ASSIGNABLE_PLANS } from './admin-teams';
-import { resolveCheckoutPurchase } from './billing-plans';
+import { isRecurringPlan, isSelfServeTier, resolveCheckoutPurchase } from './billing-plans';
 import type { PricingTierId } from '@urganize/pricing';
 import {
   ENTITLEMENTS,
@@ -561,24 +561,84 @@ describe('the seat cap is reachable, and only for a team that bought Manager', (
     expect(ADMIN_ASSIGNABLE_PLANS).not.toContain('manager');
   });
 
-  // SOLO IS ON THE PRICING PAGE BUT NOT ON SALE, and this is the tripwire for
-  // the day that changes. It is the tightest ceiling in the table (1 release, 2
-  // seats), so it is the one tier where switching it on without minting its
-  // Paystack Plans and widening subscriptions_plan_check would be felt
-  // immediately. Pointed at the checkout DECISION rather than at a constant
-  // array, for the reason this whole block exists: the last tripwire watched
-  // arrays and missed a new branch.
-  it('does not sell Solo yet, in either flag state', () => {
-    for (const pricingV2 of [true, false]) {
-      const result = resolveCheckoutPurchase({
-        plan: 'solo',
-        currency: 'NGN',
-        interval: 'monthly',
-        pricingV2,
-      });
-      expect(result.ok, `pricingV2=${pricingV2}`).toBe(false);
+  // SOLO IS SELF-SERVE AS OF 2026-09-01. Until then it sat on the public
+  // pricing page at ₦8,000 while being absent from SelfServeTierId and from
+  // subscriptions_plan_check, which made all four of its ceilings unreachable
+  // dead code — advertised, and enforced on nobody.
+  //
+  // THE ASSERTION IS ABOUT *WHICH* FAILURE, and that is the whole value of it.
+  // Solo's Paystack Plans are not minted yet, so checkout still refuses — but it
+  // must now refuse at the CONFIGURATION step (500, "plan code not configured")
+  // rather than at the VALIDATION step (400, unknown plan). Those two look
+  // identical from the outside and mean opposite things: the first says "mint the
+  // Plans", the second says "the tier does not exist". Distinguishing them is
+  // what stops the next session concluding Solo was never meant to be sold.
+  //
+  // When the Plans are minted and the env vars set, this flips to ok: true with
+  // no code change — the env read is the only thing standing in the way.
+  it('accepts Solo at checkout, refusing only for want of a minted Plan', () => {
+    const result = resolveCheckoutPurchase({
+      plan: 'solo',
+      currency: 'NGN',
+      interval: 'monthly',
+      pricingV2: true,
+    });
+    if (result.ok) {
+      // The Plans have been minted in this environment. Then the only thing
+      // worth checking is that it resolved as the tier and not as something else.
+      expect(result.planId).toBe('solo');
+      expect(result.interval).toBe('monthly');
+      return;
     }
+    expect(result.status).toBe(500);
+    expect(result.error).toContain('not configured');
+  });
+
+  // Reachability is decided by the pricing-v2 flag, exactly as Manager's is.
+  // With the flag off, Solo is not a plan id the legacy generation knows.
+  it('does not sell Solo with pricing v2 off', () => {
+    const result = resolveCheckoutPurchase({
+      plan: 'solo',
+      currency: 'NGN',
+      interval: 'monthly',
+      pricingV2: false,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('expected refusal');
+    expect(result.status).toBe(400);
+  });
+
+  // Still not something an admin hands out by hand: the only way onto a capped
+  // tier is an actual purchase, for Solo exactly as for Manager.
+  it('confirms solo is not admin-assignable', () => {
     expect(ADMIN_ASSIGNABLE_PLANS).not.toContain('solo');
+  });
+
+  // A Solo subscription has to keep extending at each renewal. Missing from
+  // RECURRING_PLAN_IDS, it would charge correctly on day one and then silently
+  // stop — the failure mode isRecurringPlan's own comment was written about.
+  it('renews a Solo subscription', () => {
+    expect(isRecurringPlan('solo')).toBe(true);
+  });
+
+  // THE WALL AND CHECKOUT MUST AGREE ON WHICH TIERS ARE SELF-SERVE, and this is
+  // what holds them together across a boundary an import cannot cross.
+  //
+  // TeamWall.tsx derives its radio list by filtering PRICING_TIER_ORDER on
+  // `!contactSales`; checkout gates on `isSelfServeTier`. It cannot import that
+  // predicate — lib/billing-plans.ts is server-only Paystack config — so the two
+  // are separate expressions of one fact, and this asserts they say the same
+  // thing for every tier that exists.
+  //
+  // Both failure directions are real and neither is loud on its own: a tier the
+  // wall offers but checkout refuses is a dead-end radio, and a tier checkout
+  // accepts but the wall omits is a price nobody can buy — precisely the state
+  // Solo was in between 2026-08-30 and 2026-09-01.
+  it('the wall and checkout agree on which tiers are self-serve', () => {
+    for (const tier of Object.keys(PRICING_TIERS) as PricingTierId[]) {
+      const salesLed = Boolean(PRICING_TIERS[tier].contactSales);
+      expect(isSelfServeTier(tier), `${tier} self-serve`).toBe(!salesLed);
+    }
   });
 
   // A trial is full access by definition, so an evaluating team never meets the

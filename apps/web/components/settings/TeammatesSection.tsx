@@ -49,12 +49,25 @@ export function TeammatesSection({
   const rolePermissions = useMemo(() => getRolePermissions(user?.role), [user?.role]);
 
   // Seats used counts the same rows the list below shows: invited and active
-  // both occupy one, matching the server's count. Disabling the two create
-  // controls at the ceiling saves a round trip that could only be refused; the
-  // server still enforces it, because a disabled button is a courtesy, not a
-  // gate.
+  // both occupy one, matching the server's count.
+  //
+  // THE CONTROLS ARE NOT DISABLED AT THE CEILING, and that reversal (2026-09-01)
+  // is deliberate. They used to be, on the reasoning that it "saves a round trip
+  // that could only be refused" — but the round trip is what CARRIES the reason.
+  // Disabled, the manager got a dimmed button at opacity-60 with no message, no
+  // named limit and no upgrade path: the request never happened, so the server's
+  // 409 — which says which plan they are on, what it includes, and which tier
+  // lifts it — was never read by anyone.
+  //
+  // So the invite flow stays fully reachable and the block happens at submit,
+  // where there is somewhere to put a sentence. `teammateError` already renders
+  // the server's string verbatim, so this needed no new copy in the client, and
+  // it keeps one implementation of the message rather than a client paraphrase
+  // that could drift from what the route actually enforces.
+  //
+  // `seatsUsed` still feeds the "3 of 4" counter beside the heading, which is
+  // the calm before-you-hit-it signal. That part was never the problem.
   const seatsUsed = teammates.length;
-  const atSeatLimit = seatLimit !== null && seatsUsed >= seatLimit;
 
   // The picker for ARTIST invites (an artist only sees their own releases;
   // founder decision, 2026-07-23).
@@ -298,7 +311,7 @@ export function TeammatesSection({
         <button
           type="button"
           onClick={() => void handleInviteTeammate()}
-          disabled={isInviting || atSeatLimit}
+          disabled={isInviting}
           className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
         >
           {isInviting ? 'Inviting...' : 'Invite'}
@@ -312,7 +325,7 @@ export function TeammatesSection({
           <button
             type="button"
             onClick={() => void handleCreateInviteLink()}
-            disabled={isCreatingLink || atSeatLimit}
+            disabled={isCreatingLink}
             className="motion-focus inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary disabled:opacity-60"
           >
             <Copy className="h-3 w-3" aria-hidden="true" />

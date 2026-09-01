@@ -10,6 +10,7 @@ import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
 import { isCardTrialEnabled, resolveCardTrialRequirement } from '@/lib/trial-card';
 import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { getTeamAccessForUser, toTeamAccessPayload } from '@/lib/team-billing-server';
+import { purchasableTiers } from '@/lib/billing-plans';
 
 // cardTrialRequired — the card-before-trial gate signal (NEXT_PUBLIC_FEATURE_CARD_TRIAL).
 //
@@ -167,5 +168,13 @@ export async function GET(request: NextRequest) {
     cardTrialRequired: cardTrialFacts.required,
     onboardingCompleted: cardTrialFacts.onboardingCompleted,
     ...(teamAccess ? { teamAccess } : {}),
+    // Which tiers this deployment can actually charge. The wall renders exactly
+    // these, so it can never offer a tier whose Paystack Plan has not been
+    // minted — see purchasableTiers() for why that gap is worth a field.
+    //
+    // Sent unconditionally rather than behind the paywall flag: it is a fact
+    // about our configuration, not about this user, and the legacy /locked
+    // picker may want it later too.
+    purchasableTiers: purchasableTiers(),
   });
 }

@@ -10,6 +10,7 @@
 
 import {
   BILLING_PLANS,
+  PRICING_TIER_ORDER,
   getTierPrice,
   isBillingInterval,
   isBillingPlanId,
@@ -33,19 +34,25 @@ import {
  * contract and invoiced by hand — so it has no Paystack plan code and must never
  * reach self-serve checkout or the renewal path.
  */
-export type RecurringPlanId = BillingPlanId | 'manager';
+export type RecurringPlanId = BillingPlanId | 'manager' | 'solo';
 
 /** The tiers a customer can actually buy without talking to us.
  *
- * MANAGER ONLY since 2026-08-30 (founder call): Label became sales-led, so its
- * card checkout is gone and Solo is not purchasable yet. Note this is about
- * NEW purchases — an existing Label subscription still renews, because
- * `isRecurringPlan` below still accepts 'label'. The two lists answer
- * different questions and are meant to disagree here. */
-export type SelfServeTierId = Extract<PricingTierId, 'manager'>;
+ * SOLO AND MANAGER since 2026-09-01 (founder call). Solo had been on the public
+ * pricing page at ₦8,000 since 2026-08-30 while being absent from here, which
+ * made every one of its four ceilings unreachable dead code — advertised, and
+ * enforced on nobody, because `resolveTeamTier` could never return a tier no
+ * code path could write.
+ *
+ * Label and Group stay OUT: both are sales-led, so their path is the
+ * talk-to-us card rather than a radio. Note this is about NEW purchases — an
+ * existing Label subscription still renews, because `isRecurringPlan` below
+ * still accepts 'label'. The two lists answer different questions and are meant
+ * to disagree there. */
+export type SelfServeTierId = Extract<PricingTierId, 'manager' | 'solo'>;
 
 export function isSelfServeTier(value: unknown): value is SelfServeTierId {
-  return value === 'manager';
+  return value === 'manager' || value === 'solo';
 }
 
 /**
@@ -123,14 +130,25 @@ const PLAN_CODE_ENV_VAR: Record<BillingPlanId, Record<PricingCurrencyCode, strin
 // mislabeled ₦750,000 Plan from an earlier attempt (CLAUDE.md records it), and
 // pointing Label at it would charge every new Label customer the wrong amount.
 //
-// Manager is the only tier that needs new Plan objects minted. Until those two
-// env vars are set, a Manager checkout returns the "plan not configured" 500 —
-// which is the correct failure: it refuses rather than charging a Plan that
-// bills the wrong term.
+// Solo and Manager are the tiers needing their own Plan objects minted. Until a
+// tier's two env vars are set, its checkout returns the "plan not configured"
+// 500 — which is the correct failure: it refuses rather than charging a Plan
+// that bills the wrong amount or term.
+//
+// ⚠️ SOLO'S TWO PLANS ARE NOT MINTED YET (added 2026-09-01). ₦8,000/mo and
+// ₦80,000/yr, per PRICING_TIERS. Until they exist and these vars are set, Solo
+// is selectable on the wall and refuses at the last step. That is the deliberate
+// order of operations: this repo has shipped an advertise-versus-charge gap four
+// times by doing it the other way round.
+//
 // Label's entry moved to RETIRED_TIER_PLAN_CODE_ENV_VAR on 2026-08-30 when it
 // became sales-led: no longer purchasable, so it must not be reachable from
 // checkout, but its live subscriptions still renew and are still validated.
 const TIER_PLAN_CODE_ENV_VAR: Record<SelfServeTierId, Record<BillingInterval, string>> = {
+  solo: {
+    monthly: 'PAYSTACK_PLAN_SOLO_MONTHLY_NGN',
+    annual: 'PAYSTACK_PLAN_SOLO_ANNUAL_NGN',
+  },
   manager: {
     monthly: 'PAYSTACK_PLAN_MANAGER_MONTHLY_NGN',
     annual: 'PAYSTACK_PLAN_MANAGER_ANNUAL_NGN',
@@ -195,6 +213,38 @@ export function getTierPaystackPlanCode(
   interval: BillingInterval
 ): string | null {
   return readPlanCodeEnv(TIER_PLAN_CODE_ENV_VAR[tier]?.[interval]);
+}
+
+/**
+ * The tiers this deployment can actually CHARGE, in pricing-page order.
+ *
+ * A tier qualifies only when it is self-serve AND both of its Paystack Plan
+ * codes are configured — because a tier missing either one is a radio button
+ * that ends in a 500, and the customer who clicked it has no way to know that
+ * was our configuration rather than their card.
+ *
+ * THIS EXISTS TO CLOSE A GAP THIS REPO HAS SHIPPED FOUR TIMES (2026-07-14,
+ * -07-15, -08-16, -08-21), each time as a price advertised that nothing could
+ * charge, and each time caught by a customer or a founder rather than by code.
+ * Every previous fix was a reminder to mint the Plans first. This one makes the
+ * order of operations unnecessary: an unmintable tier simply is not offered, and
+ * it starts being offered the moment its env vars are set, with no code change.
+ *
+ * Server-only, because it reads env. The wall receives the answer through
+ * /api/subscription-status rather than deriving it, which is the whole point —
+ * a client bundle cannot see whether a Plan exists.
+ *
+ * BOTH intervals are required rather than either, deliberately: the wall's
+ * interval toggle is always live, so offering a tier that can only be billed
+ * monthly would move the failure one click later instead of removing it.
+ */
+export function purchasableTiers(): PricingTierId[] {
+  return PRICING_TIER_ORDER.filter(
+    (tier) =>
+      isSelfServeTier(tier) &&
+      getTierPaystackPlanCode(tier, 'monthly') !== null &&
+      getTierPaystackPlanCode(tier, 'annual') !== null
+  );
 }
 
 /**
@@ -326,6 +376,7 @@ export const RECURRING_PLAN_IDS: readonly RecurringPlanId[] = [
   'annual',
   'label',
   'manager',
+  'solo',
 ] as const;
 
 /**
@@ -346,9 +397,21 @@ export const RECURRING_PLAN_IDS: readonly RecurringPlanId[] = [
  * renewal — the precise failure this comment block was written about. Whether a
  * tier can be BOUGHT today and whether an existing subscription RENEWS are
  * different questions.
+ *
+ * 'solo' was added 2026-09-01, in the same pass that made it self-serve. Adding
+ * it here is not optional bookkeeping: a Solo subscription whose id is missing
+ * from this list would charge correctly on day one and then quietly stop
+ * extending at the first renewal, leaving a paying customer walled with no
+ * failure anywhere to point at.
  */
 export function isRecurringPlan(plan: string): plan is RecurringPlanId {
-  return plan === 'monthly' || plan === 'annual' || plan === 'label' || plan === 'manager';
+  return (
+    plan === 'monthly' ||
+    plan === 'annual' ||
+    plan === 'label' ||
+    plan === 'manager' ||
+    plan === 'solo'
+  );
 }
 
 /**

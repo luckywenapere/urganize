@@ -12,6 +12,8 @@
 // id is the smaller thing that works — the CardTrialGate precedent.
 
 import { supabase } from './supabase/client';
+import { isPricingTierId } from '@urganize/pricing';
+import type { PricingTierId } from '@urganize/pricing';
 import type { TeamAccessReason, TeamAccessState } from './team-billing';
 
 export type TeamAccessClientSnapshot = {
@@ -31,6 +33,16 @@ export type TeamAccessClientSnapshot = {
   isOwnerOrAdmin: boolean;
   ownerUserId: string | null;
   ownerName: string | null;
+  /** Which tiers this deployment can actually charge, in pricing-page order.
+   *
+   *  A SERVER FACT, and that is the point: whether a tier's Paystack Plan has
+   *  been minted lives in an env var the browser cannot read, so a client-side
+   *  derivation would inevitably offer a tier that 500s at the last step. The
+   *  wall renders exactly this list. Empty or absent means "we could not tell",
+   *  and the wall falls back to its own derivation rather than showing nothing —
+   *  a wall with no way to pay is worse than one offering a tier that might
+   *  fail. See purchasableTiers() in lib/billing-plans.ts. */
+  purchasableTiers?: PricingTierId[];
 };
 
 /** How long a fetched answer is reused. Short in both directions: the wall must
@@ -71,8 +83,17 @@ async function fetchTeamAccess(): Promise<TeamAccessClientSnapshot | null> {
 
     const payload = (await response.json().catch(() => ({}))) as {
       teamAccess?: Partial<TeamAccessClientSnapshot> | null;
+      purchasableTiers?: unknown;
     };
     const team = payload.teamAccess;
+
+    // A sibling of teamAccess rather than a member of it: it is a fact about
+    // this deployment's Paystack configuration, not about this user's team.
+    // Validated element-by-element because it crosses the wire — an unknown id
+    // reaching the wall would render a radio for a tier that does not exist.
+    const purchasable = Array.isArray(payload.purchasableTiers)
+      ? payload.purchasableTiers.filter((tier): tier is PricingTierId => isPricingTierId(tier))
+      : [];
     // No teamAccess object means the flag is off server-side. Null, not a
     // fabricated "walled" — the caller must not act on an absent answer.
     if (!team || typeof team.hasAccess !== 'boolean') return null;
@@ -92,6 +113,9 @@ async function fetchTeamAccess(): Promise<TeamAccessClientSnapshot | null> {
       isOwnerOrAdmin: Boolean(team.isOwnerOrAdmin),
       ownerUserId: team.ownerUserId ?? null,
       ownerName: team.ownerName ?? null,
+      // Omitted rather than sent as [] when we learned nothing, so the wall can
+      // tell "no tier is chargeable" from "an older server did not say".
+      ...(purchasable.length > 0 ? { purchasableTiers: purchasable } : {}),
     };
   } catch {
     // Fail open: null means "we do not know", and every consumer treats that
