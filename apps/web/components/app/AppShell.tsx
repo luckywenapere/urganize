@@ -521,6 +521,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       {MOBILE_NAV_ENABLED && showWorkspaceChrome && !requiresArtistNameGate ? (
         <MobileNavBar onNewRelease={openCreateRelease} />
       ) : null}
+      {/* Deliberately NO onStartTestRelease on this instance, unlike the two
+          the first-release prompt opens (WorkspaceView, ChappiPageClient).
+          Two reasons: this modal only opens from deliberate "+ New release"
+          taps, not from the prompt the test path serves; and AppShell cannot
+          consume the ToastProvider it mounts itself, so a failed test-release
+          create here would have NO surface at all — a silent dead tap, the
+          one outcome the test path must never produce. */}
       <CreateReleaseModal
         open={isCreateReleaseOpen}
         onClose={closeCreateRelease}

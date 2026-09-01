@@ -12,6 +12,11 @@ type WorkspaceReleaseCardProps = {
   /** Signed URL for the cover art (Phase 3 source of truth, resolved server-side
    * via lib/cover-art.ts). Null/undefined → neutral placeholder. */
   coverArtUrl?: string | null;
+  /** True for a test release (NEXT_PUBLIC_FEATURE_TEST_RELEASE) — renders a
+   * small "Test" tag so a practice release never reads as real work in the
+   * catalog. WorkspaceView derives it from the `test_release` metadata
+   * marker with the flag folded in. */
+  isTest?: boolean;
   /**
    * Layout variant.
    * - 'tile' (default): stacked card — full-width square cover banner above
@@ -87,6 +92,7 @@ export function WorkspaceReleaseCard({
   selected,
   onSelect,
   coverArtUrl,
+  isTest,
   variant = 'tile',
 }: WorkspaceReleaseCardProps) {
   const progress = tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0;
@@ -101,6 +107,14 @@ export function WorkspaceReleaseCard({
         <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
           {release.artistName || 'Unassigned artist'}
         </p>
+        {/* "Test" first when both render (a test release normally stays
+            draft, so in practice this is the row's only pill): what a
+            release IS outranks where it sits in the pipeline. */}
+        {isTest ? (
+          <span className="inline-flex shrink-0 items-center rounded-full border border-brand/30 bg-brand/10 px-2 py-1 text-[11px] font-medium text-brand">
+            Test
+          </span>
+        ) : null}
         {/* Status pill is hidden for 'draft' (the canonical
             RELEASE_STATUS_OPTIONS default — see types/releases.ts) since
             nearly every release lives there during planning, making the

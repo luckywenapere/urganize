@@ -19,7 +19,10 @@ export type ReleaseCreatedSource =
   | 'chappi'
   // The UrgAns planner intake, when it creates the release itself (started
   // from a note or an assistant chip rather than an existing release).
-  | 'planner';
+  | 'planner'
+  // The one-tap test release (NEXT_PUBLIC_FEATURE_TEST_RELEASE) — kept
+  // distinct so real-release activation reads are segmentable from test runs.
+  | 'test_path';
 export type TaskCreatedSource = 'quick_create' | 'inline' | 'detail_panel' | 'onboarding';
 
 export interface AnalyticsEventPropertiesMap {
