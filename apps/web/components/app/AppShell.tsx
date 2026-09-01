@@ -109,6 +109,13 @@ const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true'
 // the assistant page owning a copy.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
+// Type-first create (founder call, 2026-09-01): tapping the type IS the
+// create, and the new release view is where the rest gets filled in — so this
+// instance's deliberate "stay on whatever page" behavior gives way to landing
+// in the release, for the flag-on path only.
+const TYPE_FIRST_CREATE_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_TYPE_FIRST_CREATE === 'true';
+
 // The workspace identity card (URG-214) — a persistent left column, mirroring
 // the UrgAns rail's right column. Only meaningful once workspaces exist, so
 // it's gated on both its own flag and NEXT_PUBLIC_FEATURE_WORKSPACE.
@@ -532,6 +539,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                 ? { prefill: { releaseType: result.releaseType } }
                 : {}),
             });
+          } else if (TYPE_FIRST_CREATE_ENABLED) {
+            // TYPE-FIRST CREATE (2026-09-01): the type tap was the whole
+            // form, so the release view — where name and date get prompted —
+            // is the destination, wherever the modal was opened from. Flag
+            // off, the stay-put behavior above is unchanged.
+            router.push(`/dashboard?release=${releaseId}`);
           }
         }}
       />
