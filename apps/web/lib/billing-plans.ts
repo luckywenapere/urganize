@@ -10,10 +10,12 @@
 
 import {
   BILLING_PLANS,
+  PRICING_TIERS,
   PRICING_TIER_ORDER,
   getTierPrice,
   isBillingInterval,
   isBillingPlanId,
+  isPricingTierId,
   type BillingInterval,
   type BillingPlanId,
   type PricingCurrencyCode,
@@ -464,6 +466,31 @@ export function getTierMinorUnit(
  * shape of the request, then configuration. A caller should never see "plan not
  * configured" for a request that was malformed to begin with.
  */
+/**
+ * The display name of a sales-led plan, or null when it is not sales-led.
+ *
+ * ONE CHECK COVERS BOTH GENERATIONS, and that is worth stating because the
+ * obvious version checks two. Every sales-led id is a `PricingTierId`: 'label'
+ * is a valid id in BOTH generations, and 'enterprise' is tier-only, while the
+ * ids that are legacy-only ('monthly', 'annual') are not sales-led and never
+ * will be. So a second lookup against BILLING_PLANS would be unreachable code
+ * — written first, then removed after a mutation test showed nothing depended
+ * on it. `salesLedIdsAreAllTierIds` in billing-plans.test.ts pins that
+ * assumption, so if a legacy-only id ever becomes sales-led this stops being
+ * true loudly rather than silently letting it through.
+ *
+ * Returns the NAME rather than a boolean so the refusal can say "Label" or
+ * "Group" — the tier ids do not match their display names ('enterprise' is
+ * shown as Group), and a message naming the id would be meaningless to whoever
+ * reads it.
+ */
+function readSalesLedPlanName(plan: unknown): string | null {
+  if (isPricingTierId(plan) && PRICING_TIERS[plan].contactSales) {
+    return PRICING_TIERS[plan].label;
+  }
+  return null;
+}
+
 export type CheckoutPurchase =
   | {
       ok: true;
@@ -488,13 +515,34 @@ export function resolveCheckoutPurchase(input: {
 }): CheckoutPurchase {
   const { plan, currency, pricingV2 } = input;
 
-  // Sales-led, so there is nothing to check out. Answered first so the message
-  // says what to do instead of listing ids that do not include this one.
-  if (plan === 'enterprise') {
+  // SALES-LED PLANS NEVER REACH CHECKOUT, whichever generation names them.
+  // Answered first so the message says what to do instead of listing ids that do
+  // not include this one.
+  //
+  // THIS USED TO TEST `plan === 'enterprise'` ALONE, and that left a live hole
+  // (found 2026-09-01). Label went sales-led on 2026-08-30, and it is a valid id
+  // in BOTH pricing generations. The tier branch below correctly declines it
+  // (`isSelfServeTier` says no) — and it then fell through to the LEGACY branch,
+  // where `isBillingPlanId` still accepts 'label'. So a request for it resolved
+  // `PAYSTACK_PLAN_LABEL_NGN` (a stale ₦750,000 Plan, which exists in the
+  // dashboard) while recording `BILLING_PLANS.label`'s ₦800,000: two different
+  // figures, on a tier that is meant to be a conversation rather than a card
+  // form.
+  //
+  // No UI could reach it — the wall filters on `contactSales` and `/locked`
+  // early-returns on it — so this is the decision being enforced at the layer
+  // that makes it, rather than only in the two surfaces that happen to respect
+  // it. It also means the refusal no longer depends on an env var being unset,
+  // which is what the old test was accidentally relying on.
+  //
+  // Derived from `contactSales` rather than listing ids, so making a tier
+  // sales-led in @urganize/pricing closes its checkout in the same edit.
+  const salesLedName = readSalesLedPlanName(plan);
+  if (salesLedName) {
     return {
       ok: false,
       status: 400,
-      error: 'Group is quoted per contract. Contact us rather than checking out.',
+      error: `${salesLedName} is quoted per contract. Contact us rather than checking out.`,
     };
   }
 

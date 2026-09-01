@@ -7905,6 +7905,55 @@ plans list — only the monthly one was visible. Manager needs BOTH intervals
 configured before `purchasableTiers()` will offer it, by the same rule Solo
 follows, so if that Plan or its env var is missing then Manager is currently
 being withheld from the wall too.
+
+### A sales-led plan could still reach checkout (2026-09-01, same day, no version)
+
+Found by the founder asking a plain question — "what is the Label plan, it's
+currently 750k" — which is worth recording as much as the fix.
+
+**`resolveCheckoutPurchase` guarded only `plan === 'enterprise'`.** Label went
+sales-led on 2026-08-30, and it is a valid id in BOTH pricing generations: the
+tier branch correctly declines it (`isSelfServeTier` says no), and it then fell
+through to the LEGACY branch, where `isBillingPlanId` still accepts 'label'. So
+a request for it resolved `PAYSTACK_PLAN_LABEL_NGN` — a stale ₦750,000 Plan that
+really does exist in the dashboard — while recording `BILLING_PLANS.label`'s
+₦800,000. Two different figures, on a tier that is meant to be a conversation.
+
+Unreachable from any UI (the wall filters on `contactSales`, `/locked`
+early-returns on it), so this is the decision being enforced at the layer that
+makes it rather than only in the two surfaces that happen to respect it. Derived
+from `contactSales`, so making a tier sales-led closes its checkout in the same
+edit.
+
+**THE PART WORTH REMEMBERING: a test already claimed to cover this and passed for
+the wrong reason.** `refuses to sell Label, which went sales-led` called
+`stubLive()`, which does not stub `PAYSTACK_PLAN_LABEL_NGN` — so the refusal was
+really "plan code not configured" (a 500) out of the legacy branch, not the
+sales-led decision. Setting that one env var in production would have removed the
+only thing refusing it, and the test would have gone on passing. It now stubs a
+valid Label plan code so the ONLY thing that can refuse is the guard, and asserts
+**400** specifically, because a 500 there is the accidental pass returning. Same
+failure shape as the surviving mutation recorded above: green is not the same as
+covered.
+
+Also: the guard's first draft checked BOTH generations, and a mutation test
+showed the second lookup was unreachable — every sales-led id is a
+`PricingTierId`. It was deleted rather than kept as decoration, and
+`salesLedIdsAreAllTierIds` pins the assumption so a legacy-only id becoming
+sales-led fails loudly instead of slipping through.
+
+**No changelog entry and no version bump**, per the internal-only rule: no UI
+could reach this path, so nothing a user can observe has changed. The
+2026-08-27 metadata-route gating was handled the same way.
+
+**Label, for the record, has no price in the product.** `PRICING_TIERS.label`
+carries no `prices` at all; the ₦800,000 in `BILLING_PLANS.label` is legacy,
+displayed nowhere, and kept only for an existing subscriber's renewal math. The
+two ₦750,000 Plans in the dashboard (`PAYSTACK_PLAN_LABEL_NGN` and
+`PAYSTACK_PLAN_LABEL_USD`, the latter charging NGN despite its name) are read by
+nothing. A live Label subscription renews against
+`PAYSTACK_PLAN_{MONTHLY,ANNUAL}_NGN`, which is why those must not be repointed.
+
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:
   - `Web` → https://app.urganize.app (builds `apps/web`)
