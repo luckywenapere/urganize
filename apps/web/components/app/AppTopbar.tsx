@@ -8,7 +8,7 @@ import { Inbox, MicVocal, Plus } from 'lucide-react';
 import { Logo } from '@urganize/ui';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
-import { forgetSceneForCurrentRelease } from '@/lib/scene-memory';
+import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
@@ -239,12 +239,11 @@ function CatalogTopbarAction() {
   return (
     <Link
       href="/dashboard"
-      // Leaving a release forgets its scene, so tapping it again starts at
-      // Activities rather than the scene the user just walked out of. The
-      // fourth surface that does this, alongside the workspace back arrow,
-      // MobileNavBar's Home tab and the side menu's Catalog row — see
-      // forgetSceneForCurrentRelease. No-ops when nothing is scoped.
-      onClick={forgetSceneForCurrentRelease}
+      // Leaving a release forgets its scene AND records that the catalog was
+      // asked for, so the lone-release auto-scope cannot undo this navigation.
+      // One of five surfaces that make the same move — see
+      // lib/catalog-intent.ts. Safe from any page, scoped or not.
+      onClick={leaveReleaseForCatalog}
       aria-label="Workspace"
       title="Workspace"
       className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${

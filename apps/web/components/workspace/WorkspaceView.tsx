@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
 import { useAuthStore } from '@/lib/auth-store';
+import { isCatalogRequested, markCatalogRequested } from '@/lib/catalog-intent';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -217,6 +218,28 @@ export function WorkspaceView() {
   // Deliberately not applied at 2+: the moment there is a choice to make, the
   // catalog is how you make it.
   const isSingleRelease = releases.length === 1;
+  // ...unless the user ASKED for the catalog, in which case the convenience is
+  // off the table for the rest of this browser session. Read once at mount and
+  // never re-read: the record only ever goes unset → set, and it is set by a
+  // navigation to /dashboard, so a stale `false` can only occur on a mount that
+  // was already showing the catalog — where the ref below is spent and nothing
+  // auto-scopes anyway.
+  //
+  // WHY IT IS NOT THE REF BELOW. That ref is per MOUNT, and this component
+  // unmounts every time you leave /dashboard — which Home, Catalog and the back
+  // arrow all do. So the ref's "one chance" came back on every return, and
+  // tapping Home from Settings on a single-release account was dragged straight
+  // back into the release (founder report, 2026-09-01). The fact has to outlive
+  // the component, so it lives in sessionStorage: see lib/catalog-intent.ts for
+  // the full history, and note it FAILS TOWARD NOT AUTO-SCOPING.
+  //
+  // Reading storage in a lazy initializer is safe here, and only here, because
+  // the skeleton gate below short-circuits on `authLoading` — true on the first
+  // render for the server AND the client (auth-store's initial `isLoading: true`
+  // is not persisted), so both render the skeleton and this value cannot change
+  // the first paint. If that gate ever stops leading with authLoading, this has
+  // to move to a mount effect.
+  const [catalogRequested] = useState(isCatalogRequested);
   // "The auto-scope has HAD ITS ONE CHANCE this mount" — not "the auto-scope
   // ran". The distinction is the bug: without this guard an explicit back tap
   // (which clears `scopedReleaseId`) immediately re-triggered the effect below
@@ -232,7 +255,10 @@ export function WorkspaceView() {
   useEffect(() => {
     // Wait for the first load: `releases` is empty until it lands, and acting
     // on that would look like zero releases rather than one.
-    if (isInitialLoading || hasAutoScopedRef.current) return;
+    // `catalogRequested` first among the bails, because it is the one that
+    // makes a deliberate navigation stick: the user is standing on the catalog
+    // because they asked to be, and re-scoping them would undo the tap.
+    if (isInitialLoading || hasAutoScopedRef.current || catalogRequested) return;
     // 0 or 2+ releases: the chance stays OPEN deliberately. A brand-new account
     // has zero here and is prompted to create one (deferred — see
     // useFirstReleasePrompt); when its first release lands, isSingleRelease
@@ -260,7 +286,7 @@ export function WorkspaceView() {
     // Back from here should leave the workspace, not restore a catalog this
     // release count has no route to.
     setScope(releases[0].id);
-  }, [isInitialLoading, isSingleRelease, scopedReleaseId, releases, setScope]);
+  }, [isInitialLoading, isSingleRelease, scopedReleaseId, releases, setScope, catalogRequested]);
 
   // Fire the dashboard fetch IMMEDIATELY, without waiting on the auth store.
   // loadCommandCenter reads its own bearer token from supabase.auth.getSession()
@@ -837,6 +863,13 @@ export function WorkspaceView() {
   // a forward move, and desktop deselects must not grow history with duplicate
   // catalog entries.
   const goBack = () => {
+    // The fifth "leave this release for the catalog" surface. It does not call
+    // leaveReleaseForCatalog(), because setScope's `forgetScene` already does
+    // the scene half properly (it knows the OUTGOING release without re-reading
+    // the url) — but the intent half is the same fact, and recording it is what
+    // keeps this exit from being undone by the lone-release auto-scope on the
+    // next mount or refresh.
+    markCatalogRequested();
     setScope(null, { forgetScene: true });
   };
 
@@ -871,10 +904,14 @@ export function WorkspaceView() {
   // scope means the user deliberately backed out via the catalog button, not
   // that the initial auto-scope hasn't landed yet — that case must render
   // the real catalog, not an eternal skeleton.
+  // `!catalogRequested` is the same rule for a deliberate exit made from a
+  // DIFFERENT page, which remounts this component and so arrives with a fresh
+  // ref. Without it, Home from Settings held the skeleton for a frame and then
+  // painted the release the user was trying to leave.
   if (
     authLoading ||
     isInitialLoading ||
-    (isSingleRelease && !scopedReleaseId && !hasAutoScopedRef.current)
+    (isSingleRelease && !scopedReleaseId && !catalogRequested && !hasAutoScopedRef.current)
   ) {
     return <WorkspaceSkeleton />;
   }

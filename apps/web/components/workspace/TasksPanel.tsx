@@ -38,7 +38,7 @@ import {
 import { matchesSearchTerms, parseSearchTerms, searchTasks } from '@/lib/task-search';
 import { appPageHaystack, buildAppPages, type AppPage } from '@/lib/app-pages';
 import { orderReleaseMenu, type ReleaseMenuKey } from '@/lib/release-menu';
-import { forgetSceneForCurrentRelease } from '@/lib/scene-memory';
+import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { useAuthStore } from '@/lib/auth-store';
 import type { Release } from '@/types/releases';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
@@ -374,7 +374,7 @@ export function TasksPanel({
   // `useSearchParams`, which in a statically prerendered client component bails
   // out to the nearest Suspense boundary; the scoped release reaches this
   // component as a prop, and the one place that needs the live URL
-  // (forgetSceneForCurrentRelease) reads it at click time.
+  // (leaveReleaseForCatalog) reads it at click time.
   const router = useRouter();
   // Tri-state, and null must stay "not yet" rather than "no" — buildAppPages
   // handles that, and the cost of being wrong here is only that the crossing
@@ -1037,7 +1037,7 @@ export function TasksPanel({
     // this release would resume the scene the user just navigated away from.
     // Every other page is somewhere you go and return from, where resuming the
     // scene is exactly what scene memory is for.
-    if (page.leavesRelease) forgetSceneForCurrentRelease();
+    if (page.leavesRelease) leaveReleaseForCatalog();
     router.push(page.href);
     closeMobilePanels();
   };
