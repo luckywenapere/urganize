@@ -44,7 +44,9 @@ const COPY: Record<
   ios: {
     title: 'Keep Urganize on your Home Screen',
     body: 'It opens full screen, straight to your work — and it is the only way an iPhone will let us send you reminders.',
-    action: 'Got it',
+    // Not an action, and deliberately worded so it does not read as one. See
+    // the iOS note in the component docblock.
+    action: 'Close',
   },
   android: {
     title: 'Get the Urganize app',
@@ -74,9 +76,26 @@ const COPY: Record<
  *  - iOS can only ever be TAUGHT. There is no beforeinstallprompt on iOS and
  *    no API of any kind that opens Add to Home Screen: Apple routes it through
  *    the share sheet and nothing on the page can reach it. So the iOS card is
- *    instructions and its button only acknowledges them. Pretending otherwise
- *    would mean a primary button that visibly does nothing — the failure
- *    PushPermissionPrompt's own header warns about for the permission dialog.
+ *    instructions, and as of 2026-09-01 it carries NO primary button at all.
+ *    It used to offer a filled "Got it", which is the first thing a thumb
+ *    reaches for on a card whose buttons sit at the bottom — and tapping it
+ *    dismissed the card, taking the two steps with it before the person had
+ *    done anything. Reported from live use as "nothing happens when you click
+ *    Got it", which was true in the sense that mattered. A filled button that
+ *    cannot install is the failure PushPermissionPrompt's own header warns
+ *    about for the permission dialog; one that also eats the instructions is
+ *    worse. Do not put it back.
+ *
+ *    ITS ONE EXIT RECORDS A DECLINE, NOT AN ACCEPT, and that is the honest
+ *    reading rather than a downgrade: nothing the page can observe tells us
+ *    whether someone followed the steps, so claiming an accept would silence
+ *    the offer for six months on a guess. A decline is session-scoped, so
+ *    someone who read the steps and did not follow them is asked again next
+ *    visit (the founder's "every visit"), while someone who DID follow them is
+ *    closed out permanently by isStandaloneDisplay() — navigator.standalone is
+ *    true from the Home Screen, so resolveDeviceInstallVariant() answers null
+ *    and the card never renders again. Detection is the confirmation here, not
+ *    a button.
  *
  *  - Android gets a LINK, not a web install. There is a real Android build
  *    (apps/mobile, distributed as an APK from the marketing site). Offering
@@ -229,8 +248,8 @@ export function InstallAppPrompt() {
                 1.
               </span>
               <span>
-                Tap the <span className="font-semibold text-content-primary">Share</span> button in
-                your browser bar.
+                Tap <span className="font-semibold text-content-primary">Share</span>, the square
+                with an arrow out of it. Bottom bar in Safari, top right in Chrome.
               </span>
             </li>
             <li className="flex gap-2">
@@ -246,36 +265,49 @@ export function InstallAppPrompt() {
         ) : null}
 
         <div className="mt-4 flex items-center gap-2">
-          {variant === 'android' ? (
-            <a
-              href={ANDROID_DOWNLOAD_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => settle('accepted')}
-              className={primaryButtonClass}
-            >
-              {copy.action}
-            </a>
-          ) : (
+          {variant === 'ios' ? (
+            // One neutral exit and no filled button: the steps above are the
+            // payload, and nothing here can perform the install. Full width so
+            // it is still a real thumb target without competing with them.
             <button
               type="button"
-              disabled={isWorking}
-              onClick={
-                variant === 'desktop' ? () => void handleDesktopInstall() : () => settle('accepted')
-              }
-              className={primaryButtonClass}
+              onClick={() => settle('declined')}
+              className={`${dismissButtonClass} flex-1`}
             >
-              {isWorking ? 'Installing…' : copy.action}
+              {copy.action}
             </button>
+          ) : (
+            <>
+              {variant === 'android' ? (
+                <a
+                  href={ANDROID_DOWNLOAD_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => settle('accepted')}
+                  className={primaryButtonClass}
+                >
+                  {copy.action}
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isWorking}
+                  onClick={() => void handleDesktopInstall()}
+                  className={primaryButtonClass}
+                >
+                  {isWorking ? 'Installing…' : copy.action}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => settle('declined')}
+                disabled={isWorking}
+                className={dismissButtonClass}
+              >
+                Not now
+              </button>
+            </>
           )}
-          <button
-            type="button"
-            onClick={() => settle('declined')}
-            disabled={isWorking}
-            className={dismissButtonClass}
-          >
-            Not now
-          </button>
         </div>
       </div>
     </div>
