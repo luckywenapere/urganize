@@ -13,9 +13,14 @@ import { panelClass } from './panelClass';
 
 /**
  * Deleting a release is only available here (URG-163) — the workspace's
- * per-release trash icons were removed. Self-contained like ProfileSection:
- * reads releases/tasks straight from the global stores rather than via
- * parent props, and owns its own delete-confirm dialog end to end.
+ * per-release trash icons were removed. ONE sanctioned exception since
+ * 2026-09-01 (founder call): a TEST release's standing banner in the
+ * workspace (TestReleaseBanner, behind NEXT_PUBLIC_FEATURE_TEST_RELEASE)
+ * carries its own "Delete test release" button, because the founder asked
+ * for the test path to end with the delete option. Real releases keep the
+ * Settings-only rule. Self-contained like ProfileSection: reads
+ * releases/tasks straight from the global stores rather than via parent
+ * props, and owns its own delete-confirm dialog end to end.
  */
 export function ReleasesSection() {
   const user = useAuthStore((state) => state.user);
@@ -64,6 +69,11 @@ export function ReleasesSection() {
     <>
       <section className={panelClass}>
         <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Releases</h2>
+        {/* "Only available here" stays literally true while
+            NEXT_PUBLIC_FEATURE_TEST_RELEASE is off (its banner carries the one
+            sanctioned exception, for TEST releases only). Revisit this
+            sentence at that flag's flip — flagged on the activation checklist
+            rather than reworded early. */}
         <p className="mb-4 text-sm text-content-secondary">
           Deleting a release is only available here. This permanently removes
           it, its activities, and its attached files.

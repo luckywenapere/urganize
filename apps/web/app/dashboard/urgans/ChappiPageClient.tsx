@@ -12,6 +12,9 @@ import { ChappiPageSkeleton } from '@/components/loading/ChappiPageSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
+import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
+import { isTestReleaseEnabled } from '@/lib/test-release';
+import { useToast } from '@/components/shared/ToastProvider';
 import { FirstReleaseWin } from '@/components/workspace/FirstReleaseWin';
 import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
@@ -32,6 +35,12 @@ const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'tru
 // ChappiPageSkeleton). The dock retires on this route entirely once the
 // flag is on.
 const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
+
+// The one-tap test path — the first-release pop-up this page mounts carries
+// the same "Just looking?" link WorkspaceView's does, since the deferred
+// prompt can fire on either surface. Read through the predicate so the env
+// var name is typed once (lib/test-release.ts).
+const TEST_RELEASE_ENABLED = isTestReleaseEnabled();
 
 export default function ChappiPageClient() {
   const router = useRouter();
@@ -90,6 +99,16 @@ export default function ChappiPageClient() {
   // (lib/first-release-prompt.ts) is what makes the two surfaces one prompt.
   useFirstReleasePrompt(() => setIsCreateModalOpen(true));
 
+  // The test link closes the modal before it runs, so this page has no inline
+  // slot left for a failure — the shared toast stack is the surface (this page
+  // renders inside AppShell's ToastProvider; a silent failure is the one
+  // unacceptable outcome). Success navigates to /dashboard scoped to the new
+  // test release, where the standing banner takes over.
+  const { pushToast } = useToast();
+  const { startTestRelease } = useStartTestRelease({
+    onError: (message) => pushToast(message, 'error'),
+  });
+
   if (!CHAPPI_ENABLED) return null;
 
   // ONE skeleton, rendered here (not as a route-segment Suspense fallback) —
@@ -146,6 +165,7 @@ export default function ChappiPageClient() {
       <CreateReleaseModal
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        onStartTestRelease={TEST_RELEASE_ENABLED ? startTestRelease : undefined}
         onCreated={(releaseId, plan, result) => {
           setIsCreateModalOpen(false);
           void loadCommandCenter();

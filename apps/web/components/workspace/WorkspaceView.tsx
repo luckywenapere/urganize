@@ -7,6 +7,7 @@ import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
 import { useAuthStore } from '@/lib/auth-store';
 import { isCatalogRequested, markCatalogRequested } from '@/lib/catalog-intent';
+import { isTestReleaseEnabled, readTestRelease } from '@/lib/test-release';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -21,6 +22,9 @@ import { SetReleaseDateCard } from '@/components/releases/SetReleaseDateCard';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
 import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
+import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
+import { TestReleaseBanner } from './TestReleaseBanner';
+import { DeleteReleaseDialog } from './DeleteReleaseDialog';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { TasksPanel } from './TasksPanel';
@@ -82,6 +86,12 @@ const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'tru
 // the mint endpoint behind it is the pre-existing, ungated invite-link route.
 const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'true';
 
+// The one-tap test path (founder request, 2026-09-01): entry buttons on the
+// zero-release empty state and the first-release pop-up, a standing banner
+// with the delete exit while a test release is scoped. Read through the
+// predicate so the env var name is typed exactly once (lib/test-release.ts).
+const TEST_RELEASE_ENABLED = isTestReleaseEnabled();
+
 // Dynamic for the same reason AppShell already loads it that way — a static
 // import here defeated that, dragging the ~460-line modal into the /dashboard
 // entry chunk that every user downloads before first paint, for a surface
@@ -122,7 +132,8 @@ export function WorkspaceView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoading: authLoading } = useAuthStore();
-  const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
+  const { releases, isInitialLoading, error, loadCommandCenter, removeReleaseLocal } =
+    useReleaseStore();
   const tasks = useTaskStore((state) => state.tasks);
   const { scopedReleaseId, setScope } = useReleaseScope();
   // Which release scene (if any) the URL has open. It renders INLINE in the
@@ -171,6 +182,14 @@ export function WorkspaceView() {
     title: string | null;
     resume: () => void;
   } | null>(null);
+
+  // The test release the standing banner's delete button is asking about;
+  // null = dialog closed. Only ever set for the SCOPED release, and only when
+  // it carries the test marker and the viewer owns it (the banner's own gate).
+  const [testReleaseToDelete, setTestReleaseToDelete] = useState<Pick<
+    Release,
+    'id' | 'title'
+  > | null>(null);
 
   // AI actions + toast, ported verbatim from the removed release detail page
   // (2026-08-04) — this is now the only surface a scoped release renders on.
@@ -327,6 +346,22 @@ export function WorkspaceView() {
   // release re-arms the condition by design (once per session still holds).
   useFirstReleasePrompt(() => setIsCreateModalOpen(true));
 
+  // The one-tap test-release create. No onError option here on purpose: on
+  // this page the failure surface is the empty state itself — the entry
+  // buttons render the hook's `error` inline — so a toast would double-report.
+  const {
+    startTestRelease,
+    isStarting: isStartingTestRelease,
+    error: testReleaseError,
+  } = useStartTestRelease();
+  // One object handed to both catalog surfaces (the ReleasesColumn /
+  // WorkspaceDesktopGrid `testRelease` prop). The flag gate lives HERE — the
+  // components stay dumb, and with the flag off both render their empty
+  // states byte-identically to before this feature existed.
+  const testReleaseEntry = TEST_RELEASE_ENABLED
+    ? { start: startTestRelease, isStarting: isStartingTestRelease, error: testReleaseError }
+    : undefined;
+
   const generateStatus = async () => {
     if (!scopedReleaseId) return;
     setIsStatusOpen(true);
@@ -468,6 +503,11 @@ export function WorkspaceView() {
         tasksDone,
         tasksTotal: releaseTasks.length,
         coverArtUrl: release.coverArtUrl ?? null,
+        // Derived client-side from the metadata the command-center already
+        // ships raw — no new API surface. The flag is folded in so every
+        // "Test" tag goes dark on a flip-off, even for rows still carrying
+        // the marker.
+        isTest: TEST_RELEASE_ENABLED && readTestRelease(release.metadata),
       };
     });
   }, [releases, taskList]);
@@ -477,18 +517,21 @@ export function WorkspaceView() {
   // show/hide condition; `templatePending` picks that card's variant
   // (URG-230). The panels that only need id/title/artistName accept this
   // wider shape structurally.
-  const scopedReleaseSlim = useMemo<Pick<
-    Release,
-    | 'id'
-    | 'title'
-    | 'artistId'
-    | 'artistName'
-    | 'releaseType'
-    | 'releaseDate'
-    | 'templatePending'
-    | 'status'
-    | 'ownerUserId'
-  > | null>(() => {
+  const scopedReleaseSlim = useMemo<
+    | (Pick<
+        Release,
+        | 'id'
+        | 'title'
+        | 'artistId'
+        | 'artistName'
+        | 'releaseType'
+        | 'releaseDate'
+        | 'templatePending'
+        | 'status'
+        | 'ownerUserId'
+      > & { isTest: boolean })
+    | null
+  >(() => {
     if (!scopedReleaseId) return null;
     const found = releases.find((r) => r.id === scopedReleaseId);
     if (!found) return null;
@@ -510,6 +553,11 @@ export function WorkspaceView() {
       // routes deliberately keep owner-only checks, so offering them to a
       // teammate is a button that 404s on press.
       ownerUserId: found.ownerUserId,
+      // Derived, not stored on Release: the metadata jsonb already reaches
+      // this component raw, nothing server-side reads the marker back after
+      // creation, and folding the flag in here means the banner goes dark on
+      // a flip-off along with everything else.
+      isTest: TEST_RELEASE_ENABLED && readTestRelease(found.metadata),
     };
   }, [scopedReleaseId, releases]);
 
@@ -747,6 +795,25 @@ export function WorkspaceView() {
   // It also supersedes the plan-waiting date card for this case: that card asks
   // for a date so the template can be instantiated, and under the planner the
   // date is question three of the intake instead.
+  // The test path's standing exit (founder call, 2026-09-01: the path "ends
+  // with an option to delete", and a standing banner beat a guided tour —
+  // wherever the user stops exploring, the way out is right there). Gated on
+  // scopedReleaseIsOwn like setReleaseDateBanner below: DELETE is owner-only,
+  // and a delete button that 404s is worse than no banner. First in the
+  // activitiesBanner chain because it states what the release IS; in practice
+  // the three banners are mutually exclusive anyway (a test release always
+  // has a date and a full plan). Degenerate case accepted: if instantiation
+  // soft-failed server-side, a zero-activity test release shows this banner
+  // above TasksPanel's own empty state, and the delete exit still works.
+  const testReleaseBanner =
+    scopedReleaseSlim && scopedReleaseSlim.isTest && scopedReleaseIsOwn ? (
+      <TestReleaseBanner
+        onDelete={() =>
+          setTestReleaseToDelete({ id: scopedReleaseSlim.id, title: scopedReleaseSlim.title })
+        }
+      />
+    ) : null;
+
   const planBanner =
     PLANNER_ENABLED && scopedReleaseSlim && scopedTasks.length === 0 ? (
       <PlanReleaseCard
@@ -1133,7 +1200,7 @@ export function WorkspaceView() {
                   archiveAction={archiveAction}
                   changeArtistAction={changeArtistAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
-                  activitiesBanner={planBanner ?? setReleaseDateBanner}
+                  activitiesBanner={testReleaseBanner ?? planBanner ?? setReleaseDateBanner}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
                   showPlanPill={showPlanPill}
                 />
@@ -1151,6 +1218,7 @@ export function WorkspaceView() {
                 onSelect={handleSelect}
                 onCreateRelease={() => setIsCreateModalOpen(true)}
                 emptyState={catalogNoMatchState}
+                testRelease={testReleaseEntry}
               />
             )}
           </div>
@@ -1179,7 +1247,7 @@ export function WorkspaceView() {
                 panelArchiveAction={archiveAction}
                 panelChangeArtistAction={changeArtistAction}
                 panelSceneContent={isDesktopViewport ? scenePanel : undefined}
-                panelActivitiesBanner={planBanner ?? setReleaseDateBanner}
+                panelActivitiesBanner={testReleaseBanner ?? planBanner ?? setReleaseDateBanner}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
                 panelShowPlanPill={showPlanPill}
               />
@@ -1189,6 +1257,7 @@ export function WorkspaceView() {
                 onSelect={handleSelect}
                 onCreateRelease={() => setIsCreateModalOpen(true)}
                 emptyState={catalogNoMatchState}
+                testRelease={testReleaseEntry}
               />
             )}
           </div>
@@ -1197,6 +1266,7 @@ export function WorkspaceView() {
       <CreateReleaseModal
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        onStartTestRelease={TEST_RELEASE_ENABLED ? startTestRelease : undefined}
         onCreated={(releaseId, plan, result) => {
           setIsCreateModalOpen(false);
           // CreateReleaseModal already force-resyncs the store on success;
@@ -1310,6 +1380,38 @@ export function WorkspaceView() {
           // Force-refresh so the catalog grid and the identity card's active
           // count both reflect it without a reload.
           void loadCommandCenter({ force: true });
+        }}
+      />
+
+      {/* The test path's delete exit — DeleteReleaseDialog's second-ever
+          mount (the first is Settings' ReleasesSection). Deleting REAL
+          releases stays Settings-only per URG-163; this dialog only ever
+          holds a test release, set by TestReleaseBanner's button. The
+          dialog owns the DELETE fetch itself. */}
+      <DeleteReleaseDialog
+        open={testReleaseToDelete !== null}
+        release={testReleaseToDelete}
+        tasksTotal={
+          testReleaseToDelete
+            ? taskList.filter((task) => task.releaseId === testReleaseToDelete.id).length
+            : 0
+        }
+        onClose={() => setTestReleaseToDelete(null)}
+        onDeleted={(releaseId) => {
+          setTestReleaseToDelete(null);
+          // Same pair Settings' handler runs: drop the release locally now,
+          // then resync so counts, rails and the identity card agree with
+          // the server.
+          removeReleaseLocal(releaseId);
+          void loadCommandCenter({ force: true });
+          // Land on the catalog and STAY there. Without the intent mark, a
+          // remaining lone REAL release would auto-scope-bounce the user
+          // straight back into a release seconds after they deleted one —
+          // the v1.14.1 mechanism. forgetScene clears the deleted release's
+          // remembered scene on the way out.
+          markCatalogRequested();
+          setScope(null, { forgetScene: true });
+          setToast({ message: 'Test release deleted.', tone: 'success' });
         }}
       />
 

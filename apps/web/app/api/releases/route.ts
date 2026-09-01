@@ -18,6 +18,7 @@ import { DEFAULT_RELEASE_TITLE, isDbReleaseType, type DbReleaseType } from '@/ty
 import { writeTemplatePending } from '@/lib/release-template-pending';
 import { writePlannerPending } from '@/lib/release-planner-pending';
 import { isReleasePlannerEnabled } from '@/lib/release-planning';
+import { isTestReleaseEnabled, writeTestRelease } from '@/lib/test-release';
 import { enqueueReleaseReminders } from '@/lib/release-reminders-server';
 
 type ReleaseSelectorListResponse = { releases: ReleaseOption[] };
@@ -80,6 +81,11 @@ type CreateReleaseBody = {
   /** 'template' (default) instantiates the rollout plan; 'blank' creates an
    * empty release the user builds up themself (founder call, 2026-07-23). */
   plan?: unknown;
+  /** The one-tap test path (NEXT_PUBLIC_FEATURE_TEST_RELEASE): marks the row
+   * with the `test_release` metadata key, forces the classic template plan,
+   * and skips the release reminders. Refused with a 400 when the flag is off
+   * and when no release date is supplied — see the isTest block below. */
+  isTest?: unknown;
 };
 
 function toSelectorRelease(
@@ -208,7 +214,8 @@ function normalizeReleaseCreatedSource(value: unknown): ReleaseCreatedSource {
     value === 'onboarding' ||
     value === 'empty_state' ||
     value === 'chappi' ||
-    value === 'planner'
+    value === 'planner' ||
+    value === 'test_path'
   ) {
     return value;
   }
@@ -344,7 +351,19 @@ export async function POST(request: NextRequest) {
     }
     const coverArtUrl = trimString(body?.coverArtUrl);
     const releaseSource = normalizeReleaseCreatedSource(body?.source);
-    const releasePlan = trimString(body?.plan) === 'blank' ? 'blank' : 'template';
+    const isTest = body?.isTest === true;
+    if (isTest && !isTestReleaseEnabled()) {
+      // Loud refusal rather than silently ignoring the field: dropping it
+      // would mint an unmarked release titled "Test release" — no card tag,
+      // no banner, no delete exit, and nothing explaining why. The route
+      // itself stays ungated; every ordinary create must keep working.
+      return NextResponse.json({ error: 'Test releases are not switched on.' }, { status: 400 });
+    }
+    // A test release always takes the template plan: a blank one would be an
+    // empty activity list under a banner that says "tick activities off", and
+    // seeing the full plan is what the test path exists to show.
+    const releasePlan =
+      isTest ? 'template' : trimString(body?.plan) === 'blank' ? 'blank' : 'template';
 
     // parseOptionalReleaseDate returns { value: null } for empty input — the
     // tolerance it was always written for, previously unreachable because the
@@ -352,6 +371,16 @@ export async function POST(request: NextRequest) {
     const releaseDateResult = parseOptionalReleaseDate(releaseDateInput);
     if (releaseDateResult.error) {
       return NextResponse.json({ error: releaseDateResult.error }, { status: 400 });
+    }
+    if (isTest && !releaseDateResult.value) {
+      // Load-bearing, not politeness. The insert below writes `metadata`
+      // through mutually-exclusive spreads, and a dateless isTest would make
+      // templatePending true beside it — two spreads setting the same key,
+      // last one wins, template_pending silently lost, a release that never
+      // instantiates. buildTestReleaseDraft always supplies a date; this
+      // guard is what makes the spread exclusivity provable rather than
+      // assumed.
+      return NextResponse.json({ error: 'A test release needs a release date.' }, { status: 400 });
     }
 
     if (coverArtUrl && !isValidHttpUrl(coverArtUrl)) {
@@ -523,7 +552,11 @@ export async function POST(request: NextRequest) {
     // reusing template_pending, because that flag makes the schedule route
     // instantiate the whole template the moment a date lands, which is exactly
     // what the draft flow exists to prevent. See lib/release-planner-pending.ts.
-    const plannerPending = isReleasePlannerEnabled() && releasePlan !== 'blank';
+    //
+    // A test release opts OUT of the planner: it must land with its full plan
+    // instantly, and routing a tester into the planner intake is exactly the
+    // pressure the test path removes.
+    const plannerPending = isReleasePlannerEnabled() && releasePlan !== 'blank' && !isTest;
 
     // A Rollout-plan release with no date owes its activities (URG-230).
     // Recorded rather than inferred — see lib/release-template-pending.ts for
@@ -571,8 +604,13 @@ export async function POST(request: NextRequest) {
         // stores/useReleaseStore.ts) first or the dashboard 500s.
         release_type: releaseType,
         description: description || null,
+        // Exactly one of these three can be true: isTest forces plannerPending
+        // false above, and a dateless isTest is refused with a 400, so
+        // templatePending (which requires no date) cannot coexist with it
+        // either. Three spreads onto one key are only safe while that holds.
         ...(templatePending ? { metadata: writeTemplatePending(null, true) } : {}),
         ...(plannerPending ? { metadata: writePlannerPending(null, true) } : {}),
+        ...(isTest ? { metadata: writeTestRelease(null, true) } : {}),
         updated_at: now,
       })
       .select('id,status,artist_name,title,release_date,created_at,updated_at')
@@ -719,12 +757,15 @@ export async function POST(request: NextRequest) {
     // of reminders in case the user creates this release and doesn't come
     // back. Never throws — a queueing failure must never fail release
     // creation. Rides the existing scheduled_notifications flusher, no new
-    // cron.
-    await enqueueReleaseReminders(adminClient, {
-      userId: auth.user.id,
-      releaseId,
-      releaseTitle: String(releaseResult.data.title || title),
-    });
+    // cron. Skipped for a test release: a "come back to your release" push
+    // about a practice release is the pressure the test path removes.
+    if (!isTest) {
+      await enqueueReleaseReminders(adminClient, {
+        userId: auth.user.id,
+        releaseId,
+        releaseTitle: String(releaseResult.data.title || title),
+      });
+    }
 
     return NextResponse.json({
       releaseId,

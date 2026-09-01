@@ -83,6 +83,16 @@ type CreateReleaseModalProps = {
       releaseType?: DbReleaseType | null;
     }
   ) => void;
+  /**
+   * The one-tap test path (NEXT_PUBLIC_FEATURE_TEST_RELEASE). When provided
+   * AND this is a first release, the chooser step carries a quiet
+   * "Just looking? Try a test release instead" link that closes the modal
+   * and runs it. Threaded from the mount sites rather than instantiated
+   * here on purpose: this modal deliberately holds no router, and the test
+   * path's defining act is a navigation. Callers pass it flag-gated, so
+   * flag-off renders are byte-identical to before the prop existed.
+   */
+  onStartTestRelease?: () => void;
 };
 
 type CreateReleaseResponse = {
@@ -125,7 +135,12 @@ function validateReleaseDate(value: string): string {
   return '';
 }
 
-export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseModalProps) {
+export function CreateReleaseModal({
+  open,
+  onClose,
+  onCreated,
+  onStartTestRelease,
+}: CreateReleaseModalProps) {
   // COPY ONLY. This modal is always dismissible — the wall URG-217 built here
   // (no Escape, no backdrop, no X, no Cancel, a Sign out escape hatch) was
   // removed 2026-08-28 (founder call): it trapped exactly the people it was
@@ -509,6 +524,25 @@ export function CreateReleaseModal({ open, onClose, onCreated }: CreateReleaseMo
                   activities as you go — you know your process.
                 </span>
               </button>
+
+              {/* The test path's second entry point (first-release mode
+                  only): a quiet link under the two real choices, for someone
+                  who was offered this modal before they were ready to commit
+                  real release details. Close-then-run so the modal is gone
+                  before the navigation lands. */}
+              {isFirstRelease && onStartTestRelease ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onStartTestRelease();
+                  }}
+                  disabled={isSubmitting}
+                  className="motion-focus justify-self-center rounded-lg px-3 py-2 text-sm font-medium text-content-secondary transition-colors hover:text-content-primary sm:col-span-2"
+                >
+                  Just looking? Try a test release instead
+                </button>
+              ) : null}
             </div>
           ) : null}
 
