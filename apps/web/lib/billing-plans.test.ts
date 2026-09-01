@@ -11,6 +11,7 @@ import {
   resolveBillingInterval,
   resolveCheckoutPurchase,
 } from './billing-plans';
+import { BILLING_PLANS, BILLING_PLAN_ORDER, isPricingTierId } from '@urganize/pricing';
 
 // advancePeriodEnd is the renewal math the Paystack webhook trusts: a late
 // renewal must EXTEND the paid window from the current period end, and a
@@ -356,7 +357,22 @@ describe('resolveCheckoutPurchase', () => {
     // by hand, so checkout must refuse it at BOTH intervals rather than charging
     // a card for a tier nobody is allowed to buy — even though those Plan
     // objects are still configured and still renewing its existing subscribers.
+    //
+    // ⚠️ THIS TEST USED TO PASS FOR THE WRONG REASON, and the fix is the
+    // `PAYSTACK_PLAN_LABEL_NGN` stub below (added 2026-09-01). `stubLive()` does
+    // not set that var, so the refusal was really "plan code not configured" (a
+    // 500) coming out of the LEGACY branch — not the sales-led decision. Since
+    // that Plan genuinely exists in the Paystack dashboard at a stale ₦750,000,
+    // setting the var in production would have removed the only thing refusing
+    // this, and a request for Label would have charged ₦750,000 while recording
+    // ₦800,000.
+    //
+    // Stubbing it is what makes the assertion mean what it says: with a valid
+    // Plan code available, the ONLY thing that can refuse is the sales-led guard.
+    // Hence the 400 — the status is the whole point, because a 500 here would be
+    // the old accidental pass returning.
     stubLive();
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_NGN', 'PLN_stale_label');
     for (const interval of ['monthly', 'annual'] as const) {
       const result = resolveCheckoutPurchase({
         plan: 'label',
@@ -364,8 +380,57 @@ describe('resolveCheckoutPurchase', () => {
         interval,
         pricingV2: true,
       });
-      expect(result.ok).toBe(false);
+      expect(result.ok, `label/${interval}`).toBe(false);
+      if (result.ok) throw new Error('expected a refusal');
+      expect(result.status, `label/${interval} status`).toBe(400);
+      expect(result.error).toContain('Label');
     }
+  });
+
+  it('refuses a sales-led plan with pricing v2 OFF too', () => {
+    // The flag decides which GENERATION a request is read in, never whether a
+    // sales-led plan may be bought. With the flag off, 'label' is a legacy id
+    // and reaches the legacy branch directly — so if the guard sat inside the
+    // tier branch this would still charge.
+    stubLive();
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_NGN', 'PLN_stale_label');
+    const result = resolveCheckoutPurchase({
+      plan: 'label',
+      currency: 'NGN',
+      interval: undefined,
+      pricingV2: false,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('expected a refusal');
+    expect(result.status).toBe(400);
+  });
+
+  // Pins the assumption `readSalesLedPlanName` rests on: it does ONE lookup,
+  // against PRICING_TIERS, because every sales-led id is also a tier id. If a
+  // legacy-only id ('monthly', 'annual') ever became sales-led, that single
+  // lookup would silently stop refusing it — so this fails first instead.
+  it('salesLedIdsAreAllTierIds', () => {
+    for (const planId of BILLING_PLAN_ORDER) {
+      if (!BILLING_PLANS[planId].contactSales) continue;
+      expect(isPricingTierId(planId), `${planId} is sales-led but not a tier id`).toBe(true);
+    }
+  });
+
+  it('refuses Group by its display name, not its stored id', () => {
+    // The id is 'enterprise' and customers read "Group". A refusal naming the id
+    // would be meaningless to the person reading it.
+    stubLive();
+    const result = resolveCheckoutPurchase({
+      plan: 'enterprise',
+      currency: 'NGN',
+      interval: 'annual',
+      pricingV2: true,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('expected a refusal');
+    expect(result.status).toBe(400);
+    expect(result.error).toContain('Group');
+    expect(result.error).not.toContain('enterprise');
   });
 
   it('records NO interval for a legacy purchase, whose id already carries it', () => {
