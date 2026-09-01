@@ -6780,6 +6780,67 @@ record of what that reasoning was, and it is superseded, not wrong.
   above already carries: the ledger entry lands at the flag flip, not at
   merge, and this feature has never been flipped.
 
+### The iOS card lost its button (2026-09-01)
+
+Founder, from live use: *"on iOS the prompt to download the app to the home
+screen, nothing happens when the user clicks Got it — can't it then
+automatically install it on their home screen."*
+
+**It cannot, and no amount of code will change that** — the first bullet at
+the top of this section is the whole answer, and it has not moved: Apple
+routes Add to Home Screen through the share sheet, there is no
+`beforeinstallprompt` and no `navigator.install` on iOS, and Chrome, Edge and
+Firefox on iOS cannot even offer the menu item. Any button claiming to install
+would be a lie.
+
+**But the report was right about the thing that mattered, and the card was
+wrong.** `Got it` was the FILLED button on a card whose actions sit at the
+bottom of the screen, so it is the first thing a thumb reaches — and tapping
+it dismissed the card, taking the two numbered steps with it before the person
+had done anything. Then `shownAt` spent the visit's one offer and the accept
+was written to localStorage for 180 days. The steps were the payload and the
+primary button threw them away.
+
+Three changes, iOS branch only (Android and desktop are untouched):
+
+1. **No primary button.** One full-width ghost `Close`, plus the × it already
+   had. Nothing on the card looks like an action, because nothing on it can
+   perform one. **Do not put a filled button back** — that is the whole defect.
+2. **Its one exit records a DECLINE, not an accept.** Nothing the page can
+   observe tells us whether someone followed the steps, so an accept would
+   silence the offer for six months on a guess. A decline is session-scoped,
+   so a reader who did not follow through is asked again next visit (the
+   founder's "every time"), while one who DID is closed out permanently by
+   `isStandaloneDisplay()` — `navigator.standalone` is true from the Home
+   Screen, so `resolveDeviceInstallVariant()` answers null and the card never
+   renders again. **Detection is the confirmation here, not a button.** No
+   consequence for the notification hand-off either: `isPushSupported()` is
+   false in an iOS Safari tab (bullet 2 above), so nothing is waiting.
+3. **Step 1 says where Share is**, since it moves: "the square with an arrow
+   out of it. Bottom bar in Safari, top right in Chrome."
+
+- **Verified:** 1922 tests (unchanged — no test exercises this component;
+  `lib/install-prompt.test.ts`'s 35 cases are on the pure and storage layers
+  and none asserted the iOS outcome), `eslint .` at the exact **3 errors / 70
+  warnings** baseline with the changed file clean, `next build` green **by
+  exit code** with `/auth`, `/onboarding` and `/settings` still `○ Static`,
+  and the compiled client chunk confirmed to carry the new step-1 copy with
+  **no remaining `Got it`**.
+- **Not verified:** nothing has rendered on a phone. This sandbox cannot mint
+  a session and has no route to either urganize domain, so the layout of a
+  single full-width ghost button and the Share-location wording against a real
+  share sheet are reasoned, not seen.
+- **A CONTRADICTION WORTH RESOLVING BEFORE TRUSTING THE LINE ABOVE:** this
+  section has said "the flag has never been flipped, so none of this is live"
+  since 2026-08-30, and yet the founder watched a real user tap `Got it` on
+  iOS. One of the two is wrong. Either `NEXT_PUBLIC_FEATURE_INSTALL_PROMPT` is
+  on in production and no ledger entry was ever written for it, or what was
+  observed was a preview deploy. Surfaced rather than guessed, per this file's
+  own rule. **If the flag IS on, the ledger owes an entry for the whole
+  install offer — not for this fix** (which is why there is no changelog entry
+  or version bump here either way: announcing "the iOS card lost its button"
+  for a feature the changelog has never mentioned would read as nonsense).
+
 ---
 
 ## Events: shows, setlists and DJ packs (2026-08-30)
