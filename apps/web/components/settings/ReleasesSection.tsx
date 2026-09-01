@@ -69,14 +69,13 @@ export function ReleasesSection() {
     <>
       <section className={panelClass}>
         <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Releases</h2>
-        {/* "Only available here" stays literally true while
-            NEXT_PUBLIC_FEATURE_TEST_RELEASE is off (its banner carries the one
-            sanctioned exception, for TEST releases only). Revisit this
-            sentence at that flag's flip — flagged on the activation checklist
-            rather than reworded early. */}
+        {/* Used to say "only available here" (URG-163). Narrowed at the
+            test-path flip (2026-09-01, v1.16.0): a TEST release's own banner
+            can delete it too, so "only" stopped being true. This is still the
+            one place a REAL release is deleted. */}
         <p className="mb-4 text-sm text-content-secondary">
-          Deleting a release is only available here. This permanently removes
-          it, its activities, and its attached files.
+          Delete a release here. This permanently removes it, its activities,
+          and its attached files.
         </p>
         {isLoadingReleases ? (
           <div className="space-y-2">
