@@ -8,7 +8,6 @@ import {
   ClipboardList,
   FolderOpen,
   Image as ImageIcon,
-  ListChecks,
   Mail,
   Menu,
   Music,
@@ -422,11 +421,12 @@ export function TasksPanel({
   };
 
   /**
-   * Toggles with the scene body below: "New activity" opens Quick Create
-   * while the activity list is showing; once a scene (Calendar / Files /
-   * Press kit / Song / …) has taken this slot, the SAME button position
-   * becomes "Activities" so there's always a way back without hunting for
-   * the scene's own pill again.
+   * "New activity" opens Quick Create while the activity list is showing.
+   * Once a scene (Calendar / Files / Press kit / Song / …) has taken this
+   * slot, this button renders nothing — the workspace's dedicated back arrow
+   * (WorkspaceView's goBack, case 1) already closes the open scene, and a
+   * second "Activities" pill doing the same thing was redundant chrome
+   * (removed 2026-08-25, founder call: "weird ... with a left arrow").
    *
    * Desktop header row ONLY as of 2026-08-17 — mobile dropped this entirely
    * (see the base-dock comment further down): the center "+" in
@@ -435,12 +435,7 @@ export function TasksPanel({
    * scene on mobile works by re-tapping its own top-tab/folded-menu entry
    * (every scene entry point is already a toggle).
    */
-  const activitiesToggleButton = activeScene ? (
-    <button type="button" onClick={closeScene} className={neutralPillClass}>
-      <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
-      Activities
-    </button>
-  ) : (
+  const activitiesToggleButton = activeScene ? null : (
     <button
       type="button"
       onClick={() =>
