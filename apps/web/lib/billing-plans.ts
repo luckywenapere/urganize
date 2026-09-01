@@ -135,11 +135,12 @@ const PLAN_CODE_ENV_VAR: Record<BillingPlanId, Record<PricingCurrencyCode, strin
 // 500 — which is the correct failure: it refuses rather than charging a Plan
 // that bills the wrong amount or term.
 //
-// ⚠️ SOLO'S TWO PLANS ARE NOT MINTED YET (added 2026-09-01). ₦8,000/mo and
-// ₦80,000/yr, per PRICING_TIERS. Until they exist and these vars are set, Solo
-// is selectable on the wall and refuses at the last step. That is the deliberate
-// order of operations: this repo has shipped an advertise-versus-charge gap four
-// times by doing it the other way round.
+// SOLO'S PLANS ARE MINTED (2026-09-01), at ₦8,000/mo and ₦80,000/yr, matching
+// PRICING_TIERS. Both env vars were set BEFORE the code shipped, which is the
+// first time in this repo's history the order of operations has been followed on
+// the first attempt rather than corrected afterwards. Note the Plan objects are
+// named `monthly` and `yearly` in the Paystack dashboard rather than
+// `PAYSTACK_PLAN_SOLO_*` like Manager's — the amount is what identifies them.
 //
 // Label's entry moved to RETIRED_TIER_PLAN_CODE_ENV_VAR on 2026-08-30 when it
 // became sales-led: no longer purchasable, so it must not be reachable from

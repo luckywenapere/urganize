@@ -7865,26 +7865,46 @@ unknown plan maps to `label`.
 
 ### Activation checklist
 
-1. Apply `20260901100000_subscriptions_allow_solo.sql`. It widens
-   `subscriptions_plan_check` AND `subscriptions_pending_plan_check` (the second
-   is for the DOWNGRADE direction — Manager → Solo parks the target in
-   `pending_plan`, so widening only the first would let a Solo purchase through
-   and refuse a Solo downgrade). It ends in a `do $$` block that raises if either
-   constraint did not take.
-2. **Mint two Paystack Plans at ₦8,000/mo and ₦80,000/yr and set
-   `PAYSTACK_PLAN_SOLO_MONTHLY_NGN` / `PAYSTACK_PLAN_SOLO_ANNUAL_NGN`.** Until
-   both are set, Solo is simply not offered on the wall — that is
-   `purchasableTiers()` doing its job, not a bug, and it means step 1 and the
-   deploy are safe in either order for the first time.
+1. ~~Apply `20260901100000_subscriptions_allow_solo.sql`~~ — **done 2026-09-01.**
+   It widens `subscriptions_plan_check` AND `subscriptions_pending_plan_check`
+   (the second is for the DOWNGRADE direction — Manager → Solo parks the target
+   in `pending_plan`, so widening only the first would let a Solo purchase
+   through and refuse a Solo downgrade). It ends in a `do $$` block that raises
+   if either constraint did not take, so a clean run is the proof.
+2. ~~Mint two Paystack Plans and set `PAYSTACK_PLAN_SOLO_MONTHLY_NGN` /
+   `PAYSTACK_PLAN_SOLO_ANNUAL_NGN`~~ — **done 2026-09-01, BEFORE the code
+   shipped.** ₦8,000/mo → `PLN_pugb0hjd5klpkfe`, ₦80,000/yr →
+   `PLN_x0bmsd3dk8x1e0p`. **This is the first time in this repo's history the
+   mint-before-flip order was followed on the first attempt** rather than
+   corrected after a customer or a founder noticed — four previous passes shipped
+   the gap. Worth knowing for anyone auditing the dashboard: the two Plan objects
+   are named `monthly` and `yearly` there, not `PAYSTACK_PLAN_SOLO_*` like
+   Manager's, so the AMOUNT is what identifies them; the ₦8,000 one also carried
+   one pre-existing subscriber, which is unaffected (their stored
+   `subscriptions.plan` is whatever it already was, not `solo`).
 3. Do NOT repoint `PAYSTACK_PLAN_{MONTHLY,ANNUAL}_NGN` — Label's live
    subscriptions still renew against those.
 4. ~~Changelog entry + version bump~~ — done as v1.15.0. Landed at merge rather
    than at flag-flip because pricing v2 is already on and the seat-wall message
-   is live immediately; Solo's own appearance is gated by step 2 instead.
-5. Verify with a real card once the Plans exist: buy Solo monthly, confirm
-   Paystack quotes ₦8,000 and `subscriptions.billing_interval` reads `monthly`,
-   then invite a second teammate and confirm the refusal appears **in the
-   Settings error box** rather than as a dimmed button.
+   is live immediately.
+5. **OPEN, and it is the only thing left: MERGE AND DEPLOY.** Steps 1 and 2 are
+   database and configuration; `purchasableTiers()`, the widened
+   `SelfServeTierId`, the derived `WALL_TIERS` and the seat-wall change all live
+   in code, so until this branch is on `main` nothing has changed for a user —
+   the env vars are set and read by nothing. Note the migration and the env vars
+   being live FIRST is harmless and is the designed order: a database that
+   permits `solo` and Plans nobody references cost nothing.
+6. Then verify with a real card: buy Solo monthly, confirm Paystack quotes
+   ₦8,000 and `subscriptions.billing_interval` reads `monthly`, then invite a
+   second teammate and confirm the refusal appears **in the Settings error box**
+   rather than as a dimmed button.
+
+**Also worth one check while in the Paystack dashboard:**
+`PAYSTACK_PLAN_MANAGER_ANNUAL_NGN` (₦350,000) could not be confirmed from the
+plans list — only the monthly one was visible. Manager needs BOTH intervals
+configured before `purchasableTiers()` will offer it, by the same rule Solo
+follows, so if that Plan or its env var is missing then Manager is currently
+being withheld from the wall too.
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:
   - `Web` → https://app.urganize.app (builds `apps/web`)
