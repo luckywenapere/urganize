@@ -4,10 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Card, Logo } from '@urganize/ui';
 import {
+  PRICING_TIER_ORDER,
   SALES_CONTACT_EMAIL,
   SALES_WHATSAPP_URL,
   formatPlanCyclePrice,
   getPlan,
+  getTier,
   type BillingInterval,
   type PricingTierId,
 } from '@urganize/pricing';
@@ -56,17 +58,33 @@ const PRICING_V2 = isPricingV2Enabled();
  *  Exactly the reasoning that kept the legacy contactSales plan out of
  *  PLAN_ORDER above.
  *
- *  MANAGER ALONE since 2026-08-30 (founder call): Label joined Group as
- *  sales-led, and Solo is not purchasable yet (no Paystack Plan, absent from
- *  SelfServeTierId). One radio is honest rather than odd — the interval toggle
- *  above it is the real choice on this screen, and the talk-to-us card covers
- *  every team too big for Manager's ceilings. Keep this in step with
- *  `isSelfServeTier`: a tier offered here that checkout refuses is a dead end. */
-const WALL_TIERS: readonly PricingTierId[] = ['manager'] as const;
+ *  DERIVED, NOT LISTED, as of 2026-09-01 — and that is a fix rather than a
+ *  tidy-up. This was a hand-written array, and it fell out of step the moment
+ *  Solo became purchasable: checkout would have accepted a tier the wall never
+ *  offered, so Solo would have been a price nobody could buy. It now falls out
+ *  of the pricing package: a tier belongs here exactly when it is not
+ *  `contactSales`, which is the same fact `isSelfServeTier` encodes on the
+ *  checkout side. It also inherits the public page's order for free (cheapest
+ *  first), so a visitor who compared tiers there meets the same ladder here.
+ *
+ *  Read from `contactSales` rather than importing `isSelfServeTier`
+ *  deliberately: that lives in lib/billing-plans.ts, which is documented
+ *  server-only Paystack config and has no business in a client bundle. The two
+ *  definitions are held together by a test in lib/entitlements.test.ts
+ *  ('the wall and checkout agree on which tiers are self-serve') rather than by
+ *  a cross-boundary import.
+ *
+ *  Sales-led tiers drop out on their own, which is what we want: the
+ *  full-weight "Talk to us" card beside this picker IS their path, and a radio
+ *  that cannot check out would be a dead end sitting next to the real one. */
+const WALL_TIERS: readonly PricingTierId[] = PRICING_TIER_ORDER.filter(
+  (tier) => !getTier(tier).contactSales
+);
 
-/** Which tier a returning owner lands on. The only self-serve tier there is,
- *  as of 2026-08-30 — it must stay a member of WALL_TIERS, or the wall opens
- *  with nothing selected. */
+/** Which tier a returning owner lands on. Manager rather than the cheapest, and
+ *  deliberately: it carries `recommended` on the public page, and pre-selecting
+ *  the entry tier would quietly steer every returning customer down a rung. It
+ *  must stay a member of WALL_TIERS, or the wall opens with nothing selected. */
 const DEFAULT_TIER: PricingTierId = 'manager';
 
 const VALUE_LINES = [
@@ -99,6 +117,38 @@ export function TeamWall() {
   const [changeResult, setChangeResult] = useState<string | null>(null);
   const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [notifyError, setNotifyError] = useState<string | null>(null);
+
+  // WHICH TIERS TO OFFER: the server's answer when it gave one, our own
+  // derivation otherwise.
+  //
+  // The server knows something this bundle cannot — whether each tier's Paystack
+  // Plan has actually been minted — so it filters out any tier that would fail
+  // at the last step of checkout. That is what stops a customer clicking a price
+  // we cannot charge, the gap this repo has shipped four times.
+  //
+  // Falling back to WALL_TIERS rather than to nothing is deliberate: an older
+  // server, or a payload we could not read, must not leave a walled team with no
+  // way to pay at all. Offering a tier that might fail is the lesser harm, and
+  // the checkout error names the real problem when it does.
+  const offeredTiers = useMemo(() => {
+    const fromServer = team?.purchasableTiers;
+    return fromServer && fromServer.length > 0 ? fromServer : WALL_TIERS;
+  }, [team?.purchasableTiers]);
+
+  // The tier actually in play. DERIVED rather than corrected in an effect, and
+  // that is worth a sentence: the offered list arrives asynchronously, so a
+  // stored selection can briefly name a tier that is not on it. Correcting that
+  // with a setState-in-effect leaves one rendered frame where the checked radio
+  // is absent from its own list — and, worse, a frame in which Subscribe would
+  // post a tier the customer never saw. Deriving it means that state cannot
+  // exist, and it costs one fewer effect.
+  //
+  // EVERY read of the chosen tier goes through this, never `selectedTier`: the
+  // picker, both checkout bodies and the analytics. `selectedTier` stays the raw
+  // record of what the user clicked.
+  const effectiveTier = offeredTiers.includes(selectedTier)
+    ? selectedTier
+    : (offeredTiers[0] ?? selectedTier);
   // Apple forbids linking out to external payment for a digital subscription
   // from inside a reviewed iOS app. Defaults false so the pre-hydration render
   // matches the server's, then flips post-mount (the LockedPageClient pattern).
@@ -176,14 +226,14 @@ export function TeamWall() {
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             event: 'paywall_view',
-            planViewed: PRICING_V2 ? selectedTier : selectedPlan,
+            planViewed: PRICING_V2 ? effectiveTier : selectedPlan,
           }),
         });
       } catch {
         // Telemetry must never affect what the user sees.
       }
     })();
-  }, [isLoading, team, selectedPlan, selectedTier]);
+  }, [isLoading, team, selectedPlan, effectiveTier]);
 
   const handleActivate = useCallback(async () => {
     setCheckoutError(null);
@@ -210,7 +260,7 @@ export function TeamWall() {
         const changeResponse = await fetch('/api/billing/change-plan', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plan: selectedTier, interval: selectedInterval }),
+          body: JSON.stringify({ plan: effectiveTier, interval: selectedInterval }),
         });
         const changePayload = (await changeResponse.json().catch(() => ({}))) as {
           kind?: string;
@@ -251,7 +301,7 @@ export function TeamWall() {
         // because nothing else could tell the webhook how far to set
         // expires_at. Flag off, this body is byte-identical to before.
         body: JSON.stringify({
-          plan: PRICING_V2 ? selectedTier : selectedPlan,
+          plan: PRICING_V2 ? effectiveTier : selectedPlan,
           currency: 'NGN',
           ...(PRICING_V2 ? { interval: selectedInterval } : {}),
           ...(team?.primaryWorkspaceId ? { workspaceId: team.primaryWorkspaceId } : {}),
@@ -278,7 +328,7 @@ export function TeamWall() {
     }
   }, [
     selectedPlan,
-    selectedTier,
+    effectiveTier,
     selectedInterval,
     team?.hasAccess,
     team?.canWrite,
@@ -296,13 +346,13 @@ export function TeamWall() {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           event: 'talk_to_us',
-          planViewed: PRICING_V2 ? selectedTier : selectedPlan,
+          planViewed: PRICING_V2 ? effectiveTier : selectedPlan,
         }),
       });
     } catch {
       // Never block the conversation on telemetry.
     }
-  }, [selectedPlan, selectedTier]);
+  }, [selectedPlan, effectiveTier]);
 
   const handleWhatsApp = useCallback(() => {
     void trackTalkToUs();
@@ -447,8 +497,8 @@ export function TeamWall() {
                 <>
                   {PRICING_V2 ? (
                     <TierPlanPicker
-                      tiers={WALL_TIERS}
-                      selectedTier={selectedTier}
+                      tiers={offeredTiers}
+                      selectedTier={effectiveTier}
                       onSelectTier={setSelectedTier}
                       interval={selectedInterval}
                       onIntervalChange={setSelectedInterval}

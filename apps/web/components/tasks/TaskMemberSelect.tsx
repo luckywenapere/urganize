@@ -28,8 +28,9 @@ type TaskMemberSelectProps = {
 // click on it, it just opens the keyboard and blocks the dropdown menu").
 //
 // On a phone the keyboard covered the very list you were trying to pick from,
-// and search buys nothing here: the Manager tier caps a team at 4 seats, so
-// the list this scrolls is a handful of people. Removing the input also
+// and search buys nothing here: every capped tier's seat ceiling is a small
+// single digit (see `limits.seats` in @urganize/pricing — Solo is the tightest),
+// so the list this scrolls is a handful of people. Removing the input also
 // removes a whole bug class rather than guarding it — the seeded-query filter
 // bug fixed hours earlier in v1.5.2, and the blur-clears-the-assignee hazard
 // beside it, both existed only because the display and the filter were the

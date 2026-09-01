@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.15.0",
+    date: "September 1, 2026",
+    highlights: [
+      "Solo is now a plan you can pick. It is for one artist, and it is the cheapest way in.",
+      "When your plan is full and you invite someone, we now tell you so. The button used to just go grey without saying why.",
+    ],
+  },
+  {
     version: "1.14.1",
     date: "September 1, 2026",
     highlights: [

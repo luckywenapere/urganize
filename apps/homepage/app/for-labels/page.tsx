@@ -129,10 +129,20 @@ export default function ForLabelsPage() {
               <h2 className={`mt-6 ${PERSONA_HEADLINE_CLASS}`}>
                 What the Label plan actually gets you.
               </h2>
+              {/* CORRECTED 2026-09-01. This said "one artist at a time", which
+                  was honest when it was written and became false on 2026-08-30
+                  when rosters shipped: a team holds as many artists as its tier
+                  allows, and Label's ceiling is none. It was also the worst
+                  place in the site to be wrong — telling the tier that pays for
+                  a roster that it gets one artist, while /pricing offered the
+                  same tier "Unlimited artists" a click away.
+
+                  The block still does its original job, which is to separate a
+                  founder SERVICE from a self-serve FEATURE. That distinction is
+                  the reason this section exists; only the factual half moved. */}
               <p className="mx-auto mt-6 max-w-[38rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
-                You get the same workspace as everyone else, one artist at a
-                time. The founders also work with you directly across your
-                roster.
+                You get the same workspace as everyone else, with your whole
+                roster in it. The founders also work with you directly across it.
               </p>
             </div>
 

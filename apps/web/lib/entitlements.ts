@@ -97,8 +97,11 @@ export type Entitlements = {
 // enforcing `active_releases` required building an explicit archive action
 // first, because nothing in the product had ever written
 // `releases.status = 'archived'`; and every cap is a no-op unless a team
-// resolves to the `manager` tier, which only happens once pricing v2 is live
-// and somebody is paying for it.
+// resolves to a CAPPED tier, which since 2026-09-01 means `solo` or `manager`
+// and requires somebody to be paying for one of them. Everything else — trial,
+// grace, comped, walled, read-only, founding, and every legacy plan id — still
+// resolves to the uncapped tier, which is what has kept these caps from ever
+// touching an existing customer.
 //
 // `sso` and `sub_teams` are declared false everywhere except enterprise and
 // are read by nothing. That is deliberate and consistent with this repo's
@@ -119,12 +122,23 @@ export type Entitlements = {
 const limitsOf = (tier: PricingTierId) => PRICING_TIERS[tier].limits;
 
 export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
-  // Solo (2026-08-30). Inert today for the same reason Manager was when it
-  // landed, and one reason more: no code path can write `solo` to
-  // subscriptions.plan (it is absent from SelfServeTierId AND from
-  // subscriptions_plan_check), so resolveTeamTier can never return it and none
-  // of these ceilings can bite a real team. When Solo becomes buyable, these
-  // are the numbers that start applying.
+  // Solo (2026-08-30; LIVE since 2026-09-01). It shipped inert — absent from
+  // SelfServeTierId and from subscriptions_plan_check, so `resolveTeamTier` could
+  // never return it and all four ceilings were unreachable dead code while the
+  // pricing page advertised them at ₦8,000. That is closed: Solo is self-serve,
+  // the migration permits the plan id, and these numbers now bite a real team.
+  //
+  // IT IS THE TIGHTEST ROW IN THE TABLE and the one most new accounts land on,
+  // so it is where a wrong number is felt first. Two of them are load-bearing in
+  // ways that are not obvious from the figure alone:
+  //   - `seats: 2` counts the OWNER, because ensureOwnedWorkspace writes an
+  //     owner row into workspace_members like any other member. So 2 means the
+  //     manager plus one collaborator, not the manager plus two. Setting it to 1
+  //     would leave the invite form permanently dead — a locked button on day
+  //     one, which is the opposite of meeting a wall by needing a second person.
+  //   - `active_releases: 1` is only survivable because archiving exists to free
+  //     the slot. It was built in the same pass that made these caps real, for
+  //     exactly this reason.
   solo: {
     artists: limitsOf('solo').artists,
     seats: limitsOf('solo').seats,
