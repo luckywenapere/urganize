@@ -11,6 +11,7 @@ import { isHardPaywallEnabled } from './team-billing';
 import { isNativePlatform } from './platform';
 import { resetSceneData } from '@/stores/useSceneDataStore';
 import { resetSceneMemory } from '@/lib/scene-memory';
+import { resetCatalogIntent } from '@/lib/catalog-intent';
 import {
   classifyAuthFailure,
   isProfileReadTransientError,
@@ -1073,6 +1074,10 @@ if (typeof window !== 'undefined') {
       // different account — must always start every release at Activities,
       // never resume whatever was open in the session that just ended.
       resetSceneMemory();
+      // Same rule, one level up: a same-tab logout then login is a new
+      // arrival, so it gets its one lone-release auto-scope back rather than
+      // inheriting "the catalog was asked for" from the session that ended.
+      resetCatalogIntent();
       useAuthStore.setState({
         user: null,
         isAuthenticated: false,

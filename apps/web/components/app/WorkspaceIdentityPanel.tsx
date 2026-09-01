@@ -16,7 +16,7 @@ import { MicVocal } from "lucide-react";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { readPersistedState, writePersistedState } from "@/lib/persisted-state";
 import { isReleaseActive } from "@/lib/release-activity";
-import { forgetSceneForCurrentRelease } from "@/lib/scene-memory";
+import { leaveReleaseForCatalog } from "@/lib/catalog-intent";
 
 // Collapsed state — same lib/persisted-state pattern as the UrgAns rail's
 // RAIL_OPEN_KEY, and for the same reason: pure UI-chrome state, so a reload
@@ -179,9 +179,11 @@ function buildNavItems(
       // `isAtRest` has always drawn the line here; the two agree now.
       isActive: (pathname: string) => pathname === "/dashboard" && !scopedReleaseId,
       // Leaving a release forgets its scene, so tapping it again lands on
-      // Activities rather than the thing you were getting out of. Same family
-      // as the back arrow and MobileNavBar's Home tab — see the helper.
-      onNavigate: forgetSceneForCurrentRelease,
+      // Activities rather than the thing you were getting out of — and records
+      // that the catalog was asked for, so a single-release workspace does not
+      // auto-scope this navigation away. Same family as the back arrow and
+      // MobileNavBar's Home tab — see lib/catalog-intent.ts.
+      onNavigate: leaveReleaseForCatalog,
       children: releases.map((release) => ({
         releaseId: release.id,
         label: release.title,

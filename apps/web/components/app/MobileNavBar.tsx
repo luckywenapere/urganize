@@ -8,7 +8,7 @@ import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
-import { forgetSceneForCurrentRelease } from '@/lib/scene-memory';
+import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { CatalogIcon, ChappiIcon, NotesIcon } from '@/components/app/BrandIcons';
 
 // Same flags AppTopbar reads — a tab only exists in the bar when its surface
@@ -325,9 +325,15 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
   // That helper reads `?release=` fresh at call time for the reason SongTab's
   // header gives: an answer on demand, not a subscription that would drag the
   // whole bar behind a Suspense boundary.
+  // NO `if (!isHome) return` guard, and its removal is the fix for a real bug
+  // (founder report, 2026-09-01: Home did not reach the catalog). The guard was
+  // harmless for the scene half — there is no `?release=` to forget on
+  // /settings, so the call self-no-ops — but the catalog INTENT has to be
+  // recorded from every page, because the page it is recorded from is precisely
+  // the page whose remount would otherwise auto-scope the user straight back
+  // into their only release. See lib/catalog-intent.ts.
   const handleHomeClick = () => {
-    if (!isHome) return;
-    forgetSceneForCurrentRelease();
+    leaveReleaseForCatalog();
   };
 
   const handleUrgAnsClick = () => {

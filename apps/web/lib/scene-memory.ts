@@ -116,12 +116,15 @@ export function rememberScene(releaseId: string, scene: SceneName | null): void 
  * Forget the scene of whichever release the CURRENT url has scoped, so coming
  * back to it lands on Activities.
  *
- * This is what every "leave this release" control does on its way out — the
- * workspace back arrow (through SetScopeOptions.forgetScene), MobileNavBar's
- * Home tab, the side menu's Catalog row, and the topbar's Catalog icon. Those
- * last three are plain <Link>s to /dashboard, so they never reach setScope and
- * have to say it themselves; this exists so they say it once rather than three
- * times, which is how the first two drifted apart from the third to begin with.
+ * HALF of what a "leave this release" control does; the other half is
+ * recording that the catalog was asked for, so a single-release workspace does
+ * not auto-scope the navigation away. Both halves live behind ONE step,
+ * lib/catalog-intent.ts's leaveReleaseForCatalog — call that, not this, from a
+ * new catalog control. Every plain <Link href="/dashboard"> in the chrome now
+ * comes through it (the topbar icon, the side menu's Catalog row,
+ * MobileNavBar's Home tab, the mobile search's page results); the workspace
+ * back arrow reaches the scene half through SetScopeOptions.forgetScene
+ * instead, which knows the OUTGOING release without re-reading the url.
  *
  * Reads the url at CALL time on purpose. Every caller is a click handler in
  * layout-level chrome, and scoping a release is a same-pathname `replace` that
