@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.17.0",
+    date: "September 2, 2026",
+    highlights: [
+      "Urganize now asks if you want notifications on. A small card shows up shortly after you sign in, on each device you use. Tap Turn on and your phone or computer will tell you when an activity is due or handed to you, even when the app is closed.",
+      "Said no? Tap Not now and it stays quiet. You can always turn notifications on later in Settings.",
+    ],
+  },
+  {
     version: "1.16.0",
     date: "September 1, 2026",
     highlights: [
