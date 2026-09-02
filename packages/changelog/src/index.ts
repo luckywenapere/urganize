@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.20.0",
+    date: "September 2, 2026",
+    highlights: [
+      "Shows are here. Book a date, keep its run of show, and build the set against the minutes you were given. The total tells you if it fits.",
+      "Send the tracks to your DJ as a pack. Each person gets their own link, so you can see who opened it and who downloaded.",
+      "Playing a festival? Book several days and several artists at once. Each day and each artist gets its own show, set and pack.",
+      "Give a set any name you like. Tap Rename on the set you are looking at.",
+    ],
+  },
+  {
     version: "1.19.0",
     date: "September 2, 2026",
     highlights: [
