@@ -17,6 +17,7 @@ const RAW_ALLOWLIST = [
   'itsderah@gmail.com',
   'ewaoluwaadenaiye@gmail.com',
   'officialworldpope@gmail.com',
+  'uzoaruqueen98@gmail.com',
 ];
 
 const normalizeEmail = (value: unknown): string => {

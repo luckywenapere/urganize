@@ -14,6 +14,7 @@ describe('isAllowlistedEmail', () => {
     'itsderah@gmail.com',
     'ewaoluwaadenaiye@gmail.com',
     'officialworldpope@gmail.com',
+    'uzoaruqueen98@gmail.com',
   ])('allows listed address %s', (email) => {
     expect(isAllowlistedEmail(email)).toBe(true);
   });
