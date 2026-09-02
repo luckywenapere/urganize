@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, requireActiveAuthenticatedUser } from '@/app/api/_shared/auth';
+import { ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
 import {
   MAX_GENRE_PREDICTION_FILE_BYTES,
   parseGenrePrediction,
@@ -14,8 +15,6 @@ import {
 // Nothing is stored: the audio is streamed through and discarded, and the
 // prediction is not written to the database — the user reviews it in the form
 // and saves via the existing PATCH /api/releases/[releaseId]/metadata.
-
-const RELEASES_TABLE = 'releases';
 
 // Cold start (Python runtime + model load) plus inference can run well past a
 // warm request. One attempt, no retry: re-uploading a multi-MB body on retry
@@ -38,39 +37,6 @@ const isGenrePredictionEnabled = (): boolean =>
 // config-only. Server-only on purpose: the upstream URL has no authentication
 // today, so it must never reach a client bundle.
 const getPredictionUrl = (): string => process.env.GENRE_PREDICTION_URL?.trim() || '';
-
-// Local ownership check, mirroring the EPK/content-calendar route groups:
-// deliberately NOT the ensureReleaseOwnership in app/api/releases/_shared.ts,
-// whose module carries the deprecated schema-missing fallback helpers (see
-// CLAUDE.md "Patterns being deprecated in v1" and the guard test). Same
-// contract: 404 (never 403) when the release is missing or owned by someone
-// else.
-async function ensureOwnedRelease(
-  adminClient: NonNullable<ReturnType<typeof createAdminClient>>,
-  releaseId: string,
-  userId: string
-): Promise<{ error: NextResponse } | { ok: true }> {
-  const { data: release, error } = await adminClient
-    .from(RELEASES_TABLE)
-    .select('id,owner_user_id')
-    .eq('id', releaseId)
-    .maybeSingle();
-
-  if (error) {
-    return {
-      error: NextResponse.json(
-        { error: error.message || 'Could not load release.' },
-        { status: 500 }
-      ),
-    };
-  }
-
-  if (!release || String(release.owner_user_id || '') !== userId) {
-    return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
-  }
-
-  return { ok: true };
-}
 
 export async function POST(
   request: NextRequest,
@@ -101,7 +67,11 @@ export async function POST(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureOwnedRelease(adminClient, releaseId, auth.user.id);
+  // Team WRITE gate (uniform non-GET rule): any non-guest member may run a
+  // prediction. A guest's prediction would be a paid dead end — the PATCH
+  // that saves the result refuses them — so the refusal happens here, with
+  // the legible view-only message rather than a fake 404.
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const formData = await request.formData().catch(() => null);

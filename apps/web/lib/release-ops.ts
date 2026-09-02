@@ -39,6 +39,19 @@ export type ReleaseSummary = {
   updatedAt: string;
 };
 
+export const toReleaseSummary = (row: Record<string, unknown>): ReleaseSummary => ({
+  id: String(row.id || ''),
+  ownerUserId: String(row.owner_user_id || ''),
+  artistId: String(row.artist_id || ''),
+  artistName: String(row.artist_name || ''),
+  title: String(row.title || ''),
+  slug: String(row.slug || ''),
+  status: (String(row.status || 'draft') as ReleaseSummary['status']) || 'draft',
+  description: String(row.description || ''),
+  createdAt: String(row.created_at || ''),
+  updatedAt: String(row.updated_at || ''),
+});
+
 export type ReleaseCollaborator = {
   id: string;
   releaseId: string;
@@ -57,6 +70,14 @@ export type ReleaseMetadataSnapshot = {
   releaseId: string;
   isrc: string;
   upc: string;
+  /**
+   * ISWC for the composition ("T-123456789-1"), issued by a collection
+   * society. Release-level and owner-entered, deliberately NOT asked of a
+   * collaborator on the public credits form: ISRC identifies the recording,
+   * UPC the release, and ISWC the song itself, so all three belong here.
+   * Added 2026-08-27.
+   */
+  iswc: string;
   primaryArtistName: string;
   releaseTitle: string;
   genre: string;

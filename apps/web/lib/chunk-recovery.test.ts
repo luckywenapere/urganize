@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CHUNK_INTENT_TTL_MS,
   CHUNK_RELOAD_COOLDOWN_MS,
   CHUNK_RELOAD_MAX_ATTEMPTS,
   isChunkLoadError,
+  isInAppNavigationClick,
   nextReloadRecord,
   parseReloadRecord,
+  resolveRecoveryTarget,
   shouldReload,
+  type LinkClick,
 } from './chunk-recovery';
 
 describe('isChunkLoadError', () => {
@@ -109,5 +113,114 @@ describe('shouldReload', () => {
       clock += CHUNK_RELOAD_COOLDOWN_MS * 2;
     }
     expect(reloads).toBe(CHUNK_RELOAD_MAX_ATTEMPTS);
+  });
+});
+
+const APP = 'https://app.urganize.app';
+const CURRENT = `${APP}/dashboard?release=r1`;
+
+const linkClick = (overrides: Partial<LinkClick> = {}): LinkClick => ({
+  href: `${APP}/settings`,
+  target: null,
+  hasDownload: false,
+  modified: false,
+  ...overrides,
+});
+
+describe('isInAppNavigationClick', () => {
+  it('accepts an ordinary in-app link', () => {
+    expect(isInAppNavigationClick(linkClick(), CURRENT)).toBe(true);
+  });
+
+  // The recorded href is somewhere the browser may later be sent, so the
+  // refusals are the half that matters.
+  it('refuses anything that is not a navigation of THIS document', () => {
+    const refused: Array<[string, LinkClick]> = [
+      ['no href', linkClick({ href: '' })],
+      ['modifier or middle click', linkClick({ modified: true })],
+      ['download attribute', linkClick({ hasDownload: true })],
+      ['opens a new tab', linkClick({ target: '_blank' })],
+      ['named frame', linkClick({ target: 'preview' })],
+      ['another origin', linkClick({ href: 'https://urganize.app/pricing' })],
+      ['mailto', linkClick({ href: 'mailto:contact@urganize.app' })],
+      ['tel', linkClick({ href: 'tel:+2347067367057' })],
+      ['capacitor deep link', linkClick({ href: 'com.urganize.app://auth/callback' })],
+      ['javascript url', linkClick({ href: 'javascript:void(0)' })],
+      ['unparseable', linkClick({ href: 'http://[' })],
+    ];
+    for (const [label, click] of refused) {
+      expect(isInAppNavigationClick(click, CURRENT), label).toBe(false);
+    }
+  });
+
+  it('accepts target="_self", which is just the default spelled out', () => {
+    expect(isInAppNavigationClick(linkClick({ target: '_self' }), CURRENT)).toBe(true);
+  });
+
+  it('resolves a relative href against the current page', () => {
+    expect(isInAppNavigationClick(linkClick({ href: '/dashboard/notes' }), CURRENT)).toBe(true);
+  });
+});
+
+describe('resolveRecoveryTarget', () => {
+  const now = 1_000_000;
+  const fresh = (href: string) => ({ href, at: now - 500 });
+
+  // The bug this exists for: the router had not committed the new URL, so a
+  // plain reload lands the user back where they started and their click is
+  // gone. Here it resumes instead.
+  it('resumes the navigation when the URL had not changed yet', () => {
+    expect(resolveRecoveryTarget(CURRENT, fresh(`${APP}/settings`), now)).toBe(`${APP}/settings`);
+  });
+
+  // The other half, and the reason this is safe to ship without being able to
+  // observe which case Next actually produces: when the router DID commit the
+  // URL first, a reload already lands on the destination, so this must decline
+  // and leave the old behaviour alone.
+  it('declines when the destination is already the current page', () => {
+    expect(resolveRecoveryTarget(CURRENT, fresh(CURRENT), now)).toBeNull();
+  });
+
+  it('declines on a hash-only difference, which loads no chunks', () => {
+    expect(resolveRecoveryTarget(CURRENT, fresh(`${CURRENT}#teammates`), now)).toBeNull();
+  });
+
+  it('treats a different query string as a real navigation', () => {
+    const target = `${APP}/dashboard?release=r2`;
+    expect(resolveRecoveryTarget(CURRENT, fresh(target), now)).toBe(target);
+  });
+
+  it('declines with no intent recorded', () => {
+    expect(resolveRecoveryTarget(CURRENT, null, now)).toBeNull();
+  });
+
+  it('declines a stale intent, so an old click cannot hijack a later failure', () => {
+    const stale = { href: `${APP}/settings`, at: now - CHUNK_INTENT_TTL_MS - 1 };
+    expect(resolveRecoveryTarget(CURRENT, stale, now)).toBeNull();
+  });
+
+  it('accepts an intent right at the freshness boundary', () => {
+    const edge = { href: `${APP}/settings`, at: now - CHUNK_INTENT_TTL_MS };
+    expect(resolveRecoveryTarget(CURRENT, edge, now)).toBe(`${APP}/settings`);
+  });
+
+  it('declines a clock that moved backwards rather than reading it as fresh', () => {
+    expect(resolveRecoveryTarget(CURRENT, { href: `${APP}/settings`, at: now + 5_000 }, now))
+      .toBeNull();
+  });
+
+  it('declines a cross-origin target', () => {
+    const off = fresh('https://evil.example/steal');
+    expect(resolveRecoveryTarget(CURRENT, off, now)).toBeNull();
+  });
+
+  it('declines unparseable input on either side', () => {
+    expect(resolveRecoveryTarget('http://[', fresh(`${APP}/settings`), now)).toBeNull();
+    expect(resolveRecoveryTarget(CURRENT, fresh('http://['), now)).toBeNull();
+    expect(resolveRecoveryTarget(CURRENT, { href: '', at: now }, now)).toBeNull();
+  });
+
+  it('never returns a target for a NaN timestamp', () => {
+    expect(resolveRecoveryTarget(CURRENT, { href: `${APP}/settings`, at: NaN }, now)).toBeNull();
   });
 });

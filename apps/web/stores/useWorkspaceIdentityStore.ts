@@ -19,6 +19,9 @@ export type WorkspaceIdentityLogo = {
 type WorkspaceIdentityStore = {
   name: string;
   artist: WorkspaceIdentityArtist | null;
+  /** How many artists the team has. The card names ONE artist, so this is what
+   *  stops that reading as "the team's artist" once there are several. */
+  artistCount: number;
   memberCount: number;
   logo: WorkspaceIdentityLogo | null;
   /** Gates the Admin link in the identity card's nav. Visibility only —
@@ -50,6 +53,9 @@ type WorkspaceIdentityCache = {
   userId: string;
   name: string;
   artist: WorkspaceIdentityArtist | null;
+  /** How many artists the team has. The card names ONE artist, so this is what
+   *  stops that reading as "the team's artist" once there are several. */
+  artistCount: number;
   memberCount: number;
 };
 
@@ -62,6 +68,7 @@ const isWorkspaceIdentityCache = (value: unknown): value is WorkspaceIdentityCac
 export const useWorkspaceIdentityStore = create<WorkspaceIdentityStore>((set, get) => ({
   name: '',
   artist: null,
+  artistCount: 0,
   memberCount: 0,
   logo: null,
   isAdmin: false,
@@ -95,6 +102,7 @@ export const useWorkspaceIdentityStore = create<WorkspaceIdentityStore>((set, ge
           set({
             name: cached.name,
             artist: cached.artist,
+            artistCount: cached.artistCount ?? (cached.artist ? 1 : 0),
             memberCount: cached.memberCount,
             hydrated: true,
           });
@@ -121,6 +129,7 @@ export const useWorkspaceIdentityStore = create<WorkspaceIdentityStore>((set, ge
       const payload = (await response.json().catch(() => null)) as {
         name?: string;
         artist?: WorkspaceIdentityArtist | null;
+        artistCount?: number;
         logo?: WorkspaceIdentityLogo | null;
         memberCount?: number;
         isAdmin?: boolean;
@@ -130,12 +139,17 @@ export const useWorkspaceIdentityStore = create<WorkspaceIdentityStore>((set, ge
       const name = typeof payload.name === 'string' ? payload.name : '';
       const artist = payload.artist ?? null;
       const memberCount = typeof payload.memberCount === 'number' ? payload.memberCount : 0;
+      // Falls back to "one if we have one", which is what every response before
+      // rosters implied, so a cached or older payload reads correctly.
+      const artistCount =
+        typeof payload.artistCount === 'number' ? payload.artistCount : artist ? 1 : 0;
 
       if (sessionUserId) {
         writePersistedState<WorkspaceIdentityCache>(IDENTITY_CACHE_KEY, IDENTITY_CACHE_VERSION, {
           userId: sessionUserId,
           name,
           artist,
+          artistCount,
           memberCount,
         });
       }
@@ -144,6 +158,7 @@ export const useWorkspaceIdentityStore = create<WorkspaceIdentityStore>((set, ge
       set({
         name,
         artist,
+        artistCount,
         memberCount,
         logo: payload.logo ?? null,
         isAdmin: payload.isAdmin === true,

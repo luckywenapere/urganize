@@ -3,7 +3,8 @@ import {
   CONTENT_CALENDARS_TABLE,
   CONTENT_POSTS_TABLE,
   createAdminClient,
-  ensureReleaseOwnership,
+  ensureReleaseTeamReadAccess,
+  ensureReleaseTeamWriteAccess,
   isContentCalendarFeatureEnabled,
   isValidPlatform,
   requireActiveAuthenticatedUser,
@@ -34,7 +35,7 @@ export async function GET(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamReadAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const { data: calendarRows, error: calendarsError } = await adminClient
@@ -109,7 +110,7 @@ export async function POST(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const body = (await request.json().catch(() => null)) as CalendarCreateBody | null;
@@ -132,7 +133,10 @@ export async function POST(
   const insertResult = await adminClient
     .from(CONTENT_CALENDARS_TABLE)
     .insert({
-      owner_user_id: auth.user.id,
+      // The RELEASE owner, not the acting teammate: the row must survive the
+      // teammate's account (auth.users delete-cascade) and stay visible to
+      // the owner's RLS/export, which key on this column.
+      owner_user_id: ownership.release.ownerUserId,
       release_id: releaseId,
       platform: body.platform,
       name: name.value,

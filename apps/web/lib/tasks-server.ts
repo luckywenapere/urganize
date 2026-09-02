@@ -36,6 +36,15 @@ import { getNotificationPresets } from '@/lib/notification-presets-server';
 import type { NotificationPresets } from '@/lib/notification-presets';
 import { TEAM_TRIAL_DAYS, isHardPaywallEnabled } from '@/lib/team-billing';
 import { logBillingEvent } from '@/lib/billing-events-server';
+import { sendEmail } from '@/lib/email';
+import {
+  APP_URL,
+  buildTaskAssignedEmail,
+  formatDueDateForEmail,
+  noteExcerptForEmail,
+  priorityLabelForEmail,
+} from '@/lib/email-templates';
+import { claimPendingWorkspaceInvite } from '@/lib/invite-claims-server';
 
 export const WORKSPACES_TABLE = 'workspaces';
 export const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
@@ -352,6 +361,12 @@ type WorkspaceAccessContext = {
   artistScopeByOwnerId: Record<string, string>;
   /** Same scopes keyed by workspace id — for task/board checks. */
   artistScopeByWorkspaceId: Record<string, string>;
+  /** The caller's role in each owner's workspace, keyed by OWNER user id
+   * (first-wins on the owner-first membership sort above the primary pick).
+   * Missing key = no membership resolved — writers treat that as read-only,
+   * the same fail-closed rule as isReadOnlyWorkspaceMember. Consumed by
+   * lib/release-access-server.ts's guest gate. */
+  memberRoleByOwnerId: Record<string, string>;
 };
 
 const TASK_STATUS_SET = new Set<TaskStatus>([
@@ -428,6 +443,33 @@ const readTemplateTaskId = (metadata: unknown): string | null => {
     if (template && typeof template === 'object') {
       const id = (template as { template_task_id?: unknown }).template_task_id;
       if (typeof id === 'string' && id.trim()) return id.trim();
+    }
+  }
+  return null;
+};
+
+// Reads the playbook's expected duration out of metadata.template.duration_days.
+//
+// Null for anything without one: a manager-added or planner-added activity
+// (which by design gets only task_type and compressed_runway — see
+// buildTaskMetadata in lib/release-planning-server.ts), or a row that predates
+// the template flow. Null means "we do not know how long this takes", which the
+// timeline renders as a single-day marker rather than inventing a span. A wrong
+// bar is worse than an honest dot.
+//
+// The fourth piece of metadata.template surfaced to the client, alongside
+// taskType, templateTaskId and compressedRunway. It exists so the timeline can
+// draw a real bar for the ~11% of playbook activities that genuinely run over
+// several days, without a schema change: the number has been on every
+// template-generated row since instantiation was written.
+const readDurationDays = (metadata: unknown): number | null => {
+  if (metadata && typeof metadata === 'object') {
+    const template = (metadata as { template?: unknown }).template;
+    if (template && typeof template === 'object') {
+      const raw = (template as { duration_days?: unknown }).duration_days;
+      if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 1) {
+        return Math.floor(raw);
+      }
     }
   }
   return null;
@@ -971,6 +1013,18 @@ async function resolveWorkspaceAccessContext(
     ])
   );
 
+  // The caller's role per workspace OWNER — zero extra queries, derived from
+  // the rows already loaded. First-wins over the owner-first membership sort,
+  // matching resolveReleaseTaskWorkspace's .find precedent for the
+  // multiple-workspaces-same-owner edge.
+  const memberRoleByOwnerId: Record<string, string> = {};
+  for (const member of memberships) {
+    const ownerId = workspaceById.get(member.workspaceId)?.owner_id || '';
+    if (ownerId && !(ownerId in memberRoleByOwnerId)) {
+      memberRoleByOwnerId[ownerId] = member.role;
+    }
+  }
+
   // Artist scopes — read in a SEPARATE, tolerant query so the app keeps
   // working before the artist_scope_id migration is applied (the main
   // membership select must never reference a column that may not exist).
@@ -1025,6 +1079,7 @@ async function resolveWorkspaceAccessContext(
       releaseOwnerIds,
       artistScopeByOwnerId,
       artistScopeByWorkspaceId,
+      memberRoleByOwnerId,
     },
     hasProvisionedOwnWorkspace,
   };
@@ -1049,6 +1104,7 @@ const EMPTY_WORKSPACE_ACCESS_CONTEXT: WorkspaceAccessContext = {
   releaseOwnerIds: [],
   artistScopeByOwnerId: {},
   artistScopeByWorkspaceId: {},
+  memberRoleByOwnerId: {},
 };
 
 /** Reads profiles.role. Never throws: an unreadable profile is treated as a
@@ -1083,6 +1139,9 @@ export async function loadWorkspaceAccessContext(
   //      latency now hides behind the resolve instead of adding to it; when
   //      it does activate rows, we re-resolve so an invited user still sees
   //      their workspace on this same request rather than the next one.
+  //      The deferred TOKEN claim (claimPendingWorkspaceInvite) rides the
+  //      same Promise.all under the same contract: recover the membership,
+  //      then re-resolve on this same request.
   //   2. Resolve the context with reads only.
   //   3. Provision-on-miss: only a user whose OWN workspace + owner
   //      membership isn't intact (first-ever load, or a corrupted/missing
@@ -1096,19 +1155,28 @@ export async function loadWorkspaceAccessContext(
   //      /api/curator/activate-team — carries a team role here and provisions
   //      normally. The role read rides in the same Promise.all so its latency
   //      hides behind the resolve on the steady state.
-  const [activatedInvites, initialResolved, accountRole] = await Promise.all([
-    activatePendingWorkspaceInvitesForUser(adminClient, user),
-    resolveWorkspaceAccessContext(adminClient, user),
-    loadAccountRole(adminClient, user.id),
-  ]);
+  const [activatedInvites, claimedPendingInvite, initialResolved, accountRole] =
+    await Promise.all([
+      activatePendingWorkspaceInvitesForUser(adminClient, user),
+      // Deferred invite claim (lib/invite-claims-server.ts): finishes a join
+      // whose accept POST never completed — the account-created-but-never-
+      // joined dead end a real invited teammate hit. Zero queries on the
+      // steady state (no pending_invite_token in user_metadata), so it rides
+      // this hot path for free, exactly like the email-invite activation
+      // beside it.
+      claimPendingWorkspaceInvite(adminClient, user),
+      resolveWorkspaceAccessContext(adminClient, user),
+      loadAccountRole(adminClient, user.id),
+    ]);
 
   if (accountRole === 'curator') {
     return EMPTY_WORKSPACE_ACCESS_CONTEXT;
   }
 
-  let resolved = activatedInvites
-    ? await resolveWorkspaceAccessContext(adminClient, user)
-    : initialResolved;
+  let resolved =
+    activatedInvites || claimedPendingInvite
+      ? await resolveWorkspaceAccessContext(adminClient, user)
+      : initialResolved;
 
   if (!resolved.hasProvisionedOwnWorkspace) {
     try {
@@ -1292,6 +1360,7 @@ function toTask(
     autoGenerated: row.auto_generated === true,
     taskType: readTaskType(row.metadata),
     templateTaskId: readTemplateTaskId(row.metadata),
+    durationDays: readDurationDays(row.metadata),
     compressedRunway: readCompressedRunway(row.metadata),
     groupName: readNullableString(row.group_name),
     groupColor: readNullableString(row.group_color),
@@ -1868,6 +1937,91 @@ export async function createTaskNotification(
   } catch (error) {
     console.error('[push] task notification push failed', error);
   }
+
+  // Email delivery — ASSIGNMENT ONLY (founder request, 2026-08-29): the push
+  // is a ping that only reaches devices with notifications enabled, and the
+  // bell is desktop-only, so an assignment could land silently for a teammate
+  // who has neither. Assignment is also the one event low-frequency and
+  // high-consequence enough to earn an inbox row; the due-date sweeps and
+  // status/comment events deliberately stay push+bell only. Rides the same
+  // dedup guard above (an early return means no email either), and like the
+  // push it must never fail the notification: sendEmail never throws and
+  // silently no-ops when RESEND_API_KEY/EMAIL_FROM are unset.
+  if (input.type === 'task_assigned') {
+    try {
+      await sendTaskAssignedEmail(adminClient, {
+        assigneeUserId: input.userId,
+        actorUserId: input.actorId || null,
+        taskId: input.taskId,
+      });
+    } catch (error) {
+      console.error('[email] task assignment email failed', error);
+    }
+  }
+}
+
+async function sendTaskAssignedEmail(
+  adminClient: SupabaseClient,
+  input: { assigneeUserId: string; actorUserId: string | null; taskId: string }
+): Promise<void> {
+  const [assigneeResult, actorResult, taskResult] = await Promise.all([
+    adminClient
+      .from('profiles')
+      .select('email,name')
+      .eq('id', input.assigneeUserId)
+      .maybeSingle(),
+    input.actorUserId
+      ? adminClient.from('profiles').select('email,name').eq('id', input.actorUserId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    adminClient
+      .from(TASKS_TABLE)
+      .select('title,description,due_date,priority,release_id')
+      .eq('id', input.taskId)
+      .maybeSingle(),
+  ]);
+
+  const assigneeEmail = String(assigneeResult.data?.email || '').trim();
+  if (!assigneeEmail) return;
+
+  const assignerLabel =
+    String(actorResult.data?.name || '').trim() ||
+    String(actorResult.data?.email || '').trim() ||
+    'Your teammate';
+
+  const task = taskResult.data as
+    | { title?: string; description?: string; due_date?: string; priority?: string; release_id?: string }
+    | null;
+  const releaseId = String(task?.release_id || '').trim();
+
+  let releaseTitle = '';
+  if (releaseId) {
+    const releaseResult = await adminClient
+      .from(RELEASES_TABLE)
+      .select('title')
+      .eq('id', releaseId)
+      .maybeSingle();
+    releaseTitle = String(releaseResult.data?.title || '').trim();
+  }
+
+  const message = buildTaskAssignedEmail({
+    recipientName: String(assigneeResult.data?.name || ''),
+    assignerLabel,
+    taskTitle: String(task?.title || ''),
+    releaseTitle,
+    dueDateLabel: formatDueDateForEmail(task?.due_date),
+    priorityLabel: priorityLabelForEmail(task?.priority),
+    note: noteExcerptForEmail(task?.description),
+    taskUrl: releaseId ? `${APP_URL}/dashboard?release=${releaseId}` : `${APP_URL}/dashboard`,
+  });
+
+  await sendEmail({
+    to: assigneeEmail,
+    subject: message.subject,
+    html: message.html,
+    text: message.text,
+    // The inbox row itself reads as coming from the person who assigned it.
+    fromLabel: `${assignerLabel} via Urganize`,
+  });
 }
 
 // Runs across every user's tasks in one pass — called from the

@@ -4,7 +4,7 @@ import {
   loadWorkspaceAccessContext,
   loadWorkspaceMembers,
 } from '@/lib/tasks-server';
-import { getWorkspaceArtist } from '@/lib/artists-server';
+import { listWorkspaceArtists } from '@/lib/artists-server';
 import { buildWorkspaceLogoPayload } from '@/lib/workspace-logo';
 import { parseAdminEmails } from '@/app/api/admin/_shared';
 
@@ -39,13 +39,20 @@ export async function GET(request: NextRequest) {
 
     const workspaceId = access.primaryWorkspaceId;
 
-    const [artist, logo, members] = await Promise.all([
-      getWorkspaceArtist(adminClient, workspaceId),
+    // The whole roster rather than the first artist: the card needs the count
+    // to stay honest once a team has several (it names one artist under the
+    // team name, which would imply a roster of one). Same single query the
+    // first-artist read was, so this costs nothing extra.
+    const [artists, logo, members] = await Promise.all([
+      listWorkspaceArtists(adminClient, workspaceId),
       buildWorkspaceLogoPayload(adminClient, workspaceId),
       loadWorkspaceMembers(adminClient, workspaceId, auth.user.id),
     ]);
 
     const memberCount = members.filter((member) => member.status === 'active').length;
+    // The team's original artist, matching what getWorkspaceArtist returned
+    // here before rosters landed.
+    const artist = artists[0] ?? null;
 
     // Whether to show the Admin link in the identity card's nav (URG-229).
     // Folded into this response rather than given its own request: the card
@@ -69,6 +76,7 @@ export async function GET(request: NextRequest) {
             slug: artist.slug,
           }
         : null,
+      artistCount: artists.length,
       logo,
       memberCount,
       isAdmin,

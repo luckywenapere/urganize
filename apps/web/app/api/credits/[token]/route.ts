@@ -4,6 +4,8 @@ import {
   createCreditsServiceClient,
   isMetadataFeatureEnabled,
 } from '@/lib/credits-server';
+import { findSubmissionIdByEmail, validateSubmissionSplits } from '@/lib/credit-submissions';
+import { notifyCreditSubmission } from '@/lib/credit-notifications-server';
 import { RELEASE_CREDIT_ROLE_OPTIONS } from '@/types/credits';
 import type { CreditSubmissionInput, ReleaseCreditRole } from '@/types/credits';
 
@@ -18,22 +20,15 @@ const RELEASE_CREDIT_SUBMISSIONS_TABLE = 'release_credit_submissions';
 const EMAIL_SHAPE = /\S+@\S+\.\S+/;
 const ROLE_SET = new Set<string>(RELEASE_CREDIT_ROLE_OPTIONS);
 // A link is meant for a release's handful of collaborators, not an
-// open-ended firehose. Cheap ceiling, not a rate limiter.
+// open-ended firehose. Cheap ceiling, not a rate limiter. Checked on the
+// INSERT path only: a full release must still accept a correction from
+// someone who already submitted, since that adds no row.
 const MAX_SUBMISSIONS_PER_RELEASE = 100;
 const SHORT_FIELD_MAX = 200;
 const LONG_FIELD_MAX = 500;
 
 const readString = (value: unknown): string => String(value ?? '').trim();
 const readCappedString = (value: unknown, max: number): string => readString(value).slice(0, max);
-
-function readSplit(value: unknown): { value: number | null; error?: string } {
-  if (value === null || value === undefined || value === '') return { value: null };
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
-    return { value: null, error: 'Splits must be a number between 0 and 100.' };
-  }
-  return { value: parsed };
-}
 
 export async function POST(
   request: NextRequest,
@@ -56,7 +51,7 @@ export async function POST(
 
   const { data: link, error: linkError } = await client
     .from(RELEASE_CREDIT_LINKS_TABLE)
-    .select('release_id,owner_user_id')
+    .select('release_id,owner_user_id,closed_at')
     .eq('share_token', normalizedToken)
     .maybeSingle();
 
@@ -67,6 +62,19 @@ export async function POST(
   // public EPK page.
   if (!link?.release_id) {
     return NextResponse.json({ error: 'This link is no longer active.' }, { status: 404 });
+  }
+
+  // Checked BEFORE the body is even read: someone who loaded the form while the
+  // link was open and submits after the owner closed it must be told the link
+  // closed, not nitpicked about a field. The form renders this string verbatim.
+  if (link.closed_at) {
+    return NextResponse.json(
+      {
+        error:
+          'This request is closed. The release team is not collecting credits through this link right now.',
+      },
+      { status: 403 }
+    );
   }
 
   const releaseId = String(link.release_id);
@@ -96,65 +104,156 @@ export async function POST(
     );
   }
 
-  const songwriterSplit = readSplit(body.songwriterSplit);
-  if (songwriterSplit.error) {
-    return NextResponse.json({ error: songwriterSplit.error }, { status: 400 });
-  }
-  const masterSplit = readSplit(body.masterSplit);
-  if (masterSplit.error) {
-    return NextResponse.json({ error: masterSplit.error }, { status: 400 });
+  // Splits are required for writers and producers and capped at one decimal
+  // place — both rules live in lib/credit-submissions.ts so the form and this
+  // route can never disagree about them.
+  const splits = validateSubmissionSplits({
+    roles,
+    songwriterSplit: body.songwriterSplit,
+    masterSplit: body.masterSplit,
+  });
+  if (!splits.ok) {
+    return NextResponse.json({ error: splits.error }, { status: 400 });
   }
 
-  const { count, error: countError } = await client
-    .from(RELEASE_CREDIT_SUBMISSIONS_TABLE)
-    .select('id', { count: 'exact', head: true })
-    .eq('release_id', releaseId);
+  const row = {
+    release_id: releaseId,
+    owner_user_id: ownerUserId,
+    legal_name: legalName,
+    stage_name: readCappedString(body.stageName, SHORT_FIELD_MAX) || null,
+    roles,
+    contribution: readCappedString(body.contribution, LONG_FIELD_MAX) || null,
+    email,
+    phone: readCappedString(body.phone, SHORT_FIELD_MAX) || null,
+    country: readCappedString(body.country, SHORT_FIELD_MAX) || null,
+    songwriter_split: splits.songwriterSplit,
+    pro_affiliation: readCappedString(body.proAffiliation, SHORT_FIELD_MAX) || null,
+    ipi_number: readCappedString(body.ipiNumber, SHORT_FIELD_MAX) || null,
+    publisher_name: readCappedString(body.publisherName, SHORT_FIELD_MAX) || null,
+    publisher_ipi: readCappedString(body.publisherIpi, SHORT_FIELD_MAX) || null,
+    master_split: splits.masterSplit,
+    instagram_handle: readCappedString(body.instagramHandle, SHORT_FIELD_MAX) || null,
+    x_handle: readCappedString(body.xHandle, SHORT_FIELD_MAX) || null,
+    bio: readCappedString(body.bio, LONG_FIELD_MAX) || null,
+    confirmed_accurate: true,
+  };
 
-  if (countError) {
+  // Same email on the same release = the same person correcting themselves, so
+  // the earlier answer is UPDATED rather than duplicated (founder spec,
+  // 2026-08-27). Before this, one person submitting twice at 50% each made the
+  // owner's writing-share total read 100% with only one contributor credited.
+  //
+  // Select-then-update-or-insert rather than .upsert(): supabase-js hands
+  // `onConflict` to PostgREST as a plain COLUMN LIST, so it cannot target the
+  // partial expression index this relies on — `(release_id, lower(email))
+  // where email is not null`. The index is still what makes the concurrent
+  // case safe: a racing insert fails 23505 and is retried as an update below.
+  const findExisting = async (): Promise<string | null> => {
+    const { data, error } = await client
+      .from(RELEASE_CREDIT_SUBMISSIONS_TABLE)
+      .select('id,email')
+      .eq('release_id', releaseId);
+    if (error) throw error;
+    return findSubmissionIdByEmail(
+      (data || []).map((item) => ({
+        id: String((item as { id?: unknown }).id || ''),
+        email: ((item as { email?: unknown }).email ?? null) as string | null,
+      })),
+      email
+    );
+  };
+
+  const updateExisting = async (submissionId: string): Promise<boolean> => {
+    // created_at is deliberately untouched (their place in the owner's list is
+    // when they FIRST answered) and updated_at is bumped by the table's own
+    // set_updated_at trigger.
+    const { data, error } = await client
+      .from(RELEASE_CREDIT_SUBMISSIONS_TABLE)
+      .update(row)
+      .eq('id', submissionId)
+      .eq('release_id', releaseId)
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    return Boolean(data);
+  };
+
+  try {
+    const existingId = await findExisting();
+    if (existingId && (await updateExisting(existingId))) {
+      return NextResponse.json({ ok: true, updated: true });
+    }
+
+    // Insert path: the ceiling applies here only.
+    const { count, error: countError } = await client
+      .from(RELEASE_CREDIT_SUBMISSIONS_TABLE)
+      .select('id', { count: 'exact', head: true })
+      .eq('release_id', releaseId);
+    if (countError) throw countError;
+    if ((count || 0) >= MAX_SUBMISSIONS_PER_RELEASE) {
+      return NextResponse.json(
+        {
+          error:
+            'This release has reached its submission limit. Contact the release owner directly.',
+        },
+        { status: 429 }
+      );
+    }
+
+    const insertResult = await client
+      .from(RELEASE_CREDIT_SUBMISSIONS_TABLE)
+      .insert(row)
+      .select('id')
+      .maybeSingle();
+
+    if (insertResult.error) {
+      // Two submissions with the same email landed at once; the index rejected
+      // the loser. Retry as the update it should have been.
+      if (insertResult.error.code === '23505') {
+        const racedId = await findExisting();
+        if (racedId && (await updateExisting(racedId))) {
+          return NextResponse.json({ ok: true, updated: true });
+        }
+      }
+      throw insertResult.error;
+    }
+    if (!insertResult.data) {
+      return NextResponse.json({ error: 'Could not submit your credit.' }, { status: 500 });
+    }
+
+    // Tell the owner — INSERT path only, so a correction stays quiet. Awaited
+    // rather than fire-and-forget: an un-awaited promise can be killed the
+    // moment a serverless response returns. It never throws and never fails
+    // this submission (see lib/credit-notifications-server.ts).
+    await notifyCreditSubmission(client, {
+      ownerUserId,
+      releaseId,
+      submissionId: String(insertResult.data.id || ''),
+      legalName,
+      stageName: row.stage_name || '',
+      roles,
+      email,
+      phone: row.phone || '',
+      country: row.country || '',
+      songwriterSplit: splits.songwriterSplit,
+      masterSplit: splits.masterSplit,
+      proAffiliation: row.pro_affiliation || '',
+      ipiNumber: row.ipi_number || '',
+      publisherName: row.publisher_name || '',
+      publisherIpi: row.publisher_ipi || '',
+      contribution: row.contribution || '',
+    });
+
+    return NextResponse.json({ ok: true, updated: false }, { status: 201 });
+  } catch (error) {
+    const message =
+      error && typeof error === 'object' && 'message' in error
+        ? String((error as { message?: unknown }).message || '')
+        : '';
+    console.error('[credits] submission failed', { releaseId, message });
     return NextResponse.json(
       { error: 'Could not submit right now. Please try again.' },
       { status: 500 }
     );
   }
-  if ((count || 0) >= MAX_SUBMISSIONS_PER_RELEASE) {
-    return NextResponse.json(
-      { error: 'This release has reached its submission limit. Contact the release owner directly.' },
-      { status: 429 }
-    );
-  }
-
-  const insertResult = await client
-    .from(RELEASE_CREDIT_SUBMISSIONS_TABLE)
-    .insert({
-      release_id: releaseId,
-      owner_user_id: ownerUserId,
-      legal_name: legalName,
-      stage_name: readCappedString(body.stageName, SHORT_FIELD_MAX) || null,
-      roles,
-      contribution: readCappedString(body.contribution, LONG_FIELD_MAX) || null,
-      email,
-      phone: readCappedString(body.phone, SHORT_FIELD_MAX) || null,
-      country: readCappedString(body.country, SHORT_FIELD_MAX) || null,
-      songwriter_split: songwriterSplit.value,
-      pro_affiliation: readCappedString(body.proAffiliation, SHORT_FIELD_MAX) || null,
-      ipi_number: readCappedString(body.ipiNumber, SHORT_FIELD_MAX) || null,
-      publisher_name: readCappedString(body.publisherName, SHORT_FIELD_MAX) || null,
-      publisher_ipi: readCappedString(body.publisherIpi, SHORT_FIELD_MAX) || null,
-      master_split: masterSplit.value,
-      instagram_handle: readCappedString(body.instagramHandle, SHORT_FIELD_MAX) || null,
-      x_handle: readCappedString(body.xHandle, SHORT_FIELD_MAX) || null,
-      bio: readCappedString(body.bio, LONG_FIELD_MAX) || null,
-      confirmed_accurate: true,
-    })
-    .select('id')
-    .maybeSingle();
-
-  if (insertResult.error || !insertResult.data) {
-    return NextResponse.json(
-      { error: insertResult.error?.message || 'Could not submit your credit.' },
-      { status: 500 }
-    );
-  }
-
-  return NextResponse.json({ ok: true }, { status: 201 });
 }

@@ -61,6 +61,15 @@ export const BILLING_EVENT_TYPES = [
    *  pricing spec asks to be tracked "by entitlement key". Frequent seat and
    *  release blocks on Manager are the clearest buy signal we get. */
   'limit_hit',
+  /** One MCP tool call from a customer's own LLM client. Recorded for founder
+   *  visibility only — DELIBERATELY NOT metered against urgans_monthly_actions.
+   *  That ceiling exists because an UrgAns turn costs us gateway tokens; over
+   *  MCP the user's own model does the thinking and we pay for nothing but a
+   *  database read, so charging an action against their allowance would bill
+   *  them for a cost we do not incur. This is also the only usage signal that
+   *  exists for the MCP surface, which has no rate limit — see the known gap in
+   *  CLAUDE.md. */
+  'mcp_tool_call',
 ] as const;
 
 export type BillingEventType = (typeof BILLING_EVENT_TYPES)[number];

@@ -79,11 +79,14 @@ function writeResumeToken(token: string): void {
     window.sessionStorage.setItem(RESUME_STORAGE_KEY, token);
   } catch {
     // sessionStorage may be unavailable (private mode). The OAuth path
-    // degrades — without the marker, the user lands on /dashboard
-    // authenticated but the invite stays pending. The email-link
-    // trigger (the legacy fallback) will catch them if their signup
-    // email matched the invite, otherwise the invite manager can
-    // re-send.
+    // degrades — without the marker, the user lands back on this page
+    // authenticated and joins with the one-click Accept button; if they
+    // navigate away instead, the email-invite activation catches them
+    // when their Google email matches the invited one, and reopening
+    // the link (multi-use for link kinds) is one click. Note the
+    // email/password path no longer depends on any of this: its token
+    // rides auth.user_metadata and the server-side deferred claim
+    // finishes the join regardless.
   }
 }
 
@@ -225,10 +228,39 @@ export default function InviteAcceptPage() {
       // Reuse the existing auth-store signup. INVITEE_PROFILE_ROLE keeps
       // the artist-name gate from firing. The auth-store handler triggers
       // the same supabase.auth.signUp the standalone /auth signup uses.
-      await signup(email.trim().toLowerCase(), password, name.trim(), INVITEE_PROFILE_ROLE);
+      //
+      // pendingInviteToken makes the join durable: it lands in
+      // auth.user_metadata, and the server-side deferred claim
+      // (lib/invite-claims-server.ts) finishes the join on the user's first
+      // authenticated request even if everything after this line fails — a
+      // dropped connection here used to leave an account that belonged to no
+      // workspace, with nothing that would ever retry.
+      await signup(email.trim().toLowerCase(), password, name.trim(), INVITEE_PROFILE_ROLE, undefined, {
+        pendingInviteToken: token,
+      });
+
+      // Email confirmation (when the Supabase project requires it) means
+      // signUp returns NO session — the accept POST below cannot run yet.
+      // That is fine now: the metadata claim joins them the moment they
+      // confirm and sign in, so say so instead of surfacing a misleading
+      // "sign in to accept" error.
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        setSuccessMessage(
+          `Account created. Check your email to confirm it, then sign in — you'll join ${displayWorkspace} automatically.`
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
       const result = await acceptInvite();
       if (!result.ok) {
-        throw new Error(result.message || 'Could not accept invite.');
+        // The account exists and the metadata claim will finish the join on
+        // their next request, so this is a delay, not a dead end — the copy
+        // must not read like one.
+        throw new Error(
+          `${result.message || 'Could not finish joining.'} Your account was created — sign in and you'll join ${displayWorkspace} automatically.`
+        );
       }
       setSuccessMessage('Joined! Taking you to the workspace…');
       router.replace(HOME_PATH);
@@ -290,8 +322,11 @@ export default function InviteAcceptPage() {
   // ── Render ─────────────────────────────────────────────────────────────
 
   const metadata = loadState.kind === 'ready' ? loadState.metadata : null;
-  const displayInviter = useMemo(() => metadata?.inviterName || 'Your teammate', [metadata]);
-  const displayWorkspace = useMemo(() => metadata?.workspaceName || 'a workspace', [metadata]);
+  // Plain derivations, not useMemo: both are string fallbacks cheap enough to
+  // recompute, and memoizing them tripped react-hooks/preserve-manual-
+  // memoization once handleEmailPasswordSignup started reading them.
+  const displayInviter = metadata?.inviterName || 'Your teammate';
+  const displayWorkspace = metadata?.workspaceName || 'a workspace';
   const showSwitchAccountHelper = useMemo(() => {
     if (!isAuthenticated || !user?.email || !metadata?.invitedEmail) return false;
     return user.email.trim().toLowerCase() !== metadata.invitedEmail.trim().toLowerCase();

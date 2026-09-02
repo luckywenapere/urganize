@@ -116,3 +116,64 @@ describe('email transport', () => {
     expect(result.error!.length).toBeLessThan(360);
   });
 });
+describe('composeFromHeader', () => {
+  it('replaces only the display name, keeping the verified address', async () => {
+    const { composeFromHeader } = await loadEmail();
+    expect(composeFromHeader('Urganize <team@send.urganize.app>', 'Lucky via Urganize')).toBe(
+      'Lucky via Urganize <team@send.urganize.app>'
+    );
+  });
+
+  it('wraps a bare configured address', async () => {
+    const { composeFromHeader } = await loadEmail();
+    expect(composeFromHeader('team@send.urganize.app', 'Lucky via Urganize')).toBe(
+      'Lucky via Urganize <team@send.urganize.app>'
+    );
+  });
+
+  it('returns the configured value untouched with no label', async () => {
+    const { composeFromHeader } = await loadEmail();
+    expect(composeFromHeader('Urganize <team@send.urganize.app>')).toBe(
+      'Urganize <team@send.urganize.app>'
+    );
+    expect(composeFromHeader('Urganize <team@send.urganize.app>', '   ')).toBe(
+      'Urganize <team@send.urganize.app>'
+    );
+  });
+
+  it('strips header-injection characters from a hostile profile name', async () => {
+    // A display name is user-controlled (it comes from profiles.name), so
+    // angle brackets, quotes and line breaks must never reach the header —
+    // any of them could smuggle a different sending address or extra headers.
+    const { composeFromHeader } = await loadEmail();
+    const hostile = 'Evil <attacker@evil.com>\r\nBcc: x@y.z" via Urganize';
+    const composed = composeFromHeader('Urganize <team@send.urganize.app>', hostile);
+    expect(composed.endsWith('<team@send.urganize.app>')).toBe(true);
+    expect(composed).not.toContain('attacker@evil.com>');
+    expect(composed).not.toContain('\r');
+    expect(composed).not.toContain('\n');
+    expect(composed).not.toContain('"');
+  });
+
+  it('caps an absurdly long label', async () => {
+    const { composeFromHeader } = await loadEmail();
+    const composed = composeFromHeader('Urganize <team@send.urganize.app>', 'x'.repeat(300));
+    expect(composed.length).toBeLessThan(120);
+    expect(composed.endsWith('<team@send.urganize.app>')).toBe(true);
+  });
+
+  it('sends with the composed From when a fromLabel is given', async () => {
+    vi.stubEnv('RESEND_API_KEY', 're_key');
+    vi.stubEnv('EMAIL_FROM', 'Urganize <team@send.urganize.app>');
+    const fetchMock = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response('{}', { status: 200 })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const { sendEmail } = await loadEmail();
+    await sendEmail({ ...message, fromLabel: 'Lucky via Urganize' });
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body ?? '{}'));
+    expect(body.from).toBe('Lucky via Urganize <team@send.urganize.app>');
+    vi.unstubAllGlobals();
+  });
+});

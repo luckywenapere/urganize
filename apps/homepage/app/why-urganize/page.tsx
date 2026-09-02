@@ -36,16 +36,17 @@ const comparisons = [
     // `them` is byte-identical to transformationPairs[0].before in
     // content/testimonials.ts — that file owns the string, this page
     // mirrors it. Change both together or not at all.
-    them: "The plan sits in a pinned message, a spreadsheet someone made once and your head. Every new release starts from zero, plus whatever you remember from the last one.",
-    us: "Create a release and Urganize lays out the whole 11-week rollout. 64 activities, from locking the master to pulling your first-week numbers. Real managers wrote it and tested it. Edit or delete any activity.",
+    them: "Your plan is spread across a pinned chat, an old spreadsheet and your memory. Every new release starts from scratch.",
+    us: "Create a release and Urganize lays out the whole rollout, written by real managers and sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Edit or delete any activity.",
   },
 ] as const;
 
 // Folded from three full-size blocks into one compact section (see the
 // note above). Each row is a single sentence per side joined by an arrow
 // instead of a boxed grid, deliberately a different shape from the "The
-// plan" comparison above and from the homepage's TransformationSection, so
-// a visitor arriving from either doesn't see the same format a third time.
+// plan" comparison above (and originally from the homepage's
+// TransformationSection too — that section was removed 2026-08-25), so a
+// visitor doesn't see the same format twice.
 const compactComparisons = [
   {
     kicker: "Ownership",

@@ -47,3 +47,10 @@ export function lockBodyScroll(): () => void {
     }
   };
 }
+
+/** True while any modal holds the shared lock. Read-only — used by the
+ * deferred first-release prompt to decline to stack itself over whatever the
+ * user (or another announcement, like WhatsNew) already has open. */
+export function isBodyScrollLocked(): boolean {
+  return lockCount > 0;
+}

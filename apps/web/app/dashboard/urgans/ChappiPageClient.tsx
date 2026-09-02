@@ -11,7 +11,10 @@ import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { ChappiPageSkeleton } from '@/components/loading/ChappiPageSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { usePlannerStore } from '@/stores/usePlannerStore';
-import { useFirstReleaseRequired } from '@/components/releases/useFirstReleaseRequired';
+import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
+import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
+import { isTestReleaseEnabled } from '@/lib/test-release';
+import { useToast } from '@/components/shared/ToastProvider';
 import { FirstReleaseWin } from '@/components/workspace/FirstReleaseWin';
 import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
@@ -37,6 +40,12 @@ const TYPE_FIRST_CREATE_ENABLED =
 // ChappiPageSkeleton). The dock retires on this route entirely once the
 // flag is on.
 const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
+
+// The one-tap test path — the first-release pop-up this page mounts carries
+// the same "Just looking?" link WorkspaceView's does, since the deferred
+// prompt can fire on either surface. Read through the predicate so the env
+// var name is typed once (lib/test-release.ts).
+const TEST_RELEASE_ENABLED = isTestReleaseEnabled();
 
 export default function ChappiPageClient() {
   const router = useRouter();
@@ -87,18 +96,23 @@ export default function ChappiPageClient() {
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
 
-  // URG-217 — same forced first-release flow as the workspace. Kept here even
-  // though the catalog is the landing surface again (2026-08-12): a
+  // The deferred first-release prompt — same hook as the workspace. Kept here
+  // even though the catalog is the landing surface again (2026-08-12): a
   // zero-release user can still arrive on this page from the topbar, the
-  // mobile nav or an installed PWA pointed at the old start_url, and the lock
-  // has to fire wherever they land. See WorkspaceView for the fail-open
-  // rationale.
-  const firstReleaseRequired = useFirstReleaseRequired();
-  useEffect(() => {
-    if (firstReleaseRequired) {
-      setIsCreateModalOpen(true);
-    }
-  }, [firstReleaseRequired]);
+  // mobile nav or an installed PWA pointed at the old start_url, and the
+  // prompt has to arm wherever they land. The sessionStorage countdown
+  // (lib/first-release-prompt.ts) is what makes the two surfaces one prompt.
+  useFirstReleasePrompt(() => setIsCreateModalOpen(true));
+
+  // The test link closes the modal before it runs, so this page has no inline
+  // slot left for a failure — the shared toast stack is the surface (this page
+  // renders inside AppShell's ToastProvider; a silent failure is the one
+  // unacceptable outcome). Success navigates to /dashboard scoped to the new
+  // test release, where the standing banner takes over.
+  const { pushToast } = useToast();
+  const { startTestRelease } = useStartTestRelease({
+    onError: (message) => pushToast(message, 'error'),
+  });
 
   if (!CHAPPI_ENABLED) return null;
 
@@ -156,6 +170,7 @@ export default function ChappiPageClient() {
       <CreateReleaseModal
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        onStartTestRelease={TEST_RELEASE_ENABLED ? startTestRelease : undefined}
         onCreated={(releaseId, plan, result) => {
           setIsCreateModalOpen(false);
           void loadCommandCenter();

@@ -153,17 +153,77 @@ export function negotiateProtocolVersion(requested: unknown): string {
   return LATEST_PROTOCOL_VERSION;
 }
 
-/** `initialize` result. Declares tools as our only capability — no resources,
- * prompts, logging, or completions are served. */
+/**
+ * `initialize` result. Declares tools and resources — no prompts, logging, or
+ * completions are served.
+ *
+ * Resources were added 2026-08-25 alongside per-user access, because they are
+ * the primitive that actually matches "take my context to another LLM": a
+ * resource is something a client attaches, where a tool is something a model
+ * decides to call. The same context is exposed BOTH ways on purpose — tool
+ * support is universal across clients, resource support is not, and a manager
+ * should not have to know which kind of client they picked.
+ *
+ * Neither capability declares `listChanged`: the tool list is static per deploy
+ * and the resource list changes only when the user's own releases do, which
+ * they will discover by listing again.
+ */
 export function buildInitializeResult(params: {
   requestedVersion: unknown;
   serverVersion: string;
 }): Record<string, unknown> {
   return {
     protocolVersion: negotiateProtocolVersion(params.requestedVersion),
-    capabilities: { tools: {} },
+    capabilities: { tools: {}, resources: {} },
     serverInfo: { name: MCP_SERVER_NAME, version: params.serverVersion },
   };
+}
+
+// ── Resources ───────────────────────────────────────────────────────────────
+
+/** The whole team's context — the same block get_workspace_context returns. */
+export const WORKSPACE_CONTEXT_URI = 'urganize://workspace/context';
+
+/** One release. `urganize://release/<id>/context`. */
+export const RELEASE_CONTEXT_URI_PREFIX = 'urganize://release/';
+const RELEASE_CONTEXT_URI_SUFFIX = '/context';
+
+export function buildReleaseContextUri(releaseId: string): string {
+  return `${RELEASE_CONTEXT_URI_PREFIX}${releaseId}${RELEASE_CONTEXT_URI_SUFFIX}`;
+}
+
+/**
+ * Pull a release id back out of a resource URI, or null.
+ *
+ * Deliberately strict rather than a lenient split: a URI is attacker-supplied
+ * text, and the id it yields is fed to a lookup. An empty or malformed id must
+ * come back as null rather than as a query for everything.
+ */
+export function parseReleaseContextUri(uri: string): string | null {
+  const value = String(uri || '').trim();
+  if (!value.startsWith(RELEASE_CONTEXT_URI_PREFIX)) return null;
+  if (!value.endsWith(RELEASE_CONTEXT_URI_SUFFIX)) return null;
+  const id = value.slice(
+    RELEASE_CONTEXT_URI_PREFIX.length,
+    value.length - RELEASE_CONTEXT_URI_SUFFIX.length
+  );
+  // A release id is a uuid; anything with a slash in it is somebody probing.
+  if (!id || id.includes('/')) return null;
+  return id;
+}
+
+/** One entry in a `resources/list` result. */
+export function buildResourceDescriptor(input: {
+  uri: string;
+  name: string;
+  description: string;
+}): Record<string, unknown> {
+  return { ...input, mimeType: 'text/plain' };
+}
+
+/** A `resources/read` result, which the spec shapes as a `contents` array. */
+export function resourceTextResult(uri: string, text: string): Record<string, unknown> {
+  return { contents: [{ uri, mimeType: 'text/plain', text }] };
 }
 
 /**

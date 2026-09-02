@@ -107,3 +107,126 @@ export function shouldReload(record: ChunkReloadRecord, now: number): boolean {
 export function nextReloadRecord(record: ChunkReloadRecord, now: number): ChunkReloadRecord {
   return { at: now, attempts: record.attempts + 1 };
 }
+
+// ---------------------------------------------------------------------------
+// Where the recovery should LAND (2026-08-31).
+//
+// The reload above cures the dead page, but on its own it reloads whatever URL
+// the tab is currently showing — and the failure it is recovering from is a
+// NAVIGATION. So when the router had not yet committed the new URL, the user's
+// click is simply lost: they tapped a link, the page refreshed, and they are
+// still where they started. That is the reported symptom ("come back and want
+// to navigate the app, it refreshes the whole page") rather than a theory.
+//
+// So the bridge records the last in-app link the user clicked and the recovery
+// resumes it. Deliberately a no-op in the case where today's behaviour is
+// already right: if the router DID commit the URL first, the destination and
+// the current location are the same page and this returns null, i.e. a plain
+// reload. There is no case where it lands somewhere the user did not ask for.
+
+/**
+ * How long a recorded navigation intent stays usable.
+ *
+ * A chunk error much later than the click that caused it is not that click's
+ * failure — it is more likely a lazy component on the page the user has been
+ * sitting on. Past this window the intent is ignored and the page just
+ * reloads, which is the safe outcome.
+ */
+export const CHUNK_INTENT_TTL_MS = 15_000;
+
+/** The last in-app link click, as recorded by ChunkRecoveryBridge. */
+export type NavigationIntent = { href: string; at: number };
+
+/**
+ * A link click, reduced to the fields the decision needs, so the decision
+ * stays pure and testable and the component stays a thin adapter.
+ *
+ * `defaultPrevented` is deliberately ABSENT. The bridge listens in the capture
+ * phase (Next's Link calls preventDefault() to route client-side, so by the
+ * bubble phase every real in-app click looks cancelled — exactly the set we
+ * need). That early, the flag is always false and would encode a guarantee it
+ * cannot make, so it is not consulted at all.
+ */
+export type LinkClick = {
+  /** The anchor's resolved absolute href. */
+  href: string;
+  /** The anchor's `target` attribute, or null when it has none. */
+  target: string | null;
+  /** Whether the anchor carries a `download` attribute. */
+  hasDownload: boolean;
+  /**
+   * A modifier key was held or a non-primary button used, so the browser
+   * opens this somewhere else. It is not a navigation of THIS document and
+   * must not be recorded as one.
+   */
+  modified: boolean;
+};
+
+/**
+ * Is this click a navigation of the current document that we should remember?
+ *
+ * Narrow on purpose: the recorded href is somewhere we may later send the
+ * browser, so anything that is not plainly an in-app route change is refused.
+ * Non-http protocols (mailto:, tel:, the Capacitor deep-link scheme) are
+ * rejected by the protocol check before the origin check can see them.
+ */
+export function isInAppNavigationClick(click: LinkClick, currentHref: string): boolean {
+  if (!click.href) return false;
+  if (click.modified) return false;
+  if (click.hasDownload) return false;
+  if (click.target && click.target !== '_self') return false;
+
+  let current: URL;
+  let target: URL;
+  try {
+    current = new URL(currentHref);
+    target = new URL(click.href, currentHref);
+  } catch {
+    return false;
+  }
+
+  if (target.protocol !== 'http:' && target.protocol !== 'https:') return false;
+  return target.origin === current.origin;
+}
+
+/**
+ * Where should a recovery reload land — the absolute href to navigate to, or
+ * null meaning "reload the URL we are on".
+ *
+ * Returns null (a plain reload) for every uncertainty: no intent recorded, a
+ * stale or clock-skewed one, an unparseable URL, a cross-origin target, or a
+ * destination that is already the current page. Only a fresh, same-origin,
+ * genuinely-different route earns a navigation.
+ */
+export function resolveRecoveryTarget(
+  currentHref: string,
+  intent: NavigationIntent | null,
+  now: number
+): string | null {
+  if (!intent || !intent.href) return null;
+
+  // Negative age means a clock that moved backwards; treat it as unusable
+  // rather than as infinitely fresh.
+  const age = now - intent.at;
+  if (!Number.isFinite(age) || age < 0 || age > CHUNK_INTENT_TTL_MS) return null;
+
+  let current: URL;
+  let target: URL;
+  try {
+    current = new URL(currentHref);
+    target = new URL(intent.href, currentHref);
+  } catch {
+    return null;
+  }
+
+  if (target.origin !== current.origin) return null;
+
+  // The router may or may not have committed the URL before the chunk failed.
+  // If it did, the current location already IS the destination, so a reload
+  // lands there and navigating would only add a duplicate history entry. The
+  // hash is excluded from the comparison: a fragment loads no chunks, so a
+  // hash-only difference is not the navigation that failed.
+  if (target.pathname === current.pathname && target.search === current.search) return null;
+
+  return target.href;
+}

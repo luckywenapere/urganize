@@ -30,12 +30,16 @@ import { registerAppServiceWorker } from '@/lib/offline/register';
 import { OfflineBanner } from '@/components/app/OfflineBanner';
 import { flushOfflineQueue } from '@/lib/offline/sync';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
+import { buildPrefetchRoutes } from '@/lib/prefetch-routes';
 import { CURATOR_HOME_PATH } from '@/lib/home-path';
 
-/** The only routes a signed-in user navigates between. Deliberately short —
- * every entry costs a speculative request, and prefetching pages nobody opens
- * is exactly the kind of waste this work is trying to remove. */
-const PREFETCHED_ROUTES = ['/dashboard', '/dashboard/urgans', '/settings'];
+// The prefetch list moved to lib/prefetch-routes.ts (2026-08-31) so it can be
+// flag- and account-aware and unit-tested. It used to be three hardcoded
+// entries here, which had drifted: the identity card and the mobile bar had
+// since grown Notes, Shows and the curator crossing, so three primary
+// destinations were cold on every load. The "deliberately short" principle
+// still holds and is argued in that module — it is every destination the nav
+// offers, not the whole app.
 
 // None of these are needed for first paint — the onboarding wizard, the
 // create-release modal, and the floating support widgets used to be
@@ -82,6 +86,14 @@ const WhatsNewModal = dynamic(
 // this one pulls in the Web Push + Capacitor push clients behind it.
 const PushPermissionPrompt = dynamic(
   () => import('@/components/app/PushPermissionPrompt').then((m) => m.PushPermissionPrompt),
+  { ssr: false }
+);
+// The install offer that precedes it. Same dynamic + flag-gated treatment,
+// and it must stay client-only: every branch it takes depends on reading the
+// user agent, the display mode, and whether the browser has offered us an
+// install of its own.
+const InstallAppPrompt = dynamic(
+  () => import('@/components/app/InstallAppPrompt').then((m) => m.InstallAppPrompt),
   { ssr: false }
 );
 // NOTE: the release scenes (Metadata / Calendar / Files / Press kit) are NOT
@@ -138,6 +150,14 @@ const ANDROID_APP_BANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_ANDROID_APP_B
 const PUSH_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PUSH_PROMPT === 'true';
 const OFFLINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_OFFLINE === 'true';
 
+// "Put us on your Home Screen" (founder request 2026-08-30, retriggered
+// 2026-08-31). Offered a minute into every visit, once per visit, at the
+// bottom of the screen where a thumb reaches, and the notification ask above
+// follows only if this one is turned down. See lib/install-prompt.ts for the
+// countdown and the once-per-visit rule, and InstallAppPrompt.tsx for why the
+// three platforms need three different mechanisms.
+const INSTALL_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_INSTALL_PROMPT === 'true';
+
 // Once-per-session arming for the side rail: landing on the assistant page
 // (the post-auth front door when the flag is on — see lib/home-path.ts)
 // opens the rail on whatever page the user navigates to next. sessionStorage,
@@ -189,6 +209,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname?.startsWith('/listen/') ||
     pathname?.startsWith('/epk/') ||
     pathname?.startsWith('/capture/') ||
+    // A DJ pack link, opened by someone with no account at all.
+    pathname?.startsWith('/pack/') ||
+    // The OAuth consent screen. Signed-in, but it is a decision about handing a
+    // third-party client access — app chrome around it would invite the user to
+    // wander off mid-authorization, and the dock floating over a consent prompt
+    // is exactly the wrong furniture. Same treatment as /epk/.
+    pathname?.startsWith('/oauth/') ||
     isPreSavePublicRoute ||
     isOnboardingRoute ||
     isInviteRoute ||
@@ -204,6 +231,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   // who also runs releases) carries a team role and gets the full app — it
   // reaches its inbox through the identity card's "Playlist pitches" entry.
   const isCuratorAccount = user?.role === 'curator';
+  // Tri-state (null = the probe has not answered). Used only to decide whether
+  // to warm the /curator crossing — see lib/prefetch-routes, which treats null
+  // as "not yet" rather than "no".
+  const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
   const showWorkspaceChrome =
     (isAuthenticated || isAuthLoading) &&
     (isDashboardRoute || isSettingsRoute) &&
@@ -304,19 +335,23 @@ export function AppShell({ children }: { children: ReactNode }) {
     useChappiStore.getState().setRailOpen(true);
   }, [isAuthenticated, isAuthLoading, isCuratorAccount, isDashboardRoute, isSettingsRoute]);
 
-  // Warm the route chunks for the app's three real destinations while the
-  // browser is idle. These pages are thin server wrappers over big client
-  // components, so what a prefetch actually buys is the JS chunk landing in
-  // cache before the click — on a slow link that's the whole difference
-  // between an instant switch and a skeleton. Once per mount, and skipped on
-  // Data Saver / 2g (see lib/connection.ts). Prefetch is a no-op in dev.
+  // Warm the route chunks for every destination the nav offers while the
+  // browser is idle, so a tap is instant instead of a skeleton. Skipped on
+  // Data Saver / 2g (see lib/connection.ts), and a no-op in dev.
+  //
+  // Which routes, and why not all of them, is argued in lib/prefetch-routes.
+  //
+  // Re-runs when hasCuratorProfile resolves, which is the point of having it
+  // in the deps: a dual account's /curator crossing is unknown on first paint
+  // and gets warmed once the probe answers. Safe to re-run because
+  // router.prefetch is idempotent — an already-cached route costs nothing.
   useEffect(() => {
     if (!isAuthenticated || isAuthLoading) return;
-    // Nothing in PREFETCHED_ROUTES is reachable by a curator.
+    // A curator-only account reaches none of these; it has its own shell.
     if (isCuratorAccount) return;
     if (!shouldBackgroundPrefetch()) return;
     return runWhenIdle(() => {
-      for (const route of PREFETCHED_ROUTES) {
+      for (const route of buildPrefetchRoutes({ hasCuratorProfile })) {
         try {
           router.prefetch(route);
         } catch {
@@ -324,7 +359,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         }
       }
     });
-  }, [isAuthLoading, isAuthenticated, isCuratorAccount, router]);
+  }, [hasCuratorProfile, isAuthLoading, isAuthenticated, isCuratorAccount, router]);
 
   // Register the app's service worker once per load — push-only (sw.js) or
   // the offline shell (sw-offline.js), decided by registerAppServiceWorker
@@ -399,7 +434,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     // provider is available for any future "save succeeded" / "upload failed"
     // moments that currently render inline toast boxes.
     <ToastProvider>
-    {ANDROID_APP_BANNER_ENABLED ? (
+    {/* Stands down when the install prompt is on: both point Android at the
+        same /download page, and two asks for one thing is one too many. The
+        newer one wins because it is the founder's brief — bottom of the
+        screen where a thumb reaches, and only once the visitor has actually
+        looked around, rather than a top banner on arrival. */}
+    {ANDROID_APP_BANNER_ENABLED && !INSTALL_PROMPT_ENABLED ? (
       <ErrorBoundary name="android-app-banner" onError={reportBoundaryError}>
         <AndroidAppBanner />
       </ErrorBoundary>
@@ -515,6 +555,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       {MOBILE_NAV_ENABLED && showWorkspaceChrome && !requiresArtistNameGate ? (
         <MobileNavBar onNewRelease={openCreateRelease} />
       ) : null}
+      {/* Deliberately NO onStartTestRelease on this instance, unlike the two
+          the first-release prompt opens (WorkspaceView, ChappiPageClient).
+          Two reasons: this modal only opens from deliberate "+ New release"
+          taps, not from the prompt the test path serves; and AppShell cannot
+          consume the ToastProvider it mounts itself, so a failed test-release
+          create here would have NO surface at all — a silent dead tap, the
+          one outcome the test path must never produce. */}
       <CreateReleaseModal
         open={isCreateReleaseOpen}
         onClose={closeCreateRelease}
@@ -553,14 +600,29 @@ export function AppShell({ children }: { children: ReactNode }) {
       ) : null}
       {/* "What's new" (founder request, 2026-07-23): announces changelog
           entries this device hasn't seen yet, once per release, on signed-in
-          app surfaces only. */}
-      {isAuthenticated && !isAuthLoading && showWorkspaceChrome ? <WhatsNewModal /> : null}
+          app surfaces only.
+          TEMPORARILY DISABLED (founder request, 2026-08-27) — the `false &&`
+          below is the whole switch. Nothing else about the feature changed:
+          WhatsNewModal, the changelog ledger, and each device's seen-version
+          are untouched, so removing `false &&` turns it straight back on and
+          picks up wherever it left off. */}
+      {false && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
+        <WhatsNewModal />
+      ) : null}
       {/* Same gate as What's new: signed in, auth RESOLVED, and only on a
           route that renders chrome. showWorkspaceChrome already excludes a
           curator-only account, which has no releases or tasks to be notified
           about. */}
       {PUSH_PROMPT_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <PushPermissionPrompt />
+      ) : null}
+      {/* Same gate again, and the same slot at the bottom of the screen — the
+          two never collide because the notification ask holds itself until
+          this one has been answered (see the install-owed branch in
+          PushPermissionPrompt). Signed-in chrome only: the minute is meant to
+          be a minute of using the app, not a minute spent on /auth. */}
+      {INSTALL_PROMPT_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
+        <InstallAppPrompt />
       ) : null}
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
       {/* FirstTimeOnboardingGate was mounted here until 2026-07-29 (URG-191).

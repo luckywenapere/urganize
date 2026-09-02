@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { BackToTopButton } from "./BackToTopButton";
 import { FaLinkedin } from "react-icons/fa6";
 import {
   SiInstagram,
@@ -64,20 +65,25 @@ export function MarketingFooter() {
       className="pb-10 pt-14 sm:pb-12 sm:pt-16 lg:pb-14 lg:pt-20"
       style={{ borderTop: "0.5px solid var(--marketing-border)" }}
     >
+      <BackToTopButton />
       <div className="mx-auto max-w-[84rem] px-6 sm:px-8 lg:px-10">
         <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
           <div>
+            {/* Same crop fix as the header: the SVG's viewBox is the ink now,
+                so this needs no overflow-hidden and no negative margin. h-12
+                stays because it reserves this block's height in the footer
+                grid; h-[15px] is the pre-crop rendered size to the pixel. */}
             <Link
               href="/"
-              className="flex h-12 items-center overflow-hidden"
+              className="flex h-12 items-center"
               aria-label="Urganize home"
             >
               <Image
                 src="/images/urganize-logo.svg"
                 alt="Urganize"
-                width={680}
-                height={144}
-                className="marketing-wordmark mt-[-0.6rem] h-24 w-auto max-w-none"
+                width={7726}
+                height={1766}
+                className="marketing-wordmark h-[15px] w-auto"
               />
             </Link>
           </div>

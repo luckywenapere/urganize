@@ -196,12 +196,49 @@ async function applyInitialOrManualCharge(
     console.error('[paystack-webhook] subscription upsert error:', subError.message);
   }
 
-  const { error: profileError } = await admin
-    .from('profiles')
-    .update({ is_subscribed: true, paid_at: now.toISOString() })
-    .eq('id', userId);
+  // THE PROFILE WRITE IS LOAD-BEARING, AND IT USED TO BE FIRE-AND-FORGET.
+  //
+  // `paid_at` is the read-only discriminator: `lapsedFromPayment` reads exactly
+  // this field to decide, when a period ends unpaid, whether the team gets
+  // read-only (kept every read, forever) or the full wall. So a subscription row
+  // saying `active` with `paid_at` still null is not a cosmetic gap — it is a
+  // customer who paid us, and who will be walled instead of read-only when their
+  // renewal eventually fails. The old code logged that and returned 200, which
+  // told Paystack the delivery succeeded and guaranteed it would never be retried.
+  //
+  // One retry, then surface it. Both writes above and here are idempotent (an
+  // upsert on user_id, and an absolute-valued update), so a Paystack redelivery
+  // is safe and is the only mechanism that can still repair this.
+  let profileError = (
+    await admin
+      .from('profiles')
+      .update({ is_subscribed: true, paid_at: now.toISOString() })
+      .eq('id', userId)
+  ).error;
+
   if (profileError) {
-    console.error('[paystack-webhook] profile update error:', profileError.message);
+    console.error(
+      '[paystack-webhook] profile update error, retrying once:',
+      profileError.message
+    );
+    profileError = (
+      await admin
+        .from('profiles')
+        .update({ is_subscribed: true, paid_at: now.toISOString() })
+        .eq('id', userId)
+    ).error;
+  }
+
+  // Reported to the caller rather than swallowed. The subscription row is
+  // already correct, so access is granted either way and the customer is not
+  // blocked — what a redelivery buys us is the stamp that decides how they are
+  // treated months later.
+  const profileWriteFailed = Boolean(profileError);
+  if (profileWriteFailed) {
+    console.error(
+      '[paystack-webhook] profile update failed twice; asking Paystack to redeliver:',
+      profileError?.message
+    );
   }
 
   invalidateSubscriptionSnapshot(userId);
@@ -237,6 +274,8 @@ async function applyInitialOrManualCharge(
       }
     })();
   }
+
+  return { profileWriteFailed };
 }
 
 /** The `source` start-checkout or change-plan wrote into the payments jsonb.
@@ -774,7 +813,7 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
       // does not say whether the customer bought a month or a year — and a
       // legacy plan does not, so absent stays absent.
       const selectedInterval = readSelectedInterval(payment.paystack_response);
-      await applyInitialOrManualCharge(
+      const applied = await applyInitialOrManualCharge(
         admin,
         userId,
         planString,
@@ -785,6 +824,16 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
         now,
         selectedInterval
       );
+      // A failed `paid_at` stamp is the one thing here worth a redelivery — see
+      // the block inside applyInitialOrManualCharge. 500 rather than ack, so
+      // Paystack retries; every write on this path is idempotent, and the
+      // customer already has access from the subscription row either way.
+      if (applied.profileWriteFailed) {
+        return NextResponse.json(
+          { error: 'Could not record the payment fully. Please redeliver.' },
+          { status: 500 }
+        );
+      }
       return ack({
         event: 'charge.success',
         reference,
@@ -798,7 +847,7 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
     // logic in lib/billing.ts. No subscription_code persistence (these
     // aren't recurring on the Paystack side).
     if (planString === 'access' || planString === 'custom') {
-      await applyInitialOrManualCharge(
+      const applied = await applyInitialOrManualCharge(
         admin,
         userId,
         planString,
@@ -808,6 +857,12 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
         null,
         now
       );
+      if (applied.profileWriteFailed) {
+        return NextResponse.json(
+          { error: 'Could not record the payment fully. Please redeliver.' },
+          { status: 500 }
+        );
+      }
       return ack({ event: 'charge.success', reference, matched: 'manual_or_legacy', plan: planString });
     }
 

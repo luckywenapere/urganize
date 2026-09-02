@@ -16,6 +16,7 @@ import {
   normalizeLoginLabel,
   resolveLoginState,
 } from '@/lib/team-logins';
+import { checkSeatAllowance, recordLimitHit } from '@/lib/seats-server';
 import {
   INVITE_LINKS_TABLE,
   INVITE_LINK_COLUMNS,
@@ -123,6 +124,32 @@ export async function POST(request: NextRequest) {
         },
         { status: 409 }
       );
+    }
+
+    // SEAT CEILING, added 2026-09-01. Redemption has always been the real
+    // enforcement point (`joinWorkspaceViaLink` — one link, many redeemers, so
+    // that is the only place a total can be held), and it stays. This is the
+    // second half, and it exists so the refusal reaches the RIGHT PERSON.
+    //
+    // Without it, a team at its ceiling mints a link that is guaranteed to fail,
+    // and the failure surfaces to whoever clicks it — someone who cannot fix it,
+    // and who has to go back and tell the manager. The manager, meanwhile, saw a
+    // successful copy-to-clipboard. Checking here means the person who can
+    // upgrade reads the message at the moment they act.
+    //
+    // Placed AFTER the runaway guard, so "revoke a link you're not using" (which
+    // they can act on immediately, alone) is offered before "upgrade your plan".
+    // Fails open on an unreadable count or tier, like every other cap.
+    const seats = await checkSeatAllowance(adminClient, workspaceId);
+    if (!seats.allowed) {
+      await recordLimitHit(adminClient, {
+        workspaceId,
+        actorUserId: auth.user.id,
+        key: seats.key,
+        limit: seats.limit,
+        current: seats.current,
+      });
+      return NextResponse.json({ error: seats.message }, { status: 409 });
     }
 
     // A release id is only provenance, but it is a foreign key — so confirm

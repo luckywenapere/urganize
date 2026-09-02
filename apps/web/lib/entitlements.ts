@@ -39,6 +39,8 @@ export type Limit = number | typeof UNLIMITED;
 export type SupportChannel = 'email' | 'whatsapp_24h' | 'sla';
 
 export type Entitlements = {
+  /** Artists on the roster. */
+  artists: Limit;
   /** Active team members. UNLIMITED on label and enterprise: this is a
    *  coordination product, and a seat wall pushes half the release back into
    *  WhatsApp and churns the account. */
@@ -74,6 +76,15 @@ export type Entitlements = {
 // behind NEXT_PUBLIC_FEATURE_DATA_EXPORT. That route is deliberately NOT behind
 // the paywall and has its own guard test — see lib/account-export.ts.)
 //
+// `artists` IS ENFORCED as of 2026-08-30, when rosters shipped. It was declared
+// a week earlier with the Solo tier and gated nothing, because until then no
+// code path could add a second artist to a team. Two things about it worth
+// knowing here: like seats, it has TWO creation points (POST
+// /api/workspace/artists and the lookup-or-create branch inside POST
+// /api/releases), and capping only the first would leave the second open; and
+// it is the only ceiling whose count is not what the user sees listed, because
+// an artist with no releases yet still occupies a slot.
+//
 // `rollout_template_custom_save` is STILL DECLARATIVE ONLY, and reading it to
 // gate anything would gate a feature that does not exist: rollout templates are
 // static TypeScript in lib/release-templates, and `release_plan_drafts` is
@@ -86,8 +97,11 @@ export type Entitlements = {
 // enforcing `active_releases` required building an explicit archive action
 // first, because nothing in the product had ever written
 // `releases.status = 'archived'`; and every cap is a no-op unless a team
-// resolves to the `manager` tier, which only happens once pricing v2 is live
-// and somebody is paying for it.
+// resolves to a CAPPED tier, which since 2026-09-01 means `solo` or `manager`
+// and requires somebody to be paying for one of them. Everything else — trial,
+// grace, comped, walled, read-only, founding, and every legacy plan id — still
+// resolves to the uncapped tier, which is what has kept these caps from ever
+// touching an existing customer.
 //
 // `sso` and `sub_teams` are declared false everywhere except enterprise and
 // are read by nothing. That is deliberate and consistent with this repo's
@@ -108,7 +122,40 @@ export type Entitlements = {
 const limitsOf = (tier: PricingTierId) => PRICING_TIERS[tier].limits;
 
 export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
+  // Solo (2026-08-30; LIVE since 2026-09-01). It shipped inert — absent from
+  // SelfServeTierId and from subscriptions_plan_check, so `resolveTeamTier` could
+  // never return it and all four ceilings were unreachable dead code while the
+  // pricing page advertised them at ₦8,000. That is closed: Solo is self-serve,
+  // the migration permits the plan id, and these numbers now bite a real team.
+  //
+  // IT IS THE TIGHTEST ROW IN THE TABLE and the one most new accounts land on,
+  // so it is where a wrong number is felt first. Two of them are load-bearing in
+  // ways that are not obvious from the figure alone:
+  //   - `seats: 2` counts the OWNER, because ensureOwnedWorkspace writes an
+  //     owner row into workspace_members like any other member. So 2 means the
+  //     manager plus one collaborator, not the manager plus two. Setting it to 1
+  //     would leave the invite form permanently dead — a locked button on day
+  //     one, which is the opposite of meeting a wall by needing a second person.
+  //   - `active_releases: 1` is only survivable because archiving exists to free
+  //     the slot. It was built in the same pass that made these caps real, for
+  //     exactly this reason.
+  solo: {
+    artists: limitsOf('solo').artists,
+    seats: limitsOf('solo').seats,
+    active_releases: limitsOf('solo').activeReleases,
+    rollout_template_default: true,
+    rollout_template_custom_save: false,
+    urgans_monthly_actions: limitsOf('solo').urgansMonthlyActions,
+    urgans_priority: false,
+    file_attachments: true,
+    data_export: true,
+    concierge_onboarding: false,
+    support_channel: 'email',
+    sso: false,
+    sub_teams: false,
+  },
   manager: {
+    artists: limitsOf('manager').artists,
     seats: limitsOf('manager').seats,
     active_releases: limitsOf('manager').activeReleases,
     rollout_template_default: true,
@@ -123,6 +170,7 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sub_teams: false,
   },
   label: {
+    artists: limitsOf('label').artists,
     seats: limitsOf('label').seats,
     active_releases: limitsOf('label').activeReleases,
     rollout_template_default: true,
@@ -137,6 +185,7 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sub_teams: false,
   },
   enterprise: {
+    artists: limitsOf('enterprise').artists,
     seats: limitsOf('enterprise').seats,
     active_releases: limitsOf('enterprise').activeReleases,
     rollout_template_default: true,
@@ -259,7 +308,11 @@ export function resolveTeamTier(input: {
 /** The entitlement keys that carry a countable ceiling. Deliberately not every
  * key: the booleans are checked directly, and a limit only needs this shape
  * when there is a number to compare and copy to write. */
-export type CountableLimitKey = 'seats' | 'active_releases' | 'urgans_monthly_actions';
+export type CountableLimitKey =
+  | 'artists'
+  | 'seats'
+  | 'active_releases'
+  | 'urgans_monthly_actions';
 
 export type LimitVerdict =
   | { allowed: true; limit: Limit; current: number; remaining: number | null }
@@ -287,6 +340,8 @@ const tierLabel = (tier: PricingTierId): string => PRICING_TIERS[tier].label;
  */
 function limitMessage(key: CountableLimitKey, limit: number, tierLabel: string): string {
   switch (key) {
+    case 'artists':
+      return `${tierLabel} plans cover ${limit} ${limit === 1 ? 'artist' : 'artists'}. Upgrade to Label for unlimited artists.`;
     case 'seats':
       return `${tierLabel} plans include ${limit} people. Upgrade to Label for unlimited team members.`;
     case 'active_releases':

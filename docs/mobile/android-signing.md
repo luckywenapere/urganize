@@ -74,7 +74,7 @@ If that errors or shows a CN of "Android Debug", `keystore.properties` was not p
 
 ## 5. Bump `versionCode` before every upload
 
-`versionCode` in `apps/mobile/android/app/build.gradle` must strictly increase on every build you upload to any Play track, and Play never lets a number be reused — even from a rejected or deleted build. It is currently `1`, correct for a first upload.
+`versionCode` in `apps/mobile/android/app/build.gradle` must strictly increase on every build you upload to any Play track, and Play never lets a number be reused — even from a rejected or deleted build. It is currently `2` (bumped 2026-09-02 for the first build that carries native push; `1` was the 2026-08-07 debug APK, which predates the push plugin and `google-services.json`).
 
 `versionName` needs no maintenance: it reads `apps/mobile/package.json` at build time, so it tracks the changelog ledger version automatically.
 

@@ -27,6 +27,7 @@
 //    UI — tool-registry.test.ts asserts that structurally.
 
 import { CALENDAR_TOOLS } from './tool-families/calendar';
+import { CONTEXT_TOOLS } from './tool-families/context';
 import { CORE_TOOLS } from './tool-families/core';
 import { METADATA_TOOLS } from './tool-families/metadata';
 import { NOTE_TOOLS } from './tool-families/notes';
@@ -41,6 +42,7 @@ export type { ChappiTool, ChappiToolContext, ChappiConfirmOutcome } from './tool
 
 export const CHAPPI_TOOLS: ChappiTool[] = [
   ...CORE_TOOLS,
+  ...CONTEXT_TOOLS,
   ...RELEASE_TOOLS,
   ...PLANNER_TOOLS,
   ...METADATA_TOOLS,

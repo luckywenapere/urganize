@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { CalendarClock, RotateCcw, Trash2, Undo2 } from 'lucide-react';
 
-import { TaskMemberCombobox } from '@/components/tasks/TaskMemberCombobox';
+import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';
 import type { WorkspaceMember } from '@/lib/tasks';
 import {
   computeTaskYmd,
@@ -51,8 +50,6 @@ export function PlanTaskRow({
   onRemove,
   onRestore,
 }: PlanTaskRowProps) {
-  const [memberQuery, setMemberQuery] = useState('');
-
   const dateYmd = releaseDate ? computeTaskYmd(releaseDate, task.offset_days) : null;
   const selectedMember =
     members.find((member) => member.userId && member.userId === task.assignee_user_id) || null;
@@ -149,11 +146,9 @@ export function PlanTaskRow({
         </label>
 
         <div className="min-w-[10rem] flex-1">
-          <TaskMemberCombobox
+          <TaskMemberSelect
             members={members}
             selectedMember={selectedMember}
-            query={memberQuery}
-            onQueryChange={setMemberQuery}
             onSelectMember={(member) => onChange({ assignee_user_id: member?.userId || null })}
             label="Assign someone"
             placeholder="Nobody yet"

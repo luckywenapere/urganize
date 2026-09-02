@@ -9,6 +9,7 @@ import {
   formatFileSize,
 } from '@/lib/asset-constants';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { prepareAvatarImage } from '@/lib/downscale-image';
 import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
 import {
   buildUploadFailureReport,
@@ -27,10 +28,10 @@ import {
 } from './settings-cache';
 
 // Workspace artist/logo editors are gated by the same flag that hides the
-// legacy artist input in the create-release modal. Lifting to many artists
-// later is a UI change only — the schema (artists.workspace_id, partial
-// unique on (workspace_id, slug)) already permits multiple rows per
-// workspace.
+// legacy artist input in the create-release modal. The roster landed
+// 2026-08-30; the schema (artists.workspace_id, partial unique on
+// (workspace_id, slug)) had permitted several rows per workspace since June, so
+// it was a UI change only, exactly as this comment used to predict.
 const WORKSPACE_FEATURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
 // URG-214: the workspace identity card's editors. Only meaningful once
@@ -43,6 +44,14 @@ export const LOGO_MIME_ALLOWLIST = ASSET_MIME_ALLOWLIST.cover_art;
 // MAX_WORKSPACE_LOGO_BYTES. Must stay the same constant the upload-url route
 // validates against, or the client advertises a limit the server refuses.
 export const LOGO_SIZE_LIMIT = MAX_WORKSPACE_LOGO_BYTES;
+
+type WorkspaceArtistListResponse = {
+  workspaceId?: string;
+  artists?: WorkspaceArtist[];
+  /** null means no ceiling, or a tier we could not resolve. Render nothing. */
+  artistLimit?: number | null;
+  error?: string;
+};
 
 type WorkspaceArtistResponse = {
   workspaceId?: string;
@@ -68,15 +77,21 @@ export type WorkspaceSettingsState = {
   removeLogo: () => void;
   /** Identity store hydration — gates both the name and logo skeletons. */
   identityHydrated: boolean;
-  // Workspace artist
-  artist: WorkspaceArtist | null | undefined;
-  artistInput: string;
-  setArtistInput: (value: string) => void;
-  isLoadingArtist: boolean;
-  isSavingArtist: boolean;
+  // Workspace artists (the roster)
+  artists: WorkspaceArtist[] | undefined;
+  /** null = no ceiling, or a tier we could not read. Show nothing either way. */
+  artistLimit: number | null;
+  isLoadingArtists: boolean;
+  /** The artist currently being renamed, so only that row shows a spinner. */
+  savingArtistId: string | null;
+  isAddingArtist: boolean;
   artistMessage: string;
   artistError: string;
-  saveArtist: () => void;
+  /** The artist currently being removed, so only that row shows its state. */
+  removingArtistId: string | null;
+  renameArtist: (artistId: string, name: string) => void;
+  addArtist: (name: string) => void;
+  removeArtist: (artistId: string) => void;
 };
 
 /**
@@ -91,10 +106,12 @@ export type WorkspaceSettingsState = {
  * did before tabs and the tab paints instantly on first open.
  */
 export function useWorkspaceSettings(userId: string, accessToken: string): WorkspaceSettingsState {
-  const [artist, setArtist] = useState<WorkspaceArtist | null | undefined>(null);
-  const [artistInput, setArtistInput] = useState('');
-  const [isLoadingArtist, setIsLoadingArtist] = useState(false);
-  const [isSavingArtist, setIsSavingArtist] = useState(false);
+  const [artists, setArtists] = useState<WorkspaceArtist[] | undefined>(undefined);
+  const [artistLimit, setArtistLimit] = useState<number | null>(null);
+  const [isLoadingArtists, setIsLoadingArtists] = useState(false);
+  const [savingArtistId, setSavingArtistId] = useState<string | null>(null);
+  const [isAddingArtist, setIsAddingArtist] = useState(false);
+  const [removingArtistId, setRemovingArtistId] = useState<string | null>(null);
   const [artistMessage, setArtistMessage] = useState('');
   const [artistError, setArtistError] = useState('');
   const [artistPrimed, setArtistPrimed] = useState(false);
@@ -132,38 +149,42 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
       isArtistCache
     );
     if (cache && cache.userId === userId) {
-      setArtist(cache.artist ?? undefined);
-      setArtistInput(cache.artist?.name ?? '');
+      setArtists(cache.artists);
       setArtistPrimed(true);
     }
   }, [userId]);
 
-  // Load the workspace artist behind the flag. Mirrors the logo loader's
-  // shape so the feedback paths and cleanup-on-unmount semantics stay
-  // consistent.
+  // Load the roster behind the flag. Mirrors the logo loader's shape so the
+  // feedback paths and cleanup-on-unmount semantics stay consistent.
+  //
+  // The ceiling is deliberately NOT cached alongside the artists: a ceiling
+  // changes when a plan changes, and a stale one would tell a manager who just
+  // upgraded that they are still capped. Same reasoning as the seat limit on
+  // the teammates list.
   useEffect(() => {
     if (!userId || !WORKSPACE_FEATURE_ENABLED || !accessToken) return;
     let cancelled = false;
 
     const load = async () => {
-      setIsLoadingArtist(true);
+      setIsLoadingArtists(true);
       try {
-        const response = await fetch('/api/workspace/artist', {
+        const response = await fetch('/api/workspace/artists', {
           headers: { Authorization: `Bearer ${accessToken}` },
           cache: 'no-store',
         });
-        const payload = (await response.json().catch(() => ({}))) as WorkspaceArtistResponse;
+        const payload = (await response.json().catch(() => ({}))) as WorkspaceArtistListResponse;
         if (cancelled) return;
         if (response.ok) {
-          setArtist(payload.artist ?? undefined);
-          setArtistInput(payload.artist?.name ?? '');
+          const list = payload.artists ?? [];
+          setArtists(list);
+          setArtistLimit(payload.artistLimit ?? null);
           writePersistedState<ArtistCache>(ARTIST_CACHE_KEY, SETTINGS_CACHE_VERSION, {
             userId,
-            artist: payload.artist ?? null,
+            artists: list,
           });
         }
       } finally {
-        if (!cancelled) setIsLoadingArtist(false);
+        if (!cancelled) setIsLoadingArtists(false);
       }
     };
 
@@ -246,6 +267,21 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
     let step: UploadStep = 1;
     let status: number | undefined;
     try {
+      // Shrink before uploading. Byte size alone never caught the file that
+      // broke this: a 1.1 MB PNG at 12500x12500 passed every check and then no
+      // browser would decode it, leaving a broken box that never even fired an
+      // error event for the fallback below to catch. See lib/downscale-image.ts.
+      const prepared = await prepareAvatarImage(file);
+      if (!prepared) {
+        setLogoError('Could not read that image. Try a JPEG, or export the PNG again.');
+        return;
+      }
+      // From here the PREPARED file is the upload: its name, type and size all
+      // have to travel together, or the signed path, the bytes we PUT and what
+      // the server validated stop describing the same thing.
+      const upload = prepared.file;
+      const uploadMimeType = upload.type || mimeType;
+
       const token = await getAccessToken();
       if (!token) throw new Error('Session expired. Please sign in again.');
 
@@ -256,9 +292,9 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          file_name: file.name,
-          mime_type: mimeType,
-          file_size: file.size,
+          file_name: upload.name,
+          mime_type: uploadMimeType,
+          file_size: upload.size,
         }),
       });
       const uploadUrlPayload = (await uploadUrlResponse.json().catch(() => ({}))) as {
@@ -274,8 +310,8 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
       step = 2;
       const storageResponse = await fetch(uploadUrlPayload.upload_url, {
         method: 'PUT',
-        headers: { 'Content-Type': mimeType },
-        body: file,
+        headers: { 'Content-Type': uploadMimeType },
+        body: upload,
       });
       if (!storageResponse.ok) {
         status = storageResponse.status;
@@ -292,7 +328,7 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
         },
         body: JSON.stringify({
           storage_path: uploadUrlPayload.storage_path,
-          file_name: file.name,
+          file_name: upload.name,
         }),
       });
       const recordPayload = (await recordResponse.json().catch(() => ({}))) as {
@@ -358,25 +394,37 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
     }
   };
 
-  const saveArtist = async () => {
-    if (!userId || !artist) return;
+  /** Persist a roster to both state and the cache, so the two cannot diverge. */
+  const commitRoster = (next: WorkspaceArtist[]) => {
+    setArtists(next);
+    writePersistedState<ArtistCache>(ARTIST_CACHE_KEY, SETTINGS_CACHE_VERSION, {
+      userId,
+      artists: next,
+    });
+  };
+
+  const renameArtist = async (artistId: string, name: string) => {
+    if (!userId) return;
+    const current = (artists ?? []).find((entry) => entry.id === artistId);
+    if (!current) return;
+
     setArtistError('');
     setArtistMessage('');
-    const trimmed = artistInput.trim();
+    const trimmed = name.trim();
     if (!trimmed) {
       setArtistError('Artist name cannot be empty.');
       return;
     }
-    if (trimmed === artist.name) {
+    if (trimmed === current.name) {
       setArtistMessage('No changes.');
       return;
     }
 
-    setIsSavingArtist(true);
+    setSavingArtistId(artistId);
     try {
       const token = await getAccessToken();
       if (!token) throw new Error('Session expired. Please sign in again.');
-      const response = await fetch('/api/workspace/artist', {
+      const response = await fetch(`/api/workspace/artists/${encodeURIComponent(artistId)}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -388,12 +436,11 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
       if (!response.ok || !payload.artist) {
         throw new Error(payload.error || 'Could not rename artist.');
       }
-      setArtist(payload.artist);
-      setArtistInput(payload.artist.name);
-      writePersistedState<ArtistCache>(ARTIST_CACHE_KEY, SETTINGS_CACHE_VERSION, {
-        userId,
-        artist: payload.artist,
-      });
+      const saved = payload.artist;
+      commitRoster((artists ?? []).map((entry) => (entry.id === artistId ? saved : entry)));
+      // Renaming rewrites the artist name cached on every one of that artist's
+      // releases, so say how many moved. It is the only visible sign that the
+      // rename reached further than this page.
       const releasesNote =
         typeof payload.releasesUpdated === 'number' && payload.releasesUpdated > 0
           ? ` (${payload.releasesUpdated} release${payload.releasesUpdated === 1 ? '' : 's'} updated)`
@@ -402,7 +449,75 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
     } catch (err) {
       setArtistError(errorMessage(err, 'Could not rename artist.'));
     } finally {
-      setIsSavingArtist(false);
+      setSavingArtistId(null);
+    }
+  };
+
+  const addArtist = async (name: string) => {
+    if (!userId) return;
+    setArtistError('');
+    setArtistMessage('');
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setArtistError('Artist name cannot be empty.');
+      return;
+    }
+
+    setIsAddingArtist(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch('/api/workspace/artists', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as WorkspaceArtistResponse;
+      if (!response.ok || !payload.artist) {
+        throw new Error(payload.error || 'Could not add artist.');
+      }
+      // Appended, not sorted: the list is oldest-first server-side and a new
+      // artist is the newest, so appending matches what a reload will show.
+      commitRoster([...(artists ?? []), payload.artist]);
+      setArtistMessage(`${payload.artist.name} added.`);
+    } catch (err) {
+      setArtistError(errorMessage(err, 'Could not add artist.'));
+    } finally {
+      setIsAddingArtist(false);
+    }
+  };
+
+  const removeArtist = async (artistId: string) => {
+    if (!userId) return;
+    const current = (artists ?? []).find((entry) => entry.id === artistId);
+    if (!current) return;
+
+    setArtistError('');
+    setArtistMessage('');
+    setRemovingArtistId(artistId);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch(`/api/workspace/artists/${encodeURIComponent(artistId)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        // The server's refusals name a number and say what to do about it
+        // ("has 3 releases. Move them first"), so they are surfaced verbatim
+        // rather than replaced with a generic failure.
+        throw new Error(payload.error || 'Could not remove this artist.');
+      }
+      commitRoster((artists ?? []).filter((entry) => entry.id !== artistId));
+      setArtistMessage(`${current.name} removed.`);
+    } catch (err) {
+      setArtistError(errorMessage(err, 'Could not remove this artist.'));
+    } finally {
+      setRemovingArtistId(null);
     }
   };
 
@@ -420,14 +535,17 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
     uploadLogo: (file: File) => void uploadLogo(file),
     removeLogo: () => void removeLogo(),
     identityHydrated,
-    artist,
-    artistInput,
-    setArtistInput,
-    isLoadingArtist: isLoadingArtist && !artistPrimed,
-    isSavingArtist,
+    artists,
+    artistLimit,
+    isLoadingArtists: isLoadingArtists && !artistPrimed,
+    savingArtistId,
+    isAddingArtist,
     artistMessage,
     artistError,
-    saveArtist: () => void saveArtist(),
+    removingArtistId,
+    renameArtist: (artistId: string, name: string) => void renameArtist(artistId, name),
+    addArtist: (name: string) => void addArtist(name),
+    removeArtist: (artistId: string) => void removeArtist(artistId),
   };
 }
 

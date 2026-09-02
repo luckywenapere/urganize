@@ -63,15 +63,18 @@ describe('isContactSalesPlan', () => {
     expect(isContactSalesPlan(null)).toBe(false);
   });
 
-  // CHANGED 2026-08-24, and the direction is the point: this used to assert
-  // true. 'label' is the one id that exists in both plan generations — legacy
-  // Label was the sales-led ₦800,000 roster plan, tier Label is the self-serve
-  // flagship — and a STORED 'label' can only ever be the tier, because the id
-  // was not permitted by subscriptions_plan_check until the tier migration
-  // added it. Reading it as sales-led sent a paying Label subscriber to a
-  // mailto instead of the checkout they were trying to reach.
-  it('treats a stored Label plan as self-serve, not sales-led', () => {
-    expect(isContactSalesPlan('label')).toBe(false);
+  // FLIPPED TWICE, so the history matters more than the current value. 'label'
+  // is the one id that exists in both plan generations: legacy Label was the
+  // sales-led ₦800,000 roster plan, tier Label launched as the self-serve
+  // flagship (2026-08-24, when this assertion was inverted to false), and on
+  // 2026-08-30 the founder made the tier sales-led too — so it reads true
+  // again, now for a reason that applies to BOTH generations.
+  //
+  // The consequence this assertion is really guarding: a Label subscriber who
+  // lapses is pointed at the mailto rather than a checkout. That is correct for
+  // a tier we quote by hand, and it is a real change for anyone already on it.
+  it('treats a stored Label plan as sales-led', () => {
+    expect(isContactSalesPlan('label')).toBe(true);
   });
 });
 
@@ -207,11 +210,15 @@ describe('summarizeBilling', () => {
     expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'label' })).title).toBe(
       'Label plan'
     );
-    // Not 'contact': the exit a paying Label customer gets is "change plan",
-    // and a lapsed one gets the picker. Either way, never a mailto.
-    expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'label' })).cta).toBe('change');
+    // 'contact' since 2026-08-30: Label is sales-led, so both a paying and a
+    // lapsed Label customer are pointed at us rather than at a self-serve
+    // picker they cannot buy from. This asserted 'change'/'plans' while the
+    // tier was purchasable.
+    expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'label' })).cta).toBe(
+      'contact'
+    );
     expect(summarizeBilling(snapshot({ accountStatus: 'expired', plan: 'label' })).cta).toBe(
-      'plans'
+      'contact'
     );
   });
 

@@ -201,7 +201,7 @@ export default async function PublicEpkPage({ params }: PageProps) {
             className="font-mono text-[11px] uppercase tracking-[0.18em]"
             style={{ color: FAINT }}
           >
-            Made with <span style={{ color: BRAND }}>Urganize</span> — the operating system for music business
+            Made with <span style={{ color: BRAND }}>Urganize</span>, the operating system for music business
           </a>
         </footer>
       </div>

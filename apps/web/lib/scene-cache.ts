@@ -20,7 +20,8 @@ export type SceneName =
   | 'plan'
   | 'capture'
   | 'song'
-  | 'coverart';
+  | 'coverart'
+  | 'timeline';
 
 export const SCENE_NAMES: readonly SceneName[] = [
   'metadata',
@@ -32,15 +33,18 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'capture',
   'song',
   'coverart',
+  'timeline',
 ];
 
 // Inlined at build time, same read every UI gate uses. The prefetch list must
 // respect it: with the flag off the calendar API routes 404, so prefetching
 // the scene burned one guaranteed-404 request per scoped release.
+const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
 const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
+const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
 
 /** Prefetch order: most-likely-opened first, so a user who taps a pill mid-
  * prefetch is most likely to find their scene already warm.
@@ -51,9 +55,16 @@ const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
  * would 404 on almost every release. It fetches its own draft directly.
  *
  * 'calendar' and 'capture' are present only when their feature flags are on,
- * for the same would-always-404 reason. */
+ * for the same would-always-404 reason.
+ *
+ * 'metadata' joined them 2026-08-27. It had been unconditional, but its fetcher
+ * hits /metadata AND /credits, and the credits route has always 404'd with the
+ * flag off — and readJson throws on a non-ok response. So with the flag off
+ * this prefetch already spent two requests per release and then threw; the
+ * metadata route is gated now too, which would have made it two guaranteed
+ * 404s. */
 export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
-  'metadata',
+  ...(METADATA_ENABLED ? (['metadata'] as const) : []),
   ...(COVER_ART_ENABLED ? (['coverart'] as const) : []),
   ...(SONG_UPLOAD_ENABLED ? (['song'] as const) : []),
   'files',
@@ -62,6 +73,41 @@ export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
   'pitch',
   ...(CAPTURE_ENABLED ? (['capture'] as const) : []),
 ];
+
+/**
+ * Resolve the `?scene=` param into the scene that is actually RENDERING, or
+ * null.
+ *
+ * Two jobs in one place, and the second is why this lives in lib rather than
+ * beside any one consumer: the param has to be a known scene name, AND its
+ * feature flag has to be on, because with a flag off the pill never renders and
+ * the API routes 404 — so a stale URL must read as "no scene open".
+ *
+ * WHY IT IS SHARED. This exact expression was hand-rolled in three places
+ * (WorkspaceView, which builds the scene body; TasksPanel, which decides
+ * which pill is lit; and now WorkspaceSkeleton, which has to reserve the same
+ * layout the real view will paint). They drifted once already — TasksPanel's
+ * copy was missing 'song' and 'coverart' long after the real gate had them —
+ * and a layout decision computed two ways is the bug class this consolidation
+ * exists to end.
+ *
+ * DELIBERATELY ONLY FIVE FLAGS. metadata / files / epk / pitch / plan are NOT
+ * gated here, matching the behaviour this replaces exactly: those scenes gate
+ * themselves inside ReleaseScenePanel and their own pills, and adding them here
+ * would change which scenes render rather than just consolidating the check.
+ * If one of them ever needs URL-level gating, it belongs here — but that is a
+ * behaviour change, not a tidy-up.
+ */
+export function resolveActiveScene(rawParam: string | null): SceneName | null {
+  if (!rawParam || !(SCENE_NAMES as readonly string[]).includes(rawParam)) return null;
+  const scene = rawParam as SceneName;
+  if (scene === 'calendar' && !CONTENT_CALENDAR_ENABLED) return null;
+  if (scene === 'capture' && !CAPTURE_ENABLED) return null;
+  if (scene === 'song' && !SONG_UPLOAD_ENABLED) return null;
+  if (scene === 'coverart' && !COVER_ART_ENABLED) return null;
+  if (scene === 'timeline' && !TIMELINE_ENABLED) return null;
+  return scene;
+}
 
 /** Within this window a cached scene is served with NO network call at all.
  * Matches useWorkspaceIdentityStore's 30s — long enough that the tap-around-
@@ -72,6 +118,31 @@ export const SCENE_FRESH_MS = 30_000;
  * covers "close the laptop, come back tomorrow" without ever showing data old
  * enough to mislead. */
 export const SCENE_PERSIST_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Scenes whose payload changes WITHOUT the owner doing anything, because a
+ * public form writes into them server-side. For these a fresh-looking cache
+ * entry can still be wrong, so SCENE_FRESH_MS must not suppress the network
+ * call: they paint from cache exactly as before and then always revalidate in
+ * the background on a real (non-prefetch) load.
+ *
+ * `metadata` carries the collaborator credit submissions, and the spec is
+ * explicit that a new submission has to be there when the owner looks. Without
+ * this, a submission landing inside the 30s window was invisible even after a
+ * full page reload, because the disk-adoption path returns a still-fresh
+ * persisted copy with zero requests.
+ *
+ * `capture` has the identical shape of bug (fans post leads to a public page)
+ * and is deliberately NOT included yet — that scene is not what this pass was
+ * asked to fix, and adding it here later is a one-line change.
+ */
+export const SCENE_REVALIDATE_ON_LOAD: Partial<Record<SceneName, boolean>> = {
+  metadata: true,
+};
+
+export function shouldRevalidateOnLoad(scene: SceneName): boolean {
+  return SCENE_REVALIDATE_ON_LOAD[scene] === true;
+}
 
 /**
  * Beyond this age a MEMORY entry must not be rendered at all — the load blocks
@@ -103,11 +174,16 @@ export const SCENE_HARD_EXPIRY_MS: Partial<Record<SceneName, number>> = {
  * editable document rather than a snapshot. Keeping it out of this type means
  * the store cannot be given a meaningless fetcher for it, and the compiler
  * enforces that rather than a comment.
+ *
+ * 'timeline' is out for the opposite reason: it fetches NOTHING. It is laid out
+ * entirely from the activities TasksPanel already has in props, so there is no
+ * payload to cache, no route to prefetch, and a fetcher for it would have to
+ * invent a request that does not exist.
  */
-export type CacheableSceneName = Exclude<SceneName, 'plan'>;
+export type CacheableSceneName = Exclude<SceneName, 'plan' | 'timeline'>;
 
 export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName =>
-  scene !== 'plan';
+  scene !== 'plan' && scene !== 'timeline';
 
 /**
  * Which scenes may touch localStorage.
@@ -138,6 +214,10 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   // restart and would be guaranteed expired by the next visit.
   song: false,
   coverart: false,
+  // Nothing to persist: the timeline is laid out from the activities the
+  // workspace already holds, so it has no payload of its own. See
+  // CacheableSceneName.
+  timeline: false,
 };
 
 /** How many releases' scenes to keep on disk. A manager works a couple of

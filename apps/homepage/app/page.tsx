@@ -9,9 +9,8 @@ import {
 import {
   FinalCTASection,
   HeroSection,
-  TemplatePlanSection,
+  StatsSection,
   ThreeFeaturesSection,
-  TransformationSection,
   WorkspaceShotSection,
 } from "./components/landing/Sections";
 
@@ -34,23 +33,39 @@ export default function Home() {
         <MarketingHeader />
 
         <main>
-          {/* Proof sits at screen two (2026-07-31 reorder), directly after
-              the hero, so the credibility check happens before the visitor
-              has already decided to leave. Trimmed 2026-08-13 (founder call:
-              the page was overwhelming): MirrorSection was cut because it
-              made the hero's WhatsApp/scattered-notes argument a third time,
-              and AskAISection was cut because it sent visitors off-site to
-              three AI chatbots one scroll before the final CTA. Rebuild both
-              from git history if either beat is ever wanted back. */}
+          {/* The page is five beats (2026-08-25 trim): hero + video, the
+              offer (stats), the product (screenshot), three features, the
+              final ask. Proof rides as one-line ProofLines under the hero
+              and final forms rather than as sections of its own. Removal
+              history: MirrorSection and AskAISection cut 2026-08-13
+              (founder call: the page was overwhelming — one repeated the
+              hero's argument a third time, the other sent visitors
+              off-site one scroll before the final CTA). Rebuild any of
+              these from git history if a beat is ever wanted back. */}
           {/* CommunitySection was REMOVED 2026-08-19 (founder call: nobody
               clicked it) — the page now ends on the final waitlist CTA, the
               journey's one terminal ask. The /community page and the
               footer's Community link survive; only the landing beat is
               gone. Rebuild from git history if it's ever wanted back. */}
           <HeroSection />
-          <TransformationSection />
+          {/* Stats added 2026-08-25 (founder-supplied figures — the same-day
+              removals in WorkspaceShot/FinalCTA asked for exactly these before
+              any stat beat returns): the offer in three cards, right under
+              the demo video. */}
+          <StatsSection />
+          {/* TransformationSection (the before/after quote rows) was REMOVED
+              2026-08-25, founder call: too bulky for a skimming visitor, and
+              every quoted voice survives elsewhere (hero + final-CTA
+              ProofLines here; full quotes on /for-managers, /for-executives
+              and /why-urganize). Rebuild from git history if the beat is
+              ever wanted back. */}
           <WorkspaceShotSection />
-          <TemplatePlanSection />
+          {/* TemplatePlanSection (the playbook excerpt) was REMOVED
+              2026-08-25, founder call, in the same trim as the
+              before/after rows above. The rollout-plan claim it carried
+              still leads the hero ("Urganize plans the rollout...") and
+              is spelled out in full on /features, /why-urganize and the
+              persona pages. Rebuild from git history if wanted back. */}
           <ThreeFeaturesSection />
           <FinalCTASection />
         </main>

@@ -15,7 +15,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Urganize for AI artists",
   description:
-    "Making the song got fast. The rollout did not. Urganize gives every drop the same 11-week plan, an owner on every activity and a press kit you send as one link.",
+    "Making the song got fast. The rollout did not. Urganize gives every drop a full rollout plan, an owner on every activity and a press kit you send as one link.",
   path: "/for-ai-artists",
 });
 
@@ -46,7 +46,7 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "The song took an afternoon. The rollout still takes weeks.",
-    body: "Create a release and Urganize lays out the whole rollout. 64 activities across 11 weeks, from locking the master to pulling your first-week numbers. You did not have to think of any of it, and you can delete whatever does not apply to how you work.",
+    body: "Create a release and Urganize lays out the whole rollout, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. You did not have to think of any of it, and you can delete whatever does not apply to how you work.",
     points: [
       "One template, shaped for each release",
       "Every activity dated around that release day",

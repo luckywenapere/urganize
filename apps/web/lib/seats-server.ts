@@ -66,15 +66,19 @@ export async function countTeamSeats(
  *
  * LIVE since 2026-08-24. This paragraph used to say the check was inert
  * because nothing could write `subscriptions.plan = 'manager'`; switching
- * NEXT_PUBLIC_FEATURE_PRICING_V2 on made Manager purchasable, so a team that
- * buys it is genuinely capped at four seats now. There is still deliberately no
- * flag check here: reachability is decided at checkout, and a second gate would
- * add a way for the two to disagree without adding any safety.
+ * NEXT_PUBLIC_FEATURE_PRICING_V2 on made Manager purchasable, and 2026-09-01
+ * did the same for Solo. There is still deliberately no flag check here:
+ * reachability is decided at checkout, and a second gate would add a way for the
+ * two to disagree without adding any safety.
  *
- * Who this can and cannot bite: only a team whose OWNER holds a paid `manager`
- * subscription. A trial, a comped team, a grandfathered `founding` deal and
- * every pre-tier plan id all resolve to the uncapped tier, so the flip capped
- * no existing customer — `entitlements.test.ts` asserts exactly that.
+ * Who this can and cannot bite: only a team whose OWNER holds a paid subscription
+ * on a capped tier. A trial, a comped team, a grandfathered `founding` deal and
+ * every pre-tier plan id all resolve to the uncapped tier, so neither flip capped
+ * an existing customer — `entitlements.test.ts` asserts exactly that.
+ *
+ * The ceiling is read from the tier rather than named here on purpose: Solo's is
+ * 2 and Manager's is 4, and hard-coding either would be the third copy of a
+ * number that already lives in @urganize/pricing.
  */
 export async function checkSeatAllowance(
   client: SupabaseClient,

@@ -49,15 +49,19 @@ The six features that constitute v1:
 
 **Scope expansion (2026-08-14):** a sixteenth surface, **fan email capture**, was consciously sanctioned by the founder. It moves nothing off the out-of-scope list below, and the two nearest lines are worth naming because the distinction is the whole reason this is buildable: **"pre-save campaigns" is NOT crossed** — nothing calls a DSP, and the destination is a plain URL the manager types, so this is a link-and-a-graphic page, not a pre-save mechanism; **"listener profile generation" is NOT crossed** — a lead is an email address on one release's page, never merged across releases and never enriched. It honors the release-spine principle: a capture page exists only for a release. Per release, the owner authors one public page (`/capture/[token]`) with a graphic, a headline, an incentive line and a destination link; a fan gives an email and the link is revealed **on the same screen**, and the collected emails come back in-app for export. Storage and display only — nothing in this product sends email, and there is no ESP integration. **The documented conversion knowledge is the point of the feature, not decoration:** `lib/capture-playbook/` is a hand-written, version-controlled markdown source plus a deterministic TS grader (the `release-templates` discipline applied to a surface that could easily have been a prompt), and it grades the page live as the manager writes it. **No AI anywhere in it** — a model asked "is this headline good" answers differently every time and cannot be tested. Flag-gated behind `NEXT_PUBLIC_FEATURE_CAPTURE` (default off; every capture API route 404s and the public page 404s when off). This is the tenth sanctioned expansion — the "do not exceed" rule still holds for everything else.
 
+**Scope expansion (2026-08-30):** a seventeenth surface, **events** — shows, setlists and DJ packs — was consciously sanctioned by the founder. **It is the largest expansion so far and the only one that moves THREE lines off the out-of-scope list at once**: standalone events, touring / live show coordination, and a song library as its own entity. It also does something none of the previous sixteen did — it gives the release a SIBLING. Release and Event are peers, both hanging off the artist, and **the Song is the join between them**: the row a rollout is built around is the row dragged into a setlist. Principle 1 is amended accordingly (see the note there), and this is the one expansion that should be re-read before anyone cites the release spine as settled. The reasoning the founder gave: shows happen year round and releases do not, so the product is opened during a rollout and closed for the eight weeks between — a manager runs a show out of a WhatsApp thread, a voice note and a Drive folder the DJ cannot open on his phone, and the two things that break are the DJ arriving without the tracks and a 38 minute set built for a 25 minute slot. Nine tables, all flag-gated behind `NEXT_PUBLIC_FEATURE_EVENTS` (default off; every route 404s and the public pack page reports itself unavailable when off). Full detail in "Events" under Working notes, and the six load-bearing schema decisions in the header of `supabase/migrations/20260830120000_events.sql`. This is the eleventh sanctioned expansion — the "do not exceed" rule still holds for everything else.
+
+**Scope expansion (2026-08-30):** an eighteenth surface, the **Timeline view**, was consciously sanctioned by the founder ("Go ahead", after the two blocking engineering questions on the spec were answered). It is the lightest expansion on this list and arguably not one at all: it adds **no object, no table, no migration and no API route**, and the v1 hard list already uses the word — item 5 describes event milestones as "dated points on the release timeline". What it adds is a second way to LOOK at activities the workspace already holds: every activity on a week axis anchored to release day, phases collapsible, a today line, and drag to reschedule. It moves nothing off the out-of-scope list; the nearest line, "analytics dashboards", is not crossed, because it reports nothing and computes no metric — it positions rows on a date axis. It honors the release-spine principle by construction (an activity exists only for a release). Internally this is the Gantt view; **in product it is called Timeline**, and every user-visible string says so. Flag-gated behind `NEXT_PUBLIC_FEATURE_TIMELINE` (default off; with it off the pill never renders and `?scene=timeline` reads as no-scene). Phase 1 only — the roster view across releases and UrgAns rescheduling are Phase 2, deliberately not built. This is the twelfth sanctioned expansion — the "do not exceed" rule still holds for everything else.
+
 **Out of scope for v1, no exceptions:**
 
-- Standalone events (events not tied to a release)
+- Standalone events (events not tied to a release) — **EXCEPTION (2026-08-30): now built as the events surface.** The founder consciously moved this line; a show hangs off the artist, not off a release. This is the fifth sanctioned exception to this list, and one of three moved by the same decision (see "Scope expansion (2026-08-30)" above) — do not read it as license to add other items from this list.
 - Notes / idea capture / voice memos / track ideas — **EXCEPTION (2026-08-09): text notes are now being built as the Notes surface.** The founder consciously moved this line; see "Scope expansion (2026-08-09)" above. Global quick capture with an optional release link, private to the owner, at `/dashboard/notes`. **Voice memos and track-idea audio are NOT covered by this exception and stay out of scope.** This is the fourth sanctioned exception to this list (Chappi below was the first, the metadata hub above the second, native mobile apps below the third) — do not read it as license to add other items from this list.
 - Folders as a feature
 - Royalty splits / split sheet automation beyond storage
 - Sync licensing
 - Merch
-- Touring / live show coordination
+- Touring / live show coordination — **EXCEPTION (2026-08-30), and a NARROW one.** Events cover a single show: its run of show, its setlists and the pack sent to the DJ. Guest lists, budgets, settlements, travel and multi-day festival routing were all named as non-goals in the spec and stay out — that is the line that stops this becoming a touring module.
 - Native mobile apps (iOS, Android) — **EXCEPTION (2026-07-21; recorded here 2026-08-07): now being built as a Capacitor native shell around the existing web app.** The founder consciously moved this line; see "Scope expansion (2026-07-21...)" above for the full decision and `docs/mobile/capacitor-audit.md` for the technical audit. This is the third sanctioned exception to this list (Chappi below was the first, the metadata hub above the second, Notes above the fourth) — do not read it as license to add other items from this list.
 - Third-party music platform integrations (DistroKid, Spotify, Apple Music, Instagram, etc.)
 - Notifications inbox (transactional email is fine; in-app inbox is v2)
@@ -67,7 +71,7 @@ The six features that constitute v1:
 - Listener profile generation
 - Credit submissions / shareable credit links — **EXCEPTION (2026-07-31): now being built as the release metadata hub's collaborator credit capture.** The founder consciously moved this line; one shareable, no-login link per release lets collaborators submit publishing/distribution credits through a public form, landing on the in-app Metadata page (see "Scope expansion (2026-07-31)" above). Storage and display only — no automation, no signing. This is the second sanctioned exception to THIS list (Chappi below was the first; native mobile apps below is the third, Notes above the fourth) — do not read it as license to add other items from this list.
 - AI chat / general-purpose AI assistant — **EXCEPTION (2026-07-13): now being built as Chappi.** The founder consciously moved this line; Chappi is the conversational AI front door, at its own dedicated page (`/dashboard/urgans`, see "Chappi — conversational AI front door" under AI integration). This was the first sanctioned exception to this list — the metadata hub above is the second, native mobile apps above is the third, Notes above is the fourth; do not read any of these as license to add other items from this list.
-- Track / song library as separate entities (assets cover this for v1)
+- Track / song library as separate entities (assets cover this for v1) — **EXCEPTION (2026-08-30): `songs` and `song_versions` are now real tables.** Assets genuinely could not cover it: `assets_scope_check` requires every row to belong to a release or a task, and a back-catalog song belongs to neither, so serving the event side through `assets` would have meant weakening that constraint for every existing asset. Nothing about a song is duplicated from the release side — it is the join between the two.
 - Collaborators directory as a standalone feature (assignees on tasks is enough)
 
 When a feature request lands that's on this "out of scope" list — even if it's a small ask, even if a user wants it — the answer is *v2*. Do not add it to v1 to be helpful. The discipline of saying no is the product strategy.
@@ -78,7 +82,7 @@ When a feature request lands that's on this "out of scope" list — even if it's
 
 These are the principles that govern v1 build decisions. When in doubt, return to these.
 
-1. **The release is the spine.** Every feature serves a release. If you find yourself building something that doesn't tie back to a specific release, stop and ask whether it belongs in v1. **The workspace's scoped release view (`/dashboard?release=<id>`) is where the product converges** — the standalone release detail page (`/dashboard/releases/[releaseId]`) that used to hold this role was removed 2026-08-04 (founder call) and its content (Activities, Motion progress, Tailor plan, Generate status update, the one-time getting-started guide) absorbed into the workspace. The workspace is the single navigational + working surface; new features attach to the release (via a scoped-header pill, same as Metadata/Calendar/Files/Press kit), not to standalone surfaces.
+1. **The release is the spine.** Every feature serves a release. If you find yourself building something that doesn't tie back to a specific release, stop and ask whether it belongs in v1. **The workspace's scoped release view (`/dashboard?release=<id>`) is where the product converges** — the standalone release detail page (`/dashboard/releases/[releaseId]`) that used to hold this role was removed 2026-08-04 (founder call) and its content (Activities, Motion progress, Tailor plan, Generate status update, the one-time getting-started guide) absorbed into the workspace. The workspace is the single navigational + working surface; new features attach to the release (via a scoped-header pill, same as Metadata/Calendar/Files/Press kit), not to standalone surfaces. **AMENDED 2026-08-30: the release now has a sibling.** Events (shows) hang off the ARTIST, not off a release, and the Song is the join between the two — so "does this tie back to a release?" is no longer the whole test. The rest of this principle is unchanged and still binds everything release-shaped: a metadata hub, a press kit, a content calendar and a capture page are all still release scenes, and a new feature that IS about a release still attaches to the workspace rather than growing its own page. What changed is that "it does not tie back to a release" is now a question with two possible right answers instead of one, and the second one is a founder call, not a default (see "Scope expansion (2026-08-30)").
 
 2. **Templates carry domain knowledge; AI is a removable polish layer.** Hand-crafted release templates are the product's IP. AI adjusts them and writes prose around them. If AI failed tomorrow, the product would still work — users pick a template, get a plan, edit it, run their release. Build it so AI is *removable* without the product dying. (Exception under active build: **Chappi**, the conversational front door — see AI integration. It's a conscious expansion of the AI surface, but still honors this principle's spirit: Chappi degrades to a deterministic command bar + action chips when no model is configured.)
 
@@ -311,6 +315,12 @@ Current schedules, both daily and both approximate — Hobby precision is ±59 m
 - Route handlers: always `route.ts`. Per-domain helpers in `_shared.ts`.
 - DB columns: `snake_case`. TS types for DB rows: `camelCase`. (Legacy `Db*` prefixed types were removed — they drifted from the schema and were unused.)
 
+**Commit authorship (2026-08-27, founder call; audited 2026-08-28).** Every commit in this repo should be authored **`Lucky Wenapere <luckydio10@gmail.com>`** — that address is the one GitHub resolves to the account, so it is what makes blame, the contribution graph and Vercel's per-deployment attribution read correctly. The 2026-08-28 audit found 629 of the 631 commits on `main` authored that way (one other author is `prosper20`, a real contributor; the single exception is recorded in the last bullet). Three things hold that in place; do not remove any of them without replacing it:
+
+- **`.claude/settings.json`** carries `attribution` (`commit: ""`, `pr: ""`, `sessionUrl: false`), which suppresses the assistant's commit trailer, PR-description line and session link, and a `SessionStart` hook that sets the **repo-local** identity (`.git/config` only — never the machine's global config). A fresh container's global git identity is not this one, so the hook is what corrects it each session. Project hooks require the workspace-trust step, so on the very first session in a new clone it may not have run yet — check `git config --local user.email` before the first commit.
+- **Keep squash as the merge method** (already recorded under Deploy Configuration) — but know exactly what it does and does not cover, because this bullet overstated it until 2026-08-28. Under squash, GitHub rewrites author → PR author and committer → `GitHub`, and re-signs the result, which is why merged work on `main` reads correctly and shows Verified. **It governs the merge path and nothing else.** Measured 2026-08-28: of 631 commits on `main`, **381 were committed by GitHub (squash) and 248 arrived by direct push** — and a direct push keeps whatever identity the container had, since no squash rewrite ever sees it. So there are two ways this regresses, not one: switching to a merge commit or a rebase merge (which lands branch commits verbatim, carrying whatever identity and signature they were made with), and pushing straight to `main` from a container whose identity was never corrected. The second is not hypothetical — it produced `1408c76` (see below). **The repo-local identity hook in the first bullet is the only thing covering the direct-push path**, so `git config --local user.email` is worth checking before any direct push to `main`, not just before the first commit of a session.
+- Commits already on `main` that carry an assistant trailer are history and stay as they are; removing them would mean rewriting and force-pushing the branch Vercel deploys from. The 2026-08-28 audit put numbers on it: **319 of 631 commit messages** carry a `Co-authored-by:` trailer or a session link (194 the trailer alone, 125 both), spanning 2026-05-14 to 2026-08-27. Those affect neither authorship, blame nor the graph — GitHub just renders a co-author on the commit page. **One commit is a genuine exception and was deliberately left alone (founder call, 2026-08-28): `1408c76` ("feat(urgans): put overdue work… (#384)", 2026-08-24) is authored AND committed by `Claude <noreply@anthropic.com>`**, because it was a direct push and nothing reattributed it. Re-authoring it means rewriting the 42 commits from it forward, and **41 of those are GitHub-signed** — any rewrite re-signs them with the container's key (`/home/claude/.ssh/commit_signing_key.pub`, which is not registered to the account) or leaves them unsigned, so 41 commits would flip Verified → Unverified permanently, `abc407a` among them. One Claude-authored commit out of 631 was judged the cheaper of the two. Do not "tidy" this later without re-reading that trade.
+
 ---
 
 ## Resolved v1 blockers
@@ -424,6 +434,7 @@ All six v1 scope items are now built in code. Internal use continues throughout 
 - **If a request would violate a principle in this file, flag it before proceeding.** Don't silently comply with requests that contradict the architectural principles.
 - **When you find anti-patterns documented here** (the schema-missing fallback), do not propagate them. Fix or work around them; don't extend them.
 - **The "Resolved v1 blockers" section is closed.** If you discover a new v1 blocker, surface it immediately before proceeding.
+- **Anything the user has to READ or COPY goes in the reply, not a Bash command.** Tool output is shown to the assistant, not reliably to the user, so `cat`-ing a file at them delivers nothing — this happened with a migration on 2026-08-25 and the founder's answer was "I cant see the sql you want me to run". **Migration SQL especially: paste the whole file into a fenced ```sql block in the message.** He applies migrations by hand in the Supabase dashboard, and `supabase/migrations/` is the only sanctioned way to change schema (principle 9), so every feature here eventually needs its SQL handed over that way. Same for anything else meant to be copied — an env block, a generated config, a command to run. Reading a file to understand it is what Bash is for; delivering it to a human is not.
 
 ---
 
@@ -637,7 +648,7 @@ The artist data model is changing from "owner-scoped, free-text duplicates every
 - **`releases.artist_name`** is a write-through read-cache. UI surfaces (workspace card, scope pill, task drawer, release detail header) keep reading it because it is denormalized on the release row and avoids the join. Never mutate it directly — it gets clobbered on the next rename. Mutate through `artist_id`.
 - **`artists.owner_user_id`** is retained for the destruction model (`ON DELETE CASCADE` to `auth.users`), the existing RLS pattern, and three lookup paths in `app/api/releases/route.ts`. A follow-up will repoint those at `workspace_id` and drop `owner_user_id`.
 - **`profiles.artist_name`** is retired as an artist source. The legacy "Artist profile" editor in Settings writes to it but no longer feeds any new code path. **The column still has four live readers** (`components/support/SupportChat.tsx`, `app/api/admin/pricing-validation/route.ts`, `components/onboarding/useOnboardingWizard.ts` (the `firstName` derivation), plus the read-gate at `lib/auth-store.ts:454`). The column drop is staged in `supabase/migrations/99999999_artists_workspace_cleanup_DO_NOT_APPLY_YET.sql` and gated on those four readers being removed first.
-- **One-artist-per-workspace is UI-only.** The schema permits multiple artists per workspace (partial unique index allows many rows with NULL `workspace_id`; nothing prevents multiple non-NULL `workspace_id` rows with distinct slugs). Adding an "add another artist" affordance and listing UI lifts the limit without a migration.
+- ~~**One-artist-per-workspace is UI-only.**~~ **LIFTED 2026-08-30 — a team can hold several artists; see "Artist rosters" below.** This entry predicted the shape of that change exactly ("adding an 'add another artist' affordance and listing UI lifts the limit without a migration"), and that is what it took: no migration, because the schema has permitted many artists per workspace since Migration 2's partial unique index on `(workspace_id, slug)`.
 
 **Implicit-artist release create:** Behind the flag, `CreateReleaseModal` does not collect any artist input. `POST /api/releases` resolves the workspace (`ensureOwnedWorkspace`), looks up `getWorkspaceArtist(workspace.id)`, and uses that artist's id + name. If no workspace artist exists yet, the legacy lookup-or-create branch still fires but scopes the new artist row to the workspace via `workspace_id`. The implicit path is the new normal; the lookup-or-create branch is the recovery seam for first-release-in-new-workspace.
 
@@ -690,7 +701,7 @@ A design/marketing review found the homepage misrepresenting the product and gat
 - **Reprice (2026-07-15, full Monthly retier):** Monthly ₦17,000→₦150,000 / $26→$100, Annual ₦170,000→₦1,500,000 / $260→$1,000 (10× monthly — the exact "2 months free" ratio the pre-07-14 tier had, applied to the new base). This is the display/code half of finally closing the 07-14 gap noted above. **Operational step DONE for NGN (2026-07-20, URG-162):** two new Live Paystack Plan objects created — "Urganize Monthly NGN (2026)" `PLN_fcwtgnjs90ca71n` (₦150,000/mo) and "Urganize Annual NGN (2026)" `PLN_qmec1u8urppfu35` (₦1,500,000/yr) — and `PAYSTACK_PLAN_MONTHLY_NGN` / `PAYSTACK_PLAN_ANNUAL_NGN` repointed in Vercel (`urganize` project, Production+Preview) with a production redeploy verified Ready. Old Plan objects left untouched (any subscriber bound to one keeps renewing at their original rate; the reprice-time audit found zero real Monthly-tier subscribers anyway). **USD half is BLOCKED at the account level: the Paystack account only offers NGN in plan creation** (this also explains the mislabeled legacy "PAYSTACK_PLAN_LABEL_USD" plan, which is actually ₦750,000 NGN — a previous attempt hit the same wall). There are no `PAYSTACK_PLAN_*_USD` env vars in Vercel at all, so USD checkout 500s with "plan not configured" — true before and after this change. To enable USD billing: ask Paystack support to enable USD/international payments, then create the 2 USD plans ($100/mo, $1,000/yr) and add the two env vars. A live audit at reprice time found **zero real Monthly-tier subscribers** in `subscriptions` (the only 3 rows present are dead `trial_claim`-era artifacts from the retired card-on-file trial flow — `amount: 0`, no `paystack_subscription_code`, `expires_at` lapsed since March — kept "paid" only by the `profiles.is_subscribed` back-compat branch in `resolveSnapshot`, unrelated to real billing), so no grandfathering policy was needed. ~~Known, accepted state: Annual now exceeds Label in Naira~~ **Resolved 2026-07-15: Label was switched to a "Contact us" sales-led tier (see the Label contact-sales note above), so there's no Label price to invert against — the ladder inversion is moot.**
 - **Reprice (2026-08-16, NGN legs only — founder call):** Monthly ₦150,000→**₦3,500**, Annual ₦1,500,000→**₦35,000**. Annual holds the "10× monthly / 2 months free" ratio every prior tier has kept. Two things this pass deliberately did NOT do, both of which are live gaps rather than oversights: (1) **the USD legs are untouched** ($100/mo, $1,000/yr), so the `/locked` currency toggle now shows two prices that are not the same offer (₦3,500 ≈ $2.30) — tolerable only because USD checkout has never worked (no `PAYSTACK_PLAN_*_USD` env vars exist; the Paystack account offers NGN only in plan creation), so reprice or hide the USD leg before USD billing is ever switched on; (2) **no new Paystack Plan objects were created**, so `PAYSTACK_PLAN_MONTHLY_NGN` / `PAYSTACK_PLAN_ANNUAL_NGN` still point at the ₦150,000 / ₦1,500,000 Plans and checkout will **advertise ₦3,500 and charge ₦150,000** until the founder mints two new Live Plans and repoints those env vars in Vercel (`urganize` project, Production+Preview). That display-vs-Plan gap is exactly what the 2026-07-14 pass shipped and the 2026-07-20 pass had to close — this is the third time it has come up, so treat it as the default follow-up on any reprice, not an edge case. Label untouched (₦800,000 / $1,250, and `contactSales` so no figure displays). **No changelog entry or version bump** — the Versioning section's app-only scope rule states pricing display updates count as marketing.
 - **Follow-up status:** Real workspace screenshots landed 2026-06-11 (staged by the founder; `public/images/product/workspace-releases.png` + `workspace-tasks.png`, shown in `WorkspaceShotSection` and inside `TemplatePlanSection`) — retake them whenever the UI meaningfully changes. Testimonial now credits Adenaiye Miracle (Artist Manager) with permission; the quote is her verbatim words — never publish words she hasn't approved.
-- **Repositioned (2026-08-19, founder brief):** the locked marketing positioning is now **"Urganize is the AI workspace for music executives working with ambitious artists"** — executives (label heads, A&R, VP Ops) are the buyer and the hero; artists are ecosystem advocates, never the addressee. Hard language rules for ALL marketing copy: no "system of record", no container/location metaphors ("one home", "lives in one place" — the old hero and OG card were the canonical violations), "workspace" allowed, fifth-grader readability, **no Oxford comma in house copy** (verbatim customer quotes exempt). The homepage, `lib/seo.ts` strings (which feed the four JSON-LD schemas), `LANDING_KEYWORDS` and the OG card were rewritten in the first pass (`SHARE_IMAGE_VERSION` bumped per URG-156; the card's baked tagline is now "Every artist. Every release. On plan."); the ProductMenu pages and persona pages follow in two sweep PRs. New public claims, all founder-supplied (2026-08 brief): 7 founding teams / 10 artists / 2 active releases (WorkspaceShot label), 43% convert to paid + no sales team + Founding Member cohort capped at 10 teams with lifetime price lock (FinalCTA line, echoed on /pricing) — update or remove the moment any stops being true. All prior rules here (honesty rule, verbatim-quote sign-off, data-nosnippet pairing, screenshot currency) still bind. **Known doc drift, deliberately left:** this file's product-scope "Target user for v1" paragraph predates this positioning and was not rewritten — marketing speaks to executives; the v1 build-scope description remains the historical record it was.
+- **Repositioned (2026-08-19, founder brief):** the locked marketing positioning is now **"Urganize is the AI workspace for music executives working with ambitious artists"** — executives (label heads, A&R, VP Ops) are the buyer and the hero; artists are ecosystem advocates, never the addressee. Hard language rules for ALL marketing copy: no "system of record", no container/location metaphors ("one home", "lives in one place" — the old hero and OG card were the canonical violations), "workspace" allowed, fifth-grader readability, **no Oxford comma in house copy** (verbatim customer quotes exempt). The homepage, `lib/seo.ts` strings (which feed the four JSON-LD schemas), `LANDING_KEYWORDS` and the OG card were rewritten in the first pass (`SHARE_IMAGE_VERSION` bumped per URG-156; the card's baked tagline is now "Every artist. Every release. On plan."); the ProductMenu pages and persona pages follow in two sweep PRs. New public claims, all founder-supplied (2026-08 brief): 7 founding teams / 10 artists / 2 active releases (WorkspaceShot label), 43% convert to paid + no sales team + Founding Member cohort capped at 10 teams with lifetime price lock (FinalCTA line, echoed on /pricing) — update or remove the moment any stops being true. **Two of those were REMOVED from the landing page 2026-08-25 (founder call), in the same pass that cut the row titles from `TransformationSection`:** the WorkspaceShot proof-numbers label is gone entirely (the screenshot is the proof that beat needs), and FinalCTA's Founding Member + 43% + no-sales-team line is gone (the ask plus one real quote is the whole beat now). The removed strings are quoted verbatim in a comment at each site, so restoring them means supplying fresh numbers rather than reconstructing old ones. **`/pricing` still carries its own, shorter Founding Member line** ("...price locked for life. Still open.") — deliberately left, so the two pages no longer mirror each other and the old never-disagree rule between them no longer applies. All prior rules here (honesty rule, verbatim-quote sign-off, data-nosnippet pairing, screenshot currency) still bind. **Known doc drift, deliberately left:** this file's product-scope "Target user for v1" paragraph predates this positioning and was not rewritten — marketing speaks to executives; the v1 build-scope description remains the historical record it was.
 
 ---
 
@@ -751,12 +762,285 @@ The third sanctioned v1 scope expansion (see the 2026-07-30 note in "v1 scope").
 
 An MCP endpoint at **`POST /api/mcp`** exposes Chappi's existing tool surface to an external MCP client (Claude Code / Claude Desktop), so the founder can read and mutate releases/tasks from outside the app. **Not a scope expansion:** it's a second access path to the already-sanctioned Chappi tool registry, not a new feature — no new tools, no new business logic. Internal-only → no ledger entry/version bump (Versioning rules).
 
-- **Founder-only, env-bound.** `MCP_ACCESS_KEY` (bearer secret) + `MCP_USER_ID` (the `auth.users` id every call acts as). Presence of BOTH is the feature switch — unset → the route 404s (dark, mirroring the flag-off 404s). Deliberately no `NEXT_PUBLIC_FEATURE_MCP`: nothing reaches the client bundle, and a separate flag would only create a half-configured state. Server-only runtime vars, so no `turbo.json` entry (same as `CRON_SECRET`/`CHAPPI_API_KEY`). No per-user keys, no DB table, no Settings UI, no OAuth — claude.ai web connectors (OAuth 2.1 + DCR) are a separate future issue.
+- **Founder-only, env-bound.** `MCP_ACCESS_KEY` (bearer secret) + `MCP_USER_ID` (the `auth.users` id every call acts as). Presence of BOTH is the feature switch — unset → the route 404s (dark, mirroring the flag-off 404s). Deliberately no `NEXT_PUBLIC_FEATURE_MCP`: nothing reaches the client bundle, and a separate flag would only create a half-configured state. Server-only runtime vars, so no `turbo.json` entry (same as `CRON_SECRET`/`CHAPPI_API_KEY`). ~~No per-user keys, no DB table, no Settings UI, no OAuth — claude.ai web connectors (OAuth 2.1 + DCR) are a separate future issue.~~ **Superseded 2026-08-25: per-user OAuth shipped — see "Per-user MCP access, over OAuth 2.1" below.** Everything else in this section still describes the founder-key path exactly, and that path is untouched; it is now one of two ways in.
 - **Transport hand-rolled, no new dependency.** `lib/mcp/protocol.ts` is a pure JSON-RPC layer (~200 lines) covering the five methods a stateless server needs: `initialize`, `notifications/initialized`, `ping`, `tools/list`, `tools/call`. `@modelcontextprotocol/sdk`/`mcp-handler` would have added a dependency, the repo's first catch-all route segment, and session machinery for that small a surface — the same call the admin hub's Growth chart made against chart.js. Stateless is load-bearing: **never emit `Mcp-Session-Id`** (issuing one commits us to session semantics), GET/DELETE are 405, responses are plain JSON (no SSE). Batch arrays are rejected (-32600). **A failed tool is a successful call with `isError: true`** — JSON-RPC errors are reserved for protocol problems, so the model can see failures instead of the transport eating them.
 - **Tools = `CHAPPI_TOOLS` minus `EXCLUDED_TOOL_NAMES`** (`lib/mcp/tools.ts`), still **11** after the 2026-08-14 expansion took Chappi to 45: the four reads plus create_release, create_task, create_note, update_task, complete_task, reopen_task, generate_status_update. The list derives automatically, so a new Chappi tool joins MCP unless it is excluded — `protocol.test.ts` asserts the count, which is the tripwire that makes that decision conscious. **Every tool added by the full-control expansion is excluded**, for two separate reasons: the gated ones (`delete_release`, `delete_task`, `delete_note`) have no confirmation UI over MCP, and the rest reach REST routes that don't accept the MCP internal-actor bearer (the allowlist is still exactly four routes) so they would 401 anyway. Opting one in means switching its route to `requireAuthenticatedAdminOrInternal` AND bumping the count — do not do it for a gated tool at all. `navigate` is excluded because it returns a `clientAction` for a React router that doesn't exist off-browser; `clientAction` is dropped from every MCP result for the same reason. `lib/chappi/**` is imported, never edited — the two surfaces can't drift. Read the schema off the registry's camelCase `inputSchema`, NOT via `getChappiToolSchemas()` (which renames to Anthropic's `input_schema`).
-- **The internal-actor auth branch** is the one non-obvious piece. Four mutating tools work by internal fetch to our own REST routes (preserving template instantiation / assignee validation / notifications — see the `lib/chappi/tools.ts` header), and those routes validate a Supabase JWT an MCP client doesn't have. So `app/api/_shared/auth.ts` gained `requireActiveAuthenticatedUserOrInternal` + `requireAuthenticatedAdminOrInternal`: a request whose bearer timing-safe-equals `MCP_ACCESS_KEY` resolves to `MCP_USER_ID` via `auth.admin.getUserById`, then still passes the paywall gate (parity with the UI). **There is no acting-user header on purpose** — the binding is env-side, so a leaked key can only ever act as that one account. **Exactly four routes opt in** (`POST /api/releases`, `POST /api/tasks`, `PATCH /api/tasks/[id]`, `POST /api/releases/[releaseId]/generate-status`); every other route keeps the plain helpers and rejects the key with a normal 401. Do not broaden this to new routes without a reason as concrete as the internal-fetch constraint.
+- **The internal-actor auth branch** is the one non-obvious piece. Four mutating tools work by internal fetch to our own REST routes (preserving template instantiation / assignee validation / notifications — see the `lib/chappi/tools.ts` header), and those routes validate a Supabase JWT an MCP client doesn't have. So `app/api/_shared/auth.ts` gained `requireActiveAuthenticatedUserOrInternal` + `requireAuthenticatedAdminOrInternal`: a request whose bearer timing-safe-equals `MCP_ACCESS_KEY` resolves to `MCP_USER_ID` via `auth.admin.getUserById`, then still passes the paywall gate (parity with the UI). **There is no acting-user header on purpose** — the binding is env-side, so a leaked key can only ever act as that one account. ~~**Exactly four routes opt in**~~ **FIVE since 2026-08-25** (`POST /api/releases`, `POST /api/tasks`, `PATCH /api/tasks/[id]`, `POST /api/releases/[releaseId]/generate-status`, `POST /api/notes`); every other route keeps the plain helpers and rejects the key with a normal 401. The fifth closes a bug that shipped alongside this section: `create_note` was exposed over MCP from day one and always 401'd, because five exposed tools proxy REST routes and only four routes had opted in. There is a structural test for it now — see the section below. Do not broaden this to new routes without a reason as concrete as the internal-fetch constraint.
 - **Also:** `apps/web/vitest.config.ts` gained the `@/*` path alias so lib modules under test can import across directories the way the app does.
 - **Activation:** set both env vars in Vercel `Web` production, then `claude mcp add --transport http urganize https://app.urganize.app/api/mcp --header "Authorization: Bearer <key>"`.
+
+---
+
+## Per-user MCP access, over OAuth 2.1 (2026-08-25)
+
+Founder request: *"Figure out a way for all users to take context to any LLM of
+their choice through Urganize consistently through MCP probably."*
+
+Every customer can now connect their own LLM client — claude.ai, Claude Desktop,
+ChatGPT, Claude Code, Cursor — to their own workspace, and take their release
+context with them. Behind `NEXT_PUBLIC_FEATURE_MCP_CONNECT`, which is **ON in
+production since 2026-08-25** — the migration is applied and the OAuth flow is
+confirmed end to end (see Verified below; one tool call is the only step left).
+The founder-key path above is untouched, unflagged and independent: either, both,
+or neither may be switched on.
+
+**Not a scope expansion.** MCP shipped 2026-07-31 and this file recorded it as
+"a second access path to the already-sanctioned Chappi tool registry, not a new
+feature". This is the same registry reaching the same data for the same reasons;
+what changed is who may hold a credential.
+
+**The external fact that decided the architecture, and it is worth re-checking
+before anyone "simplifies" this into a token.** Claude Code accepts a static
+bearer via `--header`. **claude.ai web and Claude Desktop do not:** their
+custom-connector flow assumes OAuth 2.1 and attempts Dynamic Client
+Registration on connect, with no "no auth" option and no static-header fallback
+(anthropics/claude-ai-mcp#402, closed as not planned). ChatGPT connectors want
+OAuth too. This product's users are artist managers, not developers — they live
+in claude.ai and the phone apps, which are exactly the OAuth-only clients. A
+per-user token would have been three columns instead of three tables, and would
+have served the founder and nobody else.
+
+**Schema:** `20260825100000_mcp_oauth.sql` — `mcp_oauth_clients` (DCR
+registrations), `mcp_oauth_codes`, `mcp_oauth_tokens`. RLS enabled with **zero
+policies** on all three, the `workspace_invite_links` / `curator_invites`
+posture. **Not applied anywhere yet.**
+
+### Eight things worth knowing before editing this
+
+1. **The credential IS the binding, and that property is preserved rather than
+   abandoned.** `app/api/_shared/auth.ts` argued the env binding was safe because
+   "a leaked key can only ever act as that one user", with deliberately no
+   acting-user header. A token row carries its own `user_id`, so that still
+   holds — one credential resolves to one account and no request header can
+   redirect it. What changed is that the binding lives in a row, which is what
+   makes revocation possible at all (`.env.example` used to say, of the founder
+   key, "there is no revocation UI").
+2. **Tokens and codes are stored sha256-HASHED, which deviates from every other
+   token in this repo.** `createHash` appeared nowhere in `apps/web` before this,
+   because share links and invite codes must be re-readable to render a Copy
+   button (`INVITE_LINK_COLUMNS` says so in as many words). That reason does not
+   apply here: an access token is handed to a client once and never shown to a
+   human, so nothing needs the plaintext back and a leaked row should not be a
+   working credential.
+3. **The access gate is per TOOL, not per HTTP method.** `requireActiveAccount`
+   reads read-only mode off `request.method` and MCP is all-POST, so the honest
+   method would refuse a payment-lapsed team its MCP **reads** as well as its
+   writes — while that same team can still read everything in the app.
+   `resolveMcpToolAccessMethod` maps `tool.kind` to a synthetic GET or POST, and
+   a refusal comes back as a JSON-RPC result carrying `isError` so the model can
+   explain it rather than reporting a dead server. **Never pass the real method
+   here.**
+4. **The 401 carries `WWW-Authenticate` with `resource_metadata`, and that header
+   is the entire discovery mechanism.** Without it a client reports the server
+   unreachable instead of starting the OAuth flow. It is the first thing to check
+   on any "the connector will not connect" report.
+5. **`/.well-known/*` is served through `next.config.js` rewrites, and it has to
+   be.** Next's router ignores dot-prefixed path segments, so
+   `app/.well-known/…/route.ts` never resolves, and there is no `middleware.ts`
+   in this app. Both the bare AND the path-suffixed forms are mapped
+   (`/.well-known/oauth-protected-resource/api/mcp`), because RFC 9728 has a
+   client try the suffixed one first for a resource that lives at a path —
+   serving one and not the other works with some clients and silently fails with
+   others.
+6. **Single-use codes and refresh rotation are conditional UPDATEs, not
+   application-level checks.** `update … where consumed_at is null returning id`;
+   zero rows means somebody else won. The row is the lock — the `curator_invites`
+   pattern. `checkCodeRedemption`'s own `consumedAt` check is a fast path and is
+   explicitly NOT what makes single-use true. Rotation swaps both hashes on the
+   existing row rather than inserting a successor, so an hourly refresh does not
+   fill the owner's Settings list with dead entries.
+7. **MCP tool calls are NOT metered against `urgans_monthly_actions`.** That
+   ceiling exists because an UrgAns turn costs us gateway tokens; over MCP the
+   customer's own model does the thinking and we pay for a database read. Each
+   call records an `mcp_tool_call` billing event for visibility instead —
+   free-text `type` column, existing index, **no migration**.
+8. **`/api/mcp/connections` and its DELETE are deliberately NOT behind the
+   paywall** — the `app/api/account/export` call, for a stronger reason: a walled
+   or read-only team must always be able to cut off a credential. Authentication
+   plus the curator block, and nothing else.
+
+### The allow-list inversion, and the bug the old default shipped
+
+`lib/mcp/tools.ts` was a **deny-list** (`EXCLUDED_TOOL_NAMES`), so a newly
+registered Chappi tool joined MCP automatically and a hard-coded count in
+`protocol.test.ts` was the tripwire that made somebody notice. That default was
+defensible while one founder-held env key could reach the endpoint. It is not
+once any customer can: `executeToolCall` never reads `tool.confirm` (the gate
+lives in `runner.ts`, which the MCP path does not go through), so **that list is
+the only thing standing between an outside model and a confirmation-gated tool.**
+
+It is now an explicit `MCP_TOOL_NAMES_ALLOWED` — 13: the original 11 plus the two
+context tools. The count test stays, but its job changed: it no longer guards
+against accidental exposure, it catches an intended tool silently dropping out
+after a rename.
+
+**And it fixed what the old default already shipped:** `create_note` was in
+`tools/list` from day one and always 401'd, because it proxies `POST /api/notes`
+and that route used the plain auth helper. `tool-registry.test.ts` now parses the
+tool-family sources, extracts each allow-listed tool's `callInternalApi` path AND
+method, resolves the route file, and asserts that specific handler accepts the
+internal actor. **It was mutation-tested twice:** the first version passed on the
+reverted fix, because it matched the file's *import* rather than the handler
+body — so it is per-handler now, which also lets a route legitimately opt its
+POST in while leaving its GET on the plain helper, exactly what `/api/notes`
+does.
+
+### The context surface, and why "consistently" was already half-built
+
+`buildChappiSystemPrompt` composed ROLE + team brief + workspace snapshot +
+today, and only ROLE is specific to the assistant inside this app — it names
+tools an outside model does not have and confirmation cards it will never see.
+Everything else is just true. So that portable half moved into
+`lib/chappi/portable-context.ts` and `buildChappiSystemPrompt` now calls it:
+**one composition, two consumers**, so an answer from claude.ai and an answer
+from UrgAns cannot be working from different facts. That is what the word
+"consistently" in the request actually required, and a second renderer would have
+drifted within a month — this repo has undone that duplication for
+`isRecapEligible`, for the four-flag scene expression, and for four copies of
+`getAccessToken`.
+
+It lives in `lib/chappi/` and not `lib/mcp/` deliberately: `lib/mcp` imports
+`lib/chappi` and never the reverse.
+
+Exposed **both** as tools (`get_workspace_context`, `get_release_context`) and as
+MCP resources (`resources/list` / `resources/read`, at
+`urganize://workspace/context` and `urganize://release/<id>/context`). Resources
+are the primitive that means "attach this"; tools are what every client supports;
+a manager should not have to know which kind of client they picked.
+`capabilities` now declares `{ tools: {}, resources: {} }`.
+
+Both context tools are `kind: 'read'`, which is load-bearing rather than
+descriptive — see point 3 above.
+
+### Doc-drift found on the way, surfaced rather than absorbed
+
+Two features exist in the code and appear nowhere in this file:
+
+- **The team brief** (`lib/team-brief.ts`, `team-brief-server.ts`,
+  `team-brief-nudge.ts`, `components/settings/TeamBriefSection.tsx`,
+  `components/chappi/BriefAttribution.tsx`, migration
+  `20260824120000_team_briefs.sql`) — a manager-authored five-section standing
+  document (roster, how we work, positioning, constraints, vocabulary), capped
+  per section, injected into UrgAns's system prompt on every request, edited in
+  Settings → Workspace, flag-gated on `NEXT_PUBLIC_FEATURE_TEAM_BRIEF`. It is
+  half of what "context" means in this feature.
+- **`lib/chappi/workspace-summary.ts`** — the pure, unit-tested workspace
+  snapshot renderer (releases capped at 25 and selected by recency of the release
+  *or* its activities, overdue, open work per person, the team). The other half.
+
+Neither has a Working-notes entry. Flagged here per this file's own rule rather
+than back-filling a section for work this pass did not do.
+
+### Known gaps, stated plainly
+
+- **No rate limiting**, anywhere in this repo, and this opens an authenticated
+  endpoint a customer can point any client at. Out of scope at current scale
+  (principle 6); the `mcp_tool_call` event is the signal that should arrive
+  before it matters.
+- **Open Dynamic Client Registration**, which is what claude.ai requires.
+  Registering grants nothing — a client id is not a credential, and nothing
+  happens until a signed-in person approves it — and it is mitigated by
+  public-clients-only plus redirect-URI validation.
+- **Prompt injection widens.** Hostile text in workspace data now reaches a
+  third-party model that can call create/update tools. Same accepted posture as
+  UrgAns (reversible, visible, undoable in-app), restated because the model is
+  one we do not control.
+- **Hand-rolling an authorization server is the risk in this work.** It matches
+  the repo's precedent (`lib/mcp/protocol.ts` hand-rolls JSON-RPC,
+  `lib/fcm-server.ts` an RS256 JWT) and avoids a vendor under "boring stack", but
+  PKCE verification, exact redirect-URI matching and single-use codes are where
+  this goes wrong. All three are pure, unit-tested, and were mutation-tested:
+  making PKCE accept `plain`, making redirect matching a prefix, and dropping the
+  single-use check each fail exactly the tests written to catch them.
+
+### Verified
+
+The full suite (**1372 passing**, 30 env-gated skips, ~83 of them new across
+`lib/mcp/oauth.test.ts`, `lib/mcp-connections.test.ts`,
+`lib/chappi/portable-context.test.ts` and the two updated registry tests),
+`eslint .` at **3 errors / 67 warnings** — the 3 errors are the unchanged
+pre-existing `WorkspaceView.tsx` ones, and the single new warning is
+`useMcpConnections`'s fetch-on-mount, byte-identical to the finding
+`useTeamLogins` already carries (the documented React-19 downgraded rule).
+`next build` green **by exit code** in both flag states, with `/auth`,
+`/onboarding`, `/settings` and `/oauth/authorize` all still `○ Static`.
+
+Runtime probes against `next start`, **rebuilding between flag states** because
+`NEXT_PUBLIC_*` is inlined at build time even server-side: flag OFF, all six
+OAuth/well-known routes plus `/api/mcp/connections` and `/api/mcp` return
+**404** while the ungated `/api/releases` still **401**s — that discrimination is
+what proves the gate rather than a routing accident. Flag ON, both metadata
+documents return valid JSON with absolute URLs, `POST /api/mcp` returns **401
+carrying `WWW-Authenticate` with `resource_metadata`**, and the authenticated
+routes 401. One real defect was found this way and fixed: `/api/oauth/token`
+answered `server_error` before `unsupported_grant_type`, telling a client the
+server was misconfigured for a request that was invalid to begin with.
+
+**LIVE, and the OAuth flow is confirmed end to end (2026-08-25).** The founder
+applied the migration, set `NEXT_PUBLIC_FEATURE_MCP_CONNECT=true`, and connected
+`npx @modelcontextprotocol/inspector` to production successfully. That one
+connection exercises, against real tables: discovery through both `.well-known`
+documents, Dynamic Client Registration, the consent screen rendering and being
+approved, PKCE, the authorization-code exchange, the access token, and
+`tools/list`. It also proves the deploy genuinely rebuilt `apps/web` — a stale
+bundle would have 404'd discovery and the Inspector could not have started, which
+is the trap the activation checklist warns about.
+
+**Still NOT verified, and it is not a small remainder — NO TOOL HAS EVER BEEN
+CALLED.** So no context has actually been read out of this feature, and nothing
+has round-tripped through the internal-actor branch in
+`app/api/_shared/auth.ts` — which is where five of the thirteen allow-listed
+tools live, `create_note` among them. Its long-standing 401 is fixed in code and
+covered by a structural test, and has still never been exercised by a real
+request. Also untested: revoking in Settings → Account → Connected apps and
+confirming the next call fails (that list has never rendered), refresh-token
+rotation, which only happens an hour in, and both claude.ai and ChatGPT
+specifically. The next real check is one tool call — `get_workspace_context`
+answers most of it at once.
+
+### Adding a custom connector on claude.ai (2026-08-25)
+
+The founder could not find the option, so recording it rather than letting the
+next session re-derive it. Custom connectors still exist and are supported; two
+things get in the way:
+
+- **The path is Settings → Customize → Connectors → `+` → Add custom
+  connector.** Not Settings → Connectors, which is what this session told him
+  first and is the likely reason he could not find it.
+- **They require a PAID Claude plan.** Free accounts do not get them.
+
+Do not confuse this with submitting to the public connector *directory*, which
+does need a Team or Enterprise admin — that is publishing, and irrelevant to
+adding a private one. Note also that the July 2026 MCP spec update deprecated SSE
+in favour of a stateless HTTP request/response model, which is exactly the shape
+`/api/mcp` already serves (no session ids, plain JSON, GET is 405) — so nothing
+here is on the deprecated path.
+
+Either way claude.ai is one client's UI, not the feature: the Inspector, Claude
+Code, Cursor and any other OAuth-capable client connect today.
+
+### Activation checklist
+
+1. ~~Apply `20260825100000_mcp_oauth.sql`~~ — done 2026-08-25.
+2. ~~Set `NEXT_PUBLIC_FEATURE_MCP_CONNECT=true` on the Vercel `Web` project~~ —
+   done, and the rebuild is confirmed by the Inspector connecting at all (a stale
+   bundle 404s discovery). If a future flip needs checking before anything can
+   connect, `npx turbo-ignore @urganize/web --fallback=<the commit Vercel last
+   deployed>` is the way.
+3. ~~Changelog entry + version bump across all 10 `package.json` files~~ — done
+   as v1.2.0, at the flip rather than at merge (the EPK precedent).
+4. ~~Probe production~~ — superseded: the Inspector connecting proves discovery
+   and the token exchange, which is strictly more than the curl probe showed. For
+   the record, do **not** try to prove the flag by grepping the client bundle —
+   both ternary branches compile in, a false positive this repo has recorded
+   twice.
+5. **OPEN, and the only thing left:** call one tool. `get_workspace_context`
+   covers the most ground in a single request — it is a read, so it also tells you
+   nothing about the five REST-proxied tools; `create_note` is the one to try
+   after it, since its fix has never run. Then disconnect in Settings → Account →
+   Connected apps and confirm the next call fails.
+
+Customer-facing setup guide: `docs/mcp-connect.md`.
 
 ---
 
@@ -880,6 +1164,16 @@ A LinkedIn-company-page-style card for the record label / manager, mounted once 
 ## Identity card gains a nav; Metadata's entry point splits by viewport (2026-08-12, URG-229)
 
 The identity card (above) grew a persistent nav below the identity block: Catalog, UrgAns, an optional Notes, an optional release-scoped "Collect metadata", an optional "Playlist pitches" for a dual account, Settings, and Admin when the viewer is one. Same hand-drawn `BrandIcons` marks the topbar uses, so the two entry points read as one system; active-state matching mirrors `AppTopbar`'s (exact for `/dashboard`, prefix for the rest). **Order corrected 2026-08-14 (founder call): Metadata moved from right-after-UrgAns to the fourth slot, after Notes** — see `buildNavItems` in `WorkspaceIdentityPanel.tsx`.
+
+**RENAMED 2026-08-31 (founder call): the label is "Metadata", not "Collect metadata".** Both entry points — the identity card's nav item and `TasksPanel`'s pill/mobile top tab — carried the longer string while the scene's own heading has always read "Metadata" (`SCENE_LABELS.metadata` in `ReleaseScenePanel.tsx`), so tapping "Collect metadata" landed you on a page titled "Metadata". The rename closes that rather than opening it, and `SCENE_LABELS` was already correct and untouched. The prose below and in the sibling sections still quotes the old string in its dated narrative — that is the record of what the surface was called at the time, deliberately not rewritten. **Two consequences worth knowing:** `WorkspaceSkeleton`'s two placeholders for this pill moved `w-36` → `w-24` in the same commit (the loading-skeleton-sync rule — the label is now the same eight characters as Calendar, in the same pill with the same icon, so it reserves the same width); and the mobile top-tab strip still scrolls, because Timeline made it four tabs on 2026-08-30 and ~356px of tabs still exceeds the ~343px a 375px phone offers — the rename bought about 50px and was not enough on its own.
+
+**2026-08-31 (founder call): Catalog leaves the release now, and grew a releases submenu.** From "catalog doesnt open the catalog view once it in a particular release", plus a request for "an arrow that opens up a sub menu with all the releases so users can navigate".
+
+- **`isActive` no longer counts a scoped release as being ON the catalog**, which REVERSES the rule stated at the top of this section ("exact for `/dashboard` so a scoped release (`?release=`) still counts as the catalog"). That reading is defensible — a release is a view within the catalog — but it means the one control whose job is to get you out of a release spends the entire time you are in one telling you that you are already where it would take you. `AppTopbar`'s `isAtRest` has always drawn the line at the release param; the two agree now.
+- **All four "leave this release" controls share ONE step.** `forgetSceneForCurrentRelease` (`lib/scene-memory.ts`) is the single implementation, called by the side menu's Catalog row, the topbar's Catalog icon and `MobileNavBar`'s Home tab; the workspace back arrow reaches the same end through `SetScopeOptions.forgetScene`. Those first three are plain `<Link>`s to `/dashboard` and never reach `setScope`, so they have to say it themselves — and MobileNavBar had been saying it inline since 2026-08-30, which is exactly how the other two came to differ from it. It reads the url at CALL time, never a render-time copy, because every caller is a click handler in layout chrome that does not re-render when the scope changes. Mutation-tested: making it forget every release instead of the scoped one fails three named tests.
+- **The submenu is Catalog's alone, and shut on arrival.** `NavItem.children`, built in `buildNavItems` — the only place holding the scoped id, which is what keeps `WorkspaceNavList` free of `useSearchParams` so it can go on doubling as the Suspense fallback. Deliberately NOT persisted and NOT auto-opened for the scoped release: an arrow you open was the ask, and a nav that expands itself on every load pushes the pinned Admin/Settings group below a roster on a short viewport. **Never rendered in the collapsed 64px rail** — no room for a second level, the same call the Beta pill makes. A row with no children renders byte-identically to before, so this moved no other nav item.
+- **No skeleton change, unusually for this card:** the submenu is shut at rest and the chevron sits inside the existing row, so the resting layout is unchanged.
+- **What could NOT be reproduced, said plainly.** The read path was traced end to end and `<Link href="/dashboard">` does clear the scope: `scopedReleaseId` is derived purely from the url, only three call sites write it (the auto-scope, a card click, the back arrow), and the auto-scope's one-chance ref already covers the single-release case in-session (see the 2026-08-30 fix in `WorkspaceView`). So this fixes the two PROVABLE defects — a row claiming to be the current page, and a scene resumed on return — not a demonstrated dead click. **If it still fails on a real account, check a FULL page load of `/dashboard` on a single-release team:** there the auto-scope is *designed* to bounce you into the only release ("a catalog of one is not a catalog", founder call 2026-08-12), so Catalog genuinely cannot reach a catalog. Reversing that is its own founder call and was not taken here. **RESOLVED 2026-09-01 (v1.14.1) — and this paragraph was right about the cause while understating how easy it was to hit.** It does not take a full page load: `WorkspaceView` unmounts on every navigation away from `/dashboard`, so the one-chance ref reset on every return and Home from Settings was enough. The founder made the call ("clicking the home button should always lead back to catalog view no matter what") and the fix is a session-scoped record of the intent rather than a reversal of the auto-scope — see "Home always reaches the catalog" below.
 
 **This card is never a feature's ONLY entry point.** Both bullets below say so for Metadata, and "Crossing between the two portals" in the playlist-pitching section records the same rule being broken again on 2026-08-14 — that time by three gates compounding (`hidden lg:block`, the rail-open self-hide, and the topbar's own `hidden lg:grid` under `NEXT_PUBLIC_FEATURE_MOBILE_NAV`), which left a dual account with no crossing on a phone at all.
 
@@ -1471,7 +1765,7 @@ Founder request: automatic, periodic push notifications from a set of editable p
 - **Weekly motivational nudges:** `lib/motivation-server.ts`, run from the existing hourly `/api/cron/due-date-notifications` cron (no new Vercel Cron entry — the project's two existing crons already imply a paid plan, and an hourly check trivially covers a weekly cadence). Rotates through the preset pool deterministically (prior-send count modulo pool length) and records each send as an immediate `kind: 'motivational'` row in `scheduled_notifications` (the `WELCOME_STEP` shape). Per-user opt-out: `profiles.motivational_nudges` (default on), toggled in Settings via `MotivationalNudgesSection.tsx` (the `TaskCheckInSection` shape) — the only new opt-out this feature ships; release-reminder and deadline-reminder opt-outs are v2. **Deliberately carries NO feature-flag gate** (fixed during a completeness pass, 2026-08-12): the sweep itself delivers through the pre-existing, already-live Web Push transport regardless of `NEXT_PUBLIC_FEATURE_NATIVE_PUSH` (that flag only gates the native transport), so an earlier draft that hid this toggle behind it left every web-only user with nudges they couldn't turn off.
 - **Deadline reminder tiers:** `lib/due-tiers.ts`'s pure `assignDueTier()` extends the due-date sweep from one forward-looking tier (24h) to three — 7 days, 3 days, 1 day. Two new `notification_type` enum values, `task_due_7d` / `task_due_3d` (`20260810140000_notification_type_due_tiers.sql`, bare `ALTER TYPE ... ADD VALUE`, not wrapped in a transaction — the `split_sheet` enum-add precedent), so the new tiers reuse the entire existing bell + unread-dedupe + push-mirror machinery for free; `task_due_soon` keeps its existing role as the 1-day/24-hour tier. `createDueDateNotificationsForAllUsers` (`lib/tasks-server.ts`) now calls `assignDueTier` instead of its old inline two-branch check, and loads presets once per sweep (not once per task) to pass tier copy through `buildTaskPushPayload`'s new `copyOverrides` param. **Timezones are deliberately untouched** — tier math stays UTC-instant, matching the sweep's pre-existing behavior; due dates carry known timezone sloppiness elsewhere (manual edits store a naive local wall-clock string), and fixing that was explicitly out of scope for this work. **Two bugs fixed during a completeness pass (2026-08-12), before this ever shipped:** (1) the `deadlineReminders.enabled` preset's early return sat before the tier loop entirely, so turning the new tiers off in `/admin/notifications` also silently killed `task_overdue` — a notification that predates this feature and isn't part of what that toggle advertises; the check now only skips the three new tiers, `task_overdue` fires unconditionally as before. (2) The default preset copy wrapped `{taskTitle}` in curly quotes, and `buildTaskPushPayload`'s substitution ALSO quotes the title — doubling to `""My Song""` in every default due-date push (and the admin "send test to me" button). Fixed by dropping the quotes from the preset templates; the substitution is the only place quoting happens now.
 - **Android is live in code; iOS is prepped but founder-blocked.** `apps/mobile/android/app/src/main/AndroidManifest.xml` gained `POST_NOTIFICATIONS` (required at runtime from API 33; `targetSdk` is 35 here); `apps/mobile/android/app/google-services.json` is committed once the founder generates it (not a secret — client config only; the stock Capacitor conditional-apply block in `app/build.gradle` already expects it there). `apps/mobile/ios/App/App/AppDelegate.swift` gained the two remote-notification callbacks `@capacitor/push-notifications` requires — inert until the founder adds the Push Notifications capability/entitlement in Xcode and an APNs key in Firebase (full checklist: `docs/mobile/push-setup.md`). Running `cap sync` for this work also fixed a pre-existing, unrelated staleness: the iOS `Podfile` was missing the `CapacitorFilesystem`/`CapacitorShare` pods from when those plugins were added.
-- **Activation checklist:** (1) ~~apply `20260810130000_device_push_tokens.sql`~~ — **done**, verified live 2026-08-12 (`device_push_tokens` and `profiles.motivational_nudges` both resolve); `20260810140000_notification_type_due_tiers.sql` still needs applying (verified NOT yet live — `task_due_7d` is rejected as an invalid enum value); (2) **founder** creates a Firebase project, registers the Android app, downloads `google-services.json` (commit it), generates a service-account key; (3) **founder** sets `FCM_SERVICE_ACCOUNT_JSON` in Vercel `Web` (server-only, not in `turbo.json`); (4) set `NEXT_PUBLIC_FEATURE_NATIVE_PUSH=true` + changelog entry + version bump across all 10 `package.json` files (the EPK precedent: the ledger entry lands at flag-flip, not at merge); (5) new Android binary with `versionCode` incremented (no installed-binary back-compat burden yet — no store release has shipped); (6) iOS later, per `docs/mobile/push-setup.md`, once the founder completes the Apple-side setup.
+- **Activation checklist:** (1) ~~apply `20260810130000_device_push_tokens.sql`~~ — **done**, verified live 2026-08-12 (`device_push_tokens` and `profiles.motivational_nudges` both resolve); ~~`20260810140000_notification_type_due_tiers.sql` still needs applying~~ — **applied 2026-09-02 by the founder**, three weeks after it was verified NOT live (`task_due_7d` was rejected as an invalid enum value on 2026-08-12), so the 7-day and 3-day deadline tiers only started working that day; (2) **founder** creates a Firebase project, registers the Android app, downloads `google-services.json` (commit it), generates a service-account key; (3) **founder** sets `FCM_SERVICE_ACCOUNT_JSON` in Vercel `Web` (server-only, not in `turbo.json`); (4) set `NEXT_PUBLIC_FEATURE_NATIVE_PUSH=true` + changelog entry + version bump across all 10 `package.json` files (the EPK precedent: the ledger entry lands at flag-flip, not at merge); (5) new Android binary with `versionCode` incremented (no installed-binary back-compat burden yet — no store release has shipped); (6) iOS later, per `docs/mobile/push-setup.md`, once the founder completes the Apple-side setup.
 
 ---
 
@@ -1721,7 +2015,7 @@ Founder: the page was "a bit all over the place." It was **twelve sections in on
 - **The pill row fits on a phone, and the measurement method is the part worth keeping.** All four pills are on screen without scrolling at 375px (41.8px spare) and 360px (26.8px spare); below roughly 333px it scrolls, which is graceful and only reaches iPhone-SE-2016-era widths. The row keeps `overflow-x: auto` + `nowrap` as the fallback. Getting there took two wrong answers, both from bad measurement rather than bad layout, so: **`window.innerWidth` is not the layout width in this browser pane** (it reported 439 while `document.documentElement.clientWidth` was the true 375) — subtracting the two and calling the difference "container padding" invents ~64px of padding that does not exist. And **an open modal's scroll lock skews any width measurement**: `body` carried an inline `overflow: hidden; padding-right: 48px`, which made the row look 28px too narrow. Measure with `documentElement.clientWidth`, walk the real ancestor `padding` chain, and check no dialog is open. Actual chain below `sm`: AppShell's `<main>` `px-4` is the only horizontal padding, so available = viewport − 32.
 - **`px-2.5` below `sm` on the pills (with `sm:px-3`) is a deliberate divergence** from TasksPanel's shared pill class, and the only one. At `px-3` the four labels need ~323px, which clears 375px but leaves only ~5px at the 360px width much of Android reports; 2px less padding per side buys ~22px. `pillClass`'s comment records this so it is not "tidied" back to a single padding value.
 - ~~**Still missing, flagged not built:** there is **no billing/plan section in Settings at all**, yet `app/payment/callback/page.tsx` sends users here after a successful payment.~~ **Built 2026-08-13 (v0.52.0) — see "Settings gains a billing section" below.**
-- **Verified:** `pnpm test` (457) + `pnpm lint` (0 errors) + `pnpm build` green, `/settings` still `○ Static`. Browser-verified all four tabs render their intended sections, the URL contract (including `?tab=bogus` → Account and the clean-URL default), **zero history entries added across three tab switches**, the `#teammates` redirect landing on `?tab=team`, both themes resolving through the token system, and the pill measurements above. The skeleton's pill placeholders were sized per label (they were a uniform `w-24`, four of which came to 408px — a placeholder row that scrolled where the real one does not, then shifted every pill left when the labels arrived); the generated `sm:` variants were confirmed present in `(min-width: 640px)` blocks in the live stylesheet. Authenticated rendering required a throwaway dev-only route that seeded a fake user into the auth store, since there are no test credentials and this environment cannot mint a real Supabase session; that harness was deleted before the gates were re-run. **Note for the next person using that trick: a fake user with no releases trips `firstReleaseRequired`, so the create-release modal opens over the page and its scroll lock silently corrupts width measurements.**
+- **Verified:** `pnpm test` (457) + `pnpm lint` (0 errors) + `pnpm build` green, `/settings` still `○ Static`. Browser-verified all four tabs render their intended sections, the URL contract (including `?tab=bogus` → Account and the clean-URL default), **zero history entries added across three tab switches**, the `#teammates` redirect landing on `?tab=team`, both themes resolving through the token system, and the pill measurements above. The skeleton's pill placeholders were sized per label (they were a uniform `w-24`, four of which came to 408px — a placeholder row that scrolled where the real one does not, then shifted every pill left when the labels arrived); the generated `sm:` variants were confirmed present in `(min-width: 640px)` blocks in the live stylesheet. Authenticated rendering required a throwaway dev-only route that seeded a fake user into the auth store, since there are no test credentials and this environment cannot mint a real Supabase session; that harness was deleted before the gates were re-run. **Note for the next person using that trick: a fake user with no releases trips `firstReleaseRequired`, so the create-release modal opens over the page and its scroll lock silently corrupts width measurements.** [Correction 2026-08-28: the modal no longer opens instantly and is dismissible — the prompt now arms a ~30s deferred timer (see "First-release prompt: deferred and dismissible") — but seed a release or close the modal before measuring anyway; the scroll-lock trap is unchanged whenever any modal IS open.]
 
 ---
 
@@ -2164,6 +2458,50 @@ way), not a new store or a new prop threaded through `AppShell`. No new
 flag, no migration, no ledger entry (internal chrome rework, not a v1 scope
 item).
 
+### Song became a bottom-bar tab (2026-08-30)
+
+Founder: on mobile, put Song in the bottom navigation bar, after the plus
+button and before "You" — "it's currently hidden inside the menu." It was
+reachable on a phone only from the folded "more" drawer. Same class of change
+as the pass above (chrome repositioning, no new flag, no migration, **no
+ledger entry**), so the same rules apply; four things about it are worth
+knowing:
+
+1. **`MobileNavBar` now reads `useSearchParams`, and it MUST stay inside its
+   own `<Suspense>`.** Song is a release SCENE, not a global page, so this is
+   the one tab whose destination depends on the URL. That hook in a statically
+   prerendered client component bails out to the nearest boundary, and this bar
+   is mounted app-wide by `AppShell` including on `/settings` — the
+   `ScopedArtistLine` pattern in `WorkspaceIdentityPanel`, for the identical
+   reason. Verified: `/auth`, `/onboarding` and `/settings` are still
+   `○ Static` in both flag states. Do not lift the hook into the bar body; the
+   two click handlers deliberately read `window.location.search` at click time
+   instead, and that is not an inconsistency — they need one answer on demand,
+   this tab needs a subscription.
+2. **The tab renders in every case, scoped or not** — `?release=<id>&scene=song`
+   when a release is scoped, the catalog otherwise (which is where you pick
+   one). A tab that appeared only while scoped would reflow the whole bar on
+   every scope change, which is the same layout shift the Pitches tri-state
+   read already avoids.
+3. **It STAYS in the folded menu — this is an addition, not the MOVE that
+   Calendar and Press kit made.** The bar is gated on
+   `NEXT_PUBLIC_FEATURE_MOBILE_NAV` and the folded menu is not, so emptying the
+   menu would tie Song's mobile reachability to a second flag and leave a
+   viewport/flag band with no entry point at all — the compounding failure
+   recorded under "Crossing between the two portals", which this repo has
+   already shipped once.
+4. **Seven slots is the ceiling, and it is now measured rather than assumed.**
+   All four optional tabs at once (Song + Notes + Pitches) gives 375 / 7 =
+   ~53px per slot against a widest label of "Pitches" at ~45px and a 48px
+   center button. An eighth needs a different shape for that bar, not another
+   `flex-1`.
+
+**Not verified:** nothing rendered on a phone — this sandbox cannot mint an
+authenticated session and has no route to app.urganize.app — so the tab rests
+on the build gates plus the compiled bundle carrying it. Note the usual trap
+applies here too: grepping the client chunks for "Song" proves nothing about
+the flag, since both ternary branches compile in.
+
 **Verified:** `vitest run` (687 passing, unchanged — no test exercises this
 mobile chrome directly), `eslint .` (0 errors, 59 warnings — unchanged
 baseline), and `next build` green with every relevant pill flag ON and with
@@ -2191,6 +2529,299 @@ settled — in particular, the FAB's contextual behavior when scoping/
 unscoping a release while already on `/dashboard` (the one transition its
 own click-time-fresh-read design is built to get right) has not been
 exercised on a real device.
+
+### The search button searches activities now (2026-08-31, v1.12.0)
+
+Founder, with a screenshot of Vercel's mobile search overlay as the reference:
+*"On the mobile hamburger menu search should not show when that menu is open at
+all — only clicking on search opens the search function… (search should be able
+to search for tasks)."*
+
+**The two icon buttons at the base of the mobile dock opened the SAME panel**,
+and that panel carried a search box above the menu list — so the only thing
+"search" could ever match was those eight menu labels. A release has 64-113
+activities and not one of them was findable. Now they are two surfaces: the
+hamburger opens the menu and only the menu, with no field in it; the search
+button opens a field over real results.
+
+**Not a scope expansion and no new flag** — the same chrome-repositioning
+footing as the 2026-08-16 redesign this corrects, and search is deliberately
+UNFLAGGED because it searches activities every scoped release has rather than a
+gated feature. Revert is `git revert`.
+
+**Six things worth knowing before editing this:**
+
+1. **The ranking lives in `lib/task-search.ts`, not in the component, because
+   that is where tests can reach it.** `vitest.config.ts` collects
+   `lib/**/*.test.ts` and there are no component tests in this repo, so inline
+   ranking would have been untestable. Three tiers: title starts with the query,
+   then every term somewhere in the title, then every term across title +
+   description. Terms are whitespace-split and order-independent, so "art cover"
+   finds "Cover art final approved" — the playbooks' titles are long phrases and
+   remembering their word order is not something to require. **Mutation-tested:**
+   dropping the starts-with tier, dropping the done-last tiebreak, and making an
+   empty query match everything each fail exactly the one test written for them.
+2. **Tier 2 (description) exists because the playbooks put the useful words in
+   the body** — "Begin curator outreach", "split sheet" — so a title-only search
+   misses activities a manager remembers by their content. It ranks last so a
+   body mention never outranks a name, and a row that got in that way shows its
+   first body line so it can say why it is there.
+3. **Completed activities sort after live ones WITHIN a tier, never across
+   tiers.** A playbook release accumulates dozens of done rows that would
+   otherwise crowd out live work; but the tiers are about what was typed, so a
+   done title match still beats a live description match. Both halves are
+   pinned.
+4. **An empty query returns NOTHING and the surface says "Type to find an
+   activity."** Painting the unfiltered list would make the search surface
+   indistinguishable from the buckets above it and from the menu the founder
+   asked to separate it from. `parseSearchTerms` returning `[]` is the contract
+   that enforces it — `matchesSearchTerms` also refuses to match on no terms, so
+   the release-tool half cannot drift the other way.
+5. **`autoFocus` is BACK on this field, and it is safe only because the field is
+   `text-lg`.** It was removed 2026-08-17 when the field was 13px and focusing
+   it on open zoomed the page on iOS; the zoom needs a font under 16px, and
+   `text-lg` is the first step in THIS preset that clears it (`base` is 14px
+   here — a previous fix shipped as `text-base` and the zoom kept happening). A
+   button labelled Search that opens a field you must then tap is half a
+   control. **If this field's size is ever reduced, remove `autoFocus` in the
+   same edit.**
+6. **The bucket line on each result is derived from the SAME grouping pass the
+   buckets render from** (`sectionKeyByTaskId`, built off `sections`), so a
+   result's "Overdue" can never disagree with the list the user closed to
+   search.
+
+- **The panel stays at the bottom of the screen**, unlike the reference
+  screenshot's top-anchored overlay. The dock is thumb-reachable, and moving a
+  phone's primary control into the top corner is the exact thing
+  `NEXT_PUBLIC_FEATURE_MOBILE_NAV` exists to undo. It is also not a modal: no
+  Escape handler, no scroll lock, no new z-tier — the repo's Escape contention
+  and scroll-lock-skews-measurements traps are both avoided by construction.
+- **One `openMobilePanel` selector rather than two booleans**, so the menu and
+  the search cannot both be open — they occupy the same slot, and two at once
+  would stack into a full-screen sheet nobody designed.
+- **Group headings ("Activities", "Release tools") render only when BOTH kinds
+  of result are present**, since a heading exists to disambiguate and there is
+  nothing to disambiguate with one group. The reference has none at all.
+- **The skeleton's two dock circles now follow different rules** (the
+  loading-skeleton-sync rule): search is reserved unconditionally, because it
+  renders whenever the release has an activity and a playbook release has
+  64-113, while the menu keeps its flag-known check. A genuinely activity-less
+  release briefly reserves one 32px circle that never arrives — the same
+  magnitude of imprecision Plan and Recap already accept there.
+- **Verified:** 1873 tests (22 new in `lib/task-search.test.ts`, three of them
+  mutation-tested), `eslint .` at the exact measured baseline (3 errors / 70
+  warnings, all pre-existing in `WorkspaceView.tsx`) — one new warning appeared
+  and was fixed rather than accepted: an `eslint-disable` for
+  `jsx-a11y/no-autofocus`, a rule this config does not enable, so the directive
+  itself was dead. `next build` green **by exit code** with every folded-menu
+  flag on and with them all off, `/auth`, `/onboarding`, `/settings` still
+  `○ Static` in each, and the search copy confirmed present in the compiled
+  client chunks.
+- **Not verified:** nothing has rendered on a phone. This sandbox cannot mint an
+  authenticated session and has no route to app.urganize.app, so the layout, the
+  keyboard's interaction with a bottom-anchored panel, and `autoFocus` against a
+  real iOS Safari all rest on unit tests and the build. **`autoFocus` is the one
+  thing worth checking first** — if tapping Search zooms the page, that prop is
+  the cause and removing it is a one-line follow-up.
+
+### It searches pages too, and the catalog got its own bar (2026-08-31, v1.13.0)
+
+Founder, immediately after the split above: *"Actually that search should be able
+to search for any page at all then a search bar at the top of the catalog view
+this one actual bar to be able to search for releases — label as so 'search
+release'. That search bar at the top should also be visible on desktop view of
+catalog."*
+
+Two separate things, and the distinction between them is the design:
+
+- **The mobile dock's search** gained a third result group, **Pages**. It is a
+  palette: it lives behind an icon, appears on demand, and answers a question.
+- **The catalog** gained an always-visible **"Search release"** bar that FILTERS
+  the release list in place. It is not a palette; it is a control that belongs
+  on screen with the list it narrows.
+
+**Seven things worth knowing before editing either:**
+
+1. **`lib/app-pages.ts` exists for its KEYWORDS, not its labels.** A manager
+   hunting for their card details types "billing", and no page in this app is
+   called that — it is a section inside Settings. Label-only matching would
+   answer "No matches" to a query the product can absolutely satisfy. Same for
+   "setlist" → Shows and "assistant" → UrgAns. If a page grows a section people
+   will search for by name, the keyword goes here.
+2. **It is deliberately NOT merged with `lib/prefetch-routes.ts`**, which lists a
+   subset of the same destinations. Prefetching spends bytes on a metered
+   connection so it warms only the primary nav; search costs nothing per entry so
+   it should reach everything reachable. "Should this be warmed?" and "should
+   this be findable?" are different questions and the two files say so in each
+   other's headers.
+3. **`/admin` is absent from the page catalog, as a decision.** Its availability
+   comes from the workspace-identity payload, which 404s when
+   `NEXT_PUBLIC_FEATURE_IDENTITY_PANEL` is off — so an `isAdmin` read there would
+   be false in a default deployment and the entry would be *unreliable* rather
+   than merely restricted. It is internal, reachable by a couple of accounts, and
+   already pinned in their side menu.
+4. **`searchReleases` returns the list UNCHANGED for an empty query — the exact
+   opposite of `searchTasks`, and the difference is load-bearing.** The bar
+   filters a list the user is already looking at, so an empty box means "no
+   filter" and the catalog has to be all of it. The activity palette appears on
+   demand, so an empty box there means "nothing asked for yet" and returning
+   everything would duplicate the list underneath it. Mutation-tested in both
+   directions.
+5. **The filter is applied ONLY at the two catalog call sites, never to
+   `releaseCards` itself.** That array also feeds `selectedCard`, `leftRail` and
+   `rightRail`, so filtering it would make a scoped release vanish from its own
+   focused view while somebody typed, and empty the rails beside it.
+6. **The no-match state is ONE node passed to both catalog components** via a new
+   `emptyState` prop on `ReleasesColumn` and `WorkspaceDesktopGrid`. Without it
+   both fall through to their built-in "No releases yet / create your first
+   release", which is a lie to someone who has nine releases and mistyped. One
+   node means the phone and the desktop cannot word a search miss differently.
+7. **`autoFocus` is on the dock's field and deliberately NOT on this bar**, and
+   the reasoning is opposite rather than inconsistent: tapping a Search *button*
+   is an unambiguous "I want to type", whereas this bar is simply present on the
+   page, and stealing focus on arrival would put the phone keyboard over the
+   catalog every time the app opened.
+
+- **Where the bar renders, and why once.** `WorkspaceView` mounts it a single
+  time above BOTH viewport branches rather than inside each. The branches are
+  separate DOM subtrees (`lg:hidden` / `hidden lg:block`), so one bar per branch
+  would be two copies of the markup and two copies of the state — the drift class
+  this file keeps correcting. Its gate reads "neither branch is showing a focused
+  release, and there is at least one release to find" rather than duplicating
+  either branch's own test, which differ (mobile needs the release to resolve,
+  desktop needs its card too).
+- **Full width below `lg`, centred and capped at `lg`+.** The mobile catalog is
+  full-width rows, so a full-width bar matches them; the desktop catalog is a
+  centred grid, and `WorkspaceDesktopGrid`'s own history records that
+  left-anchored chrome above that centred row "read as misaligned" (founder call,
+  2026-07-23). `shrink-0` is on the wrapper because below `lg` it is a flex child
+  beside a `flex-1` sibling — without it a short viewport compresses the field
+  below its own `h-11`, the same failure `taskPanelPillClass` documents for pills.
+- **No release-count threshold on the bar.** The ask was for a bar at the top of
+  the catalog; hiding it below some number of releases would be second-guessing
+  that. It is gated only on there being at least one release, because searching
+  an empty catalog is meaningless and the "No releases yet" state owns that
+  screen.
+- **A verification claim I got wrong, recorded rather than quietly dropped.** I
+  expected the flag-gated page entries to be stripped from the flag-off bundle by
+  dead-code elimination, and checked for it. They are NOT: `"set list"`, a string
+  unique to `lib/app-pages.ts`, is present in one chunk with
+  `NEXT_PUBLIC_FEATURE_EVENTS` off. **So the bundle grep cannot verify this
+  gate** — the fourth time this file has had to record that a bundle grep is a
+  non-signal for a flag. The gate is a runtime `if` and the proof is
+  `lib/app-pages.test.ts`, which re-imports the module with stubbed env and
+  asserts BOTH states; that is stronger than a grep would have been anyway. The
+  cost of the strings surviving is a few hundred bytes of generic product words.
+- **Verified:** 1902 tests (29 new across `lib/app-pages.test.ts` and
+  `lib/release-search.test.ts`), `eslint .` at the exact measured baseline (3
+  errors / 70 warnings, all pre-existing in `WorkspaceView.tsx`) with zero new
+  findings, and `next build` green **by exit code** with the page flags on and
+  off, `/auth`, `/onboarding`, `/settings` still `○ Static` in each.
+  **Mutation-tested:** making an empty query return nothing, and deleting the
+  title-contains tier, each fail exactly the test written for them — and the
+  second of those needed a NEW test first, because the original "title beats
+  artist" case used a starts-with match and so pinned tier 0 against tier 2 while
+  leaving tier 1 free to collapse into tier 2 unnoticed.
+- **Not verified:** nothing has rendered in a browser at either width. The
+  catalog needs an authenticated session this sandbox cannot mint, so the bar's
+  placement above a centred grid, the count line, and the no-match state all rest
+  on unit tests and the build.
+
+### The top tabs are gone; the menu holds everything (2026-08-31, v1.14.0)
+
+Founder: *"Remove all top menu pills in mobile view and put them in the hamburger
+menu. In an order that makes sense to the user based on previous usage data."*
+
+The mobile top-tabs strip — Timeline / Content / Metadata / Pitch, permanent tabs
+since 2026-08-16 — is deleted. Those four are entries in the release menu at the
+base of the panel, ranked among the ten already there. **Desktop is untouched:**
+the same buttons still render in its header row (and Content in its footer row),
+in the same order. No new flag, no migration; revert is `git revert`.
+
+**THERE IS NO USAGE DATA, and the order does not pretend there is.**
+`captureAnalyticsEvent` sends to PostHog and otherwise appends to the VIEWER'S
+OWN localStorage, and `NEXT_PUBLIC_POSTHOG_KEY` is unset in production (recorded
+here 2026-08-24) — so no click has ever been counted, the events that do exist
+are readable only by the person who generated them, and nothing server-side
+records a scene open. The ranking therefore rests on the two proxies that ARE
+real and checkable, both argued in `lib/release-menu.ts`'s header: the founder's
+own placement decisions across five rounds of correction (which items he promoted
+to a tab, which he demoted, and the reasons he gave), and how often a rollout
+returns to each surface, taken from the playbooks' own tag counts across
+single_v0.3's 64 activities — marketing 37, followup 19, planning 16,
+distribution 11, editorial 9, asset_production 9, analytics 7, event 5,
+release_day 3. **If PostHog is ever switched on, this list is what real numbers
+should be checked against.**
+
+**Six things worth knowing before editing this:**
+
+1. **Removing the strip stranded nothing, and that is the check to repeat.**
+   Every scene renders inside `ReleaseScenePanel`, which brings its own heading
+   naming the scene AND its own "Activities" back control at every width — so the
+   tabs were neither the way out of a scene nor the only label saying which one
+   was open. What is genuinely lost is switching scene A → scene B in one tap;
+   that is two now (open the menu, pick).
+2. **The strip never worked as designed anyway.** Four tabs needed roughly 356px
+   against the ~343px a 375px phone offers, so it scrolled horizontally — the
+   fourth was always off the side, which is not the "every tab visible at once"
+   bar it was modelled on. The 2026-08-31 rename to "Metadata" bought ~50px and
+   was not enough. Bringing it back means re-solving that.
+3. **The ORDER lives in `lib/release-menu.ts`, not in the component**, so vitest
+   can pin it — this repo has no component tests, the same reason `task-search`,
+   `app-pages` and `release-search` are all lib modules. `ReleaseMenuKey` is a
+   closed union, so **an entry with no ranked position fails the type-check**:
+   verified by mutation (adding a `'brand-new-unranked-scene'` key produced
+   `error TS2322` on that array). That compile-time refusal is what stops the
+   next scene being appended to the bottom by default.
+4. **The sort is belt-and-braces, not load-bearing today.** The component's array
+   is already written in canonical order, so removing `orderReleaseMenu` would be
+   a behavioural no-op right now and no test would catch it — said plainly rather
+   than implied. What the sort buys is the future case: an entry inserted next to
+   a related one still comes out where it was ranked.
+5. **The open scene's row lights up** (`aria-pressed` + `bg-brand/10` + a brand
+   icon), which is what the tabs used to carry. Only the scene toggles set it —
+   the four modal actions (Status update, Recap, Change artist, Archive) open
+   something over the page, so there is no open scene for a lit row to report,
+   and `isActive` is left undefined rather than false so the attribute is omitted
+   instead of announcing them as unpressed toggles.
+6. **The list cap is `max-h-[50dvh]`, replacing a fixed `max-h-60`** (240px, about
+   five rows). The list is up to fourteen entries, so the cap decides how much of
+   the ranking is visible without scrolling. **`dvh` and not `vh`** — on a phone
+   `vh` is the LARGE viewport, so a `vh` cap overshoots the space actually on
+   screen, the same unit that had the UrgAns composer drifting for eight PRs.
+
+- **A side benefit worth knowing:** the four folded-in scenes are now findable in
+  the mobile SEARCH surface, which matches `moreMenuActions` on label. As top
+  tabs they were in no searchable collection at all, so typing "timeline" or
+  "content" found nothing.
+- Two labels were corrected in the same pass, both narrower than what they open
+  since v1.13.0: the menu trigger reads **"Release menu"** rather than "More"
+  (it is no longer an overflow), and the search trigger matches its own field's
+  "Search activities, tools and pages".
+- **`WorkspaceSkeleton` moved with it** (the loading-skeleton-sync rule): the
+  top-tabs placeholder row is deleted, and the menu trigger's flag-known check
+  now spans all ten flag-gated entries rather than the six that used to be
+  folded — leaving Timeline/Content/Pitch/Metadata out of it would have
+  un-reserved the trigger in exactly the flag combination production runs
+  (calendar + metadata on, the asset flags off).
+- **Verified:** 1911 tests (9 new in `lib/release-menu.test.ts`), `eslint .` at
+  the exact measured baseline (3 errors / 70 warnings, all pre-existing in
+  `WorkspaceView.tsx`) with **zero** new findings, `tsc --noEmit` clean apart
+  from the documented pre-existing `confirmed-action.test.ts` errors, and
+  `next build` green **by exit code** with every release-scene flag on and with
+  them all off, `/auth`, `/onboarding`, `/settings` still `○ Static` in each.
+  **Three mutation passes**, each failing exactly its own target: unranked keys
+  sorting to the front (1 test), no sort at all (4 tests), and the unranked-key
+  type refusal above. Compiled output checked rather than trusted from source —
+  `max-h-[50dvh]`, `bg-brand/10` and `text-brand` are all in the emitted CSS,
+  and the removed row's distinctive wrapper classes (`overflow-x-auto px-4 pb-3
+  pt-1`) appear in **zero** client chunks.
+- **Not verified:** nothing has rendered on a phone. This sandbox cannot mint an
+  authenticated session and has no route to app.urganize.app, so the menu at
+  fourteen entries, the `50dvh` cap against a real viewport, and the lit row all
+  rest on the build plus unit tests. **Do not try to check this from the bundle:**
+  "Timeline" and "Content" survive in the chunks either way, because the desktop
+  pills use the same strings.
 
 ---
 
@@ -2290,17 +2921,102 @@ byte-identical to before.
 
 ---
 
-*Last updated: 2026-09-01 (**type-first release creation built flag-off** — see
-"Type-first release creation" above. "New release" becomes one tap: pick
-Single / EP / Album, the release exists, and you land straight in it — no
-plan chooser, no login step, no fields; name and date are prompted later by a
-one-time bottom sheet after the user has explored (scroll / scene open /
-~10s), with the undismissable date card as the persistent fallback. Composed
-entirely from existing machinery (optional title/date, `template_pending`,
-the schedule route), so no API change and no migration; the schedule submit
-was extracted into `lib/schedule-release-client.ts` so the card and the sheet
-share one 207 story. NOT verified against a real session — this sandbox
-cannot mint one. Previously, 2026-08-25: **the workspace back arrow goes back** — see "The
+*Last updated: 2026-09-01 (**The test path: a one-tap test release — built, and LIVE the same day as v1.16.0.** The founder set the flag on Vercel within the hour; the v1.16.0 version-bump commit is what made it take, because a NEXT_PUBLIC_* value is inlined at build time and turbo-ignore skips a same-commit redeploy — the trap this file has recorded five times, walked on purpose for once. The same commit reworded Settings' "only available here" to "Delete a release here.", since a test release's banner made "only" untrue. Only the manual pass remains open. See "The test path: a one-tap test release" near the end of this file. Founder: "let's create a test path so users that just want to test the app can actually have a look at it without the pressure of running a whole real release first, the whole test path should end with an option for them to delete the test release if they want." Two forks answered by the founder before building: entry points are IN-APP ONLY — "Try a test release" on the zero-release empty state and "Just looking? Try a test release instead" on the first-release pop-up; the signup wizard is untouched — and the exit is a STANDING BANNER, not a guided tour. One tap POSTs a canned draft (titled "Test release", always single, dated +63 days so all 64 activities land in the future) with isTest: true; the user lands scoped under TestReleaseBanner, whose "Delete test release" button is the path's end and opens DeleteReleaseDialog's second-ever mount. NO migration and ZERO new read API surface: the marker is metadata.test_release (the planner-pending idiom verbatim, delete-on-clear) and the command-center has always shipped metadata raw to the client. Five things not to undo, all argued in the section: a dateless isTest is a 400 because the insert's THREE metadata spreads are only provably exclusive while a test always carries a date (last spread wins — template_pending would be silently lost and the release would never instantiate); isTest forces plannerPending off and the plan to 'template', since instant activities are the point and the planner intake IS the pressure removed; a flag-off isTest is a LOUD 400 rather than ignored, or a stale client mints an unmarked "Test release" with no tag, no banner and no exit; the navigation deliberately carries no &new=1 (the guide's consumption effect is mount-once and cannot fire from the empty-state entry — the banner orients instead, and the hook AWAITS the force resync before pushing); and the delete exit runs markCatalogRequested + setScope(null,{forgetScene:true}) so a remaining lone real release cannot auto-scope-bounce the user back in — the v1.14.1 mechanism, reused a day later. AppShell's modal instance deliberately does NOT carry the test link (it cannot consume the ToastProvider it mounts, so a failure there would be a silent dead tap); URG-163's Settings-only deletion gains its ONE sanctioned exception, recorded at all three comment sites; test releases skip the come-back push reminders and deliberately still count against the active-release cap. 2011 tests (18 new; four mutation passes each failing exactly its own tests), lint at the exact 3/70 baseline with zero new findings, tsc clean apart from the documented confirmed-action.test.ts errors, and next build green by exit code in BOTH flag states with /auth, /dashboard, /onboarding and /settings still Static in each. NOTHING HAS RENDERED IN A BROWSER — no session is mintable here — so the flag being live is what makes the founder's manual pass the real verification. Previously, the same day: **Home always reaches the catalog — shipped as v1.14.1** — see "Home always reaches the catalog" under "The workspace back arrow goes back now". Founder: "clicking the home button should always lead back to catalog view no matter what, if the code needs clean up, clean up." The FOURTH report caused by one auto-scope and the first with a reproducible mechanism: a workspace holding exactly one release scopes itself to that release on arrival ("a catalog of one is not a catalog", founder call 2026-08-12), and the ref guarding that says the bug out loud — it means "the auto-scope has had its one chance THIS MOUNT". WorkspaceView unmounts on every navigation away from /dashboard, so the chance came back every time you returned, and Home, Catalog and the back arrow all return. Tap Home from Settings on a single-release account and you reached the catalog and were dragged straight back into the release, INVISIBLY, because the skeleton gate covers exactly that frame. That is also why the 2026-08-31 pass could not reproduce it — it traced the same-page case, where the ref is spent and Home works; its prediction named a full page load as the hole, and the real hole was one route change. Five things worth knowing, all argued there; the four sharpest: a ref cannot fix it because the fact outlives the component, so lib/catalog-intent.ts records the intent in sessionStorage — per tab, survives a reload, dies with the tab, exactly the lifetime of "this visit"; the AUTO-SCOPE IS KEPT deliberately, because the founder asked for the buttons to work and not for signing in to stop landing on your only release, so an undirected first arrival still gets its one bounce and deleting it outright stays a one-line founder call that would retire the whole bug class; it FAILS TOWARD NOT AUTO-SCOPING, since a store that cannot be written is a store where no exit can ever record intent, and only one of "lands on a one-card catalog" and "can never reach their catalog" is an inconvenience; and the probe is a real WRITE rather than a read, because Safari's private mode serves getItem happily and throws on setItem. The one storage read during render is safe ONLY because the skeleton gate leads with authLoading (true on the first render for the server and the client alike, since the auth store's initial isLoading is not persisted) — if that ever changes it has to move to a mount effect. The actual one-line fix inside all of that: handleHomeClick's `if (!isHome) return;` is gone, a guard that was harmless for the scene half and fatal for the intent half. leaveReleaseForCatalog() replaces forgetSceneForCurrentRelease() at all five call sites so the two halves of one move cannot drift apart, which is this control's documented history. 1941 tests, two mutation passes each failing exactly its own test, lint at the exact 3/70 baseline with zero new findings, next build green by exit code with /dashboard still Static. NOTHING HAS BEEN CLICKED IN A BROWSER — no session is mintable here — and only a single-release account can show this, so that is the account to test on. Previously, 2026-08-31: **the install offer became a one-minute timer on every visit, and desktop joined it — still flag-off** — see "A minute, every visit, and desktop too" under ""Put us on your Home Screen", then notifications". Founder: "Every time the user looks at urganize through the web app they should be prompted to download the app after a minute or install the PWA for iOS or desktop." Three changes, and the first is a CONSCIOUS REVERSAL of the founder call from the day before rather than drift: the trigger is a one-minute timer and the three-distinct-surfaces counting is deleted outright, along with the per-navigation sessionStorage write it cost NavigationTracker on the shell's hottest effect — do not run both, because two triggers racing produce a card whose timing nobody can predict or test. "Every time" is scoped to once per browser SESSION, and the two answers are stored differently on purpose: a decline is sessionStorage so the next visit asks again, an accept is localStorage for 180 days because someone who already installed must not be asked tomorrow and ON ANDROID NOTHING THE PAGE CAN READ WILL EVER CONFIRM THE APK INSTALL. Desktop is a third variant via the deferred beforeinstallprompt event, the first time anything in this repo touches it. Five things a later change will be tempted to get wrong, all argued there; the four sharpest: the desktop card is offered ONLY once the browser has actually handed us an install, so desktop Safari and Firefox see nothing rather than a button that cannot work (the iOS "never a control that visibly does nothing" rule, reached from the other direction); android must resolve BEFORE desktop, because Chrome on Android fires beforeinstallprompt too and would otherwise offer a second-best web install to someone who can have the APK (mutation-tested); startInstallPromptCapture() must be called from an EAGERLY-loaded module, since Chrome fires that event once shortly after load and an unlistened event is simply gone while InstallAppPrompt is a dynamic() import — NavigationTracker for that reason and no other; and isInstallPromptOwed() probes the session store with a REAL WRITE, because Safari's private mode serves getItem happily and throws on setItem, so a read-only probe reports a store that cannot remember anything and the notification ask would be held forever behind a card that can never arm. Also: shownAt is written when the card FIRES rather than when it is answered, so leaving app chrome and coming back cannot produce a second one; and the manifest's icon now declares 1004x1004 instead of sizes:"any", because Chrome wants a declared raster icon of at least 144px before it will fire the event the whole desktop half depends on — change that number if the file is ever replaced. 1922 tests (35 replacing the 24 that tested the deleted counting), four mutation passes each failing exactly its own test, lint at the exact 3/70 baseline with zero new findings, next build green by exit code in both flag states, and the emitted manifest read from .next rather than trusted from source. NOTHING HAS RENDERED IN A BROWSER and NO beforeinstallprompt EVENT HAS EVER BEEN OBSERVED — if the desktop card never appears in production, check the manifest and Chrome's installability criteria before this code; the failure is silent by design, not a broken button. The flag has never been flipped, so none of it is live, and there is no changelog entry or version bump for the same reason (the EPK precedent: the ledger entry lands at the flip). Previously, the same day: **the mobile top tabs are gone; the release menu holds everything — shipped as v1.14.0** — see "The top tabs are gone; the menu holds everything" under "Mobile scene navigation". Founder: "Remove all top menu pills in mobile view and put them in the hamburger menu. In an order that makes sense to the user based on previous usage data." Timeline / Content / Metadata / Pitch, permanent tabs since 2026-08-16, are entries in the menu at the base of the panel now, ranked among the ten already there; desktop is untouched. THERE IS NO USAGE DATA and the order does not pretend there is — captureAnalyticsEvent sends to PostHog and otherwise appends to the VIEWER'S OWN localStorage, NEXT_PUBLIC_POSTHOG_KEY is unset in production, and nothing server-side records a scene open, so no click has ever been counted. The ranking rests on two proxies that are real and checkable, both argued in lib/release-menu.ts: the founder's own placement decisions across five rounds of correction, and how often a rollout returns to each surface per the playbooks' own tag counts across single_v0.3's 64 activities (marketing 37, planning 16, distribution 11, asset_production 9). Six things worth knowing, all argued there; the four sharpest: removing the strip stranded nothing, because every scene brings its own heading and its own "Activities" back control inside ReleaseScenePanel — the tabs were never the way out of a scene, and what is genuinely lost is switching scene A to scene B in one tap; the strip never worked as designed anyway, needing ~356px against the ~343px a 375px phone offers, so it scrolled and the fourth tab was always off the side; ReleaseMenuKey is a CLOSED UNION, so an entry with no ranked position fails the type-check (mutation-verified, error TS2322), which is what stops the next scene landing at the bottom by default; and the cap is max-h-[50dvh] rather than vh, since on a phone vh is the LARGE viewport — the same unit that had the UrgAns composer drifting for eight PRs. Said plainly rather than implied: the sort is belt-and-braces today, because the component's array is already in canonical order, so removing it would be a no-op no test would catch. Side benefit: those four scenes are now findable in the mobile search, which matches the menu on label — as tabs they were in no searchable collection at all. 1911 tests, three mutation passes, lint at the exact 3/70 baseline with zero new findings, next build green by exit code with the flags on and off, and the compiled CSS checked directly. NOTHING HAS RENDERED ON A PHONE, and do not try to check it from the bundle — "Timeline" and "Content" survive either way, since the desktop pills use the same strings. Previously, the same day: **search reaches every page, and the catalog got its own bar — shipped as v1.13.0** — see "It searches pages too, and the catalog got its own bar" under "Mobile scene navigation". Two separate things and the distinction is the design: the mobile dock's search is a PALETTE (behind an icon, on demand, answers a question) and gained a third result group for the app's own pages, while the catalog got an always-visible "Search release" bar that FILTERS the release list in place, on the phone and on the desktop. Seven things worth knowing, all argued there; the four sharpest: lib/app-pages.ts exists for its KEYWORDS rather than its labels, because a manager hunting for card details types "billing" and no page is called that — label-only matching would answer "No matches" to a query the product can satisfy; it is deliberately NOT merged with prefetch-routes.ts, since "should this be warmed?" and "should this be findable?" are different questions (prefetch spends bytes on a metered link, search costs nothing per entry); searchReleases returns the list UNCHANGED for an empty query, the exact opposite of searchTasks, because a filter with an empty box means no filter while a palette with an empty box means nothing asked for yet; and the filter is applied ONLY at the two catalog call sites and never to releaseCards itself, which also feeds selectedCard and both rails. /admin is absent from the page catalog as a decision, not an oversight: its availability comes from a payload that 404s when the identity-panel flag is off, so an isAdmin read there would be unreliable rather than merely restricted. A VERIFICATION CLAIM I GOT WRONG, recorded rather than dropped: I expected DCE to strip the flag-gated page entries from the flag-off bundle and it does not — "set list", unique to app-pages.ts, survives with the events flag off, so the bundle grep cannot verify this gate. Fourth time this file has had to record that a bundle grep is a non-signal for a flag; the proof is app-pages.test.ts asserting both states by re-import. 1902 tests, lint at the exact 3/70 baseline with zero new findings, next build green by exit code in both flag states. NOTHING HAS RENDERED IN A BROWSER at either width. Previously, the same day: **the phone's search button searches activities — shipped as v1.12.0** — see "The search button searches activities now" under "Mobile scene navigation". The mobile dock's two icon buttons opened the SAME panel, and that panel carried a search box above the menu list, so the only thing "search" could ever match was those eight menu labels — a release has 64-113 activities and not one of them was findable. They are two surfaces now: the hamburger opens the menu and only the menu, with no field in it, and the search button opens a field over real results (activities first, then any release tool whose name matches). Not a scope expansion, no new flag, no migration; search is deliberately UNFLAGGED because it searches activities every scoped release has rather than a gated feature. The ranking lives in lib/task-search.ts rather than inline because vitest collects lib only and this repo has no component tests: three tiers (title starts with the query, every term in the title, every term across title + description), terms order-independent so "art cover" finds "Cover art final approved", done activities last WITHIN a tier but never across one, and an empty query returning nothing so the surface cannot degrade back into the menu it was split from. Two things not to undo: autoFocus is back on that field and is safe ONLY because it is text-lg (iOS zooms under 16px, and base is 14px in this preset — remove autoFocus in the same edit if the size ever drops), and the panel stays at the BOTTOM rather than the reference screenshot's top overlay, because moving a phone's primary control to the top corner is what NEXT_PUBLIC_FEATURE_MOBILE_NAV exists to undo. 1873 tests with three mutation passes, lint at the exact 3/70 baseline, next build green by exit code in both flag states. NOTHING HAS RENDERED ON A PHONE — no session is mintable here — so autoFocus against a real iOS Safari is the first thing to check. Previously, 2026-08-30: **the Timeline view, built flag-off** — see "Timeline view" above. Phase 1 of the spec: one release, read plus drag, behind `NEXT_PUBLIC_FEATURE_TIMELINE`. **No migration, no API route, no new table** — the spec called a nullable `start_date` blocking and it is not, because `duration_days` has been persisted on every generated activity since instantiation was written (`metadata.template.duration_days`, now surfaced as `Task.durationDays`). The second finding is what shaped the whole view: every activity in every playbook is 1 day or 7 days and nothing else — single 57/7, EP 76/14, album 95/18 — so ~89% of a release is single-day work and a bar chart of it would be 57 stubs pretending to have span. Single-day work renders as a MARKER and only genuine multi-day work as a bar. Six things a later change will be tempted to get wrong, all argued there; the three sharpest: `dueDate` is the START of a run and not the deadline (the playbooks say "Begin X... ongoing across the week" at the offset it begins, so a span runs FORWARD — mutation-tested), the date frame is UTC on purpose while TONE stays local because "is this overdue" is a question about the user's day, and the scene is out of `CacheableSceneName` for the opposite reason to `plan` — that one edits its payload, this one fetches nothing at all. Container query rather than `lg:`, per the recorded trap that the rails narrow the column without narrowing the viewport. 1743 tests, lint at the exact 3/66 baseline with zero new warnings, `next build` green by exit code in both flag states. NOTHING HAS RENDERED IN A BROWSER — no session is mintable here — so the grid, the drag and the breakpoint rest on unit tests plus the build; and do not try to prove the flag by grepping the bundle, since both ternary branches compile in. Also flagged and deliberately NOT fixed: `templateTaskId` is null on every activity in the product, because both writers store `metadata.template.task_id` and the reader looks for `template_task_id` — which means `lib/cover-art-tasks.ts`'s deliberate exclusion of the four "brief the designer" steps is not holding. Dark today behind the cover-art flag; it wants its own change rather than being buried in a timeline diff. Footer drift noted rather than absorbed: **the Events surface (#448) and the per-view mobile bar trim (#449) both landed on main the same day and appended neither a footer entry nor, in Events' case, a version bump — their own sections are the record. Previously, the same day: **the release back arrow stopped reading history — shipped as v1.9.1** — see "The arrow stopped reading history at all" under "The workspace back arrow goes back now". Third report on this button, and the founder settled it by naming the behaviour rather than the bug: "clicking home while in task view should lead them to catalog view, same thing for that back button, always." The two earlier fixes are SUPERSEDED, not extended — both made the mechanism sound and left the shape wrong, because a destination computed from a trail is unpredictable by construction and can legitimately answer with another release, UrgAns, Notes or Settings, while a 20-entry cap drops the catalog off the bottom of a long session. It has ONE destination now, the catalog, scene open or not; goBack is one line and resolveWorkspaceBackTarget is deleted. Three things not to undo: the arrow sits in the RELEASE header above the scene tabs, so its position already means "leave this release" and browser Back plus the edge swipe already do history; the new forgetScene option on SetScopeOptions is what stops it looping, since scene memory would otherwise resume you into the very scene you backed out of, and only the explicit exits may pass it; and closing a scene without leaving is still one tap, because every scene entry point is a toggle (two taps for a folded-menu scene on mobile, the one real cost). MobileNavBar Home was paired with it per the founder's sentence — its Link already left the release, so it now forgets the scene too; the desktop Catalog links are deliberately untouched, being navigation rather than an exit. lib/nav-history survives for Settings alone, whose back button IS about where you came from, but the flow-page rejection died with the resolver, so a Settings back can in principle land on a bouncing page like /auth — pre-existing, flagged not absorbed. 1708 tests, lint at the exact 3/66 baseline, next build green by exit code. NOT PRESSED IN A BROWSER: no session is mintable here, and goBack has no unit test because this repo does not test components — it is one call now, which is most of why that is tolerable. Previously, the same day: **Chappi, the mascot, is in the product — shipped as v1.9.0** — see "Chappi, the mascot" near the end of this file. One shared component in packages/ui, six poses copied verbatim from chappi-model-sheet-v1.html, wired to real states: thinking replaces the UrgAns spinner, idle waits on the assistant's empty landing and beside the onboarding greeting, resting sits on the releases/activities/notes empty states, and celebrating turns up when Motion reaches done/done. Not a scope expansion, no flag, no migration, no new dependency. Seven things a later change will be tempted to get wrong, all argued there; the five sharpest: THE HANDS ARE ONE MITTEN placed by the sheet's own transform strings rather than twelve baked paths, which is what makes "a pose differs only in eyes, mouth and hand transforms" literally true in the code; the hover SHADOW is part of him (the sheet's part 05, and the reason the hover gap is a stated proportion), rides inside the float group, and its blur is static; that blur filter needs a per-instance id, which is the ONLY reason the component is use client, because a shared literal id breaks every later instance the moment the first unmounts and two Chappis sit in the DOM wherever this repo splits mobile and desktop by CSS; the plain data therefore lives in chappi-constants.ts, since a client module's exports reach a Server Component as opaque references and /admin/chappi rendered its nav and nothing else the first time this was tried; and EmptyState's mascot prop is opt-in per call site because an account with no releases has TWO empty states on screen at once, which is also why TasksPanel only shows him alongside the scoped wording. The viewBox is the sheet's pose box with the hero's lower edge plus overflow:visible, because neither box the sheet draws contains every pose — its own pointing card clips the raised hand. On our dark theme his hood disappears and that is CORRECT: bg-base is byte-identical to ink, so he reads as a floating cream face exactly as the sheet's own pose cards render him, and no glow container is used in-app. One copy fix the sheet forced: it bans "workspace" in anything a customer reads, so onboarding's signup line now matches the authed-setup one. pointing and carrying are built and previewed at /admin/chappi but placed nowhere — they are for marketing. Rendered in a real headless Chromium and compared side by side against the sheet's own pose grid; THE FOUR AUTHENTICATED PLACEMENTS HAVE NEVER RENDERED — no session is mintable here — so they rest on the component being proven plus traced call paths. Previously, the same day: **the install offer comes before the notification ask, built flag-off** — see ""Put us on your Home Screen", then notifications" near the end of this file. Founder brief: once someone is observed browsing the app's tabs, offer the install low on the screen where a thumb reaches, and only if they turn it down should the notification prompt follow. Not a scope expansion and no migration — the Android banner, the push card and an installable manifest all already shipped; what was missing was an iOS offer, a behavioural trigger, and any ordering between the two asks. Four things a later change will be tempted to get wrong, all argued there: THE iOS CARD CAN ONLY TEACH, because Apple routes Add to Home Screen through the share sheet and no API on any page can open it, so a primary button that "installs" would be a control that visibly does nothing; on iOS the ordering is FORCED rather than preferred, since Notification and PushManager are exposed only to Home Screen apps and isPushSupported() is false in a Safari tab; the hold costs an ask in a session where the user never browsed enough, and that is the right trade rather than a regression, because a browser grants exactly one permission prompt per origin forever and spending it on a drive-by visitor is how an origin gets Blocked for good; and lib/install-prompt.ts fails CLOSED on both counts — broken storage means no card AND isInstallPromptOwed() answers false, so it can never mute the notification ask behind an install prompt that will never arrive, which is also why markInstallPromptSettled guards its write but does NOT make the subscriber notification conditional on it (writePersistedState does not wrap setItem). AndroidAppBanner stands down when the flag is on — both point Android at the same /download page. Mutation-tested four ways; 1706 tests, lint at the exact 3/65 baseline, and next build green by exit code in both flag states. NOTHING HAS RENDERED IN A BROWSER on any phone — no session is mintable here and there is no route to either urganize domain — so the layout, the iOS steps against a real share sheet and the decline-to-notification hand-off all rest on unit tests and traced call paths; and do not try to prove the flag by grepping the client chunks, since dynamic() emits the card's chunk in both states. Footer drift noted rather than absorbed: v1.6.0 ("Artist rosters") and v1.7.0 ("Moving a release to a different artist") both landed the same day and appended their own sections without updating this footer, so it skips from here to the entry below — their sections are the record. Previously, the same day: **a Solo tier on /pricing, and the first self-serve CTAs there** — see "A Solo tier, and the first self-serve CTAs on /pricing" near the end of this file. The ladder is Solo → Manager → Label → Group: Solo is ₦8,000/mo (₦80,000/yr) for one artist, two people, one release at a time and 40 UrgAns actions a month, and Manager moves up a rung to "two or more artists" with a 5-artist ceiling. Solo and Manager now send visitors to a free trial at APP_SIGNUP_URL (which is /onboarding, never login-only /auth) while Label keeps "Book a demo" and Group "Let's talk" — that NARROWS rather than deletes the 2026-08-24 "every CTA on this page is a capture" rule, and the header's "Join the waitlist" became "Start free trial" for the same reason, with every in-body waitlist form left where it was. Two things not to misread. SOLO IS NOT ON SALE: absent from SelfServeTierId, no Paystack Plan, and in neither subscriptions plan CHECK, so nothing can write it and no team can resolve onto it — the tripwire for the day that changes is pointed at resolveCheckoutPurchase rather than at a constant array, which is the lesson from the 2026-08-24 miss. And limits.artists is DECLARED, NOT ENFORCEABLE, because nothing in the product can add a second artist to a team (one artists row per workspace, no artist input on the create modal), so "Up to 5 artists" is a knowing exception to the standing do-not-market-multi-artist note, raised with the founder's brief and shipped as asked; the number still lives in @urganize/pricing so the page quotes the field a future check will read. No changelog entry or version bump — everything a user sees is apps/homepage, which the app-only scope rule excludes. Nothing was seen in a browser; the four-across row at ≥1280px is the one thing worth a look. Previously, 2026-08-29: **the release back arrow terminates now — shipped as v1.5.4** — see "It was still a trap: nav-history was one slot, not a stack" under "The workspace back arrow goes back now". The 2026-08-25 fix made the arrow do something; it did not make it terminate. lib/nav-history held a current+previous PAIR, and recording a navigation moves current into previous — so a back press pushed the previous page and simultaneously wrote the page it just left into the slot, sending the next press straight back. Two surfaces read that one slot (this arrow and Settings'), so the loop was one tap wide: release → Settings → back → release → back → Settings → forever. Same loop between any two workspace URLs — two releases reachable via UrgAns, the bell, a note chip or the desktop rails. It is a bounded stack now, and the rule that makes back terminate is that navigating to the entry directly BENEATH the top pops instead of pushing (it cannot tell our button from browser Back or an edge swipe, and must not). readPreviousLocation kept its signature, so neither call site changed and Settings is fixed by the same edit. Three things not to undo: only ONE step down counts as a pop; resolveWorkspaceBackTarget's same-release rejection STAYS, because scene switches replace and append with no matching pop; and the new "already here" rejection reads window.location at click time, never a render-time copy. Mutation-tested both guards. Deploy carries a deliberate one-tap degradation — open tabs hold the old keys, so the first press after deploy finds an empty trail and falls to its safe floor. Not pressed in a browser. Same day, earlier: **the assignee picker is a dropdown now — shipped as v1.5.3** — see "The assignee picker became a dropdown" near the end of this file. Its text input raised the phone keyboard over the list it was meant to show, so TaskMemberCombobox is deleted and TaskMemberSelect (a button over a role=listbox panel, the NoteReleasePicker pattern) replaces it at all three call sites. Search was dropped outright rather than hidden on mobile: Manager caps a team at four seats, and a viewport-conditional control means two code paths for one picker. It also deletes the bug class v1.5.2 had guarded — both of those defects existed only because the display and the filter were one field. Same day, earlier: **the assignee picker hid the team, and fields zoomed on tap — shipped as v1.5.2** — see "The assignee picker hid the team" near the end of this file. The picker filtered its list by the current assignee's name, so an already-assigned activity offered only that person; the guard now lives in filterMembersForPicker (lib/tasks.ts) and is the second copy of one ReleaseCombobox already carried — keep them in step. Blurring an empty box no longer unassigns, PlanTaskRow seeds its query, and TaskDetailView's seed effect is keyed on task?.id. Separately, one (pointer: coarse) rule sets form controls to 16px, since this project's type scale sits under iOS's auto-zoom threshold nearly everywhere; the !important is load-bearing against Tailwind specificity, and pinch/double-tap zoom were ALREADY closed by touch-action: pan-y. Same day, earlier: **the release scenes are team-aware, shipped as
+v1.5.1** — see "Scenes opened to the team: one release-access rule" above. A
+teammate opening Collect metadata on a release they could see everywhere got
+"Release not found.", because every scene route group carried an accidental
+owner-only check while the workspace, the release GET and tasks were all
+team-aware. One shared pair (`lib/release-access-server.ts`, pure core in
+`lib/release-access.ts`) now gates eleven route groups — members read and
+write, guests are read-only, non-members keep the existence-hiding 404 — child
+rows are stamped with the RELEASE owner, schedule/archive stay owner-only and
+are hidden from teammates client-side, and a mutation-tested guard test bans
+the next local clone. Not browser-verified — no teammate session mintable
+here. Same day, earlier: **assignment sends an email — shipped as v1.5.0** — see "Assignment sends an email" near the end of this file. Assigning an activity now emails the assignee a founder-note-register message in the assigner's voice, sent as "<assigner> via Urganize" through composeFromHeader (sanitised, header-injection-tested); the email leg lives in createTaskNotification gated to task_assigned only, and POST /api/tasks finally fires the assignment notification for create-with-assignee, which used to tell nobody. Same day, earlier: **invite acceptance is durable — shipped as v1.4.3** — see "Invite acceptance is durable now: the deferred claim" near the end of this file. A real invited teammate had an account and no membership, because the accept page creates the account first and joins second with nothing recording the pending join; the token now rides auth.user_metadata and loadWorkspaceAccessContext finishes the join on the first authenticated request. The join logic moved to the leaf-only lib/invite-claims-server.ts — ONE implementation shared by the accept route and the deferred claim; do not grow a second copy. Previously 2026-08-28: **the first-release pop-up is deferred and
+dismissible, shipped as v1.4.2** — see "First-release prompt: deferred and
+dismissible" above. A zero-release account now sees the workspace first; the
+create modal offers itself ~30s in, once per browser session, and every exit
+is back (URG-217's wall — no Escape/backdrop/X/Cancel, Sign out as the only
+way off — is consciously superseded, founder call). The countdown lives in
+sessionStorage so it spans /dashboard and /dashboard/urgans, the predicate
+still fails open while the prompt storage fails closed, and four fire-time
+guards keep it from stacking over another modal or talking over an UrgAns
+conversation. Nothing browser-verified — no session mintable here. Footer
+drift noted rather than absorbed: this footer sat at 2026-08-25 while the
+v1.3.0/v1.4.x credit-collection sections of 2026-08-27 were appended below
+without updating it; their own sections are the record. Previously:
+**per-user MCP access is LIVE, and shipped as
+v1.2.0** — see "Per-user MCP access, over OAuth 2.1" above. The migration is
+applied, the flag is on, and the MCP Inspector connected to production
+successfully, which in one connection exercises discovery, Dynamic Client
+Registration, the consent screen, PKCE, the code exchange, the access token and
+tools/list against real tables — and incidentally proves the deploy rebuilt
+apps/web, the trap the checklist warns about. The ledger entry landed at the flip
+rather than at merge, per the EPK precedent. WHAT IS STILL UNTESTED IS NOT SMALL:
+no tool has ever been called, so nothing has round-tripped through the
+internal-actor branch where five of the thirteen allow-listed tools live —
+create_note among them, whose long-standing 401 this work fixed and which has
+never run for real. Revoke, the Settings list, refresh rotation and claude.ai
+itself are all still unexercised; one get_workspace_context call answers most of
+it. Also recorded: why the claude.ai connector menu was missing (paid plan, and
+the path is Settings → Customize → Connectors, not Settings → Connectors).
+Previously: **per-user MCP access, over OAuth 2.1** — see
+"Per-user MCP access, over OAuth 2.1" above. Founder ask: let all users take
+their context to any LLM of their choice. It is OAuth rather than a per-user
+token because of one external fact worth re-checking before anyone simplifies
+it: Claude Code accepts a static bearer, but claude.ai web and Claude Desktop
+assume OAuth 2.1 and attempt Dynamic Client Registration with no no-auth option
+and no static-header fallback — and artist managers live in exactly those
+clients, so a token would have served the founder and nobody else. Three tables,
+five routes, a consent screen, and hashed tokens (a deliberate deviation:
+nothing else here hashes anything, because share links must be re-readable to
+render a Copy button and an access token never is). "Consistently" turned out to
+be half-built already — buildChappiSystemPrompt's team brief plus workspace
+snapshot IS the portable context, so it moved to one builder with two consumers
+rather than growing a second renderer that would drift. Also inverts the MCP
+tool list from a deny-list to an allow-list, because "exposed unless someone
+remembers to exclude it" was fine for one founder key and is not once every
+customer holds a credential — that list is the only thing between an outside
+model and a confirmation-gated tool, since executeToolCall never reads
+tool.confirm. Which is how a real bug surfaced: create_note was advertised over
+MCP from day one and always 401'd, and the test now guarding that was
+mutation-tested twice (the first version matched the import, not the handler).
+Two undocumented features found on the way — the team brief and
+workspace-summary.ts — are flagged rather than back-filled. NOT verified against
+a real database, a real client, or a real consent screen: no migration applied,
+no session mintable here, and no route to either urganize domain. Previously:
+**an open scene gets the whole surface** — see "An
+open scene gets the whole surface" above. Third founder report on Collect
+metadata, this one a desktop screenshot, and two width faults behind it. The
+release rails only stepped aside for the UrgAns rail and for `?scene=calendar`,
+on the recorded reasoning that "the other scenes fit the normal centre column
+(founder call)" — they do not: at xl+ the rails plus their gaps take 488px, and
+`RailColumn` renders an EMPTY `<div aria-hidden>` when a rail has no cards, so on
+a one-release account half the surface was blank beside a crushed 8-field form.
+Any open scene now hides them. That fix needed the same decision in
+`WorkspaceSkeleton`, which would have been the FOURTH hand-rolled copy of one
+four-flag expression — and they had already drifted (TasksPanel's copy was
+missing 'song' and 'coverart') — so it now lives once as `resolveActiveScene` in
+`lib/scene-cache.ts`, gating only those four scenes deliberately, mutation-tested.
+Second fault: the share-link button row carried `flex-wrap` AND `sm:shrink-0`,
+which contradict — shrink-0 pins the group at max-content so it can never wrap
+and overflows instead, clipping "Regener…". Fixed with the 2026-08-10 TasksPanel
+pill precedent (group shrinks, each button `shrink-0 whitespace-nowrap`) in all
+three identical copies: Metadata, EPK, Capture. `AssetUploadControl` has the same
+class and was left alone on purpose. Nothing was seen in a browser — no
+authenticated session here — so it rests on unit tests, the lint/build baseline
+and the compiled output. Shipped as v1.1.3. Previously: **Collect metadata calmed
+down to three closed cards** — see "Collect metadata: three closed cards on
+entry" above. Second
+founder report on the same page: round one (2026-08-13) fixed the copy but
+left every step rendering fully open on entry, so a first visit still painted
+~25 elements at once. This round changes what renders, not what it says — the
+three steps became collapsed cards (the TasksPanel bucket pattern), closed on
+every entry, each carrying a one-line status chip instead of its full body.
+Session-only state, deliberately not persisted, and a load error now shows
+ONE box instead of two identical ones. Nothing behavioral changed and nothing
+was verified in a browser — this sandbox cannot mint an authenticated
+session. Previously: **the workspace back arrow goes back** — see "The
 workspace back arrow goes back now" above. Two faults behind one founder report
 that it "is not working": it pointed at the catalog unconditionally, and for a
 single-release account it was a literal no-op, because `hasAutoScopedRef` meant
@@ -4608,7 +5324,8 @@ The ref's own comment described this bug as already fixed. It was, for arrivals
 where the auto-scope had actually run — which is not the arrival most people
 have. **The fix is one branch: arriving already scoped now spends the chance.**
 Note what it deliberately does NOT do: `!isSingleRelease` leaves the chance
-OPEN, because a zero-release account is handed the create modal and must still
+OPEN, because a zero-release account is prompted to create one (deferred and
+dismissible since 2026-08-28 — see "First-release prompt" below) and must still
 get its one auto-scope when that first release lands.
 
 ### The behaviour: one rule, three cases
@@ -4677,7 +5394,3217 @@ since this repo does not test components. Worth one pass on a real account: from
 `?release=X&scene=coverart`, press back three times and expect Activities, then
 wherever you came from, and never a silent no-op.
 
+### It was still a trap: nav-history was one slot, not a stack (2026-08-29, v1.5.4)
+
+Founder, four days later, screenshot with the arrow circled: *"This back button
+gets stuck a lot right now I can't even go back."* The 2026-08-25 fix made the
+arrow DO something; it did not make it TERMINATE.
+
+**The whole cause is the data structure, and it is provable on paper.**
+`lib/nav-history.ts` held a `current` + `previous` PAIR, and `recordNavigation`
+moves `current` into `previous` on every route change. So a back press pushed the
+previous page and, in the same breath, wrote the page it had just left into the
+slot — making the very next back press come straight back. **Two surfaces read
+that one slot** (this arrow and `SettingsPageClient`'s), so the loop was one tap
+wide:
+
+```
+/dashboard?release=X  ->  /settings  ->  back  ->  /dashboard?release=X
+                      ->  back  ->  /settings  ->  back  ->  ... forever
+```
+
+The founder had been living in Settings → Teammates all week, which is why it was
+"a lot, right now". The same loop runs between any two workspace URLs: two
+different releases (reachable from UrgAns, the notification bell, a note's
+release chip, and the desktop rails), or a release and `/dashboard/notes`. The
+existing `scopesRelease` rejection caught exactly ONE instance of this shape —
+previous still scoping the SAME release — which is why it read as fixed.
+
+**`lib/nav-history.ts` is a bounded stack now** (`urganize.nav.stack`, cap 20),
+and the rule that makes back terminate is three lines in `nextNavigationStack`:
+navigating to the entry directly BENEATH the top **pops** instead of pushing. It
+cannot tell our button from the browser's Back or an edge swipe, and must not —
+all three are the same move. Every back press therefore shrinks the trail and the
+loop above reaches the catalog and stops. `readPreviousLocation` keeps its
+signature, so **neither back button's call site changed** and Settings is fixed by
+the same edit.
+
+Five things worth knowing before editing this:
+
+1. **The pop rule is the fix; mutation-tested.** Deleting that one line fails
+   exactly five tests, including both `terminates the ... loop` cases. The two
+   loops are pinned as end-to-end sequences rather than unit assertions, because
+   the defect was never in a single call — it was in what the calls did to each
+   other.
+2. **Only ONE step down counts as a pop.** A jump to an older entry pushes. The
+   narrow rule is precisely the "user went back one step" signal, and the cap
+   handles everything else; a "truncate to wherever it matches" rule would also
+   collapse legitimate forward revisits.
+3. **`resolveWorkspaceBackTarget`'s same-release rejection STAYS**, and is not
+   made redundant by the stack. Scene switches `replace`, which appends with no
+   matching pop, so the entry beneath the top can still be a scene of the release
+   being left. That guard is also why the trail can grow on replace at all —
+   hence the cap.
+4. **A third rejection was added: a target equal to the page you are already
+   on.** The trail cannot normally produce it (it never holds one URL twice in a
+   row), so this is insurance against a navigation that never reached
+   NavigationTracker's effect — the cost of being wrong there is the worst
+   possible outcome for this button, a tap that visibly does nothing. It reads
+   `window.location` at CLICK time, never a render-time copy (the MobileNavBar
+   FAB pattern).
+5. **Deploy carries a one-tap degradation, by design.** Open tabs hold the old
+   `urganize.nav.current` / `.previous` keys, which nothing reads any more, so the
+   first back press after the deploy finds an empty trail and falls to its floor
+   — the catalog for the workspace, `/dashboard` for Settings. Both are safe, and
+   the trail rebuilds from the next navigation. The old keys are deliberately not
+   migrated or cleaned up: sessionStorage is per-tab and dies with the tab.
+
+- **Verified:** 1665 tests (16 new in `lib/nav-history.test.ts`, which had 8 and
+  covered only the pure resolver), `eslint .` at the exact 3-error / 65-warning
+  baseline, `next build` green by exit code with `/auth`, `/onboarding` and
+  `/settings` still `○ Static`. Both new guards mutation-tested.
+- **Not verified:** not pressed in a browser — the workspace needs an
+  authenticated session this sandbox cannot mint, and there is no network route
+  to app.urganize.app. The storage round trip runs against a Map-backed
+  sessionStorage stub (the `lib/credit-prefill.test.ts` approach), not a real one.
+  Worth one pass on a phone: from a release go to Settings, press Back, then press
+  the release's arrow — it must reach the catalog, not return to Settings.
+
+### The arrow stopped reading history at all (2026-08-30, v1.9.1)
+
+Third report on the same button, and the founder settled it by naming the
+behaviour he wanted rather than the bug: *"this back button is failing again …
+clicking home while in task view should lead them to catalog view, same thing
+for that back button, always."* **The two fixes above are superseded, not
+extended: the release back arrow has ONE destination now — the catalog — scene
+open or not, however you arrived.** `goBack` is one line, `setScope(null, {
+forgetScene: true })`, and `resolveWorkspaceBackTarget` is deleted.
+
+**Why the previous rule kept producing reports even though each fix was
+correct.** Both earlier passes made the mechanism sound and left the SHAPE
+wrong: a destination computed from a trail is unpredictable by construction, and
+the trail can legitimately answer with something that is not the catalog — the
+previous entry can be another release (reachable from UrgAns, the bell, a note's
+release chip, the desktop rails), or UrgAns, Notes or Settings, and the 20-entry
+cap drops the catalog off the bottom of a long session entirely. Every one of
+those is a defensible "back" and none of them is what someone pressing the arrow
+beside a release title expects. That is the difference between a fixed bug and a
+fixed button.
+
+**Three things a later change will be tempted to get wrong:**
+
+1. **The position is the argument.** The arrow sits in the RELEASE HEADER,
+   beside the title and above the scene tabs, so it means "leave this release";
+   the tabs manage what is inside one. Browser Back and the edge swipe already
+   do history, and duplicating them in a chrome button made both feel
+   unreliable. Do not reintroduce a "smart" destination here — git history has
+   the resolver if the case is ever genuinely made.
+2. **`forgetScene` (new on `SetScopeOptions`) is what stops it looping.**
+   `setScope` records the outgoing release's open scene so re-entering resumes
+   it (`lib/scene-memory`, 2026-08-17) — right when you are SWITCHING between
+   releases, wrong when you have just deliberately backed out, because you would
+   tap that release again and land straight back in the scene you were trying to
+   escape. Only the explicit exits pass it; rail cards, UrgAns links and note
+   chips must not.
+3. **Closing a scene without leaving the release is still one tap**, which is
+   what makes the collapse safe: every scene's own entry point is a toggle (the
+   lit mobile top tab, the lit desktop pill), and desktop additionally keeps
+   TasksPanel's dedicated "Activities" button. A folded-menu scene on mobile
+   costs two taps (hamburger, then the lit item) — the one real cost of this
+   change, and the reason worth re-reading if anyone wants the close-scene step
+   back as case 1.
+
+**`MobileNavBar`'s Home tab was paired with it**, per the founder's sentence.
+Its `<Link href="/dashboard">` already did the leaving (no query, so `?release=`
+and `?scene=` go together); what was missing was the other half — it now calls
+`rememberScene(releaseId, null)` so Home and the arrow land in the same place
+AND come back to the same place. Read at click time, not via `useSearchParams`,
+for the reason `SongTab`'s header gives. **The desktop Catalog links (the
+identity card's nav, the topbar icon) are deliberately NOT changed** — they are
+navigation rather than an exit, and desktop's exit is the arrow itself; flagged
+so the asymmetry is a decision rather than an oversight.
+
+**`lib/nav-history.ts` survives with one consumer, Settings' back button**,
+which is a genuinely different control: Settings is a place you visit FROM
+somewhere, so returning there is its whole point (founder request, 2026-07-23).
+The stack and the pop rule are what keep IT terminating, so none of that moved.
+Deleting the resolver did take the flow-page rejection with it, and Settings
+guards only against landing back on `/settings` — so a Settings back can in
+principle land on a bouncing page like `/auth`. Pre-existing (the resolver never
+guarded Settings), surfaced rather than absorbed.
+
+- **Verified:** 1708 tests (the 14 that remain in `lib/nav-history.test.ts`
+  cover the trail Settings still depends on; the ~26 resolver cases went with the
+  resolver), `eslint .` at the exact 3-error / 66-warning baseline, `next build`
+  green by exit code with `/auth`, `/onboarding` and `/settings` still
+  `○ Static`.
+- **Not verified:** not pressed in a browser. The workspace needs an
+  authenticated session this sandbox cannot mint and there is no network route to
+  app.urganize.app, and this repo does not test components, so `goBack` itself has
+  no unit test — it is one call now, which is most of why that is tolerable. Worth
+  one pass on a phone: from a release open Collect metadata, press the arrow once
+  and expect the catalog; tap the release again and expect Activities, not
+  Collect metadata.
+
+### Home always reaches the catalog (2026-09-01, v1.14.1)
+
+Founder: *"clicking the home button should always lead back to catalog view no
+matter what, if the code needs clean up, clean up."*
+
+**The fourth report caused by one auto-scope, and the first with a reproducible
+mechanism.** A workspace holding exactly one release scopes itself to that
+release on arrival — "a catalog of one is not a catalog" (founder call,
+2026-08-12). `WorkspaceView` guards that with a `useRef` whose own comment says
+the bug out loud: it means *"the auto-scope has had its one chance **THIS
+MOUNT**"*. `WorkspaceView` unmounts on every navigation away from `/dashboard`,
+so the chance came back every time you returned — and Home, Catalog and the back
+arrow all return. Tap Home from Settings on a single-release account and you
+navigated to the catalog and were dragged straight back into the release,
+**invisibly**, because the skeleton gate covers exactly that frame. The button
+looked broken because it could not reach its destination.
+
+That also explains why the 2026-08-31 pass could not reproduce it: it traced the
+same-page case (Home while already on `/dashboard`), where the ref is spent and
+Home works correctly. Its prediction named a full page load as the remaining
+hole; the real hole was one route change, which is far easier to hit.
+
+**Five things worth knowing before editing this:**
+
+1. **A ref cannot fix it, because the fact outlives the component.**
+   `lib/catalog-intent.ts` records "the user asked for the catalog" in
+   **sessionStorage**: per tab, survives a reload, dies with the tab — exactly
+   the lifetime of "this visit". Every deliberate exit writes it and the
+   auto-scope reads it, so the one navigation whose entire purpose is to reach
+   the catalog can never be undone by a convenience that assumes you did not
+   mean it.
+2. **The auto-scope is KEPT, deliberately, and that is the scope line.** The
+   founder asked for the buttons to work, not for signing in to stop landing on
+   your only release — which is the only thing the 2026-08-12 call was ever
+   about. An undirected first arrival in a session still gets its one bounce.
+   Deleting the auto-scope outright is a one-line follow-up if it is ever wanted
+   (drop `isSingleRelease`, the ref, the effect and the gate's third term, and
+   this module goes with them); it would also retire this whole bug class, and
+   it is a founder call rather than a cleanup.
+3. **It FAILS TOWARD NOT AUTO-SCOPING.** An unusable session store answers
+   `isCatalogRequested() === true`, because a store that cannot be written is a
+   store where no exit can ever record intent. The two outcomes are "a
+   private-window user with one release lands on a one-card catalog" and "a
+   private-window user can never reach their catalog at all"; only the first is
+   an inconvenience. Mutation-tested.
+4. **The probe is a real WRITE, not a read.** Safari's private mode serves
+   `getItem` happily and throws on `setItem`, so a read-only probe reports a
+   store that cannot hold the mark an exit is about to write — the same
+   reasoning `lib/install-prompt.ts` records for its own probe.
+5. **The one storage read during render is safe only because the skeleton gate
+   leads with `authLoading`.** `WorkspaceView` reads the record in a lazy
+   `useState` initializer, which runs during SSR too; `authLoading` is `true` on
+   the first render for the server AND the client (auth-store's initial
+   `isLoading: true` is not in `partialize`, verified), so both render the
+   skeleton and the value cannot change the first paint. **If that gate ever
+   stops leading with `authLoading`, this has to move to a mount effect** — an
+   effect was rejected here only because it would add a
+   `set-state-in-effect` warning above the baseline for no behavioural gain.
+
+- **`leaveReleaseForCatalog()` is the shared step, replacing
+  `forgetSceneForCurrentRelease()` at every call site** — it forgets the scene
+  AND records the intent, so the two halves of one move cannot drift apart. That
+  drift is the documented history of this control: the first three surfaces
+  diverged from the fourth before the shared step existed. `forgetScene`
+  survives in `scene-memory.ts` as that step's scene half plus `setScope`'s
+  path; a new catalog control calls `leaveReleaseForCatalog`, not it.
+- **The actual one-line fix inside all of that: `handleHomeClick`'s
+  `if (!isHome) return;` is gone.** That guard was harmless for the scene half
+  (no `?release=` on `/settings` to forget, so the call self-no-ops) and fatal
+  for the intent half, because the page it swallowed the intent on is precisely
+  the page whose remount would auto-scope you back.
+- **Five surfaces, one rule:** MobileNavBar's Home tab, the topbar's Catalog
+  icon, the side menu's Catalog row, the mobile search's page results, and
+  `WorkspaceView`'s back arrow (which marks the intent itself, since `setScope`
+  already does its scene half properly). The arrow marking it is new and makes
+  its exit survive a refresh, which it did not before.
+- **Reset on sign-out**, beside `resetSceneMemory()` and `resetSceneData()`: a
+  same-tab logout then login is a new arrival and gets its bounce back.
+- **Verified:** 1941 tests (19 new in `lib/catalog-intent.test.ts`), `eslint .`
+  at the exact measured baseline (**3 errors / 70 warnings**, all pre-existing in
+  `WorkspaceView.tsx`) with **zero** new findings, and `next build` green **by
+  exit code** with `/auth`, `/onboarding`, `/settings` and `/dashboard` all still
+  `○ Static` — the last one matters, since this added a storage read to
+  `WorkspaceView`. Two mutation passes, each failing exactly its own test:
+  failing open on an unusable store, and dropping the intent half of the shared
+  step.
+- **Not verified:** nothing has been clicked in a browser. The workspace needs an
+  authenticated session this sandbox cannot mint and there is no network route to
+  app.urganize.app, and this repo does not test components — so the fix rests on
+  the module's unit tests plus a traced read path. Worth one pass on a
+  **single-release** account, which is the only account that can show this: from
+  inside the release go to Settings, press Home, and expect the catalog; then
+  refresh and expect to still be on the catalog.
+
 ---
+
+## Collect metadata: three closed cards on entry (2026-08-25)
+
+Founder, second time on this exact page: the Collect metadata scene is
+"overloaded with too much information for when a user just enters that
+section" — "bring down the information so that even a 5th grader would
+understand what is going on there and how to use it intuitively." Round one
+(2026-08-13, see the docblock at the top of `MetadataSection.tsx`) fixed the
+COPY — Step 1/2/3 labels, plain-English hints, "all optional" said out loud —
+but left the structure untouched: every step still rendered fully open on
+entry, so a first visit painted an intro line, three headers, three helper
+paragraphs, all 8 fields with their hints, the explicit checkbox, Save, the
+link card, and an empty-state line, all at once. Copy alone didn't fix a
+volume problem.
+
+**The fix: the three steps are now collapsed cards, closed on every entry.**
+A user sees the scene header, one short intro line ("Everything music stores
+need for this song, in three steps. Tap a step to open it — everything is
+optional."), and three tappable cards — a plain title plus a live one-line
+status chip (`N of 8 filled in`, `Link is live` / `No link yet`, `N answers` /
+`No answers yet`, with `· check the shares` appended in warning tone when a
+collected split doesn't total 100%). Tap a card to open it; everything inside
+is exactly the round-one content, unchanged.
+
+This reuses the house pattern rather than inventing one: the workspace task
+buckets (`TasksPanel.tsx`) are collapsed-by-default `<button aria-expanded
+aria-controls>` headers with a `ChevronDown` that rotates `-rotate-90` when
+closed, and their own comment records the reasoning this borrows verbatim:
+"The header counts carry the signal at a glance; opening a bucket is a
+deliberate act."
+
+**Three things a later change will be tempted to get wrong:**
+
+1. **No smart auto-open of "the next incomplete step."** That would re-dump
+   the 8-field grid on exactly the first-time user this complaint is about.
+   All three cards start closed, unconditionally, every time the scene mounts.
+2. **The open/closed state is session-only `useState`, deliberately NOT
+   persisted** like the task buckets are (no `lib/persisted-state` key).
+   Buckets are a daily working view a user curates over many visits; Metadata
+   is visited occasionally and the complaint was specifically about *entry* —
+   every entry has to start calm, not resume wherever the user last left it.
+3. **A load error hides all three cards behind ONE error box.** Before this
+   there were two identical Retry boxes (Step 1 and Step 2) plus a Step 3
+   whose empty-state copy quietly lied during an error. It's one fetch for the
+   whole scene, so one error state covers it — and it also avoids editing a
+   form seeded from `EMPTY_FORM` mid-error, which risks saving blanks over
+   real data.
+
+**Not touched:** every handler, the fetch/cache logic, the dirty-form ref,
+genre prediction, the `window.confirm` copy, `SubmissionCard`, the `Field`
+helper, and the scene chrome (`ReleaseScenePanel`'s header/back-control, the
+entry-point pills, the topbar) — this is a render-layer restructure of
+`MetadataSection.tsx` alone. `ReleaseSectionSkeletons.tsx` is also untouched:
+`MetadataFieldsSkeleton` and `ShareLinkCardSkeleton` keep their exact shape
+and their exact `border-stroke-default bg-bg-surface` tokens, and the real
+content boxes inside each open card were deliberately kept on those same
+tokens (a first draft tried `border-stroke-subtle bg-bg-elevated` to visually
+separate the nested box from its new outer card, then reverted it — that
+would have made loaded content flash a different shade than the frozen
+skeleton the instant data arrives). No flag change, no migration, no API
+change.
+
+**Verified:** `vitest run` and `eslint .` at the unchanged baseline (3 errors
+/ 66 warnings, all pre-existing in `WorkspaceView.tsx`), `next build` green by
+exit code, `/auth`, `/onboarding`, `/settings` still `○ Static`. **Not
+verified:** the scene has never been opened in a browser — it needs an
+authenticated session with a real release, which this sandbox cannot mint and
+has no network route to. The change is markup-only over unchanged handlers,
+so the risk is visual rather than behavioral; worth one live pass: open
+Collect metadata, confirm three closed cards with correct statuses, open Step
+1, fill a field, Save, and watch the chip move.
+
+---
+
+## An open scene gets the whole surface (2026-08-25)
+
+Founder, next day, screenshot of Collect metadata on a desktop: "fix this bug on
+desktop view." Two faults, both width, one screenshot.
+
+### Fault 1: two empty rails were holding half the surface
+
+`hideRailsForLayout` in `WorkspaceView.tsx` dropped the release rails for the
+UrgAns rail and for `?scene=calendar` **and nothing else** — on the recorded
+reasoning that "the other scenes fit the normal centre column, so they leave the
+rails alone (founder call)". They do not. At xl+ the two rails plus their gaps
+take `220 + 24 + 24 + 220 = 488px`, so a 1280px viewport with the identity card
+on leaves a scene about 450px, and `RailColumn` renders an **empty
+`<div aria-hidden>`** when a rail has no cards — which is every rail on a
+one-release account. Nearly half the surface was blank while an 8-field form was
+crushed beside it. It is now `Boolean(activeScene)`: any open scene, same
+treatment.
+
+Three things worth keeping about that:
+
+1. **The rails' documented purpose is about the release-CARD view** — "so the
+   centered card sits in the middle, not flush against the viewport edge". A
+   scene REPLACES the activity list with a working surface (a form, a month
+   grid, a file list, a press-kit preview), and every one of those wants the
+   width more than a sibling release card does. The back arrow and the catalog
+   are still one press away.
+2. **`Boolean(activeScene)`, never the raw URL param.** `activeScene` is already
+   flag-gated, so a stale `?scene=capture` with that flag off correctly counts
+   as no scene and keeps the rails.
+3. **`WorkspaceSkeleton` had to move in the same commit** (the
+   loading-skeleton-sync rule): it computed the same decision from its own
+   calendar-only copy, so a refresh on any other scene URL painted 3-column
+   rails that vanished the instant data resolved.
+
+### The consolidation that made fault 1 safe to fix
+
+That skeleton mirror would have been the FOURTH hand-rolled copy of the same
+four-flag expression (`WorkspaceView` for the scene body, `TasksPanel` for which
+pill is lit, `WorkspaceSkeleton` for the layout). They had **already drifted** —
+TasksPanel's copy was missing `'song'` and `'coverart'` long after the real gate
+had them, which its own comment admitted. So it now lives once, as
+`resolveActiveScene` in `lib/scene-cache.ts` (the shared floor its header already
+claims to be), and all three callers use it. A layout decision computed two ways
+is exactly the bug class this fix is about.
+
+**It gates only four scenes, deliberately.** `metadata` / `files` / `epk` /
+`pitch` / `plan` are NOT gated there, matching the behaviour it replaces exactly:
+those gate themselves inside `ReleaseScenePanel` and their own pills, and adding
+them would change which scenes RENDER rather than consolidating a check. A test
+asserts they stay open with every gated flag off, so adding one has to break that
+test on purpose. Mutation-tested: deleting the calendar gate fails the suite.
+
+### Fault 2: `sm:shrink-0` made `flex-wrap` dead code
+
+The link card's button row is `flex flex-wrap gap-2 sm:shrink-0`, and those two
+classes contradict each other: `flex-shrink: 0` pins the group at its ~350px
+max-content width, so at any width ≥ `sm` it can **never** wrap — it overflows
+instead, and gets clipped mid-word ("Regener…" in the screenshot). The row was
+latent before and became a hard clip when the three closed cards landed the day
+before with `overflow-hidden` on each.
+
+Fixed with the precedent already recorded for TasksPanel's pills (2026-08-10):
+the group loses `sm:shrink-0` so it can narrow, and each button gains
+`shrink-0 whitespace-nowrap` so they move whole onto a second row rather than
+compressing and breaking their own labels inside a fixed `h-9`. The URL beside
+them is `flex-1` with a 0 basis, so it absorbs none of the shrinkage and keeps
+truncating.
+
+**Three identical copies**, all fixed together: `MetadataSection`, `EpkSection`,
+`CaptureSection` are byte-identical in this row. Leaving two of them would be the
+drift this file keeps having to correct.
+
+**`AssetUploadControl` carries the same `sm:shrink-0` and was deliberately left
+alone** — different shape (a `<select>` label sibling, not a truncating URL), a
+different failure width, and `NEXT_PUBLIC_FEATURE_FILES` is off in production. It
+is the same latent class if anyone widens this later.
+
+### Verified
+
+1278 tests (4 new in `lib/scene-cache.test.ts`, plus the calendar-gate mutation
+test above), `eslint .` at the exact 3-error / 66-warning baseline (all three
+errors pre-existing in `WorkspaceView.tsx`), `next build` green **by exit code**
+with `/auth`, `/onboarding`, `/settings` still `○ Static`. Compiled output
+checked rather than assumed — the repo's own habit for anything CSS-dependent:
+the link-card `sm:shrink-0` string is down to **one** occurrence in the client
+chunks (AssetUploadControl, as intended), the new wrapping button class is
+present, and `.shrink-0{flex-shrink:0}` / `.whitespace-nowrap{white-space:nowrap}`
+are both in the compiled CSS.
+
+**Not verified:** none of it has been seen in a browser. The workspace needs an
+authenticated session with a real release, which this sandbox cannot mint, and it
+has no network route to either urganize domain. Both faults are layout-only over
+unchanged handlers, so the risk is visual. Worth one live pass: open Collect
+metadata on a desktop and confirm the scene now spans the full centre with no
+empty columns beside it, that all three link buttons are whole, and that closing
+the scene brings the release rails back.
+
+---
+
+## The metadata collection link, audited then refined (2026-08-27, v1.3.0)
+
+Founder spec, two-phase: audit the credit-collection flow first, then close the
+gaps. **The feature already existed** — collaborator credit capture, built
+2026-07-31 (URG-108) and live behind `NEXT_PUBLIC_FEATURE_METADATA`. The audit
+found the whole spine working (one link per release, public no-login form,
+submissions attached to the release and listed for the owner, split totals shown
+plainly without blocking) and six real gaps. **No new flag**, and no scope
+expansion: this is the same surface, corrected.
+
+Founder decisions taken before building: **skip** the expected-contributor count
+("N answers" stands), **keep the 11 detailed roles** rather than collapsing to
+the spec's 5 (a superset, and collapsing would migrate real rows and lose
+precision distributors use), **no tier gating**. A contributor still only ever
+enters their own splits, which the spec preferred and the code already did.
+
+**One migration, `20260827100000_credits_link_close_and_email_upsert.sql`,
+deliberately covering all three schema changes in one file** — the feature is
+live and the code reads all three, so a partial hand-application leaves the app
+selecting columns that do not exist. **⚠️ Its section 2 DELETES duplicate rows**
+(keeping the newest per release+email) because the unique index cannot build
+otherwise.
+
+**Six things worth knowing before editing any of this:**
+
+1. **Closing a link is not revoking it, and that distinction is the feature.**
+   `release_credit_links.closed_at` (timestamptz, NULL = open, so every existing
+   row stays open with no backfill and reopen is just `= null`). The token still
+   resolves: `loadPublicCreditForm` now returns a discriminated union
+   (`ok` / `closed` / `missing`) and the public page renders "This request is
+   closed" with the release still named, rather than a 404. Everything else still
+   collapses to `missing` — a rotated-away token must never be distinguishable
+   from one that never existed. **Regenerate clears `closed_at`** on purpose: a
+   regenerated-but-still-closed link is a trap state nothing in the UI explains,
+   so Regenerate means "fresh live link" and Close means "pause the one I have".
+2. **The public POST refuses a closed link BEFORE reading the body**, at 403.
+   Someone who loaded the form while it was open and submits after must be told
+   the link closed, not nitpicked about a field.
+3. **Same-email resubmission updates instead of duplicating, and `.upsert()`
+   cannot do it.** supabase-js hands `onConflict` to PostgREST as a plain COLUMN
+   LIST, so it cannot target the partial expression index this needs
+   (`(release_id, lower(email)) where email is not null`). So the route
+   selects-then-updates-or-inserts, retrying an insert that fails `23505` as an
+   update. Matching happens in JS, never through `.ilike()` — `_` is a wildcard
+   and underscores are common in email local parts, so `john_doe@x.com` would
+   match `johnXdoe@x.com`. `created_at` is never touched (their place in the
+   owner's list is when they FIRST answered); the 100-submission cap applies to
+   the insert path only, since a correction adds no row.
+4. **The split rules live once, in `lib/credit-submissions.ts`, and are run by
+   both the form and the route** so the two cannot disagree — the
+   `asset-constants.ts` pattern. Required for writers (songwriter / composer /
+   lyricist) and producers; credit-only roles (engineer, vocalist, musician,
+   featured artist) are asked for nothing, because they are usually credited
+   without holding a share and demanding a number teaches people to invent one.
+   A second decimal place is **rejected, not rounded** — silently turning 33.33
+   into 33.3 changes a number a publisher gave them.
+5. **`SCENE_REVALIDATE_ON_LOAD` in `lib/scene-cache.ts` is why a submission is
+   never hidden.** The 30s freshness window meant a submission landing in that
+   window was invisible even after a full page reload (the disk-adoption path
+   returns a still-fresh persisted copy with zero requests). Metadata now always
+   revalidates in the background on a real open: it still paints from cache, so
+   nothing flickers, but the fetch always runs. **Prefetch passes are exempt** or
+   the idle prefetch would re-fetch seconds after a real load. In-flight dedup
+   stays first and unconditional. `capture` has the identical bug (fans post
+   leads to a public page) and is deliberately **not** included — a one-line
+   addition when someone wants it.
+6. **`patchScene` in `MetadataSection.tsx` reads the store at call time**, not
+   the render closure, precisely because of item 5: a background fetch can now
+   land between a render and a mutation resolving, and merging onto the older
+   copy would re-stamp superseded submissions as fresh.
+
+**Also fixed, each a real defect rather than polish:** every input on the public
+form was `text-sm`, which is **13px in this repo's preset** (it shifts the whole
+scale down — `text-base` is 14px, only `text-lg` clears iOS Safari's 16px
+zoom threshold), so the form zoomed the page on every field tap on the one device
+most collaborators open it on. `country` and `publisherIpi` were collected from
+day one and rendered **nowhere**, so an owner doing a distributor handoff could
+not tell they had them. **ISWC did not exist anywhere in the repo** — added to
+`release_metadata` and Step 1 (now 9 fields), release-level and owner-entered
+because ISRC identifies the recording, UPC the release and ISWC the song, so it
+is never asked of a collaborator. It also had to join `METADATA_FIELDS` in
+`lib/chappi/tool-families/metadata.ts` or an assistant metadata update would
+have nulled it, which is exactly the full-replace trap that file's header warns
+about. Em dashes removed from the user-facing copy on both public share pages.
+
+**Tests: the feature had ZERO and now has 67** across
+`lib/credit-submissions.test.ts`, `lib/credits-server.test.ts` and the
+scene-cache additions. **Mutation-tested rather than merely asserted:** making
+`requiredSplits` ignore writer roles, and dropping metadata from
+`SCENE_REVALIDATE_ON_LOAD`, each fail exactly the tests written to catch them.
+
+**Verified:** 1454 tests pass, `eslint .` at **byte-identical baseline**
+(3 errors / 68 warnings, all pre-existing in `WorkspaceView.tsx`, confirmed by
+linting a stashed tree), `next build` green **by exit code** in both flag states
+with `/auth`, `/onboarding`, `/settings` still `○ Static`. Runtime probes:
+flag off, every credits route (the new PATCH included) **404**s while the ungated
+`/api/releases` still **401**s — that discrimination is what proves the gate
+rather than a routing accident; flag on, the owner routes **401**. Note
+`/credits/<bad token>` answers the 404 body with HTTP **200**, the pre-existing
+`force-dynamic` quirk this file already records for epk/capture/credits.
+
+**NOT verified, and it is the whole risk surface:** nothing has run against a
+real database. The migration is unapplied here, so no link has been closed, no
+resubmission has replaced anything, no `23505` retry has fired, and the closed
+page has never rendered. The owner UI needs an authenticated session this
+environment cannot mint, and there is no network route to app.urganize.app. All
+of it rests on unit tests plus traced call paths.
+
+**Phase 2 is complete as of 2026-08-27** — owner notification, the CSV export and
+the prefill, all three in the sections below.
+
+### The owner notification (2026-08-27)
+
+Founder request, Phase 2 item 1. **Push AND email, both, every time, fired inline
+from the public credits POST.** No migration, no new feature flag, no changelog
+entry yet (see the trigger at the end).
+
+Founder calls: both channels every time; off switch on the admin presets page
+rather than a per-user column; **new people only** (a correction stays quiet);
+one notification per submission, each naming the person.
+
+**Why not the in-app bell, and this is the load-bearing decision.**
+`notifications.task_id` is `not null references public.tasks(id)` and all seven
+`notification_type` values are task-scoped, so a credits event has no legal row
+there. Making it fit needs an enum add, dropping NOT NULL on the app's hottest
+realtime table (it is in `supabase_realtime` with `replica identity full`), a new
+`release_id` column, and ~8 code sites — `NotificationRow`/`TaskNotification`
+both hard-type `taskId: string`, `listNotifications` would push `null` into an
+`.in()`, the unread dedupe is keyed on `task_id`, `buildTaskPushPayload` would
+emit `tag: task-undefined-…`, and `NotificationsBell.handleSelect` calls
+`openTask(taskId)` unconditionally while its `sameScope` short-circuit ignores
+`scene`, so an owner already scoped to that release would get NO navigation at
+all. The bell is also `hidden lg:block`, i.e. **desktop only**, so an
+in-app-only notification would never reach a phone.
+`lib/billing-alerts-server.ts:9-14` is the recorded precedent for choosing email
+at this exact fork, and CLAUDE.md's own out-of-scope line names transactional
+email as fine while deferring the inbox to v2. **`scheduled_notifications` is
+also ruled out**: its only flusher is a DAILY cron on the Hobby plan, shortened
+only by some unrelated user logging in — up to ~24h, wrong for "someone just
+submitted".
+
+**Five things worth knowing before editing this:**
+
+1. **The push `tag` is keyed on the SUBMISSION, never the release.** A shared tag
+   makes the push service REPLACE the previous notification rather than stack it,
+   so two collaborators answering minutes apart would leave the owner seeing only
+   the second — silently defeating the founder's "one each, naming the person".
+   Mutation-tested.
+2. **Insert path only is a security property, not a preference.** The UPDATE path
+   carries no submission cap by design (a correction adds no row), so notifying
+   on updates would let anyone holding the share link send the owner unlimited
+   pushes and emails. This is also **the first place in the app where an
+   unauthenticated request can trigger a push at all** — every other
+   `sendPushToUsers` caller is a cron, an admin route, or authenticated.
+3. **The email is the half that carries the detail**, and that is the whole
+   reason both channels exist rather than one: name, stage name, roles, both
+   splits, PRO, IPI, publisher, so a manager can check a number or forward the
+   thing to a distributor without opening the app. If it is ever trimmed to "you
+   have a new submission", it stops being worth sending. `buildCreditDetailRows`
+   drops blank fields entirely — a wall of "not given" is worse than a short list.
+4. **It never throws and never fails the submission.** A collaborator on weak
+   mobile data has already done the work by then. Push and email run in
+   `Promise.all` so the worst case is `max()` not `sum()`; the honest ceiling is
+   the email module's own 10s abort, typical is ~300ms. If that ever bites, the
+   follow-up is a `send_at = now()` queue row, which trades latency back.
+5. **`fillCreditPlaceholders` leaves an UNKNOWN `{placeholder}` alone** rather
+   than blanking it: a silently-emptied word reads as a broken product to whoever
+   receives the notification. Also mutation-tested.
+
+Files: `lib/credit-notifications.ts` (pure copy + the tag/url decisions),
+`lib/credit-notifications-server.ts` (the leaf sender, the
+`release-reminders-server.ts` shape), `buildCreditSubmissionEmail` in
+`lib/email-templates.ts`, a fourth `creditSubmissions` category in
+`lib/notification-presets.ts` (JSON in `app_settings`, so the normalizer keeps
+pre-2026-08-27 rows working with no migration), the admin section in
+`app/admin/notifications/NotificationsPageClient.tsx` plus its "Send test to me"
+branch, and one `await notifyCreditSubmission(...)` on the insert path of
+`app/api/credits/[token]/route.ts`.
+
+**Verified:** 1491 tests (37 new), `eslint .` at byte-identical baseline (3
+errors / 68 warnings, all pre-existing in `WorkspaceView.tsx`), `next build`
+green by exit code in both flag states with `/auth`, `/onboarding`, `/settings`
+still `○ Static`. Flag off, the credits POST 404s while the ungated control
+401s.
+
+**NOT verified, and it is the whole risk surface: no notification has ever been
+delivered.** No real database, no Resend key, no push subscription here. The
+500s a local probe returns are the placeholder Supabase URL failing upstream of
+this code (`"Could not resolve this link."`), not the notifier.
+
+**Changelog entry: shipped as v1.4.0** (2026-08-27), covering this and the
+spreadsheet export below. It was deliberately held at merge — the flag-flip
+precedent applied to a feature with no flag, since both channels no-op until
+`RESEND_API_KEY` + `EMAIL_FROM` or the VAPID pair are set — and then released
+the same day when the founder confirmed those env vars have been set in Vercel
+for a long time. **That confirmation is the only evidence they are set: this
+sandbox cannot reach either urganize domain (the agent proxy answers 403 to
+CONNECT), so no probe backs it up.** If a notification never arrives, check
+those four env vars on the `Web` project before looking at this code. The admin
+section is internal-only and never earns an entry.
+
+### The submissions spreadsheet (2026-08-27)
+
+Phase 2 item 2. A "Download as spreadsheet" button in Step 3 of the Metadata
+scene. **Entirely client-side — no route, no second fetch, no migration, no
+flag** — because the scene already holds every submission in memory.
+
+**Three decisions worth keeping:**
+
+1. **Splits are RAW NUMBERS, never "50%". This is the whole point of the
+   file.** The reason to export splits is to total the column and see whether it
+   reaches 100, and neither Excel nor Sheets can sum a cell containing a percent
+   sign — so `"50%"` would make the export useless for its one job. A quoted
+   bare number is still coerced by both, so `lib/csv.ts`'s always-quote rule
+   costs nothing. An unanswered split stays EMPTY rather than becoming 0, because
+   a zero share is a real answer and conflating the two would silently change a
+   total. Mutation-tested: adding the percent sign back fails three tests.
+2. **Every column is printed even when blank**, the opposite of the notification
+   email, which drops blanks. A spreadsheet is where completeness beats
+   curation: a missing column breaks a formula, an empty cell does not.
+3. **Roles are semicolon-separated**, not comma. Every field is quoted so a
+   comma would be legal, but this is the column people split back apart by hand
+   and a comma list inside a comma file is a foot-gun there.
+
+It goes through `shareOrDownloadTextFile` (`lib/share-file.ts`) rather than a
+plain anchor, because a webview cannot download: native gets the share sheet, an
+old shell without the plugins gets a "use the web app" message instead of a
+silent no-op, and web gets a real file. The `DataExportSection` precedent,
+including its outcome copy. Escaping comes from `lib/csv.ts` per that module's
+own instruction that new code comes there — this is the first consumer to take
+it up, so the four private copies it complains about are unchanged and still
+four.
+
+Files: `lib/credit-submissions-csv.ts` (+ 16 tests), the button and handler in
+`MetadataSection.tsx`, and one prop threaded through `ReleaseScenePanel.tsx` so
+the filename can name the release (`midnight-ep-credits-2026-08-27.csv`) rather
+than colliding when a manager exports three releases in a sitting.
+
+**Changelog: shipped in v1.4.0** alongside the notification above rather than as
+its own version, since splitting them would have announced half a feature.
+
+### Prefill, on the contributor's own device (2026-08-27)
+
+Phase 2 item 3, and the one where **the spec's literal wording was the wrong
+thing to build.** It asked to prefill "if the same contributor (same email) has
+submitted on a past release in the workspace" — which means the public form asks
+the server what it knows about a typed email. That endpoint has no login, the
+share token is its only gate, and links get forwarded freely, so it would hand
+anyone holding a link a co-writer's legal name, IPI, PRO, publisher and phone
+for the price of guessing an email. IPI numbers are what royalty claims are made
+with. Put to the founder with three options; **he chose device-local**, so there
+is no server lookup and nothing to harvest. The cost is that switching devices
+means retyping, which is the right trade.
+
+**The field list is the feature, and what is absent matters more than what is
+there.** `lib/credit-prefill.ts` remembers identity, contact, publishing and
+socials. It NEVER remembers:
+
+- **Either split.** A 50% share on one song says nothing about the next, and a
+  silently pre-filled ownership share is the most dangerous autofill this domain
+  has — it could file a claim nobody typed. A hard line, not a trade-off.
+- **Roles.** They change per song AND drive which splits are required, so a
+  wrong prefill nobody notices files a wrong credit and demands the wrong
+  number.
+- **"What you did"**, which is about this song.
+- **The accuracy tick**, an attestation about THIS submission. It has to be
+  ticked again or it means nothing.
+
+Mutation-tested: adding splits and roles to the list fails five tests across the
+constant, the picker, the merge and the round trip.
+
+**Three mechanisms worth knowing:**
+
+1. **The notice is a mitigation, not polish.** Arriving at a PUBLIC form that
+   already knows your legal name is unsettling with nothing explaining it, and
+   on a shared studio or cafe machine the reader may not be the person it
+   remembers. So the form says whose details it filled in and offers "Not you?
+   Start fresh". The six-month age cap is the backstop for the machine nobody
+   comes back to.
+2. **It reads in a PRE-PAINT layout effect** (`useIsomorphicLayoutEffect`, the
+   `/onboarding` saved-draft precedent), not a plain `useEffect`: this page is
+   server-rendered, so the empty form is already on screen and a post-paint read
+   would show blank fields for a frame and then fill them. Reading during render
+   instead would be a hydration mismatch, so a setState in an effect is
+   unavoidable here. Note lint reports no finding only because the rule does not
+   track the aliased hook — the pattern is still setState-in-effect.
+3. **"Fill it in for someone else" clears the notice but does NOT forget the
+   stored details.** A different person is about to type, so the form must go
+   blank — but those are the first person's own details on their own device, and
+   they may want them on the next release. Two different things that look like
+   one.
+
+Storage goes through `lib/persisted-state.ts`, whose reads are already guarded
+(version, age, validator, try/catch) but whose **writes are not** — `setItem`
+throws on a full quota and in Safari private mode. Wrapped, because remembering
+details is a convenience that must never break a submission that already
+succeeded. First public page in the app to touch localStorage at all.
+
+**Changelog: shipped as v1.4.1** (2026-08-27). It landed after v1.4.0 had already
+gone out, so it got its own patch entry rather than being folded backwards into
+a released version — the ledger is a log, and rewriting a shipped entry would
+falsify it.
+
+**Not verified:** no real prefill has happened. The round trip is covered by 26
+unit tests against a stubbed localStorage (vitest runs node-only here and jsdom
+is not a dependency), but nothing has run in a browser.
+
+**Not verified:** no real submission has been exported. The button needs an
+authenticated session with real rows, which this environment cannot mint.
+
+**The two adjacent findings this pass flagged were fixed the same day** (founder
+request), and both are invisible in production because the flag is on — no
+changelog entry or version bump, per the flag-off precedent:
+
+1. **`GET/PATCH /api/releases/[releaseId]/metadata` is gated now.** It was the
+   one handler on the metadata surface with no flag check, so a direct call could
+   read and write a release's distribution fields while every UI entry point to
+   them was dark. The reader is defined locally rather than imported from the
+   credits group's `_shared.ts`, matching how `predict-genre/route.ts` owns its
+   own — route groups read their flags themselves. **The body is exactly
+   `'Not found.'` on purpose**, because `isFlagGateOff` matches that string to
+   tell "feature off" apart from `ensureReleaseOwnership`'s `'Release not
+   found.'`; the two Chappi metadata tools now translate it into a plain refusal
+   instead of telling the user their release does not exist (the `create_note`
+   precedent, three call sites — `update_release_metadata` needs it on both its
+   read-then-merge GET and its PATCH).
+2. **`'metadata'` is flag-conditional in `SCENE_PREFETCH_ORDER`.** Adding the
+   gate above would have made the idle prefetch fire guaranteed 404s — but it was
+   already broken before that: the metadata fetcher hits `/metadata` AND
+   `/credits`, `/credits` has always 404'd with the flag off, and `readJson`
+   **throws** on a non-ok response. So with the flag off that prefetch already
+   spent two requests per scoped release and then threw. It now joins
+   calendar/capture/song/coverart in being conditional, which is what the
+   prefetch list's own comment says the pattern is for. Mutation-tested: making
+   it unconditional again fails the prefetch test.
+3. **The account data export now carries `credit_links` and
+   `credit_submissions`.** These are the publishing details a manager most needs
+   in hand for a distributor handoff (legal names, IPI and PRO numbers,
+   publishers, both splits), and they were the one part of a release that
+   deleting the account would destroy and the export did not hand back. Keyed on
+   `release_id` like the other release-scoped tables. `share_token` is
+   deliberately not redacted — `REDACTED_KEYS`' own comment already anticipated
+   credits: it is the user's own link and the export is useless without it. The
+   route's guard test still passes, so the open-route auth and the `select('*')`
+   rule are intact.
+
+**`predict-genre` was deliberately left alone.** It gates on its own
+`NEXT_PUBLIC_FEATURE_GENRE_PREDICTION` (off by default), its comment already
+records that it is "only meaningful alongside `NEXT_PUBLIC_FEATURE_METADATA`",
+and there is no UI path to it when metadata is off. Worth one line if anyone ever
+turns genre prediction on independently.
+
+---
+
+## Invite acceptance is durable now: the deferred claim (2026-08-29, v1.4.3)
+
+Founder report: a teammate used an invite link and created an account, but the
+founder could not assign him a task and was unsure he could see the workspace's
+releases. **One root cause, both symptoms: the account existed and the
+`workspace_members` row did not.** The accept page (`/invite/accept`) creates
+the ACCOUNT first and joins the workspace SECOND, and nothing recorded the
+pending join — so any failure between the two steps (a dropped request on weak
+mobile data, the documented failure mode of this user base; a lost OAuth resume
+marker; a no-session signup while email confirmation is on, which the auth
+store swallows without throwing) left an account that belonged to no team, with
+nothing that would ever retry. Everything downstream was verified correct and
+untouched: the assignee picker's selectability rule, the PATCH assignee
+validation, `releaseOwnerIds` visibility — all of them key off the membership
+row that was never written.
+
+**The fix is a durable claim, the `activatePendingWorkspaceInvitesForUser`
+pattern applied to token invites.** The accept page's email/password signup now
+stashes the invite token in `auth.user_metadata.pending_invite_token` (via a
+new optional `options` param on the auth store's `signup`), and
+`loadWorkspaceAccessContext` finishes the join on the user's first
+authenticated request, whatever path brought them back into the app.
+
+**Five things worth knowing before editing this:**
+
+1. **`lib/invite-claims-server.ts` is the ONE implementation of the join, and
+   it is deliberately LEAF-ONLY** (the `lib/seats-server.ts` rule, restated in
+   its header): it is imported by `lib/tasks-server.ts` AND by
+   `app/api/invites/[token]/route.ts`, which hand-rolls its auth to stay off
+   the paywalled `_shared/auth` chain. The route's POST is now a thin mapper
+   over `claimWorkspaceInvite` — `joinWorkspaceViaLink` and the legacy
+   member-row accept moved into the lib verbatim. Do not grow a second copy of
+   join semantics in the route again; the GET keeps its own row lookups
+   because metadata display is not a join.
+2. **The deferred claim costs ZERO queries on the steady state.** It rides
+   `loadWorkspaceAccessContext`'s existing `Promise.all` and bails on a pure
+   metadata read (`readPendingInviteToken`) — the key is absent for everyone
+   who is not mid-recovery, and that function tolerates every shape a
+   user-writable `user_metadata` can hold (unit-tested).
+3. **The metadata is cleared on every TERMINAL outcome** (joined, already a
+   member, invalid, expired, used, seat-refused) via
+   `auth.admin.updateUserById` — GoTrue shallow-merges `user_metadata`, and a
+   null value removes just this key. Only a transient query error keeps it, so
+   the next request retries. The user object read by `getAuthenticatedUser` is
+   fetched fresh from GoTrue per request (not decoded from the JWT), so a
+   cleared key never re-triggers.
+4. **Claim semantics are byte-compatible with the route's long-standing
+   behavior**, including the two easy-to-lose details: the legacy per-email
+   kind runs NO seat check (an 'invited' row already occupies a seat, counted
+   at mint), and "already used" answers before "expired" — an invite you
+   already hold is used, not expired. `resolveLegacyInviteClaim` is the pure,
+   unit-tested encoding of that ordering.
+5. **The accept page stopped lying on the two failure shapes.** A no-session
+   signup (email confirmation) now says the join completes at next sign-in —
+   which the deferred claim makes TRUE — instead of surfacing "Sign in to
+   accept this invite." as an error; a failed accept POST after a successful
+   signup appends the same reassurance instead of reading like a dead end.
+
+**Recovering an ALREADY-stuck teammate needs no code at all**, and both paths
+predate this fix: (a) invite them by email from Settings → Teammates using the
+exact address they signed up with — `activatePendingWorkspaceInvitesForUser`
+activates the pending row silently on their next dashboard load; or (b) have
+them reopen the same join link while signed in and press "Accept and join"
+(link-kind invites are multi-use).
+
+- **Verified:** 1550 tests (21 new in `lib/invite-claims-server.test.ts`),
+  `eslint .` at the exact 3-error/68-warning baseline (the one new
+  react-compiler warning was avoided by turning two trivial `useMemo` string
+  fallbacks on the accept page into plain consts), `next build` green by exit
+  code with `/auth`, `/onboarding`, `/settings` still `○ Static`.
+- **Not verified:** nothing has run against a real database or a real signup —
+  this sandbox cannot mint a Supabase session or reach app.urganize.app. The
+  claim's DB plumbing is exercised only through the route it was extracted
+  from; worth one live pass: sign up from a join link with the network throttled
+  so the accept POST fails, then sign in and confirm the workspace appears.
+
+---
+
+## First-release prompt: deferred and dismissible (2026-08-28, v1.4.2)
+
+Founder request: for accounts with zero releases, the create-release pop-up must
+not open the moment they land — "they have to log in first, look at how it looks
+before the pop-up comes up," with the trigger choice delegated ("time-based …
+or when they try to click on something … just decide"). His read was that the
+instant pop-up churns people who wanted to see the workspace first.
+
+**What changed, in one line: the URG-217 wall is gone.** The old mechanism was
+instant AND inescapable — `CreateReleaseModal` read `useFirstReleaseRequired`
+as `isMandatory` and dropped every exit (no Escape, no backdrop, no X, no
+Cancel; a Sign out button as the only way off), while two identical effects
+(`WorkspaceView`, `ChappiPageClient`) opened it the moment the store confirmed
+zero releases. Both halves had to move together: a pop-up that arrives 30
+seconds later but still cannot be closed contradicts "look before creating" —
+the wall IS the churn moment, just delayed. And because the modal read the hook
+itself, every instance was inescapable for a zero-release user however it was
+opened, including AppShell's manual one. Dismissal now lands on the existing
+"No releases yet" empty state, whose Create release button remains the standing
+CTA.
+
+**The trigger that won the evaluation: a 30s dwell timer, once per browser
+session.** First-interaction triggers punish exactly the exploring this exists
+to allow; exit intent is mouse-tracking theater that fails on phones; idle
+detection is the politest but needs global listeners nobody else has (principle
+6); never-auto-opening drops the activation nudge the founder explicitly kept.
+A settle delay has house precedent — `PushPermissionPrompt`'s `ASK_DELAY_MS`.
+
+**Five things worth knowing before editing this:**
+
+1. **The countdown lives in sessionStorage (`urganize.first-release.prompt`,
+   `{ armedAt, shownAt? }`) so it SPANS the two surfaces** that mount the hook
+   (`/dashboard` and `/dashboard/urgans`) instead of restarting on every
+   navigation — a per-mount timer would either never fire for a user hopping
+   pages or fire once per page. Per tab; a fresh session re-arms, so a
+   returning zero-release user gets one gentle re-prompt per visit. Pure
+   decision logic in `lib/first-release-prompt.ts` (unit-tested), timer + fire
+   guards in `components/releases/useFirstReleasePrompt.ts`.
+2. **The two modules fail in OPPOSITE directions, on purpose.** The predicate
+   (`lib/first-release-required.ts`) fails OPEN — uncertain ⇒ not required —
+   because a wrong `true` used to wall people in. The prompt storage fails
+   CLOSED — broken sessionStorage ⇒ never auto-open — because the only cost of
+   silence is that the offer never arrives, and the empty-state CTA stands.
+   `armPrompt` returning null on a failed write is load-bearing: arming a
+   timer without a stored `armedAt` would run a private countdown that
+   restarts on every mount.
+3. **Four fire-time guards, all failing toward not interrupting:** re-check
+   the predicate from live snapshots (a release created via UrgAns/MCP since
+   arming wins); a hidden tab defers to the next `visibilitychange`; another
+   modal holding the body scroll lock (WhatsNew, or a create modal the user
+   opened themselves seconds earlier — `isBodyScrollLocked()`, a new read-only
+   getter on `lib/body-scroll-lock.ts`) consumes the session's prompt
+   silently; an UrgAns conversation in progress (`messages.length > 0`, any of
+   its three surfaces) consumes silently — the assistant is itself an
+   activation path and must not be talked over. Mark-then-open, so a crash
+   between the two fails toward silence.
+4. **The modal keeps its first-release COPY, keyed on the renamed
+   `isFirstRelease` read** ("Welcome to Urganize / Create your first release /
+   Every release gets its own workspace…") — the wall and the timing were the
+   problem, not the framing. The Tab-trap was kept and made UNCONDITIONAL,
+   matching `TaskQuickCreateModal`'s identical trap (a dialog's backdrop
+   already communicates that the page behind is inert); the Sign out escape
+   hatch went with the wall it compensated for, along with `handleSignOut`
+   and the modal's `useRouter`/`useAuthStore` imports.
+5. **Who this actually serves:** the onboarding wizard creates the first
+   release before `onboarding_completed` is stamped, so the wizard path never
+   sees the prompt. The zero-release population is people who deleted their
+   last release (still re-arms by design), teammates invited into a team with
+   no releases yet (invite-accept stamps onboarding complete), and
+   artist-scoped members whose artist has no releases — the last two being
+   exactly the people the old modal's own docstring admitted "shouldn't be
+   creating releases" while offering them Sign out as the only exit. They now
+   get a dismissible offer; role-aware suppression is a plausible follow-up,
+   not this change.
+
+No new feature flag (the back-arrow/mobile-scene-nav/Collect-metadata
+precedent for founder-driven UX reworks of shipped surfaces); revert is git
+revert. No analytics on the prompt — `NEXT_PUBLIC_POSTHOG_KEY` is still unset
+in production, so an event would record nothing (the documented telemetry
+correction).
+
+**Verified:** the full vitest suite green including 11 new cases in
+`lib/first-release-prompt.test.ts` (the cross-navigation resume, the
+exactly-at-deadline fire, shownAt outranking everything, the clock-skew clamp,
+the junk-rejection contract, delay bounds, key namespace); `eslint .` — 0 new
+findings, and the change deletes three pre-existing warnings (the two
+auto-open `set-state-in-effect`s and one in the sign-out path); `next build`
+green by exit code with `/auth`, `/onboarding`, `/settings` still `○ Static`.
+**Not verified:** nothing rendered in a browser — the workspace needs an
+authenticated session this sandbox cannot mint. Worth one live pass: fresh
+zero-release account → workspace + empty state, no modal; prompt at ~30s;
+Escape/backdrop/X/Cancel all close it; no re-prompt that session while the CTA
+still opens it; a /dashboard ↔ /dashboard/urgans hop resumes the countdown
+rather than restarting it (seed
+`sessionStorage['urganize.first-release.prompt']='{"armedAt":0}'` to skip the
+wait).
+
+---
+
+## Assignment sends an email (2026-08-29, v1.5.0)
+
+Founder request, immediately after the invite fix: assigning an activity should
+also email the assignee, and the email must read as if a person wrote it —
+"very, very sleek, modern, polished... It should not seem automated or robotic."
+
+**What fires on assignment is now three channels through ONE choke point:**
+`createTaskNotification` (`lib/tasks-server.ts`) carries the bell row, the push
+mirror, and — for `task_assigned` ONLY — the email. The type gate is
+deliberate: due-date sweeps, status changes and comments stay push+bell, because
+assignment is the one event low-frequency and high-consequence enough to earn an
+inbox row, and it is the one that can otherwise land silently (push needs the
+user to have enabled notifications; the bell is desktop-only). The email rides
+the same unread-dedup guard as the other two channels, and like them it can
+never fail the request: `sendEmail` never throws and no-ops without
+`RESEND_API_KEY`/`EMAIL_FROM`.
+
+**Four things worth knowing before editing this:**
+
+1. **The register is the founder-note one, not the card one, and that is the
+   brief.** `buildTaskAssignedEmail` (`lib/email-templates.ts`) follows the
+   welcome email's documented rule for personal-reading mail — plain paragraphs,
+   system font, white ground, NO ink logo banner — written in the ASSIGNER's
+   voice ("<name> just handed you this one"), with exactly one designed element:
+   a spring-bordered card carrying the activity title, a
+   release · due · priority meta line, and the description's first line as a
+   quoted note. A test pins the banner's absence, because the banner is the
+   marker that flips personal mail back into product mail.
+2. **The inbox row itself reads as the person, via `fromLabel`.** `sendEmail`
+   gained an optional display-name override composed by `composeFromHeader`
+   (pure, exported, tested): "<assigner> via Urganize <team@send.urganize.app>".
+   Only the NAME half changes — the address stays the verified `EMAIL_FROM` one,
+   so deliverability and DMARC are untouched. The label is user-controlled
+   (`profiles.name`), so the composer strips angle brackets, quotes and line
+   breaks and caps the length; the header-injection case is unit-tested. Do not
+   bypass it by string-building a From header anywhere else.
+3. **Create-with-assignee notifies now too.** Until this, only the PATCH
+   reassignment fired `task_assigned` — creating an activity already assigned to
+   a teammate (quick-create, or UrgAns's `create_task`) told nobody at all.
+   `POST /api/tasks` now fires the same notification with the same guard
+   (never when the creator assigns to themself, which is also every
+   template-instantiated task, so plan generation still emails no one).
+4. **The pure formatters live in `lib/email-templates.ts`, not tasks-server,
+   because that is where tests can reach them.** `formatDueDateForEmail`
+   (UTC on purpose — a date-only string must not shift a day),
+   `priorityLabelForEmail` (only urgent/high earn a word), and
+   `noteExcerptForEmail` (first non-empty line, capped). Nothing imports
+   tasks-server in a unit test — it is too entangled — so the one untested
+   piece is the `task_assigned` type gate itself, which is a single `if` beside
+   the push mirror.
+
+There is deliberately **no per-user email opt-out** (that would be a profiles
+column and a Settings row for a channel doing at most a few sends a week at
+current scale — principle 6); if assignment email volume ever grows into an
+annoyance, that is the follow-up, alongside widening the type gate if other
+events earn the inbox.
+
+- **Verified:** 1584 tests (23 new across the template, the three formatters and
+  `composeFromHeader` including its header-injection case), `eslint .` at the
+  exact 3-error/66-warning baseline, `next build` green by exit code with
+  `/auth`, `/onboarding`, `/settings` still `○ Static`.
+- **Not verified:** no real email has been sent — this sandbox has no Resend
+  key and cannot mint a session. Worth one live pass: assign an activity to a
+  teammate and check the received mail's From line, the card, and that the
+  button lands on the release. `EMAIL_FROM`/`RESEND_API_KEY` are already set in
+  production (confirmed by the founder for v1.4.0), so this ships live with no
+  activation step.
+
+---
+
+## The assignee picker hid the team; fields zoomed on tap (2026-08-29, v1.5.2)
+
+Two founder reports from one sitting: assigning an activity to a teammate, the
+teammate was not in the list; and tapping the box "does a weird zooming thing
+... it should be stiff like a normal app everywhere."
+
+### The picker filtered the list by the current assignee's name
+
+`TaskMemberCombobox`'s input is BOTH the display of the current assignee and
+the search box. `TaskDetailView` seeds it with `task.assignee?.name` so you can
+see who owns the activity — and the filter then narrowed the dropdown to that
+one person. It surfaced on "the first task" because every template-generated
+activity is assigned to the release owner, so the box arrives holding the
+owner's own name.
+
+**This repo had already found and fixed this exact bug once**, in the sibling
+`components/shared/ReleaseCombobox.tsx` (its comment: "the dropdown would show
+ONLY the selected release — defeating the picker"). `TaskMemberCombobox` is
+otherwise a near-line-for-line sibling; it just never got the guard. The rule
+now lives in `filterMembersForPicker` (`lib/tasks.ts`) — **these two are the
+only implementations of this guard and should stay in step.**
+
+**Four things worth knowing before editing this:**
+
+1. **The guard must not fire when there is no selection**, or a fresh picker
+   stops filtering entirely. Mutation-tested: deleting the guard fails exactly
+   the two tests written for it, and nothing else.
+2. **It lives in `lib/tasks.ts`, not beside the component, because that is
+   where tests can reach it.** vitest runs `environment: 'node'` and collects
+   only `lib/**` and `app/**`; there are zero `.test.tsx` files in the repo and
+   no jsdom or testing-library to add one with. `lib/task-sections.test.ts` is
+   the precedent for testing `lib/tasks.ts` helpers this way.
+3. **Blurring an empty box no longer unassigns.** It used to call
+   `commitSelection(null)`, which persisted a real unassign — so tabbing
+   through an assigned activity could silently drop its owner. It restores the
+   display text now, matching `ReleaseCombobox.handleBlur`. Nothing is lost:
+   the dropdown's explicit **Unassigned** row is the designed way to clear an
+   assignee, and it is untouched.
+4. **`PlanTaskRow` never seeded its query at all**, so an assigned planner
+   activity rendered the "Nobody yet" placeholder — and, with the old blur
+   behaviour, tabbing through that row unassigned the person. The draft is
+   `string | undefined` on purpose: `undefined` means "not edited yet" and
+   falls back to the live selection, so a later edit still wins.
+
+Also, `TaskDetailView`'s seed effect is keyed on `task?.id` now rather than the
+whole `task` object. The async detail fetch (and every field save) hands back a
+new `task` reference for the SAME activity, which re-seeded the inputs and
+clobbered whatever was being typed. **The very next effect in that file was
+already keyed on `task?.id` with a comment explaining this exact hazard** — the
+fix is that comment applied one effect up.
+
+### Fields zoomed on tap
+
+iOS auto-zooms when a focused control's text is under 16px, and **this
+project's scale sits below that line almost everywhere**: `text-sm` 13px,
+`text-base` 14px, and the shared `.input` class 15px via `--text-base`. Only
+`text-lg` (16px) clears it — the same trap already recorded in the mobile-menu
+section, where a search input had to move to `text-lg`.
+
+One rule in `globals.css`, under `@media (pointer: coarse)`, sets form controls
+to 16px. Three things are deliberate:
+
+- **`!important` is load-bearing.** Tailwind's `text-sm` is a class selector
+  and out-specifies a bare element selector, so without it the rule silently
+  does nothing. Do not "clean it up".
+- **`(pointer: coarse)` rather than a width breakpoint** — it targets the
+  devices that actually auto-zoom, a landscape iPad and the Capacitor shell
+  included, and leaves desktop untouched.
+- **One rule, not ~130 hand-edited controls**, which would regress the first
+  time anyone adds an input.
+
+**The other two zoom paths were already closed and needed no code:**
+`touch-action: pan-y` on `html`/`body` (and `pan-x` on `.overflow-x-auto`)
+admits no zoom gesture, so pinch and double-tap were already disabled — which
+is why the only symptom left was the focus auto-zoom, and why `touch-action`
+could not have fixed it. Verified in the compiled CSS, not just the source.
+**Do not touch the `html` rule while in that file:** its comment records that
+adding `overflow-x` there broke `position: sticky` app-wide.
+
+- **Verified:** 1596 tests (12 new in `lib/member-picker.test.ts`, mutation-
+  tested), `eslint .` at the exact 3-error/66-warning baseline, `next build`
+  green by exit code with `/auth`, `/onboarding`, `/settings` still `○ Static`,
+  and the media query confirmed present in the MINIFIED output
+  (`@media (pointer:coarse){...font-size:16px!important}`) — this repo has been
+  burned twice trusting source over compiled CSS.
+- **Not verified:** none of it has been seen in a browser or on a phone. The
+  picker needs an authenticated session with a real teammate, which this
+  sandbox cannot mint. Worth one pass: open an activity assigned to yourself,
+  tap Assignee, confirm the whole team lists and nothing zooms, then type a
+  partial name and confirm filtering still narrows.
+
+---
+
+## Scenes opened to the team: one release-access rule (2026-08-29, v1.5.1)
+
+Founder screenshot: the Collect metadata scene on a scoped release ("Ohema")
+erroring with **"Release not found."** while the release sat right there in the
+header. Root cause, confirmed end to end before touching anything: **the
+workspace shows releases to every workspace member (whole-workspace visibility,
+2026-07-23) and the release detail GET, tasks and pitching are all team-aware —
+but every per-scene route group carried a LOCAL owner-only check**, so a
+teammate (an email invite, a team login from the compulsory post-create step, an
+artist-scoped member) could see a release everywhere and get a 404 inside any
+scene. That exact string is produced only by those ownership checks — a DB error
+on this path surfaces as a 500/501 with different copy — so the screenshot could
+only be a non-owner member. v1.4.3's invite-join fix (its section above) put
+more real teammates into workspaces the same week, which is why it surfaced now.
+
+**Owner-only was a copy-propagation accident, not a decision.** Eight copies of
+`ensureReleaseOwnership` existed (one shared + seven local clones), and every
+clone's docstring justified the copy on schema-fallback-module-hygiene grounds —
+a reason that turned out to misread the guard: `schema-fallback-guard.test.ts`
+regex-matches the five deprecated helper NAMES in file text (comments included,
+no import-path inspection), so importing a clean name from `releases/_shared.ts`
+never tripped it. The only DELIBERATE owner-only rule on record is for the
+release ROW itself ("teammates work through activities; the release object
+itself stays the owner's to change").
+
+**The one rule now (matches the tasks model exactly):** any workspace member may
+use a release's scenes — reads AND writes — with `guest` members read-only;
+only release-row mutations (PATCH/DELETE, archive, schedule) stay owner-only.
+
+Six things worth knowing before editing this:
+
+1. **`lib/release-access.ts` is the pure decision; `lib/release-access-server.ts`
+   is the only wrapper.** `decideReleaseAccess` evaluates owner → visibility →
+   artist scope → (writes only) role, and THAT ORDER IS A SECURITY PROPERTY:
+   visibility outranks the role gate, so a non-member probing a write endpoint
+   gets 404 `'Release not found.'` (never a 403 that confirms existence), and
+   only someone who can already see a release can learn they are read-only in
+   it. Mutation-tested four ways (inverted owner compare, deleted scope check,
+   missing-role-defaults-allow, reordered gate — each fails a named test). The
+   refusal string must also never become `'Not found.'`, which UrgAns's
+   `isFlagGateOff` reads as "feature flag off". Guest writes get
+   `buildReadOnlyResponse()`'s 403 — safe with `lib/access-redirect.ts`, which
+   intercepts 402 only.
+2. **`WorkspaceAccessContext` gained `memberRoleByOwnerId`** — the caller's role
+   per workspace OWNER, derived in `resolveWorkspaceAccessContext` from rows
+   already loaded (zero extra queries, first-wins over the owner-first
+   membership sort). `resolveReleaseTaskWorkspace` was deliberately NOT reused
+   as the access primitive: it has a write side effect
+   (`createDefaultReleaseTaskGroups`).
+3. **Eleven route groups now gate through the pair** — metadata (+
+   predict-genre), credits (+ submissions), assets, song, cover-art, epk,
+   capture (+ rotate), recap, generate-status, content-calendars,
+   content-posts: GETs call `ensureReleaseTeamReadAccess`, every other method
+   `ensureReleaseTeamWriteAccess`. The six local clones are deleted, and
+   **`lib/release-access-guard.test.ts` freezes the rule** (comment-stripped
+   source scan over an explicit directory list; bans
+   `ensureReleaseOwnership|ensureOwnedRelease`; requires the shared pair in
+   every route.ts; mutation-tested three ways). Enlisting a new scene group is
+   a conscious edit to that list. `ensureReleaseReadAccess` in
+   `releases/_shared.ts` is now an alias re-export of the shared read helper
+   (one team-read implementation; its missing-table edge moved 501→500, the
+   sanctioned ratchet direction), and `toReleaseSummary` moved to
+   `lib/release-ops.ts`.
+4. **Child rows are stamped with the RELEASE owner, never the acting teammate.**
+   Five insert sites flipped (calendar, post, epk, capture, credits link;
+   recap's `:306` was the INSERT stamp, not a read) — `assets`/`song`/
+   `cover-art` already stamped the owner, which settled the convention. It is
+   load-bearing, not cosmetic: those `owner_user_id` columns carry owner-scoped
+   RLS, feed `account/export` and `delete-now`, and cascade from `auth.users` —
+   a caller-stamped row would die with the teammate's account and hide from the
+   owner's export. The credits link is the sharpest case: the public POST
+   propagates `link.owner_user_id` into every submission. `assets.uploaded_by`
+   still records the actor.
+5. **Schedule and archive stay owner-only, gated client-side now.**
+   `WorkspaceView` reads `scopedReleaseSlim.ownerUserId` and hides
+   `SetReleaseDateCard` and the Archive/Restore action for non-owners (fail
+   OPEN on missing data — the ReleasesSection legacy-cache pattern), because
+   both were offered to teammates and 404'd on press. Schedule is genuinely
+   unsafe to open up mechanically: its deferred template instantiation calls
+   `ensureOwnedWorkspace(auth.user)`, so a teammate save would land 64 tasks in
+   the TEAMMATE's own workspace. The plan group is DEFERRED owner-only (flag
+   off in prod; draft rows owner-keyed in 8 places); collaborators is
+   caller-less legacy, untouched.
+6. **Two accepted semantics changes, said out loud:** the `metadata_viewed`
+   stamp now fires for any member's view (team review is review; the payload
+   records who), and UrgAns tools that proxy these routes (calendar tools, epk
+   generate/revoke, recap, `generate_status_update`, song) now work for
+   teammates as a free effect — `set_release_date`, planner tools and release
+   PATCH/archive still refuse them.
+
+Also fixed, the amplifier: `MetadataSection.tsx` rendered its error box on
+`loadError` ALONE, hiding perfectly good cached data behind it (the store keeps
+the payload on a failed revalidate, and since v1.3.0 metadata always
+revalidates on open). The blocking box now renders only with `!data`; with
+cached data on screen a slim banner reports the failure above the cards — the
+CuratorLoadError blocking-vs-banner split, copied not imported.
+
+**Verified:** the full suite green including 15 new `lib/release-access.test.ts`
+cases and the ~50-case guard test; `eslint .` byte-identical to the measured
+baseline (3 errors / 66 warnings, all pre-existing in `WorkspaceView.tsx`);
+`next build` green by exit code with `/auth`, `/onboarding`, `/settings` still
+`○ Static`; runtime probes in both flag states (flag off → the scene routes 404
+with the flag body `'Not found.'`; flag on → 401, so auth still precedes any
+release read). A raw `tsc --noEmit` shows 8 PRE-EXISTING errors in
+`app/api/urgans/confirmed-action.test.ts` on main too (next build's checker
+tolerates them) — do not attribute those to this work, and gate on the build's
+exit code as always. **Not verified:** no real teammate session — this sandbox
+cannot mint one — so the member/guest paths rest on the pure-core tests, the
+guard test and traced call paths. Worth one live pass: as a teammate, open
+Collect metadata and the Calendar on a shared release, save a metadata field,
+create the credits link (its row's `owner_user_id` must be the release owner),
+and as a guest confirm the view-only refusal on save.
+
+---
+
+## The assignee picker became a dropdown (2026-08-29, v1.5.3)
+
+Founder request, hours after v1.5.2: *"I don't think they should be able to
+type in that place. They should just open the dropdown... whenever I click on
+it, it just opens the keyboard and blocks the dropdown menu."*
+
+`TaskMemberCombobox` was a text input that doubled as a search box, so tapping
+it raised the phone keyboard over the very list being picked from. It is
+deleted; `components/tasks/TaskMemberSelect.tsx` replaces it — a button trigger
+over a `role="listbox"` panel, structurally `components/notes/NoteReleasePicker.tsx`
+(outside-click close, Escape closes only the menu and returns focus, options
+are real buttons so Tab and Enter work without roving focus).
+
+**Search was dropped outright rather than hidden on mobile, and that is the
+decision to re-read before adding it back.** The Manager tier caps a team at
+four seats (`packages/pricing`, `limits.seats`), so the list is a handful of
+people that a scrolling menu handles — principle 6, the case we have. A
+viewport-conditional control would also mean two code paths for one picker,
+which this file already records going wrong (the "three independently-correct
+viewport rules leaving a band with zero entry points" note under playlist
+pitching).
+
+**It deletes a bug class rather than guarding one.** Both defects fixed in
+v1.5.2 hours earlier — the seeded query filtering the list down to the current
+assignee, and an empty blur persisting a real unassign — existed *only* because
+the display and the filter were the same field. With no input, neither is
+reachable. `filterMembersForPicker` and its 12 tests went with the component;
+`ReleaseCombobox` keeps its own copy of that guard and is untouched, so the
+release picker still searches (a release list genuinely can be long).
+
+Preserved from the old component, deliberately: the "Unassigned" row as the
+explicit way to clear an assignee, invited-but-not-joined members rendering
+visible-but-disabled with "Pending invite" (assigning writes
+`assigned_to_user_id`, which needs a real user id), the
+`NEXT_PUBLIC_FEATURE_WORKSPACE` filter, and both densities. All three consumers
+(`TaskDetailView`, `TaskQuickCreateModal` via `TaskUIProvider`, `PlanTaskRow`)
+lost their `query` state entirely — that plumbing is gone, not merely unused.
+
+- **Verified:** 1649 tests pass, `eslint .` at **3 errors / 65 warnings** — one
+  warning BELOW the standing baseline, since the deleted component took its
+  `set-state-in-effect` finding with it — `tsc --noEmit` clean apart from the
+  pre-existing `confirmed-action.test.ts` errors, and `next build` green by exit
+  code with `/auth`, `/onboarding`, `/settings` still `○ Static`. The compiled
+  bundle was checked directly: `aria-haspopup`, `role="listbox"` and "Pending
+  invite" are present, and the old "Search teammates" placeholder is gone.
+- **Not verified:** not seen in a browser or on a phone — the picker needs an
+  authenticated session with a real teammate, which this sandbox cannot mint.
+  Worth one pass on each of the three surfaces, since the dropdown is
+  absolutely positioned inside a scrolling modal in two of them.
+
+---
+
+## A Solo tier, and the first self-serve CTAs on /pricing (2026-08-30)
+
+Founder call: add a fourth, cheapest tier; move Manager one rung up; let the two
+lowest tiers sign themselves up. The ladder is now **Solo → Manager → Label →
+Group**, and Manager stops being the front door.
+
+- **Solo:** ₦8,000/mo, ₦80,000/yr (the same 10× "2 months free" ratio every rung
+  holds). 1 artist, 2 people, 1 release at a time, 40 UrgAns actions a month,
+  plus files/credits/press kits, export and email support.
+- **Manager:** audience moves from "one or two artists" to "two or more", and it
+  gains an artist ceiling of 5. Prices, seats, releases and actions untouched.
+
+**No changelog entry and no version bump.** Everything a user can see is on
+`apps/homepage`, which the Versioning section's app-only scope rule excludes
+("pricing display updates count as marketing"). The `apps/web` half is inert —
+see the next point.
+
+**Six things worth knowing before editing this:**
+
+1. **SOLO IS ON THE PRICING PAGE BUT NOT ON SALE, deliberately** — the same
+   staging Manager itself shipped in. It is absent from `SelfServeTierId`, has no
+   Paystack Plan object, and is **not in `subscriptions_plan_check` or
+   `subscriptions_pending_plan_check`**, so nothing can write `solo` to a
+   subscription row, `resolveTeamTier` can never return it, and none of its
+   ceilings can bite a real team. Its CTA is the free team trial, which needs no
+   plan code. `entitlements.test.ts` carries the tripwire, pointed at
+   `resolveCheckoutPurchase` rather than at a constant array — the lesson from
+   2026-08-24, when the previous tripwire watched two arrays and missed `manager`
+   becoming purchasable through a third branch. **Selling Solo means a migration
+   widening BOTH plan constraints, two minted Plans, their env vars, and adding
+   it to `SelfServeTierId` + `isRecurringPlan`** (skip that last one and renewals
+   silently stop extending — a hazard this file already records twice).
+2. **`limits.artists` is DECLARED AND NOT ENFORCEABLE, and "Up to 5 artists" is
+   the one claim on this page that outruns the product.** Nothing can add a
+   second artist to a team: a workspace resolves ONE `artists` row
+   (`getWorkspaceArtist`), the create-release modal collects no artist input, and
+   every release points at that same row — the one-artist rule is a UI fact, not
+   a schema one (the schema has always permitted many). So Solo's ceiling of 1 is
+   what every account already gets, and Manager's 5 describes the offer rather
+   than a switch anyone can flip. It was a knowing exception to the standing
+   "do not market multi-artist until the UI limit is lifted" note — raised with
+   the founder before merge and shipped as asked, with the answer being "ship
+   it, and build multi-artist next". **That follow-up SHIPPED the same day —
+   see "Artist rosters" below — so this claim is true now**, and `artists` moved
+   from declarative to a real `CountableLimitKey` enforced at both creation
+   points. Left as written because the staging is the reusable part: a number
+   can be published one day and enforced the next precisely because it lived in
+   `limits` rather than in the card copy.
+3. **The number still lives in `@urganize/pricing`, not in the card copy.**
+   `artists` joined `TierLimits` beside the three enforced ceilings and
+   `tierHighlights` derives its line, so the page quotes the same field a future
+   check will read. A literal "5 artists" in JSX is exactly how a published
+   figure drifts from a real one — the failure this repo has shipped four times
+   with prices. `apps/homepage` cannot import from `apps/web`, which is why the
+   countable limits live in the shared package at all.
+4. **"1 artist" and "Up to 5 artists" are phrased differently on purpose.** The
+   entry tier states what you get; the tier above states how far you can go.
+   Normalising them would lose that, and the founder wrote both strings.
+5. **The self-serve split is by who can be served without us in the room.** Solo
+   and Manager send people to `APP_SIGNUP_URL`; Label keeps "Book a demo" and
+   Group keeps "Let's talk", because a roster is still set up by hand. This
+   NARROWS, and does not delete, the 2026-08-24 "every CTA on this page is a
+   capture" rule — that comment is rewritten in place rather than left to
+   contradict the code. The header's "Join the waitlist" became "Start free
+   trial" for the same reason; the in-body waitlist forms all stay.
+   **`APP_SIGNUP_URL` is `/onboarding`, never `/auth`** — `/auth` is login-only
+   and has no signup form, so a "start" CTA pointed there lands people on a page
+   with no way to create an account.
+6. **Four cards go 1 → 2 → 4 columns** (`sm:grid-cols-2 xl:grid-cols-4`,
+   container widened to `max-w-6xl`). Deliberately not four from `md`: at 768px
+   that is ~170px a card, which wraps the price and every ceiling line. Below
+   `sm` it still stacks to one column, which is where most of this traffic reads
+   it.
+
+Also reworded: the hero's "we still set every team up ourselves, so start with a
+demo" line, which two of the four cards now contradict, and the footnote under
+the cards, which states the trial terms (14 days, no card) beside the button that
+starts one — the same terms `/signup` and `TEAM_TRIAL_DAYS` carry, so all three
+move together.
+
+- **Verified:** 1669 tests (4 new), `eslint .` at the exact baselines in both
+  apps (web 3 errors / 65 warnings, all pre-existing in `WorkspaceView.tsx`;
+  homepage 0 / 2), and `next build` green **by exit code** for both apps with
+  `/pricing`, `/auth`, `/onboarding` and `/settings` all still `○ Static`. The
+  prerendered `/pricing` HTML was parsed rather than trusted: cards in the order
+  Solo, Manager, Label, Group; CTA anchors resolving to onboarding, onboarding,
+  the Label mailto and the Group mailto; "Join the waitlist" gone from every
+  page's header. Compiled CSS confirms `sm:grid-cols-2` at 40rem and
+  `xl:grid-cols-4` at 80rem, and every tier amount is in the client bundle
+  (`8e3`/`8e4` for Solo), which is what makes the interval toggle real for it.
+- **Not verified:** nothing was seen in a browser, so the four-across row at
+  ≥1280px has never been laid out for real — that is the one thing worth a look,
+  since it is the width where the price string is tightest. This sandbox cannot
+  reach either urganize domain (the proxy answers 403 to CONNECT), so the signup
+  destination is confirmed from `lib/app-urls.ts` and the `/onboarding` route
+  existing and server-rendering its real form, not from opening it.
+
+---
+
+## Artist rosters (2026-08-30, v1.6.0)
+
+A team can hold several artists. Founder call, taken the same day the Solo tier
+advertised "Up to 5 artists" against a product that could not do it — the claim
+and the capability are back in step.
+
+**Not a scope expansion**, and barely a build: **no migration**. The schema has
+allowed many artists per workspace since Migration 2 (2026-06-02) swapped the
+artists unique index to a partial `(workspace_id, slug)`, and the
+workspace-scoped-artists section had predicted this exact change down to the
+work it would take. Three things turned out to be already built:
+
+- **`POST /api/releases` has always accepted an artist** — an `artistId`
+  authorised against workspace MEMBERSHIP (not just ownership), or an
+  `artistName` it looks up or creates. The create-release modal simply never
+  sent one, so the API half of "pick an artist" existed and was unreachable.
+- **Artist-scoped teammates already work, and were always multi-artist.**
+  `workspace_members.artist_scope_id` shipped 2026-07-23 and is enforced in
+  `decideReleaseAccess` (so eleven scene route groups plus the single-release
+  GET), `loadWorkspaceMembers`' task reads, the release list and the command
+  centre. It was near-pointless while a team had one artist.
+- **`getWorkspaceArtist`'s `.order('created_at').limit(1)`** was written as a
+  defensive tiebreak and quietly became the contract: the first row is the
+  team's original artist.
+
+**Six things worth knowing before editing this:**
+
+1. **The artists ceiling has TWO creation points, and capping one is capping
+   none.** `POST /api/workspace/artists` is the one a person uses;
+   the lookup-or-create branch inside `POST /api/releases` mints an artist for
+   any caller that names one we have not seen. Both call `checkArtistAllowance`.
+   This is the seat cap's lesson applied before it could bite rather than after.
+2. **Oldest-first ordering is a contract, not a display choice.** It decides
+   which artist an API call that names none is filed under, and which artist the
+   identity card falls back to. Mutation-tested: reversing it fails exactly one
+   named test.
+3. **Everything about the roster fails open.** An unreadable count, an
+   unresolvable tier, a failed roster fetch in the modal and a failed fetch in
+   Settings all degrade to the pre-roster behaviour rather than to an error. The
+   modal case is the sharpest: no roster means no picker and no `artistId`,
+   which drops straight back onto the server's implicit-artist path, so a
+   broken fetch can never block release creation.
+4. **The picker renders only when there is more than one artist**, the
+   release-type picker's precedent exactly. A one-artist team sees the form it
+   saw before this existed, and it preselects the first artist — the one the
+   server would have chosen anyway — so the picker changes what is VISIBLE,
+   never what a manager gets by leaving it alone.
+5. **The artist-scope invite picker reads the real roster now.** It derived its
+   list from existing RELEASES, so an artist with no releases yet could not be
+   scoped to — which is every artist you have just added and are about to invite
+   someone to. Releases remain the fallback only while the roster is loading, so
+   the picker never empties for someone who could use it a moment ago. This is
+   what makes "an artist only sees their own releases" reachable; the
+   enforcement behind it needed no change.
+6. **The identity card names the artist of whichever release you are looking
+   at** (founder call), falling back to the one artist's name, or to a count
+   once there are several — naming just the first would read as "the team's
+   artist". The `?release=` read sits in its own child component behind a
+   Suspense boundary, matching what that file already does for its nav:
+   `useSearchParams` in a statically prerendered client component bails out to
+   the nearest boundary, and this card is mounted app-wide including on
+   `/settings`, which must stay `○ Static`. **Do not lift that hook into the
+   panel body.**
+
+- **`/api/workspace/artist` (singular) is deleted**, not deprecated: it had one
+  consumer, which now reads the plural route. Its schema-missing-fallback
+  baseline entry was ratcheted out of `schema-fallback-guard.test.ts` — and that
+  guard earned its keep here, failing the build when the new routes were first
+  written by copying that route's error handling, which CLAUDE.md already
+  records as a grandfathered baseline rather than a template. Second time that
+  exact mistake has been caught by that test.
+- **DELETE shipped 2026-08-30 (v1.8.0)** and only ever removes an artist
+  attached to nothing — see "Removing an artist" below. **Existing releases stay
+  with their original artist when a second is added** (founder call): nothing
+  moves on its own, and nothing is moved by a delete either.
+- **Verified:** 1682 tests (11 new in `lib/artists-server.test.ts`, plus artist
+  ceiling coverage in `entitlements.test.ts` including that no pre-tier plan is
+  newly capped), `eslint .` at the exact 3-error / 65-warning baseline, and
+  `next build` green **by exit code** with `/auth`, `/onboarding` and
+  `/settings` still `○ Static`. Runtime probes in both flag states, rebuilding
+  between them: workspace flag ON, `/api/workspace/artists` 401s
+  unauthenticated and `/artists/[artistId]` 405s a GET (PATCH only); flag OFF it
+  404s while the ungated `/api/releases` still 401s — that discrimination is
+  what proves the gate rather than a routing accident. Two mutation tests, on
+  the roster ordering and on the counter's fail-open.
+- **Not verified:** nothing has run against a real database, so no artist has
+  actually been added, renamed, picked on a release, or scoped to an invite.
+  The owner UI needs an authenticated session this sandbox cannot mint. Worth
+  one live pass: add a second artist in Settings, create a release and confirm
+  the picker appears and files it correctly, invite someone scoped to the new
+  artist, and confirm they see only that artist's releases.
+
+---
+
+## Moving a release to a different artist (2026-08-30, v1.7.0)
+
+The correction for a mistake the roster made possible. The create-release
+picker preselects the first artist, so filing a release under the wrong one
+became reachable on 2026-08-30 with no way to fix it short of deleting the
+release. `POST /api/releases/[releaseId]/artist` is that fix. **No migration.**
+
+**Five things worth knowing before editing this:**
+
+1. **The write set is the whole correctness story: the link plus TWO cached
+   names.** `releases.artist_id`, `releases.artist_name` and
+   `release_metadata.primary_artist_name` — the same three places
+   `renameWorkspaceArtist` touches, and they must stay in step. Dropping either
+   cache does not throw; the release just shows the old artist's name everywhere
+   while being filed under the new one, which is worse than an error because
+   nothing looks wrong. Both are mutation-tested in `lib/artists-server.test.ts`.
+2. **A DEDICATED ROUTE, and the reason is stronger than the archive route's.**
+   The release PATCH is a full-row replace that DELIBERATELY refuses to touch the
+   artist: with the workspace flag on it ignores `body.artistName` and rewrites
+   the existing value, precisely so the edit form cannot desync the cached name
+   from the link. Accepting an artist there would reopen what that guard exists
+   to prevent.
+3. **OWNER-ONLY, which is a decision rather than copied convention.** Every other
+   release-scene route group became team-aware in v1.5.1, but moving a release
+   CHANGES WHO CAN SEE IT — an artist-scoped teammate sees exactly the releases
+   whose `artist_id` matches their scope, so this hands the release to one
+   person's view and takes it from another's. It belongs with the other
+   owner-only release-row mutations (PATCH, DELETE, schedule, archive), and the
+   dialog says the visibility part out loud before the confirm button.
+4. **`stores/useArtistRosterStore.ts` is the shared roster**, and it exists
+   because three surfaces needed the same list: the create-release picker, the
+   "Change artist" action's visibility rule, and the dialog. It also RETIRES the
+   per-open fetch the modal shipped with a day earlier. **Deliberately not folded
+   into `useWorkspaceIdentityStore`** even though that carries `artistCount` from
+   the same endpoint: the identity card is behind
+   `NEXT_PUBLIC_FEATURE_IDENTITY_PANEL`, which defaults OFF, so reading the
+   roster from it would make the picker vanish in a default deployment.
+5. **Everything still fails open.** An empty or unloaded roster hides the action
+   and the picker, which is the pre-roster behaviour; the action additionally
+   requires more than one artist, so a one-artist team never sees a control that
+   could only tell it no.
+
+- The route validates the target against the CALLER'S roster rather than reading
+  the artist row and comparing workspaces after, so an artist on another team is
+  indistinguishable from one that does not exist — the rename route's shape.
+  `primaryWorkspaceId` is safe here despite resolving to a JOINED team for
+  someone who owns no releases: this caller owns THIS release.
+- Reassigning to the current artist returns `changed: false` rather than writing.
+- Fixed in passing: the release PATCH still pointed at `/api/workspace/artist`,
+  deleted the day before.
+
+### The delete analysis, and what was built from it (v1.8.0)
+
+**`releases.artist_id` IS NOT DECLARED IN ANY MIGRATION.** The only mention
+across `supabase/migrations/` is a plpgsql local variable; the column exists in
+production and `20260602010000` sets it NOT NULL, but its original definition —
+**including its foreign key to `artists`** — was never captured.
+Pre-reconciliation drift. Anything that ever recreates this column must
+re-declare that constraint, or it vanishes silently.
+
+**ANSWERED against production, 2026-08-30, and the answer was a third case
+neither prediction covered.** The constraint is
+`releases_artist_id_fkey` with `confdeltype = 'n'` — **`ON DELETE SET NULL`** —
+**while the column itself is NOT NULL.** Those two contradict each other, and
+that contradiction IS the current behaviour:
+
+- **An artist with no releases deletes cleanly.**
+- **An artist WITH releases cannot be deleted at all.** Postgres fires the SET
+  NULL, the resulting UPDATE violates the not-null constraint, and the whole
+  DELETE aborts. Nothing is orphaned and nothing is destroyed — so the safe
+  outcome holds, **but by accident**, and it surfaces as a raw not-null
+  violation rather than anything a user can act on.
+
+**THE LANDMINE, and the reason this is written down.** The foreign key DECLARES
+set-null as the intent; only the column's NOT NULL is stopping it. Relax that
+NOT NULL — or recreate the column without it, which the drift above makes easy —
+and every one of those refusals silently becomes a real set-null on live
+releases, with no error anywhere. A null `artist_id` then fails every
+`=== scope` comparison, so artist-scoped teammates lose those releases without a
+trace, and nothing on screen looks wrong because the artist NAME is cached on
+the release row. Do not treat the current refusal as a guarantee.
+
+**The recommended rule when it is built, unchanged by the answer above but now
+better founded: allow delete only for an artist with no releases AND nobody
+scoped to them.** Cascading would destroy release history behind a button
+labelled "delete artist"; reassigning-on-delete hides a data decision inside a
+delete. Both refusals are things a manager can act on, and the scoped-member
+check is what closes the `workspace_members.artist_scope_id` privacy hole (also
+`ON DELETE SET NULL`, where null means FULL visibility — so deleting an artist
+silently promotes a teammate scoped to them).
+
+Note the honest scope: a typo is a rename, and an artist who left still has
+releases, so delete is really "undo adding one by mistake" — which the artists
+ceiling makes worth having, since on Manager a stray artist permanently costs one
+of five slots.
+
+**BUILT 2026-08-30 as `DELETE /api/workspace/artists/[artistId]` plus a Remove
+control on each Settings roster row.** Four things worth knowing:
+
+1. **THREE refusals, and each is a different kind of harm.** Releases (the
+   database refuses too, now explicitly — see the migration below — but this
+   makes it a sentence naming the number). Teammates scoped to this artist,
+   which **nothing in the database stops** and is the quieter harm, since
+   `artist_scope_id` is `ON DELETE SET NULL` and NULL means FULL visibility. And
+   the LAST artist on a roster, which is not about integrity at all: that delete
+   would succeed, but a team with no artist has no implicit artist for release
+   creation to fall back on, so the next release would silently mint one from
+   the owner's name.
+2. **`countArtistDeletionBlockers` FAILS CLOSED**, deliberately unlike every
+   other count in `artists-server.ts`. An unreadable count refuses the delete,
+   because being wrong here destroys a link or widens someone's access — neither
+   undoable — while being wrong the other way just makes a manager retry.
+3. **`describeArtistDeletionBlock` is pure so the copy is testable**, and every
+   refusal names a number AND says what to do about it. The scoped-member
+   sentence says what would otherwise happen ("or they will start seeing every
+   release") rather than only refusing. Mutation-tested both ways: failing open
+   on an unreadable count, and ignoring scoped members, each fail exactly the
+   tests written for them.
+4. **`window.confirm`, not a bespoke dialog** — the opposite call from
+   `ChangeReleaseArtistDialog`. The server refuses every removal that would
+   actually lose something, so what reaches the prompt can only remove an artist
+   attached to nothing: it is a slip guard, not a decision point, and it matches
+   what `MetadataSection` already uses for the same weight of action.
+
+**Migration `20260830100000_releases_artist_id_restrict.sql`** re-declares
+`releases_artist_id_fkey` as `ON DELETE RESTRICT` and is **the first time
+`releases.artist_id`'s constraint has ever been in version control**. It is not
+destructive and backfills nothing: it only changes what happens on a delete that
+already could not succeed. The `if exists` on the drop makes it safe on an
+environment built purely from migrations, where the constraint never existed —
+which is exactly the drift it documents. It ends in a `do $$` block that raises
+if the action is not `r`, so the intent cannot quietly slip again.
+**Needs applying to production**; until it is, the refusal stays the accidental
+not-null one, and the app-level checks are doing the real work either way.
+
+- **Verified (reassignment, and re-run with delete):** 1693 tests (11 new across
+  both; the two cached writes and the two refusal properties all
+  mutation-tested), `eslint .`
+  at **3 errors / 66 warnings** — the one warning above the standing baseline is
+  `ChangeReleaseArtistDialog`'s portal mount guard, byte-for-byte the finding
+  `ArchiveReleaseDialog` and `DeleteReleaseDialog` already carry. `next build`
+  green **by exit code** with `/auth`, `/onboarding` and `/settings` still
+  `○ Static`. Runtime probe: the route 401s unauthenticated (so auth precedes any
+  release read) and 405s a GET.
+  Runtime probes both ways on the roster route: workspace flag ON, DELETE and
+  PATCH 401 unauthenticated; flag OFF both 404 while the ungated `/api/releases`
+  still 401s.
+- **Not verified:** nothing has run against a real database — no release has
+  actually been moved, no artist removed, and neither the dialog nor the Remove
+  control has rendered. The migration is unapplied. Worth one live pass: move a
+  release and confirm the catalog card, the scoped header and the identity card
+  all update without a reload; then try removing an artist who has releases
+  (expect a sentence naming the count), one with a teammate scoped to them, the
+  last one on the roster, and finally a spare with nothing attached.
+
+---
+
+## "Put us on your Home Screen", then notifications (2026-08-30)
+
+Founder request: when a user is observed browsing through the different tabs
+of the app, offer them the install — the PWA on iOS, the Android app on
+Android — low on the screen where a thumb reaches; and if they turn it down,
+*then* ask about notifications.
+
+**Not a scope expansion, and no migration.** Every piece it coordinates
+already shipped: `AndroidAppBanner` (2026-08, top banner → `/download`),
+`PushPermissionPrompt` (2026-08-21, bottom card, 6s after load),
+`app/manifest.ts` (installable since the push work), and
+`isAndroidBrowser()`. What did not exist was an iOS install offer, a
+behavioural trigger, and any ordering between the two asks. Behind
+`NEXT_PUBLIC_FEATURE_INSTALL_PROMPT`, default `false`; **not yet activated**.
+
+**The trigger is behaviour, not a timer** (the founder's words, and the better
+signal anyway): three DISTINCT app surfaces in one session — the landing page
+plus two deliberate moves. `lib/first-release-prompt.ts` is the timer-shaped
+sibling and they deliberately share no mechanism, because they answer
+different questions.
+
+**Seven things worth knowing before editing this:**
+
+1. **The iOS card can only ever TEACH.** There is no `beforeinstallprompt` on
+   iOS and no API of any kind that opens Add to Home Screen — Apple routes it
+   through the share sheet, which no page can reach. So the iOS variant is two
+   numbered steps and a button that only acknowledges them. Wiring a primary
+   button that "installs" would be a control that visibly does nothing, the
+   exact failure `PushPermissionPrompt`'s own header warns about for the
+   permission dialog.
+2. **On iOS the ordering is forced, not preferred.** Apple exposes
+   `Notification` and `PushManager` ONLY to Home Screen web apps, so in a
+   Safari tab `isPushSupported()` is false and the push effect returns before
+   it ever reaches the hold. Install-then-notifications is the only sequence
+   that can work there. On Android and desktop both asks are possible and the
+   founder's rule applies as written — the notification ask follows a
+   **decline**, and an accept suppresses it.
+3. **The hold costs an ask, and that is the right trade rather than a
+   regression.** An Android-browser user who never opens three surfaces gets
+   no notification ask that session. A browser grants exactly ONE permission
+   prompt per origin, forever — spending it on someone who opened one page and
+   left is how an origin gets Blocked for good, which `lib/push-prompt.ts`
+   already documents as unrecoverable. Deferring to a session where they
+   actually used the app improves the ask.
+4. **`lib/install-prompt.ts` fails CLOSED on BOTH counts, and the second is
+   the subtle one.** Broken storage means no card (cost: silence). It also
+   means `isInstallPromptOwed()` answers false, so a storage failure can never
+   hold the notification prompt hostage behind an install prompt that will
+   never arrive. `markInstallPromptSettled` is the mirror image: its write is
+   wrapped and the subscriber notification is NOT conditional on it, because
+   `writePersistedState` does not guard `setItem` (Safari private mode, full
+   quota) and an unguarded throw would abandon the dismissal half-done —
+   card still up, notification ask never released. Losing the record costs one
+   repeat offer; losing the signal costs the ask entirely.
+5. **`resolveInstallVariant` answers "already installed" BEFORE it sniffs the
+   user agent**, and a test pins that: an installed iOS Home Screen app is
+   still an iOS user agent, and the reversed order tells it to install the
+   thing it is already running inside. Note `isStandaloneDisplay()` is a
+   different question from `isNativePlatform()` — Home Screen vs the Capacitor
+   shell — and both mean "no offer".
+6. **A different release is NOT a different tab.** `installViewKey` counts
+   `?scene=` and `/settings?tab=` as their own surfaces (they genuinely swap
+   the working surface) but deliberately not `?release=`, or the card would
+   fire at someone flicking through their own catalog. The counted paths are
+   an allow-list (`/dashboard`, `/settings`, `/admin`): three bounced flow
+   steps through `/auth` and `/onboarding` are not browsing.
+7. **`AndroidAppBanner` stands down when this flag is on.** Both point Android
+   at the same `/download` page, and two asks for one thing is one too many.
+   The newer one wins because it is the brief — bottom of the screen, and only
+   once the visitor has looked around, rather than a top banner on arrival.
+   Flag off, that banner behaves exactly as it does today.
+
+- **Where it lives:** `lib/install-prompt.ts` (counting, decision, storage,
+  and two tiny subscriptions rather than a store — the `body-scroll-lock.ts`
+  precedent for cross-component state that is not really UI state),
+  `components/app/InstallAppPrompt.tsx`, plus `isIOSBrowser()` /
+  `isStandaloneDisplay()` in `lib/platform.ts`. `NavigationTracker` records
+  the views: piggy-backed rather than given its own effect, because it already
+  owns the one Suspense boundary that can read `searchParams` from
+  layout-level chrome — and the record call is itself flag-gated so a flag-off
+  build performs no extra storage writes on the shell's hottest effect.
+- **It shares `PushPermissionPrompt`'s exact slot** (`z-[140]`, the same
+  `bottomClass` clearing `MobileNavBar`), which is safe precisely because the
+  two can never be on screen together: the notification ask holds until this
+  card is answered.
+- **Verified:** the full suite (1706 passing, 30 env-gated skips, 24 of them
+  new in `lib/install-prompt.test.ts`), `eslint .` at the exact measured
+  baseline (3 errors / 65 warnings, all pre-existing in `WorkspaceView.tsx`),
+  and `next build` green **by exit code** in BOTH flag states with `/auth`,
+  `/onboarding` and `/settings` still `○ Static`. **Mutation-tested rather
+  than merely asserted:** checking iOS before "already installed", counting
+  `?release=` as a surface, ignoring the settled record, and moving the
+  settled notification inside the `try` each fail exactly the test written to
+  catch them.
+- **Not verified, and it is most of the risk surface:** nothing has rendered
+  in a browser, on any phone. This sandbox cannot mint an authenticated
+  session and has no network route to either urganize domain, so the card's
+  layout, the iOS instructions against a real share sheet, the Android link,
+  and the whole hand-off from decline to the notification ask rest on unit
+  tests plus traced call paths. Do NOT try to prove the flag state by grepping
+  the client chunks — `dynamic()` emits the card's chunk in both states, the
+  same false positive this file records for "Fan capture" and "Press kit".
+- **Activation checklist:** (1) nothing to migrate — set
+  `NEXT_PUBLIC_FEATURE_INSTALL_PROMPT=true` on the Vercel `Web` project **and
+  confirm the deploy actually rebuilt `apps/web`** (`npx turbo-ignore
+  @urganize/web --fallback=<the commit Vercel last deployed>`);
+  `NEXT_PUBLIC_FEATURE_PUSH_PROMPT` should be on too, or the second half of
+  the sequence does not exist. (2) Changelog entry + minor version bump across
+  all `package.json` files at the flip, not at merge (the EPK precedent).
+  (3) Verify on a real phone, which is the only place this can be verified:
+  on an iPhone in Safari open three surfaces and confirm the card appears low
+  on the screen with the Add to Home Screen steps, then add it and confirm the
+  installed app never offers again and DOES ask about notifications; on
+  Android confirm the top banner is gone, that "Get the app" reaches
+  `/download`, and that "Not now" is followed about a second later by the
+  notification ask.
+
+### A minute, every visit, and desktop too (2026-08-31)
+
+Founder, the day after the above shipped (still flag-off, still never
+activated): *"Every time the user looks at urganize through the web app they
+should be prompted to download the app after a minute or install the PWA for
+iOS or desktop."* Three changes, and the first is a **conscious reversal of
+the founder call recorded above** rather than drift — the section above is the
+record of what that reasoning was, and it is superseded, not wrong.
+
+1. **The trigger is a one-minute timer, not three distinct surfaces.** The
+   view counting is deleted outright — `installViewKey`,
+   `nextInstallViewList`, `recordInstallPromptView` and the
+   per-navigation sessionStorage write they cost `NavigationTracker` on the
+   shell's hottest effect. **Do not run both**: two triggers racing produce a
+   card whose timing nobody can predict or test. The countdown lives in
+   sessionStorage (`{ armedAt, shownAt? }`) so it SPANS the pages that host
+   the card, exactly as `lib/first-release-prompt.ts` does and for the same
+   reason — a per-mount timer restarts on every navigation.
+2. **"Every time" is scoped to once per browser session**, and the two answers
+   are stored differently on purpose. A **decline** is sessionStorage, so the
+   next visit asks again — that is the founder's "every time". An **accept**
+   is localStorage for 180 days, because someone who already installed must
+   not be asked tomorrow and **on Android nothing the page can read will ever
+   confirm the APK install**. An install we CAN see ends it permanently by
+   construction: `isStandaloneDisplay()`/`isNativePlatform()` resolve the
+   variant to null, and the `appinstalled` event marks the accept too.
+3. **Desktop is a third variant**, via the deferred `beforeinstallprompt`
+   event — the first time anything in this repo touches it.
+
+**Five things a later change will be tempted to get wrong:**
+
+- **The desktop card is offered ONLY once the browser has actually handed us
+  an install.** `resolveInstallVariant` takes `canPromptInstall`, so desktop
+  Safari and Firefox see nothing rather than a button that cannot work. That
+  is the iOS rule ("never a control that visibly does nothing") reached from
+  the other direction, and it is why a null variant is the honest answer.
+- **`android` must be resolved BEFORE `desktop`.** Chrome on Android fires
+  `beforeinstallprompt` too, so the desktop branch would otherwise offer a
+  second-best web install to someone who can have the APK. Mutation-tested.
+  The already-installed checks still come before every UA sniff, for the
+  reason the section above gives.
+- **`startInstallPromptCapture()` must be called from an EAGERLY-loaded
+  module.** Chrome fires `beforeinstallprompt` once, shortly after load, and
+  an unlistened event is simply gone — while `InstallAppPrompt` is a
+  `dynamic()` import that may not have resolved yet. It starts in
+  `NavigationTracker` for that reason and no other, and is idempotent.
+- **`isInstallPromptOwed()` probes the session store with a REAL WRITE**, and
+  that is not paranoia: Safari's private mode serves `getItem` happily and
+  throws on `setItem`, so a read-only probe reports a store that cannot
+  remember anything — and the notification ask would then be held forever
+  behind a card that can never arm. The fail-closed pairing this module leads
+  with (no card AND no hold) depends on it. Mutation-tested.
+- **`shownAt` is written when the card FIRES, not when it is answered.**
+  Leaving app chrome unmounts the card, and coming back must not produce a
+  second one. It also means an ignored card releases the notification ask,
+  which is the right direction.
+- **The manifest's icon now declares `1004x1004` instead of `sizes: "any"`.**
+  Chrome wants a declared raster icon of at least 144px before it will offer
+  an install at all — and therefore before it fires the event the whole
+  desktop half depends on. `any` is defined for scalable icons and leaves a
+  PNG ambiguous. If that file is ever replaced, change the number to match or
+  the desktop offer quietly stops appearing.
+
+- **Verified:** 1922 tests (35 in `lib/install-prompt.test.ts`, replacing the
+  24 that tested the deleted counting), `eslint .` at the exact measured
+  baseline (**3 errors / 70 warnings**, all pre-existing in
+  `WorkspaceView.tsx`) with **zero** new findings, and `next build` green **by
+  exit code** in BOTH flag states with `/auth`, `/onboarding` and `/settings`
+  still `○ Static` in each. The emitted manifest was read from
+  `.next/server/app/manifest.webmanifest.body` rather than trusted from
+  source. **Four mutation passes**, each failing exactly its own test:
+  resolving desktop before android, sniffing the UA before the
+  already-installed check, ignoring `shownAt`, and dropping the
+  storage-writable probe.
+- **Not verified, and it is most of the risk surface:** nothing has rendered
+  in a browser on any device, and **no `beforeinstallprompt` event has ever
+  been observed** — this sandbox cannot mint a session and has no route to
+  either urganize domain, so the desktop half in particular rests on unit
+  tests against a stubbed event. If the desktop card never appears in
+  production, the manifest and Chrome's installability criteria are the first
+  thing to check, not this code — and the failure is silent by design (no
+  card), not a broken button.
+- **Activation is unchanged and STILL NOT DONE:** the flag has never been
+  flipped, so none of this is live. See the checklist above; step 3's manual
+  pass is now "wait a minute" rather than "open three surfaces", plus a
+  desktop Chrome pass confirming the card offers a real install.
+- **No changelog entry or version bump**, per the EPK precedent the checklist
+  above already carries: the ledger entry lands at the flag flip, not at
+  merge, and this feature has never been flipped.
+
+### The iOS card lost its button (2026-09-01)
+
+Founder, from live use: *"on iOS the prompt to download the app to the home
+screen, nothing happens when the user clicks Got it — can't it then
+automatically install it on their home screen."*
+
+**It cannot, and no amount of code will change that** — the first bullet at
+the top of this section is the whole answer, and it has not moved: Apple
+routes Add to Home Screen through the share sheet, there is no
+`beforeinstallprompt` and no `navigator.install` on iOS, and Chrome, Edge and
+Firefox on iOS cannot even offer the menu item. Any button claiming to install
+would be a lie.
+
+**But the report was right about the thing that mattered, and the card was
+wrong.** `Got it` was the FILLED button on a card whose actions sit at the
+bottom of the screen, so it is the first thing a thumb reaches — and tapping
+it dismissed the card, taking the two numbered steps with it before the person
+had done anything. Then `shownAt` spent the visit's one offer and the accept
+was written to localStorage for 180 days. The steps were the payload and the
+primary button threw them away.
+
+Three changes, iOS branch only (Android and desktop are untouched):
+
+1. **No primary button.** One full-width ghost `Close`, plus the × it already
+   had. Nothing on the card looks like an action, because nothing on it can
+   perform one. **Do not put a filled button back** — that is the whole defect.
+2. **Its one exit records a DECLINE, not an accept.** Nothing the page can
+   observe tells us whether someone followed the steps, so an accept would
+   silence the offer for six months on a guess. A decline is session-scoped,
+   so a reader who did not follow through is asked again next visit (the
+   founder's "every time"), while one who DID is closed out permanently by
+   `isStandaloneDisplay()` — `navigator.standalone` is true from the Home
+   Screen, so `resolveDeviceInstallVariant()` answers null and the card never
+   renders again. **Detection is the confirmation here, not a button.** No
+   consequence for the notification hand-off either: `isPushSupported()` is
+   false in an iOS Safari tab (bullet 2 above), so nothing is waiting.
+3. **Step 1 says where Share is**, since it moves: "the square with an arrow
+   out of it. Bottom bar in Safari, top right in Chrome."
+
+- **Verified:** 1922 tests (unchanged — no test exercises this component;
+  `lib/install-prompt.test.ts`'s 35 cases are on the pure and storage layers
+  and none asserted the iOS outcome), `eslint .` at the exact **3 errors / 70
+  warnings** baseline with the changed file clean, `next build` green **by
+  exit code** with `/auth`, `/onboarding` and `/settings` still `○ Static`,
+  and the compiled client chunk confirmed to carry the new step-1 copy with
+  **no remaining `Got it`**.
+- **Not verified:** nothing has rendered on a phone. This sandbox cannot mint
+  a session and has no route to either urganize domain, so the layout of a
+  single full-width ghost button and the Share-location wording against a real
+  share sheet are reasoned, not seen.
+- **A CONTRADICTION WORTH RESOLVING BEFORE TRUSTING THE LINE ABOVE:** this
+  section has said "the flag has never been flipped, so none of this is live"
+  since 2026-08-30, and yet the founder watched a real user tap `Got it` on
+  iOS. One of the two is wrong. Either `NEXT_PUBLIC_FEATURE_INSTALL_PROMPT` is
+  on in production and no ledger entry was ever written for it, or what was
+  observed was a preview deploy. Surfaced rather than guessed, per this file's
+  own rule. **If the flag IS on, the ledger owes an entry for the whole
+  install offer — not for this fix** (which is why there is no changelog entry
+  or version bump here either way: announcing "the iOS card lost its button"
+  for a feature the changelog has never mentioned would read as nonsense).
+
+---
+
+## Events: shows, setlists and DJ packs (2026-08-30)
+
+The eleventh sanctioned scope expansion, and the one that gave the release a
+sibling (see the 2026-08-30 note in "v1 scope" and the amendment to Principle
+1). Phase 1 is complete in code behind `NEXT_PUBLIC_FEATURE_EVENTS` (default
+off); **not yet activated, and two things below block flipping it.**
+
+**What it is:** a show carries a venue, a set time, a slot length and a run of
+show; one or more setlists are built against that slot with a live running
+total; the songs' files go out to the DJ as a pack, one unguessable link per
+recipient, with read receipts back.
+
+**Schema:** `20260830120000_events.sql` — nine tables and four enums.
+**Applied to production 2026-08-30.** Its header carries six load-bearing
+decisions and is the thing to read before changing anything here; the two that
+shape everything else are repeated below.
+
+### Seven things worth knowing before editing this
+
+1. **Song versions carry their OWN storage and do not reuse `assets`.** That
+   table's `assets_scope_check` requires every row to belong to a release or a
+   task — the release spine enforced in Postgres — and a back-catalog song
+   belongs to neither. Weakening that constraint to serve the event side would
+   degrade it for every existing asset, so `song_versions` got its own columns
+   in the same private bucket instead, under a `song/<songId>/…` prefix that
+   cannot collide (every release asset path starts with a release UUID).
+2. **ONE access rule, three object types.** Shows, sets and songs all resolve
+   through `decideReleaseAccess` — named for releases but generic in fact: it
+   reads an owner id and an artist id, which is exactly what each of these
+   carries. Cloning it per route group is how eleven release scenes spent a
+   year drifting apart (see "Scenes opened to the team"); do not start a
+   twelfth.
+3. **Every row is stamped with the ARTIST'S or SHOW'S owner, never the acting
+   teammate.** Every account owns a personal workspace, so a show created by a
+   teammate and owned by them would sit where nobody else can read it and the
+   team owner would never see the date they were told about. Same rule the
+   release scenes follow for child rows.
+4. **The running total refuses to say a set fits when it cannot know.**
+   `summarizeSetlist` may report OVER on a partial set (unknowns can only add)
+   but never ON TIME or comfortably UNDER. An unmeasured item resolves to
+   `null`, never `0` — counting it as zero would silently shorten every set
+   containing a song nobody has timed, which is the failure this whole surface
+   exists to prevent. Both properties are mutation-tested.
+5. **Per-recipient tokens ARE the read-receipt feature.** One shared URL can
+   tell you somebody opened a pack; it can never tell you which somebody, and
+   "the DJ has them, the engineer does not" is the only version of that
+   question worth answering. The passcode is per-pack and opt-in (founder
+   call); the token is per-recipient and is the only access control.
+6. **Downloads go through our own route, never a storage URL.** Two reasons
+   and both matter: the download has to be logged, and the file has to land as
+   `01 Dorian - Lagos Nights (Clean)[102BPM][Am].mp3`. A signed Supabase URL
+   arrives as a UUID, which is exactly what makes a pack useless in a dark
+   booth. The leading number is what puts the folder in running order when a
+   DJ drags it into Rekordbox.
+7. **Revoking a recipient is SOFT, and the access log outlives them.** The log
+   is the only deterrent on an unreleased track, so deleting the recipient row
+   would blank the name beside every download they already made — hence
+   `on delete set null` plus denormalized names. Note the log has a SELECT
+   policy and no write policy at all: rows are written by the public route on
+   behalf of someone with no session, and nothing in the product should let a
+   signed-in user manufacture or erase a download record.
+
+**Deliberate shortfalls against the spec, both founder calls to make:**
+
+- **Reorder is up/down buttons, not drag.** Native HTML5 drag does not work on
+  touch at all and this is used on a phone backstage; a real drag means a new
+  dependency. Buttons work everywhere and are keyboard-reachable.
+- **"Download all as a zip" is not built.** There is no archiver in this repo
+  and the data export declined to add one on purpose. Per-track download works.
+
+**Two things block the flag flip, and neither is a code problem:**
+
+1. ~~No mobile entry point.~~ **RESOLVED 2026-08-30: Shows is a tab in the
+   bottom bar, and it is the LAST one that fits.** Neither shape the request
+   offered could host it — with `NEXT_PUBLIC_FEATURE_MOBILE_NAV` on, the topbar
+   keeps only a centred logo and the help menu (that flag exists precisely to
+   move nav OUT of the hardest-to-reach corner), and the one hamburger in the
+   app is release-scoped inside `TasksPanel` and never renders on `/settings`.
+   So it went in the bar, beside Notes, as the other global surface.
+
+   **An overflow sheet was built first and then discarded, which is worth
+   recording so nobody rebuilds it by reflex.** That design made the bar a
+   fixed six with Shows, Notes and Pitches behind a More button — a reasonable
+   answer to a bar that was running out of room, and the wrong one here for two
+   reasons. The same day, three founder calls (#445/#446/#447) reshaped the bar
+   and, in making Song and Pitches mutually exclusive, capped it at six with a
+   measured seventh slot still clear (~53px at 375px against a widest label of
+   ~45px). So the room existed. And demoting Notes and Pitches to reach it
+   would have re-litigated arrangements the founder had just made deliberately.
+   One tab uses documented headroom and touches nothing else.
+
+   **The bar is now full.** Seven is the ceiling, worst case being Home ·
+   UrgAns · + · Notes · Shows · You · (Song XOR Pitches). An EIGHTH surface
+   needs the overflow sheet after all — that is the point to build it, not
+   before.
+2. **WAV downloads are blocked on Supabase billing, not on us.** The 40 MiB
+   per-file audio ceiling exists because the free plan refuses uploads over
+   50 MB. A studio master at 24-bit/48kHz runs ~16 MiB PER MINUTE and is
+   rejected outright; a 4 minute WAV at 44.1/16 is ~38 MiB and only just fits.
+   So packs can offer MP3 today and cannot offer WAV until that plan changes.
+   The spec's WAV toggle is not buildable before then.
+
+**Verified:** 1793 tests passing (including 27 on the events lib, 33 on the
+setlist module and 15 on the pack logic); `eslint .` at 3 errors / 70 warnings
+against a 3/66 baseline, the four new ones all the documented React-19
+`set-state-in-effect` downgrade (three fetch-on-mount, one portal mount guard);
+`next build` green by exit code in both flag states with `/auth`, `/onboarding`
+and `/settings` still `○ Static`. Runtime probes in both states, rebuilding
+between them: flag off every route 404s while an ungated control still 401s and
+the public page reports itself unavailable; flag on they 401 and a bad token
+resolves to nothing. The migration was applied to a scratch Postgres 16 and
+every documented delete rule exercised with real rows — both halves of the
+setlist shape constraint, all three restrict FKs refusing independently, the
+release set-null keeping the song, and the log surviving recipient removal.
+
+**NOT verified, and it is most of the surface:** nothing has run against the
+production database or a real Supabase Storage bucket. No show has been booked,
+no file uploaded, no pack sent, no link opened by a real DJ. This sandbox
+cannot mint an authenticated session and has no network route to
+app.urganize.app, so all of it rests on unit tests, the scratch-Postgres apply
+and traced call paths.
+
+**Activation checklist:** (1) the migration is already applied; (2) solve the
+mobile entry point; (3) set `NEXT_PUBLIC_FEATURE_EVENTS=true` in Vercel `Web`
+**and make sure the deploy actually rebuilds `apps/web`** — `NEXT_PUBLIC_*` is
+inlined at build time, and the EP/album flip records `turbo-ignore` skipping a
+web build whose commit touched only `package.json` files; (4) changelog entry +
+minor version bump across all `package.json` files at the flip, not at merge
+(the EPK precedent); (5) verify end to end with a real date — book a show,
+build a set that runs over, upload an MP3, send it to yourself, and confirm the
+receipt flips from "Not opened" to "Downloaded".
+
+---
+
+---
+
+## Timeline view (2026-08-30, flag-off)
+
+The eleventh sanctioned expansion (see the 2026-08-30 note in "v1 scope"), and
+Phase 1 of the spec only: one release, read plus drag. Behind
+`NEXT_PUBLIC_FEATURE_TIMELINE`, default off. **No migration, no API route, no
+new table** — it is a lens on activities the workspace already has in props.
+
+Internally the Gantt view. **In product it is Timeline**, and every user-visible
+string says so.
+
+### What the spec's two blocking questions turned out to answer
+
+The spec called a nullable `start_date` column blocking, on the reading that
+activities store only a due date. They store more than that, and the two
+findings below are why this shipped without touching the schema.
+
+1. **`duration_days` is already persisted on every generated activity**, at
+   `metadata.template.duration_days` — written by `instantiate.ts` since it was
+   first built and by `release-planning-server.ts` on plan approval. It reaches
+   the client now as `Task.durationDays` via `readDurationDays`, the fourth
+   reader of that object alongside `taskType` / `templateTaskId` /
+   `compressedRunway`. A manager-added activity correctly carries none, and null
+   means "we do not know", which renders as a point rather than a guess.
+
+2. **Every activity in every playbook is either 1 day or 7 days, and nothing
+   else** — single 57/7, EP 76/14, album 95/18. So ~89% of a release is
+   single-day work, and a bar chart of it would be 57 one-cell stubs pretending
+   to have span. **They render as markers and only genuine multi-day work
+   renders as a bar.** That is not the spec's fallback rule being invoked, it is
+   the shape of the data, and it is what the founder's "go ahead" chose. If a
+   future playbook revision changes that ratio the view's design should be
+   revisited — `release-timeline.test.ts` pins the current numbers against the
+   live single playbook so the change cannot pass unnoticed.
+
+`start_date` is therefore still the right column for **manually-added
+activities and edge-dragging** (P0 #7's resize half, not built), and the spec's
+"do not backfill a guessed duration" instinct still holds.
+
+### Six things worth knowing before editing this
+
+1. **`dueDate` is the START of the run, not the deadline.** Counter-intuitive
+   given the column name, and reversing it mirrors every bar to the wrong side
+   of its week. The playbooks settle it: every 7-day activity reads *"Begin
+   curator/playlist outreach... Ongoing across the week"* at `offset_days: -42`,
+   which is the playbook's own Week 6. So a span is
+   `[dueDate, dueDate + durationDays - 1]`. Mutation-tested — reversing it fails
+   exactly two named tests.
+2. **The date frame is UTC, deliberately, and the tone frame is not.**
+   Instantiation computes due dates as `Date.UTC(release) + offset * 86400000`,
+   so reading them back with UTC components is exact and a template activity
+   round-trips to its own `offset_days` (asserted against all 64 tasks of the
+   live playbook). Local-time arithmetic would shift roughly half the world by a
+   day. Tone, though, comes from `getTaskSectionKey`, which uses local midnight,
+   because "is this overdue" is a question about the user's day. The two can
+   disagree for a few hours around midnight, and that is the correct trade.
+3. **Tone is inherited, never recomputed.** Deriving it from
+   `getTaskSectionKey` means the timeline and the activity list cannot disagree
+   about what is overdue, and it inherits two rules for free: status beats due
+   date, and a compressed runway is "catch up" rather than slippage — without
+   which a release created inside its own lead time would open screaming red
+   about a compressed schedule rather than about anything wrong.
+4. **The axis stretches to reach today, bounded.** The spec asks for an axis
+   running "from the earliest activity to release day plus two weeks" AND a
+   today marker "without which the whole view is decorative". Those conflict
+   whenever today falls outside the scheduled span, which is the normal state of
+   a release planned months ahead. So the axis reaches for today up to
+   `TIMELINE_MAX_TODAY_GAP_DAYS` (84); beyond that — a release that ended two
+   years ago — no marker is drawn rather than a hundred empty columns.
+5. **It is out of `CacheableSceneName`, for the opposite reason to `plan`.**
+   That one is excluded because it edits its payload; this one because it
+   **fetches nothing at all**. There is no route to prefetch and a fetcher for it
+   would have to invent a request that does not exist. Pinned by a test.
+6. **Container query, not `lg:`** (`.tl-scene-container`, 34rem — the calendar's
+   `.cc-*` mechanism at a lower threshold, since week columns of dots need less
+   room than a month grid of post titles). The recorded trap applies here
+   exactly: the UrgAns rail and the identity card narrow the centre column
+   without narrowing the viewport, so a viewport gate would hand a 13-week grid
+   ~450px. Below the threshold the scene renders the vertical week-by-week list,
+   which is the documented mobile behaviour rather than a degraded desktop view.
+
+### Smaller decisions
+
+- **Drag is wide-widths-only and read-only below**, per the spec's non-goal:
+  precision dragging on a 380px screen is a real source of accidental date
+  changes. Tapping a row on the narrow view opens the detail pop-up, where the
+  date is an ordinary input.
+- **A drag snaps to whole days** (`daysForDragDelta`). The axis is ~11 weeks in a
+  few hundred pixels, so a free drag lands on arbitrary timestamps and a manager
+  aiming for next Tuesday misses.
+- **A click and a drag are the same gesture until pointer-up**, distinguished by
+  whether any whole day of movement accumulated. Zero movement opens the detail
+  panel; anything else reschedules. No second editing surface is built, per P0 #6.
+- **A failed reschedule snaps back and says so** — the optimistic day offset is
+  dropped and the error is toasted, rather than leaving a bar somewhere the
+  server never agreed to.
+- **Dateless activities are listed, not dropped.** A manager-added activity often
+  has no date yet, and silently omitting it from "the whole rollout on one
+  screen" would make the view lie.
+- **Phases come from `derivePlanPhase`**, the same definition the plan review
+  scene groups by, keyed on the START of the work. Collapsed by default with a
+  summary bar spanning the phase, so a shut phase still says when it runs.
+
+### Verified
+
+1743 tests (34 new in `lib/release-timeline.test.ts`), `eslint .` at the exact
+measured baseline (**3 errors / 66 warnings**, all pre-existing in
+`WorkspaceView.tsx`) with **zero new warnings** despite the drag handlers, and
+`next build` green **by exit code** in both flag states with `/auth`,
+`/onboarding`, `/settings` and `/dashboard` all still `○ Static`. Two mutations
+were run and each failed exactly the tests written to catch it: reversing the bar
+direction, and treating every activity as a bar.
+
+### Not verified
+
+**Nothing has rendered in a browser.** This sandbox cannot mint an authenticated
+session and has no network route to app.urganize.app, so the grid, the drag
+gesture, the container-query breakpoint and the mobile list rest on unit tests
+plus the build. The usual trap applies to any attempt to check the flag from the
+bundle: both ternary branches compile in, so grepping for "Timeline" proves
+nothing — `resolveActiveScene` returning null with the flag off is the real gate
+and is unit-tested in both states.
+
+Worth one live pass at flag-flip: open a real 64-activity release, confirm the
+today line lands where it should, expand a phase, drag a 7-day bar and confirm it
+persists, then drag one with the network throttled to see the snap-back.
+
+### Adjacent defect found, deliberately NOT fixed here
+
+**`templateTaskId` is null on every activity in the product.** Both writers store
+`metadata.template.task_id` (`instantiate.ts`, `release-planning-server.ts`) and
+`readTemplateTaskId` in `lib/tasks-server.ts` reads
+`metadata.template.template_task_id`. They have never matched.
+
+The consequence is in `lib/cover-art-tasks.ts`, whose design depends on the
+distinction: an activity **with** a template id is matched against the nine
+allow-listed playbook steps and never falls back to a title match, which is what
+excludes the four "brief the designer" steps from prompting for a file that does
+not exist yet. With the id always null, every activity takes the title-match
+fallback, so that exclusion is not actually holding. It is dark today
+(`NEXT_PUBLIC_FEATURE_COVER_ART` is off), which is why it has gone unnoticed.
+
+Not fixed in this PR on purpose: it is a behavioural change to a different
+feature, and folding it into a timeline diff would bury it. It wants its own
+change, and a test asserting a round trip through the writer rather than a
+hard-coded key string.
+
+---
+
+## Chappi, the mascot (2026-08-30, v1.9.0)
+
+The character from `chappi-model-sheet-v1.html` (Draft 01, Aug 2026), built as
+one shared component and wired to real states. **Not a scope expansion:**
+nothing new is stored, no route is added that a customer reaches, and no line
+moves off the out-of-scope list — this is chrome on surfaces that already
+shipped, the same footing as the mobile scene-nav rework and the
+Collect-metadata cards. **No feature flag** (the same founder-driven-UX-rework
+precedent), no migration, and no new dependency.
+
+`packages/ui/src/Chappi.tsx` plus `chappi-constants.ts`, both exported from the
+package index. Six poses — idle, pointing, thinking, celebrating, carrying,
+resting.
+
+**Every path, transform, colour and weight is copied from the sheet.** Nothing
+is redrawn and nothing is approximated, so the proportions it states hold
+exactly: outline 0.047 H = 7, mouth 0.054 H = 8, ear cup 0.31 H = 46, eye width
+0.23 H = 34, eye centres 0.38 H = 56, body 1.70 H = 252, eye line 58% of body,
+mouth line 77%, hover gap tip-to-shadow 0.23 H = 34, smallest legible size 64px
+wide. If the sheet is revised, re-copy from it rather than nudging numbers.
+
+**Seven things worth knowing before editing this:**
+
+1. **The hands are ONE mitten placed by the sheet's own transform strings**
+   (`translate(76,250) rotate(-12)`, and so on), not twelve baked paths. The
+   sheet says a pose differs only in eyes, mouth and hand TRANSFORMS, and
+   keeping them as transforms is what makes that literally true in the code —
+   a new pose is three strings, which is the whole reason he has no arms.
+2. **The shadow is part of him, not decoration.** `<ellipse cx=200 cy=372
+   rx=76 ry=13>` at 45% black under a `feGaussianBlur` — the sheet's part 05,
+   "he hovers, one shadow ellipse drops him onto any surface", and the reason
+   the hover gap is a stated proportion. It rides INSIDE the float group, as
+   in the sheet, and its blur is static: nothing here animates a filter.
+3. **That filter is the only reason the component is `'use client'`.** An SVG
+   filter needs an id, and the id has to be per instance: a shared literal
+   works until the FIRST instance unmounts, at which point every later one
+   silently loses its blur and hardens into a black ellipse — and two Chappis
+   sit in the DOM at once wherever this repo splits mobile and desktop
+   branches by CSS. `useId` is the fix and `useId` is a hook.
+4. **Which is why the plain data lives in `chappi-constants.ts`.** A client
+   module's exports reach a Server Component as opaque client references, not
+   values, so a server-rendered page importing `CHAPPI_POSES` from
+   `Chappi.tsx` gets a proxy it cannot map over. `/admin/chappi` is exactly
+   that case and it broke the first time this was tried — the page rendered
+   its nav and nothing else. Keep new constants in the constants file.
+5. **The viewBox is the sheet's pose box with the hero's lower edge**, and
+   `overflow: visible` on top. Neither box the sheet draws contains every
+   pose: the pose box (`66 60 268 330`) crops the shadow's blur, and BOTH
+   crop pointing's raised hand, which reaches x≈357 — visibly clipped in the
+   sheet's own pointing card. Every pose shares this one box deliberately, so
+   swapping one for another cannot resize him or shift the layout around him.
+6. **`EmptyState`'s `mascot` prop is opt-in per call site, and that is a
+   correctness guard rather than a style choice.** That component backs eight
+   empty states and two can be on screen at once: an account with no releases
+   has an empty releases column AND an empty activity list. Rendering him
+   inside `EmptyState` unconditionally would put two on one screen. For the
+   same reason `TasksPanel` shows him only alongside the SCOPED wording — no
+   release scoped means no release list beside it that could be full.
+7. **Celebrating sits on the Motion readout, deliberately NOT in a toast or a
+   sheet.** Task completion already has a three-way contest for the one bottom
+   surface (cover art ask, then the check-in, then the undo toast — see
+   `useTaskStore.completeTask`), and a fourth claimant would either lose every
+   time or push a real question off screen. `ReleaseDeliveredMark` holds the
+   "every activity done" rule ONCE so the mobile strip (`WorkspaceView`) and
+   the desktop one (`WorkspaceDesktopFocused`) cannot disagree. A release with
+   no activities is not delivered: 0 of 0 is empty, not finished.
+
+**On our dark theme his hood disappears, and that is correct.** `bg-bg-base` in
+dark is `rgb(13,18,14)` — byte-identical to the ink he is outlined in — so he
+reads as a floating cream face with the spring ear rings marking the hood. That
+is exactly how the sheet's own pose cards render him (`#101710`, flat, no
+glow), so no glow container is used at any in-app placement. `CHAPPI_GLOW` is
+the sheet's hero stage gradient, exported for a surface that wants that
+treatment; note it is a dark green wash, NOT flat forest, because forest at
+full strength behind an ink hood fights the outline it is meant to reveal.
+
+**Where he is wired:** thinking replaces the `Loader2` spinner in the UrgAns
+transcript (page, dock and rail); idle on the assistant page's empty landing
+(page variant only, joining the existing `flex-1` region rather than becoming a
+third one — the two-region split is what three rejected attempts landed on) and
+beside the onboarding greeting on step 0; resting on the releases empty state
+(mobile column and desktop grid), the scoped activities empty state and the
+notes empty state; celebrating at 100% Motion. `pointing` and `carrying` are
+built and previewed but placed nowhere — they are for marketing surfaces.
+
+**One copy fix the sheet forced.** Its voice rules bind every string rendered
+next to him, and one of them is that he never says "workspace" ("that word
+stays out of anything a customer reads"). Onboarding's signup branch said "A
+few questions before we set up your workspace." Both branches now say the
+authed-setup branch's line, which was already true and already clean.
+
+**Preview:** `/admin/chappi` — all six poses at 64, 96 and 160, the dark
+surface with the stage gradient, and a static row. Internal, like the rest of
+`/admin`; it reads no data, so unlike its neighbours it has no backing API
+acting as the guard.
+
+- **Verified:** 1718 tests, `eslint .` at the exact measured baseline (3 errors
+  / 66 warnings, all pre-existing in `WorkspaceView.tsx`, confirmed by linting a
+  stashed tree), homepage lint clean, and `next build` green **by exit code**
+  for both apps with `/auth`, `/onboarding`, `/settings` and `/admin/chappi` all
+  `○ Static`. Rendered in a real headless Chromium and compared side by side
+  against the sheet's own pose grid, served locally and screenshotted: all six
+  poses match, on both the cream and the dark ground, with the onboarding
+  placement checked at 900 and 375.
+- **Not verified:** the four authenticated placements — the UrgAns thinking row,
+  the assistant empty landing, the two empty states and the delivered mark —
+  have never rendered, because this sandbox cannot mint a session and has no
+  route to app.urganize.app. They rest on the component being proven, the build,
+  and traced call paths. Worth one pass: ask UrgAns something and watch the
+  spinner row, then finish the last activity on a release and check the Motion
+  strip.
+
+---
+
+## The self-refresh after an idle tab, and where it lands (2026-08-31, v1.10.1)
+
+Founder report: leaving the app for a while, coming back and trying to navigate
+refreshes the whole page — "it's not meant to be so", and it should keep its
+state instead.
+
+**The refresh is ours and it is deliberate.** `ChunkRecoveryBridge` is the only
+thing in the app that reloads a page on its own (every other
+`location.reload()` is behind a user-clicked Retry). It fires on one narrow
+error: a JS chunk that 404s. That is version skew — a tab holds its build's
+asset URLs, we deploy continuously from `main`, and once a new deployment takes
+the production alias those files are gone. Nothing throws inside React, so
+without the reload the page stays painted and every control is dead. **Do not
+"fix" the reload away; it is the cure for a worse bug.**
+
+**Ruled out, so nobody re-investigates:** there is no focus/`visibilitychange`/
+`online`/`pageshow` refetch listener anywhere in the app; `TOKEN_REFRESHED` in
+`lib/auth-store.ts` is deliberately non-flickering and `INITIAL_SESSION`
+releases the loading gate without one; and `lib/access-redirect.ts`'s 402
+interception navigates to `/locked` (visibly different) rather than refreshing
+in place. State also already survives — command-center, scene data, notes,
+identity and curator stores are all cache-first over `localStorage`, so a
+reload repaints rather than restarting. The one genuine loss is an open UrgAns
+conversation, which is memory-only and already recorded as deferred.
+
+**THE REAL FIX IS NOT CODE, AND IT IS STILL NOT DONE: Vercel Skew Protection is
+off.** `next.config.js` has stamped the deployment id onto asset requests since
+2026-08-16 and its comment says the line does nothing without the project
+setting. Verified rather than assumed on 2026-08-31: built with
+`VERCEL_DEPLOYMENT_ID` set, and every asset URL in the prerendered HTML carries
+`?dpl=<id>` (189 of them on `/settings` alone), so **the toggle will take
+effect the moment it is switched on** — Vercel → the `Web` project → Settings →
+Advanced → Skew Protection. Two unknowns I could not settle: vercel.com is
+egress-blocked from the sandbox, so the exact menu path is from memory, and
+**this account is on the HOBBY plan** (the same plan that caps crons at one a
+day), so confirm Skew Protection is even offered there. If it is not, this
+fallback is all there is until the plan changes.
+
+A hypothesis checked and DISCARDED, so it is not re-litigated:
+`VERCEL_DEPLOYMENT_ID` is not declared in `turbo.json`'s build `env`, and
+Turborepo 2 defaults to `envMode: strict` — but a probe showed it passes
+through to the build in **both** strict and loose mode, so no turbo change is
+needed. It is also absent from the task's hash, which is the desirable half (it
+changes every deploy and would otherwise bust the build cache).
+
+**What this version actually changed: the recovery now RESUMES the navigation
+instead of reloading the page being left.** The failure is a navigation, so
+when the router had not yet committed the new URL a plain reload silently ate
+the click — the user tapped a link and got a refresh, still standing where they
+started, which is exactly what was reported. Three things worth knowing:
+
+1. **It is a proven no-op in the case where the old behaviour was already
+   right.** `resolveRecoveryTarget` returns null — meaning plain reload —
+   whenever the destination is already the current page, which is what happens
+   if the router DID commit the URL first. So there is no case where this lands
+   somewhere the user did not ask for, and that matters because **which of the
+   two cases Next actually produces cannot be observed from here** (it needs two
+   live deployments, a browser and a session). Mutation-tested: dropping that
+   guard fails exactly two named tests.
+2. **The click listener is CAPTURE phase, and must stay there.** Next's `Link`
+   calls `preventDefault()` to route client-side, so by the bubble phase every
+   real in-app click already looks cancelled — precisely the set we need to
+   record. The flip side is that `defaultPrevented` is meaningless that early,
+   so `LinkClick` deliberately has no such field rather than checking a flag it
+   cannot trust.
+3. **Everything else fails toward a plain reload:** no intent, a stale or
+   clock-skewed one (15s TTL), an unparseable URL, a cross-origin target, a
+   hash-only difference, a modified/middle click, `target="_blank"`, a
+   `download` anchor, or a non-http scheme (`mailto:`, `tel:`, the Capacitor
+   deep link). The recorded href is somewhere the browser may later be sent, so
+   the refusals are the half that matters. Origin and staleness were both
+   mutation-tested too.
+
+Also unfixable and worth saying out loud: **phones discard background tabs to
+reclaim memory**, and the browser then reloads the document itself with no app
+code involved. If a refresh happens when nothing was deployed, that is what it
+is. The console line `[chunk-recovery] stale build detected` is the
+discriminator — present means skew, absent means the browser did it.
+
+**Doc-drift flagged, not silently backfilled:** the whole 2026-08-16
+chunk-recovery stack (`lib/chunk-recovery.ts`, `ChunkRecoveryBridge`, the
+`deploymentId` line) was built and shipped without ever being recorded in this
+file — the same failure mode flagged for Web Push and the mobile shell. This
+section is the first mention of it; there is no separate 2026-08-16 entry to
+reconcile.
+
+- **Verified:** 1838 tests (15 new, all three new guards mutation-tested),
+  `eslint .` at the exact 3-error / 70-warning baseline with **zero** new
+  findings, and `next build` green by exit code with `/auth`, `/onboarding` and
+  `/settings` still `○ Static`. The resume path was confirmed present in the
+  compiled client bundle rather than trusted from source.
+- **Not verified:** no browser and no real skew event. This sandbox cannot mint
+  a session and has no network route to app.urganize.app, so the click
+  recording and the resume have only ever run as pure functions. It is safe by
+  the no-op property in point 1 rather than by observation.
+
+## The prefetch list had drifted behind the nav (2026-08-31, v1.10.2)
+
+Founder request, straight after the refresh fix above: *"load the entire app in
+the background so whenever users want to navigate it's fast and there is no
+latency."*
+
+**Most of this was already built, which is the first thing to know before
+adding more.** `AppShell` has warmed route chunks on idle since the perf pass —
+gated on `shouldBackgroundPrefetch()` (Data Saver and 2g excluded,
+`lib/connection.ts`) and wrapped in `runWhenIdle`. `useScenePrefetch` warms the
+scoped release's scene DATA the same way. `loadCommandCenter` and the scene,
+notes, identity and curator stores are all cache-first over `localStorage`.
+Scene CODE needs no prefetch at all: `ReleaseScenePanel` uses no `dynamic()`,
+so every scene ships in the dashboard bundle and is warm the moment
+`/dashboard` is.
+
+**What was actually wrong: `PREFETCHED_ROUTES` was three hardcoded entries and
+the nav had outgrown it.** `/dashboard`, `/dashboard/urgans` and `/settings`
+were warm while `/dashboard/notes`, `/dashboard/shows` and the dual-account
+`/curator` crossing — all primary nav destinations by then — were cold on every
+load. Same drift class as the four hand-rolled copies of the scene-flag
+expression and the two `100vh` document floors: a list that has to be kept in
+step with something else, and wasn't.
+
+The list now lives in `lib/prefetch-routes.ts` as `buildPrefetchRoutes`, so it
+is flag-aware, account-aware and unit-tested.
+
+**Four things a later change will be tempted to get wrong:**
+
+1. **It is NOT "the entire app", and the founder's wording should not be read
+   as asking for that.** Prefetching is bytes now for latency later, and this
+   product's users are largely on metered Nigerian mobile data — the reasoning
+   already written into `lib/connection.ts`, and the same constraint that got
+   framer-motion deleted and that cost a real curator his sign-up over 1.0 MB
+   of chunks. The rule is "every destination the primary nav offers, and
+   nothing else": public token pages (`/epk`, `/credits`, `/capture`, `/pack`)
+   are for strangers arriving with a link, the money and identity flows
+   (`/locked`, `/start-trial`, `/payment`, `/redeem`, `/oauth/authorize`,
+   `/invite`, `/join`) are one-time or exceptional, `/admin` is reachable by a
+   couple of accounts, and the redirect stubs resolve to routes already on the
+   list. Warming any of them spends bytes on pages most users never see once.
+2. **Every route is gated on the same flag its nav entry is gated on.** With a
+   flag off those pages bounce or 404, so prefetching them is pure waste. The
+   flags are read at module scope (the `NEXT_PUBLIC_*` inlining pattern), so
+   the tests re-import the module per case with `vi.resetModules()` +
+   `vi.stubEnv` — the `intent-router.test.ts` approach — and assert BOTH
+   states rather than trusting the ambient environment.
+3. **`hasCuratorProfile` is tri-state and `null` must stay "not yet", never
+   "no".** It is the documented dual-account trap with a cheaper consequence
+   than usual: read as `no`, a playlist owner's crossing simply never warms.
+   The effect has it in its dependency array on purpose, so the crossing is
+   warmed once the probe answers; re-running is free because `router.prefetch`
+   is idempotent. Mutation-tested.
+4. **`buildPrefetchRoutes` returns a fresh array.** It is called from inside an
+   effect on every relevant change, and handing out the shared base list would
+   let one caller's mutation leak into every later call. Also mutation-tested.
+
+**Verified:** 1846 tests (8 new, three guards mutation-tested — the tri-state,
+the flag gate and the array copy each fail exactly their own test), `eslint .`
+at the exact 3-error / 70-warning baseline with **zero** new findings, and
+`next build` green **by exit code** in BOTH flag states with `/auth`,
+`/onboarding` and `/settings` still `○ Static` in each.
+
+**A non-signal worth recording, because it was tried:** grepping the client
+chunks for `"/dashboard/shows"` proves nothing about the flag — the nav
+components compile both ternary branches in, so the string is present either
+way. This is the same false positive already recorded for "Fan capture", "Press
+kit" and the EP/album flip. The unit tests are the real check here.
+
+**Not verified:** nothing was measured in a browser and no timing was taken —
+this sandbox cannot mint a session and has no network route to
+app.urganize.app, so "navigation is now instant" rests on the mechanism plus
+the tests, not on an observation. Worth one look on a real phone: reload, wait
+a beat, then tap Notes and Shows.
+
+**Still cold on purpose, so nobody reads this as a total win:** scene data for
+releases OTHER than the scoped one. Warming all of them is O(releases × 6) API
+calls, which is exactly the waste the list above is written to avoid.
+
+## Icons only in the mobile bar, and notifications finally reach a phone (2026-08-31, v1.10.3)
+
+Founder call: *"In UrgAns view instead of showing 'song' on the mobile lower
+menu, show 'notifications' then remove all the titles and just show the icons
+to save space."*
+
+**Read as two changes with different scopes, and the reading is worth
+recording** since only one of them names a view. The Song → Notifications swap
+is the assistant page only, as asked. **The labels come off EVERY tab, not just
+that view's** — "all the titles" is bar-wide on its face, the space argument is
+about the bar rather than about one screen, and the alternative would have been
+worse on this bar specifically: labels on five views and absent on one changes
+the bar's shape as you navigate, which is the exact complaint that produced
+`EmptyTabSlot` a day earlier ("let the icons remain in the same position... so
+they don't jump around"). Note also that on the assistant page the swap is a
+SWAP, so the tab count there is unchanged — meaning "to save space" cannot have
+been about that view at all.
+
+### Notifications was a deferral being closed, not a new surface
+
+`AppTopbar` wraps the bell in `hidden lg:block` and the comment gives one
+reason: *"the mobile bar has no room for it once the logo takes the centered
+slot, and **MobileNavBar has no notifications tab to move it to**."* Now it has
+one. `MobileNavBar` renders **the same `NotificationsBell` component** in a new
+`placement="bar"` mode — not a reimplementation — so the fetch, the unread
+badge, the peek-vs-read model and the row-tap navigation are all the shipped
+ones. Nothing is stored and no route is added, which is also what keeps it
+clear of the "Notifications inbox … in-app inbox is v2" scope line: this is the
+built bell, finally reachable on a phone.
+
+**Four things a later change will be tempted to get wrong:**
+
+1. **The bar panel is `absolute`, not `fixed`, and that inverts a trap into the
+   mechanism.** `MobileNavBar`'s `<nav>` carries `backdrop-blur-xl`, and
+   `backdrop-filter` makes an element a containing block for `fixed`
+   descendants — the bell's own topbar comment already records hitting this
+   with the topbar. So a `fixed inset-x-4 top-[4.5rem]` panel mounted in the bar
+   would measure against the 64px bar rather than the viewport and land off
+   screen. Using `absolute bottom-full` makes that containing block the thing
+   the panel *wants* to measure from, so it opens upward off the bar's top edge
+   with **no portal**. The wrapper in bar placement must therefore stay
+   unpositioned — adding `relative` to it breaks this.
+2. **It must not reuse the topbar's `sm:`-and-up branch.** That one is
+   trigger-anchored (`sm:absolute sm:top-full`), which from a bottom-bar tab
+   opens the panel *downward* off the bottom of the screen. The bar renders up
+   to `lg`, so bar placement is viewport-relative at every width it sees.
+3. **The trailing slot's EXISTENCE is an account question; its CONTENT is a view
+   question.** That split is what keeps the bar still. Existence is
+   `hasCuratorProfile !== true` (a dual account carries Pitches there instead) —
+   fixed per account, so dropping it costs no stability. Content is
+   Notifications on the assistant page and Song elsewhere. It deliberately no
+   longer depends on the SONG flag, because notifications have nothing to do
+   with song upload: with that flag off the slot still exists and holds
+   Notifications on the assistant page, `EmptyTabSlot` elsewhere.
+4. **Labels are `sr-only`, not deleted.** Five unlabelled icon links would
+   announce as five links with no accessible names. Keeping one string per tab
+   also means the icon and the announced name cannot drift — the reasoning
+   `WorkspaceIdentityPanel`'s collapsed rail already uses.
+
+**The width ceiling changed meaning, so re-read it before adding a tab.** The
+recorded five-tabs-plus-button limit was set by the widest LABEL ("Pitches",
+~45px) in a ~52px slot. Measured against a 20px glyph instead, the binding
+constraint is now the ~44px touch target, so there is real headroom that did
+not exist before. A sixth tab is still a decision rather than free, but it is
+no longer the hard stop the old note describes.
+
+**One known limit, stated rather than papered over: a dual account gets no
+notifications tab**, because it has no trailing slot to swap. That is one
+partner account, and the alternative — a tab appearing only on the assistant
+page — would move Pitches every time they opened the assistant, reintroducing
+the jumping. Their bell is still there on desktop.
+
+Also folded in: the five inline copies of the tab class string became one
+`NavTab`, since all five were being edited anyway and copy drift in this file
+is a recorded problem.
+
+- **Verified:** 1846 tests (unchanged — nothing here is unit-testable; this repo
+  has no component tests and no jsdom), `eslint .` at the exact 3-error /
+  70-warning baseline with **zero** new findings, and `next build` green **by
+  exit code** with every bar flag on and `/auth`, `/onboarding`, `/settings`
+  still `○ Static`. The compiled output was checked rather than trusted from
+  source: the bell is bundled into the nav-bar chunk, the upward-panel classes
+  are present, and `.animate-menu-up`, `.sr-only` and `.bottom-full` all exist
+  in the emitted CSS.
+- **Not verified, and it is the whole visual risk:** nothing has rendered on a
+  phone. This sandbox cannot mint a session and has no route to
+  app.urganize.app, so the upward panel, the badge on the tab and the icon-only
+  row rest on the build plus the CSS check. Worth one pass on a real device:
+  open the assistant, tap the bell, and confirm the panel opens upward and
+  clears the bar.
+
+### REVERTED the same day: two live bells broke the assistant page (v1.11.2)
+
+Founder, minutes after the flip: *"urgans is not opening anymore on mobile
+view."* **The notifications tab is out; the icons-only half stayed.**
+
+**The mechanism, and it is the thing to read before re-landing this.** The
+topbar's bell is wrapped in `<div className="hidden lg:block">` — that is CSS,
+so below `lg` the component still **MOUNTS and still runs its effects**. Adding
+a second instance in the bar therefore gave `/dashboard/urgans` on mobile TWO
+live bells, each calling `supabase.channel(`notifications:${'${userId}'}`)` on the
+**same topic** and each fetching `/api/notifications`. Duplicate realtime
+subscriptions to one topic are not something supabase-js promises anything sane
+about, and **this app has no error boundaries anywhere** (its own Known issues
+entry says so), so a throw in that effect takes the page down instead of
+surfacing. It could only happen on that one route, because the bar renders Song
+everywhere else — which matches the report's scope exactly.
+
+**Honest limit on the diagnosis:** the mechanism was confirmed by reading (the
+CSS-hide, the shared topic, the missing boundaries), not by reproducing it — no
+session is mintable here. The revert was chosen over a speculative fix because
+it restores a known-good state in one deploy.
+
+**Re-landing it needs ONE live subscription, not two.** Hoist the fetch and the
+channel into a shared store (`useNotificationsStore`) so any number of triggers
+render against one subscription. **Do NOT just gate the second instance on a
+viewport check:** that still leaves two independent fetches and two toasts for
+one event in any state where both are mounted, and it trades a CSS gate for a
+hydration-sensitive JS one. The `placement` prop was reverted too rather than
+left inert — an untested code path nothing calls is worse than no path.
+
+Two smaller lessons worth keeping:
+
+- **`hidden lg:block` is not "not mounted".** Several surfaces in this app use
+  CSS to hide chrome per viewport (the topbar nav icons, `WorkspaceMenu`, this
+  bell). Any of them that owns a subscription, a fetch or a timer is still
+  paying for it on the viewport where it is invisible — and is still there to
+  collide with a second instance.
+- The v1.11.1 ledger entry promising notifications on mobile is **left as
+  written**; v1.11.2 corrects it in the log rather than rewriting history,
+  which is how this changelog works.
+
+## Shows gets a microphone; the content calendar is just "Content" (2026-08-31, v1.11.3)
+
+Founder call: *"on desktop show and calendar have the same icon, change the
+content calendar title to content and change the icon of shows to a
+microphone."* The collision was real and literal — `ShowsIcon` in
+`WorkspaceIdentityPanel` was defined as `CalendarDays`, the exact glyph the
+workspace's calendar pill uses, so the identity card's Shows row and that pill
+showed the same mark.
+
+Three things worth knowing:
+
+1. **`MicVocal`, not `Mic`.** The former is the handheld performer's mic, the
+   latter a podcast condenser, and a show is someone on a stage. Note `Mic2` is
+   only a deprecated alias of `MicVocal` — do not reach for it.
+2. **The swap is scoped to the three NAV surfaces** — the identity card's row,
+   the mobile bar's tab, and the topbar's icon. `CalendarDays` deliberately
+   stays everywhere it means an actual DATE: the shows list and a show's own
+   page (both render it beside the date), the create-release modal, and
+   `TaskRow` / `TaskDetailView` for due dates and event milestones. The Content
+   pill also keeps its calendar glyph, because that scene genuinely is a month
+   grid of planned posts — what was wrong was Shows borrowing it, not the
+   calendar using it.
+3. **The rename moved two skeleton placeholders, and that was not cosmetic.**
+   `WorkspaceSkeleton`'s outbound row documents its own rule — every width
+   rounds DOWN, because a placeholder wider than the real pill shifts every
+   neighbour left when the labels arrive. "Content" is a character shorter than
+   "Calendar", so the w-24 reservation sized for the old label became the one
+   case that row forbids; both copies (the desktop footer and the mobile
+   top-tabs strip) step down to w-20. A stale comment on the Metadata
+   placeholder claiming it was "the same eight characters as Calendar" was
+   corrected in the same pass — Metadata is now the wider of the two.
+
+Both label sites moved together: the pill in `TasksPanel` and
+`SCENE_LABELS.calendar` in `ReleaseScenePanel`. Keeping them in step is the
+lesson of the Metadata rename earlier the same day, where the pill said
+"Collect metadata" and the scene heading said "Metadata" for weeks. The one
+string left alone is `CalendarTabs`' `aria-label="Content calendars"`, which
+names the calendar OBJECTS inside the scene rather than the scene itself.
+
+- **Verified:** 1851 tests, `eslint .` at the exact 3-error / 70-warning
+  baseline, `next build` green by exit code with the events / calendar /
+  identity-panel flags on and `/auth`, `/onboarding`, `/settings` still
+  `○ Static`. Compiled output checked: `"Content"` present twice (pill + scene
+  label), `"Content calendar"` gone from user-facing strings entirely, and
+  `CalendarDays` confirmed still imported only by the date-rendering files.
+- **Not verified:** nothing rendered in a browser — no session is mintable
+  here — so the microphone's visual weight beside the other nav glyphs, and the
+  w-20 placeholders against the real pills, are unobserved. Worth one look on
+  desktop.
+
+---
+
+## Solo became a real tier (2026-09-01, v1.15.0)
+
+Founder brief: audit the Solo tier's entitlements, then enforce them, under one
+rule — **gate seats, not features.** A Solo manager keeps the whole product
+surface (assignment, shows, setlists, DJ packs, UrgAns); what their plan limits
+is how many people and how much usage. The audit came first and set the scope;
+only two of its findings needed code, and the biggest one was not on the brief's
+list at all.
+
+**THE HEADLINE FINDING: Solo could not be sold, so all four of its ceilings were
+unreachable dead code.** It shipped 2026-08-30 on the public pricing page at
+₦8,000 with an entitlement entry, deliberately staged ("the same staging Manager
+itself shipped in") — absent from `SelfServeTierId` and from
+`subscriptions_plan_check`, so `resolveTeamTier` could never return it. The tier
+was advertised and enforced on nobody. Everything else was secondary to that.
+
+**What the audit found already right, and must not be "fixed" later:**
+
+- **One source of truth, correctly split.** Countable ceilings live in
+  `@urganize/pricing` (`PRICING_TIERS[tier].limits`); `ENTITLEMENTS` READS them
+  via `limitsOf()`; `tierHighlights()` builds the pricing page's copy from the
+  same field. Zero divergent hardcoded values anywhere — verified by enumerating
+  every call site, not assumed.
+- **No feature is gated by tier, anywhere.** `tasks`, `events`, `setlists`,
+  `songs` and the pack routes consult no entitlement, and no `tier === '...'`
+  comparison exists outside the entitlements module.
+- **External contacts never touch `workspace_members`.** DJ pack recipients,
+  curator profiles and credit submitters all have their own tables, so a Solo
+  team with its one collaborator can still send tonight's pack. Structural
+  rather than enforced by a check that could be forgotten.
+- **Every cap fails open** on an unreadable count or an unresolvable tier.
+- Both seat doors and both artist doors were already covered.
+
+**The four decisions, all delegated ("do what's best") and all resolved as
+KEEP** — every value was already published, so moving one would have reduced an
+advertised number or contradicted a settled call: Solo seats **2** (the owner
+occupies a seat, so 2 is manager + artist; at 1 the invite form is dead on day
+one, the "locked button" the brief exists to avoid), artists **1**, active
+releases **1** (survivable only because archiving frees the slot), UrgAns
+**40**/month, reset on the **billing anniversary**, and an expired trial still
+meets the **full wall** (read-only is for payment failure only — the 2026-08-24
+call; a trial expiring into usable limits is a permanent free tier, which the
+pricing spec rejects). Manager's artists stay **5**: the brief's table said 2,
+but 5 is live on the public page and Manager was out of scope, so the table was
+the error.
+
+### Six things worth knowing before editing this
+
+1. **`purchasableTiers()` is the permanent fix for a gap this repo has shipped
+   FOUR times** (2026-07-14, -07-15, -08-16, -08-21), each time as a price
+   advertised that nothing could charge. Pricing v2 is live in production, so
+   simply adding Solo to the wall would have offered a tier whose Paystack Plans
+   do not exist and 500'd at checkout. Instead the SERVER says which tiers it can
+   charge — self-serve AND both Plan codes configured — and the wall renders
+   exactly that, through `/api/subscription-status`, which it already fetched. An
+   unmintable tier is not offered, and starts being offered the moment its env
+   vars are set with **no code change**. Every previous fix was a reminder to
+   mint the Plans first; this makes the order of operations unnecessary. **Do not
+   re-derive the offered list client-side** — a browser cannot see whether a Plan
+   exists.
+2. **`WALL_TIERS` is DERIVED now, and that closed a real defect rather than
+   tidying one.** It was a hand-written array and fell out of step the instant
+   Solo became purchasable. It filters `PRICING_TIER_ORDER` on `!contactSales`
+   rather than importing `isSelfServeTier`, because that predicate lives in
+   `lib/billing-plans.ts` — documented server-only Paystack config with no
+   business in a client bundle. The two expressions of one fact are held together
+   by a test ('the wall and checkout agree on which tiers are self-serve'), not a
+   cross-boundary import.
+3. **`effectiveTier` is derived, never corrected in an effect.** The offered list
+   arrives asynchronously, so a stored selection can briefly name a tier not on
+   it. A setState-in-effect would leave one frame where the checked radio is
+   absent from its own list — and worse, a frame where Subscribe posts a tier the
+   customer never saw. Every read of the chosen tier goes through it;
+   `selectedTier` stays the raw record of the click.
+4. **THE SEAT WALL NO LONGER DISABLES ITS BUTTONS, and that reversal is the
+   point.** They used to dim at `opacity-60` on the reasoning that it "saves a
+   round trip that could only be refused" — but the round trip is what CARRIES
+   the reason. Disabled, the manager got no message, no named limit and no
+   upgrade path, so the server's 409 (which names their plan, its contents and
+   the tier that lifts it) was never read by anyone. The flow is fully reachable
+   and the block happens at submit, where there is somewhere to put a sentence.
+   `teammateError` already rendered the server's string verbatim, so this needed
+   no new client copy — which also keeps one implementation of the message.
+5. **The invite-LINK mint is seat-capped now, as well as redemption.** Redemption
+   stays the real enforcement point (one link, many redeemers, so it is the only
+   place a total can be held). The mint check exists so the refusal reaches the
+   person who can act on it: without it a team at its ceiling mints a link
+   guaranteed to fail, the failure surfaces to whoever clicks it, and the manager
+   saw a successful copy-to-clipboard. Placed AFTER the runaway guard, so "revoke
+   a link you're not using" — which they can do alone, now — is offered before
+   "upgrade your plan".
+6. **The webhook's `paid_at` write is no longer fire-and-forget.** It is the
+   read-only discriminator (`lapsedFromPayment` reads exactly that field), so a
+   subscription row saying `active` with `paid_at` null is a customer who paid us
+   and who will be **walled instead of read-only** when a renewal eventually
+   fails. The old code logged it and returned 200, telling Paystack the delivery
+   succeeded and guaranteeing it would never be retried. Now: one retry, then a
+   500 so Paystack redelivers. Both writes are idempotent, and the customer has
+   access from the subscription row either way.
+
+### Consistency sweep
+
+The founder asked explicitly for this. Two real problems, one customer-facing:
+
+- **`/for-labels` told Label prospects they get "one artist at a time".** False
+  since rosters shipped 2026-08-30, and the worst place in the site to be wrong:
+  the tier that pays for a roster, told it gets one artist, while `/pricing`
+  offered that same tier "Unlimited artists" one click away. The block still does
+  its original job (separating a founder SERVICE from a self-serve FEATURE); only
+  the factual half moved.
+- **Three comments carried hardcoded ceiling numbers** (`TaskMemberSelect` "4
+  seats", `seats-server` "four seats", `urgans-usage` "150 actions"). All now
+  point at the field instead of restating it — Solo's numbers differ, so each was
+  already half wrong.
+
+### Tests
+
+`lib/tier-limits-guard.test.ts` (45 cases). Per limit: passes at the ceiling,
+refuses past it, and the refusal names both the number and the tier that lifts
+it. Then the axis that matters most and cannot be tested by driving a UI — this
+repo has no component tests and no jsdom, and no database in CI — so **"the
+client cannot bypass this" is proved structurally**: every creation point's
+source is asserted to CALL its allowance helper (comments stripped first, so
+prose cannot satisfy a check). Better than a UI test, which proves one path on
+one day; this fails when someone adds a new door. Plus the inverse block, which
+is what protects shows and pitching: the DJ pack, curator pitch and credits
+routes must call no seat check and touch no `workspace_members`.
+
+**Mutation-tested, five ways, each failing exactly its own test:** dropping the
+seat check from the invite-link mint; adding one to the DJ pack route; pointing
+the seat counter at another table; making `purchasableTiers` accept one interval
+instead of both; and a comment naming a helper satisfying nothing.
+
+**One mutation SURVIVED and is recorded rather than hidden:** deleting the
+`isSelfServeTier` guard from `purchasableTiers()` fails no test, because Label
+has no entry in `TIER_PLAN_CODE_ENV_VAR` (its mapping moved to
+`RETIRED_TIER_PLAN_CODE_ENV_VAR`, which `getTierPaystackPlanCode` does not read)
+and Group is absent from `PRICING_TIER_ORDER`. So the env mapping alone excludes
+them today and the predicate is defence-in-depth against one specific future edit
+— re-adding a sales-led tier to that map, which WOULD be caught. The test says so
+and pins both halves separately rather than implying more than it proves.
+
+### Verified
+
+1990 tests passing (45 new), `eslint .` at **byte-identical** counts with and
+without these changes (3 errors / 70 warnings, all pre-existing), homepage lint
+at its own 0/2 baseline, and `next build` green **by exit code** in both flag
+states with `/auth`, `/onboarding` and `/settings` still `○ Static` in each.
+Runtime probe confirmed auth still precedes the new seat check (`POST
+/api/workspace/invite-link` 401s unauthenticated) and that the external-contact
+routes answer their own feature flags rather than a seat refusal.
+
+### NOT verified, and it is the whole risk surface
+
+**Nothing ran against a real database, a real account or real Paystack.** No seat
+has actually been refused, no Solo checkout attempted, no webhook delivered, and
+neither the wall nor the Teammates section has rendered in a browser — this
+sandbox cannot mint a Supabase session and the proxy answers 403 to CONNECT for
+both urganize domains. It rests on unit tests, the mutation runs and traced call
+paths.
+
+**The Part 1 audit could not deliver production counts** for the same reason
+(`.env.local` points at `placeholder.supabase.co`). The SQL is in the audit
+report; the structural half was answerable from code and is the stronger answer
+anyway: **no existing account can be broken by the Solo caps**, because five
+branches resolve to the uncapped tier before a plan is read (founding, trial,
+grace, comped, walled/read-only), every pre-tier plan id maps to `label`, and an
+unknown plan maps to `label`.
+
+### Activation checklist
+
+1. ~~Apply `20260901100000_subscriptions_allow_solo.sql`~~ — **done 2026-09-01.**
+   It widens `subscriptions_plan_check` AND `subscriptions_pending_plan_check`
+   (the second is for the DOWNGRADE direction — Manager → Solo parks the target
+   in `pending_plan`, so widening only the first would let a Solo purchase
+   through and refuse a Solo downgrade). It ends in a `do $$` block that raises
+   if either constraint did not take, so a clean run is the proof.
+2. ~~Mint two Paystack Plans and set `PAYSTACK_PLAN_SOLO_MONTHLY_NGN` /
+   `PAYSTACK_PLAN_SOLO_ANNUAL_NGN`~~ — **done 2026-09-01, BEFORE the code
+   shipped.** ₦8,000/mo → `PLN_pugb0hjd5klpkfe`, ₦80,000/yr →
+   `PLN_x0bmsd3dk8x1e0p`. **This is the first time in this repo's history the
+   mint-before-flip order was followed on the first attempt** rather than
+   corrected after a customer or a founder noticed — four previous passes shipped
+   the gap. Worth knowing for anyone auditing the dashboard: the two Plan objects
+   are named `monthly` and `yearly` there, not `PAYSTACK_PLAN_SOLO_*` like
+   Manager's, so the AMOUNT is what identifies them; the ₦8,000 one also carried
+   one pre-existing subscriber, which is unaffected (their stored
+   `subscriptions.plan` is whatever it already was, not `solo`).
+3. Do NOT repoint `PAYSTACK_PLAN_{MONTHLY,ANNUAL}_NGN` — Label's live
+   subscriptions still renew against those.
+4. ~~Changelog entry + version bump~~ — done as v1.15.0. Landed at merge rather
+   than at flag-flip because pricing v2 is already on and the seat-wall message
+   is live immediately.
+5. **OPEN, and it is the only thing left: MERGE AND DEPLOY.** Steps 1 and 2 are
+   database and configuration; `purchasableTiers()`, the widened
+   `SelfServeTierId`, the derived `WALL_TIERS` and the seat-wall change all live
+   in code, so until this branch is on `main` nothing has changed for a user —
+   the env vars are set and read by nothing. Note the migration and the env vars
+   being live FIRST is harmless and is the designed order: a database that
+   permits `solo` and Plans nobody references cost nothing.
+6. Then verify with a real card: buy Solo monthly, confirm Paystack quotes
+   ₦8,000 and `subscriptions.billing_interval` reads `monthly`, then invite a
+   second teammate and confirm the refusal appears **in the Settings error box**
+   rather than as a dimmed button.
+
+**Also worth one check while in the Paystack dashboard:**
+`PAYSTACK_PLAN_MANAGER_ANNUAL_NGN` (₦350,000) could not be confirmed from the
+plans list — only the monthly one was visible. Manager needs BOTH intervals
+configured before `purchasableTiers()` will offer it, by the same rule Solo
+follows, so if that Plan or its env var is missing then Manager is currently
+being withheld from the wall too.
+
+### A sales-led plan could still reach checkout (2026-09-01, same day, no version)
+
+Found by the founder asking a plain question — "what is the Label plan, it's
+currently 750k" — which is worth recording as much as the fix.
+
+**`resolveCheckoutPurchase` guarded only `plan === 'enterprise'`.** Label went
+sales-led on 2026-08-30, and it is a valid id in BOTH pricing generations: the
+tier branch correctly declines it (`isSelfServeTier` says no), and it then fell
+through to the LEGACY branch, where `isBillingPlanId` still accepts 'label'. So
+a request for it resolved `PAYSTACK_PLAN_LABEL_NGN` — a stale ₦750,000 Plan that
+really does exist in the dashboard — while recording `BILLING_PLANS.label`'s
+₦800,000. Two different figures, on a tier that is meant to be a conversation.
+
+Unreachable from any UI (the wall filters on `contactSales`, `/locked`
+early-returns on it), so this is the decision being enforced at the layer that
+makes it rather than only in the two surfaces that happen to respect it. Derived
+from `contactSales`, so making a tier sales-led closes its checkout in the same
+edit.
+
+**THE PART WORTH REMEMBERING: a test already claimed to cover this and passed for
+the wrong reason.** `refuses to sell Label, which went sales-led` called
+`stubLive()`, which does not stub `PAYSTACK_PLAN_LABEL_NGN` — so the refusal was
+really "plan code not configured" (a 500) out of the legacy branch, not the
+sales-led decision. Setting that one env var in production would have removed the
+only thing refusing it, and the test would have gone on passing. It now stubs a
+valid Label plan code so the ONLY thing that can refuse is the guard, and asserts
+**400** specifically, because a 500 there is the accidental pass returning. Same
+failure shape as the surviving mutation recorded above: green is not the same as
+covered.
+
+Also: the guard's first draft checked BOTH generations, and a mutation test
+showed the second lookup was unreachable — every sales-led id is a
+`PricingTierId`. It was deleted rather than kept as decoration, and
+`salesLedIdsAreAllTierIds` pins the assumption so a legacy-only id becoming
+sales-led fails loudly instead of slipping through.
+
+**No changelog entry and no version bump**, per the internal-only rule: no UI
+could reach this path, so nothing a user can observe has changed. The
+2026-08-27 metadata-route gating was handled the same way.
+
+**Label, for the record, has no price in the product.** `PRICING_TIERS.label`
+carries no `prices` at all; the ₦800,000 in `BILLING_PLANS.label` is legacy,
+displayed nowhere, and kept only for an existing subscriber's renewal math. The
+two ₦750,000 Plans in the dashboard (`PAYSTACK_PLAN_LABEL_NGN` and
+`PAYSTACK_PLAN_LABEL_USD`, the latter charging NGN despite its name) are read by
+nothing. A live Label subscription renews against
+`PAYSTACK_PLAN_{MONTHLY,ANNUAL}_NGN`, which is why those must not be repointed.
+
+## The test path: a one-tap test release (2026-09-01; LIVE the same day, v1.16.0)
+
+Founder request: *"let's create a test path so users that just want to test the
+app can actually have a look at it without the pressure of running a whole real
+release first, the whole test path should end with an option for them to delete
+the test release if they want."* Two forks were put to the founder before
+building and both answers shape everything here: entry points are **in-app
+only** (the zero-release empty state and the first-release pop-up; the signup
+wizard is untouched), and the exit is a **standing banner**, not a guided tour.
+Behind `NEXT_PUBLIC_FEATURE_TEST_RELEASE`, default `false`. **LIVE in production
+as of 2026-09-01 (v1.16.0):** the founder set the flag on the Vercel `Web`
+project the same afternoon the code merged, and the v1.16.0 version-bump commit
+is what made the flip take — a `NEXT_PUBLIC_*` value is inlined at build time,
+the merge deploy was built before the variable existed, and `turbo-ignore` skips
+a same-commit redeploy, so the flag sat set-but-inert until a commit touched
+`apps/web/package.json` (the measured 2026-08-16 fact; sixth time this repo has
+walked that path, first time it was done on purpose rather than discovered).
+**No migration**, and **zero new read API surface** — see point 1.
+
+**What it is:** "Try a test release" on the catalog's "No releases yet" empty
+state (both viewport branches, one shared `testRelease` prop so they cannot
+drift), and "Just looking? Try a test release instead" on the first-release
+pop-up's chooser step. One tap POSTs a canned draft from
+`lib/test-release.ts:buildTestReleaseDraft` — titled "Test release", always
+`single` (the one design-partner-reviewed playbook), dated **+63 days** so all
+64 activities land in the future and the buckets read naturally — with
+`isTest: true` and `source: 'test_path'`. The user lands scoped to it under a
+standing `TestReleaseBanner` (via TasksPanel's `activitiesBanner` slot, first in
+the chain) whose "Delete test release" button opens `DeleteReleaseDialog`'s
+second-ever mount. The catalog card carries a small "Test" pill.
+
+**Seven things worth knowing before editing this:**
+
+1. **The marker is `metadata.test_release === true`, and the read path cost
+   nothing.** `lib/test-release.ts` copies `release-planner-pending.ts`'s idiom
+   verbatim (top-level key, `=== true` read, spread-merge write,
+   delete-on-clear). The only writer is `POST /api/releases`; nothing
+   server-side reads it back after creation; the client reads it off
+   `Release.metadata`, which the command-center has always shipped raw — that
+   is the zero-new-API-surface claim, and it is why there is no migration.
+2. **A dateless `isTest` is a 400, and that guard is load-bearing, not
+   politeness.** The insert writes `metadata` through THREE mutually-exclusive
+   spreads (`template_pending` / `planner_pending` / `test_release`).
+   `templatePending` requires no date, so a dateless test would set two spreads
+   at once — last one wins, `template_pending` silently lost, a release that
+   never instantiates. The date requirement (plus point 3) is what makes the
+   exclusivity provable rather than assumed; the invariant comment sits beside
+   the spreads.
+3. **`isTest` forces the planner OFF and the plan to `'template'`.** A test
+   release must land with its full plan instantly — routing a tester into the
+   planner intake is exactly the pressure this path removes, and a blank test
+   release would be an empty list under a banner saying "tick activities off".
+4. **A flag-off `isTest` is a LOUD 400** (`'Test releases are not switched
+   on.'`), never silently ignored: dropping the field would mint an unmarked
+   release titled "Test release" — no tag, no banner, no delete exit. The route
+   itself stays ungated; every ordinary create keeps working. There is no
+   404-probe for this flag (the POST route must stay open), so the flag's two
+   states are pinned by unit tests of `isTestReleaseEnabled` plus code review
+   of the 400 — and the standing trap applies: do NOT grep the client bundle
+   for "Test release", both ternary branches compile in (fifth time recorded).
+5. **The navigation deliberately carries no `&new=1`.** The NewReleaseGuide
+   consumption effect in WorkspaceView is mount-once (empty dep array), and the
+   empty-state entry fires while the user is ALREADY on `/dashboard` where no
+   remount happens — the guide could never show. The banner carries the
+   orientation copy instead, which is better anyway: one surface both explains
+   the thing and offers the way out. Relatedly, the hook AWAITS
+   `loadCommandCenter({ force: true })` before pushing (a commented deviation
+   from the modal's `void`): pushing early paints the still-empty catalog
+   uncovered mid-fetch, and awaiting lets the auto-scope's
+   arrive-already-scoped rule spend the lone-release chance cleanly.
+6. **The delete exit lands on the catalog and STAYS there.** `onDeleted` runs
+   `removeReleaseLocal` + force reload (the ReleasesSection pair), then
+   `markCatalogRequested()` + `setScope(null, { forgetScene: true })` — without
+   the intent mark, a remaining lone REAL release would auto-scope-bounce the
+   user straight back into a release seconds after they deleted one (the
+   v1.14.1 mechanism). The banner is gated on `scopedReleaseIsOwn` (DELETE is
+   owner-only; a delete button that 404s is worse than no banner). **URG-163's
+   Settings-only deletion rule gains its ONE sanctioned exception here** —
+   recorded at all three comment sites (WorkspaceDesktopFocused, ReleasesSection
+   docblock, the WorkspaceView mount) — and real releases keep the rule.
+7. **AppShell's modal instance deliberately does NOT carry the test link**,
+   unlike the two the first-release prompt opens (WorkspaceView's — failure
+   renders inline in the empty state — and ChappiPageClient's — failure goes to
+   `pushToast`, which works there because the page renders inside AppShell's
+   ToastProvider). AppShell cannot consume the provider it mounts itself, so a
+   failed create from its instance would be a silent dead tap, the one outcome
+   this path must never produce; and that instance only opens from deliberate
+   "+ New release" taps, not from the prompt the test path serves. The comment
+   at its mount records this so it is not "unified" later.
+
+- **Deliberately NOT suppressed:** `time_to_first_release` / `release_date_set`
+  analytics still fire (segmentable — `release_created.source` is
+  `'test_path'`, added to the normalizer AND the `ReleaseCreatedSource` union,
+  which is a type error to skip), and a test release **counts against the
+  active-release cap** — it IS an active release, the target user has zero, and
+  deleting it frees the slot. **Suppressed:** `enqueueReleaseReminders` (its one
+  call site is wrapped in `if (!isTest)`) — a "come back to your release" push
+  about a practice release is the pressure this removes.
+- **Verified:** 2011 tests (18 new in `lib/test-release.test.ts`), `eslint .` at
+  the exact measured clean-tree baseline (**3 errors / 70 warnings**; the two
+  findings that now print CreateReleaseModal line numbers are its pre-existing
+  mount-guard/chooser-reset effects shifted by the new prop's doc lines),
+  `tsc --noEmit` clean apart from the documented pre-existing
+  `confirmed-action.test.ts` errors, and `next build` green **by exit code** in
+  BOTH flag states with `/auth`, `/dashboard`, `/onboarding` and `/settings`
+  all still `○ Static` in each. **Four mutation passes, each failing exactly
+  its own tests:** blind-overwrite in `writeTestRelease` (3 failures),
+  clear-writes-false instead of deleting (2), truthy read instead of `=== true`
+  (1), and a 62-day lead (2) — file restored byte-identical after each.
+- **Not verified:** nothing has rendered in a browser — this sandbox cannot
+  mint a session and has no route to app.urganize.app — so the button stacks,
+  the banner, the modal link and the delete flow rest on unit tests plus the
+  traced paths above. No real POST has carried `isTest`, so the route's four
+  invariants have never executed end to end.
+- **Activation checklist:** (1) ~~nothing to migrate — set
+  `NEXT_PUBLIC_FEATURE_TEST_RELEASE=true` on the Vercel `Web` project~~ — done
+  by the founder 2026-09-01; (2) ~~changelog entry + version bump across all
+  `package.json` files at the flip~~ — done as v1.16.0, and that commit is
+  ALSO the rebuild that inlined the flag (see the header paragraph); (3)
+  ~~revisit Settings' "Deleting a release is only available here" sentence~~ —
+  reworded to "Delete a release here." in the same commit, since a test
+  release's banner made "only" untrue; **(4) OPEN, and the only thing left: the
+  manual pass.** On a zero-release account tap "Try a test release" → land
+  scoped with the banner and 64 future activities → tick one → "Delete test
+  release" → the dialog names it with the activity count → land on the catalog
+  with no auto-scope bounce; repeat once via the pop-up's quiet link; once as a
+  teammate on a shared test release (no banner); and confirm no come-back push
+  ever arrives for it. Do not try to confirm the flag from the bundle — both
+  ternary branches compile in; the button appearing is the proof.
+
+---
+
+## The notification ask goes live (2026-09-02, v1.17.0)
+
+Founder: "turn it on" — `NEXT_PUBLIC_FEATURE_PUSH_PROMPT`, the soft ask card
+built 2026-08-21 (PR #361) that has sat at its default `false` ever since. The
+question that led here was whether notifications could be switched on
+automatically across all devices; they cannot (a permission is granted per
+device, by a tap on that device, and browsers only honour the OS prompt from a
+real gesture), so this card is the closest the platforms allow: it asks on every
+device that has not answered yet, about six seconds after sign-in.
+
+**Why it was almost certainly off, since nothing recorded it either way.** The
+flag was introduced without a ledger entry (a flag flip earns one, per the EPK
+precedent, and none exists for the card), this file's only mention of it was the
+install-prompt checklist saying it "should be on too", and the comment above the
+flag in `AppShell.tsx` records the audit that motivated the card — ONE
+registered browser and ZERO devices against ~40 deadline notifications a day —
+with nothing since recording that number moving. The Vercel value itself could
+not be read from the sandbox (the proxy refuses the connection), so "off" is an
+inference from the paper trail, not a reading.
+
+**Three things worth knowing at the flip:**
+
+1. **The order is env var FIRST, then a deploy that rebuilds `apps/web`.**
+   `NEXT_PUBLIC_*` is inlined at build time, so merging this entry before the
+   var is set ships a ledger announcing a card the bundle cannot render — the
+   exact false-announcement the EP/album flip recorded. The version-bump commit
+   is sufficient to force the rebuild (`apps/web/package.json` is part of the
+   package, measured 2026-08-16); a same-commit Redeploy is not.
+2. **Web only, unless `NEXT_PUBLIC_FEATURE_NATIVE_PUSH` is also on.** The card
+   covers the Capacitor shell through `isNativePushAvailable()`, but that path
+   is gated on the native flag, which has its own founder-blocked activation
+   checklist (Firebase, `FCM_SERVICE_ACCOUNT_JSON`, a new binary). With it off,
+   the native app's bridge stays passive and the only way to enable push there
+   is still the Settings toggle. That is a known limit, not a defect.
+3. **iOS Safari tabs never see the card**, by platform rule rather than by ours:
+   `isPushSupported()` is false there because Apple exposes `PushManager` only
+   to Home Screen apps. The install offer (`NEXT_PUBLIC_FEATURE_INSTALL_PROMPT`,
+   still off) is what would get an iPhone user to the point where this card can
+   ask. Turning this flag on alone helps Android browsers and every desktop.
+
+- **No code changed.** This is the ledger entry, the version bump and this note;
+  the card, its gates and its snooze are exactly as PR #361 and #437 left them.
+- **Verify after the deploy:** sign in on a device where app.urganize.app has
+  neither been granted nor blocked for notifications and "Not now" has never
+  been tapped, stay on the dashboard for ten seconds, and expect the card.
+  Then, from a second browser, assign yourself an activity and expect the push.
+  If no card appears, check the Vercel var and confirm the deploy rebuilt
+  `apps/web` before suspecting the code.
+
+## The install offer goes live (2026-09-02, v1.18.0)
+
+Founder: "turn on the install prompt too", minutes after the notification ask
+above. `NEXT_PUBLIC_FEATURE_INSTALL_PROMPT`, built 2026-08-30 (#437),
+retriggered to a one-minute timer 2026-08-31, and given its iOS fix 2026-09-01.
+**No code changed** — this is the ledger entry, the version bump and this note.
+
+**This also resolves the contradiction the 2026-09-01 iOS entry left open.**
+That section records the founder watching a real user tap `Got it` on iOS while
+this file insisted the flag had never been flipped, and named the two
+possibilities: on in production with no ledger entry, or a preview deploy.
+Either way it is moot now — the flag is on by an explicit founder call, the
+ledger entry exists, and this note is the record. If it WAS already on, the only
+thing this deploy changes is that the changelog finally says so.
+
+**Three things worth knowing at the flip:**
+
+1. **Env var FIRST, then a deploy that rebuilds `apps/web`** — the same order as
+   the notification ask, for the same build-time-inlining reason. The
+   version-bump commit is what forces the rebuild.
+2. **`AndroidAppBanner` stands down the moment this is on.** `AppShell` renders
+   it only when `INSTALL_PROMPT_ENABLED` is false, so Android browser visitors
+   lose the top banner on arrival and gain the bottom card after a minute. Both
+   point at `/download`. Nobody gets asked twice for one thing, and nobody loses
+   the path to the APK.
+3. **The two cards share one slot and are sequenced, not stacked.** With both
+   flags on, the notification ask holds itself until this card is answered, and
+   follows a decline about a second later (`INSTALL_HANDOFF_DELAY_MS`). An
+   accept, or an ignored card, releases it too. On iOS the notification ask
+   cannot fire in a Safari tab at all, so this card is the only one an iPhone
+   user sees — and its iOS variant has no primary button by design (2026-09-01):
+   it teaches the two share-sheet taps and records a decline on Close, because
+   nothing the page can read confirms an iOS install except `navigator.standalone`
+   on the next visit from the Home Screen.
+
+**The one thing that has never been observed and is worth watching for:** the
+DESKTOP card depends on Chrome firing `beforeinstallprompt`, which requires the
+manifest to pass Chrome's installability criteria (the icon now declares
+`1004x1004` for exactly this). If no card ever appears on desktop Chrome after a
+minute, that is the first thing to check, not this code — the failure is silent
+by design, since a card with an install button that cannot install would be
+worse than no card.
+
+- **Verify after the deploy:** on an Android phone in Chrome, sign in and wait a
+  minute — expect "Get the Urganize app" low on the screen, no top banner, and
+  the notifications card a beat after tapping Not now. On desktop Chrome, expect
+  "Install Urganize" with a working Install button. On an iPhone in Safari,
+  expect the two-step card with only a Close.
+
+## Native push goes live, pending a binary (2026-09-02, v1.19.0)
+
+Founder: "turn on native push too", the third flag flip of the morning.
+`NEXT_PUBLIC_FEATURE_NATIVE_PUSH`, built 2026-08-10, with its activation
+checklist recorded under "Mobile push notifications + editable presets". Unlike
+the two flips above, **this one is not finished by the flag and a deploy.** Read
+the four points before assuming Android phones are receiving anything.
+
+1. **The flag only controls the CLIENT half.** The server sender
+   (`lib/fcm-server.ts`) gates on `FCM_SERVICE_ACCOUNT_JSON` being set, not on
+   the flag, and no-ops silently without it. Firebase's Android CLIENT config
+   (`google-services.json`, project `urganize-2b082`) has been committed since
+   2026-08-12 (#269); whether the SERVER key was ever pasted into Vercel is a
+   founder step (`docs/mobile/push-setup.md` part 2) that this sandbox cannot
+   verify and the doc does not mark done. If a device registers and nothing
+   arrives, that env var is the first suspect; `[fcm]`-prefixed lines in the
+   Vercel function logs are the second.
+2. **No installed binary can use this yet.** The only Android build ever
+   recorded is the debug APK of 2026-08-07, which predates BOTH the push plugin
+   (added 2026-08-10) and `google-services.json` (2026-08-12). On that build
+   `Capacitor.isPluginAvailable('PushNotifications')` is false, so
+   `isNativePushAvailable()` is false, the card and the Settings toggle fall
+   back to the web path, and `isPushSupported()` is false inside a webview — so
+   the flag changes NOTHING on any phone running it. That is safe (no broken
+   button) and also means **a new APK is the real activation step.**
+   `versionCode` is bumped 1 → 2 in this pass so the next `assembleRelease` is
+   the incremented build the signing doc requires; note that doc's warning that
+   a release-signed build cannot install over the 2026-08-07 debug APK — those
+   testers uninstall first and sign in again.
+3. **What the flag does change, once a capable build is installed:** the
+   notification ask card (live since v1.17.0) takes its native branch
+   (`native = NATIVE_PUSH_ENABLED && isNativePushAvailable()`), so "Turn on
+   notifications" inside the app requests the OS permission and registers an
+   FCM token to `device_push_tokens` instead of failing on a missing
+   `PushManager`; `PushNotificationsSection` in Settings does the same; and
+   `CapacitorPushBridge` re-registers a granted device on every launch. The
+   server fans every existing push — deadlines, assignments, the drip, admin
+   broadcasts — out to those tokens with no call-site change.
+4. **iOS is untouched.** Part 3 of `docs/mobile/push-setup.md` (APNs key,
+   entitlement, `GoogleService-Info.plist`) is still founder-blocked on a Mac
+   and an Apple Developer account. The iPhone path remains: install to the Home
+   Screen, then the WEB push ask.
+
+**The ledger entry is written for the state AFTER the binary ships**, because a
+changelog line saying "the Android app can notify you" is true of the build, not
+of the flag — and the flip and the build are being done in the same pass on
+purpose, so the entry does not sit false for weeks the way the EPK flag once
+did. If the binary slips, the entry is the thing that is wrong, not the code.
+
+- **A leftover from the original checklist, closed in the same sitting:**
+  `20260810140000_notification_type_due_tiers.sql` was verified NOT applied on
+  2026-08-12 and nothing since recorded applying it, so for three weeks the
+  daily sweep's 7-day and 3-day tiers failed on insert (`task_due_7d` was not a
+  valid enum value) while the 1-day tier and `task_overdue` kept working. **The
+  founder applied it 2026-09-02**, right after this flip merged. Worth knowing
+  when reading notification history: no 7d/3d reminder can exist before that
+  date, and their absence is not a bug in `assignDueTier`.
+- **Verify, in this order:** (a) build and sideload the new APK; (b) in the
+  app, sign in, wait for the card, tap Turn on, accept the OS prompt — expect
+  "Notifications are on for this device" and a new row in `device_push_tokens`;
+  (c) `/admin/notifications` → Send test to me — expect a system-tray
+  notification within seconds; (d) tap it — expect the app to foreground and
+  land on the target page.
 
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:

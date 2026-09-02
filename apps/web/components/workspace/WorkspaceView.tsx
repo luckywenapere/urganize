@@ -4,7 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
 import { useAuthStore } from '@/lib/auth-store';
+import { isCatalogRequested, markCatalogRequested } from '@/lib/catalog-intent';
+import { isTestReleaseEnabled, readTestRelease } from '@/lib/test-release';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { isBrowserOnline } from '@/lib/offline/status';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -19,11 +22,15 @@ import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { SetReleaseDateCard } from '@/components/releases/SetReleaseDateCard';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
-import { useFirstReleaseRequired } from '@/components/releases/useFirstReleaseRequired';
+import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
+import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
+import { TestReleaseBanner } from './TestReleaseBanner';
+import { DeleteReleaseDialog } from './DeleteReleaseDialog';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { TasksPanel } from './TasksPanel';
 import { useSceneOverlay } from './useSceneOverlay';
+import { resolveActiveScene } from '@/lib/scene-cache';
 import { useScenePrefetch } from './useScenePrefetch';
 import { useIsDesktopViewport } from './useIsDesktopViewport';
 import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
@@ -31,12 +38,16 @@ import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
 import { useReleaseSetupPrompt } from './useReleaseSetupPrompt';
-import { readPreviousLocation, resolveWorkspaceBackTarget } from '@/lib/nav-history';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
 import { ArchiveReleaseDialog } from '@/components/workspace/ArchiveReleaseDialog';
+import { ChangeReleaseArtistDialog } from '@/components/workspace/ChangeReleaseArtistDialog';
+import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { isReleaseActive } from '@/lib/release-activity';
 import { isRecapEligible as isRecapEligibleForRelease } from '@/lib/recap-eligibility';
+import { searchReleases } from '@/lib/release-search';
+import { ReleaseSearchBar } from './ReleaseSearchBar';
+import { EmptyState } from '@/components/shared/EmptyState';
 
 const TASKS_PANEL_ID = 'workspace-tasks';
 
@@ -68,18 +79,10 @@ const RELEASE_RECAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_RECAP === 
 // which mutated real task rows the moment the model answered.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
-// Same flag TasksPanel reads for its Calendar pill. The scene URL param has to
-// be gated on it too: with the flag off, a stale `?scene=calendar` bookmark
-// used to render the calendar island shell around a permanently failing fetch
-// (its API routes 404 when off) instead of the normal activity list.
-const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
-const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
-// Same flag TasksPanel reads for its Song pill, gated here for the same reason
-// the two above are: a stale `?scene=song` bookmark must resolve to the normal
-// activity list, not to a scene whose API routes 404.
-const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
-// Same reason again, for the Cover art pill/scene.
-const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
+// The four flag-gated scene params (calendar / capture / song / coverart) used
+// to be read here as local consts and compared inline. They now live behind
+// `resolveActiveScene` in lib/scene-cache.ts, because TasksPanel and
+// WorkspaceSkeleton need the identical answer and the copies had drifted.
 
 // Team logins (2026-08-16). Gates ONLY the compulsory post-create step here;
 // the mint endpoint behind it is the pre-existing, ungated invite-link route.
@@ -93,6 +96,11 @@ const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'tru
 // FIRST_WIN in .env.example.
 const TYPE_FIRST_CREATE_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_TYPE_FIRST_CREATE === 'true';
+// The one-tap test path (founder request, 2026-09-01): entry buttons on the
+// zero-release empty state and the first-release pop-up, a standing banner
+// with the delete exit while a test release is scoped. Read through the
+// predicate so the env var name is typed exactly once (lib/test-release.ts).
+const TEST_RELEASE_ENABLED = isTestReleaseEnabled();
 
 // Dynamic for the same reason AppShell already loads it that way — a static
 // import here defeated that, dragging the ~460-line modal into the /dashboard
@@ -141,7 +149,8 @@ export function WorkspaceView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoading: authLoading } = useAuthStore();
-  const { releases, isInitialLoading, error, loadCommandCenter } = useReleaseStore();
+  const { releases, isInitialLoading, error, loadCommandCenter, removeReleaseLocal } =
+    useReleaseStore();
   const tasks = useTaskStore((state) => state.tasks);
   const { scopedReleaseId, setScope } = useReleaseScope();
   // Which release scene (if any) the URL has open. It renders INLINE in the
@@ -150,16 +159,12 @@ export function WorkspaceView() {
   // appear"), so this view has to know about it to build the panel body and to
   // give the calendar its width.
   const { activeScene: urlScene, openScene, closeScene } = useSceneOverlay();
-  // Flag-gate the calendar scene at the one place the URL is resolved: with
-  // the flag off the param is treated as no-scene, matching the pill (which
-  // never renders) and the API routes (which 404).
-  const activeScene =
-    (urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED) ||
-    (urlScene === 'capture' && !CAPTURE_ENABLED) ||
-    (urlScene === 'song' && !SONG_UPLOAD_ENABLED) ||
-    (urlScene === 'coverart' && !COVER_ART_ENABLED)
-      ? null
-      : urlScene;
+  // Flag-gate the scene the URL names: with a flag off the param reads as
+  // no-scene, matching the pill (which never renders) and the API routes (which
+  // 404). One shared resolver rather than a local copy — TasksPanel and
+  // WorkspaceSkeleton have to agree with this exactly, and the three
+  // hand-rolled copies this replaces had already drifted once.
+  const activeScene = resolveActiveScene(urlScene);
   // Which of the two always-in-the-DOM layout branches (mobile drill-down /
   // desktop focused) should receive side-effectful children — see the hook.
   const isDesktopViewport = useIsDesktopViewport();
@@ -170,7 +175,7 @@ export function WorkspaceView() {
   // Same global quick-create TasksPanel's header pill opens — the date card's
   // "add an activity yourself" action routes here so both entry points land
   // in one modal (URG-233).
-  const { openQuickCreate } = useTaskUI();
+  const { openQuickCreate, openTask } = useTaskUI();
   const isRailOpen = useChappiStore((state) => state.railOpen);
   // The intake modal is mounted once by AppShell; this opens it.
   const openIntake = usePlannerStore((state) => state.openIntake);
@@ -195,6 +200,14 @@ export function WorkspaceView() {
     resume: () => void;
   } | null>(null);
 
+  // The test release the standing banner's delete button is asking about;
+  // null = dialog closed. Only ever set for the SCOPED release, and only when
+  // it carries the test marker and the viewer owns it (the banner's own gate).
+  const [testReleaseToDelete, setTestReleaseToDelete] = useState<Pick<
+    Release,
+    'id' | 'title'
+  > | null>(null);
+
   // AI actions + toast, ported verbatim from the removed release detail page
   // (2026-08-04) — this is now the only surface a scoped release renders on.
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -205,6 +218,13 @@ export function WorkspaceView() {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isRecapOpen, setIsRecapOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const [isChangeArtistOpen, setIsChangeArtistOpen] = useState(false);
+
+  // The roster decides whether "Change artist" is worth offering at all. Read
+  // from the shared store (not the identity store, which is behind a flag that
+  // defaults off) and loaded once per session by the effect below.
+  const rosterArtists = useArtistRosterStore((state) => state.artists);
+  const loadArtistRoster = useArtistRosterStore((state) => state.load);
   const [isGeneratingStatus, setIsGeneratingStatus] = useState(false);
   const [statusUpdate, setStatusUpdate] = useState('');
   // The counts behind the generated paragraph, shown as tiles above it so the
@@ -234,6 +254,28 @@ export function WorkspaceView() {
   // Deliberately not applied at 2+: the moment there is a choice to make, the
   // catalog is how you make it.
   const isSingleRelease = releases.length === 1;
+  // ...unless the user ASKED for the catalog, in which case the convenience is
+  // off the table for the rest of this browser session. Read once at mount and
+  // never re-read: the record only ever goes unset → set, and it is set by a
+  // navigation to /dashboard, so a stale `false` can only occur on a mount that
+  // was already showing the catalog — where the ref below is spent and nothing
+  // auto-scopes anyway.
+  //
+  // WHY IT IS NOT THE REF BELOW. That ref is per MOUNT, and this component
+  // unmounts every time you leave /dashboard — which Home, Catalog and the back
+  // arrow all do. So the ref's "one chance" came back on every return, and
+  // tapping Home from Settings on a single-release account was dragged straight
+  // back into the release (founder report, 2026-09-01). The fact has to outlive
+  // the component, so it lives in sessionStorage: see lib/catalog-intent.ts for
+  // the full history, and note it FAILS TOWARD NOT AUTO-SCOPING.
+  //
+  // Reading storage in a lazy initializer is safe here, and only here, because
+  // the skeleton gate below short-circuits on `authLoading` — true on the first
+  // render for the server AND the client (auth-store's initial `isLoading: true`
+  // is not persisted), so both render the skeleton and this value cannot change
+  // the first paint. If that gate ever stops leading with authLoading, this has
+  // to move to a mount effect.
+  const [catalogRequested] = useState(isCatalogRequested);
   // "The auto-scope has HAD ITS ONE CHANCE this mount" — not "the auto-scope
   // ran". The distinction is the bug: without this guard an explicit back tap
   // (which clears `scopedReleaseId`) immediately re-triggered the effect below
@@ -249,11 +291,15 @@ export function WorkspaceView() {
   useEffect(() => {
     // Wait for the first load: `releases` is empty until it lands, and acting
     // on that would look like zero releases rather than one.
-    if (isInitialLoading || hasAutoScopedRef.current) return;
+    // `catalogRequested` first among the bails, because it is the one that
+    // makes a deliberate navigation stick: the user is standing on the catalog
+    // because they asked to be, and re-scoping them would undo the tap.
+    if (isInitialLoading || hasAutoScopedRef.current || catalogRequested) return;
     // 0 or 2+ releases: the chance stays OPEN deliberately. A brand-new account
-    // has zero here and is handed the create modal; when its first release
-    // lands, isSingleRelease flips true and that account should still get its
-    // one auto-scope. Consuming the chance now would silently remove it.
+    // has zero here and is prompted to create one (deferred — see
+    // useFirstReleasePrompt); when its first release lands, isSingleRelease
+    // flips true and that account should still get its one auto-scope.
+    // Consuming the chance now would silently remove it.
     if (!isSingleRelease) return;
     // ARRIVED ALREADY SCOPED — a refresh, a bookmark, an UrgAns link, or the
     // /dashboard/releases/[releaseId] redirect stub. The convenience this effect
@@ -276,7 +322,7 @@ export function WorkspaceView() {
     // Back from here should leave the workspace, not restore a catalog this
     // release count has no route to.
     setScope(releases[0].id);
-  }, [isInitialLoading, isSingleRelease, scopedReleaseId, releases, setScope]);
+  }, [isInitialLoading, isSingleRelease, scopedReleaseId, releases, setScope, catalogRequested]);
 
   // Fire the dashboard fetch IMMEDIATELY, without waiting on the auth store.
   // loadCommandCenter reads its own bearer token from supabase.auth.getSession()
@@ -287,6 +333,14 @@ export function WorkspaceView() {
   useEffect(() => {
     void loadCommandCenter();
   }, [loadCommandCenter]);
+
+  // Same shape, and same reasoning: the store reads its own bearer token, and
+  // its recency guard collapses this to a no-op on every navigation after the
+  // first. Failing leaves the roster empty, which reads as "one artist" and
+  // simply hides the Change artist action — never an error.
+  useEffect(() => {
+    void loadArtistRoster();
+  }, [loadArtistRoster]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -300,17 +354,30 @@ export function WorkspaceView() {
     void loadCommandCenter();
   }, [authLoading, loadCommandCenter, router, user]);
 
-  // URG-217: a user with zero releases can't do anything here, so the create
-  // modal opens itself and (in the modal) loses its exits until they create
-  // one. Only fires once the store has CONFIRMED zero releases — the predicate
-  // fails open while loading and on load errors, so a network blip can't wall
-  // anyone off. Deleting your last release re-triggers this by design.
-  const firstReleaseRequired = useFirstReleaseRequired();
-  useEffect(() => {
-    if (firstReleaseRequired) {
-      setIsCreateModalOpen(true);
-    }
-  }, [firstReleaseRequired]);
+  // The deferred first-release prompt (2026-08-28, founder call — supersedes
+  // URG-217's immediate open): a zero-release account sees the workspace
+  // first, then the create modal offers itself about half a minute in, once
+  // per browser session, and can be dismissed. Only arms once the store has
+  // CONFIRMED zero releases — the predicate fails open while loading and on
+  // load errors, so a network blip never prompts anyone. Deleting your last
+  // release re-arms the condition by design (once per session still holds).
+  useFirstReleasePrompt(() => setIsCreateModalOpen(true));
+
+  // The one-tap test-release create. No onError option here on purpose: on
+  // this page the failure surface is the empty state itself — the entry
+  // buttons render the hook's `error` inline — so a toast would double-report.
+  const {
+    startTestRelease,
+    isStarting: isStartingTestRelease,
+    error: testReleaseError,
+  } = useStartTestRelease();
+  // One object handed to both catalog surfaces (the ReleasesColumn /
+  // WorkspaceDesktopGrid `testRelease` prop). The flag gate lives HERE — the
+  // components stay dumb, and with the flag off both render their empty
+  // states byte-identically to before this feature existed.
+  const testReleaseEntry = TEST_RELEASE_ENABLED
+    ? { start: startTestRelease, isStarting: isStartingTestRelease, error: testReleaseError }
+    : undefined;
 
   const generateStatus = async () => {
     if (!scopedReleaseId) return;
@@ -460,6 +527,11 @@ export function WorkspaceView() {
         tasksDone,
         tasksTotal: releaseTasks.length,
         coverArtUrl: release.coverArtUrl ?? null,
+        // Derived client-side from the metadata the command-center already
+        // ships raw — no new API surface. The flag is folded in so every
+        // "Test" tag goes dark on a flip-off, even for rows still carrying
+        // the marker.
+        isTest: TEST_RELEASE_ENABLED && readTestRelease(release.metadata),
       };
     });
   }, [releases, taskList]);
@@ -469,22 +541,30 @@ export function WorkspaceView() {
   // show/hide condition; `templatePending` picks that card's variant
   // (URG-230). The panels that only need id/title/artistName accept this
   // wider shape structurally.
-  const scopedReleaseSlim = useMemo<Pick<
-    Release,
-    | 'id'
-    | 'title'
-    | 'artistName'
-    | 'releaseType'
-    | 'releaseDate'
-    | 'templatePending'
-    | 'status'
-  > | null>(() => {
+  const scopedReleaseSlim = useMemo<
+    | (Pick<
+        Release,
+        | 'id'
+        | 'title'
+        | 'artistId'
+        | 'artistName'
+        | 'releaseType'
+        | 'releaseDate'
+        | 'templatePending'
+        | 'status'
+        | 'ownerUserId'
+      > & { isTest: boolean })
+    | null
+  >(() => {
     if (!scopedReleaseId) return null;
     const found = releases.find((r) => r.id === scopedReleaseId);
     if (!found) return null;
     return {
       id: found.id,
       title: found.title,
+      // Feeds the change-artist dialog, which needs the CURRENT link to know
+      // what a move is moving away from.
+      artistId: found.artistId,
       artistName: found.artistName,
       // Feeds the per-playbook runway copy in SetReleaseDateCard and
       // NewReleaseGuide, which would otherwise quote single's 8 weeks at an
@@ -493,6 +573,15 @@ export function WorkspaceView() {
       releaseDate: found.releaseDate,
       templatePending: found.templatePending,
       status: found.status,
+      // Gates the two OWNER-ONLY actions below (archive, set-date): both
+      // routes deliberately keep owner-only checks, so offering them to a
+      // teammate is a button that 404s on press.
+      ownerUserId: found.ownerUserId,
+      // Derived, not stored on Release: the metadata jsonb already reaches
+      // this component raw, nothing server-side reads the marker back after
+      // creation, and folding the flag in here means the banner goes dark on
+      // a flip-off along with everything else.
+      isTest: TEST_RELEASE_ENABLED && readTestRelease(found.metadata),
     };
   }, [scopedReleaseId, releases]);
 
@@ -508,6 +597,12 @@ export function WorkspaceView() {
     suspended: isCreateModalOpen,
     sceneOpen: Boolean(activeScene),
   });
+  // Whether the scoped release belongs to the signed-in user. Fails OPEN on
+  // missing data (legacy cache rows without ownerUserId, auth still
+  // resolving) — the ReleasesSection pattern: hiding an owner's own controls
+  // is worse than a teammate seeing a control the server refuses.
+  const scopedReleaseIsOwn =
+    !scopedReleaseSlim?.ownerUserId || !user?.id || scopedReleaseSlim.ownerUserId === user.id;
 
   // Differentiate browser tabs when a release is scoped, ported from the
   // removed release detail page — falls back to the default dashboard
@@ -555,6 +650,44 @@ export function WorkspaceView() {
   // path uses `scopedReleaseSlim` directly for the same reason.
   const isDesktopFocusedMode = Boolean(scopedReleaseId && selectedCard);
 
+  // The catalog's "Search release" bar (2026-08-31, founder request).
+  //
+  // The filter is applied ONLY to the two catalog surfaces below. It must never
+  // touch `releaseCards` itself, which also feeds `selectedCard`, `leftRail`
+  // and `rightRail` — filtering those would make a scoped release vanish from
+  // its own focused view while someone typed, and empty the rails beside it.
+  const [releaseQuery, setReleaseQuery] = useState('');
+  const catalogReleases = useMemo(
+    () => searchReleases(releaseCards, releaseQuery),
+    [releaseCards, releaseQuery]
+  );
+  // The bar shows whenever the catalog is the thing on screen. The two branches
+  // fall back to the catalog on slightly different conditions (mobile needs the
+  // release to resolve, desktop needs its card too), so this reads as "neither
+  // branch is showing a focused release" rather than duplicating either test.
+  const showCatalogSearch =
+    releaseCards.length > 0 && !(scopedReleaseId && scopedReleaseSlim) && !isDesktopFocusedMode;
+  // One node, handed to both catalog surfaces, so a search miss cannot be
+  // worded two ways. Without it both components fall through to their built-in
+  // "No releases yet / create your first release" state, which is a lie to
+  // someone who has nine releases and mistyped.
+  const catalogNoMatchState =
+    releaseQuery.trim().length > 0 && catalogReleases.length === 0 ? (
+      <EmptyState
+        title="No releases match that"
+        description="Try a different word, or clear the search to see everything."
+        action={
+          <button
+            type="button"
+            onClick={() => setReleaseQuery('')}
+            className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-4 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+          >
+            Clear search
+          </button>
+        }
+      />
+    ) : undefined;
+
   /** Open the intake for the scoped release. */
   const openPlanIntake = () => {
     if (!scopedReleaseId) return;
@@ -575,6 +708,9 @@ export function WorkspaceView() {
         onClose={closeScene}
         onToast={(message, tone) => setToast({ message, tone })}
         existingTaskCount={scopedTasks.length}
+        tasks={scopedTasks}
+        onOpenTask={openTask}
+        onTaskRescheduled={() => void loadCommandCenter({ force: true })}
         onPlanApproved={() => {
           setHasPlanDraft(false);
           closeScene();
@@ -584,15 +720,31 @@ export function WorkspaceView() {
       />
     ) : undefined;
 
-  // The content calendar's month grid is built for ~1200px, so it gets the
-  // release rails out of the way — the same treatment the UrgAns rail already
-  // triggers. The grid↔agenda swap itself is container-width-based now
-  // (cc-month-view/cc-agenda-view in globals.css), so a still-narrow column
-  // (identity panel or rail open) degrades to the agenda instead of squeezing
-  // the grid; hiding the rails here is what makes the grid the COMMON case at
-  // lg+ rather than the lucky one. The other scenes fit the normal centre
-  // column, so they leave the rails alone (founder call).
-  const hideRailsForLayout = (CHAPPI_ENABLED && isRailOpen) || activeScene === 'calendar';
+  // ANY open scene gets the release rails out of the way — the same treatment
+  // the UrgAns rail already triggers.
+  //
+  // This used to be calendar-ONLY, on the recorded reasoning that "the other
+  // scenes fit the normal centre column, so they leave the rails alone (founder
+  // call)". A founder report on Collect metadata (2026-08-25, screenshot)
+  // retires that: at xl+ the two rails plus their gaps take 220 + 24 + 24 + 220
+  // = 488px of the surface, so a 1280px viewport with the identity card on left
+  // the scene about 450px — and on a ONE-RELEASE account both rails are
+  // literally empty `<div aria-hidden>` (see RailColumn), so nearly half the
+  // surface was blank while an 8-field form was crushed beside it. The clipped
+  // "Regener…" button in that screenshot is the same width shortage one level
+  // down.
+  //
+  // The rails' own documented purpose — "so the centered card sits in the
+  // middle, not flush against the viewport edge" — is about the release-CARD
+  // view. A scene REPLACES the activity list with a working surface (forms,
+  // a month grid, a file list, a press-kit preview), and every one of those
+  // wants the width more than a sibling release card does. The back arrow and
+  // the catalog are still one press away.
+  //
+  // Boolean(activeScene) and not `!== null` on the raw URL param on purpose:
+  // `activeScene` is already flag-gated above, so a stale `?scene=capture` URL
+  // with that flag off correctly counts as no scene and keeps the rails.
+  const hideRailsForLayout = (CHAPPI_ENABLED && isRailOpen) || Boolean(activeScene);
 
   // A recap is only worth offering once the release has actually happened, and
   // this now calls the SAME lib/recap-eligibility.ts predicate the recap route
@@ -646,11 +798,23 @@ export function WorkspaceView() {
   // one-way door.
   const isScopedArchived = !isReleaseActive(scopedReleaseSlim?.status);
   const archiveAction =
-    scopedReleaseId && (isRecapEligible || isScopedArchived)
+    scopedReleaseId && scopedReleaseIsOwn && (isRecapEligible || isScopedArchived)
       ? {
           label: isScopedArchived ? 'Restore release' : 'Archive release',
           onClick: () => setIsArchiveOpen(true),
         }
+      : null;
+
+  // Moving a release to another artist. Offered only when there is somewhere to
+  // move it TO — the create-release picker's rule, so a one-artist team never
+  // sees a control that can only tell it no.
+  //
+  // Owner-only for the same reason archive is, and a sharper one: this changes
+  // who can see the release, because an artist-scoped teammate sees exactly the
+  // releases whose artist matches their scope.
+  const changeArtistAction =
+    scopedReleaseId && scopedReleaseIsOwn && rosterArtists.length > 1
+      ? { label: 'Change artist', onClick: () => setIsChangeArtistOpen(true) }
       : null;
 
   // The Plan pill only exists while there is something to open: no activities
@@ -667,6 +831,25 @@ export function WorkspaceView() {
   // It also supersedes the plan-waiting date card for this case: that card asks
   // for a date so the template can be instantiated, and under the planner the
   // date is question three of the intake instead.
+  // The test path's standing exit (founder call, 2026-09-01: the path "ends
+  // with an option to delete", and a standing banner beat a guided tour —
+  // wherever the user stops exploring, the way out is right there). Gated on
+  // scopedReleaseIsOwn like setReleaseDateBanner below: DELETE is owner-only,
+  // and a delete button that 404s is worse than no banner. First in the
+  // activitiesBanner chain because it states what the release IS; in practice
+  // the three banners are mutually exclusive anyway (a test release always
+  // has a date and a full plan). Degenerate case accepted: if instantiation
+  // soft-failed server-side, a zero-activity test release shows this banner
+  // above TasksPanel's own empty state, and the delete exit still works.
+  const testReleaseBanner =
+    scopedReleaseSlim && scopedReleaseSlim.isTest && scopedReleaseIsOwn ? (
+      <TestReleaseBanner
+        onDelete={() =>
+          setTestReleaseToDelete({ id: scopedReleaseSlim.id, title: scopedReleaseSlim.title })
+        }
+      />
+    ) : null;
+
   const planBanner =
     PLANNER_ENABLED && scopedReleaseSlim && scopedTasks.length === 0 ? (
       <PlanReleaseCard
@@ -684,7 +867,7 @@ export function WorkspaceView() {
   // activity list (URG-230). It reports its own success through the existing
   // workspace toast and unmounts on its own once the store reports a date.
   const setReleaseDateBanner =
-    !planBanner && scopedReleaseSlim && !scopedReleaseSlim.releaseDate ? (
+    !planBanner && scopedReleaseSlim && scopedReleaseIsOwn && !scopedReleaseSlim.releaseDate ? (
       <SetReleaseDateCard
         releaseId={scopedReleaseSlim.id}
         releaseTitle={scopedReleaseSlim.title}
@@ -741,49 +924,56 @@ export function WorkspaceView() {
     }
   };
 
-  // THE BACK ARROW. One rule, three cases, in order:
+  // THE BACK ARROW. ONE destination: the catalog. It leaves the release —
+  // scene open or not, however the user got here — and that is all it does.
   //
-  //   1. A SCENE IS OPEN -> close the scene. Lands on Activities for the same
-  //      release, and never consults history. This is what makes scene-to-scene
-  //      ping-pong structurally impossible rather than merely guarded against,
-  //      and it is why one stray tap can never throw someone out of a release
-  //      they were part-way through.
-  //   2. NO SCENE -> go to where they actually were, via lib/nav-history — the
-  //      same per-tab record the Settings back button has used since 2026-07-23,
-  //      which stores the previous in-app URL query string and all. `push`, like
-  //      Settings, so this is a real forward move rather than a rewrite of the
-  //      entry they are on.
-  //   3. NOTHING USABLE -> drop the release scope, which is what this button did
-  //      unconditionally before and is still the right floor.
+  // This REPLACES the history-aware rule of 2026-08-25 (close the scene first,
+  // otherwise the previous in-app URL from lib/nav-history, otherwise drop the
+  // scope), which the founder rejected on 2026-08-30: "this back button is
+  // failing again … clicking home while in task view should lead them to
+  // catalog view, same thing for that back button, always." Two reasons worth
+  // keeping, so nobody rebuilds the clever version:
   //
-  // NOT router.back(), and that is not an oversight: a legacy-route redirect can
-  // make a scene URL the FIRST history entry in a tab, so back() would eject the
-  // user out of the app entirely. Recorded at useSceneOverlay.closeScene, and the
-  // stub it names is real (app/dashboard/releases/[releaseId]/page.tsx). Nothing
-  // in this app calls router.back() anywhere.
+  //   * IT LIVES IN THE RELEASE HEADER, beside the release title and above the
+  //     scene tabs. Its position already says "leave this release"; the tabs
+  //     are what manage the inside of one. A control whose destination depends
+  //     on invisible state reads as broken even when each individual case is
+  //     defensible — and several were genuinely not the catalog: the previous
+  //     location could be another release, UrgAns, Notes or Settings, and a
+  //     trail 20 deep drops the catalog off the bottom entirely. That is the
+  //     unpredictability being reported, not a single reproducible case.
+  //   * BROWSER BACK AND THE EDGE SWIPE ALREADY DO HISTORY. Duplicating them
+  //     in a chrome button bought nothing and made both feel unreliable.
   //
-  // resolveWorkspaceBackTarget owns every rejection — most importantly that a
-  // previous location still scoping THIS release is not "back" at all. See it
-  // for why that matters more than it looks.
-  const resolveBackTarget = () =>
-    resolveWorkspaceBackTarget({
-      previous: readPreviousLocation(),
-      scopedReleaseId,
-    });
-
+  // Closing a scene without leaving the release is still a tap: every scene's
+  // own entry point is a toggle (the lit mobile top tab, the lit desktop pill),
+  // and desktop additionally carries a dedicated "Activities" button in
+  // TasksPanel's header row.
+  //
+  // Still NOT router.back(), for the reason it never was: a legacy-route
+  // redirect can make a scene URL the FIRST history entry in a tab, so back()
+  // would eject the user out of the app entirely. Recorded at
+  // useSceneOverlay.closeScene, and the stub it names is real
+  // (app/dashboard/releases/[releaseId]/page.tsx). Nothing in this app calls
+  // router.back() anywhere.
+  //
+  // `forgetScene` is what stops this looping — see SetScopeOptions. Without it
+  // backing out of, say, Cover art records Cover art as where the release was
+  // left, so tapping that release again drops the user straight back into the
+  // scene they just walked out of.
+  //
+  // `replace`, the hook's default: leaving is a return to the at-rest view, not
+  // a forward move, and desktop deselects must not grow history with duplicate
+  // catalog entries.
   const goBack = () => {
-    if (activeScene) {
-      closeScene();
-      return;
-    }
-    const target = resolveBackTarget();
-    if (target) {
-      router.push(target);
-      return;
-    }
-    // Replace-not-push so desktop deselects don't grow history with a
-    // duplicate at-rest entry.
-    setScope(null);
+    // The fifth "leave this release for the catalog" surface. It does not call
+    // leaveReleaseForCatalog(), because setScope's `forgetScene` already does
+    // the scene half properly (it knows the OUTGOING release without re-reading
+    // the url) — but the intent half is the same fact, and recording it is what
+    // keeps this exit from being undone by the lone-release auto-scope on the
+    // next mount or refresh.
+    markCatalogRequested();
+    setScope(null, { forgetScene: true });
   };
 
   const handleMobileBack = () => {
@@ -793,18 +983,13 @@ export function WorkspaceView() {
     }
   };
 
-  // What the arrow SAYS, matched to what it will actually do. The old label,
-  // "Back to all releases", is now true in only one of the three cases, and a
-  // screen reader announcing the wrong destination is worse than a vague one.
-  //
-  // Deliberately derived from `activeScene` ALONE, not from resolveBackTarget():
-  // that reads sessionStorage, and a storage read during render gives the server
-  // and the client different text for the same attribute. The button does not
-  // appear in the server output today (the skeleton gate holds while
-  // authLoading), so it would not mismatch in practice — but a label is not
-  // worth depending on that. "Back" is vague and never wrong; the old label was
-  // specific and usually wrong.
-  const backLabel = activeScene ? 'Back to activities' : 'Back';
+  // What the arrow SAYS, matched to what it does. It had two behaviours between
+  // 2026-08-25 and 2026-08-30 and so had to settle for a vague "Back"; with one
+  // destination the specific label is true again, in every state, which is what
+  // a screen reader needs. A constant also keeps this out of the class of bugs
+  // where a label is derived from storage during render and disagrees between
+  // the server and the client.
+  const backLabel = 'Back to all releases';
 
   // ONE skeleton, rendered here (not as a route-segment Suspense fallback).
   // SSR serializes the skeleton into the HTML response; hydration re-renders
@@ -822,10 +1007,14 @@ export function WorkspaceView() {
   // scope means the user deliberately backed out via the catalog button, not
   // that the initial auto-scope hasn't landed yet — that case must render
   // the real catalog, not an eternal skeleton.
+  // `!catalogRequested` is the same rule for a deliberate exit made from a
+  // DIFFERENT page, which remounts this component and so arrives with a fresh
+  // ref. Without it, Home from Settings held the skeleton for a frame and then
+  // painted the release the user was trying to leave.
   if (
     authLoading ||
     isInitialLoading ||
-    (isSingleRelease && !scopedReleaseId && !hasAutoScopedRef.current)
+    (isSingleRelease && !scopedReleaseId && !catalogRequested && !hasAutoScopedRef.current)
   ) {
     return <WorkspaceSkeleton />;
   }
@@ -930,6 +1119,28 @@ export function WorkspaceView() {
             </div>
           ) : null}
 
+          {/* The catalog's search bar (2026-08-31, founder request). Rendered
+              ONCE here, above BOTH viewport branches, rather than inside each —
+              it is the same control doing the same job at every width, and the
+              two branches are separate DOM subtrees (`lg:hidden` /
+              `hidden lg:block`), so one bar in each would be two copies of the
+              markup and two copies of the state to keep in step.
+
+              Gated on the catalog actually being on screen AND on there being
+              a release to find: searching an empty catalog is meaningless, and
+              the "No releases yet" state already owns that screen. Note this
+              is deliberately NOT gated on a release count threshold — the ask
+              was for a bar at the top of the catalog, and hiding it below some
+              number of releases would be second-guessing that. */}
+          {showCatalogSearch ? (
+            <ReleaseSearchBar
+              value={releaseQuery}
+              onChange={setReleaseQuery}
+              matchCount={catalogReleases.length}
+              totalCount={releaseCards.length}
+            />
+          ) : null}
+
           {/* ====================================================================
               MOBILE (< lg): drill-down. Level 1 shows the release list; Level 2
               shows back header + TasksPanel for the scoped release (Files and
@@ -949,10 +1160,11 @@ export function WorkspaceView() {
                       start a fresh one). The prior isSingleRelease-gated hide
                       left single-release workspaces with no way out at all.
 
-                      Same three-case handler as the desktop arrow, deliberately:
-                      the complaint that started this ("the back button is not
-                      working") applies identically on a phone, and letting the
-                      two diverge is how this file has drifted before. */}
+                      Same handler as the desktop arrow, deliberately: every
+                      complaint about this button so far ("not working",
+                      "gets stuck", "failing again") arrived as a phone
+                      screenshot, and letting the two diverge is how this file
+                      has drifted before. */}
                   <button
                     type="button"
                     onClick={handleMobileBack}
@@ -1008,6 +1220,10 @@ export function WorkspaceView() {
                     <span className="shrink-0 font-mono text-[11px] font-semibold text-content-primary">
                       {scopedTasks.filter((t) => t.status === 'done').length}/{scopedTasks.length}
                     </span>
+                    <ReleaseDeliveredMark
+                      total={scopedTasks.length}
+                      done={scopedTasks.filter((t) => t.status === 'done').length}
+                    />
                   </div>
                 )}
                 {newReleaseGuideBanner}
@@ -1018,8 +1234,9 @@ export function WorkspaceView() {
                   statusUpdateAction={statusUpdateAction}
                   recapAction={recapAction}
                   archiveAction={archiveAction}
+                  changeArtistAction={changeArtistAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
-                  activitiesBanner={planBanner ?? setReleaseDateBanner}
+                  activitiesBanner={testReleaseBanner ?? planBanner ?? setReleaseDateBanner}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
                   showPlanPill={showPlanPill}
                 />
@@ -1032,10 +1249,12 @@ export function WorkspaceView() {
               </>
             ) : (
               <ReleasesColumn
-                releases={releaseCards}
+                releases={catalogReleases}
                 scopedReleaseId={scopedReleaseId}
                 onSelect={handleSelect}
                 onCreateRelease={() => setIsCreateModalOpen(true)}
+                emptyState={catalogNoMatchState}
+                testRelease={testReleaseEntry}
               />
             )}
           </div>
@@ -1062,16 +1281,19 @@ export function WorkspaceView() {
                 panelStatusUpdateAction={statusUpdateAction}
                 panelRecapAction={recapAction}
                 panelArchiveAction={archiveAction}
+                panelChangeArtistAction={changeArtistAction}
                 panelSceneContent={isDesktopViewport ? scenePanel : undefined}
-                panelActivitiesBanner={planBanner ?? setReleaseDateBanner}
+                panelActivitiesBanner={testReleaseBanner ?? planBanner ?? setReleaseDateBanner}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
                 panelShowPlanPill={showPlanPill}
               />
             ) : (
               <WorkspaceDesktopGrid
-                releases={releaseCards}
+                releases={catalogReleases}
                 onSelect={handleSelect}
                 onCreateRelease={() => setIsCreateModalOpen(true)}
+                emptyState={catalogNoMatchState}
+                testRelease={testReleaseEntry}
               />
             )}
           </div>
@@ -1080,6 +1302,7 @@ export function WorkspaceView() {
       <CreateReleaseModal
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        onStartTestRelease={TEST_RELEASE_ENABLED ? startTestRelease : undefined}
         onCreated={(releaseId, plan, result) => {
           setIsCreateModalOpen(false);
           // CreateReleaseModal already force-resyncs the store on success;
@@ -1231,6 +1454,52 @@ export function WorkspaceView() {
           });
           // Force-refresh so the catalog grid and the identity card's active
           // count both reflect it without a reload.
+          void loadCommandCenter({ force: true });
+        }}
+      />
+
+      {/* The test path's delete exit — DeleteReleaseDialog's second-ever
+          mount (the first is Settings' ReleasesSection). Deleting REAL
+          releases stays Settings-only per URG-163; this dialog only ever
+          holds a test release, set by TestReleaseBanner's button. The
+          dialog owns the DELETE fetch itself. */}
+      <DeleteReleaseDialog
+        open={testReleaseToDelete !== null}
+        release={testReleaseToDelete}
+        tasksTotal={
+          testReleaseToDelete
+            ? taskList.filter((task) => task.releaseId === testReleaseToDelete.id).length
+            : 0
+        }
+        onClose={() => setTestReleaseToDelete(null)}
+        onDeleted={(releaseId) => {
+          setTestReleaseToDelete(null);
+          // Same pair Settings' handler runs: drop the release locally now,
+          // then resync so counts, rails and the identity card agree with
+          // the server.
+          removeReleaseLocal(releaseId);
+          void loadCommandCenter({ force: true });
+          // Land on the catalog and STAY there. Without the intent mark, a
+          // remaining lone REAL release would auto-scope-bounce the user
+          // straight back into a release seconds after they deleted one —
+          // the v1.14.1 mechanism. forgetScene clears the deleted release's
+          // remembered scene on the way out.
+          markCatalogRequested();
+          setScope(null, { forgetScene: true });
+          setToast({ message: 'Test release deleted.', tone: 'success' });
+        }}
+      />
+
+      <ChangeReleaseArtistDialog
+        open={isChangeArtistOpen}
+        release={scopedReleaseSlim}
+        onClose={() => setIsChangeArtistOpen(false)}
+        onChanged={(_releaseId, artistName) => {
+          setIsChangeArtistOpen(false);
+          setToast({ message: `Moved to ${artistName}.`, tone: 'success' });
+          // Force-refresh: the release card, the scoped header and the identity
+          // card's artist line all read the cached name, so without this they
+          // keep showing the old artist until a reload.
           void loadCommandCenter({ force: true });
         }}
       />

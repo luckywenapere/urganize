@@ -8,6 +8,7 @@ import {
 } from '@/components/workspace/TasksPanel';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownReleaseCount } from './known-counts';
+import { resolveActiveScene } from '@/lib/scene-cache';
 
 // Same URL param useReleaseScope reads (`?release=`). Knowing this at
 // skeleton-render time (before release data has loaded) lets the skeleton
@@ -41,6 +42,12 @@ const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 // fixing the mobile pill-row overflow bug. DESKTOP ONLY since 2026-08-15, so
 // it is reserved in the header row and deliberately not in the mobile dock.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
+
+// Timeline (2026-08-30) sits right before Metadata in the real desktop header
+// row and leads the mobile top-tabs strip. Reserved unconditionally under its
+// flag — unlike Plan and Recap, whether it renders depends only on a release
+// being scoped, which this skeleton already knows.
+const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
 
 // Same flag AppTopbar/ChappiDock read. The UrgAns side rail renders itself
 // beside AppShell's <main> (URG-210) — including while this skeleton shows —
@@ -99,12 +106,14 @@ const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 
 export function WorkspaceSkeleton() {
   const searchParams = useSearchParams();
   const isRailOpen = useChappiStore((state) => state.railOpen);
-  // Mirrors WorkspaceView's hideRailsForLayout exactly: rails also hide while
-  // the calendar scene is open, and a refresh on a `?scene=calendar` URL used
-  // to paint 3-column rails here that vanished the moment data resolved.
-  const isCalendarScene =
-    CONTENT_CALENDAR_ENABLED && searchParams.get('scene') === 'calendar';
-  const hideRails = (CHAPPI_ENABLED && isRailOpen) || isCalendarScene;
+  // Mirrors WorkspaceView's hideRailsForLayout exactly: the rails hide while
+  // ANY scene is open, and a refresh on a `?scene=…` URL used to paint
+  // 3-column rails here that vanished the moment data resolved. Widened from
+  // calendar-only alongside the real view (2026-08-25) — the two read the same
+  // `resolveActiveScene`, so they cannot disagree about whether a stale
+  // flag-off param counts as an open scene.
+  const hideRails =
+    (CHAPPI_ENABLED && isRailOpen) || resolveActiveScene(searchParams.get('scene')) !== null;
   const knownCount = useKnownReleaseCount();
   // `?release=` is the normal signal, but a single-release workspace scopes
   // itself in an effect, so the URL is still bare while WorkspaceView holds
@@ -129,6 +138,26 @@ export function WorkspaceSkeleton() {
       <div
         className={`flex min-h-0 min-w-0 flex-1 flex-col pt-6 sm:px-6 lg:block lg:px-0 lg:pt-0 ${isFocused ? 'pb-0 lg:pb-0' : 'pb-6 sm:pb-24'}`}
       >
+          {/* The catalog's "Search release" bar (2026-08-31). Reserved on the
+              same rule the real one renders on — the catalog is showing AND
+              there is a release to find — and the wrapper classes are
+              byte-identical to ReleaseSearchBar's so nothing shifts when data
+              lands. Its count line ("3 of 9 releases") is NOT reserved: it only
+              appears while a query is being typed, which cannot be true on the
+              first paint.
+
+              `knownCount` hydrates in an effect, so an SSR paint reserves
+              nothing here and the bar arrives with the count — the same
+              tradeoff every other count-aware shape in this file makes, and it
+              is the honest direction: reserving a bar for an account that turns
+              out to have no releases would push the "No releases yet" state
+              down the page. */}
+          {!isFocused && knownCount > 0 ? (
+            <div className="mb-4 w-full shrink-0 lg:mx-auto lg:max-w-md">
+              <SkeletonBlock className="h-11 w-full rounded-full" />
+            </div>
+          ) : null}
+
           <section className="flex min-h-0 flex-1 flex-col lg:hidden">
             {isFocused ? (
               <MobileFocusedSkeleton />
@@ -264,19 +293,29 @@ function TasksPanelSkeleton() {
     // would make the row jump for every release that has a plan already, which
     // is most of them. Same trade the recap pill documents above.
   ];
-  // The pills both layouts share (New activity, Metadata, then one per enabled
-  // flag), reserved once and rendered into both containers below — exactly as
-  // the real component builds `primaryPills` once and feeds it to the desktop
-  // header row and the mobile dock. Only one of the two is ever displayed.
+  // The header row's pills (New activity, Timeline, Metadata, then one per
+  // enabled flag). DESKTOP ONLY — the real buttons these stand in for stopped
+  // rendering below `lg` on 2026-08-31, when the mobile top tabs were folded
+  // into the release menu, so there is no second container to feed. (This
+  // comment described them as shared by "both layouts" for a while after the
+  // real component had already stopped doing that.)
   const primaryPillBlocks = (
     <>
       <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
+      {TIMELINE_ENABLED ? (
+        <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" />
+      ) : null}
       {/* Metadata — narrow widths only, carrying the SAME hide class the
           real pill computes (see TasksPanel.tsx's METADATA_PILL_HIDE_CLASS:
           empty when the identity panel is flagged off, else xl/lg depending
-          on Chappi) so the reserved footprint matches at every breakpoint. */}
+          on Chappi) so the reserved footprint matches at every breakpoint.
+          w-24 since the 2026-08-31 rename from "Collect metadata" — eight
+          characters in a pill with a 14px icon. It used to be described as
+          "the same width as Calendar"; that pill's label shortened to
+          "Content" later the same day, so Metadata is now the wider of the
+          two and keeps w-24 on its own merit. */}
       {METADATA_ENABLED ? (
-        <SkeletonBlock className={`h-8 w-36 shrink-0 rounded-full ${METADATA_PILL_HIDE_CLASS}`} />
+        <SkeletonBlock className={`h-8 w-24 shrink-0 rounded-full ${METADATA_PILL_HIDE_CLASS}`} />
       ) : null}
       {pillWidths.map((width, index) => (
         <SkeletonBlock key={`pill-${index}`} className={`h-8 ${width} shrink-0 rounded-full`} />
@@ -295,18 +334,26 @@ function TasksPanelSkeleton() {
   const extraActionPillBlocks = STATUS_UPDATE_ENABLED ? (
     <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
   ) : null;
-  // Calendar / Press kit / Fan capture — the panel's outbound group. A
-  // desktop-only footer row at lg+, the tail of the mobile dock below it.
+  // Calendar / Press kit / Fan capture — the panel's outbound group, a
+  // desktop-only footer row at lg+. It used to describe itself as also being
+  // "the tail of the mobile dock"; the dock has carried no pills since
+  // 2026-08-17 and, since 2026-08-31, these three reach a phone only through
+  // the release menu, which reserves nothing per entry.
   // NO pill in this row carries a Beta tag any more (Calendar lost its stamp
   // 2026-08-15, the other two on 2026-08-16), so each width is now just its
-  // label: px-3 + a 14px icon + gap-1.5 + the text at 12px semibold. That puts
-  // Calendar and Press kit level, with Fan capture one step up as the longest
-  // label. Widths are per-label rather than uniform, and each rounds DOWN to
-  // the nearest step: a placeholder wider than the real pill shifts every
-  // neighbour left when the labels arrive.
+  // label: px-3 + a 14px icon + gap-1.5 + the text at 12px semibold. Widths
+  // are per-label rather than uniform, and each rounds DOWN to the nearest
+  // step: a placeholder wider than the real pill shifts every neighbour left
+  // when the labels arrive, where a narrower one shifts them right, which is
+  // the tolerated direction.
+  //
+  // Content (was "Calendar" until 2026-08-31) is the shortest of the three at
+  // seven characters and steps down to w-20 accordingly — at w-24 it would
+  // have been the one case this row forbids, a placeholder wider than the pill
+  // it stands in for. Press kit keeps w-24, Fan capture w-28 as the longest.
   const outboundPillBlocks = (
     <>
-      {CONTENT_CALENDAR_ENABLED ? <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" /> : null}
+      {CONTENT_CALENDAR_ENABLED ? <SkeletonBlock className="h-8 w-20 shrink-0 rounded-full" /> : null}
       {EPK_ENABLED ? <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" /> : null}
       {CAPTURE_ENABLED ? <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" /> : null}
     </>
@@ -357,59 +404,59 @@ function TasksPanelSkeleton() {
           {outboundPillBlocks}
         </div>
       ) : null}
-      {/* Mobile top tabs (below `lg`) — 2026-08-16 redesign. Calendar,
-          Metadata, Pitch: all three are flag+scope-known (unlike Recap,
-          which moved OUT to the folded menu 2026-08-17 — see the base dock
-          below — because its eligibility depends on release/task data this
-          skeleton renders before it has), so all three are fully reservable
-          here. Widths match the desktop outbound/primary placeholders for
-          the same labels, and the wrapper's scroll/bleed classes match the
-          real row byte-for-byte so the reserved footprint sits exactly
-          where the real one lands. */}
-      {CONTENT_CALENDAR_ENABLED || METADATA_ENABLED || PITCHING_ENABLED ? (
-        <div className="-mx-4 flex shrink-0 gap-2 overflow-x-auto px-4 pb-3 pt-1 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden">
-          {CONTENT_CALENDAR_ENABLED ? (
-            <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" />
-          ) : null}
-          {METADATA_ENABLED ? (
-            <SkeletonBlock className="h-8 w-36 shrink-0 rounded-full" />
-          ) : null}
-          {PITCHING_ENABLED ? (
-            <SkeletonBlock className="h-8 w-16 shrink-0 rounded-full" />
-          ) : null}
-        </div>
-      ) : null}
-      {/* Mobile base dock (below `lg`) — 2026-08-16 redesign, now (2026-08-17)
-          just the two icon-button placeholders for the search/menu controls
-          that reveal the folded "more" menu (Plan / Cover art / Song / Files
-          / Status update / Recap / Press kit / Fan capture). The row used to
-          also reserve New activity and Pitch as permanent standalone pills —
-          both gone: Pitch moved up into the top-tabs strip above (now
-          reserved there instead, see above), and New activity was retired
-          outright (superseded by MobileNavBar's center "+", which this
-          skeleton has no reason to reserve for since it isn't part of this
-          panel). No border or background of its own (2026-08-17 correction:
-          the row used to carry both, which read as a boxed rectangle sitting
-          under the pills). The icon buttons are reserved whenever any
-          FLAG-known folded item exists — Plan and Recap are both excluded
-          from that check the same way Plan is excluded from `pillWidths`
-          above: whether either renders depends on release/draft/task data
-          this skeleton doesn't have yet, and the other six are enough to
-          decide whether the controls belong here at all. */}
+      {/* The mobile top-tabs strip reserved here (Content / Metadata / Pitch,
+          plus Timeline once that flag landed) went away with the real row on
+          2026-08-31 — founder call, everything moved into the release menu at
+          the base of the panel. Nothing replaces its footprint: the panel's
+          body simply starts higher on a phone now. */}
+      {/* Mobile base dock (below `lg`) — the two icon-button placeholders for
+          the search and menu controls. The row used to also reserve New
+          activity and Pitch as permanent standalone pills; both went in
+          2026-08-17 (Pitch to the top tabs, then — with those gone — into the
+          menu; New activity retired outright, superseded by MobileNavBar's
+          center "+", which this skeleton has no reason to reserve for since it
+          isn't part of this panel). No border or background of its own
+          (2026-08-17 correction: the row used to carry both, which read as a
+          boxed rectangle sitting under the pills).
+
+          The two controls are reserved on DIFFERENT rules as of 2026-08-31,
+          when they stopped opening the same panel (see TasksPanel's base-dock
+          block):
+
+          - SEARCH is unconditional. It renders whenever the release has any
+            activity, and a playbook release has 64-113 of them, so "always"
+            is a far better guess than any flag combination — the skeleton has
+            no task data to check. A genuinely activity-less release (the
+            planner's plan-first flow) briefly reserves one 32px circle that
+            never arrives, the same magnitude of imprecision Plan and Recap
+            already accept below.
+          - THE MENU keeps a flag-known check, but it now spans every release
+            surface rather than the six that were folded away — Timeline,
+            Content, Pitch and Metadata joined the list the day the top tabs
+            were removed, so leaving them out of this condition would have
+            un-reserved the trigger in exactly the flag combination production
+            runs (calendar + metadata on, the asset flags off). Plan and Recap
+            stay excluded for the reason Plan is excluded from `pillWidths`
+            above: whether either renders depends on release/draft/task data
+            this skeleton doesn't have yet. */}
       <div
         className={`sticky z-20 -mx-4 flex items-center gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
-        {COVER_ART_ENABLED ||
-        SONG_UPLOAD_ENABLED ||
-        FILES_ENABLED ||
-        STATUS_UPDATE_ENABLED ||
-        EPK_ENABLED ||
-        CAPTURE_ENABLED ? (
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
+          {TIMELINE_ENABLED ||
+          CONTENT_CALENDAR_ENABLED ||
+          PITCHING_ENABLED ||
+          METADATA_ENABLED ||
+          COVER_ART_ENABLED ||
+          SONG_UPLOAD_ENABLED ||
+          FILES_ENABLED ||
+          STATUS_UPDATE_ENABLED ||
+          EPK_ENABLED ||
+          CAPTURE_ENABLED ? (
             <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
-            <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </div>
   );

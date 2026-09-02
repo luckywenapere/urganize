@@ -4,115 +4,108 @@
 // sessionStorage (per-tab, dies with the tab) by NavigationTracker on every
 // route change; browser history alone can't answer this reliably (deep
 // links, fresh tabs, external referrers).
+//
+// A STACK, NOT ONE SLOT (2026-08-29), and the difference is the entire reason
+// the back buttons used to trap people. The old shape was a `current` +
+// `previous` pair, so every back press REFILLED the slot with the page it had
+// just left — which made the next back press return there. Two surfaces read
+// this (the workspace arrow and Settings), so the loop was one tap wide:
+//
+//   release -> Settings -> back -> release -> back -> Settings -> back -> ...
+//
+// The founder hit exactly that and reported "this back button gets stuck a lot,
+// I can't even go back". Two different releases loop the same way (UrgAns, a
+// note's release chip and the desktop rails can all move you between them), and
+// so does any page/release pair.
+//
+// (The workspace back arrow that report was about no longer reads this module
+// at all — see the note further down. Settings' back button still does, and the
+// stack is what keeps IT terminating.)
+//
+// With a stack, returning to the entry directly beneath the top POPS instead of
+// pushing (see recordNavigation), so back always shrinks the trail and always
+// terminates. It costs one JSON parse per route change on a per-tab store.
 
-const CURRENT_KEY = 'urganize.nav.current';
-const PREVIOUS_KEY = 'urganize.nav.previous';
+const STACK_KEY = 'urganize.nav.stack';
 
-/** Record the tab's current in-app URL; the one it replaces becomes the
- * "previous location". Same-URL re-renders are ignored. */
-export function recordNavigation(url: string) {
-  if (typeof window === 'undefined' || !url) return;
+/** Trail depth. Long enough that back stays useful across a real session,
+ * short enough that scene switching — which `replace`s, and therefore appends
+ * without a matching pop — can't grow this without bound. */
+const MAX_DEPTH = 20;
+
+/** Same-app relative paths only — defense against anything untoward reaching
+ * the trail, and the reason a stored value can be trusted as a push target. */
+function isInAppUrl(value: unknown): value is string {
+  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//');
+}
+
+function readStack(): string[] {
   try {
-    const current = window.sessionStorage.getItem(CURRENT_KEY);
-    if (current === url) return;
-    if (current) window.sessionStorage.setItem(PREVIOUS_KEY, current);
-    window.sessionStorage.setItem(CURRENT_KEY, url);
+    const raw = window.sessionStorage.getItem(STACK_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isInAppUrl).slice(-MAX_DEPTH);
   } catch {
-    // sessionStorage can throw in private modes — the back button falls
-    // back to /dashboard, which is always safe.
+    // Unparseable (a half-written value, a shape from an older build) is
+    // treated as no history at all: back falls through to its floor, which is
+    // always safe, and the trail rebuilds from the next navigation.
+    return [];
+  }
+}
+
+/**
+ * The trail after navigating to `url` — the whole decision, kept pure so it can
+ * be tested without a browser (this repo runs vitest in `node`).
+ *
+ * Three cases, and the middle one is what makes back terminate:
+ *  - Same URL as the top: a re-render, not a navigation. Unchanged.
+ *  - The entry directly BENEATH the top: the user went back one step (our own
+ *    button, the browser's, or an edge swipe — this cannot tell them apart and
+ *    does not need to). Pop, so the page they left is forgotten rather than
+ *    becoming the next "previous".
+ *  - Anything else: a forward move. Push, capped at MAX_DEPTH.
+ */
+export function nextNavigationStack(stack: readonly string[], url: string): string[] {
+  if (!isInAppUrl(url)) return [...stack];
+  if (stack[stack.length - 1] === url) return [...stack];
+  if (stack.length > 1 && stack[stack.length - 2] === url) return stack.slice(0, -1);
+  return [...stack, url].slice(-MAX_DEPTH);
+}
+
+/** Record the tab's current in-app URL. See nextNavigationStack for the rules. */
+export function recordNavigation(url: string) {
+  if (typeof window === 'undefined' || !isInAppUrl(url)) return;
+  try {
+    const next = nextNavigationStack(readStack(), url);
+    window.sessionStorage.setItem(STACK_KEY, JSON.stringify(next));
+  } catch {
+    // sessionStorage can throw in private modes — the back buttons fall back
+    // to their own floors (/dashboard for Settings, dropping the release
+    // scope for the workspace), both of which are always safe.
   }
 }
 
 /** The in-app URL the user was on before the current page, or null. */
 export function readPreviousLocation(): string | null {
   if (typeof window === 'undefined') return null;
-  try {
-    const previous = window.sessionStorage.getItem(PREVIOUS_KEY);
-    // Only ever return same-app relative paths — defense against anything
-    // untoward finding its way into the slot.
-    if (previous && previous.startsWith('/') && !previous.startsWith('//')) {
-      return previous;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+  const stack = readStack();
+  return stack.length > 1 ? (stack[stack.length - 2] ?? null) : null;
 }
 
-/** Pages that must never be a back destination.
- *
- * Every one of them either bounces (the auth pages and /locked redirect an
- * authenticated team straight back into the app) or is a one-way flow step that
- * makes no sense to re-enter. Sending someone "back" to one is worse than not
- * moving them at all. */
-const NON_DESTINATION_PREFIXES = [
-  '/auth',
-  '/onboarding',
-  '/locked',
-  '/start-trial',
-  '/redeem',
-  '/invite',
-  '/join',
-  '/payment',
-] as const;
-
-/** Does this URL scope the given release in the workspace?
- *
- * Read off the query string rather than by substring match, so a release id
- * appearing anywhere else in the URL cannot produce a false positive. */
-function scopesRelease(url: string, releaseId: string): boolean {
-  const queryStart = url.indexOf('?');
-  if (queryStart === -1) return false;
-  try {
-    return new URLSearchParams(url.slice(queryStart + 1)).get('release') === releaseId;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Where the workspace's back arrow should go, or null for "no usable previous —
- * fall back to dropping the release scope".
- *
- * Called only when NO scene is open: with a scene open the arrow closes the
- * scene and never consults history at all, which is what makes scene-to-scene
- * ping-pong structurally impossible rather than merely guarded against.
- *
- * TWO REJECTIONS, and the first is the whole reason this function exists:
- *
- *  1. A PREVIOUS LOCATION THAT STILL SCOPES THE SAME RELEASE IS NOT "BACK".
- *     nav-history holds one slot, not a stack, and skips same-URL writes — so
- *     immediately after closing a scene the previous location IS that scene's
- *     own URL. Pushing it would re-open the thing the user just left, and the
- *     user would be stuck bouncing between two URLs. Going back to the release
- *     you are trying to leave is not leaving it. This is the analogue of the
- *     Settings back button's `!previous.startsWith('/settings')` guard, which
- *     does not transfer directly because both URLs here share one pathname.
- *  2. A flow page (see NON_DESTINATION_PREFIXES).
- *
- * The same-origin check mirrors readPreviousLocation's, because this is also
- * reachable with a value that never went through it.
- */
-export function resolveWorkspaceBackTarget(input: {
-  previous: string | null;
-  scopedReleaseId: string | null;
-}): string | null {
-  const previous = input.previous;
-  if (!previous) return null;
-  if (!previous.startsWith('/') || previous.startsWith('//')) return null;
-
-  const path = previous.split('?')[0] ?? '';
-  if (
-    NON_DESTINATION_PREFIXES.some(
-      (prefix) => path === prefix || path.startsWith(`${prefix}/`)
-    )
-  ) {
-    return null;
-  }
-
-  if (input.scopedReleaseId && scopesRelease(previous, input.scopedReleaseId)) {
-    return null;
-  }
-
-  return previous;
-}
+// THE WORKSPACE BACK ARROW NO LONGER READS ANY OF THIS (2026-08-30).
+//
+// `resolveWorkspaceBackTarget` lived here until the founder rejected a
+// history-aware release back arrow outright: it now always leaves the release
+// for the catalog, so it needs no previous location, no rejections and no
+// scene special case. See WorkspaceView's `goBack` for the reasoning; git
+// history has the resolver if a smart destination is ever wanted again.
+//
+// SETTINGS IS THE ONLY CONSUMER LEFT, and it is a genuinely different button:
+// Settings is a place you visit from somewhere, so returning to that somewhere
+// is the whole point of it (founder request, 2026-07-23). It guards only
+// against landing back on `/settings`, so the flow-page rejection the deleted
+// resolver carried is gone with it — a Settings back CAN in principle land on
+// a page like `/auth` that bounces an authenticated user straight into the
+// app. Pre-existing rather than introduced here (the resolver never guarded
+// Settings), and worth a guard of its own if it ever shows up in practice.

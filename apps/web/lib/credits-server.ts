@@ -23,6 +23,19 @@ export type PublicCreditForm = {
   releaseDate: string | null;
 };
 
+/**
+ * How a share token resolves publicly.
+ *
+ * 'closed' exists because the owner can now pause a link (release_credit_links
+ * .closed_at) and the spec asks for a polite "this request is closed" message
+ * rather than a dead end. Everything else still collapses to 'missing' — the
+ * page must never distinguish a rotated-away token from one that never existed.
+ */
+export type PublicCreditFormLookup =
+  | { kind: 'ok'; form: PublicCreditForm }
+  | { kind: 'closed'; form: PublicCreditForm }
+  | { kind: 'missing' };
+
 // Shared by the public page (read) and the public submit route (write) —
 // both run with no user session, so both need the service-role client.
 export function createCreditsServiceClient(): SupabaseClient | null {
@@ -37,44 +50,65 @@ export function createCreditsServiceClient(): SupabaseClient | null {
 export const CREDIT_TOKEN_SHAPE = /^[A-Za-z0-9_-]{16,64}$/;
 
 /**
- * Resolve a share token to the release context the public form needs.
- * Returns null for anything that should render as 404: flag off, unknown
- * token, or a broken environment — the public page never distinguishes
- * "revoked" from "never existed".
+ * Pure: what a link row (or its absence) means to the public page.
+ *
+ * Split out from the query so it can be unit-tested — this is the one place
+ * "closed" and "gone" are told apart, and getting it backwards would either
+ * leak the existence of a rotated token or leave a closed link looking broken.
  */
-export async function loadPublicCreditForm(token: string): Promise<PublicCreditForm | null> {
-  if (!isMetadataFeatureEnabled()) return null;
+export function classifyCreditLinkRow(
+  row: { release_id?: unknown; closed_at?: unknown } | null | undefined
+): 'missing' | 'closed' | 'open' {
+  if (!row?.release_id) return 'missing';
+  return row.closed_at ? 'closed' : 'open';
+}
+
+/**
+ * Resolve a share token to the release context the public form needs.
+ *
+ * Returns 'missing' for anything that should render as 404: flag off, unknown
+ * token, a deleted release, or a broken environment — the public page never
+ * distinguishes "revoked" from "never existed". A link the owner CLOSED is the
+ * one exception, and it still carries the release context so the closed page
+ * can name the release the person was trying to help with.
+ */
+export async function loadPublicCreditForm(token: string): Promise<PublicCreditFormLookup> {
+  if (!isMetadataFeatureEnabled()) return { kind: 'missing' };
   const normalizedToken = token.trim();
-  if (!CREDIT_TOKEN_SHAPE.test(normalizedToken)) return null;
+  if (!CREDIT_TOKEN_SHAPE.test(normalizedToken)) return { kind: 'missing' };
 
   const client = createCreditsServiceClient();
-  if (!client) return null;
+  if (!client) return { kind: 'missing' };
 
   try {
     const { data: link, error: linkError } = await client
       .from(RELEASE_CREDIT_LINKS_TABLE)
-      .select('release_id')
+      .select('release_id,closed_at')
       .eq('share_token', normalizedToken)
       .maybeSingle();
 
-    if (linkError || !link?.release_id) return null;
+    if (linkError) return { kind: 'missing' };
+    const state = classifyCreditLinkRow(link);
+    if (state === 'missing') return { kind: 'missing' };
 
     const { data: release, error: releaseError } = await client
       .from('releases')
       .select('id,title,artist_name,release_date')
-      .eq('id', String(link.release_id))
+      .eq('id', String(link!.release_id))
       .maybeSingle();
 
-    if (releaseError || !release) return null;
+    if (releaseError || !release) return { kind: 'missing' };
 
-    return {
+    const form: PublicCreditForm = {
       releaseId: String(release.id),
       releaseTitle: String(release.title || ''),
       artistName: String(release.artist_name || ''),
       releaseDate: release.release_date ? String(release.release_date) : null,
     };
+
+    return state === 'closed' ? { kind: 'closed', form } : { kind: 'ok', form };
   } catch {
     // A public page must degrade to 404, never 500, on infrastructure blips.
-    return null;
+    return { kind: 'missing' };
   }
 }

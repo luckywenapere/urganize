@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/lib/tasks';
 import { WorkspaceReleaseCard } from './WorkspaceReleaseCard';
@@ -59,6 +60,7 @@ type WorkspaceDesktopFocusedProps = {
   panelStatusUpdateAction?: TaskPanelAction | null;
   panelRecapAction?: TaskPanelAction | null;
   panelArchiveAction?: TaskPanelAction | null;
+  panelChangeArtistAction?: TaskPanelAction | null;
   /** Forwarded verbatim to TasksPanel's `sceneContent` — a release scene
    * (Metadata / Calendar / Files / Press kit) that replaces the activity
    * buckets in this centre column while it's open (2026-08-05). */
@@ -103,6 +105,7 @@ export function WorkspaceDesktopFocused({
   panelStatusUpdateAction,
   panelRecapAction,
   panelArchiveAction,
+  panelChangeArtistAction,
   panelSceneContent,
   panelActivitiesBanner,
   panelBannerReplacesEmptyState,
@@ -127,7 +130,13 @@ export function WorkspaceDesktopFocused({
           2026-07-23) with the release's motion tracker filling the freed
           space: label + progress bar + done/total count, same voice as the
           release cards' Motion strip. Deleting a release is Settings-only
-          (URG-163) — no delete affordance lives here. */}
+          (URG-163) — no delete affordance lives here. ONE sanctioned
+          exception since 2026-09-01 (founder call): a TEST release's
+          standing banner (TestReleaseBanner, via the activitiesBanner slot)
+          carries its own "Delete test release" button, because the founder
+          asked for the test path to end with the delete option. Real
+          releases keep the Settings-only rule; the per-release trash icons
+          stay removed. */}
       <div className="flex shrink-0 items-center gap-4">
         {onClose ? (
           <button
@@ -157,6 +166,7 @@ export function WorkspaceDesktopFocused({
           <span className="shrink-0 font-mono text-[11px] font-semibold text-content-primary">
             {tasksDone}/{tasksTotal}
           </span>
+          <ReleaseDeliveredMark total={tasksTotal} done={tasksDone} />
         </div>
       </div>
 
@@ -210,6 +220,7 @@ export function WorkspaceDesktopFocused({
             statusUpdateAction={panelStatusUpdateAction}
             recapAction={panelRecapAction}
             archiveAction={panelArchiveAction}
+            changeArtistAction={panelChangeArtistAction}
             sceneContent={panelSceneContent}
             activitiesBanner={panelActivitiesBanner}
             bannerReplacesEmptyState={panelBannerReplacesEmptyState}
@@ -257,7 +268,7 @@ function RailColumn({ cards, onSelect, ariaLabel, hiddenBelowXl = false }: RailC
       aria-label={ariaLabel}
       className={`min-h-0 min-w-0 space-y-3 overflow-y-auto overscroll-contain pb-4 ${visibilityClass}`}
     >
-      {cards.map(({ release, tasksDone, tasksTotal, coverArtUrl }) => (
+      {cards.map(({ release, tasksDone, tasksTotal, coverArtUrl, isTest }) => (
         <WorkspaceReleaseCard
           key={release.id}
           release={release}
@@ -266,6 +277,7 @@ function RailColumn({ cards, onSelect, ariaLabel, hiddenBelowXl = false }: RailC
           selected={false}
           onSelect={onSelect}
           coverArtUrl={coverArtUrl}
+          isTest={isTest}
         />
       ))}
     </aside>

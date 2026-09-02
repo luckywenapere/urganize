@@ -18,6 +18,7 @@ const WORKSPACE_FEATURE_ENABLED =
 const IDENTITY_PANEL_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' && WORKSPACE_FEATURE_ENABLED;
 const DATA_EXPORT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DATA_EXPORT === 'true';
+const MCP_CONNECT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MCP_CONNECT === 'true';
 
 // The "After tasks" check-in row, same gate the real row reads.
 const TASK_OUTCOMES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_OUTCOMES === 'true';
@@ -113,6 +114,12 @@ export function SettingsPageSkeleton({
               { key: 'appearance', height: 'h-24', show: true },
               { key: 'security', height: 'h-40', show: true },
               { key: 'session', height: 'h-20', show: true },
+              // Flag-known and so reservable, but the HEIGHT is a guess: most
+              // accounts resolve to a one-line empty state, and one with two
+              // connected apps resolves taller. h-24 splits it — three lines of
+              // copy plus room for one row — rather than reserving for the
+              // uncommon case and leaving a gap for everybody else.
+              { key: 'connected-apps', height: 'h-24', show: MCP_CONNECT_ENABLED },
               // Flag-known, so unlike Admin this one CAN be reserved: two
               // lines of copy plus a row of two buttons.
               { key: 'data-export', height: 'h-28', show: DATA_EXPORT_ENABLED },

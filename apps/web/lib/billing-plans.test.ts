@@ -11,6 +11,7 @@ import {
   resolveBillingInterval,
   resolveCheckoutPurchase,
 } from './billing-plans';
+import { BILLING_PLANS, BILLING_PLAN_ORDER, isPricingTierId } from '@urganize/pricing';
 
 // advancePeriodEnd is the renewal math the Paystack webhook trusts: a late
 // renewal must EXTEND the paid window from the current period end, and a
@@ -125,7 +126,17 @@ describe('isRecurringPlan', () => {
     expect(isRecurringPlan('enterprise')).toBe(false);
     expect(isSelfServeTier('enterprise')).toBe(false);
     expect(isSelfServeTier('manager')).toBe(true);
-    expect(isSelfServeTier('label')).toBe(true);
+  });
+
+  it('keeps renewing Label after it stopped being purchasable', () => {
+    // The two lists answer different questions and are MEANT to disagree here.
+    // Label went sales-led 2026-08-30, so nobody can buy it any more — but it
+    // was self-serve through the whole pricing-v2 launch, so live Label
+    // subscriptions exist. Dropping it from isRecurringPlan would make the
+    // webhook bail with non_recurring_subscription and silently stop extending
+    // them, which is the exact failure that gate was written about.
+    expect(isSelfServeTier('label')).toBe(false);
+    expect(isRecurringPlan('label')).toBe(true);
   });
 });
 
@@ -214,18 +225,26 @@ describe('tier plan codes and prices', () => {
     vi.unstubAllEnvs();
   });
 
-  it('points Label at the LIVE monthly/annual plans, not PAYSTACK_PLAN_LABEL_*', () => {
-    // This is the trap, so it gets a test. PAYSTACK_PLAN_LABEL_NGN holds a
-    // mislabeled ₦750,000 Plan from an earlier attempt; the Label tier's prices
-    // are identical to the live monthly/annual ones by design, which is why it
-    // reuses those Plan objects and needs none minted.
+  it('judges a retired Label renewal against the LIVE plans, not PAYSTACK_PLAN_LABEL_*', () => {
+    // This is the trap, so it keeps its test. PAYSTACK_PLAN_LABEL_NGN holds a
+    // mislabeled ₦750,000 Plan from an earlier attempt; Label's tier prices were
+    // identical to the live monthly/annual ones by design, so those are the Plan
+    // objects its subscribers are really billed against.
+    //
+    // Label went sales-led 2026-08-30, so this no longer runs through
+    // getTierPaystackPlanCode (it is off SelfServeTierId and unreachable from
+    // checkout) — RETIRED_TIER_PLAN_CODE_ENV_VAR carries it for renewals only.
+    // Same trap, same guard, one layer along.
     vi.stubEnv('PAYSTACK_PLAN_MONTHLY_NGN', 'PLN_live_month');
     vi.stubEnv('PAYSTACK_PLAN_ANNUAL_NGN', 'PLN_live_year');
     vi.stubEnv('PAYSTACK_PLAN_LABEL_NGN', 'PLN_wrong_750k');
 
-    expect(getTierPaystackPlanCode('label', 'monthly')).toBe('PLN_live_month');
-    expect(getTierPaystackPlanCode('label', 'annual')).toBe('PLN_live_year');
-    expect(getTierPaystackPlanCode('label', 'monthly')).not.toBe('PLN_wrong_750k');
+    const judge = (code: string, storedInterval: 'monthly' | 'annual') =>
+      planCodeMatchesSubscription({ code, plan: 'label', storedInterval });
+
+    expect(judge('PLN_live_month', 'monthly')).toBe(true);
+    expect(judge('PLN_live_year', 'annual')).toBe(true);
+    expect(judge('PLN_wrong_750k', 'monthly')).toBe(false);
   });
 
   it('reads Manager from its own two env vars', () => {
@@ -243,10 +262,10 @@ describe('tier plan codes and prices', () => {
   });
 
   it('prices each tier per interval, in kobo', () => {
+    // Manager is the only self-serve tier since 2026-08-30, so it is the only
+    // one a checkout can price.
     expect(getTierMinorUnit('manager', 'monthly')).toBe(35_000_00);
     expect(getTierMinorUnit('manager', 'annual')).toBe(350_000_00);
-    expect(getTierMinorUnit('label', 'monthly')).toBe(80_000_00);
-    expect(getTierMinorUnit('label', 'annual')).toBe(800_000_00);
   });
 });
 
@@ -333,32 +352,85 @@ describe('resolveCheckoutPurchase', () => {
     });
   });
 
-  it('sends Label at the live Plans and records the interval it was sold as', () => {
+  it('refuses to sell Label, which went sales-led', () => {
+    // Label was self-serve at the live Plans until 2026-08-30. Now it is quoted
+    // by hand, so checkout must refuse it at BOTH intervals rather than charging
+    // a card for a tier nobody is allowed to buy — even though those Plan
+    // objects are still configured and still renewing its existing subscribers.
+    //
+    // ⚠️ THIS TEST USED TO PASS FOR THE WRONG REASON, and the fix is the
+    // `PAYSTACK_PLAN_LABEL_NGN` stub below (added 2026-09-01). `stubLive()` does
+    // not set that var, so the refusal was really "plan code not configured" (a
+    // 500) coming out of the LEGACY branch — not the sales-led decision. Since
+    // that Plan genuinely exists in the Paystack dashboard at a stale ₦750,000,
+    // setting the var in production would have removed the only thing refusing
+    // this, and a request for Label would have charged ₦750,000 while recording
+    // ₦800,000.
+    //
+    // Stubbing it is what makes the assertion mean what it says: with a valid
+    // Plan code available, the ONLY thing that can refuse is the sales-led guard.
+    // Hence the 400 — the status is the whole point, because a 500 here would be
+    // the old accidental pass returning.
     stubLive();
-    const monthly = resolveCheckoutPurchase({
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_NGN', 'PLN_stale_label');
+    for (const interval of ['monthly', 'annual'] as const) {
+      const result = resolveCheckoutPurchase({
+        plan: 'label',
+        currency: 'NGN',
+        interval,
+        pricingV2: true,
+      });
+      expect(result.ok, `label/${interval}`).toBe(false);
+      if (result.ok) throw new Error('expected a refusal');
+      expect(result.status, `label/${interval} status`).toBe(400);
+      expect(result.error).toContain('Label');
+    }
+  });
+
+  it('refuses a sales-led plan with pricing v2 OFF too', () => {
+    // The flag decides which GENERATION a request is read in, never whether a
+    // sales-led plan may be bought. With the flag off, 'label' is a legacy id
+    // and reaches the legacy branch directly — so if the guard sat inside the
+    // tier branch this would still charge.
+    stubLive();
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_NGN', 'PLN_stale_label');
+    const result = resolveCheckoutPurchase({
       plan: 'label',
       currency: 'NGN',
-      interval: 'monthly',
-      pricingV2: true,
+      interval: undefined,
+      pricingV2: false,
     });
-    const annual = resolveCheckoutPurchase({
-      plan: 'label',
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('expected a refusal');
+    expect(result.status).toBe(400);
+  });
+
+  // Pins the assumption `readSalesLedPlanName` rests on: it does ONE lookup,
+  // against PRICING_TIERS, because every sales-led id is also a tier id. If a
+  // legacy-only id ('monthly', 'annual') ever became sales-led, that single
+  // lookup would silently stop refusing it — so this fails first instead.
+  it('salesLedIdsAreAllTierIds', () => {
+    for (const planId of BILLING_PLAN_ORDER) {
+      if (!BILLING_PLANS[planId].contactSales) continue;
+      expect(isPricingTierId(planId), `${planId} is sales-led but not a tier id`).toBe(true);
+    }
+  });
+
+  it('refuses Group by its display name, not its stored id', () => {
+    // The id is 'enterprise' and customers read "Group". A refusal naming the id
+    // would be meaningless to the person reading it.
+    stubLive();
+    const result = resolveCheckoutPurchase({
+      plan: 'enterprise',
       currency: 'NGN',
       interval: 'annual',
       pricingV2: true,
     });
-    expect(monthly).toMatchObject({
-      ok: true,
-      planCode: 'PLN_live_month',
-      amountMinorUnit: 80_000_00,
-      interval: 'monthly',
-    });
-    expect(annual).toMatchObject({
-      ok: true,
-      planCode: 'PLN_live_year',
-      amountMinorUnit: 800_000_00,
-      interval: 'annual',
-    });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('expected a refusal');
+    expect(result.status).toBe(400);
+    expect(result.error).toContain('Group');
+    expect(result.error).not.toContain('enterprise');
   });
 
   it('records NO interval for a legacy purchase, whose id already carries it', () => {
@@ -415,7 +487,7 @@ describe('resolveCheckoutPurchase', () => {
     stubLive();
     for (const bogus of [undefined, null, '', 'yearly', 'ANNUAL', 3]) {
       const result = resolveCheckoutPurchase({
-        plan: 'label',
+        plan: 'manager',
         currency: 'NGN',
         interval: bogus,
         pricingV2: true,
@@ -430,7 +502,7 @@ describe('resolveCheckoutPurchase', () => {
     // set, so getting one step further before failing would be worse.
     stubLive();
     const result = resolveCheckoutPurchase({
-      plan: 'label',
+      plan: 'manager',
       currency: 'USD',
       interval: 'annual',
       pricingV2: true,

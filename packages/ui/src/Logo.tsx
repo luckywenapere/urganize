@@ -66,19 +66,22 @@ export const Logo: React.FC<LogoProps> = ({
   );
 };
 
-// Icon-only variant (square logo)
-export const LogoIcon: React.FC<{ size?: number; className?: string; priority?: boolean }> = ({ 
-  size = 24, 
+// Icon-only variant (square logo). Transparent PNG (white mark, no fill) —
+// `app-mark-invert` is the same light-theme invert trick app-wordmark uses,
+// so the mark reads correctly against either theme's page background
+// instead of carrying its own black square.
+export const LogoIcon: React.FC<{ size?: number; className?: string; priority?: boolean }> = ({
+  size = 24,
   className = '',
   priority = false,
 }) => {
   return (
-    <Image 
-      src="/images/urganize-logo-square.png"
+    <Image
+      src="/images/urganize-logo-square-transparent.png"
       alt="Urganize"
       width={size}
       height={size}
-      className={`object-contain ${className}`}
+      className={`app-mark-invert object-contain ${className}`}
       priority={priority}
     />
   );

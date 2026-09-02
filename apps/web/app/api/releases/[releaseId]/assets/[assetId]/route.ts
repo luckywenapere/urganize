@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createAdminClient,
-  ensureReleaseOwnership,
   requireActiveAuthenticatedUser,
   isOptionalTableMissingError,
 } from '../../../_shared';
+import { ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
 import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-helpers';
 
 const ASSETS_TABLE = 'assets';
@@ -37,7 +37,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const fetchResult = await adminClient

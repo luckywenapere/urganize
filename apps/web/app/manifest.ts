@@ -17,10 +17,17 @@ export default function manifest(): MetadataRoute.Manifest {
     display: 'standalone',
     background_color: '#0d120e',
     theme_color: '#0d120e',
+    // The real pixel dimensions, not `sizes: "any"`. Chrome's installability
+    // check wants a declared raster icon of at least 144px before it will
+    // offer an install (and therefore before it fires beforeinstallprompt,
+    // which is the whole desktop half of InstallAppPrompt); `any` is defined
+    // for scalable icons and leaves a PNG's size ambiguous. This file is
+    // 1004x1004 — if it is ever replaced, change this to match or the
+    // desktop install offer quietly stops appearing.
     icons: [
       {
         src: '/images/urganize-logo-square.png',
-        sizes: 'any',
+        sizes: '1004x1004',
         type: 'image/png',
         purpose: 'any',
       },

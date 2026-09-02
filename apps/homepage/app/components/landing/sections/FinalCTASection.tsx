@@ -7,39 +7,40 @@ import { centeredHeadlineClass } from "./shared";
 export function FinalCTASection() {
   return (
     <ScrollReveal>
-      <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
+      <SectionShell
+        className="py-[100px] lg:py-[120px]"
+        containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10"
+      >
         <div className="text-center">
           <h2 className={centeredHeadlineClass}>
             Releases shouldn&apos;t be hard to run.
           </h2>
 
-          {/* The one artists-as-advocates line on the page (2026-08
-              positioning: executives buy, artists benefit, word spreads).
-              Addressed to the executive — never to the artist. Cuttable if
-              the page ever feels heavy again. */}
-          <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
-            Your artists will feel the difference.
-          </p>
-
+          {/* The artists-as-advocates line ("Your artists will feel the
+              difference.") was cut 2026-08-25 on the founder's call — its
+              own comment had marked it cuttable from the day it shipped.
+              The headline plus the form plus one real quote is the whole
+              beat. */}
           <div className="relative z-[60] mt-10 flex w-full flex-col items-center gap-3">
             <WaitlistForm source="homepage_final_cta" />
-            {/* Founding Member line at the decision point, not the hero:
-                scarcity belongs next to the ask. Every claim here is
-                checkable — the cap, the price lock and the conversion
-                figure are founder-supplied (2026-08 brief); /pricing
-                carries a matching line so the two pages never disagree.
-                The 43% sentence is the founder's first-cut candidate if
-                this ever reads as too much. */}
-            <p className="mx-auto max-w-[30rem] text-balance text-sm leading-6 text-[var(--marketing-text-subtle)]">
-              Founding Members: capped at 10 teams, price locked for life.
-              43% of teams that try Urganize pay for it. There is no sales
-              team.
-            </p>
+            {/* The Founding Member line that used to sit here ("Founding
+                Members: capped at 10 teams, price locked for life. 43% of
+                teams that try Urganize pay for it. There is no sales
+                team.") was REMOVED 2026-08-25 on the founder's call, in the
+                same pass that cut the row titles from TransformationSection
+                and the proof-numbers line from WorkspaceShotSection. The
+                ask plus one real quote is the whole beat now. /pricing
+                still carries its own, shorter Founding Member line
+                ("...price locked for life. Still open.") — that one was
+                deliberately left, so the two pages no longer mirror each
+                other and the old never-disagree note no longer applies. Do
+                not restore this without fresh founder-supplied figures. */}
             {/* Adenaiye's chaos/multiple-releases sentence — the sharpest
                 ICP-match line on the site — at the last chance to convert a
-                scroller. Swapped off tamuno 2026-08-13: his full quote
-                already anchors TransformationSection's "Status" row, so
-                mounting him here repeated the same words twice on one page. */}
+                scroller. Swapped off tamuno 2026-08-13 to avoid repeating
+                his then-on-page TransformationSection quote; that section
+                was removed 2026-08-25 and this mount stands on the
+                ICP-match merit alone. */}
             <ProofLine id="adenaiye" className="mt-2" />
           </div>
         </div>

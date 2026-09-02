@@ -18,6 +18,7 @@ import {
   type UploadStep,
 } from '@/lib/upload-failure-report';
 import { MAX_CURATOR_BIO_LENGTH, MAX_CURATOR_DISPLAY_NAME_LENGTH } from '@/lib/pitching';
+import { prepareAvatarImage } from '@/lib/downscale-image';
 
 const inputClass =
   'h-11 w-full rounded-xl border border-stroke-default bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none';
@@ -107,6 +108,19 @@ export function CuratorProfilePageClient() {
     let step: UploadStep = 1;
     let status: number | undefined;
     try {
+      // Shrink before uploading — a photo straight off a phone or a print-res
+      // export can be far past what any browser will decode, and that failure
+      // paints a broken avatar without firing an error event. See
+      // lib/downscale-image.ts for the file that proved it.
+      const prepared = await prepareAvatarImage(file);
+      if (!prepared) {
+        setError('Could not read that image. Try a JPEG, or export the photo again.');
+        return;
+      }
+      // The prepared file is the upload from here: name, type and size travel
+      // together so the signed path, the bytes and the validated size agree.
+      const upload = prepared.file;
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -120,9 +134,9 @@ export function CuratorProfilePageClient() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          file_name: file.name,
-          mime_type: file.type,
-          file_size: file.size,
+          file_name: upload.name,
+          mime_type: upload.type,
+          file_size: upload.size,
         }),
       });
       const signPayload = (await signResponse.json().catch(() => null)) as {
@@ -138,8 +152,8 @@ export function CuratorProfilePageClient() {
       step = 2;
       const uploadResponse = await fetch(signPayload.upload_url, {
         method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
+        headers: { 'Content-Type': upload.type },
+        body: upload,
       });
       if (!uploadResponse.ok) {
         status = uploadResponse.status;

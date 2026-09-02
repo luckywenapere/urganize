@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizeReleaseSlug } from '@/lib/release-ops';
+import { checkLimit, type LimitVerdict } from '@/lib/entitlements';
+import { getWorkspaceTier } from '@/lib/team-billing-server';
 
 export const ARTISTS_TABLE = 'artists';
 export const RELEASES_TABLE = 'releases';
@@ -13,15 +15,183 @@ export type WorkspaceArtist = {
   slug: string;
 };
 
+const ARTIST_COLUMNS = 'id,workspace_id,owner_user_id,name,slug';
+
+function toWorkspaceArtist(row: Record<string, unknown>): WorkspaceArtist {
+  return {
+    id: String(row.id),
+    workspaceId: String(row.workspace_id || ''),
+    ownerUserId: String(row.owner_user_id || ''),
+    name: String(row.name || ''),
+    slug: String(row.slug || ''),
+  };
+}
+
 /**
- * Returns the workspace's single artist row, or null when none exists.
+ * Every artist on a team, oldest first.
  *
- * Workspace-scoped artists are the Phase 1+2 model. The v1 UI soft-limits to
- * one artist per workspace; until a "many artists per workspace" UI lands,
- * callers should treat workspace_id as the unique key and use `.maybeSingle`
- * semantics. `.order('created_at')` is added so that, in the legacy state
- * where a workspace has multiple artists, we return the oldest one
- * deterministically rather than racing on physical row order.
+ * Oldest-first is load-bearing rather than cosmetic: the first row is the
+ * team's original artist, which is what `getWorkspaceArtist` has always
+ * returned and what the implicit-artist path on release creation still falls
+ * back to. Reordering this would silently change which artist an API call that
+ * names none is filed under.
+ *
+ * Returns [] on any read failure. Callers render an empty roster rather than an
+ * error, matching how `getWorkspaceArtist` has always swallowed its errors —
+ * and the caller that matters (Settings) has its own error surface anyway.
+ */
+export async function listWorkspaceArtists(
+  adminClient: SupabaseClient,
+  workspaceId: string
+): Promise<WorkspaceArtist[]> {
+  if (!workspaceId) return [];
+  const { data, error } = await adminClient
+    .from(ARTISTS_TABLE)
+    .select(ARTIST_COLUMNS)
+    .eq('workspace_id', workspaceId)
+    .order('created_at', { ascending: true });
+
+  if (error || !Array.isArray(data)) return [];
+  return data.map((row) => toWorkspaceArtist(row as Record<string, unknown>));
+}
+
+/**
+ * How many artists a team has, or null when it cannot be read.
+ *
+ * Null means "do not enforce", exactly as `countTeamSeats` documents: turning a
+ * transient database blip into a team that cannot add an artist is worse than
+ * briefly allowing one too many.
+ */
+export async function countWorkspaceArtists(
+  adminClient: SupabaseClient,
+  workspaceId: string
+): Promise<number | null> {
+  if (!workspaceId) return null;
+  try {
+    const { count, error } = await adminClient
+      .from(ARTISTS_TABLE)
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId);
+    if (error) {
+      console.error('[artists] could not count workspace artists:', error.message);
+      return null;
+    }
+    return count ?? 0;
+  } catch (error) {
+    console.error('[artists] could not count workspace artists:', error);
+    return null;
+  }
+}
+
+/**
+ * Is this team allowed one more artist?
+ *
+ * Shared by BOTH places an artist can be created, which is the entire point:
+ * `POST /api/workspace/artists` is the one a person uses, and the
+ * lookup-or-create branch inside `POST /api/releases` will mint an artist for
+ * any caller that sends a name we have not seen. Capping only the first leaves
+ * the second open — the exact hole the seat cap had to close across two routes,
+ * and the reason this lives beside the counter rather than in a route file.
+ *
+ * FAILS OPEN twice, deliberately, mirroring `checkSeatAllowance`: an
+ * unresolvable tier and an unreadable count both return allowed, because
+ * refusing on a database blip is worse than briefly allowing one artist too
+ * many.
+ */
+export async function checkArtistAllowance(
+  adminClient: SupabaseClient,
+  workspaceId: string
+): Promise<LimitVerdict> {
+  const allowed: LimitVerdict = { allowed: true, limit: null, current: 0, remaining: null };
+
+  const tier = await getWorkspaceTier(workspaceId);
+  if (!tier) return allowed;
+
+  const current = await countWorkspaceArtists(adminClient, workspaceId);
+  if (current === null) return allowed;
+
+  return checkLimit({ tier, key: 'artists', current });
+}
+
+/**
+ * Adds an artist to a team.
+ *
+ * Does NOT check the tier ceiling — that is the route's job, because the two
+ * creation points (this, and the lookup-or-create inside `POST /api/releases`)
+ * need to report a refusal differently. Mixing the cap in here would make the
+ * cheaper of those two paths silently authoritative.
+ *
+ * The `conflict` flag mirrors `renameWorkspaceArtist`: the partial unique index
+ * on (workspace_id, slug) is the real guard, the pre-check is only there to
+ * produce a readable message, and 23505 is the backstop for the race between
+ * them.
+ */
+export async function createWorkspaceArtist(
+  adminClient: SupabaseClient,
+  input: { workspaceId: string; ownerUserId: string; name: string }
+): Promise<{ data: WorkspaceArtist | null; error: string | null; conflict?: boolean }> {
+  const trimmed = input.name.trim();
+  if (!trimmed) {
+    return { data: null, error: 'Artist name cannot be empty.' };
+  }
+  if (trimmed.length > 120) {
+    return { data: null, error: 'Artist name must be 120 characters or fewer.' };
+  }
+
+  const slug = normalizeReleaseSlug(trimmed) || `artist-${Date.now()}`;
+
+  const existing = await adminClient
+    .from(ARTISTS_TABLE)
+    .select('id')
+    .eq('workspace_id', input.workspaceId)
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (existing.data) {
+    return {
+      data: null,
+      error: `An artist named "${trimmed}" is already on your roster.`,
+      conflict: true,
+    };
+  }
+
+  const inserted = await adminClient
+    .from(ARTISTS_TABLE)
+    .insert({
+      owner_user_id: input.ownerUserId,
+      workspace_id: input.workspaceId,
+      name: trimmed,
+      slug,
+      updated_at: new Date().toISOString(),
+    })
+    .select(ARTIST_COLUMNS)
+    .single();
+
+  if (inserted.error || !inserted.data) {
+    const code = String((inserted.error as { code?: string } | null)?.code || '');
+    if (code === '23505') {
+      return {
+        data: null,
+        error: `An artist named "${trimmed}" is already on your roster.`,
+        conflict: true,
+      };
+    }
+    return { data: null, error: inserted.error?.message || 'Could not add artist.' };
+  }
+
+  return { data: toWorkspaceArtist(inserted.data as Record<string, unknown>), error: null };
+}
+
+/**
+ * Returns the workspace's FIRST artist row, or null when none exists.
+ *
+ * This predates multi-artist and is deliberately kept: it is the fallback for
+ * an API caller that creates a release without naming an artist, and it backs
+ * the identity card's unscoped read. `.order('created_at')` means "the team's
+ * original artist" rather than a race on physical row order — which was written
+ * as a defensive measure and became the actual contract when rosters landed.
+ *
+ * Anything that needs the whole roster wants `listWorkspaceArtists`.
  */
 export async function getWorkspaceArtist(
   adminClient: SupabaseClient,
@@ -29,7 +199,7 @@ export async function getWorkspaceArtist(
 ): Promise<WorkspaceArtist | null> {
   const { data, error } = await adminClient
     .from(ARTISTS_TABLE)
-    .select('id,workspace_id,owner_user_id,name,slug')
+    .select(ARTIST_COLUMNS)
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: true })
     .limit(1)
@@ -37,13 +207,7 @@ export async function getWorkspaceArtist(
 
   if (error || !data) return null;
 
-  return {
-    id: String(data.id),
-    workspaceId: String(data.workspace_id || ''),
-    ownerUserId: String(data.owner_user_id || ''),
-    name: String(data.name || ''),
-    slug: String(data.slug || ''),
-  };
+  return toWorkspaceArtist(data as Record<string, unknown>);
 }
 
 type RenameResult = {
@@ -215,6 +379,190 @@ export async function renameWorkspaceArtist(
     },
     error: null,
   };
+}
+
+/**
+ * Files one release under a different artist.
+ *
+ * WRITES THE SAME THREE PLACES A RENAME DOES, plus the link itself — and that
+ * set is the whole correctness story, so keep it in step with
+ * `renameWorkspaceArtist` above:
+ *   - releases.artist_id (the link; everything that decides visibility reads
+ *     this and nothing else)
+ *   - releases.artist_name (the denormalized cache every card and public page
+ *     renders)
+ *   - release_metadata.primary_artist_name (the same cache on the sidecar)
+ *
+ * Leaving either cache behind would not throw. The release would simply show
+ * the old artist's name everywhere while being filed under the new one, which
+ * is worse than an error because nothing would look wrong.
+ *
+ * THIS CHANGES WHO CAN SEE THE RELEASE. An artist-scoped teammate sees exactly
+ * the releases whose artist_id matches their scope, so moving a release grants
+ * it to one person's view and removes it from another's. That is why the route
+ * calling this is owner-only and says so before it runs.
+ *
+ * Authorization is the caller's job: this trusts that `releaseId` is owned by
+ * the actor and `artistId` is on their roster.
+ */
+export async function reassignReleaseArtist(
+  adminClient: SupabaseClient,
+  input: { releaseId: string; artist: WorkspaceArtist }
+): Promise<{ error: string | null }> {
+  const now = new Date().toISOString();
+
+  const updateRelease = await adminClient
+    .from(RELEASES_TABLE)
+    .update({
+      artist_id: input.artist.id,
+      artist_name: input.artist.name,
+      updated_at: now,
+    })
+    .eq('id', input.releaseId)
+    .select('id')
+    .maybeSingle();
+
+  if (updateRelease.error) {
+    return { error: updateRelease.error.message || 'Could not move the release.' };
+  }
+  if (!updateRelease.data) {
+    return { error: 'Release not found.' };
+  }
+
+  // Best-effort, exactly as the rename path treats it: the sidecar is a second
+  // copy of a name the release row already carries, and failing the whole
+  // request over it would leave the user thinking nothing moved when the link
+  // and the visible label both did.
+  await adminClient
+    .from(RELEASE_METADATA_TABLE)
+    .update({ primary_artist_name: input.artist.name, updated_at: now })
+    .eq('release_id', input.releaseId);
+
+  return { error: null };
+}
+
+export type ArtistDeletionBlocker = {
+  /** Releases still filed under this artist. */
+  releases: number;
+  /** Teammates who can only see this artist's releases. */
+  scopedMembers: number;
+};
+
+/**
+ * What deleting this artist would take with it.
+ *
+ * BOTH COUNTS ARE REFUSALS, not warnings, and each is a different kind of harm:
+ *
+ *   releases — the database would refuse anyway (releases_artist_id_fkey is ON
+ *     DELETE RESTRICT as of 20260830100000), but as a raw constraint error. This
+ *     is what turns that into a sentence naming the number. Before that
+ *     migration the constraint was ON DELETE SET NULL against a NOT NULL column,
+ *     so the refusal was an accident of two settings contradicting each other —
+ *     see the migration header.
+ *
+ *   scopedMembers — nothing in the database stops this one, and it is the
+ *     quieter harm. `workspace_members.artist_scope_id` is ON DELETE SET NULL,
+ *     and NULL there means FULL WORKSPACE VISIBILITY. So deleting an artist
+ *     silently promotes everyone scoped to them from "sees one artist" to "sees
+ *     everything", with no screen anywhere mentioning it.
+ *
+ * FAILS CLOSED, unlike every other count in this module. An unreadable count
+ * returns null and the caller must refuse: the cost of being wrong here is
+ * destroying a link or widening someone's access, neither of which is undoable,
+ * whereas the cost of a spurious refusal is that a manager retries.
+ */
+export async function countArtistDeletionBlockers(
+  adminClient: SupabaseClient,
+  artistId: string
+): Promise<ArtistDeletionBlocker | null> {
+  if (!artistId) return null;
+  try {
+    const [releases, members] = await Promise.all([
+      adminClient
+        .from(RELEASES_TABLE)
+        .select('id', { count: 'exact', head: true })
+        .eq('artist_id', artistId),
+      adminClient
+        .from('workspace_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('artist_scope_id', artistId)
+        .neq('status', 'removed'),
+    ]);
+
+    if (releases.error || members.error) {
+      console.error(
+        '[artists] could not count deletion blockers:',
+        releases.error?.message || members.error?.message
+      );
+      return null;
+    }
+
+    return {
+      releases: releases.count ?? 0,
+      scopedMembers: members.count ?? 0,
+    };
+  } catch (error) {
+    console.error('[artists] could not count deletion blockers:', error);
+    return null;
+  }
+}
+
+/**
+ * The refusal message for a blocked delete, or null when it may proceed.
+ *
+ * Pure, so the wording is testable. Every sentence names a number the manager
+ * can act on and says what to do about it — a refusal a user cannot resolve is
+ * worse than no button at all.
+ */
+export function describeArtistDeletionBlock(
+  blockers: ArtistDeletionBlocker | null
+): string | null {
+  if (!blockers) {
+    return 'Could not check what this artist is attached to. Try again.';
+  }
+
+  const { releases, scopedMembers } = blockers;
+  if (releases > 0 && scopedMembers > 0) {
+    return `This artist has ${releases} ${releases === 1 ? 'release' : 'releases'} and ${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} who can only see them. Move the ${releases === 1 ? 'release' : 'releases'} and change that access first.`;
+  }
+  if (releases > 0) {
+    return `This artist has ${releases} ${releases === 1 ? 'release' : 'releases'}. Move ${releases === 1 ? 'it' : 'them'} to another artist first, or archive ${releases === 1 ? 'it' : 'them'}.`;
+  }
+  if (scopedMembers > 0) {
+    return `${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} can only see this artist. Change their access first, or they will start seeing every release.`;
+  }
+  return null;
+}
+
+/**
+ * Removes an artist. The caller must have authorized it AND confirmed there is
+ * nothing to lose — see countArtistDeletionBlockers.
+ *
+ * Scoped to the workspace as well as the id so the write itself cannot reach
+ * another team's row, matching how the archive route re-asserts ownership on
+ * its UPDATE.
+ */
+export async function deleteWorkspaceArtist(
+  adminClient: SupabaseClient,
+  input: { artistId: string; workspaceId: string }
+): Promise<{ error: string | null }> {
+  const { error } = await adminClient
+    .from(ARTISTS_TABLE)
+    .delete()
+    .eq('id', input.artistId)
+    .eq('workspace_id', input.workspaceId);
+
+  if (error) {
+    // 23503 = foreign_key_violation: the RESTRICT backstop fired, which means a
+    // release was filed under this artist between our check and this delete.
+    const code = String((error as { code?: string }).code || '');
+    if (code === '23503') {
+      return { error: 'This artist has releases now. Move them first.' };
+    }
+    return { error: error.message || 'Could not remove this artist.' };
+  }
+
+  return { error: null };
 }
 
 /**

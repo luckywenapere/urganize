@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   SCENE_CACHE_MAX_RELEASES,
   SCENE_FRESH_MS,
@@ -13,6 +13,7 @@ import {
   releaseIdFromEntryKey,
   sceneEntryKey,
   shouldPersistScene,
+  shouldRevalidateOnLoad,
   trimSceneCacheEntries,
   withinPersistBudget,
   type SceneCacheEntry,
@@ -71,12 +72,14 @@ describe('persist policy', () => {
     // rather than a snapshot, so it owns its own reads and writes. The
     // calendar joins the list only when its flag is on — with it off, its API
     // routes 404, so prefetching would burn a guaranteed-404 per release.
+    const metadataEnabled = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
     const contentCalendarEnabled = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
     const captureEnabled = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
     const songUploadEnabled = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
     const coverArtEnabled = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
     const cacheable = [...SCENE_NAMES]
       .filter(isCacheableScene)
+      .filter((scene) => scene !== 'metadata' || metadataEnabled)
       .filter((scene) => scene !== 'calendar' || contentCalendarEnabled)
       .filter((scene) => scene !== 'capture' || captureEnabled)
       .filter((scene) => scene !== 'song' || songUploadEnabled)
@@ -91,6 +94,35 @@ describe('persist policy', () => {
     expect(isCacheableScene('plan')).toBe(false);
     expect(shouldPersistScene('plan')).toBe(false);
     expect((SCENE_PREFETCH_ORDER as readonly string[]).includes('plan')).toBe(false);
+  });
+
+  it('keeps the timeline scene out of the cache entirely', () => {
+    // The opposite reason to the plan scene's: this one fetches NOTHING. It is
+    // laid out from activities TasksPanel already has in props, so there is no
+    // payload to cache and a fetcher for it would have to invent a request that
+    // does not exist.
+    expect(isCacheableScene('timeline')).toBe(false);
+    expect(shouldPersistScene('timeline')).toBe(false);
+    expect((SCENE_PREFETCH_ORDER as readonly string[]).includes('timeline')).toBe(false);
+  });
+});
+
+describe('shouldRevalidateOnLoad', () => {
+  it('always revalidates metadata — a public form writes into it', () => {
+    // Collaborators submit credits through /credits/[token], so a
+    // fresh-looking cache entry can be missing an answer the owner is
+    // specifically looking for.
+    expect(shouldRevalidateOnLoad('metadata')).toBe(true);
+  });
+
+  it('leaves every other scene on the plain freshness window', () => {
+    // Deliberately narrow: the point of the cache is that tapping between
+    // scenes costs nothing, and every scene here changes only when the owner
+    // changes it. Adding one is a behaviour change, so this fails on purpose.
+    for (const scene of SCENE_NAMES) {
+      if (scene === 'metadata') continue;
+      expect(shouldRevalidateOnLoad(scene)).toBe(false);
+    }
   });
 });
 
@@ -224,5 +256,69 @@ describe('withinPersistBudget', () => {
 
   it('allows exactly the limit', () => {
     expect(withinPersistBudget('x'.repeat(SCENE_PERSIST_MAX_BYTES))).toBe(true);
+  });
+});
+
+// resolveActiveScene reads its four feature flags at MODULE scope (the
+// NEXT_PUBLIC_* inlining pattern), so stubbing env after an import would be too
+// late — each case re-imports with the flags it wants. All four are stubbed
+// explicitly rather than read from the ambient environment: vitest does not load
+// .env.local, and leaving any of them to chance would make these assertions
+// depend on whoever ran them.
+async function loadResolver(flagsOn: boolean) {
+  vi.resetModules();
+  for (const flag of [
+    'NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR',
+    'NEXT_PUBLIC_FEATURE_CAPTURE',
+    'NEXT_PUBLIC_FEATURE_SONG_UPLOAD',
+    'NEXT_PUBLIC_FEATURE_COVER_ART',
+    'NEXT_PUBLIC_FEATURE_TIMELINE',
+  ]) {
+    vi.stubEnv(flag, flagsOn ? 'true' : 'false');
+  }
+  return import('./scene-cache');
+}
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe('resolveActiveScene', () => {
+  it('returns null for no param, an unknown name, and near-misses', async () => {
+    const { resolveActiveScene } = await loadResolver(true);
+    expect(resolveActiveScene(null)).toBeNull();
+    expect(resolveActiveScene('')).toBeNull();
+    expect(resolveActiveScene('bogus')).toBeNull();
+    // Case and whitespace are NOT normalized: the app only ever writes these
+    // params itself, so a near-miss is a hand-typed URL and reads as no scene.
+    expect(resolveActiveScene('Metadata')).toBeNull();
+    expect(resolveActiveScene(' metadata')).toBeNull();
+  });
+
+  it('resolves every scene name when its flag is on', async () => {
+    const { resolveActiveScene, SCENE_NAMES: names } = await loadResolver(true);
+    for (const scene of names) {
+      expect(resolveActiveScene(scene)).toBe(scene);
+    }
+  });
+
+  it('treats the five flag-gated scenes as closed when their flags are off', async () => {
+    const { resolveActiveScene } = await loadResolver(false);
+    for (const scene of ['calendar', 'capture', 'song', 'coverart', 'timeline']) {
+      expect(resolveActiveScene(scene)).toBeNull();
+    }
+  });
+
+  it('leaves the five ungated scenes open with those flags off', async () => {
+    // Deliberate, and the reason this is asserted rather than left implicit:
+    // metadata / files / epk / pitch / plan gate themselves inside
+    // ReleaseScenePanel and their own pills, and gating them here would change
+    // which scenes RENDER rather than just consolidating the check. A future
+    // change that adds one of them to the resolver has to break this test on
+    // purpose.
+    const { resolveActiveScene } = await loadResolver(false);
+    for (const scene of ['metadata', 'files', 'epk', 'pitch', 'plan']) {
+      expect(resolveActiveScene(scene)).toBe(scene);
+    }
   });
 });

@@ -17,9 +17,12 @@ const NOW = new Date('2026-09-01T00:00:00.000Z');
 /** 15 days out, i.e. exactly half of a nominal 30-day monthly period. */
 const HALF_MONTH_LEFT = new Date('2026-09-16T00:00:00.000Z').toISOString();
 
+// Solo↔Manager is the only priced pair left after Label went sales-led on
+// 2026-08-30. Derived rather than literal, so a reprice moves the expectations
+// with the tier table.
 const monthlyDiff =
-  (getTierPrice('label', 'monthly')?.minorUnit ?? 0) -
-  (getTierPrice('manager', 'monthly')?.minorUnit ?? 0);
+  (getTierPrice('manager', 'monthly')?.minorUnit ?? 0) -
+  (getTierPrice('solo', 'monthly')?.minorUnit ?? 0);
 
 describe('unusedFraction', () => {
   it('is a half at the midpoint of a monthly period', () => {
@@ -54,9 +57,9 @@ describe('unusedFraction', () => {
 describe('quotePlanChange — upgrade', () => {
   it('charges the difference for the days left, and never moves the period end', () => {
     const quote = quotePlanChange({
-      currentPlan: 'manager',
+      currentPlan: 'solo',
       currentInterval: 'monthly',
-      targetTier: 'label',
+      targetTier: 'manager',
       targetInterval: 'monthly',
       periodEndsAt: HALF_MONTH_LEFT,
       now: NOW,
@@ -72,9 +75,9 @@ describe('quotePlanChange — upgrade', () => {
 
   it('charges the full difference at the very start of a period', () => {
     const quote = quotePlanChange({
-      currentPlan: 'manager',
+      currentPlan: 'solo',
       currentInterval: 'monthly',
-      targetTier: 'label',
+      targetTier: 'manager',
       targetInterval: 'monthly',
       periodEndsAt: new Date('2026-10-01T00:00:00.000Z').toISOString(),
       now: NOW,
@@ -86,9 +89,9 @@ describe('quotePlanChange — upgrade', () => {
   it('never charges more than the outright difference', () => {
     // The clamp matters: a 31-day period must not produce 103% of the gap.
     const quote = quotePlanChange({
-      currentPlan: 'manager',
+      currentPlan: 'solo',
       currentInterval: 'monthly',
-      targetTier: 'label',
+      targetTier: 'manager',
       targetInterval: 'monthly',
       periodEndsAt: new Date('2026-10-15T00:00:00.000Z').toISOString(),
       now: NOW,
@@ -102,9 +105,9 @@ describe('quotePlanChange — upgrade', () => {
     // process. Charging it would produce a broken checkout; the most this gives
     // away is a few days of the gap between two tiers.
     const quote = quotePlanChange({
-      currentPlan: 'manager',
+      currentPlan: 'solo',
       currentInterval: 'monthly',
-      targetTier: 'label',
+      targetTier: 'manager',
       targetInterval: 'monthly',
       periodEndsAt: new Date('2026-09-01T00:30:00.000Z').toISOString(),
       now: NOW,
@@ -119,9 +122,9 @@ describe('quotePlanChange — upgrade', () => {
     for (let hours = 1; hours <= 30 * 24; hours += 7) {
       const end = new Date(NOW.getTime() + hours * 60 * 60 * 1000).toISOString();
       const quote = quotePlanChange({
-        currentPlan: 'manager',
+        currentPlan: 'solo',
         currentInterval: 'monthly',
-        targetTier: 'label',
+        targetTier: 'manager',
         targetInterval: 'monthly',
         periodEndsAt: end,
         now: NOW,
@@ -137,9 +140,9 @@ describe('quotePlanChange — upgrade', () => {
 describe('quotePlanChange — downgrade', () => {
   it('moves nobody early and charges nothing', () => {
     const quote = quotePlanChange({
-      currentPlan: 'label',
+      currentPlan: 'manager',
       currentInterval: 'monthly',
-      targetTier: 'manager',
+      targetTier: 'solo',
       targetInterval: 'monthly',
       periodEndsAt: HALF_MONTH_LEFT,
       now: NOW,
@@ -159,9 +162,9 @@ describe('quotePlanChange — what it refuses', () => {
     [
       'the same plan',
       {
-        currentPlan: 'label',
+        currentPlan: 'manager',
         currentInterval: 'monthly',
-        targetTier: 'label',
+        targetTier: 'manager',
         targetInterval: 'monthly',
         periodEndsAt: HALF_MONTH_LEFT,
         now: NOW,
@@ -171,9 +174,9 @@ describe('quotePlanChange — what it refuses', () => {
     [
       'a change of interval, which would mean restarting the period',
       {
-        currentPlan: 'manager',
+        currentPlan: 'solo',
         currentInterval: 'monthly',
-        targetTier: 'label',
+        targetTier: 'manager',
         targetInterval: 'annual',
         periodEndsAt: HALF_MONTH_LEFT,
         now: NOW,
@@ -183,7 +186,7 @@ describe('quotePlanChange — what it refuses', () => {
     [
       'a sales-led target with no price to prorate',
       {
-        currentPlan: 'label',
+        currentPlan: 'manager',
         currentInterval: 'monthly',
         targetTier: 'enterprise',
         targetInterval: 'monthly',
@@ -193,9 +196,40 @@ describe('quotePlanChange — what it refuses', () => {
       'sales_led_target',
     ],
     [
-      'an unknown target',
+      // NEW 2026-08-30: Label used to be the flagship self-serve target and
+      // was the upgrade path these tests were written around. Now it is quoted
+      // by hand, so a self-serve move ONTO it must refuse rather than charge a
+      // card for a tier nobody may buy.
+      'Label as a target, now that it is sales-led',
+      {
+        currentPlan: 'manager',
+        currentInterval: 'monthly',
+        targetTier: 'label',
+        targetInterval: 'monthly',
+        periodEndsAt: HALF_MONTH_LEFT,
+        now: NOW,
+      },
+      'sales_led_target',
+    ],
+    [
+      // The other half: an existing Label subscriber cannot self-serve their
+      // way OFF it either. Their rate is one we quoted by hand, so the change
+      // is a conversation rather than arithmetic this package can do.
+      'Label as the current plan, which we may not hold the rate for',
       {
         currentPlan: 'label',
+        currentInterval: 'monthly',
+        targetTier: 'manager',
+        targetInterval: 'monthly',
+        periodEndsAt: HALF_MONTH_LEFT,
+        now: NOW,
+      },
+      'legacy_current_plan',
+    ],
+    [
+      'an unknown target',
+      {
+        currentPlan: 'manager',
         currentInterval: 'monthly',
         targetTier: 'platinum',
         targetInterval: 'monthly',
@@ -209,7 +243,7 @@ describe('quotePlanChange — what it refuses', () => {
       {
         currentPlan: 'annual',
         currentInterval: 'annual',
-        targetTier: 'label',
+        targetTier: 'manager',
         targetInterval: 'annual',
         periodEndsAt: new Date('2027-03-01T00:00:00.000Z').toISOString(),
         now: NOW,
@@ -221,7 +255,7 @@ describe('quotePlanChange — what it refuses', () => {
       {
         currentPlan: 'founding',
         currentInterval: 'annual',
-        targetTier: 'label',
+        targetTier: 'manager',
         targetInterval: 'annual',
         periodEndsAt: new Date('2027-03-01T00:00:00.000Z').toISOString(),
         now: NOW,
@@ -243,9 +277,9 @@ describe('quotePlanChange — what it refuses', () => {
     [
       'a period that has already lapsed',
       {
-        currentPlan: 'manager',
+        currentPlan: 'solo',
         currentInterval: 'monthly',
-        targetTier: 'label',
+        targetTier: 'manager',
         targetInterval: 'monthly',
         periodEndsAt: new Date('2026-08-01T00:00:00.000Z').toISOString(),
         now: NOW,
@@ -255,9 +289,9 @@ describe('quotePlanChange — what it refuses', () => {
     [
       'no period at all',
       {
-        currentPlan: 'manager',
+        currentPlan: 'solo',
         currentInterval: 'monthly',
-        targetTier: 'label',
+        targetTier: 'manager',
         targetInterval: 'monthly',
         periodEndsAt: null,
         now: NOW,
@@ -269,7 +303,7 @@ describe('quotePlanChange — what it refuses', () => {
       {
         currentPlan: null,
         currentInterval: 'monthly',
-        targetTier: 'label',
+        targetTier: 'manager',
         targetInterval: 'monthly',
         periodEndsAt: HALF_MONTH_LEFT,
         now: NOW,
@@ -310,8 +344,8 @@ describe('quotePlanChange — what it refuses', () => {
 describe('the quote can never contradict the tier table', () => {
   it('treats every cheaper-or-equal move as a downgrade, across both intervals', () => {
     for (const interval of ['monthly', 'annual'] as const) {
-      for (const from of ['manager', 'label'] as const) {
-        for (const to of ['manager', 'label'] as const) {
+      for (const from of ['solo', 'manager'] as const) {
+        for (const to of ['solo', 'manager'] as const) {
           if (from === to) continue;
           const fromPrice = getTierPrice(from, interval)?.minorUnit ?? 0;
           const toPrice = getTierPrice(to, interval)?.minorUnit ?? 0;

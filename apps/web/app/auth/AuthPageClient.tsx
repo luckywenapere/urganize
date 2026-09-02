@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuthStore } from '@/lib/auth-store';
+import { SESSION_EXPIRED_NOTICE_KEY, useAuthStore } from '@/lib/auth-store';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { HOME_PATH } from '@/lib/home-path';
 import { openExternalUrl } from '@/lib/external-link';
@@ -267,6 +267,22 @@ export default function AuthPage() {
     }
   }, [email, inviteEmail]);
 
+  // Was this visit caused by a session we lost rather than a sign-out the user
+  // asked for? lib/auth-store.ts leaves a one-shot marker when supabase-js
+  // drops a session on its own — usually a refresh it could not complete.
+  // Consumed on read, so a later visit in the same tab does not repeat it.
+  const [sessionExpired, setSessionExpired] = useState(false);
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem(SESSION_EXPIRED_NOTICE_KEY)) {
+        window.sessionStorage.removeItem(SESSION_EXPIRED_NOTICE_KEY);
+        setSessionExpired(true);
+      }
+    } catch {
+      // Restricted storage context — the notice is a courtesy, not a gate.
+    }
+  }, []);
+
   const openEmailStage = () => {
     setError('');
     focusEmailOnOpenRef.current = true;
@@ -401,7 +417,7 @@ export default function AuthPage() {
               "Log into Urganize"; desktop says what the identifier-first flow
               actually does — sign up or log in, decided by the email.
               (Founder call, 2026-08-21.) */}
-          <h1 className="mt-7 text-center font-display text-2xl font-bold uppercase tracking-[0.06em] text-content-primary">
+          <h1 className="mt-10 text-center font-display text-2xl font-bold uppercase tracking-[0.06em] text-content-primary">
             <span className="lg:hidden">Log into Urganize</span>
             <span className="hidden lg:inline">Sign up or log in</span>
           </h1>
@@ -416,7 +432,20 @@ export default function AuthPage() {
             </p>
           </noscript>
 
-          <div className="mt-12 w-full space-y-4">
+          {/* Not an error — the user did nothing wrong and their work is
+              intact. It exists so an unasked-for login screen is explained
+              rather than mysterious. */}
+          {sessionExpired && (
+            <p
+              role="status"
+              className="mt-6 w-full border border-stroke-default bg-bg-surface px-4 py-3 text-sm leading-relaxed text-content-secondary"
+            >
+              Your session ended, so you will need to log in again. Nothing has
+              been lost.
+            </p>
+          )}
+
+          <div className="mt-16 w-full space-y-4">
             {/* Google */}
             <button
               type="button"

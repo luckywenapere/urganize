@@ -3,15 +3,20 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   Check,
+  ChevronDown,
   ClipboardList,
   Copy,
+  Download,
   ExternalLink,
   Loader2,
+  Lock,
+  LockOpen,
   RefreshCw,
   Sparkles,
   Trash2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
+import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { MetadataFieldsSkeleton, ShareLinkCardSkeleton } from '@/components/loading/ReleaseSectionSkeletons';
 import type { ReleaseMetadataSnapshot } from '@/lib/release-ops';
 import {
@@ -19,14 +24,19 @@ import {
   validateGenrePredictionUpload,
 } from '@/lib/genre-prediction';
 import { RELEASE_CREDIT_ROLE_LABELS } from '@/types/credits';
+import {
+  buildCreditSubmissionsCsv,
+  creditsCsvFileName,
+} from '@/lib/credit-submissions-csv';
+import { shareOrDownloadTextFile } from '@/lib/share-file';
 import { useSceneData } from './useSceneData';
 import { useSceneDataStore, type MetadataScenePayload } from '@/stores/useSceneDataStore';
 
 // The metadata hub (URG-108). Self-contained (the EpkSection pattern): takes
 // releaseId, fetches its own data, renders its own loading/empty/error
-// states. Hosted by ReleaseSceneOverlay as an overlay window over the
-// workspace (2026-08-04 — it had its own /dashboard/releases/[releaseId]/metadata
-// page until then; that route is a redirect stub now). Three sections: editable
+// states. Hosted by ReleaseScenePanel as an inline panel over the workspace
+// (2026-08-04 — it had its own /dashboard/releases/[releaseId]/metadata page
+// until then; that route is a redirect stub now). Three sections: editable
 // release-level distribution fields, the collaborator credits share link, and
 // the submissions collected through it.
 //
@@ -38,6 +48,50 @@ import { useSceneDataStore, type MetadataScenePayload } from '@/stores/useSceneD
 // here: name the thing in words a beginner knows before naming it in industry
 // terms (ISRC gets a hint, not just a label), and say what is optional out
 // loud rather than leaving silence to imply "required".
+//
+// ROUND TWO (2026-08-25, founder feedback: the page is still "overloaded with
+// too much information for when a user just enters that section" — "bring down
+// the information so that even a 5th grader would understand what is going on
+// there and how to use it intuitively"). Round one fixed the COPY; entering the
+// scene still painted all three steps fully open at once — an intro line, three
+// headers, three helper paragraphs, all 8 fields with their hints, the explicit
+// checkbox, Save, the link card, and an empty-state line. So this pass changes
+// what renders on entry, not what it says: each step is now a collapsed card
+// (the TasksPanel bucket pattern — collapsed-by-default `<button aria-expanded
+// aria-controls>` with a rotating ChevronDown), carrying a plain title and a
+// live one-line status chip. Three decisions worth keeping if this gets touched
+// again:
+//   - All three cards start CLOSED on every entry, with no "smart" auto-open of
+//     the next incomplete step. Auto-opening would re-dump the 8-field grid on
+//     exactly the first-time user this complaint is about.
+//   - The open/closed state is session-only `useState`, NOT persisted to
+//     localStorage like the task buckets are. Buckets are a daily working view
+//     a user curates; this scene is visited occasionally and the complaint was
+//     about *entry*, so every entry has to start calm.
+//   - A load error hides all three cards behind ONE error box (there used to be
+//     two identical Retry boxes, one per step, plus a third step whose
+//     empty-state copy quietly lied during an error) — the whole scene is one
+//     fetch, so one error state covers it.
+//
+// ROUND THREE (2026-08-27, founder spec "Metadata Collection Link"). Four
+// things worth knowing before editing this file:
+//   - Step 2's link has THREE states, not two: no link / live / closed. Closing
+//     does not touch the token or any answer — the URL keeps resolving and the
+//     public page shows a "this request is closed" note instead of the form, so
+//     reopening brings the same link back. Regenerate still rotates the token
+//     AND clears the closed state, because "give me a new link" means the owner
+//     wants a working one.
+//   - `patchScene` reads the store at call time rather than the render closure.
+//     Metadata now always revalidates in the background on open
+//     (SCENE_REVALIDATE_ON_LOAD in lib/scene-cache.ts, so a submission that
+//     lands while the owner is looking is never hidden by the 30s freshness
+//     window), which means a fetch can resolve between a render and a mutation.
+//   - Every field the public form collects is now rendered in SubmissionCard.
+//     `country` and `publisherIpi` were captured from day one and shown
+//     nowhere, so an owner preparing a distributor handoff could not tell they
+//     had them.
+//   - Splits display at ONE decimal place, matching what the public form now
+//     accepts (lib/credit-submissions.ts). Legacy 2dp rows display rounded.
 //
 // NEXT_PUBLIC_ prefix so the value is inlined at build time for this client
 // component. The API routes guard the same flag server-side (404 when off).
@@ -61,6 +115,7 @@ async function getAccessToken(): Promise<string> {
 type MetadataFormState = {
   isrc: string;
   upc: string;
+  iswc: string;
   genre: string;
   subgenre: string;
   language: string;
@@ -73,6 +128,7 @@ type MetadataFormState = {
 const EMPTY_FORM: MetadataFormState = {
   isrc: '',
   upc: '',
+  iswc: '',
   genre: '',
   subgenre: '',
   language: '',
@@ -87,6 +143,7 @@ function toFormState(metadata: ReleaseMetadataSnapshot | null): MetadataFormStat
   return {
     isrc: metadata.isrc,
     upc: metadata.upc,
+    iswc: metadata.iswc,
     genre: metadata.genre,
     subgenre: metadata.subgenre,
     language: metadata.language,
@@ -97,36 +154,64 @@ function toFormState(metadata: ReleaseMetadataSnapshot | null): MetadataFormStat
   };
 }
 
+/** The blanks the Step 1 chip counts. The explicit checkbox is a yes/no rather
+ * than a blank to fill, so it stays out. */
+const COUNTED_METADATA_FIELDS = [
+  'genre',
+  'subgenre',
+  'language',
+  'labelName',
+  'isrc',
+  'upc',
+  'iswc',
+  'pLine',
+  'cLine',
+] as const satisfies readonly (keyof MetadataFormState)[];
+
+/** One decimal place, matching what the public form now accepts. Legacy rows
+ * stored with two decimals display rounded. */
 function formatPercent(value: number): string {
-  const rounded = Math.round(value * 100) / 100;
-  return `${rounded % 1 === 0 ? rounded : rounded.toFixed(2)}%`;
+  const rounded = Math.round(value * 10) / 10;
+  return `${rounded % 1 === 0 ? rounded : rounded.toFixed(1)}%`;
 }
 
-/** Splits have to add up to 100 — say so in words rather than leaving the
+/** Splits have to add up to 100, so say so in words rather than leaving the
  * reader to work out what "unclaimed" meant, or why 120% is a problem. */
 function describeSplitTotal(label: string, total: number): string {
-  const rounded = Math.round(total * 100) / 100;
+  const rounded = Math.round(total * 10) / 10;
   if (rounded === 100) return `${label} add up to 100%. Nothing missing.`;
   if (rounded > 100) {
-    return `${label} add up to ${formatPercent(total)} — that is ${formatPercent(
+    return `${label} add up to ${formatPercent(total)}. That is ${formatPercent(
       total - 100
     )} too much. They should total 100%.`;
   }
-  return `${label} add up to ${formatPercent(total)} — ${formatPercent(
+  return `${label} add up to ${formatPercent(total)}. ${formatPercent(
     100 - total
-  )} still missing. They should total 100%.`;
+  )} is still missing. They should total 100%.`;
 }
 
 function splitTotalTone(total: number): string {
-  return Math.round(total * 100) / 100 === 100 ? 'text-content-secondary' : 'text-status-warning';
+  return Math.round(total * 10) / 10 === 100 ? 'text-content-secondary' : 'text-status-warning';
 }
+
+/** Whether a split total needs a flag on the collapsed Step 3 chip — reuses
+ * splitTotalTone's own rounding so the chip and the in-card banner can never
+ * disagree about what "off" means. */
+function splitTotalIsOff(total: number): boolean {
+  return splitTotalTone(total) === 'text-status-warning';
+}
+
+type StepKey = 'details' | 'credits' | 'answers';
 
 type MetadataSectionProps = {
   releaseId: string;
+  /** Only used to name the exported spreadsheet. Optional so the scene keeps
+   * working for any caller that does not have it in hand. */
+  releaseTitle?: string;
   onToast?: (message: string, tone: 'success' | 'error' | 'warning') => void;
 };
 
-export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
+export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSectionProps) {
   // One cached scene covers both endpoints this section reads (metadata +
   // credits), fetched in parallel by the store. Cache-first, so re-opening
   // Metadata — or opening it after the workspace's idle prefetch has warmed
@@ -141,6 +226,20 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
 
   const link = data?.link ?? null;
   const submissions = useMemo(() => data?.submissions ?? [], [data]);
+
+  // --- Collapsed-card state ---------------------------------------------------
+  // Session-only and all-closed on every mount — see the ROUND TWO doc comment
+  // above for why this deliberately does not persist like the task buckets do.
+  const [openSteps, setOpenSteps] = useState<Record<StepKey, boolean>>({
+    details: false,
+    credits: false,
+    answers: false,
+  });
+  const toggleStep = (key: StepKey) =>
+    setOpenSteps((current) => ({ ...current, [key]: !current[key] }));
+  const detailsBodyId = useId();
+  const creditsBodyId = useId();
+  const answersBodyId = useId();
 
   // --- Release-level fields -------------------------------------------------
   const [form, setForm] = useState<MetadataFormState>(EMPTY_FORM);
@@ -168,23 +267,42 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
 
   // --- Submissions -------------------------------------------------------------
   const [deletingId, setDeletingId] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
 
   const shareUrl = link
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/credits/${link.shareToken}`
     : '';
+  /** A closed link still resolves: the public page shows a "this request is
+   * closed" message instead of the form, so the URL stays valid and reopening
+   * brings the same link back to life. */
+  const isLinkClosed = Boolean(link?.closedAt);
 
   /** Write-through helper: mutations return the authoritative row, so the
-   * cache is patched directly instead of costing another round trip. */
+   * cache is patched directly instead of costing another round trip.
+   *
+   * The base payload is read from the STORE at call time, not from the `data`
+   * captured when this callback was created. Metadata now always revalidates in
+   * the background on open (SCENE_REVALIDATE_ON_LOAD), so a fetch can land
+   * between a render and a mutation resolving — and merging onto the older
+   * closure copy would re-stamp superseded submissions as fresh. */
   const patchScene = useCallback(
-    (patch: Partial<MetadataScenePayload>) => {
+    (
+      patch:
+        | Partial<MetadataScenePayload>
+        | ((current: MetadataScenePayload) => Partial<MetadataScenePayload>)
+    ) => {
+      const held = useSceneDataStore.getState().getScene(releaseId, 'metadata');
+      const base: MetadataScenePayload = {
+        metadata: held?.metadata ?? null,
+        link: held?.link ?? null,
+        submissions: held?.submissions ?? [],
+      };
       setScene(releaseId, 'metadata', {
-        metadata: data?.metadata ?? null,
-        link: data?.link ?? null,
-        submissions: data?.submissions ?? [],
-        ...patch,
+        ...base,
+        ...(typeof patch === 'function' ? patch(base) : patch),
       });
     },
-    [data, releaseId, setScene]
+    [releaseId, setScene]
   );
 
   useEffect(() => {
@@ -343,6 +461,48 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
     }
   };
 
+  /**
+   * Close or reopen the link. No window.confirm on purpose: this repo reserves
+   * confirms for the irreversible (Regenerate kills a URL that may already be
+   * in someone's WhatsApp, Remove destroys an answer), and closing is one tap
+   * to undo with every submission untouched.
+   */
+  const handleToggleClosed = async (action: 'close' | 'reopen') => {
+    if (isMutatingLink) return;
+    setIsMutatingLink(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        onToast?.('Session expired. Please sign in again.', 'error');
+        return;
+      }
+      const res = await fetch(`/api/releases/${releaseId}/credits`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        link?: MetadataScenePayload['link'];
+        error?: string;
+      };
+      if (!res.ok || !data.link) {
+        onToast?.(data.error || 'Could not update the credits link.', 'error');
+        return;
+      }
+      patchScene({ link: data.link });
+      onToast?.(
+        action === 'close'
+          ? 'Link closed. No new answers can come in.'
+          : 'Link reopened. Answers can come in again.',
+        'success'
+      );
+    } catch (err) {
+      onToast?.(err instanceof Error ? err.message : 'Could not update the credits link.', 'error');
+    } finally {
+      setIsMutatingLink(false);
+    }
+  };
+
   const handleCopy = async () => {
     if (!shareUrl) return;
     try {
@@ -350,6 +510,42 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
       setCopied(true);
     } catch {
       onToast?.('Could not copy — select the link and copy it manually.', 'warning');
+    }
+  };
+
+  /**
+   * Hand the owner every submission as a spreadsheet.
+   *
+   * Entirely client-side: the scene already holds all of them, so there is no
+   * route and no second fetch. Goes through shareOrDownloadTextFile rather than
+   * a plain anchor because a webview cannot download — on native it opens the
+   * share sheet, and on an old shell without the plugins it says so instead of
+   * doing nothing (the DataExportSection precedent).
+   */
+  const handleExportCsv = async () => {
+    if (isExporting || submissions.length === 0) return;
+    setIsExporting(true);
+    try {
+      const outcome = await shareOrDownloadTextFile({
+        contents: buildCreditSubmissionsCsv(submissions),
+        fileName: creditsCsvFileName(releaseTitle || '', new Date().toISOString()),
+        mimeType: 'text/csv;charset=utf-8',
+        title: 'Collaborator credits',
+      });
+      if (outcome === 'unsupported') {
+        onToast?.(
+          'This app version cannot save files. Open app.urganize.app in your browser and export from there.',
+          'warning'
+        );
+      } else if (outcome === 'downloaded') {
+        onToast?.('Credits downloaded as a spreadsheet.', 'success');
+      } else if (outcome === 'shared') {
+        onToast?.('Your spreadsheet is ready to save.', 'success');
+      }
+    } catch (err) {
+      onToast?.(err instanceof Error ? err.message : 'Could not build the spreadsheet.', 'error');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -377,7 +573,9 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
         onToast?.(data.error || 'Could not remove the submission.', 'error');
         return;
       }
-      patchScene({ submissions: submissions.filter((item) => item.id !== submissionId) });
+      patchScene((current) => ({
+        submissions: current.submissions.filter((item) => item.id !== submissionId),
+      }));
       onToast?.('Submission removed.', 'success');
     } catch (err) {
       onToast?.(err instanceof Error ? err.message : 'Could not remove the submission.', 'error');
@@ -396,320 +594,488 @@ export function MetadataSection({ releaseId, onToast }: MetadataSectionProps) {
   );
   const hasAnySongwriterSplit = submissions.some((item) => item.songwriterSplit !== null);
   const hasAnyMasterSplit = submissions.some((item) => item.masterSplit !== null);
+  const splitsNeedAttention =
+    (hasAnySongwriterSplit && splitTotalIsOff(totalSongwriterSplit)) ||
+    (hasAnyMasterSplit && splitTotalIsOff(totalMasterSplit));
 
-  // "N of 8 filled in" — the explicit checkbox is a yes/no, not a blank to
-  // fill, so it stays out of the count.
+  // "N of 9 filled in" — derived from COUNTED_METADATA_FIELDS so the count and
+  // the total can never disagree when a field is added.
   const filledFieldCount = useMemo(
-    () =>
-      [form.genre, form.subgenre, form.language, form.labelName, form.isrc, form.upc, form.pLine, form.cLine].filter(
-        (value) => value.trim() !== ''
-      ).length,
+    () => COUNTED_METADATA_FIELDS.filter((field) => String(form[field]).trim() !== '').length,
     [form]
   );
 
   if (!METADATA_ENABLED) return null;
 
+  const answersChipLabel =
+    submissions.length > 0 ? `${submissions.length} answer${submissions.length === 1 ? '' : 's'}` : 'No answers yet';
+
   return (
-    <div className="mt-8 space-y-8">
-      {/* One plain sentence saying what this whole page is for, before the
-          three numbered steps below (founder feedback, 2026-08-13: the page
-          carried too much cognitive load — jargon copy, no ordering, nothing
-          saying fields are optional). */}
+    <div className="mt-8 space-y-4">
+      {/* One plain sentence saying what this whole page is for AND how to use
+          it — the interaction itself ("tap a step") is part of the 5th-grader
+          bar, not just the vocabulary (founder feedback, round two, 2026-08-25). */}
       <p className="text-sm leading-relaxed text-content-secondary">
-        Everything a music store needs to list this song correctly — plus one link that collects
-        your collaborators&rsquo; details for you. Three steps, all optional, in any order.
+        Everything music stores need for this song, in three steps. Tap a step to open it. Nothing
+        here is required.
       </p>
 
-      {/* Step 1: release details */}
-      <section>
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-            Step 1 · The song&rsquo;s details
-          </h2>
-          {!isLoading && !loadError ? (
-            <span
-              className={`text-[11px] ${filledFieldCount === 8 ? 'text-brand' : 'text-content-tertiary'}`}
-            >
-              {filledFieldCount} of 8 filled in
-            </span>
-          ) : null}
+      {loadError && !data ? (
+        // One error box for the whole scene, not one per step: it is a single
+        // fetch, and letting each step's body render its own copy of the form
+        // risks saving blanks over real data mid-error. Blocking ONLY when
+        // there is nothing to show — with cached data on screen, the banner
+        // inside the cards branch below reports the failure instead of
+        // hiding a perfectly good payload behind it (the CuratorLoadError
+        // blocking-vs-banner split).
+        <div className="flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-status-error">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => void reloadScene()}
+            className="inline-flex h-9 shrink-0 items-center self-start border border-stroke-default bg-bg-elevated px-4 text-sm font-semibold text-content-primary hover:bg-bg-hover sm:self-auto"
+          >
+            Retry
+          </button>
         </div>
-        <p className="mt-1 text-sm text-content-secondary">
-          Music stores like Spotify and Apple ask for these when a song goes out. Every field is
-          optional — fill in what you know now and come back for the rest.
-        </p>
-
-        {isLoading ? (
-          <MetadataFieldsSkeleton />
-        ) : loadError ? (
-          <div className="mt-4 flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-status-error">{loadError}</p>
-            <button
-              type="button"
-              onClick={() => void reloadScene()}
-              className="inline-flex h-9 shrink-0 items-center self-start border border-stroke-default bg-bg-elevated px-4 text-sm font-semibold text-content-primary hover:bg-bg-hover sm:self-auto"
-            >
-              Retry
-            </button>
-          </div>
-        ) : (
-          // Ordered easiest-first on purpose: the form opens on words a
-          // beginner already knows (genre, language) rather than on ISRC/UPC,
-          // which read as a wall of acronyms and used to be the first thing
-          // anyone saw.
-          <div className="mt-4 grid grid-cols-1 gap-4 border border-stroke-default bg-bg-surface p-4 sm:grid-cols-2">
-            <Field
-              label="Genre"
-              hint="The main style of the music, like Afrobeats or Hip-hop."
-              value={form.genre}
-              onChange={(v) => editForm((f) => ({ ...f, genre: v }))}
-              labelAction={
-                GENRE_PREDICTION_ENABLED ? (
-                  <>
-                    <input
-                      ref={genreFileInputRef}
-                      type="file"
-                      accept={GENRE_PREDICTION_ACCEPT_ATTR}
-                      className="hidden"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        // Reset so picking the same file again still fires.
-                        event.target.value = '';
-                        if (file) void handlePredictGenre(file);
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => genreFileInputRef.current?.click()}
-                      disabled={isPredictingGenre || isSaving}
-                      className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-60"
-                    >
-                      {isPredictingGenre ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-3 w-3" />
-                      )}
-                      {isPredictingGenre ? 'Predicting…' : 'Predict from audio'}
-                    </button>
-                  </>
-                ) : undefined
-              }
-            />
-            <Field
-              label="Subgenre"
-              hint="A more specific style, like Amapiano or Drill. Leave blank if none fits."
-              value={form.subgenre}
-              onChange={(v) => editForm((f) => ({ ...f, subgenre: v }))}
-            />
-            <Field
-              label="Language"
-              hint="The language of the lyrics, like English or Yoruba."
-              value={form.language}
-              onChange={(v) => editForm((f) => ({ ...f, language: v }))}
-            />
-            <Field
-              label="Label name"
-              hint="The label putting this out. Use the artist's name if there's no label."
-              value={form.labelName}
-              onChange={(v) => editForm((f) => ({ ...f, labelName: v }))}
-            />
-            <Field
-              label="ISRC"
-              hint="The ID code for this one recording. Your distributor gives it to you — leave blank if you don't have it yet."
-              value={form.isrc}
-              onChange={(v) => editForm((f) => ({ ...f, isrc: v }))}
-            />
-            <Field
-              label="UPC"
-              hint="The barcode number for the whole release. Also from your distributor."
-              value={form.upc}
-              onChange={(v) => editForm((f) => ({ ...f, upc: v }))}
-            />
-            <Field
-              label="℗ line (who owns the recording)"
-              hint="The year, then whoever owns the recording."
-              placeholder="℗ 2026 Some Label"
-              value={form.pLine}
-              onChange={(v) => editForm((f) => ({ ...f, pLine: v }))}
-            />
-            <Field
-              label="© line (who owns the words and artwork)"
-              hint="The year, then whoever owns the song itself."
-              placeholder="© 2026 Some Label"
-              value={form.cLine}
-              onChange={(v) => editForm((f) => ({ ...f, cLine: v }))}
-            />
-            <label className="flex items-center gap-2 text-sm text-content-secondary sm:col-span-2">
-              <input
-                type="checkbox"
-                checked={form.explicit}
-                onChange={(event) => editForm((f) => ({ ...f, explicit: event.target.checked }))}
-                className="h-4 w-4 accent-brand"
-              />
-              This song has explicit content (swearing or adult themes)
-            </label>
-            <div className="sm:col-span-2">
+      ) : (
+        <div className="space-y-3">
+          {loadError ? (
+            // Stale-but-usable: the refresh failed but a cached payload is on
+            // screen (the store keeps it on a failed revalidate). Keep the
+            // cards; say so above them.
+            <div className="flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-status-error">
+                Couldn&rsquo;t refresh this page &mdash; showing what we have. {loadError}
+              </p>
               <button
                 type="button"
-                onClick={() => void handleSaveMetadata()}
-                disabled={isSaving}
-                className="inline-flex h-9 items-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => void reloadScene()}
+                className="inline-flex h-8 shrink-0 items-center self-start border border-stroke-default bg-bg-elevated px-3 text-xs font-semibold text-content-primary hover:bg-bg-hover sm:self-auto"
               >
-                {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                {isSaving ? 'Saving…' : 'Save details'}
+                Retry
               </button>
             </div>
-          </div>
-        )}
-      </section>
-
-      {/* Step 2: credits share link */}
-      <section>
-        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Step 2 · Collect everyone&rsquo;s credits
-        </h2>
-        <p className="mt-1 text-sm text-content-secondary">
-          Anyone who worked on this song — producers, writers, engineers — fills out one short form.
-          Copy the link and send it to them on WhatsApp, text, or email. They don&rsquo;t need an
-          account.
-        </p>
-
-        {isLoading ? (
-          <ShareLinkCardSkeleton />
-        ) : loadError ? (
-          <div className="mt-4 flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-status-error">{loadError}</p>
+          ) : null}
+          {/* Step 1: release details */}
+          <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
             <button
               type="button"
-              onClick={() => void reloadScene()}
-              className="inline-flex h-9 shrink-0 items-center self-start border border-stroke-default bg-bg-elevated px-4 text-sm font-semibold text-content-primary hover:bg-bg-hover sm:self-auto"
+              onClick={() => toggleStep('details')}
+              aria-expanded={openSteps.details}
+              aria-controls={detailsBodyId}
+              className={`motion-focus flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover ${
+                openSteps.details ? 'border-b border-stroke-subtle' : ''
+              }`}
             >
-              Retry
-            </button>
-          </div>
-        ) : !link ? (
-          <div className="mt-4 border border-stroke-default bg-bg-surface p-6 text-center">
-            <p className="text-sm text-content-secondary">
-              One link works for everyone who worked on this song.
-            </p>
-            <button
-              type="button"
-              onClick={() => void handleCreateLink()}
-              disabled={isMutatingLink}
-              className="mt-3 inline-flex items-center gap-2 border border-brand/25 bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isMutatingLink ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Creating…
-                </>
-              ) : (
-                <>
-                  <ClipboardList className="h-3.5 w-3.5" />
-                  Create the link
-                </>
-              )}
-            </button>
-          </div>
-        ) : (
-          <div className="mt-4 border border-stroke-default bg-bg-surface p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <p className="min-w-0 flex-1 truncate font-mono text-xs text-content-secondary" title={shareUrl}>
-                {shareUrl}
-              </p>
-              <div className="flex flex-wrap gap-2 sm:shrink-0">
-                <button
-                  type="button"
-                  onClick={() => void handleCopy()}
-                  className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="h-3.5 w-3.5 text-brand" />
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3.5 w-3.5" />
-                      Copy link
-                    </>
-                  )}
-                </button>
-                <a
-                  href={shareUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  Open form
-                </a>
-                <button
-                  type="button"
-                  onClick={() => void handleRegenerateLink()}
-                  disabled={isMutatingLink}
-                  className="inline-flex h-9 items-center gap-2 border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-status-warning disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isMutatingLink ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  )}
-                  Regenerate
-                </button>
-              </div>
-            </div>
-            <p className="mt-3 text-xs text-content-tertiary">
-              Anyone with this link can fill out the form — no account needed. Need a fresh link?
-              Tap Regenerate: the old one stops working right away, and answers you already
-              collected are safe.
-            </p>
-          </div>
-        )}
-      </section>
-
-      {/* Step 3: submissions */}
-      <section>
-        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Step 3 · Their answers land here {submissions.length > 0 ? `(${submissions.length})` : ''}
-        </h2>
-
-        {submissions.length === 0 ? (
-          <p className="mt-4 text-sm text-content-secondary">
-            {link
-              ? 'Nothing yet. Once you share the link, each person’s answer shows up here on its own.'
-              : 'Create the link in step 2 first, then share it. Answers show up here as they come in.'}
-          </p>
-        ) : (
-          <>
-            {(hasAnySongwriterSplit || hasAnyMasterSplit) && (
-              <div className="mt-4 flex flex-col gap-2 border border-stroke-default bg-bg-surface p-4 text-sm sm:flex-row sm:items-center sm:gap-6">
-                {hasAnySongwriterSplit && (
-                  <p className={splitTotalTone(totalSongwriterSplit)}>
-                    {describeSplitTotal('Writing shares', totalSongwriterSplit)}
-                  </p>
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+                Step 1 · The song&rsquo;s details
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                {isLoading ? (
+                  <SkeletonBlock className="h-3 w-20" />
+                ) : (
+                  <span
+                    className={`text-[11px] ${
+                      filledFieldCount === COUNTED_METADATA_FIELDS.length
+                        ? 'text-brand'
+                        : 'text-content-tertiary'
+                    }`}
+                  >
+                    {filledFieldCount} of {COUNTED_METADATA_FIELDS.length} filled in
+                  </span>
                 )}
-                {hasAnyMasterSplit && (
-                  <p className={splitTotalTone(totalMasterSplit)}>
-                    {describeSplitTotal('Recording shares', totalMasterSplit)}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="mt-4 space-y-3">
-              {submissions.map((submission) => (
-                <SubmissionCard
-                  key={submission.id}
-                  submission={submission}
-                  isDeleting={deletingId === submission.id}
-                  onDelete={() => void handleDeleteSubmission(submission.id, submission.legalName)}
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${
+                    openSteps.details ? '' : '-rotate-90'
+                  }`}
+                  aria-hidden="true"
                 />
-              ))}
-            </div>
-          </>
-        )}
-      </section>
+              </span>
+            </button>
+            {openSteps.details ? (
+              <div id={detailsBodyId} className="p-4">
+                <p className="text-sm text-content-secondary">
+                  Music stores like Spotify and Apple ask for these when a song goes out. Every field
+                  is optional, so fill in what you know now and come back for the rest.
+                </p>
+
+                {isLoading ? (
+                  <MetadataFieldsSkeleton />
+                ) : (
+                  // Ordered easiest-first on purpose: the form opens on words a
+                  // beginner already knows (genre, language) rather than on ISRC/UPC,
+                  // which read as a wall of acronyms and used to be the first thing
+                  // anyone saw.
+                  <div className="mt-4 grid grid-cols-1 gap-4 border border-stroke-default bg-bg-surface p-4 sm:grid-cols-2">
+                    <Field
+                      label="Genre"
+                      hint="The main style of the music, like Afrobeats or Hip-hop."
+                      value={form.genre}
+                      onChange={(v) => editForm((f) => ({ ...f, genre: v }))}
+                      labelAction={
+                        GENRE_PREDICTION_ENABLED ? (
+                          <>
+                            <input
+                              ref={genreFileInputRef}
+                              type="file"
+                              accept={GENRE_PREDICTION_ACCEPT_ATTR}
+                              className="hidden"
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                // Reset so picking the same file again still fires.
+                                event.target.value = '';
+                                if (file) void handlePredictGenre(file);
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => genreFileInputRef.current?.click()}
+                              disabled={isPredictingGenre || isSaving}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-60"
+                            >
+                              {isPredictingGenre ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Sparkles className="h-3 w-3" />
+                              )}
+                              {isPredictingGenre ? 'Predicting…' : 'Predict from audio'}
+                            </button>
+                          </>
+                        ) : undefined
+                      }
+                    />
+                    <Field
+                      label="Subgenre"
+                      hint="A more specific style, like Amapiano or Drill. Leave blank if none fits."
+                      value={form.subgenre}
+                      onChange={(v) => editForm((f) => ({ ...f, subgenre: v }))}
+                    />
+                    <Field
+                      label="Language"
+                      hint="The language of the lyrics, like English or Yoruba."
+                      value={form.language}
+                      onChange={(v) => editForm((f) => ({ ...f, language: v }))}
+                    />
+                    <Field
+                      label="Label name"
+                      hint="The label putting this out. Use the artist's name if there's no label."
+                      value={form.labelName}
+                      onChange={(v) => editForm((f) => ({ ...f, labelName: v }))}
+                    />
+                    <Field
+                      label="ISRC"
+                      hint="The ID code for this one recording. Your distributor gives it to you — leave blank if you don't have it yet."
+                      value={form.isrc}
+                      onChange={(v) => editForm((f) => ({ ...f, isrc: v }))}
+                    />
+                    <Field
+                      label="UPC"
+                      hint="The barcode number for the whole release. Also from your distributor."
+                      value={form.upc}
+                      onChange={(v) => editForm((f) => ({ ...f, upc: v }))}
+                    />
+                    <Field
+                      label="ISWC"
+                      hint="The ID code for the song itself, not the recording. Your publisher or royalty society gives it to you. Leave blank if you don't have it yet."
+                      placeholder="T-123456789-1"
+                      value={form.iswc}
+                      onChange={(v) => editForm((f) => ({ ...f, iswc: v }))}
+                    />
+                    <Field
+                      label="℗ line (who owns the recording)"
+                      hint="The year, then whoever owns the recording."
+                      placeholder="℗ 2026 Some Label"
+                      value={form.pLine}
+                      onChange={(v) => editForm((f) => ({ ...f, pLine: v }))}
+                    />
+                    <Field
+                      label="© line (who owns the words and artwork)"
+                      hint="The year, then whoever owns the song itself."
+                      placeholder="© 2026 Some Label"
+                      value={form.cLine}
+                      onChange={(v) => editForm((f) => ({ ...f, cLine: v }))}
+                    />
+                    <label className="flex items-center gap-2 text-sm text-content-secondary sm:col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={form.explicit}
+                        onChange={(event) => editForm((f) => ({ ...f, explicit: event.target.checked }))}
+                        className="h-4 w-4 accent-brand"
+                      />
+                      This song has explicit content (swearing or adult themes)
+                    </label>
+                    <div className="sm:col-span-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleSaveMetadata()}
+                        disabled={isSaving}
+                        className="inline-flex h-9 items-center gap-2 border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                        {isSaving ? 'Saving…' : 'Save details'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          {/* Step 2: credits share link */}
+          <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
+            <button
+              type="button"
+              onClick={() => toggleStep('credits')}
+              aria-expanded={openSteps.credits}
+              aria-controls={creditsBodyId}
+              className={`motion-focus flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover ${
+                openSteps.credits ? 'border-b border-stroke-subtle' : ''
+              }`}
+            >
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+                Step 2 · Collect everyone&rsquo;s credits
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                {isLoading ? (
+                  <SkeletonBlock className="h-3 w-16" />
+                ) : (
+                  <span
+                    className={`text-[11px] ${
+                      isLinkClosed
+                        ? 'text-status-warning'
+                        : link
+                          ? 'text-brand'
+                          : 'text-content-tertiary'
+                    }`}
+                  >
+                    {isLinkClosed ? 'Link is closed' : link ? 'Link is live' : 'No link yet'}
+                  </span>
+                )}
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${
+                    openSteps.credits ? '' : '-rotate-90'
+                  }`}
+                  aria-hidden="true"
+                />
+              </span>
+            </button>
+            {openSteps.credits ? (
+              <div id={creditsBodyId} className="p-4">
+                <p className="text-sm text-content-secondary">
+                  Anyone who worked on this song, like producers, writers and engineers, fills out
+                  one short form. Copy the link and send it to them on WhatsApp, text or email. They
+                  don&rsquo;t need an account. One link works for everyone.
+                </p>
+
+                {isLoading ? (
+                  <ShareLinkCardSkeleton />
+                ) : !link ? (
+                  <div className="mt-4 border border-stroke-default bg-bg-surface p-6 text-center">
+                    <p className="text-sm text-content-secondary">
+                      One link works for everyone who worked on this song.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void handleCreateLink()}
+                      disabled={isMutatingLink}
+                      className="mt-3 inline-flex items-center gap-2 border border-brand/25 bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isMutatingLink ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Creating…
+                        </>
+                      ) : (
+                        <>
+                          <ClipboardList className="h-3.5 w-3.5" />
+                          Create the link
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-4 border border-stroke-default bg-bg-surface p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <p className="min-w-0 flex-1 truncate font-mono text-xs text-content-secondary" title={shareUrl}>
+                        {shareUrl}
+                      </p>
+                      {/* `sm:shrink-0` used to sit on this group and it made the
+                          `flex-wrap` beside it dead code: flex-shrink:0 pins the
+                          group at its ~350px max-content width, so instead of
+                          wrapping it OVERFLOWED the card and got clipped
+                          mid-word ("Regener…" — founder screenshot,
+                          2026-08-25). The group shrinks now and each button
+                          carries `shrink-0 whitespace-nowrap` instead, so they
+                          move whole onto a second row rather than compressing
+                          and breaking their own labels inside a fixed h-9 —
+                          the same fix TasksPanel's pills took on 2026-08-10.
+                          The URL beside them is `flex-1` with a 0 basis, so it
+                          absorbs none of the shrinkage and keeps truncating. */}
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleCopy()}
+                          className="inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
+                        >
+                          {copied ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-brand" />
+                              Copied
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5" />
+                              Copy link
+                            </>
+                          )}
+                        </button>
+                        <a
+                          href={shareUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Open form
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => void handleToggleClosed(isLinkClosed ? 'reopen' : 'close')}
+                          disabled={isMutatingLink}
+                          className="inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isMutatingLink ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : isLinkClosed ? (
+                            <LockOpen className="h-3.5 w-3.5" />
+                          ) : (
+                            <Lock className="h-3.5 w-3.5" />
+                          )}
+                          {isLinkClosed ? 'Reopen link' : 'Close link'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleRegenerateLink()}
+                          disabled={isMutatingLink}
+                          className="inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-secondary hover:bg-bg-hover hover:text-status-warning disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isMutatingLink ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          )}
+                          Regenerate
+                        </button>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-xs text-content-tertiary">
+                      {isLinkClosed
+                        ? 'This link is closed. Anyone who opens it sees a short "this request is closed" note instead of the form. Tap Reopen link to start collecting again.'
+                        : 'Done collecting? Tap Close link and the form stops taking answers, without breaking the link. Regenerate instead if you need a brand new one: the old link stops working right away, and answers you already collected are safe.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          {/* Step 3: submissions */}
+          <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
+            <button
+              type="button"
+              onClick={() => toggleStep('answers')}
+              aria-expanded={openSteps.answers}
+              aria-controls={answersBodyId}
+              className={`motion-focus flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover ${
+                openSteps.answers ? 'border-b border-stroke-subtle' : ''
+              }`}
+            >
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+                Step 3 · Their answers land here
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                {isLoading ? (
+                  <SkeletonBlock className="h-3 w-20" />
+                ) : (
+                  <span
+                    className={`text-[11px] ${
+                      submissions.length > 0 ? 'text-content-secondary' : 'text-content-tertiary'
+                    }`}
+                  >
+                    {answersChipLabel}
+                    {splitsNeedAttention ? <span className="text-status-warning"> · check the shares</span> : null}
+                  </span>
+                )}
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${
+                    openSteps.answers ? '' : '-rotate-90'
+                  }`}
+                  aria-hidden="true"
+                />
+              </span>
+            </button>
+            {openSteps.answers ? (
+              <div id={answersBodyId} className="p-4">
+                {submissions.length === 0 ? (
+                  <p className="text-sm text-content-secondary">
+                    {link
+                      ? 'Nothing yet. Once you share the link, each person’s answer shows up here on its own.'
+                      : 'Create the link in step 2 first, then share it. Answers show up here as they come in.'}
+                  </p>
+                ) : (
+                  <>
+                    {(hasAnySongwriterSplit || hasAnyMasterSplit) && (
+                      <div className="flex flex-col gap-2 border border-stroke-default bg-bg-surface p-4 text-sm sm:flex-row sm:items-center sm:gap-6">
+                        {hasAnySongwriterSplit && (
+                          <p className={splitTotalTone(totalSongwriterSplit)}>
+                            {describeSplitTotal('Writing shares', totalSongwriterSplit)}
+                          </p>
+                        )}
+                        {hasAnyMasterSplit && (
+                          <p className={splitTotalTone(totalMasterSplit)}>
+                            {describeSplitTotal('Recording shares', totalMasterSplit)}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Sits above the list rather than in the card header: it
+                        acts on ALL the answers, and the header is a toggle, so a
+                        button in there would fight the tap that opens the card. */}
+                    <div className="mt-4 flex">
+                      <button
+                        type="button"
+                        onClick={() => void handleExportCsv()}
+                        disabled={isExporting}
+                        className="inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap border border-stroke-default bg-bg-elevated px-3 text-sm font-medium text-content-primary hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isExporting ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Download className="h-3.5 w-3.5" />
+                        )}
+                        {isExporting ? 'Building…' : 'Download as spreadsheet'}
+                      </button>
+                    </div>
+
+                    <div className="mt-3 space-y-3">
+                      {submissions.map((submission) => (
+                        <SubmissionCard
+                          key={submission.id}
+                          submission={submission}
+                          isDeleting={deletingId === submission.id}
+                          onDelete={() => void handleDeleteSubmission(submission.id, submission.legalName)}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -791,17 +1157,34 @@ function SubmissionCard({
   isDeleting: boolean;
   onDelete: () => void;
 }) {
-  const submittedDate = submission.createdAt
-    ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(
-        new Date(submission.createdAt)
-      )
-    : '';
+  const formatDate = (value: string): string =>
+    new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(
+      new Date(value)
+    );
 
-  const contactLine = [submission.email, submission.phone].filter(Boolean).join(' · ');
+  const submittedDate = submission.createdAt ? formatDate(submission.createdAt) : '';
+  // Resubmitting with the same email replaces the earlier answer, keeping
+  // created_at — so an updated row needs to say when it last changed, or the
+  // owner has no way to tell a correction from the original. A minute of slack
+  // absorbs the trigger writing updated_at a hair after created_at on insert.
+  const updatedDate =
+    submission.updatedAt &&
+    submission.createdAt &&
+    new Date(submission.updatedAt).getTime() - new Date(submission.createdAt).getTime() > 60_000
+      ? formatDate(submission.updatedAt)
+      : '';
+
+  // Every field the form collects is shown: country and the publisher's IPI
+  // were captured from the start and rendered nowhere, so an owner doing a
+  // distributor handoff had to guess they were missing.
+  const contactLine = [submission.email, submission.phone, submission.country]
+    .filter(Boolean)
+    .join(' · ');
   const publishingLine = [
     submission.proAffiliation && `PRO: ${submission.proAffiliation}`,
     submission.ipiNumber && `IPI: ${submission.ipiNumber}`,
     submission.publisherName && `Publisher: ${submission.publisherName}`,
+    submission.publisherIpi && `Publisher IPI: ${submission.publisherIpi}`,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -872,6 +1255,7 @@ function SubmissionCard({
       {submittedDate ? (
         <p className="mt-3 text-[11px] uppercase tracking-[0.1em] text-content-tertiary">
           Submitted {submittedDate}
+          {updatedDate ? ` · updated ${updatedDate}` : ''}
         </p>
       ) : null}
     </div>

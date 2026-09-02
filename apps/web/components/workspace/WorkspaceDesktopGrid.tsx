@@ -1,14 +1,24 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { Plus } from 'lucide-react';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { WorkspaceReleaseCard } from './WorkspaceReleaseCard';
-import type { ReleaseCardData } from './ReleasesColumn';
+import type { ReleaseCardData, TestReleaseEntry } from './ReleasesColumn';
 
 type WorkspaceDesktopGridProps = {
   releases: ReleaseCardData[];
   onSelect: (releaseId: string) => void;
   onCreateRelease: () => void;
+  /**
+   * Replaces the built-in "No releases yet" state when `releases` is empty —
+   * see the same prop on ReleasesColumn for why. WorkspaceView passes the same
+   * node to both, so the phone and the desktop word a search miss identically.
+   */
+  emptyState?: ReactNode;
+  /** See TestReleaseEntry on ReleasesColumn — same one-tap entry, same gate
+   * (WorkspaceView passes it only when the flag is on). */
+  testRelease?: TestReleaseEntry;
 };
 
 /**
@@ -27,25 +37,55 @@ export function WorkspaceDesktopGrid({
   releases,
   onSelect,
   onCreateRelease,
+  emptyState,
+  testRelease,
 }: WorkspaceDesktopGridProps) {
+  const createButton = (
+    <button
+      type="button"
+      onClick={onCreateRelease}
+      // Disabled while the test release is being set up so the two entry
+      // points cannot race a second create; never true when the prop is
+      // absent, so the flag-off button is behaviorally unchanged.
+      disabled={testRelease?.isStarting}
+      className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <Plus className="h-4 w-4" />
+      Create release
+    </button>
+  );
+
   return (
     // No "Releases" eyebrow (founder call, 2026-07-23): the centered grid
     // IS the page — a left-anchored label over a centered row read as
     // misaligned, and the topbar already orients the user.
     <section className="workspace-mode-enter space-y-4">
-      {releases.length === 0 ? (
+      {releases.length === 0 && emptyState ? (
+        emptyState
+      ) : releases.length === 0 ? (
         <EmptyState
+          mascot="resting"
           title="No releases yet"
           description="Create your first release to start planning activities."
           action={
-            <button
-              type="button"
-              onClick={onCreateRelease}
-              className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
-            >
-              <Plus className="h-4 w-4" />
-              Create release
-            </button>
+            testRelease ? (
+              <div className="flex flex-col items-center gap-2.5">
+                {createButton}
+                <button
+                  type="button"
+                  onClick={testRelease.start}
+                  disabled={testRelease.isStarting}
+                  className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-4 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {testRelease.isStarting ? 'Setting up your test release…' : 'Try a test release'}
+                </button>
+                {testRelease.error ? (
+                  <p className="text-xs text-status-error">{testRelease.error}</p>
+                ) : null}
+              </div>
+            ) : (
+              createButton
+            )
           }
         />
       ) : (
@@ -84,7 +124,7 @@ export function WorkspaceDesktopGrid({
         // 1008px is exactly 4 max-width cards plus their gaps, so no future
         // width change anywhere upstream can produce a 5th column.
         <div className="mx-auto grid max-w-[1008px] justify-center gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,240px))]">
-          {releases.map(({ release, tasksDone, tasksTotal, coverArtUrl }) => (
+          {releases.map(({ release, tasksDone, tasksTotal, coverArtUrl, isTest }) => (
             <WorkspaceReleaseCard
               key={release.id}
               release={release}
@@ -93,6 +133,7 @@ export function WorkspaceDesktopGrid({
               selected={false}
               onSelect={onSelect}
               coverArtUrl={coverArtUrl}
+              isTest={isTest}
             />
           ))}
         </div>

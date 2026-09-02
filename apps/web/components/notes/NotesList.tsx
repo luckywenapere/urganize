@@ -120,6 +120,7 @@ export function NotesList({
       <div className="min-h-0 flex-1 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
         {isEmpty ? (
           <EmptyState
+            mascot="resting"
             title={
               isFiltering ? 'No notes for this release yet.' : 'Park a thought before it gets away.'
             }

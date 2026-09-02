@@ -45,7 +45,9 @@ const BASELINE = new Set([
   'app/api/tasks/route.ts',
   'app/api/ui-drafts/_shared.ts',
   'app/api/ui-drafts/route.ts',
-  'app/api/workspace/artist/route.ts',
+  // 'app/api/workspace/artist/route.ts' retired 2026-08-30: the singular route
+  // was replaced by /api/workspace/artists, which does not carry the pattern.
+  // A sanctioned ratchet down, not a suppression.
   'app/api/workspace/members/[id]/route.ts',
   'app/api/workspace/members/invite/route.ts',
   'app/api/workspace/members/route.ts',

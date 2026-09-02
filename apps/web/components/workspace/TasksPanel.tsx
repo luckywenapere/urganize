@@ -2,8 +2,12 @@
 
 import { useEffect, useId, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
 import {
+  ArrowRight,
   CalendarDays,
+  ChartNoAxesGantt,
   ChevronDown,
   ClipboardList,
   FolderOpen,
@@ -15,33 +19,43 @@ import {
   NotebookPen,
   Archive,
   PartyPopper,
+  Users,
   Plus,
   Radio,
   Search,
   Sparkles,
+  X,
   type LucideProps,
+  ListChecks,
 } from 'lucide-react';
 import {
   getTaskSectionLabel,
   groupTasksIntoSections,
+  isEventMilestone,
   type Task,
   type TaskSectionKey,
 } from '@/lib/tasks';
+import { matchesSearchTerms, parseSearchTerms, searchTasks } from '@/lib/task-search';
+import { appPageHaystack, buildAppPages, type AppPage } from '@/lib/app-pages';
+import { orderReleaseMenu, type ReleaseMenuKey } from '@/lib/release-menu';
+import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
+import { useAuthStore } from '@/lib/auth-store';
 import type { Release } from '@/types/releases';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { TaskRow } from '@/components/tasks/TaskRow';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useSceneOverlay, type SceneName } from './useSceneOverlay';
+import { resolveActiveScene } from '@/lib/scene-cache';
 
 // Metadata entry point (URG-108). This flag also gates the identity panel's
-// "Collect metadata" nav item (WorkspaceIdentityPanel) — the two must never
+// "Metadata" nav item (WorkspaceIdentityPanel) — the two must never
 // disagree about whether the feature exists, only about WHICH surface shows
 // it at a given viewport.
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 
 // Mirrors AppShell's own gate for the identity card, which is what hosts the
-// "Collect metadata" nav item this pill defers to at wide widths. Read here
+// "Metadata" nav item this pill defers to at wide widths. Read here
 // because the pill may only step aside where that card actually renders —
 // both flags default to false and are independent of METADATA above, so
 // without this check a metadata-on / identity-panel-off environment (the
@@ -60,10 +74,11 @@ const IDENTITY_PANEL_ENABLED =
 // rail happens to be closed. That is strictly better than a viewport band
 // where the feature has no entry point at all.
 //
-// Only takes effect at `lg`+ (both values are min-width breakpoints), so
-// reusing the same Metadata button below `lg` — in the new mobile top-tabs
-// row — is always safe: within the range that row renders, this class hasn't
-// started hiding anything yet.
+// Only takes effect at `lg`+ (both values are min-width breakpoints), which is
+// why it was safe on the mobile top tabs while they existed and is equally
+// irrelevant to the release menu that replaced them (2026-08-31): below `lg`
+// this class has never hidden anything. Metadata's narrow-width entry point is
+// that menu now — this button is desktop-only.
 // Exported so WorkspaceSkeleton reserves the placeholder at exactly the same
 // breakpoints (the loading-skeleton-sync rule that file documents; it has
 // already drifted from this row once).
@@ -74,11 +89,10 @@ export const METADATA_PILL_HIDE_CLASS = !IDENTITY_PANEL_ENABLED
     : 'lg:hidden';
 
 // Content calendar entry point (URG-157). Same flag that gates the calendar
-// API routes. On mobile this is now one of the top TABS (see the "outbound"
-// mobile row below) rather than a folded-menu item or a dock pill — moved
-// there 2026-08-16 (founder request, screenshot reference) alongside Press
-// kit, Recap and Metadata, the four things worth a permanent, always-visible
-// entry point.
+// API routes. It has been a dock pill, then a permanent mobile top tab
+// (2026-08-16), and since 2026-08-31 an entry in the release menu — ranked
+// third there, behind only Plan and Timeline, because marketing is 37 of the
+// playbook's 64 activities and this is where that work gets planned.
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 
 // Files entry point (URG-182): same flag gates the assets API routes and the
@@ -107,6 +121,12 @@ const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 // "more" menu rather than the top tabs — see the 2026-08-16 mobile redesign
 // note below for why it isn't one of the four permanent tabs.
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
+
+// Timeline entry point (2026-08-30). Same flag gates the ?scene=timeline URL
+// param in lib/scene-cache.ts, so a stale bookmark reads as no-scene when it
+// is off. The scene has no API routes to gate — it lays itself out from the
+// activities this panel already has in props.
+const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
 
 // Notes entry point: same flag AppTopbar and the identity panel read.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
@@ -143,12 +163,41 @@ export const TASKS_PILL_DOCK_OFFSET_CLASS = MOBILE_NAV_ENABLED
 export const taskPanelPillClass =
   'motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover';
 
+/** The two round icon buttons at the base of the mobile dock (search, more).
+ *  One class rather than two copies: they sit side by side, so any drift
+ *  between them is visible in the same glance. */
+const MOBILE_DOCK_TRIGGER_CLASS =
+  'motion-focus motion-press grid h-8 w-8 shrink-0 touch-manipulation place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary';
+
+/** The panel either trigger opens. Shared so the menu and the search surface
+ *  cannot end up looking like two different components. */
+const MOBILE_DOCK_PANEL_CLASS =
+  'rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]';
+
+/** Group label inside the search results. */
+const SEARCH_GROUP_HEADING_CLASS =
+  'px-2 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-content-tertiary';
+
+/**
+ * First non-empty line of an activity's body, shown on a search row that
+ * matched THERE rather than in the title — a result has to be able to say why
+ * it is in the list. Truncation is left to CSS so no arbitrary character
+ * budget has to be maintained here.
+ */
+function describeDescriptionMatch(description: string | null): string | null {
+  if (!description) return null;
+  return description
+    .split('\n')
+    .map((line) => line.trim())
+    .find(Boolean) ?? null;
+}
+
 /**
  * A flag-gated AI action ported from the removed release detail page
  * (Status update, Release recap). Structured rather than pre-rendered
  * ReactNode: this component places each one in a different spot at each
  * width (the desktop header row, the mobile top tabs, or the mobile folded
- * "more" menu), and the folded menu's search needs a real label to filter
+ * "more" menu), and the mobile search surface needs a real label to filter
  * against — a rendered `<button>` blob can't be introspected for its text.
  */
 export type TaskPanelAction = {
@@ -240,6 +289,7 @@ type TasksPanelProps = {
   /** Shelve a finished release, or restore an archived one. Modal-shaped like
    *  recap, so it lives in the same two places. */
   archiveAction?: TaskPanelAction | null;
+  changeArtistAction?: TaskPanelAction | null;
   /**
    * When set, replaces the activity buckets with this content while keeping the
    * header row of pills above it (2026-08-05, founder call). That row is the
@@ -278,16 +328,29 @@ type TasksPanelProps = {
   showPlanPill?: boolean;
 };
 
-/** One entry in the mobile "more" menu — the folded pills that don't earn a
- * permanent spot on a phone (see the 2026-08-16 redesign note below). Data,
- * not JSX: the menu's search filters on `label`, which a pre-rendered button
- * can't be introspected for. */
+/** One entry in the mobile release menu. Since 2026-08-31 that is EVERY
+ * release surface on a phone, not just the folded overflow — the top-tabs
+ * strip is gone and this list replaced it (founder call, below).
+ *
+ * Data, not JSX, for two reasons now: the mobile SEARCH surface matches these
+ * on `label`, which a pre-rendered button can't be introspected for; and
+ * `lib/release-menu.ts` sorts them, which needs a `key` it can read.
+ *
+ * `key` is the closed `ReleaseMenuKey` union deliberately: a new entry that
+ * hasn't been given a position in RELEASE_MENU_ORDER fails to type-check,
+ * which is what stops the next scene silently landing at the bottom. */
 type MoreMenuAction = {
-  key: string;
+  key: ReleaseMenuKey;
   label: string;
   icon: ComponentType<LucideProps>;
   onClick: () => void;
   disabled?: boolean;
+  /** Lit when this entry's scene is the open one. It replaces what the top
+   *  tabs used to say with `aria-pressed`: which surface you are looking at,
+   *  and that tapping it again closes it. Only the scene toggles set it —
+   *  the modal actions (Status update, Recap, Archive, Change artist) open
+   *  something over the page and have no lit state to report. */
+  isActive?: boolean;
 };
 
 export function TasksPanel({
@@ -297,6 +360,7 @@ export function TasksPanel({
   statusUpdateAction,
   recapAction,
   archiveAction,
+  changeArtistAction,
   sceneContent,
   activitiesBanner,
   bannerReplacesEmptyState = false,
@@ -306,26 +370,31 @@ export function TasksPanel({
   // this panel stays where it is underneath the modal.
   const { openTask, openQuickCreate } = useTaskUI();
 
+  // For the search surface's Pages group. `useRouter` only — deliberately NOT
+  // `useSearchParams`, which in a statically prerendered client component bails
+  // out to the nearest Suspense boundary; the scoped release reaches this
+  // component as a prop, and the one place that needs the live URL
+  // (leaveReleaseForCatalog) reads it at click time.
+  const router = useRouter();
+  // Tri-state, and null must stay "not yet" rather than "no" — buildAppPages
+  // handles that, and the cost of being wrong here is only that the crossing
+  // is briefly unsearchable for a dual account.
+  const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
+
   // The pills below swap this panel's body between the activity buckets and a
   // release scene (Calendar / Files / Press kit), in place — they
   // were nav links to separate pages until 2026-08-04, then briefly modal
   // overlays, and are now an inline swap per the founder's correction. Clicking
   // the pill of the scene that's already open closes it, back to activities.
   const { activeScene: urlScene, openScene, closeScene } = useSceneOverlay();
-  // Mirror WorkspaceView's flag gate: with the calendar flag off, a stale
-  // `?scene=calendar` URL must not flip the leading pill to "Activities" for a
-  // scene that isn't rendering (WorkspaceView passes no sceneContent then).
-  // Same for `?scene=capture`/`?scene=song`/`?scene=coverart` behind their own
-  // flags — 'song' and 'coverart' were missing from this specific mirror
-  // until 'coverart' was added, a small pre-existing gap now closed alongside
-  // it (WorkspaceView's own copy of this gate already covered all four).
-  const activeScene =
-    (urlScene === 'calendar' && !CONTENT_CALENDAR_ENABLED) ||
-    (urlScene === 'capture' && !CAPTURE_ENABLED) ||
-    (urlScene === 'song' && !SONG_UPLOAD_ENABLED) ||
-    (urlScene === 'coverart' && !COVER_ART_ENABLED)
-      ? null
-      : urlScene;
+  // Shared with WorkspaceView (which builds the scene body) and
+  // WorkspaceSkeleton (which reserves its layout) rather than mirrored here:
+  // with a flag off, a stale `?scene=…` URL must not flip the leading pill to
+  // "Activities" for a scene that isn't rendering. This used to be a local copy
+  // of the same four-flag expression and it had drifted — 'song' and 'coverart'
+  // were missing from it for a while — which is exactly why it now lives in
+  // lib/scene-cache.ts.
+  const activeScene = resolveActiveScene(urlScene);
 
   /**
    * Pill classes, lit when that scene is the open one. `shrink-0
@@ -403,21 +472,27 @@ export function TasksPanel({
     writePersistedState(EXPANDED_STORAGE_KEY, EXPANDED_STORAGE_VERSION, next);
   };
 
-  // The mobile "more" menu (2026-08-16 redesign, below) — collapsed by
-  // default, so nothing here is reserved in the skeleton (the Plan-pill
+  // The mobile dock's two panels (2026-08-16 redesign, split 2026-08-31 —
+  // see the base-dock block below). Both collapsed by default, so neither is
+  // reserved in the skeleton beyond its trigger button (the Plan-pill
   // precedent: data this component doesn't have yet gets no guessed width).
-  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-  const [moreMenuQuery, setMoreMenuQuery] = useState('');
+  //
+  // ONE selector rather than two booleans, so the panels are mutually
+  // exclusive by construction: they occupy the same slot above the trigger
+  // row, and two open at once would stack into a full-screen sheet nobody
+  // designed.
+  const [openMobilePanel, setOpenMobilePanel] = useState<'menu' | 'search' | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const moreMenuListId = useId();
+  const searchPanelId = useId();
 
-  const toggleMoreMenu = () => {
-    setIsMoreMenuOpen((open) => {
-      const next = !open;
-      // Fresh state on every open, not just on close: a query left over from
-      // a previous look at the menu should not silently filter the next one.
-      if (!next) setMoreMenuQuery('');
-      return next;
-    });
+  const toggleMobilePanel = (panel: 'menu' | 'search') => {
+    setOpenMobilePanel((current) => (current === panel ? null : panel));
+    // Unconditional: every toggle either opens the search fresh or leaves it,
+    // so a query is never worth carrying across one. A leftover query would
+    // silently filter the next look at a surface the user thinks they just
+    // opened.
+    setSearchQuery('');
   };
 
   /**
@@ -470,13 +545,34 @@ export function TasksPanel({
       </button>
     ) : null;
 
-  // Metadata (URG-108). Desktop: NARROW widths only, since the identity
-  // panel's "Collect metadata" nav item is this release's persistent entry
+  // Timeline and Metadata — DESKTOP HEADER ROW ONLY since 2026-08-31, when the
+  // mobile top-tabs strip these two also fed was removed (founder call; see the
+  // note where that row used to render). On a phone both are entries in the
+  // release menu at the base of the panel instead.
+  //
+  // Metadata (URG-108) is additionally NARROW-widths-only on desktop, since the
+  // identity panel's "Metadata" nav item is this release's persistent entry
   // point at wide widths (WorkspaceIdentityPanel) and two controls for one
   // scene is noise — see METADATA_PILL_HIDE_CLASS above for exactly where it
-  // retreats. Mobile (2026-08-16): one of the three permanent top tabs
-  // (Calendar / Metadata / Pitch as of 2026-08-17), where that hide class is
-  // always inert (it only ever fires at/above `lg`).
+  // retreats. That class only ever fires at/above `lg`, so it was inert in the
+  // mobile row and is inert in the menu entry too; what keeps Metadata
+  // reachable on a phone now is the menu, not this button.
+  //
+  // Timeline leads the row for the same reason it leads the menu: it is the
+  // same activities seen a different way, so it reads as a view switch rather
+  // than another release surface.
+  const timelineButton =
+    TIMELINE_ENABLED && scopedRelease ? (
+      <button
+        type="button"
+        onClick={() => toggleScene('timeline', scopedRelease.id)}
+        aria-pressed={activeScene === 'timeline'}
+        className={pillClass('timeline')}
+      >
+        Timeline
+      </button>
+    ) : null;
+
   const metadataButton =
     METADATA_ENABLED && scopedRelease ? (
       <button
@@ -486,7 +582,7 @@ export function TasksPanel({
         className={`${pillClass('metadata')} ${METADATA_PILL_HIDE_CLASS}`}
       >
         <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
-        Collect metadata
+        Metadata
       </button>
     ) : null;
 
@@ -522,13 +618,12 @@ export function TasksPanel({
       </button>
     ) : null;
 
-  // Playlist pitching: browse curator playlists and send this release's
-  // song, with each curator's answer shown beside it. Mobile (2026-08-17):
-  // one of the three top tabs, alongside Calendar and Collect metadata —
-  // pitching is frequent enough to earn a permanent, always-visible spot
-  // rather than the folded menu (it was its own standalone pill until this
-  // date, when Recap took that row's other slot instead — see the top-tabs
-  // and base-dock comments further down).
+  // Playlist pitching: browse curator playlists and send this release's song,
+  // with each curator's answer shown beside it. Desktop header row only since
+  // 2026-08-31 (the top-tabs strip it used to feed is gone). It still ranks
+  // high in the mobile menu — fourth, above Metadata — because the reason it
+  // earned a permanent tab in the first place holds: pitching is frequent, and
+  // marketing is 37 of the playbook's 64 activities.
   const pitchButton =
     PITCHING_ENABLED && scopedRelease ? (
       <button
@@ -600,8 +695,12 @@ export function TasksPanel({
       aria-pressed={activeScene === 'calendar'}
       className={pillClass('calendar')}
     >
+      {/* Keeps the calendar glyph: this scene IS a month grid of planned
+          posts, so the icon is right even though the label shortened. What
+          changed is Shows, which was using this same glyph for a live date
+          and now uses a microphone. */}
       <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-      Calendar
+      Content
     </button>
   ) : null;
 
@@ -679,46 +778,45 @@ export function TasksPanel({
     </button>
   ) : null;
 
-  /**
-   * Mobile top tabs (2026-08-16, founder request via screenshot reference).
-   * The permanent, always-visible entry points on a phone: Calendar,
-   * Collect metadata, Pitch. Unlike the desktop footer's outbound pair,
-   * these do NOT hide while a scene is open — the whole point of a tab strip
-   * is that every tab stays reachable and the active one is highlighted,
-   * matching the reference (all tabs visible, "Logs" lit).
-   *
-   * All three are scene toggles (Pitch included, as of 2026-08-17 — it was a
-   * standalone base-dock pill before that date) and all three light up via
-   * `aria-pressed` when their scene is open.
-   *
-   * Press kit and Recap are NOT part of this row. Press kit moved to the
-   * folded "more" menu 2026-08-17 (which is why `epkButton` doesn't appear
-   * here even though the variable still exists — desktop's footer row still
-   * uses it, unchanged). Recap joined it there the same day: it opens a
-   * modal rather than a scene, so it never lit up here anyway, and the
-   * folded menu is where the other non-scene AI action (Status update)
-   * already lives.
-   */
-  const hasMobileTopTabs = Boolean(
-    scopedRelease && (calendarButton || metadataButton || pitchButton)
-  );
+  const changeArtistButton = changeArtistAction ? (
+    <button type="button" onClick={changeArtistAction.onClick} className={neutralPillClass}>
+      <Users className="h-3.5 w-3.5" aria-hidden="true" />
+      {changeArtistAction.label}
+    </button>
+  ) : null;
 
-  // The folded "more" menu (2026-08-16; Press kit and Recap added
-  // 2026-08-17) — everything that isn't a top tab or, on mobile, in the
-  // panel's own scroll body. Data, not JSX, so the search box above the list
-  // can filter on a real label. Order mirrors the rough priority the desktop
-  // row already implies: Plan first (it's the one thing a plan-less release
-  // needs), then Cover art, Song and Files — the release's core identity
-  // assets — then the two AI actions from the removed release detail page
-  // (Status update, Recap) grouped together, then Press kit and Fan capture
-  // together at the end — the two "send this outward" items, same pairing
-  // the desktop footer row keeps them in.
-  // Deliberately NOT memoized: each entry's onClick closes over `toggleScene`,
-  // which itself closes over the current `activeScene` — memoizing this array
-  // risks serving a stale closure (tap "Song" after switching scenes without
-  // this array's own deps changing, and it would toggle against a scene that
-  // is no longer the open one). The array is eight items at most, so
-  // recomputing it every render costs nothing worth guarding against.
+  /**
+   * The mobile release menu — EVERY release surface on a phone since
+   * 2026-08-31, not just the overflow it used to be.
+   *
+   * Founder call that day: "Remove all top menu pills in mobile view and put
+   * them in the hamburger menu. In an order that makes sense to the user based
+   * on previous usage data." So the top-tabs strip (Timeline / Content /
+   * Metadata / Pitch, permanent tabs since 2026-08-16) is gone and those four
+   * are entries here, ranked among the rest.
+   *
+   * Nothing was stranded by removing that strip, which is the check worth
+   * repeating before touching this: every scene renders inside
+   * `ReleaseScenePanel`, which carries its own heading naming the scene AND
+   * its own "Activities" back control at every width. So the tabs were not the
+   * way out of a scene and not the only label saying which one was open —
+   * losing them costs the ability to switch scene A → scene B in one tap,
+   * which now takes two (open the menu, pick).
+   *
+   * ORDER is `lib/release-menu.ts`, which carries the full argument — including
+   * the honest note that there is no usage data to base it on (PostHog is
+   * unset in production, so no click has ever been counted) and what was used
+   * instead. Do not re-rank these here; that module is the source of truth and
+   * the sort below is what actually decides.
+   *
+   * Data, not JSX, so the search surface can match on a real label. Deliberately
+   * NOT memoized: each entry's onClick closes over `toggleScene`, which closes
+   * over the current `activeScene` — memoizing risks serving a stale closure
+   * (tap "Song" after switching scenes without this array's own deps changing,
+   * and it would toggle against a scene that is no longer the open one). It is
+   * fourteen items at most, so recomputing it every render costs nothing worth
+   * guarding against.
+   */
   const moreMenuActionsRaw: (MoreMenuAction | null)[] = [
     showPlanPill && scopedRelease
       ? {
@@ -726,6 +824,56 @@ export function TasksPanel({
           label: 'Plan',
           icon: Sparkles,
           onClick: () => toggleScene('plan', scopedRelease.id),
+          isActive: activeScene === 'plan',
+        }
+      : null,
+    // The four below were the top tabs until 2026-08-31. They keep the labels
+    // and icons their pills carry on desktop, so a user moving between a phone
+    // and a laptop sees the same names in the same order.
+    TIMELINE_ENABLED && scopedRelease
+      ? {
+          key: 'timeline',
+          label: 'Timeline',
+          // The desktop pill has no icon (it is the only one in that row
+          // without one, pre-dating this change); a menu row needs one, and a
+          // Gantt mark is what this scene actually draws. Deliberately not a
+          // calendar glyph even though it is a date axis — Content already
+          // holds that one two rows down, and two calendar icons side by side
+          // is the exact collision the Shows microphone fixed the day before.
+          icon: ChartNoAxesGantt,
+          onClick: () => toggleScene('timeline', scopedRelease.id),
+          isActive: activeScene === 'timeline',
+        }
+      : null,
+    CONTENT_CALENDAR_ENABLED && scopedRelease
+      ? {
+          key: 'calendar',
+          label: 'Content',
+          icon: CalendarDays,
+          onClick: () => toggleScene('calendar', scopedRelease.id),
+          isActive: activeScene === 'calendar',
+        }
+      : null,
+    PITCHING_ENABLED && scopedRelease
+      ? {
+          key: 'pitch',
+          label: 'Pitch',
+          icon: Radio,
+          onClick: () => toggleScene('pitch', scopedRelease.id),
+          isActive: activeScene === 'pitch',
+        }
+      : null,
+    // Metadata carries no hide class here, unlike its desktop pill: that class
+    // only ever fires at `lg`+ (see METADATA_PILL_HIDE_CLASS), and this list is
+    // below `lg`. With the top tabs gone this menu IS Metadata's narrow-width
+    // entry point, which is what keeps the feature reachable on a phone.
+    METADATA_ENABLED && scopedRelease
+      ? {
+          key: 'metadata',
+          label: 'Metadata',
+          icon: ClipboardList,
+          onClick: () => toggleScene('metadata', scopedRelease.id),
+          isActive: activeScene === 'metadata',
         }
       : null,
     COVER_ART_ENABLED && scopedRelease
@@ -734,6 +882,7 @@ export function TasksPanel({
           label: 'Cover art',
           icon: ImageIcon,
           onClick: () => toggleScene('coverart', scopedRelease.id),
+          isActive: activeScene === 'coverart',
         }
       : null,
     SONG_UPLOAD_ENABLED && scopedRelease
@@ -742,6 +891,7 @@ export function TasksPanel({
           label: 'Song',
           icon: Music,
           onClick: () => toggleScene('song', scopedRelease.id),
+          isActive: activeScene === 'song',
         }
       : null,
     FILES_ENABLED && scopedRelease
@@ -750,8 +900,12 @@ export function TasksPanel({
           label: 'Files',
           icon: FolderOpen,
           onClick: () => toggleScene('files', scopedRelease.id),
+          isActive: activeScene === 'files',
         }
       : null,
+    // No `isActive` on this one or the three after it: they open a modal over
+    // the page rather than swapping this panel's body, so there is no open
+    // scene for a lit row to report.
     statusUpdateAction
       ? {
           key: 'status-update',
@@ -761,10 +915,24 @@ export function TasksPanel({
           disabled: statusUpdateAction.disabled,
         }
       : null,
-    // Recap moved here 2026-08-17 from the mobile top tabs — it opens a
-    // modal, not a scene, so it never lit up like its former neighbours
-    // there anyway, and this groups it with the other AI action (Status
-    // update) from the removed release detail page.
+    EPK_ENABLED && scopedRelease
+      ? {
+          key: 'epk',
+          label: 'Press kit',
+          icon: Newspaper,
+          onClick: () => toggleScene('epk', scopedRelease.id),
+          isActive: activeScene === 'epk',
+        }
+      : null,
+    CAPTURE_ENABLED && scopedRelease
+      ? {
+          key: 'capture',
+          label: 'Fan capture',
+          icon: Mail,
+          onClick: () => toggleScene('capture', scopedRelease.id),
+          isActive: activeScene === 'capture',
+        }
+      : null,
     recapAction
       ? {
           key: 'recap',
@@ -774,8 +942,15 @@ export function TasksPanel({
           disabled: recapAction.disabled,
         }
       : null,
-    // Archive sits with recap for the same reason: it opens a modal rather
-    // than a scene, so it would never light up among the top tabs.
+    changeArtistAction
+      ? {
+          key: 'change-artist',
+          label: changeArtistAction.label,
+          icon: Users,
+          onClick: changeArtistAction.onClick,
+          disabled: changeArtistAction.disabled,
+        }
+      : null,
     archiveAction
       ? {
           key: 'archive',
@@ -785,36 +960,89 @@ export function TasksPanel({
           disabled: archiveAction.disabled,
         }
       : null,
-    EPK_ENABLED && scopedRelease
-      ? {
-          key: 'epk',
-          label: 'Press kit',
-          icon: Newspaper,
-          onClick: () => toggleScene('epk', scopedRelease.id),
-        }
-      : null,
-    CAPTURE_ENABLED && scopedRelease
-      ? {
-          key: 'capture',
-          label: 'Fan capture',
-          icon: Mail,
-          onClick: () => toggleScene('capture', scopedRelease.id),
-        }
-      : null,
   ];
-  const moreMenuActions = moreMenuActionsRaw.filter(
-    (item): item is MoreMenuAction => item !== null
+  // The array above is already written in canonical order so the two agree on
+  // sight, but this sort is what decides — so an entry inserted next to a
+  // related one still comes out where it was ranked.
+  const moreMenuActions = orderReleaseMenu(
+    moreMenuActionsRaw.filter((item): item is MoreMenuAction => item !== null)
   );
 
-  const query = moreMenuQuery.trim().toLowerCase();
-  const filteredMoreMenuActions = query
-    ? moreMenuActions.filter((action) => action.label.toLowerCase().includes(query))
-    : moreMenuActions;
+  // Which bucket each activity sits in, derived from the SAME grouping pass
+  // the buckets above render from rather than by re-deriving it per result —
+  // so a search result's "Overdue" / "Due This Week" line can never disagree
+  // with the list the user closed to search.
+  const sectionKeyByTaskId = useMemo(() => {
+    const map = new Map<string, TaskSectionKey>();
+    (Object.entries(sections) as [TaskSectionKey, Task[]][]).forEach(([key, list]) => {
+      list.forEach((task) => map.set(task.id, key));
+    });
+    return map;
+  }, [sections]);
+
+  // One query, THREE kinds of result: the release's activities (the point of
+  // the 2026-08-31 split — sixty-odd rows that were previously unsearchable),
+  // the release tools the folded menu holds, and the app's own pages (added
+  // the same day — "that search should be able to search for any page at
+  // all"). Terms are parsed once so all three answer the same question.
+  const searchTerms = parseSearchTerms(searchQuery);
+  const taskMatches = searchTasks(tasks, searchQuery);
+  const toolMatches =
+    searchTerms.length > 0
+      ? moreMenuActions.filter((action) => matchesSearchTerms(action.label, searchTerms))
+      : [];
+  // Rebuilt per render rather than memoized, matching moreMenuActionsRaw above
+  // and for a weaker version of the same reason: it is a handful of literals
+  // and one store read, so a stale-closure risk is not worth trading for.
+  const pageMatches =
+    searchTerms.length > 0
+      ? buildAppPages({ hasCuratorProfile }).filter((page) =>
+          matchesSearchTerms(appPageHaystack(page), searchTerms)
+        )
+      : [];
+  const hasSearchResults =
+    taskMatches.results.length > 0 || toolMatches.length > 0 || pageMatches.length > 0;
+  // Headings exist to tell the kinds of result apart, so with only one kind on
+  // screen they are noise — the reference screenshot has none at all.
+  const searchGroupCount =
+    (taskMatches.results.length > 0 ? 1 : 0) +
+    (toolMatches.length > 0 ? 1 : 0) +
+    (pageMatches.length > 0 ? 1 : 0);
+  const showSearchGroupHeadings = searchGroupCount > 1;
+
+  // The dock's own presence rule. Search needs activities to search; the menu
+  // needs actions to list. Either alone is enough to render the row, so a
+  // release with sixty activities and every optional feature switched off
+  // still gets a way to find one.
+  const hasMobileDockControls = tasks.length > 0 || moreMenuActions.length > 0;
+
+  const closeMobilePanels = () => {
+    setOpenMobilePanel(null);
+    setSearchQuery('');
+  };
 
   const handleMoreMenuSelect = (action: MoreMenuAction) => {
     action.onClick();
-    setIsMoreMenuOpen(false);
-    setMoreMenuQuery('');
+    closeMobilePanels();
+  };
+
+  const handleSearchPageSelect = (page: AppPage) => {
+    // The catalog is an EXIT from the scoped release, so it takes the same
+    // step the back arrow, MobileNavBar's Home tab, the side menu's Catalog
+    // row and the topbar's Catalog icon all take — otherwise coming back to
+    // this release would resume the scene the user just navigated away from.
+    // Every other page is somewhere you go and return from, where resuming the
+    // scene is exactly what scene memory is for.
+    if (page.leavesRelease) leaveReleaseForCatalog();
+    router.push(page.href);
+    closeMobilePanels();
+  };
+
+  const handleSearchTaskSelect = (taskId: string) => {
+    // The detail pop-up is mounted globally by TaskUIProvider, so this works
+    // with a scene open as well as over the activity list.
+    openTask(taskId);
+    closeMobilePanels();
   };
 
   return (
@@ -827,10 +1055,12 @@ export function TasksPanel({
     // (see WorkspaceDesktopFocused) — on mobile, where it's an ordinary block
     // child in normal page flow, `flex: 1 1 0%` on a non-flex-item is inert.
     <aside id={id} className="flex min-h-0 min-w-0 flex-1 flex-col scroll-mt-20">
-      {/* Desktop header row (lg+ ONLY). Below `lg` these buttons render
-          across two mobile-only rows instead — the top tabs, and the
-          standalone-pills-plus-menu dock at the base — see those blocks
-          further down.
+      {/* Desktop header row (lg+ ONLY). Below `lg` none of these buttons
+          render at all as of 2026-08-31: every one of them is an entry in the
+          release menu at the base of the panel instead (founder call — the
+          mobile top-tabs strip that used to carry four of them is gone; see
+          the note where it used to be, and `moreMenuActionsRaw` for the
+          entries).
 
           It needs no sticky treatment of its own: at lg+ this panel lives
           inside WorkspaceDesktopFocused's viewport-locked, `overflow-hidden`
@@ -842,6 +1072,7 @@ export function TasksPanel({
       <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex">
         {activitiesToggleButton}
         {planButton}
+        {timelineButton}
         {metadataButton}
         {coverArtButton}
         {songButton}
@@ -850,35 +1081,31 @@ export function TasksPanel({
         {notesPill}
         {statusUpdateButton}
         {recapButton}
+        {changeArtistButton}
         {archiveButton}
       </div>
 
-      {/* Mobile top tabs (below `lg` ONLY) — 2026-08-16, founder request via
-          screenshot reference (a Vercel-style tab strip: every tab stays
-          visible, the active one lit). Corrected 2026-08-17: Press kit moved
-          out to the folded "more" menu (it isn't reached often enough to
-          earn a permanent tab, and the row read as crowded), and — later the
-          same day — Recap swapped places with Pitch: Recap moved into the
-          folded menu (it opens a modal, not a scene, so it never lit up like
-          its neighbours here), and Pitch moved up from the standalone
-          base-dock row into this strip instead, since it IS a scene toggle
-          like Calendar and Collect metadata and reads naturally alongside
-          them.
+      {/* The mobile top-tabs strip that used to sit here — Timeline / Content
+          / Metadata / Pitch, a Vercel-style tab bar from 2026-08-16 — was
+          REMOVED 2026-08-31 (founder call: "Remove all top menu pills in
+          mobile view and put them in the hamburger menu"). Those four are
+          entries in the release menu at the base of the panel now, ranked
+          among the rest by lib/release-menu.ts.
 
-          Horizontally scrollable with the same gutter-matching bleed the old
-          dock used (`-mx-4 px-4` stepping up at sm/md): even three pills
-          including the long "Collect metadata" label don't reliably fit a
-          375px screen, and a strip that scrolls beats one that wraps for a
-          tab bar — wrapping would make the "always visible, tap to switch"
-          read of a tab bar collapse into something that looks like the pill
-          dock underneath it. */}
-      {hasMobileTopTabs ? (
-        <div className="-mx-4 flex shrink-0 gap-2 overflow-x-auto px-4 pb-3 pt-1 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden">
-          {calendarButton}
-          {metadataButton}
-          {pitchButton}
-        </div>
-      ) : null}
+          Recorded because the strip's own history is a run of corrections and
+          the next instinct may be to bring it back: it never fit. Four tabs
+          needed roughly 356px against the ~343px a 375px phone offers, so it
+          scrolled horizontally, which means it was never the "every tab
+          visible at once" bar it was modelled on — the fourth was always off
+          the side. What replaced it costs one extra tap to switch scenes and
+          gives the width back to the activity list.
+
+          Nothing became unreachable. Every scene renders inside
+          ReleaseScenePanel, which brings its own heading naming the scene and
+          its own "Activities" back control at every width, so the tabs were
+          neither the way out of a scene nor the only thing saying which one
+          was open. Desktop is untouched: the same four buttons still render in
+          the header row above. */}
 
       {/* Scrollable body — desktop-only internal scroll box (`lg:` prefix).
           On desktop this box gets a real bounded height from the ancestor
@@ -919,6 +1146,17 @@ export function TasksPanel({
         {!bannerReplacesEmptyState &&
         sectionOrder.every((sectionKey) => sections[sectionKey].length === 0) ? (
           <div className="px-1 py-6 text-center">
+            {/* The mascot only joins the SCOPED wording, and that is the
+                guard rather than a style choice: with no releases at all the
+                releases column is empty too and already shows him, so
+                pairing him with "No activities yet." would put two on one
+                screen. No release scoped means no release list beside this
+                one that could be full. */}
+            {scopedRelease ? (
+              <div className="mb-3 flex justify-center">
+                <Chappi pose="resting" size={CHAPPI_MIN_SIZE} />
+              </div>
+            ) : null}
             <p className="text-sm text-content-secondary">
               {scopedRelease ? 'No activities for this release yet.' : 'No activities yet.'}
             </p>
@@ -1049,23 +1287,48 @@ export function TasksPanel({
 
       {/* Mobile base dock (below `lg` ONLY) — redesigned 2026-08-16 (founder
           request, screenshot reference) from "every pill in one wrapping
-          block" into a folded "more" menu, entered via the search or
-          hamburger icon buttons, holding everything else this panel used to
-          put in the old dock: Plan (while it exists), Cover art, Song,
-          Files, Status update, Recap, Press kit, Fan capture. Filterable by
-          the search box inside it.
+          block" into a folded "more" menu, holding everything else this panel
+          used to put in the old dock: Plan (while it exists), Cover art,
+          Song, Files, Status update, Recap, Press kit, Fan capture.
 
-          The row used to also carry two permanent standalone pills — New
-          activity/Activities and Pitch — removed 2026-08-17: Pitch moved up
-          into the top-tabs strip above (it's a scene toggle like Calendar
-          and Collect metadata, so it belongs there now), and New activity
-          was retired outright — the center "+" in `MobileNavBar` opens
-          Quick Create directly when a release is scoped, so a second,
-          release-scoped entry point for the same action here was redundant.
-          Losing "Activities" (the same button's back-from-a-scene state)
-          costs nothing functionally: every scene's own entry point, top tab
-          or folded-menu item alike, is already a toggle — re-tapping it
-          closes the scene just as well.
+          SPLIT 2026-08-31 (founder request, screenshot reference): the two
+          icon buttons used to open the SAME panel, which carried a search box
+          above the menu list — so "search" only ever filtered those eight
+          labels and could not find an activity, the thing a release actually
+          has sixty of. Now they are two surfaces:
+
+            hamburger -> the menu, and only the menu. No field in it at all.
+            search    -> a field over real results, in three groups: matching
+                         activities, then any release tool whose name matches,
+                         then the app's own pages (Catalog, UrgAns, Notes,
+                         Shows, Settings, the curator crossing — see
+                         lib/app-pages.ts, which carries the keywords that make
+                         "billing" find Settings).
+
+          Both live in the same slot above the trigger row and are mutually
+          exclusive (see `openMobilePanel`). The panel sits at the BOTTOM of
+          the screen rather than the top as in the reference screenshot: the
+          dock is thumb-reachable, and moving a phone's primary control to the
+          top corner is the exact thing NEXT_PUBLIC_FEATURE_MOBILE_NAV exists
+          to undo.
+
+          THE MENU IS EVERYTHING NOW (2026-08-31, founder call): "Remove all
+          top menu pills in mobile view and put them in the hamburger menu."
+          Timeline, Content, Pitch and Metadata were permanent top tabs from
+          2026-08-16 and are ranked entries in this list instead. It is no
+          longer an overflow, which is why the trigger's label reads "Release
+          menu" and the open scene's row lights up — that lit state is what
+          the tabs used to carry.
+
+          The row also used to have two permanent standalone pills — New
+          activity/Activities and Pitch — both removed 2026-08-17: Pitch went
+          up into the top-tabs strip (and has now landed back here, one layer
+          down), and New activity was retired outright, since the center "+"
+          in `MobileNavBar` opens Quick Create directly when a release is
+          scoped. Losing "Activities" (that button's back-from-a-scene state)
+          costs nothing: every scene brings its own "Activities" back control
+          inside `ReleaseScenePanel`, and every menu entry is a toggle, so
+          re-tapping a lit row closes it too.
 
           `sticky` (not `fixed`) for the same reason the old dock used it:
           this is the last child in flow, so a short list leaves it sitting
@@ -1086,94 +1349,251 @@ export function TasksPanel({
         className={`sticky z-20 -mx-4 flex flex-col gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
         <div className="flex flex-wrap items-center gap-2">
-          {moreMenuActions.length > 0 ? (
+          {hasMobileDockControls ? (
             <div className="ml-auto flex shrink-0 items-center gap-2">
               {/* touch-manipulation on both: disables the browser's own
                   double-tap-to-zoom gesture on these specific buttons
-                  (independent of the input font-size fix below — this
-                  guards against the tap itself zooming the page, not just
-                  a focused field zooming it), while leaving pinch-zoom
+                  (independent of the search field's font-size fix below —
+                  this guards against the tap itself zooming the page, not
+                  just a focused field zooming it), while leaving pinch-zoom
                   available everywhere else for accessibility. */}
-              <button
-                type="button"
-                onClick={toggleMoreMenu}
-                aria-expanded={isMoreMenuOpen}
-                aria-controls={moreMenuListId}
-                aria-label="Search the menu"
-                className="motion-focus motion-press grid h-8 w-8 shrink-0 touch-manipulation place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-              >
-                <Search className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                onClick={toggleMoreMenu}
-                aria-expanded={isMoreMenuOpen}
-                aria-controls={moreMenuListId}
-                aria-label="More"
-                className="motion-focus motion-press grid h-8 w-8 shrink-0 touch-manipulation place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-              >
-                <Menu className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
+              {tasks.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => toggleMobilePanel('search')}
+                  aria-expanded={openMobilePanel === 'search'}
+                  aria-controls={searchPanelId}
+                  // Matches the field's own label rather than the narrower
+                  // "Search activities" it said until 2026-08-31 — this
+                  // surface has found tools and pages since the day pages
+                  // were added, and the trigger should say what it opens.
+                  aria-label="Search activities, tools and pages"
+                  className={MOBILE_DOCK_TRIGGER_CLASS}
+                >
+                  <Search className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              ) : null}
+              {moreMenuActions.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => toggleMobilePanel('menu')}
+                  aria-expanded={openMobilePanel === 'menu'}
+                  aria-controls={moreMenuListId}
+                  // "More" was right while this was an overflow list. Since
+                  // 2026-08-31 it holds every release surface, so it is the
+                  // release menu and says so.
+                  aria-label="Release menu"
+                  className={MOBILE_DOCK_TRIGGER_CLASS}
+                >
+                  <Menu className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              ) : null}
             </div>
           ) : null}
         </div>
 
-        {isMoreMenuOpen ? (
-          <div
-            id={moreMenuListId}
-            className="rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
-          >
+        {/* The menu: the plain list, no field. Since 2026-08-31 this is every
+            release surface on a phone, not an overflow — see
+            `moreMenuActionsRaw` above, and lib/release-menu.ts for the order.
+
+            `50dvh` rather than the old fixed `max-h-60` (240px, about five
+            rows): the list is up to fourteen entries now, and the top of it is
+            where the most-used surfaces sit, so the cap decides how much of
+            the ranking a user sees without scrolling. `dvh` and not `vh`
+            deliberately — on a phone `vh` is the LARGE viewport, so with
+            browser chrome showing a `vh` cap overshoots the space actually on
+            screen (the same unit that had the UrgAns composer drifting for
+            eight PRs). */}
+        {openMobilePanel === 'menu' ? (
+          <div id={moreMenuListId} className={MOBILE_DOCK_PANEL_CLASS}>
+            <ul className="max-h-[50dvh] overflow-y-auto">
+              {moreMenuActions.map((action) => (
+                <li key={action.key}>
+                  <button
+                    type="button"
+                    onClick={() => handleMoreMenuSelect(action)}
+                    disabled={action.disabled}
+                    // Undefined on the modal actions, which omits the
+                    // attribute entirely rather than announcing them as
+                    // unpressed toggles.
+                    aria-pressed={action.isActive}
+                    className={`motion-focus flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm transition-colors disabled:opacity-60 ${
+                      action.isActive
+                        ? 'bg-brand/10 font-semibold text-content-primary'
+                        : 'text-content-primary hover:bg-bg-hover'
+                    }`}
+                  >
+                    <action.icon
+                      className={`h-4 w-4 shrink-0 ${
+                        action.isActive ? 'text-brand' : 'text-content-tertiary'
+                      }`}
+                      aria-hidden="true"
+                    />
+                    {action.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {/* The search surface: a field over real results. */}
+        {openMobilePanel === 'search' ? (
+          <div id={searchPanelId} className={MOBILE_DOCK_PANEL_CLASS}>
             <div className="relative">
               <Search
                 className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-content-tertiary"
                 aria-hidden="true"
               />
               {/*
-                No `autoFocus`, deliberately: tapping either trigger button
-                used to focus this field the instant the panel opened, which
-                on iOS Safari means an unwanted page zoom on tap — a field
-                under 16px triggers it on focus. Both buttons now just open
-                the menu; the user taps into the field themselves to search.
+                `text-lg`, NOT `text-base`, and this is load-bearing rather
+                than cosmetic: iOS Safari zooms the whole page when a field
+                UNDER 16px takes focus, and this project's own type scale
+                (packages/config/tailwind/preset.js) redefines `base` to 14px
+                — `lg` is the first step in THIS preset that clears the
+                threshold. A previous fix shipped as `text-base` and the zoom
+                kept happening.
 
-                `text-lg`, NOT `text-base` — the fix originally shipped as
-                `text-base`, and the zoom kept happening because this
-                project's own type scale (packages/config/tailwind/preset.js)
-                redefines `base` to 14px, not Tailwind's stock 16px. `lg` is
-                the first step in THIS preset that actually clears iOS's
-                threshold. Kept as a second, independent guard beyond removing
-                `autoFocus`: even a manual tap into this field can never
-                trigger the zoom now, regardless of what focuses it.
+                `autoFocus` is back (it was removed 2026-08-17, when this
+                field was 13px and focusing it on open zoomed the page): a
+                button labelled Search that opens a field you must then tap is
+                half a control. It is safe ONLY because of the size above —
+                if this field's font size is ever reduced, remove autoFocus in
+                the same edit.
               */}
               <input
                 type="text"
-                value={moreMenuQuery}
-                onChange={(event) => setMoreMenuQuery(event.target.value)}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                autoFocus
                 placeholder="Search…"
-                className="motion-focus h-9 w-full rounded-full border border-stroke-default bg-bg-elevated pl-9 pr-3 text-lg text-content-primary placeholder:text-content-tertiary"
+                aria-label="Search activities, tools and pages"
+                className="motion-focus h-9 w-full rounded-full border border-stroke-default bg-bg-elevated pl-9 pr-10 text-lg text-content-primary placeholder:text-content-tertiary"
               />
+              <button
+                type="button"
+                onClick={closeMobilePanels}
+                aria-label="Close search"
+                className="motion-focus absolute right-1 top-1/2 grid h-7 w-7 -translate-y-1/2 touch-manipulation place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+              >
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
             </div>
-            <ul className="mt-1 max-h-60 overflow-y-auto">
-              {filteredMoreMenuActions.length === 0 ? (
-                <li className="py-3 text-center text-xs text-content-tertiary">No matches.</li>
-              ) : (
-                filteredMoreMenuActions.map((action) => (
-                  <li key={action.key}>
-                    <button
-                      type="button"
-                      onClick={() => handleMoreMenuSelect(action)}
-                      disabled={action.disabled}
-                      className="motion-focus flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm text-content-primary transition-colors hover:bg-bg-hover disabled:opacity-60"
-                    >
-                      <action.icon
-                        className="h-4 w-4 shrink-0 text-content-tertiary"
-                        aria-hidden="true"
-                      />
-                      {action.label}
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
+
+            {searchTerms.length === 0 ? (
+              // Deliberately NOT the whole activity list: an unfiltered 64-row
+              // list is what the buckets above already are, and painting it
+              // here would make the search surface indistinguishable from the
+              // menu the founder asked to separate it from.
+              <p className="px-2 py-3 text-center text-xs text-content-tertiary">
+                Type to find an activity, a tool or a page.
+              </p>
+            ) : !hasSearchResults ? (
+              <p className="px-2 py-3 text-center text-xs text-content-tertiary">No matches.</p>
+            ) : (
+              <div className="mt-1 max-h-72 overflow-y-auto">
+                {taskMatches.results.length > 0 ? (
+                  <>
+                    {showSearchGroupHeadings ? (
+                      <p className={SEARCH_GROUP_HEADING_CLASS}>Activities</p>
+                    ) : null}
+                    <ul>
+                      {taskMatches.results.map(({ task, matchedIn }) => {
+                        const bucket = sectionKeyByTaskId.get(task.id);
+                        const snippet =
+                          matchedIn === 'description'
+                            ? describeDescriptionMatch(task.description)
+                            : null;
+                        const context = [bucket ? getTaskSectionLabel(bucket) : null, snippet]
+                          .filter(Boolean)
+                          .join(' · ');
+                        const RowIcon = isEventMilestone(task) ? CalendarDays : ListChecks;
+                        return (
+                          <li key={task.id}>
+                            <button
+                              type="button"
+                              onClick={() => handleSearchTaskSelect(task.id)}
+                              className="motion-focus flex w-full items-start gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-bg-hover"
+                            >
+                              <RowIcon
+                                className="mt-0.5 h-4 w-4 shrink-0 text-content-tertiary"
+                                aria-hidden="true"
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm text-content-primary">
+                                  {task.title}
+                                </span>
+                                {context ? (
+                                  <span className="block truncate text-[11px] text-content-tertiary">
+                                    {context}
+                                  </span>
+                                ) : null}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {taskMatches.hiddenCount > 0 ? (
+                      <p className="px-2 pb-1 pt-0.5 text-[11px] text-content-tertiary">
+                        +{taskMatches.hiddenCount} more. Keep typing to narrow it down.
+                      </p>
+                    ) : null}
+                  </>
+                ) : null}
+
+                {toolMatches.length > 0 ? (
+                  <>
+                    {showSearchGroupHeadings ? (
+                      <p className={SEARCH_GROUP_HEADING_CLASS}>Release tools</p>
+                    ) : null}
+                    <ul>
+                      {toolMatches.map((action) => (
+                        <li key={action.key}>
+                          <button
+                            type="button"
+                            onClick={() => handleMoreMenuSelect(action)}
+                            disabled={action.disabled}
+                            className="motion-focus flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm text-content-primary transition-colors hover:bg-bg-hover disabled:opacity-60"
+                          >
+                            <action.icon
+                              className="h-4 w-4 shrink-0 text-content-tertiary"
+                              aria-hidden="true"
+                            />
+                            {action.label}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+
+                {pageMatches.length > 0 ? (
+                  <>
+                    {showSearchGroupHeadings ? (
+                      <p className={SEARCH_GROUP_HEADING_CLASS}>Pages</p>
+                    ) : null}
+                    <ul>
+                      {pageMatches.map((page) => (
+                        <li key={page.key}>
+                          <button
+                            type="button"
+                            onClick={() => handleSearchPageSelect(page)}
+                            className="motion-focus flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm text-content-primary transition-colors hover:bg-bg-hover"
+                          >
+                            <ArrowRight
+                              className="h-4 w-4 shrink-0 text-content-tertiary"
+                              aria-hidden="true"
+                            />
+                            {page.label}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+              </div>
+            )}
           </div>
         ) : null}
       </div>

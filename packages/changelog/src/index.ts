@@ -20,6 +20,290 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.19.0",
+    date: "September 2, 2026",
+    highlights: [
+      "The Android app can now send you notifications, the same as the web app: when an activity is due, when one is handed to you, and when we have news. Install the newest build of the app, then tap Turn on when the card appears after you sign in, or switch it on any time in Settings.",
+      "Notifications you turned on in a browser keep working. Turning them on in the app adds your phone to the list, so both ring.",
+    ],
+  },
+  {
+    version: "1.18.0",
+    date: "September 2, 2026",
+    highlights: [
+      "After about a minute in the app, we offer to put Urganize on your device. On Android, one tap gets you the app. On a computer, one tap installs it in its own window. On an iPhone, the card shows you the two taps that add it to your Home Screen.",
+      "Say Not now and it stays out of your way for the rest of the visit. Once you have installed it, we do not ask again.",
+      "If you turn the install down, the notifications card follows a moment later, so you still get the choice.",
+    ],
+  },
+  {
+    version: "1.17.0",
+    date: "September 2, 2026",
+    highlights: [
+      "Urganize now asks if you want notifications on. A small card shows up shortly after you sign in, on each device you use. Tap Turn on and your phone or computer will tell you when an activity is due or handed to you, even when the app is closed.",
+      "Said no? Tap Not now and it stays quiet. You can always turn notifications on later in Settings.",
+    ],
+  },
+  {
+    version: "1.16.0",
+    date: "September 1, 2026",
+    highlights: [
+      "Just want to look around first? Try a test release. One tap sets up a full plan you can play with, and you can delete it whenever you are done.",
+    ],
+  },
+  {
+    version: "1.15.0",
+    date: "September 1, 2026",
+    highlights: [
+      "Solo is now a plan you can pick. It is for one artist, and it is the cheapest way in.",
+      "When your plan is full and you invite someone, we now tell you so. The button used to just go grey without saying why.",
+    ],
+  },
+  {
+    version: "1.14.1",
+    date: "September 1, 2026",
+    highlights: [
+      "Home and Catalog always take you back to your full list of releases now. If you only had one release, they used to pull you straight back into it.",
+    ],
+  },
+  {
+    version: "1.14.0",
+    date: "August 31, 2026",
+    highlights: [
+      "On your phone, the row of buttons above your activities is gone. Everything it held is in the menu button at the bottom of the screen, along with everything that was already there.",
+      "The menu is in order of what you use most, so the things you open every week are at the top. The one you have open is highlighted.",
+    ],
+  },
+  {
+    version: "1.13.0",
+    date: "August 31, 2026",
+    highlights: [
+      "Your catalog has a search bar at the top now, on your phone and on your computer. Type part of a release name or an artist name to find it.",
+      "The search on your phone also finds pages now, not just activities. Type \"billing\" and it takes you to Settings.",
+    ],
+  },
+  {
+    version: "1.12.0",
+    date: "August 31, 2026",
+    highlights: [
+      "On your phone, the search button now searches your activities. Type a few letters and tap the one you want. It used to only look through the menu's own eight buttons, so it could never find an activity.",
+      "The menu button opens just the menu. The search box is gone from it, because search has its own place now.",
+    ],
+  },
+  {
+    version: "1.11.3",
+    date: "August 31, 2026",
+    highlights: [
+      "Shows has its own microphone icon now. It used to share the calendar icon with your content calendar, so on a big screen the two were hard to tell apart.",
+      "The content calendar is now just called Content.",
+    ],
+  },
+  {
+    version: "1.11.2",
+    date: "August 31, 2026",
+    highlights: [
+      "UrgAns opens on your phone again. The notifications button we added earlier today was stopping it, so we have taken that button back out and will put it back once it works properly.",
+    ],
+  },
+  {
+    version: "1.11.1",
+    date: "August 31, 2026",
+    highlights: [
+      "The bottom menu on your phone shows icons only now, with no words under them, so the buttons are bigger and easier to hit.",
+      "Your notifications are on your phone at last. Open UrgAns and tap the bell in the bottom menu to see them.",
+    ],
+  },
+  {
+    version: "1.11.0",
+    date: "August 31, 2026",
+    highlights: [
+      "Tap Catalog in the side menu to leave a release and get back to your list. It used to look like you were already there, so it was easy to miss.",
+      "Catalog now has an arrow. Open it to see all your releases and jump straight to any one of them.",
+    ],
+  },
+  {
+    version: "1.10.2",
+    date: "August 31, 2026",
+    highlights: [
+      "Notes and Shows now open straight away instead of loading when you tap them. The app gets them ready in the background while you read, the same way it already did for your catalog and UrgAns.",
+    ],
+  },
+  {
+    version: "1.10.1",
+    date: "August 31, 2026",
+    highlights: [
+      "If the app reloads itself after we ship an update, it now takes you to the page you tapped instead of dropping you back where you started.",
+    ],
+  },
+  {
+    version: "1.10.0",
+    date: "August 31, 2026",
+    highlights: [
+      "See a whole release on one screen. Every activity sits on a week line with today marked, so you can tell what is late and what is coming without reading a list.",
+      "Drag an activity to another week to move it. On a phone you get the same week-by-week view to read.",
+    ],
+  },
+  {
+    version: "1.9.1",
+    date: "August 30, 2026",
+    highlights: [
+      "The back arrow next to a release name now always takes you to your list of releases. It used to guess where you came from, and it guessed wrong a lot.",
+    ],
+  },
+  {
+    version: "1.9.0",
+    date: "August 30, 2026",
+    highlights: [
+      "Meet Chappi, the face of UrgAns. He waits with you while UrgAns thinks, sits on screens that are still empty, and turns up to celebrate when every activity on a release is done.",
+    ],
+  },
+  {
+    version: "1.8.0",
+    date: "August 30, 2026",
+    highlights: [
+      "You can remove an artist you added by mistake. It only works if they have no releases and nobody is limited to seeing them, and it tells you which one is in the way.",
+    ],
+  },
+  {
+    version: "1.7.0",
+    date: "August 30, 2026",
+    highlights: [
+      "Filed a release under the wrong artist? You can move it now, from the release itself.",
+    ],
+  },
+  {
+    version: "1.6.0",
+    date: "August 30, 2026",
+    highlights: [
+      "You can work with more than one artist now. Add them in Settings, and pick who a release is for when you create it.",
+      "Invite an artist and they only see their own releases. You can now do that for an artist who has no releases yet.",
+    ],
+  },
+  {
+    version: "1.5.4",
+    date: "August 29, 2026",
+    highlights: [
+      "The back arrow on a release always takes you somewhere now. Before, it could bounce you between the same two screens and you could never get out.",
+    ],
+  },
+  {
+    version: "1.5.3",
+    date: "August 29, 2026",
+    highlights: [
+      "Picking who does an activity is now a simple dropdown. Tap it and the list of your team opens — no keyboard pops up over it any more.",
+    ],
+  },
+  {
+    version: "1.5.2",
+    date: "August 29, 2026",
+    highlights: [
+      "The assignee box shows your whole team again. If an activity was already assigned to someone, opening the box only showed that one person, so you could not hand the work to anybody else.",
+      "Tapping a box no longer zooms the page in on your phone. That was happening on almost every field in the app.",
+      "Fixed a rare case in the plan editor where moving past the assignee box could quietly clear who it was assigned to.",
+    ],
+  },
+  {
+    version: "1.5.1",
+    date: "August 29, 2026",
+    highlights: [
+      "Your teammates can now open a release's pages — Collect metadata, the calendar, the press kit and the rest. Before, those pages said \"Release not found.\" unless you were the person who created the release.",
+      "If the Collect metadata page can't refresh, you keep what already loaded and get a Retry button instead of the page going blank.",
+    ],
+  },
+  {
+    version: "1.5.0",
+    date: "August 29, 2026",
+    highlights: [
+      "When you hand an activity to a teammate, they now get an email as well, not just a notification. It reads like a note from you, with the activity, the release and the due date, and a button that opens it.",
+      "This also works when you create an activity that is already assigned to someone. Before, that told nobody at all.",
+    ],
+  },
+  {
+    version: "1.4.3",
+    date: "August 29, 2026",
+    highlights: [
+      "Invite links are dependable now. If a teammate created an account from your link but never landed in your workspace, that can no longer happen: they join automatically the next time they sign in.",
+      "Signing up on a weak connection used to leave a teammate stuck outside the team, so you could not assign them anything and they could not see your releases. Both are fixed by the same change.",
+    ],
+  },
+  {
+    version: "1.4.2",
+    date: "August 28, 2026",
+    highlights: [
+      "No more pop-up the moment you land. If you have no releases yet, you get to look around first, and the app offers to help a little later.",
+      "You can close that create-release window now. The Create release button is right there whenever you are ready.",
+    ],
+  },
+  {
+    version: "1.4.1",
+    date: "August 27, 2026",
+    highlights: [
+      "The credits form now remembers the person filling it in. Next time you send them a link, their name, email and publishing details are already there, so they only add what is new.",
+      "It remembers on their own phone or computer, never on ours, and it never fills in shares or what they did on the song. Those change with every song.",
+    ],
+  },
+  {
+    version: "1.4.0",
+    date: "August 27, 2026",
+    highlights: [
+      "When someone sends their credits, you hear about it straight away, with what they filled in. No more checking the page to see if anyone answered.",
+      "You can download everyone's credits as a spreadsheet. The shares come out as real numbers, so you can add up the column and see if it reaches 100.",
+      "If someone goes back and fixes their answer, we do not message you a second time.",
+    ],
+  },
+  {
+    version: "1.3.0",
+    date: "August 27, 2026",
+    highlights: [
+      "You can now close a credits link when you are done collecting, and open it again later. Anyone who opens a closed link sees a short note instead of the form.",
+      "If the same person fills in the form twice, their new answer replaces the old one. Before, you got two entries for one person and your shares added up wrong.",
+      "Writers and producers now have to enter their share, so you are not left chasing the one number you need.",
+      "Your song details have a new ISWC box, next to ISRC and UPC.",
+      "The credits form is easier to fill in on a phone, and new answers show up as soon as you open the page.",
+    ],
+  },
+  {
+    version: "1.2.1",
+    date: "August 27, 2026",
+    highlights: [
+      "Your workspace logo and your profile photo now show up after you upload them. A very large picture used to upload fine and then never appear, leaving a broken box with nothing you could do about it.",
+      "Big pictures are shrunk before they upload, so they save faster and load quickly even on a slow connection.",
+    ],
+  },
+  {
+    version: "1.2.0",
+    date: "August 25, 2026",
+    highlights: [
+      "Connect Claude, ChatGPT or another AI app to Urganize and ask it about your releases. It can see your releases, activities and notes, and add or change them — it cannot delete anything.",
+      "You decide which apps get in, and you can cut any of them off at any time from Settings.",
+    ],
+  },
+  {
+    version: "1.1.4",
+    date: "August 25, 2026",
+    highlights: [
+      "You stay logged in. A slow or patchy connection used to sign you out for real — you would come back to the app, or reopen it on your phone, and be asked to log in again even though nothing was wrong with your account. Now a request that does not get through is treated as exactly that, and your session is left alone.",
+      "A hiccup loading your profile no longer looks like being logged out, and no longer shows you a red error while you are working.",
+      "If your session genuinely does end, the login page now tells you so instead of appearing out of nowhere, and your email is still filled in.",
+    ],
+  },
+  {
+    version: "1.1.3",
+    date: "August 25, 2026",
+    highlights: [
+      "On a computer, pages inside a release now use the full width. Collect metadata, your calendar, files and your press kit were being squeezed into a narrow strip with empty space next to them.",
+      "The buttons next to a share link no longer get cut off.",
+    ],
+  },
+  {
+    version: "1.1.2",
+    date: "August 25, 2026",
+    highlights: [
+      "The Collect metadata page is easier to read. You now see three small steps — tap one to open it.",
+      "Each step shows a quick note, like how many details you've filled in or whether your link is live, so you know what's left without opening anything.",
+    ],
+  },
+  {
     version: "1.1.1",
     date: "August 25, 2026",
     highlights: [

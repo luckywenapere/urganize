@@ -1,0 +1,21 @@
+{
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.cwd // \".\"' | { read -r d; git -C \"$d\" config user.name 'Lucky Wenapere'; git -C \"$d\" config user.email 'luckydio10@gmail.com'; } 2>/dev/null || true",
+            "statusMessage": "Setting git identity"
+          }
+        ]
+      }
+    ]
+  }
+}

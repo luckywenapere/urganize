@@ -9,5 +9,11 @@ export const wideContainerClass = "max-w-[84rem] px-6 sm:px-8 lg:px-10";
 export const centeredHeadlineClass =
   "text-balance text-[2rem] font-semibold leading-[1.08] tracking-[-0.04em] text-[var(--marketing-text)] sm:text-[2.6rem] lg:text-[3rem]";
 
+// The lead-paragraph scale that sits under a centeredHeadlineClass h2. Its
+// last two consumers (TransformationSection, TemplatePlanSection) came off
+// the page on 2026-08-25, so nothing imports it today — kept rather than
+// deleted because the next section that needs a lead should reuse this
+// scale instead of inventing a third one. Delete it if a section is added
+// with a deliberately different lead size.
 export const mutedLeadClass =
   "text-balance text-[clamp(1.1rem,2vw,1.4rem)] leading-8 text-[var(--marketing-text-muted)]";

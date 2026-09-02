@@ -9,7 +9,7 @@ import {
   tierHighlights,
 } from '@urganize/pricing';
 import { ADMIN_ASSIGNABLE_PLANS } from './admin-teams';
-import { resolveCheckoutPurchase } from './billing-plans';
+import { isRecurringPlan, isSelfServeTier, resolveCheckoutPurchase } from './billing-plans';
 import type { PricingTierId } from '@urganize/pricing';
 import {
   ENTITLEMENTS,
@@ -27,7 +27,14 @@ import {
   resolveTeamTier,
 } from './entitlements';
 
+// The tiers a visitor SEES. Copy and ordering rules apply to these.
 const TIERS = PRICING_TIER_ORDER;
+
+// Every tier that EXISTS, display-retired ones included. Structural checks use
+// this: `enterprise` came off PRICING_TIER_ORDER on 2026-08-30 but its
+// definition and entitlements are still live for any stored row, so testing
+// only the displayed set would quietly stop covering it.
+const ALL_TIERS = Object.keys(PRICING_TIERS) as PricingTierId[];
 
 // THE ONE THAT MUST NEVER GO GREEN BY BEING DELETED.
 //
@@ -64,6 +71,28 @@ describe('the tier table matches what is published', () => {
     expect(manager.seats).toBe(4);
     expect(manager.active_releases).toBe(3);
     expect(manager.urgans_monthly_actions).toBe(150);
+  });
+
+  it('caps Solo at exactly 1 artist, 2 seats, 1 active release and 40 assistant actions', () => {
+    const solo = resolveEntitlements('solo');
+    expect(solo.artists).toBe(1);
+    expect(solo.seats).toBe(2);
+    expect(solo.active_releases).toBe(1);
+    expect(solo.urgans_monthly_actions).toBe(40);
+  });
+
+  // The ladder is the reason Solo exists: one artist, then a roster, then no
+  // ceiling. If two rungs ever read the same, the middle card stops earning its
+  // place on the page.
+  it('widens every ceiling as the ladder goes up', () => {
+    for (const key of ['artists', 'seats', 'active_releases', 'urgans_monthly_actions'] as const) {
+      const solo = resolveEntitlements('solo')[key];
+      const manager = resolveEntitlements('manager')[key];
+      expect(typeof solo, `solo ${key}`).toBe('number');
+      expect(typeof manager, `manager ${key}`).toBe('number');
+      expect(solo as number, `${key} solo < manager`).toBeLessThan(manager as number);
+      expect(resolveEntitlements('label')[key], `label ${key}`).toBeNull();
+    }
   });
 
   // Seats are never capped above the entry tier. A seat wall pushes half the
@@ -105,50 +134,47 @@ describe('the tier table matches what is published', () => {
 
   it('declares an entitlement for every tier, with no gaps', () => {
     const keys = Object.keys(ENTITLEMENTS.manager).sort();
-    for (const tier of TIERS) {
+    for (const tier of ALL_TIERS) {
       expect(Object.keys(ENTITLEMENTS[tier]).sort(), `${tier} keys`).toEqual(keys);
     }
   });
 });
 
-// The migration story depends on these two prices being the same number. Label
-// reuses the Paystack Plan objects that today's monthly/annual point at, so if
-// one moves and the other does not, checkout advertises one figure and charges
-// another — the gap this repo has shipped four times.
-describe('Label is priced identically to the live plans it inherits', () => {
-  it('matches monthly', () => {
-    expect(getTierPrice('label', 'monthly')?.amount).toBe(BILLING_PLANS.monthly.prices.NGN.amount);
-    expect(getTierPrice('label', 'monthly')?.minorUnit).toBe(
-      BILLING_PLANS.monthly.prices.NGN.minorUnit
-    );
-  });
-
-  it('matches annual', () => {
-    expect(getTierPrice('label', 'annual')?.amount).toBe(BILLING_PLANS.annual.prices.NGN.amount);
-    expect(getTierPrice('label', 'annual')?.minorUnit).toBe(
-      BILLING_PLANS.annual.prices.NGN.minorUnit
-    );
-  });
-
-  // Regression guard: the LIVE paywall renders BILLING_PLANS, so this PR must
-  // not have moved it. If this fails, a real checkout's advertised price moved.
-  it('leaves the live plan amounts untouched at NGN 80,000 / 800,000', () => {
+// Label used to be pinned to these amounts, because its tier prices had to
+// equal the live monthly/annual Plans it shared. Label went sales-led on
+// 2026-08-30 and carries no prices at all, so the pinning tests went with them
+// — but the guard below matters MORE now, not less: those Plan objects still
+// renew every live monthly, annual and Label subscription.
+describe('the live plan amounts', () => {
+  // Regression guard: the LIVE paywall renders BILLING_PLANS, so no pricing
+  // edit may move it. If this fails, a real checkout's advertised price moved.
+  it('are untouched at NGN 80,000 / 800,000', () => {
     expect(BILLING_PLANS.monthly.prices.NGN.amount).toBe(80_000);
     expect(BILLING_PLANS.annual.prices.NGN.amount).toBe(800_000);
   });
 });
 
 describe('tier prices and the sales-led tier', () => {
-  it('prices Manager below Label on both intervals', () => {
+  // The ladder has to read as a ladder. A card priced above the one to its
+  // right is the kind of inversion this repo has shipped before (Annual once
+  // exceeded Label in Naira), and it makes the whole table look unconsidered.
+  it('prices the tiers in ascending order, left to right', () => {
+    // Two priced cards since 2026-08-30, then a conversation. Derived from the
+    // order rather than named, so this keeps holding if a tier is added.
+    const priced = PRICING_TIER_ORDER.filter((tier) => !PRICING_TIERS[tier].contactSales);
+    expect(priced.length).toBeGreaterThan(1);
     for (const interval of ['monthly', 'annual'] as const) {
-      const manager = getTierPrice('manager', interval)?.amount ?? 0;
-      const label = getTierPrice('label', interval)?.amount ?? 0;
-      expect(manager).toBeLessThan(label);
+      let previous = 0;
+      for (const tier of priced) {
+        const amount = getTierPrice(tier, interval)?.amount ?? 0;
+        expect(amount, `${tier}/${interval}`).toBeGreaterThan(previous);
+        previous = amount;
+      }
     }
   });
 
-  it('holds the 2-months-free ratio on both priced tiers', () => {
-    for (const tier of ['manager', 'label'] as const) {
+  it('holds the 2-months-free ratio on every priced tier', () => {
+    for (const tier of ['solo', 'manager'] as const) {
       const monthly = getTierPrice(tier, 'monthly')?.amount ?? 0;
       const annual = getTierPrice(tier, 'annual')?.amount ?? 0;
       expect(annual, `${tier} annual`).toBe(monthly * 10);
@@ -157,11 +183,17 @@ describe('tier prices and the sales-led tier', () => {
 
   // Never render a price for a tier we quote by hand. Returning null forces the
   // caller into the "Let's talk" branch instead of formatting a zero.
-  it('has no price at all for enterprise', () => {
-    expect(PRICING_TIERS.enterprise.contactSales).toBe(true);
-    expect(PRICING_TIERS.enterprise.prices).toBeUndefined();
-    expect(getTierPrice('enterprise', 'monthly')).toBeNull();
-    expect(getTierPrice('enterprise', 'annual')).toBeNull();
+  it('has no price at all on any sales-led tier', () => {
+    // Label joined enterprise here on 2026-08-30. Written over every
+    // contactSales tier rather than naming one, so a future sales-led tier
+    // cannot ship still carrying an amount.
+    const salesLed = ALL_TIERS.filter((tier) => PRICING_TIERS[tier].contactSales);
+    expect(salesLed).toEqual(['label', 'enterprise']);
+    for (const tier of salesLed) {
+      expect(PRICING_TIERS[tier].prices, `${tier} prices`).toBeUndefined();
+      expect(getTierPrice(tier, 'monthly'), `${tier}/monthly`).toBeNull();
+      expect(getTierPrice(tier, 'annual'), `${tier}/annual`).toBeNull();
+    }
   });
 
   // The stored id and the customer-facing name deliberately differ for the
@@ -175,19 +207,28 @@ describe('tier prices and the sales-led tier', () => {
   it('calls the sales-led tier Group while keeping the enterprise id', () => {
     expect(PRICING_TIERS.enterprise.id).toBe('enterprise');
     expect(PRICING_TIERS.enterprise.label).toBe('Group');
-    // No tier displays the old name anywhere.
-    for (const tier of TIERS) {
+    // No tier displays the old name anywhere, retired ones included.
+    for (const tier of ALL_TIERS) {
       expect(PRICING_TIERS[tier].label).not.toMatch(/enterprise/i);
     }
   });
 
   it('recommends exactly one tier, and it is the one we sell', () => {
+    // Moved from Label to Manager on 2026-08-30: Label became sales-led, so
+    // Manager is the only tier a visitor can actually buy — pointing at a card
+    // with no checkout behind it would be the worst of both.
     const recommended = TIERS.filter((tier) => PRICING_TIERS[tier].recommended);
-    expect(recommended).toEqual(['label']);
+    expect(recommended).toEqual(['manager']);
+    expect(PRICING_TIERS.manager.contactSales).toBeUndefined();
   });
 
-  it('orders the cards entry point, flagship, sales-led', () => {
-    expect(PRICING_TIER_ORDER).toEqual(['manager', 'label', 'enterprise']);
+  it('orders the cards cheapest first, ending at the sales-led tier', () => {
+    // Group (id `enterprise`) was retired from display 2026-08-30. Its
+    // DEFINITION deliberately survives so a stored row still resolves, which is
+    // exactly why this asserts the order rather than the tier table.
+    expect(PRICING_TIER_ORDER).toEqual(['solo', 'manager', 'label']);
+    expect(PRICING_TIER_ORDER).not.toContain('enterprise');
+    expect(PRICING_TIERS.enterprise).toBeDefined();
   });
 
   it('carries a price for every interval on every self-serve tier', () => {
@@ -455,6 +496,28 @@ describe('the seat cap is reachable, and only for a team that bought Manager', (
     expect(rejectedAsUnknownPlan(false)).toBe(true);
   });
 
+  // The artists ceiling became enforceable on 2026-08-30, when rosters shipped.
+  // Until then nothing in the product could add a second artist, so the number
+  // was published and gated nothing.
+  it('caps a paying Manager team at its fifth artist', () => {
+    const tier = resolveTeamTier({ state: 'paid', ownerPlan: 'manager' });
+    expect(checkLimit({ tier, key: 'artists', current: 4 }).allowed).toBe(true);
+    const blocked = checkLimit({ tier, key: 'artists', current: 5 });
+    expect(blocked.allowed).toBe(false);
+    if (blocked.allowed) throw new Error('expected blocked');
+    expect(blocked.message).toContain('5');
+    // The published line and the refusal have to agree, or a manager reads one
+    // number on the pricing page and meets another in the product.
+    expect(tierHighlights('manager')[0]).toContain('5');
+  });
+
+  it('never caps artists on the tiers that advertise unlimited', () => {
+    for (const tier of ['label', 'enterprise'] as const) {
+      expect(isUnlimited(resolveEntitlements(tier).artists), `${tier} artists`).toBe(true);
+      expect(checkLimit({ tier, key: 'artists', current: 999 }).allowed).toBe(true);
+    }
+  });
+
   it('caps a paying Manager team at its fourth seat, so the fifth invite is refused', () => {
     const tier = resolveTeamTier({ state: 'paid', ownerPlan: 'manager' });
     expect(tier).toBe('manager');
@@ -482,6 +545,7 @@ describe('the seat cap is reachable, and only for a team that bought Manager', (
     for (const plan of LEGACY_WRITABLE_PLANS) {
       const tier = resolveTeamTier({ state: 'paid', ownerPlan: plan });
       const entitlements = resolveEntitlements(tier);
+      expect(isUnlimited(entitlements.artists), `${plan} -> ${tier} artists`).toBe(true);
       expect(isUnlimited(entitlements.seats), `${plan} -> ${tier} seats`).toBe(true);
       expect(isUnlimited(entitlements.active_releases), `${plan} -> ${tier} releases`).toBe(true);
       expect(
@@ -495,6 +559,86 @@ describe('the seat cap is reachable, and only for a team that bought Manager', (
   // way onto a capped tier remains an actual purchase.
   it('confirms manager is still not admin-assignable', () => {
     expect(ADMIN_ASSIGNABLE_PLANS).not.toContain('manager');
+  });
+
+  // SOLO IS SELF-SERVE AS OF 2026-09-01. Until then it sat on the public
+  // pricing page at ₦8,000 while being absent from SelfServeTierId and from
+  // subscriptions_plan_check, which made all four of its ceilings unreachable
+  // dead code — advertised, and enforced on nobody.
+  //
+  // THE ASSERTION IS ABOUT *WHICH* FAILURE, and that is the whole value of it.
+  // Solo's Paystack Plans are not minted yet, so checkout still refuses — but it
+  // must now refuse at the CONFIGURATION step (500, "plan code not configured")
+  // rather than at the VALIDATION step (400, unknown plan). Those two look
+  // identical from the outside and mean opposite things: the first says "mint the
+  // Plans", the second says "the tier does not exist". Distinguishing them is
+  // what stops the next session concluding Solo was never meant to be sold.
+  //
+  // When the Plans are minted and the env vars set, this flips to ok: true with
+  // no code change — the env read is the only thing standing in the way.
+  it('accepts Solo at checkout, refusing only for want of a minted Plan', () => {
+    const result = resolveCheckoutPurchase({
+      plan: 'solo',
+      currency: 'NGN',
+      interval: 'monthly',
+      pricingV2: true,
+    });
+    if (result.ok) {
+      // The Plans have been minted in this environment. Then the only thing
+      // worth checking is that it resolved as the tier and not as something else.
+      expect(result.planId).toBe('solo');
+      expect(result.interval).toBe('monthly');
+      return;
+    }
+    expect(result.status).toBe(500);
+    expect(result.error).toContain('not configured');
+  });
+
+  // Reachability is decided by the pricing-v2 flag, exactly as Manager's is.
+  // With the flag off, Solo is not a plan id the legacy generation knows.
+  it('does not sell Solo with pricing v2 off', () => {
+    const result = resolveCheckoutPurchase({
+      plan: 'solo',
+      currency: 'NGN',
+      interval: 'monthly',
+      pricingV2: false,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('expected refusal');
+    expect(result.status).toBe(400);
+  });
+
+  // Still not something an admin hands out by hand: the only way onto a capped
+  // tier is an actual purchase, for Solo exactly as for Manager.
+  it('confirms solo is not admin-assignable', () => {
+    expect(ADMIN_ASSIGNABLE_PLANS).not.toContain('solo');
+  });
+
+  // A Solo subscription has to keep extending at each renewal. Missing from
+  // RECURRING_PLAN_IDS, it would charge correctly on day one and then silently
+  // stop — the failure mode isRecurringPlan's own comment was written about.
+  it('renews a Solo subscription', () => {
+    expect(isRecurringPlan('solo')).toBe(true);
+  });
+
+  // THE WALL AND CHECKOUT MUST AGREE ON WHICH TIERS ARE SELF-SERVE, and this is
+  // what holds them together across a boundary an import cannot cross.
+  //
+  // TeamWall.tsx derives its radio list by filtering PRICING_TIER_ORDER on
+  // `!contactSales`; checkout gates on `isSelfServeTier`. It cannot import that
+  // predicate — lib/billing-plans.ts is server-only Paystack config — so the two
+  // are separate expressions of one fact, and this asserts they say the same
+  // thing for every tier that exists.
+  //
+  // Both failure directions are real and neither is loud on its own: a tier the
+  // wall offers but checkout refuses is a dead-end radio, and a tier checkout
+  // accepts but the wall omits is a price nobody can buy — precisely the state
+  // Solo was in between 2026-08-30 and 2026-09-01.
+  it('the wall and checkout agree on which tiers are self-serve', () => {
+    for (const tier of Object.keys(PRICING_TIERS) as PricingTierId[]) {
+      const salesLed = Boolean(PRICING_TIERS[tier].contactSales);
+      expect(isSelfServeTier(tier), `${tier} self-serve`).toBe(!salesLed);
+    }
   });
 
   // A trial is full access by definition, so an evaluating team never meets the
@@ -516,6 +660,7 @@ describe('countable ceilings are derived, not duplicated', () => {
   it('reads every ceiling straight off the shared tier limits', () => {
     for (const tier of PRICING_TIER_ORDER) {
       const limits = PRICING_TIERS[tier].limits;
+      expect(ENTITLEMENTS[tier].artists).toBe(limits.artists);
       expect(ENTITLEMENTS[tier].seats).toBe(limits.seats);
       expect(ENTITLEMENTS[tier].active_releases).toBe(limits.activeReleases);
       expect(ENTITLEMENTS[tier].urgans_monthly_actions).toBe(limits.urgansMonthlyActions);
@@ -545,11 +690,23 @@ describe('tierHighlights', () => {
 
   it('says unlimited where there is no ceiling, and quotes no number', () => {
     const lines = tierHighlights('label');
-    const ceilingLines = lines.slice(0, 3);
+    const ceilingLines = lines.slice(0, 4);
     for (const line of ceilingLines) {
       expect(line.toLowerCase()).toContain('unlimited');
       expect(line).not.toMatch(/\d/);
     }
+  });
+
+  // The roster line leads every card and is built from `limits.artists`, so a
+  // re-cut tier cannot leave "Up to 5 artists" sitting on a card that no longer
+  // means it.
+  it('leads with the roster size, taken from the limit', () => {
+    expect(tierHighlights('solo')[0]).toBe('1 artist');
+    expect(tierHighlights('manager')[0]).toBe(
+      `Up to ${PRICING_TIERS.manager.limits.artists} artists`
+    );
+    expect(tierHighlights('label')[0]).toBe('Unlimited artists');
+    expect(tierHighlights('enterprise')[0]).toBe('Unlimited artists');
   });
 
   it('includes every perk after the ceilings', () => {
@@ -578,19 +735,23 @@ describe('public tier copy tells the truth', () => {
   });
 
   it('phrases the annual saving in months and never as a percentage', () => {
+    expect(annualSavingCopy('solo')).toBe('2 months free');
     expect(annualSavingCopy('manager')).toBe('2 months free');
-    expect(annualSavingCopy('label')).toBe('2 months free');
-    // No annual price to save against.
+    // No annual price to save against on a sales-led tier.
+    expect(annualSavingCopy('label')).toBeNull();
     expect(annualSavingCopy('enterprise')).toBeNull();
   });
 
-  it('carries no percentage and no em dash anywhere in the tier copy', () => {
-    // The pricing spec forbids a percentage saving, and the marketing copy
-    // rules forbid em dashes in house copy.
+  it('carries no percentage, no em dash and no "workspace" in the tier copy', () => {
+    // The pricing spec forbids a percentage saving, the marketing copy rules
+    // forbid em dashes in house copy, and "workspace" is banned from tier copy
+    // specifically: it is what WE call the thing, not what a manager calls the
+    // place their releases live.
     for (const tier of PRICING_TIER_ORDER) {
       const copy = [PRICING_TIERS[tier].audience, ...tierHighlights(tier)].join(' ');
-      expect(copy).not.toContain('%');
-      expect(copy).not.toContain('\u2014');
+      expect(copy, tier).not.toContain('%');
+      expect(copy, tier).not.toContain('\u2014');
+      expect(copy.toLowerCase(), tier).not.toContain('workspace');
     }
   });
 });

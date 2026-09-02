@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { verifyAdmin } from '../../_shared';
 import { sendPushToUsers } from '@/lib/push-server';
 import { getNotificationPresets } from '@/lib/notification-presets-server';
+import { fillCreditPlaceholders } from '@/lib/credit-notifications';
 
 // "Send test to me" (mobile push notifications, 2026-08-10) — exercises
 // whichever transport(s) the admin's own account has registered (Web Push
@@ -44,6 +45,22 @@ export async function POST(request: NextRequest) {
     payload = {
       title: copy.title,
       body: copy.body.replace('{taskTitle}', '“Test Activity”'),
+      url: '/dashboard',
+      tag: 'urganize-test',
+    };
+  } else if (category === 'creditSubmissions') {
+    const copy = presets.creditSubmissions.copy;
+    // Substituted through the same helper the real send uses, so a test push
+    // cannot render placeholders differently from the genuine one.
+    payload = {
+      title: fillCreditPlaceholders(copy.title, {
+        collaboratorName: 'Ada Example',
+        releaseTitle: 'Test Release',
+      }),
+      body: fillCreditPlaceholders(copy.body, {
+        collaboratorName: 'Ada Example',
+        releaseTitle: 'Test Release',
+      }),
       url: '/dashboard',
       tag: 'urganize-test',
     };

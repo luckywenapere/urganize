@@ -2,6 +2,8 @@ export * from "./AudioPlayer";
 export * from "./AiRecoveryActions";
 export * from "./Button";
 export * from "./Card";
+export * from "./chappi-constants";
+export * from "./Chappi";
 export * from "./Input";
 export * from "./LoadingScreen";
 export * from "./Logo";

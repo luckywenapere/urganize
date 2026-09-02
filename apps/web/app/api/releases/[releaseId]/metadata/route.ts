@@ -4,17 +4,43 @@ import {
   RELEASE_METADATA_TABLE,
   buildMissingTableResponse,
   createAdminClient,
-  ensureReleaseOwnership,
   requireActiveAuthenticatedUser,
   isOptionalTableMissingError,
   loadReleaseCommandCenterData,
   toMetadataSnapshot,
 } from '../../_shared';
+import {
+  ensureReleaseTeamReadAccess,
+  ensureReleaseTeamWriteAccess,
+} from '@/lib/release-access-server';
+
+// Feature flag. This route is part of the metadata surface
+// (NEXT_PUBLIC_FEATURE_METADATA) and was the one handler in it with no gate:
+// the credits route group, the public /credits/[token] page and its POST route
+// all 404 when the flag is off, so a direct call could still read and write a
+// release's distribution fields through here while every UI entry point to
+// them was dark.
+//
+// Defined locally rather than imported from the credits route group's
+// _shared.ts, matching how predict-genre/route.ts owns its own flag reader:
+// route groups read their flags themselves, and a cross-group import of a
+// boolean would tie this handler to a sibling group's module.
+//
+// The body is exactly 'Not found.' on purpose. lib/chappi/tool-families/shared
+// .ts:isFlagGateOff matches that string to tell "the feature is off" apart
+// from the release access check's 'Release not found.', so the assistant can
+// explain which one happened instead of reporting a missing release.
+const isMetadataFeatureEnabled = (): boolean =>
+  process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
+  if (!isMetadataFeatureEnabled()) {
+    return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  }
+
   const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
@@ -22,7 +48,12 @@ export async function GET(
   if (!releaseId) return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
 
   const adminClient = createAdminClient(auth.supabaseUrl);
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  // Team read (whole-workspace visibility): any member of the owner's
+  // workspace may open the Metadata scene, not just the release owner.
+  // Accepted semantics note: the metadata_viewed stamp below now fires for
+  // any member's view — team review is review, and the payload already
+  // records who viewed.
+  const ownership = await ensureReleaseTeamReadAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const viewEvent = await adminClient!.from(RELEASE_EVENTS_TABLE).insert({
@@ -52,6 +83,7 @@ export async function GET(
 type UpdateMetadataBody = {
   isrc?: unknown;
   upc?: unknown;
+  iswc?: unknown;
   genre?: unknown;
   subgenre?: unknown;
   language?: unknown;
@@ -68,7 +100,7 @@ const readOptionalString = (value: unknown): string | null => {
 };
 
 // Editable half of the metadata hub (URG-108): the release-level
-// distribution fields (ISRC, UPC, genre, subgenre, language, explicit,
+// distribution fields (ISRC, UPC, ISWC, genre, subgenre, language, explicit,
 // label, (P)/(C) lines). Full-replace on every save — the hub's form is
 // fully controlled and always submits its complete current state, so an
 // upsert keyed on release_id is simpler and more predictable than a partial
@@ -84,6 +116,10 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
+  if (!isMetadataFeatureEnabled()) {
+    return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  }
+
   const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
@@ -91,7 +127,7 @@ export async function PATCH(
   if (!releaseId) return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
 
   const adminClient = createAdminClient(auth.supabaseUrl);
-  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
   if ('error' in ownership) return ownership.error;
 
   const body = (await request.json().catch(() => ({}))) as UpdateMetadataBody;
@@ -107,6 +143,7 @@ export async function PATCH(
         release_id: releaseId,
         isrc: readOptionalString(body.isrc),
         upc: readOptionalString(body.upc),
+        iswc: readOptionalString(body.iswc),
         genre: readOptionalString(body.genre),
         subgenre: readOptionalString(body.subgenre),
         language: readOptionalString(body.language),

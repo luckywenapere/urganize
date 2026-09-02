@@ -1,27 +1,22 @@
 import { ProofLine } from "../ProofLine";
-import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { WaitlistForm } from "../WaitlistForm";
-import { YouTubeFacade } from "../YouTubeFacade";
+import { WatchDemo } from "../WatchDemo";
 import { wideContainerClass } from "./shared";
 
 export function HeroSection() {
   return (
     <SectionShell
-      className="pb-20 pt-16 sm:pb-24 sm:pt-20 lg:pb-28 lg:pt-24"
+      className="pb-20 pt-20 sm:pb-24 sm:pt-24 lg:pb-28 lg:pt-28"
       containerClassName={wideContainerClass}
     >
       <div className="mx-auto flex max-w-[64rem] flex-col items-center text-center">
-        {/* Executive repositioning (2026-08-19): the eyebrow carries the
-            locked category claim as a plain noun; the h1 spends its words
-            on the buyer's outcome. "AI workspace" is a category label here
-            — AI verbs only ever describe shipped UrgAns behavior (see
-            ThreeFeaturesSection). */}
-        <p className="hero-fade-in mono-label text-[var(--marketing-text-subtle)]">
-          The AI workspace for music executives
-        </p>
-
-        <div className="mt-8 flex flex-col items-center gap-8 sm:gap-10">
+        {/* Eyebrow removed (2026-08-25, founder call): the h1 now leads the
+            viewport directly, so the section's own top padding carries the
+            framing that the eyebrow + its mt-8 used to (bumped one step at
+            every breakpoint to keep the same visual weight under the fixed
+            header). */}
+        <div className="flex flex-col items-center gap-8 sm:gap-10">
           {/* Outcome-first h1: the old "One home for every release" was a
               container metaphor, banned under the 2026-08 positioning.
               The accent stays on "every release" — the unit of work. */}
@@ -35,8 +30,7 @@ export function HeroSection() {
 
           <p className="hero-fade-in hero-delay-2 mx-auto block w-full max-w-[44rem] text-balance text-center text-lg leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
             Urganize plans the rollout, gives every activity an owner and
-            shows you where each release stands. No more scrolling WhatsApp
-            to find out.
+            shows you where each release stands.
           </p>
         </div>
 
@@ -64,15 +58,17 @@ export function HeroSection() {
             className="mt-2 w-full max-w-[30rem] border-t border-[color:var(--marketing-border)] pt-5"
           />
         </div>
-      </div>
 
-      <ScrollReveal>
-        <div className="mx-auto mt-14 w-full max-w-4xl sm:mt-16">
-          <div className="relative aspect-video w-full overflow-hidden rounded-xl">
-            <YouTubeFacade />
-          </div>
+        {/* The demo hides behind this button now (founder call, 2026-08-27):
+            the old full-width 16:9 facade took ~500px that visitors scrolled
+            straight past. WatchDemo opens the player in an overlay, so only
+            the people who actually want the demo see it. Fades in with the
+            CTA group (delay-3) rather than on scroll — it sits above the
+            fold with the form. */}
+        <div className="hero-fade-in hero-delay-3 mt-10">
+          <WatchDemo />
         </div>
-      </ScrollReveal>
+      </div>
     </SectionShell>
   );
 }

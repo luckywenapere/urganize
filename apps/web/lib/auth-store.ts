@@ -4,7 +4,6 @@ import { persist } from 'zustand/middleware';
 import type { User } from '@supabase/supabase-js';
 import { supabase, type Profile, handleSupabaseError } from './supabase/client';
 import { errorMessage } from "@/lib/errors";
-import { isNetworkFailure } from './offline/network-error';
 import { installAccessRedirect } from './access-redirect';
 import { isAllowlistedEmail } from './paywall-allowlist';
 import { isCardTrialEnabled, resolveCardTrialDestination } from './trial-card';
@@ -12,6 +11,14 @@ import { isHardPaywallEnabled } from './team-billing';
 import { isNativePlatform } from './platform';
 import { resetSceneData } from '@/stores/useSceneDataStore';
 import { resetSceneMemory } from '@/lib/scene-memory';
+import { resetCatalogIntent } from '@/lib/catalog-intent';
+import {
+  classifyAuthFailure,
+  isProfileReadTransientError,
+  shouldClearPersistedSession,
+  type AuthFailureKind,
+} from '@/lib/auth-failure';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
 
 // Custom URL scheme registered in the native shell's Info.plist /
 // AndroidManifest.xml (apps/mobile) — see docs/mobile/auth-setup.md. Google
@@ -311,10 +318,69 @@ const isScheduledDeletionActive = (metadata: Record<string, unknown> | undefined
   return Number.isFinite(scheduledTime) && scheduledTime > Date.now();
 };
 
-const isAbortError = (error: unknown): boolean => {
-  const message = String(errorMessage(error, '')).toLowerCase();
-  const name = String((error as { name?: string } | null)?.name || '').toLowerCase();
-  return name === 'aborterror' || message.includes('aborted') || message.includes('operation was aborted');
+/**
+ * `navigator.onLine` where it exists, for classifyAuthFailure's `opts.online`.
+ * Optimistic off-browser: a missing Navigator must not be read as "offline".
+ */
+const isBrowserOnline = (): boolean =>
+  typeof navigator === 'undefined' || navigator.onLine !== false;
+
+/**
+ * The last auth failure we chose to ride out, kept only so that if the session
+ * dies moments later we can say in telemetry whether we had just seen the
+ * network misbehaving. Not state — never rendered, never persisted.
+ */
+let lastAuthFailure: { kind: AuthFailureKind; at: number } | null = null;
+
+const rememberAuthFailure = (error: unknown): void => {
+  lastAuthFailure = { kind: classifyAuthFailure(error, { online: isBrowserOnline() }), at: Date.now() };
+};
+
+/** Only a failure in the last two minutes is plausibly related to a sign-out. */
+const RECENT_AUTH_FAILURE_MS = 120_000;
+
+/**
+ * Did WE ask for the sign-out we are about to hear about?
+ *
+ * supabase-js emits SIGNED_OUT on its own initiative whenever it gives up on a
+ * session — most often a refresh that failed non-retryably. That is a real
+ * logout and we still honour it (by then the token is already deleted, so
+ * pretending otherwise would leave the app running as `anon`, which under RLS
+ * returns empty results rather than errors — a blank dashboard with no way
+ * out). But it is worth telling apart from a sign-out this app asked for, so
+ * we can explain it on /auth and count it in telemetry.
+ *
+ * 'deliberate' covers every signOut() WE call: the user clicking Log out, and
+ * scheduled-deletion enforcement (which sets its own, far more specific
+ * message and must not be papered over with a generic one). The default is
+ * 'unexpected', so a SIGNED_OUT nobody here initiated is reported as one.
+ */
+type SignOutOrigin = 'deliberate' | 'unexpected';
+let pendingSignOutOrigin: SignOutOrigin = 'unexpected';
+
+/** A signOut() we asked for, so the SIGNED_OUT it emits is not counted as a loss. */
+const runDeliberateSignOut = async (): Promise<void> => {
+  pendingSignOutOrigin = 'deliberate';
+  try {
+    await supabase.auth.signOut();
+  } finally {
+    pendingSignOutOrigin = 'unexpected';
+  }
+};
+
+/**
+ * One-shot, deliberately in sessionStorage rather than the persisted store
+ * slice: an explanation for the current visit must never become sticky.
+ * Read and cleared by app/auth/AuthPageClient.tsx.
+ */
+export const SESSION_EXPIRED_NOTICE_KEY = 'urganize.auth.session-expired';
+
+const markSessionExpiredNotice = (): void => {
+  try {
+    window.sessionStorage.setItem(SESSION_EXPIRED_NOTICE_KEY, '1');
+  } catch {
+    // Storage can throw in a restricted webview. The notice is a courtesy.
+  }
 };
 
 const resolveNeedsOnboarding = (profile: Profile | null | undefined): boolean => {
@@ -338,7 +404,20 @@ interface AuthState {
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: (nextPath?: string) => Promise<void>;
-  signup: (email: string, password: string, name: string, role: string, artistName?: string) => Promise<void>;
+  signup: (
+    email: string,
+    password: string,
+    name: string,
+    role: string,
+    artistName?: string,
+    options?: {
+      /** Invite token stashed into auth.user_metadata at signup so the
+       * server-side deferred claim (lib/invite-claims-server.ts) can finish
+       * the workspace join even when the accept POST after signup never
+       * completes — the account-created-but-never-joined dead end. */
+      pendingInviteToken?: string;
+    }
+  ) => Promise<void>;
   updateArtistName: (artistName: string) => Promise<void>;
   updateProfileName: (name: string) => Promise<void>;
   updateAskAfterTasks: (enabled: boolean) => Promise<void>;
@@ -391,34 +470,58 @@ export const useAuthStore = create<AuthState>()(
               set({ isLoading: true });
             }
             
-            // getUser() is more reliable as it forces a check against the
-            // server; getSession() is a local read. Independent, so run them
-            // together rather than paying getUser's round trip first.
-            const [
-              { data: { user }, error: userError },
-              { data: { session } },
-            ] = await Promise.all([supabase.auth.getUser(), supabase.auth.getSession()]);
+            // SEQUENTIAL, and getSession() first. Do not restore the old
+            // Promise.all here: getUser() and getSession() both take the same
+            // navigator lock (auth-js _acquireLock), and its re-entrancy fast
+            // path only applies once the lock is ALREADY held — which it is
+            // not when both are started at once. So they queue, and at
+            // lockAcquireTimeout (5s by default) the waiter STEALS the lock and
+            // the holder is thrown NavigatorLockAcquireTimeoutError. That throw
+            // comes from the lock wrapper, outside _getUser's try/catch, so
+            // getUser() rejects rather than returning an { error } result. The
+            // net effect was that any /auth/v1/user round trip slower than five
+            // seconds logged the user out — durably, because the catch below
+            // persists isAuthenticated.
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-            if (userError) {
-              // A real rejection (expired refresh token, revoked session,
-              // bad credentials) means we are definitely not authenticated.
-              // A network failure means we simply couldn't ask — if we
-              // already have a persisted session, trust it rather than
-              // signing the user out from under them over a dropped
-              // connection. Server-side auth is untouched either way: every
-              // API route still checks the token independently.
-              if (isNetworkFailure(userError) && currentState.isAuthenticated && currentState.user) {
+            if (!session) {
+              if (sessionError && !shouldClearPersistedSession(sessionError, { online: isBrowserOnline() })) {
+                // We could not read the session, which is not the same as
+                // there not being one. Keep whatever is persisted and just
+                // release the gate.
+                console.warn('[auth] could not read session; keeping persisted state', sessionError);
+                rememberAuthFailure(sessionError);
                 set({ isLoading: false });
                 return;
               }
+              // No token and no excuse: genuinely signed out. This is the leg
+              // that keeps the app signoutable.
               set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, hasCuratorProfile: null, error: null });
               return;
             }
-            
+
+            // Advisory only. Its one unique contribution is the server-fresh
+            // scheduled-deletion check below; everything else we need is
+            // already on the signed, unexpired JWT payload in session.user. So
+            // when the network is down we degrade to the local user rather
+            // than treating an unanswered request as a logout.
+            const { data: { user: verifiedUser }, error: userError } = await supabase.auth.getUser();
+
+            if (userError && shouldClearPersistedSession(userError, { online: isBrowserOnline() })) {
+              set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, hasCuratorProfile: null, error: null });
+              return;
+            }
+            if (userError) {
+              console.warn('[auth] could not verify session with the server; continuing with the local one', userError);
+              rememberAuthFailure(userError);
+            }
+
+            const user = verifiedUser ?? session.user;
+
             if (user && session) {
               if (shouldEnforceScheduledDeletion && isScheduledDeletionActive(user.user_metadata as Record<string, unknown>)) {
                 const scheduledAt = getScheduledDeletion(user.user_metadata as Record<string, unknown>);
-                await supabase.auth.signOut();
+                await runDeliberateSignOut();
                 set({
                   user: null,
                   isAuthenticated: false,
@@ -429,7 +532,37 @@ export const useAuthStore = create<AuthState>()(
                 return;
               }
 
-              const profile = await getOrCreateProfile(user);
+              // A profiles row is application data; authentication is whether
+              // Supabase Auth recognises this JWT. Conflating them meant a
+              // Postgres restart, an RLS deploy, or one slow request logged out
+              // everyone who reloaded during it.
+              let profile: Profile;
+              try {
+                profile = await getOrCreateProfile(user);
+              } catch (profileError) {
+                const cached = get().user;
+                // The id check is essential: never hand account A's cached
+                // profile to account B.
+                if (cached && cached.id === user.id) {
+                  // Keep the last known-good row rather than signing out or
+                  // fabricating a fallback — buildFallbackProfile sets
+                  // onboarding_completed: false, which would shove an
+                  // established user back into the onboarding wizard.
+                  console.warn('[auth] profile read failed; using the cached profile', profileError);
+                  persistLastAuthEmail(cached.email || user.email);
+                  set({ isAuthenticated: true, isLoading: false, error: null });
+                  void ensureActiveAccessOrRedirect(session.access_token, cached.email || user.email);
+                  return;
+                }
+                if (isProfileReadTransientError(profileError)) {
+                  // Nothing cached (first load on this device, offline). Do not
+                  // invent a profile, and do not call this a logout.
+                  console.warn('[auth] profile read failed with nothing cached', profileError);
+                  set({ isLoading: false });
+                  return;
+                }
+                throw profileError;
+              }
 
               if (profile) {
                 persistLastAuthEmail(profile.email || user.email);
@@ -460,18 +593,17 @@ export const useAuthStore = create<AuthState>()(
             
             set({ user: null, isAuthenticated: false, isLoading: false, needsOnboarding: true, hasCuratorProfile: null, error: null });
           } catch (error) {
-            if (isAbortError(error)) {
-              set((state) => ({ isLoading: false, error: state.error }));
+            if (!shouldClearPersistedSession(error, { online: isBrowserOnline() })) {
+              // Could not reach the server, or the lock was stolen out from
+              // under us. Neither is evidence about the session, so keep the
+              // persisted identity and release the gate. Deliberately no
+              // `error` set: a signed-in user should not get a red banner over
+              // a network blip. authCheckedAt is deliberately NOT stamped, so
+              // the 30s recency guard does not suppress the next attempt.
+              console.warn('[auth] session check failed transiently; keeping persisted state', error);
+              rememberAuthFailure(error);
+              set({ isLoading: false });
               return;
-            }
-            // Same reasoning as the userError branch above: a network
-            // failure mid-check must not evict a session we already trust.
-            if (isNetworkFailure(error)) {
-              const persisted = get();
-              if (persisted.isAuthenticated && persisted.user) {
-                set({ isLoading: false });
-                return;
-              }
             }
             console.error('Auth check failed:', error);
             const errorMessage = handleSupabaseError(error);
@@ -507,7 +639,7 @@ export const useAuthStore = create<AuthState>()(
 
           if (shouldEnforceScheduledDeletion && isScheduledDeletionActive(data.user.user_metadata as Record<string, unknown>)) {
             const scheduledAt = getScheduledDeletion(data.user.user_metadata as Record<string, unknown>);
-            await supabase.auth.signOut();
+            await runDeliberateSignOut();
             throw new Error(`Account is scheduled for deletion on ${new Date(scheduledAt || '').toLocaleString()}. Contact contact@urganize.app to recover.`);
           }
 
@@ -578,7 +710,14 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      signup: async (email: string, password: string, name: string, role: string, artistName?: string) => {
+      signup: async (
+        email: string,
+        password: string,
+        name: string,
+        role: string,
+        artistName?: string,
+        options?: { pendingInviteToken?: string }
+      ) => {
         try {
           set({ isLoading: true, error: null });
           const normalizedArtistName = String(artistName || '').trim();
@@ -594,6 +733,10 @@ export const useAuthStore = create<AuthState>()(
                 name: name.trim(),
                 role,
                 artist_name: normalizedArtistName || undefined,
+                // Durable record of a not-yet-claimed workspace invite. The
+                // deferred claim in loadWorkspaceAccessContext reads and
+                // clears it — see lib/invite-claims-server.ts.
+                pending_invite_token: options?.pendingInviteToken?.trim() || undefined,
               },
             },
           });
@@ -827,6 +970,9 @@ export const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         try {
+          // Claim the SIGNED_OUT this is about to emit, so the handler does
+          // not mistake a deliberate sign-out for a session we lost.
+          pendingSignOutOrigin = 'deliberate';
           const { error } = await supabase.auth.signOut();
           if (error) throw error;
 
@@ -845,6 +991,8 @@ export const useAuthStore = create<AuthState>()(
           const errorMessage = handleSupabaseError(error);
           console.error('Logout failed:', error);
           set({ error: errorMessage });
+        } finally {
+          pendingSignOutOrigin = 'unexpected';
         }
       },
     }),
@@ -889,6 +1037,32 @@ if (typeof window !== 'undefined') {
       }
       void useAuthStore.getState().checkAuth();
     } else if (event === 'SIGNED_OUT') {
+      // Still an unconditional wipe, even when supabase-js decided this on its
+      // own: by the time we hear about it _removeSession() has already deleted
+      // the token, so keeping isAuthenticated would leave every query running
+      // as `anon` — and under RLS that returns empty result sets rather than
+      // errors, i.e. a silently blank app with no way out. A login screen is
+      // the better failure. What we DO add is an explanation and a count.
+      if (pendingSignOutOrigin === 'unexpected') {
+        const { isAuthenticated: wasAuthenticated } = useAuthStore.getState();
+        const recent =
+          lastAuthFailure && Date.now() - lastAuthFailure.at < RECENT_AUTH_FAILURE_MS
+            ? lastAuthFailure
+            : null;
+        if (wasAuthenticated) {
+          markSessionExpiredNotice();
+        }
+        captureAnalyticsEvent({
+          name: 'auth_session_lost_unexpectedly',
+          properties: {
+            was_authenticated: wasAuthenticated,
+            ...(recent
+              ? { last_failure_kind: recent.kind, last_failure_age_ms: Date.now() - recent.at }
+              : {}),
+          },
+        });
+      }
+      lastAuthFailure = null;
       invalidateAuthRecency();
       // Cached release-scene data is per-account. Clearing it here (memory AND
       // disk) is what stops account B, signing in on the same device, from
@@ -900,6 +1074,10 @@ if (typeof window !== 'undefined') {
       // different account — must always start every release at Activities,
       // never resume whatever was open in the session that just ended.
       resetSceneMemory();
+      // Same rule, one level up: a same-tab logout then login is a new
+      // arrival, so it gets its one lone-release auto-scope back rather than
+      // inheriting "the catalog was asked for" from the session that ended.
+      resetCatalogIntent();
       useAuthStore.setState({
         user: null,
         isAuthenticated: false,

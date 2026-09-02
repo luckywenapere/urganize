@@ -36,7 +36,7 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "You don't start from a blank page for artist number three.",
-    body: "Create a release and Urganize lays out the whole rollout. 64 activities across 11 weeks, from locking the master to pulling your first-week numbers. Every artist gets the same starting plan and you can edit or delete any activity.",
+    body: "Create a release and Urganize lays out the whole rollout, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Every artist gets the same starting plan and you can edit or delete any activity.",
     points: [
       "One template, shaped for each release",
       "Every activity dated around that release day",
@@ -157,8 +157,9 @@ export default function ForManagersPage() {
             canonical copy. Swapped in 2026-08-05: her new review's chaos/
             multiple-releases-and-artists-and-team sentence is this page's
             exact audience. Antoine (the prior quote here) still carries the
-            landing TransformationSection's "plan" row and the /features CTA
-            ProofLine, so his voice isn't lost from the site. */}
+            /features CTA ProofLine (his landing TransformationSection row
+            went with that section, removed 2026-08-25), so his voice isn't
+            lost from the site. */}
         <ScrollReveal>
           <SectionShell
             className="py-[80px] lg:py-[100px]"

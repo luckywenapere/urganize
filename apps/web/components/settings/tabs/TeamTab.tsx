@@ -11,6 +11,9 @@ type TeamTabProps = {
   onRefetch: () => void;
   /** Seat ceiling, or null when the team has none. */
   seatLimit?: number | null;
+  /** The team's roster, so an artist invite can be scoped to an artist who has
+   *  no releases yet — which is every artist you have just added. */
+  artists?: { id: string; name: string }[];
 };
 
 /**
@@ -37,6 +40,7 @@ export function TeamTab({
   onTeammatesChange,
   onRefetch,
   seatLimit = null,
+  artists,
 }: TeamTabProps) {
   return (
     <div className="divide-y divide-stroke-subtle">
@@ -46,6 +50,7 @@ export function TeamTab({
         onTeammatesChange={onTeammatesChange}
         onRefetch={onRefetch}
         seatLimit={seatLimit}
+        artists={artists}
       />
       <TeamLoginsSection />
     </div>

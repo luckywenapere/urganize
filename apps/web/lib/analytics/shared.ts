@@ -19,10 +19,30 @@ export type ReleaseCreatedSource =
   | 'chappi'
   // The UrgAns planner intake, when it creates the release itself (started
   // from a note or an assistant chip rather than an existing release).
-  | 'planner';
+  | 'planner'
+  // The one-tap test release (NEXT_PUBLIC_FEATURE_TEST_RELEASE) — kept
+  // distinct so real-release activation reads are segmentable from test runs.
+  | 'test_path';
 export type TaskCreatedSource = 'quick_create' | 'inline' | 'detail_panel' | 'onboarding';
 
 export interface AnalyticsEventPropertiesMap {
+  /**
+   * The session ended without the user asking for it — supabase-js dropped the
+   * token itself, almost always after a refresh it could not complete. This is
+   * the only signal that tells us whether users are being logged out in the
+   * wild, and it exists because four separate paths in lib/auth-store.ts used
+   * to do the same thing silently (URG-235).
+   *
+   * `last_failure_kind` is what the preceding auth failure classified as, when
+   * there was one within `last_failure_age_ms` — a `transient` value here means
+   * we very likely lost a live session to a bad connection rather than a real
+   * revocation.
+   */
+  auth_session_lost_unexpectedly: {
+    last_failure_kind?: 'revoked' | 'transient' | 'unknown';
+    last_failure_age_ms?: number;
+    was_authenticated: boolean;
+  };
   onboarding_started: EmptyAnalyticsProperties;
   onboarding_role_selected: { role: 'artist' | 'manager' | 'label' | 'other' };
   onboarding_release_created: {
@@ -113,7 +133,19 @@ export interface AnalyticsEventPropertiesMap {
     tasks_removed: number;
     tasks_added: number;
     ai_applied: boolean;
+    /** Approved from the twenty-second nudge rather than the standing bar. */
+    via_prompt: boolean;
   };
+  /** The twenty-second review nudge (2026-08-25). A manager scrolling a
+   * sixty-task plan has no natural end point, so after twenty seconds the
+   * approve bar offers to move them on. `shown` against
+   * `planner_draft_approved.via_prompt` says whether the nudge converts;
+   * `dismissed` against a later approve says whether it merely interrupts.
+   * Both are payload-free on purpose: the interesting counts already ride on
+   * the approve event, and reading them here would mean either a stale
+   * closure or restarting the timer on every keystroke. */
+  planner_review_prompt_shown: EmptyAnalyticsProperties;
+  planner_review_prompt_dismissed: EmptyAnalyticsProperties;
   // UrgAns reply action row (2026-08-12): copy / retry / thumbs under each
   // assistant reply. Thumbs are the first structured feedback signal on
   // assistant quality — worth watching once the agent model is wired.
