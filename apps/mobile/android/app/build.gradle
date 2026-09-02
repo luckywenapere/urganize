@@ -40,7 +40,10 @@ android {
         // deliberately NOT derived from the semver version: a monotonic
         // counter can't be reconstructed from 0.41.2 without ambiguity.
         // Bump it by one for every build you upload to any track.
-        versionCode 1
+        // 2 (2026-09-02): the first build carrying native push — the push
+        // plugin and google-services.json both landed after the versionCode 1
+        // debug APK of 2026-08-07, so that build can never register a device.
+        versionCode 2
         versionName packageJson.version
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
