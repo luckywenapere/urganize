@@ -120,6 +120,14 @@ describe('summarizeSetlist', () => {
 });
 
 describe('describeSetlistFit', () => {
+  // The screenshot that prompted this: a fresh set under a 120-minute slot read
+  // "You are 120 minutes under 120." Empty is its own state, not "under".
+  it('says the set is empty rather than counting the whole slot as slack', () => {
+    expect(describeSetlistFit(summarizeSetlist([], 120))).toBe(
+      'Nothing in the set yet. You have 120 minutes to fill.'
+    );
+  });
+
   it('never rounds a real overrun down to zero minutes', () => {
     const summary = summarizeSetlist([song(1500 + 70)], 25); // 70s over
     expect(describeSetlistFit(summary)).toBe('You are 1 minute over 25.');

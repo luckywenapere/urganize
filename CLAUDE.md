@@ -7516,8 +7516,11 @@ artist is what makes each artist's set real; the rename is labelling.
   on the list → open Day 3 for one artist, rename its set to "#2 Victony's
   setlist", confirm the song picker shows THAT artist's catalog and the 120-min
   total.
-- **Noticed, not fixed:** an empty set reads "You are 120 minutes under 120."
-  (`describeSetlistFit` has no empty-set branch). Unrelated to this request.
+- **Also fixed (founder ask, same day):** an empty set read "You are 120
+  minutes under 120." — `describeSetlistFit` fell through to the under-copy.
+  It now says "Nothing in the set yet. You have 120 minutes to fill."; zero
+  measured plus zero unmeasured can only be an empty set, since every stored
+  duration is checked > 0. Tested.
 - **Activation:** apply `20260902100000_events_series.sql` before
   `NEXT_PUBLIC_FEATURE_EVENTS` is flipped; the flip, ledger entry and version
   bump remain the Events feature's own activation step.
