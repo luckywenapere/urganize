@@ -13,6 +13,8 @@
 //
 // Flags: --base=https://app.urganize.app  --release=<id>  --epk=<token>
 //        --hero-title="Golden Hour"  --login-timeout=900000
+//        --anonymise="Real Name=Dami Okafor"  (swap the signed-in person's
+//        display name for a fictional one in every capture)
 //
 // How it works: the same raw-CDP driver of the installed, signed Chrome that
 // scripts/smoke-waitlist.mjs uses (spawn Chrome with a remote-debugging port,
@@ -96,12 +98,23 @@ const DEMO_TEAM = {
 // under the filename older pages already import, so /features, /brand and the
 // persona pages get the current UI with zero code changes.
 // ---------------------------------------------------------------------------
-const PROMPT_CARDS = ['[aria-labelledby="install-prompt-title"]', '[aria-labelledby="push-prompt-title"]'];
-const OPEN_BUCKETS = {
-  type: "eval",
-  // Buckets default to collapsed; open the first two so activity rows exist.
-  expression: "[...document.querySelectorAll('aside button[aria-expanded=\"false\"][aria-controls]')].slice(0, 2).forEach((b) => b.click()); true",
-};
+// Hidden in every shot: the two prompt cards that appear a minute into a
+// session, and the Admin entry the identity card shows an operator account
+// (ADMIN_EMAILS) — real customers never see it, so the marketing site must
+// not either.
+const PROMPT_CARDS = ['[aria-labelledby="install-prompt-title"]', '[aria-labelledby="push-prompt-title"]', 'a[href="/admin"]', 'nav a[href^="/dashboard?release="]'];
+// Buckets default to collapsed; open every live one so activity rows exist
+// (a release weeks out has empty Overdue and Due today buckets). Done stays
+// shut: a list of struck-through rows says nothing about the work ahead. Run
+// twice with a beat between — the first click can land before the panel has
+// hydrated its persisted bucket state.
+const OPEN_BUCKETS_EXPRESSION = "[...document.querySelectorAll('aside button[aria-expanded=\"false\"][aria-controls]')].filter((b) => !/^Done/.test(b.innerText.trim())).forEach((b) => b.click()); true";
+const OPEN_BUCKETS = [
+  { type: "eval", expression: OPEN_BUCKETS_EXPRESSION },
+  { type: "settle", ms: 700 },
+  { type: "eval", expression: OPEN_BUCKETS_EXPRESSION },
+  { type: "settle", ms: 400 },
+];
 
 const SHOTS = [
   { name: "catalog", legacy: "workspace-releases", viewport: "desktop", url: "/dashboard", waitFor: { selector: '[aria-label="Search release"]' } },
@@ -109,34 +122,74 @@ const SHOTS = [
   {
     name: "scoped-release", legacy: "workspace-tasks", viewport: "desktop", url: "/dashboard?release=$ID",
     waitFor: { selector: "aside button[aria-expanded][aria-controls]" },
-    actions: [OPEN_BUCKETS, { type: "wait", selector: '[data-ph-capture-attribute-section="tasks"]' }, { type: "settle", ms: 500 }],
+    actions: [...OPEN_BUCKETS, { type: "wait", selector: '[data-ph-capture-attribute-section="tasks"]' }, { type: "settle", ms: 500 }],
   },
   {
     name: "activity-detail", viewport: "desktop", url: "/dashboard?release=$ID",
     waitFor: { selector: "aside button[aria-expanded][aria-controls]" },
     actions: [
-      OPEN_BUCKETS,
+      ...OPEN_BUCKETS,
       { type: "wait", selector: '[data-ph-capture-attribute-section="tasks"]' },
       { type: "click", selector: '[data-ph-capture-attribute-section="tasks"]', nth: 1 },
       { type: "wait", selector: 'section[aria-label="Activity detail"]' },
       { type: "settle", ms: 700 },
     ],
   },
-  { name: "timeline", viewport: "desktop", url: "/dashboard?release=$ID&scene=timeline", waitFor: { selector: ".tl-scene-container" }, actions: [{ type: "settle", ms: 600 }] },
-  { name: "artists-roster", viewport: "desktop", url: "/settings?tab=workspace", waitFor: { text: "Add an artist" } },
+  {
+    name: "timeline", viewport: "desktop", url: "/dashboard?release=$ID&scene=timeline",
+    waitFor: { selector: ".tl-scene-container" },
+    // Phases start collapsed; open the two with live work so the axis shows
+    // activities as markers and bars, not four summary strips.
+    actions: [
+      { type: "settle", ms: 600 },
+      { type: "eval", expression: "[...document.querySelectorAll('.tl-scene-container button')].filter((b) => /^(Pre-release|Release week)/.test(b.innerText.trim())).forEach((b) => b.click()); true" },
+      { type: "settle", ms: 700 },
+    ],
+  },
+  {
+    name: "artists-roster", viewport: "desktop", url: "/settings?tab=workspace",
+    waitFor: { text: "Add an artist" },
+    // Scroll the Artists section to the top of the viewport so the roster,
+    // not the workspace-name form above it, is what the shot shows.
+    actions: [
+      { type: "eval", expression: "(() => { const el = [...document.querySelectorAll('main *')].find((e) => /^artists$/i.test((e.textContent || '').trim())); if (!el) return false; el.scrollIntoView({ block: 'start', behavior: 'instant' }); let node = el.parentElement; while (node && node !== document.body) { const style = getComputedStyle(node); if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight) { node.scrollTop = Math.max(0, node.scrollTop - 110); return 'scrolled container'; } node = node.parentElement; } window.scrollBy(0, -110); return 'scrolled window'; })()" },
+      { type: "settle", ms: 700 },
+      { type: "log", selector: "main", label: "settings viewport text", chars: 160 },
+    ],
+  },
+  // The public press kit needs no session and is dark-locked, so one capture
+  // serves both themes. Shot BEFORE the UrgAns page: that page holds a typed
+  // draft after its shot, and navigating away from it is the one place a
+  // beforeunload prompt could stall the run.
+  { name: "epk-phone", viewport: "phone", url: "/epk/$EPK", themes: ["dark"], waitFor: { text: "Press kit", timeoutMs: 60_000 }, rail: "keep" },
   {
     name: "urgans-confirmation", viewport: "desktop", url: "/dashboard/urgans", rail: "keep",
     waitFor: { selector: '[aria-label="Message UrgAns"]' },
+    // Two turns that mirror the section copy exactly: one thing it just does
+    // (completing an activity is not gated) and one it must ask about first
+    // (deleting a release is). The model answers the deletion by asking for
+    // confirmation in prose before it ever proposes the gated tool, so the
+    // card is not guaranteed — the wait for it is optional, and the
+    // conversation without it still shows the assistant asking first.
     actions: [
-      { type: "type", selector: '[aria-label="Message UrgAns"]', text: "Delete the release $HERO_TITLE" },
+      // Two nudges sit on a fresh account (invite your team, tell UrgAns about
+      // the team); dismiss them so the conversation is the whole picture.
+      { type: "eval", expression: "for (const sel of ['[aria-label=\"Dismiss invite banner\"]', '[role=\"status\"] [aria-label=\"Dismiss\"]']) document.querySelector(sel)?.click(); true" },
+      { type: "settle", ms: 400 },
+      { type: "type", selector: '[aria-label="Message UrgAns"]', text: "Mark the cover art activity done for $HERO_TITLE" },
+      { type: "settle", ms: 500 },
       { type: "click", selector: '[aria-label="Send"]' },
-      { type: "wait", selector: '[aria-label="Confirm this action"]', timeoutMs: 90_000 },
+      { type: "settle", ms: 30_000 },
+      { type: "type", selector: '[aria-label="Message UrgAns"]', text: "Delete the release $HERO_TITLE" },
+      { type: "settle", ms: 500 },
+      { type: "click", selector: '[aria-label="Send"]' },
+      { type: "wait", selector: '[aria-label="Confirm this action"]', timeoutMs: 60_000, optional: true },
       { type: "settle", ms: 800 },
+      { type: "log", selector: "main", label: "urgans transcript", chars: 900 },
     ],
     // Never leave a live deletion proposal behind: Cancel the card afterwards.
     after: [{ type: "clickText", within: '[aria-label="Confirm this action"]', text: "Cancel" }],
   },
-  { name: "epk-phone", viewport: "phone", url: "/epk/$EPK", themes: ["dark"], waitFor: { text: "Press kit" }, rail: "keep" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -181,7 +234,9 @@ function getOpenPort() {
 
 async function waitForChrome(port) {
   let lastError;
-  for (let attempt = 0; attempt < 100; attempt += 1) {
+  // A cold profile on a slow disk can take well over ten seconds to bind the
+  // port, so wait up to 45s before giving up.
+  for (let attempt = 0; attempt < 180; attempt += 1) {
     try {
       const response = await fetch(`http://127.0.0.1:${port}/json/list`);
       const targets = await response.json();
@@ -190,9 +245,9 @@ async function waitForChrome(port) {
     } catch (error) {
       lastError = error;
     }
-    await sleep(100);
+    await sleep(250);
   }
-  throw lastError ?? new Error("Chrome did not expose a page target.");
+  throw new Error(`Chrome never answered on the debugging port ${port} (${lastError?.cause?.code ?? lastError?.message ?? "no page target"}).`);
 }
 
 function createCdpClient(webSocketUrl) {
@@ -206,6 +261,11 @@ function createCdpClient(webSocketUrl) {
   });
   socket.addEventListener("message", (event) => {
     const message = JSON.parse(typeof event.data === "string" ? event.data : Buffer.from(event.data).toString("utf8"));
+    if (message.method === "Page.javascriptDialogOpening") {
+      console.warn(`[chrome] dialog: ${message.params?.message ?? ""} (accepted)`);
+      socket.send(JSON.stringify({ id: ++nextId, method: "Page.handleJavaScriptDialog", params: { accept: true } }));
+      return;
+    }
     if (!message.id) return;
     const request = pending.get(message.id);
     if (!request) return;
@@ -213,10 +273,18 @@ function createCdpClient(webSocketUrl) {
     if (message.error) request.reject(new Error(JSON.stringify(message.error)));
     else request.resolve(message.result);
   });
-  function send(method, params = {}) {
+  // A command Chrome never answers (a page wedged behind a dialog, a target
+  // that went away) must fail the shot, not hang the run: 60s per command.
+  function send(method, params = {}, timeoutMs = 60_000) {
     const id = ++nextId;
     return new Promise((resolve, reject) => {
-      pending.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        if (pending.delete(id)) reject(new Error(`${method} timed out after ${timeoutMs / 1000}s`));
+      }, timeoutMs);
+      pending.set(id, {
+        resolve: (value) => { clearTimeout(timer); resolve(value); },
+        reject: (error) => { clearTimeout(timer); reject(error); },
+      });
       socket.send(JSON.stringify({ id, method, params }));
     });
   }
@@ -452,10 +520,20 @@ async function runAction(client, action, context) {
       return client.evaluate(action.expression);
     case "settle":
       return sleep(action.ms ?? 500);
-    case "wait":
-      if (action.selector) return client.waitFor(`Boolean(document.querySelector(${selector}))`, action.selector, action.timeoutMs);
-      if (action.text) return client.waitFor(`document.body.innerText.includes(${JSON.stringify(fill(action.text, context))})`, action.text, action.timeoutMs);
-      return sleep(action.ms ?? 500);
+    case "wait": {
+      const pending = action.selector
+        ? client.waitFor(`Boolean(document.querySelector(${selector}))`, action.selector, action.timeoutMs)
+        : action.text
+          ? client.waitFor(`document.body.innerText.toLowerCase().includes(${JSON.stringify(fill(action.text, context).toLowerCase())})`, action.text, action.timeoutMs)
+          : sleep(action.ms ?? 500);
+      if (!action.optional) return pending;
+      return pending.catch((error) => console.warn(`[shot] optional wait skipped: ${error.message}`));
+    }
+    case "log": {
+      const text = await client.evaluate(`(() => { const el = document.querySelector(${JSON.stringify(action.selector ?? "main")}) || document.body; return el.innerText.slice(0, ${action.chars ?? 600}); })()`);
+      console.log(`[shot] ${action.label ?? "page text"}: ${JSON.stringify(text)}`);
+      return;
+    }
     case "click": {
       const ok = await client.evaluate(`(() => { const els = [...document.querySelectorAll(${selector})]; const el = els[${action.nth ?? 0}]; if (!el) return false; el.scrollIntoView({ block: "center" }); el.click(); return true; })()`);
       if (!ok) throw new Error(`nothing to click for ${action.selector}`);
@@ -467,10 +545,17 @@ async function runAction(client, action, context) {
       return;
     }
     case "type": {
-      const focused = await client.evaluate(`(() => { const el = document.querySelector(${selector}); if (!el) return false; el.focus(); return true; })()`);
-      if (!focused) throw new Error(`nothing to type into for ${action.selector}`);
-      await client.send("Input.insertText", { text: fill(action.text, context) });
-      return sleep(300);
+      const ok = await client.evaluate(`(() => {
+        const el = document.querySelector(${selector});
+        if (!el) return false;
+        el.focus();
+        const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        Object.getOwnPropertyDescriptor(proto, "value").set.call(el, ${JSON.stringify(fill(action.text, context))});
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        return true;
+      })()`);
+      if (!ok) throw new Error(`nothing to type into for ${action.selector}`);
+      return sleep(400);
     }
     default:
       throw new Error(`unknown action ${action.type}`);
@@ -479,6 +564,23 @@ async function runAction(client, action, context) {
 
 async function setTheme(client, mode) {
   await client.evaluate(`(() => { localStorage.setItem("urganize.theme", ${JSON.stringify(mode)}); const root = document.documentElement; root.dataset.theme = ${JSON.stringify(mode)}; root.classList.remove("dark", "light"); root.classList.add(${JSON.stringify(mode)}); return true; })()`);
+}
+
+// The account behind the demo team belongs to a real person, and the app
+// prints their display name (the assignee on every activity, the greeting on
+// the assistant page). --anonymise="Real Name=Dami Okafor" swaps that string
+// in every text node before each capture, so the marketing site never shows
+// a real name. The UI is untouched; only the identity string changes.
+const ANONYMISE = (args.anonymise ?? "").split("=");
+async function anonymise(client) {
+  if (ANONYMISE.length !== 2 || !ANONYMISE[0]) return;
+  await client.evaluate(`(() => {
+    const from = ${JSON.stringify(ANONYMISE[0])}, to = ${JSON.stringify(ANONYMISE[1])};
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    let node; let count = 0;
+    while ((node = walker.nextNode())) { if (node.nodeValue.includes(from)) { node.nodeValue = node.nodeValue.split(from).join(to); count += 1; } }
+    return count;
+  })()`);
 }
 
 async function hideChrome(client, selectors) {
@@ -515,9 +617,22 @@ async function captureShot(client, shot, context) {
   await client.send("Page.navigate", { url });
   await client.waitFor('document.readyState === "complete"', "load", 30_000);
   if (shot.waitFor?.selector) await client.waitFor(`Boolean(document.querySelector(${JSON.stringify(fill(shot.waitFor.selector, context))}))`, shot.waitFor.selector, shot.waitFor.timeoutMs ?? 30_000);
-  if (shot.waitFor?.text) await client.waitFor(`document.body.innerText.includes(${JSON.stringify(fill(shot.waitFor.text, context))})`, shot.waitFor.text, shot.waitFor.timeoutMs ?? 30_000);
-  await client.evaluate("document.fonts.ready.then(() => true)");
-  await client.waitFor("[...document.images].every((img) => img.complete)", "images", 15_000).catch(() => {});
+  if (shot.waitFor?.text) await client.waitFor(`document.body.innerText.toLowerCase().includes(${JSON.stringify(fill(shot.waitFor.text, context).toLowerCase())})`, shot.waitFor.text, shot.waitFor.timeoutMs ?? 30_000);
+  // A transient API failure paints "Could not load …" in the workspace; one
+  // reload clears it, and a shot of an error banner is worse than no shot.
+  if (await client.evaluate(`document.body.innerText.includes("Could not load")`)) {
+    console.warn(`[shot] ${shot.name}: workspace reported a load error, reloading once`);
+    await client.send("Page.reload", { ignoreCache: false });
+    await client.waitFor('document.readyState === "complete"', "reload", 30_000);
+    await sleep(1500);
+    if (shot.waitFor?.selector) await client.waitFor(`Boolean(document.querySelector(${JSON.stringify(fill(shot.waitFor.selector, context))}))`, shot.waitFor.selector, shot.waitFor.timeoutMs ?? 30_000);
+  }
+  await client.evaluate("Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 5000))]).then(() => true)");
+  // Every visible image must have actually decoded (complete is also true for
+  // a failed load): cover art and avatars are signed Storage URLs that can
+  // take a few seconds on a fresh session, and a card with a blank box where
+  // the artwork should be is the one thing a catalog screenshot must not show.
+  await client.waitFor("[...document.images].filter((img) => img.getBoundingClientRect().width > 0).every((img) => img.complete && img.naturalWidth > 0)", "images", 25_000).catch(() => console.warn("[shot] some images never decoded"));
   if (shot.rail !== "keep" && shot.viewport === "desktop") {
     // The UrgAns side rail arms itself open once per session; the shots want
     // the product, not the assistant, unless they are about the assistant.
@@ -525,6 +640,7 @@ async function captureShot(client, shot, context) {
   }
   for (const action of shot.actions ?? []) await runAction(client, action, context);
   await hideChrome(client, [...PROMPT_CARDS, ...(shot.hide ?? [])]);
+  await anonymise(client);
   await sleep(800);
 
   const files = {};
@@ -533,6 +649,7 @@ async function captureShot(client, shot, context) {
       await setTheme(client, theme);
       await sleep(450); // the app's 250ms colour transitions
       await hideChrome(client, [...PROMPT_CARDS, ...(shot.hide ?? [])]);
+      await anonymise(client);
     }
     const { data } = await client.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
     const { out, width, height } = await encodePng(Buffer.from(data, "base64"), viewport.outputWidth);
@@ -605,6 +722,7 @@ async function main() {
   const port = await getOpenPort();
   const tempRoot = path.resolve(os.tmpdir());
   const userDataDir = path.join(tempRoot, `urganize-shots-${Date.now()}`);
+  console.log(`[chrome] ${browserPath} on port ${port}, profile ${userDataDir}`);
   const chrome = spawn(browserPath, [
     "--no-first-run",
     "--no-default-browser-check",
@@ -613,7 +731,15 @@ async function main() {
     `--remote-debugging-port=${port}`,
     `--user-data-dir=${userDataDir}`,
     "about:blank",
-  ], { stdio: "ignore" });
+  ], { stdio: ["ignore", "ignore", "pipe"] });
+  chrome.on("error", (error) => console.error(`[chrome] failed to start: ${error.message}`));
+  chrome.on("exit", (code, signal) => console.error(`[chrome] process exited (code ${code}, signal ${signal})`));
+  chrome.stderr.on("data", (chunk) => {
+    // Chrome is chatty on stderr; surface only the lines worth reading.
+    for (const line of String(chunk).split(/\r?\n/)) {
+      if (/DevTools listening|ERROR|FATAL|Failed/.test(line)) console.error(`[chrome] ${line.trim()}`);
+    }
+  });
 
   let client;
   let failures = 0;
@@ -626,7 +752,7 @@ async function main() {
     await client.send("Page.navigate", { url: `${BASE}/auth` });
     console.log("\nA Chrome window is open at the sign-in page. Sign in to the DEMO account (email + password).");
     console.log("Waiting for the app to land on /dashboard …\n");
-    await client.waitFor(`["/dashboard", "/settings"].some((p) => location.pathname.startsWith(p))`, "sign-in", LOGIN_TIMEOUT_MS);
+    await client.waitFor(`location.pathname === "/dashboard" || location.pathname.startsWith("/dashboard?")`, "sign-in", LOGIN_TIMEOUT_MS);
     await sleep(1500);
     await client.evaluate(PAGE_API);
 
@@ -646,7 +772,10 @@ async function main() {
         if (ONLY && !ONLY.has(shot.name)) continue;
         if (shot.url.includes("$EPK") && !context.epkToken) { console.warn(`[shot] ${shot.name}: skipped, no --epk token`); continue; }
         try {
-          await captureShot(client, shot, context);
+          await Promise.race([
+            captureShot(client, shot, context),
+            sleep(4 * 60 * 1000).then(() => { throw new Error("shot exceeded its 4 minute budget"); }),
+          ]);
         } catch (error) {
           failures += 1;
           console.error(`[shot] ${shot.name} FAILED: ${error.message}`);
