@@ -1,61 +1,41 @@
-/* Urganize service worker — Web Push delivery + notification clicks.
+/* Urganize service worker — push-only (NEXT_PUBLIC_FEATURE_OFFLINE off).
  *
- * Deliberately minimal: no caching/offline layer (the app is served by
- * Next.js/Vercel as usual). This file exists so push subscriptions have a
- * worker to deliver to — including installed PWAs on phones.
+ * Deliberately minimal: no caching/offline layer of its own. This file
+ * exists so push subscriptions have a worker to deliver to — including
+ * installed PWAs on phones. See sw-push.js for the push/notificationclick
+ * handlers, and sw-offline.js for the caching layer registered instead of
+ * this file when the offline flag is on (lib/offline/register.ts).
  *
- * Payload contract (see apps/web/lib/push-server.ts, the ONLY sender):
- *   { title: string, body: string, url?: string, tag?: string }
+ * Both files are registered at the SAME scope ('/'), so flipping the flag
+ * swaps which script owns that scope on the next page load — the browser's
+ * own update mechanism, no version negotiation of our own needed. This
+ * file's activate handler deletes any caches sw-offline.js created, so
+ * turning the flag back off is a real kill switch: the next load registers
+ * this script, and the very first thing it does is remove the offline
+ * caching layer's state.
  */
 
+importScripts('/sw-push.js');
+
+const OFFLINE_CACHE_PREFIX = 'urganize-offline-';
+
 self.addEventListener('install', () => {
-  // Take over immediately on updates — there is no cache state to migrate.
+  // Take over immediately on updates — there is no cache state of our own
+  // to migrate (any offline caches present belong to sw-offline.js, cleaned
+  // up in activate below).
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener('push', (event) => {
-  let data = {};
-  try {
-    data = event.data ? event.data.json() : {};
-  } catch {
-    // A malformed payload still surfaces as a generic notification rather
-    // than being dropped silently.
-  }
-
-  const title = data.title || 'Urganize';
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body: data.body || '',
-      icon: '/images/urganize-logo-square.png',
-      badge: '/images/urganize-mark.png',
-      tag: data.tag || undefined,
-      data: { url: data.url || '/dashboard' },
-    })
-  );
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/dashboard';
-
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Prefer focusing an already-open app window (and navigating it) over
-      // opening a duplicate tab.
-      for (const client of windowClients) {
-        if ('focus' in client) {
-          client.focus();
-          if ('navigate' in client) {
-            client.navigate(targetUrl);
-          }
-          return;
-        }
-      }
-      return self.clients.openWindow(targetUrl);
-    })
+    (async () => {
+      const cacheNames = await caches.keys();
+      await Promise.all(
+        cacheNames
+          .filter((name) => name.startsWith(OFFLINE_CACHE_PREFIX))
+          .map((name) => caches.delete(name))
+      );
+      await self.clients.claim();
+    })()
   );
 });

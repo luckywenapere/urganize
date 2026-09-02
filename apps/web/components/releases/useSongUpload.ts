@@ -4,6 +4,10 @@ import { useCallback, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { uploadSong, validateSongFile } from '@/lib/song';
 import type { ReleaseSong } from '@/types/song';
+import { isBrowserOnline } from '@/lib/offline/status';
+import { enqueue, type QueuedMutation } from '@/lib/offline/queue';
+
+const OFFLINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_OFFLINE === 'true';
 
 /**
  * Picking a song file and getting it onto a release, as one reusable piece of
@@ -26,6 +30,9 @@ export type SongUploadState = {
   isUploading: boolean;
   /** Inline, non-toast message — a rejected file or a failed step. */
   error: string;
+  /** True when the picked file was queued for offline sync instead of
+   * uploaded — see useCoverArtUpload's identical field for the reasoning. */
+  queued: boolean;
   /** The file a failed step 2 left behind, so a Retry can reuse it. */
   retryFile: File | null;
   /** Props for the (visually hidden) file input the consumer must render. */
@@ -57,12 +64,14 @@ export function useSongUpload(params: {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
+  const [queued, setQueued] = useState(false);
   const [retryFile, setRetryFile] = useState<File | null>(null);
 
   const begin = useCallback(
     async (file: File) => {
       setError('');
       setRetryFile(null);
+      setQueued(false);
 
       const validation = validateSongFile({
         name: file.name,
@@ -78,6 +87,20 @@ export function useSongUpload(params: {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token || '';
+      const userId = session?.user?.id || '';
+
+      if (OFFLINE_ENABLED && !isBrowserOnline() && userId) {
+        await enqueue<Extract<QueuedMutation, { kind: 'song_upload' }>>({
+          kind: 'song_upload',
+          userId,
+          payload: { releaseId },
+          blob: file,
+        });
+        setQueued(true);
+        onToast?.("You're offline — this will upload when you're back online.", 'warning');
+        return;
+      }
+
       if (!token) {
         const message = 'Your session expired. Sign in again and retry.';
         setError(message);
@@ -91,6 +114,18 @@ export function useSongUpload(params: {
 
       if (result.ok) {
         onUploaded(result.song);
+        return;
+      }
+
+      if (OFFLINE_ENABLED && result.retryable && !isBrowserOnline() && userId) {
+        await enqueue<Extract<QueuedMutation, { kind: 'song_upload' }>>({
+          kind: 'song_upload',
+          userId,
+          payload: { releaseId },
+          blob: file,
+        });
+        setQueued(true);
+        onToast?.("You're offline — this will upload when you're back online.", 'warning');
         return;
       }
 
@@ -117,6 +152,7 @@ export function useSongUpload(params: {
   return {
     isUploading,
     error,
+    queued,
     retryFile,
     inputProps: {
       ref: inputRef,

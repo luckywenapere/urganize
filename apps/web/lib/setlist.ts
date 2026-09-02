@@ -212,6 +212,14 @@ export function describeSetlistFit(summary: SetlistSummary): string {
   const overBy = pluralMinutes(Math.max(1, Math.round(summary.deltaSeconds / 60)));
   const underBy = pluralMinutes(Math.max(1, Math.round(Math.abs(summary.deltaSeconds) / 60)));
 
+  // Nothing added yet. Without this branch an empty set fell through to the
+  // under-copy and read "You are 120 minutes under 120." — true, and useless.
+  // Zero measured with zero unmeasured can only be an empty set, since every
+  // stored duration is checked > 0.
+  if (summary.totalSeconds === 0 && summary.unmeasuredCount === 0) {
+    return `Nothing in the set yet. You have ${slotMinutes} minutes to fill.`;
+  }
+
   if (summary.fit === 'over') {
     return summary.isPartial
       ? `Already ${overBy} over ${slotMinutes}, and ${summary.unmeasuredCount} still need a length.`

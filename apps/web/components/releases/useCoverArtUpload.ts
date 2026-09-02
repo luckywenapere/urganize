@@ -6,6 +6,10 @@ import { uploadCoverArt, validateCoverArtFile } from '@/lib/cover-art-upload';
 import { gradeCoverArt, type CoverArtGrade } from '@/lib/cover-art-dsp';
 import { readImageDimensions } from '@/lib/cover-art-image';
 import type { ReleaseCoverArt } from '@/types/cover-art';
+import { isBrowserOnline } from '@/lib/offline/status';
+import { enqueue, type QueuedMutation } from '@/lib/offline/queue';
+
+const OFFLINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_OFFLINE === 'true';
 
 /**
  * Picking a cover art image and getting it onto a release, as one reusable
@@ -26,6 +30,10 @@ export type CoverArtUploadState = {
    * showing this so a below-spec image stays visibly below spec.
    */
   grade: CoverArtGrade | null;
+  /** True when the picked file was queued for offline sync instead of
+   * uploaded — the release's actual cover art doesn't update until the
+   * queue replays (lib/offline/sync.ts) on reconnect. */
+  queued: boolean;
   retryFile: File | null;
   inputProps: {
     ref: React.RefObject<HTMLInputElement | null>;
@@ -51,11 +59,13 @@ export function useCoverArtUpload(params: {
   const [error, setError] = useState('');
   const [retryFile, setRetryFile] = useState<File | null>(null);
   const [grade, setGrade] = useState<CoverArtGrade | null>(null);
+  const [queued, setQueued] = useState(false);
 
   const begin = useCallback(
     async (file: File) => {
       setError('');
       setRetryFile(null);
+      setQueued(false);
 
       const validation = validateCoverArtFile({
         name: file.name,
@@ -86,6 +96,24 @@ export function useCoverArtUpload(params: {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token || '';
+      const userId = session?.user?.id || '';
+
+      // Offline: getSession() is a local read, so this still works. Queue
+      // the file rather than attempting a request that can only fail —
+      // the release's cover art updates once the queue replays this on
+      // reconnect (lib/offline/sync.ts).
+      if (OFFLINE_ENABLED && !isBrowserOnline() && userId) {
+        await enqueue<Extract<QueuedMutation, { kind: 'cover_art_upload' }>>({
+          kind: 'cover_art_upload',
+          userId,
+          payload: { releaseId, dimensions: dimensions ?? null },
+          blob: file,
+        });
+        setQueued(true);
+        onToast?.("You're offline — this will upload when you're back online.", 'warning');
+        return;
+      }
+
       if (!token) {
         const message = 'Your session expired. Sign in again and retry.';
         setError(message);
@@ -99,6 +127,22 @@ export function useCoverArtUpload(params: {
 
       if (result.ok) {
         onUploaded(result.coverArt);
+        return;
+      }
+
+      // A retryable failure that happens to land while the browser has
+      // ALREADY gone offline (the connection dropped mid-upload, not
+      // before it started) gets the same queue treatment rather than a
+      // Retry button that can only fail again.
+      if (OFFLINE_ENABLED && result.retryable && !isBrowserOnline() && userId) {
+        await enqueue<Extract<QueuedMutation, { kind: 'cover_art_upload' }>>({
+          kind: 'cover_art_upload',
+          userId,
+          payload: { releaseId, dimensions: dimensions ?? null },
+          blob: file,
+        });
+        setQueued(true);
+        onToast?.("You're offline — this will upload when you're back online.", 'warning');
         return;
       }
 
@@ -122,6 +166,7 @@ export function useCoverArtUpload(params: {
     isUploading,
     error,
     grade,
+    queued,
     retryFile,
     inputProps: {
       ref: inputRef,

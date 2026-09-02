@@ -3,8 +3,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { CalendarPlus, Loader2 } from 'lucide-react';
 import { Button } from '@urganize/ui';
-import { supabase } from '@/lib/supabase/client';
-import { useReleaseStore } from '@/stores/useReleaseStore';
+import { scheduleRelease } from '@/lib/schedule-release-client';
 import { getTemplateStats } from '@/lib/release-templates/loader';
 import { DEFAULT_RELEASE_TITLE, type DbReleaseType } from '@/types/releases';
 
@@ -13,13 +12,6 @@ function formatYmdLocal(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-}
-
-async function getAccessToken(): Promise<string> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session?.access_token || '';
 }
 
 type SetReleaseDateCardProps = {
@@ -98,51 +90,23 @@ export function SetReleaseDateCard({
     setIsSaving(true);
     setError('');
 
-    try {
-      const accessToken = await getAccessToken();
-      if (!accessToken) throw new Error('Session expired. Please sign in again.');
+    // Shared with ReleaseSetupSheet (lib/schedule-release-client.ts) so the
+    // 207 handling and the toast copy cannot drift between the two surfaces.
+    // The helper also runs the forced store refresh — which is what unmounts
+    // this card once the store reports a date.
+    const outcome = await scheduleRelease(releaseId, {
+      releaseDate,
+      title: showNameField ? title : undefined,
+    });
 
-      const response = await fetch(`/api/releases/${releaseId}/schedule`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          releaseDate,
-          title: showNameField ? title.trim() || undefined : undefined,
-        }),
-      });
-
-      const payload = await response.json().catch(() => ({}));
-
-      // 207: the date saved but the plan build failed. Surface the server's
-      // message in place rather than throwing — the date IS saved, so a bare
-      // failure would misrepresent what happened.
-      if (!response.ok && response.status !== 207) {
-        throw new Error(payload?.error || 'Could not save the release date.');
-      }
-      if (response.status === 207) {
-        setError(payload?.error || 'Your release date was saved, but the plan could not be built.');
-        void useReleaseStore.getState().loadCommandCenter({ force: true });
-        return;
-      }
-
-      const created = Number(payload?.activitiesCreated || 0);
-      onSaved(
-        created > 0
-          ? `Release date set. ${created} activities scheduled.`
-          : 'Release date set.'
-      );
-
-      // The card unmounts once the store reports a release date, so no local
-      // reset is needed — but the refresh is what makes that happen.
-      await useReleaseStore.getState().loadCommandCenter({ force: true });
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Could not save the release date.');
-    } finally {
-      setIsSaving(false);
+    if (outcome.kind === 'saved') {
+      onSaved(outcome.message);
+    } else {
+      // 'partial' (207: the date IS saved, the plan build failed) and 'error'
+      // both surface in place rather than as a toast.
+      setError(outcome.message);
     }
+    setIsSaving(false);
   };
 
   const dateInput = (

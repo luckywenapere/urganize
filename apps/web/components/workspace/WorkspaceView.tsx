@@ -9,6 +9,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { isCatalogRequested, markCatalogRequested } from '@/lib/catalog-intent';
 import { isTestReleaseEnabled, readTestRelease } from '@/lib/test-release';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { isBrowserOnline } from '@/lib/offline/status';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { type Task } from '@/lib/tasks';
@@ -36,6 +37,7 @@ import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
+import { useReleaseSetupPrompt } from './useReleaseSetupPrompt';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
 import { ArchiveReleaseDialog } from '@/components/workspace/ArchiveReleaseDialog';
@@ -86,6 +88,14 @@ const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'tru
 // the mint endpoint behind it is the pre-existing, ungated invite-link route.
 const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'true';
 
+// Type-first create (founder call, 2026-09-01): the create modal becomes a
+// one-tap type picker, and the tap lands STRAIGHT in the new release — no
+// access step, no first-win, no ?new=1 guide. Name and date are prompted
+// later, inside the release (ReleaseSetupSheet, nudged once after the user
+// has explored). Documented as incompatible with RELEASE_PLANNER and
+// FIRST_WIN in .env.example.
+const TYPE_FIRST_CREATE_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_TYPE_FIRST_CREATE === 'true';
 // The one-tap test path (founder request, 2026-09-01): entry buttons on the
 // zero-release empty state and the first-release pop-up, a standing banner
 // with the delete exit while a test release is scoped. Read through the
@@ -110,6 +120,13 @@ const StatusUpdateModal = dynamic(
 );
 const RecapModal = dynamic(
   () => import('@/components/releases/RecapModal').then((m) => m.RecapModal),
+  { ssr: false }
+);
+
+// Only ever requested once the setup nudge actually fires, and never while
+// the type-first flag is off.
+const ReleaseSetupSheet = dynamic(
+  () => import('@/components/releases/ReleaseSetupSheet').then((m) => m.ReleaseSetupSheet),
   { ssr: false }
 );
 
@@ -364,6 +381,13 @@ export function WorkspaceView() {
 
   const generateStatus = async () => {
     if (!scopedReleaseId) return;
+    // The status generator is a single AI call with no offline story — say
+    // so plainly rather than opening the modal on a fetch that can only
+    // fail after the fact.
+    if (!isBrowserOnline()) {
+      setToast({ tone: 'error', message: "You're offline — generating a status update needs a connection." });
+      return;
+    }
     setIsStatusOpen(true);
     setIsGeneratingStatus(true);
     setStatusUpdate('');
@@ -561,6 +585,18 @@ export function WorkspaceView() {
     };
   }, [scopedReleaseId, releases]);
 
+  // The type-first setup nudge (2026-09-01): once per release, after the
+  // user has explored a little (scroll / scene open / short dwell — the
+  // arming rules are pure and tested in lib/release-setup-prompt.ts). Holds
+  // while the create modal owns the screen.
+  const setupPrompt = useReleaseSetupPrompt({
+    flagOn: TYPE_FIRST_CREATE_ENABLED,
+    releaseId: scopedReleaseSlim?.id ?? null,
+    templatePending: Boolean(scopedReleaseSlim?.templatePending),
+    hasReleaseDate: Boolean(scopedReleaseSlim?.releaseDate),
+    suspended: isCreateModalOpen,
+    sceneOpen: Boolean(activeScene),
+  });
   // Whether the scoped release belongs to the signed-in user. Fails OPEN on
   // missing data (legacy cache rows without ownerUserId, auth still
   // resolving) — the ReleasesSection pattern: hiding an owner's own controls
@@ -1281,6 +1317,28 @@ export function WorkspaceView() {
           // list. The planner card is the honest version of that moment.
           const plannerPending = result?.plannerPending === true;
 
+          // TYPE-FIRST CREATE (founder call, 2026-09-01): the type tap was
+          // the whole form, so land straight in the release — no access step
+          // (decision recorded in CLAUDE.md; Settings → Team still mints
+          // logins), no first-win (it celebrates a plan a dateless release
+          // doesn't have yet), no ?new=1 (the guide describes a built plan —
+          // the date card + setup sheet are the honest version). The
+          // plannerPending branch is kept for safety even though the two
+          // flags are documented as incompatible.
+          if (TYPE_FIRST_CREATE_ENABLED) {
+            router.push(`/dashboard?release=${releaseId}`);
+            if (plannerPending) {
+              openIntake({
+                source: 'empty_state',
+                releaseId,
+                ...(result?.releaseType
+                  ? { prefill: { releaseType: result.releaseType } }
+                  : {}),
+              });
+            }
+            return;
+          }
+
           // Everything this flow did before team logins existed, deferred into
           // one closure so the access step can run FIRST and then hand control
           // back untouched. Nothing below this line changed behaviour — the
@@ -1351,6 +1409,23 @@ export function WorkspaceView() {
             const target = winReleaseId;
             setWinReleaseId(null);
             router.push(`/dashboard?release=${target}`);
+          }}
+        />
+      ) : null}
+
+      {/* The type-first setup nudge. Success reports through the same
+          workspace toast the date card uses; dismissal is quiet — the
+          undismissable SetReleaseDateCard in the panel stays as the
+          persistent path to the same two fields. */}
+      {setupPrompt.open && scopedReleaseSlim ? (
+        <ReleaseSetupSheet
+          releaseId={scopedReleaseSlim.id}
+          releaseTitle={scopedReleaseSlim.title}
+          releaseType={scopedReleaseSlim.releaseType}
+          onDismiss={setupPrompt.dismiss}
+          onSaved={(message) => {
+            setToast({ message, tone: 'success' });
+            setupPrompt.dismiss();
           }}
         />
       ) : null}

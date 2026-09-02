@@ -14,8 +14,10 @@ import {
   getAvailableReleaseTypes,
   getTemplate,
   getTemplateLeadTimeDays,
+  getTemplateStats,
 } from '@/lib/release-templates/loader';
 import { DEFAULT_RELEASE_TITLE, type DbReleaseType } from '@/types/releases';
+import { isBrowserOnline } from '@/lib/offline/status';
 
 // The release types this modal can create: authored AND switched on AND
 // storable. getAvailableReleaseTypes is the loader's flag gate, so with
@@ -40,6 +42,17 @@ const RELEASE_TYPE_LABELS: Record<DbReleaseType, string> = {
 // it creates the release, and the manager plans it with UrgAns next. Only the
 // wording changes, so the flag is read for copy alone.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
+
+// Type-first create (founder call, 2026-09-01). When on, this modal is ONE
+// screen: tap Single / EP / Album and the release is created on the spot —
+// no plan chooser (every type-first release is a rollout release; "start
+// blank" is covered by never setting a date and adding your own activities,
+// the existing SetReleaseDateCard escape hatch), no title, no date. Both are
+// prompted later, inside the release (ReleaseSetupSheet). Flag off, the
+// two-step modal below is byte-identical to before this flag existed.
+// Documented as incompatible with NEXT_PUBLIC_FEATURE_RELEASE_PLANNER.
+const TYPE_FIRST_CREATE_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_TYPE_FIRST_CREATE === 'true';
 
 function formatYmdLocal(date: Date): string {
   const year = date.getFullYear();
@@ -336,9 +349,29 @@ export function CreateReleaseModal({
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!validateForm()) {
+  // The one create call, shared by the step-2 form submit and the type-first
+  // cards (which ARE the submit under NEXT_PUBLIC_FEATURE_TYPE_FIRST_CREATE).
+  const performCreate = async (input: {
+    title?: string;
+    releaseDate?: string;
+    releaseType: DbReleaseType;
+    plan: ReleasePlanChoice;
+    /** Sent only when the artist picker actually rendered (see handleSubmit);
+     * the type-first cards never render it, so they always take the server's
+     * implicit-artist path. */
+    artistId?: string;
+    /** Whether the type was an explicit pick (the type-first cards, or the
+     * step-2 picker when it rendered) — callers hand an explicit pick to the
+     * planner intake as a prefill; a default is not an answer. */
+    typeWasPicked: boolean;
+  }) => {
+    // Release creation needs the server: artist resolution, the release
+    // cap check, and (for a template plan) task instantiation all happen
+    // there, and the flow branches on the id it returns. There is nothing
+    // useful to queue, so say so plainly instead of firing a request that
+    // can only time out.
+    if (!isBrowserOnline()) {
+      setSubmitError("You're offline — creating a release needs a connection. Try again once you're back online.");
       return;
     }
 
@@ -360,14 +393,14 @@ export function CreateReleaseModal({
         body: JSON.stringify({
           // Both may be empty — the route defaults the title and treats a
           // missing date as "not decided yet" (URG-230).
-          title: title.trim() || undefined,
-          releaseDate: releaseDate || undefined,
-          releaseType,
+          title: input.title || undefined,
+          releaseDate: input.releaseDate || undefined,
+          releaseType: input.releaseType,
           // Omitted unless the picker actually rendered, so a one-artist team
           // keeps taking the server's implicit-artist path untouched.
-          artistId: showArtistPicker && selectedArtistId ? selectedArtistId : undefined,
+          artistId: input.artistId,
           source: 'dashboard',
-          plan: plan || 'template',
+          plan: input.plan,
         }),
       });
 
@@ -381,10 +414,6 @@ export function CreateReleaseModal({
         throw new Error('Release created, but no release id was returned.');
       }
 
-      // Captured BEFORE the reset below, so callers get the name the user
-      // typed rather than the cleared field.
-      const createdTitle = title.trim();
-
       setTitle('');
       setReleaseDate('');
       setErrors({});
@@ -393,16 +422,40 @@ export function CreateReleaseModal({
       // follow-up non-forced loadCommandCenter() calls piggyback on this
       // in-flight load instead of firing a duplicate fetch.
       void useReleaseStore.getState().loadCommandCenter({ force: true });
-      onCreated(releaseId, plan || 'template', {
+      onCreated(releaseId, input.plan, {
         plannerPending: payload.plannerPending === true,
-        title: createdTitle || null,
-        releaseType: SHOW_TYPE_PICKER ? releaseType : null,
+        title: input.title || null,
+        releaseType: input.typeWasPicked ? input.releaseType : null,
       });
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Could not create release.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!validateForm()) {
+      return;
+    }
+    await performCreate({
+      title: title.trim(),
+      releaseDate,
+      releaseType,
+      plan: plan || 'template',
+      artistId: showArtistPicker && selectedArtistId ? selectedArtistId : undefined,
+      typeWasPicked: SHOW_TYPE_PICKER,
+    });
+  };
+
+  // Type-first create: the tap IS the form. `setReleaseType` only drives the
+  // spinner on the tapped card; the create itself takes the option directly
+  // so it can never race the state update.
+  const handleTypeFirstPick = (option: DbReleaseType) => {
+    if (isSubmitting) return;
+    setReleaseType(option);
+    void performCreate({ releaseType: option, plan: 'template', typeWasPicked: true });
   };
 
   const modal = (
@@ -453,14 +506,22 @@ export function CreateReleaseModal({
                 ) : null}
               </p>
               <h2 id="create-release-title" className="mt-2 font-display text-2xl font-semibold text-content-primary">
-                {isFirstRelease
-                  ? plan
-                    ? 'Your first release'
-                    : 'Create your first release'
-                  : plan
-                    ? 'New release'
-                    : 'How do you want to start?'}
+                {TYPE_FIRST_CREATE_ENABLED
+                  ? 'What are you releasing?'
+                  : isFirstRelease
+                    ? plan
+                      ? 'Your first release'
+                      : 'Create your first release'
+                    : plan
+                      ? 'New release'
+                      : 'How do you want to start?'}
               </h2>
+              {TYPE_FIRST_CREATE_ENABLED ? (
+                <p className="mt-2 max-w-xl text-sm leading-6 text-content-secondary">
+                  Tap one and your release is created — you can name it and set the
+                  date inside.
+                </p>
+              ) : null}
               {/* First-run context, echoing the onboarding wizard's own line
                   ("Every release gets a workspace.") so the two first-run
                   surfaces sound like one product. */}
@@ -482,10 +543,48 @@ export function CreateReleaseModal({
             </IconButton>
           </div>
 
+          {/* Type-first create (founder call, 2026-09-01): ONE screen, one
+              card per playbook, and the tap creates the release on the spot.
+              No plan chooser (dropped — every type-first release is a rollout
+              release), no fields. Each card quotes its own playbook's real
+              numbers, the same stats SetReleaseDateCard quotes. */}
+          {TYPE_FIRST_CREATE_ENABLED ? (
+            <div
+              className={`grid gap-3 p-4 sm:p-5 ${
+                CREATABLE_RELEASE_TYPES.length > 1 ? 'sm:grid-cols-3' : ''
+              }`}
+            >
+              {CREATABLE_RELEASE_TYPES.map((option) => {
+                const stats = getTemplateStats(option);
+                const isBusy = isSubmitting && releaseType === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => handleTypeFirstPick(option)}
+                    disabled={isSubmitting}
+                    className="motion-focus motion-press group flex flex-col items-start gap-2 rounded-xl border border-stroke-default bg-bg-elevated p-4 text-left transition-colors hover:border-brand/50 hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60 sm:p-5"
+                  >
+                    <span className="flex items-center gap-2 font-display text-base font-semibold text-content-primary">
+                      {RELEASE_TYPE_LABELS[option]}
+                      {isBusy ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-brand" aria-hidden="true" />
+                      ) : null}
+                    </span>
+                    <span className="text-sm leading-6 text-content-secondary">
+                      {stats.activityCount} activities across ~{stats.spanWeeks} weeks,
+                      built the moment you set a date.
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
           {/* Step 1 — the chooser (founder call, 2026-07-23): two option
               cards side by side, Linear-style. Rollout plan is the
               recommended default; Blank is the empty canvas. */}
-          {!plan ? (
+          {!TYPE_FIRST_CREATE_ENABLED && !plan ? (
             <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
               <button
                 type="button"

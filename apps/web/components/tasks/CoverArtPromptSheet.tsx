@@ -246,7 +246,11 @@ function CoverArtPromptBody({
                 You can add it any time from Cover art on this release.
               </p>
 
-              {upload.error ? (
+              {upload.queued ? (
+                <p className="mt-3 text-xs text-content-secondary" role="status">
+                  You&rsquo;re offline — this will upload when you&rsquo;re back online.
+                </p>
+              ) : upload.error ? (
                 <p className="mt-3 text-xs text-status-error" role="alert">
                   {upload.error}
                 </p>

@@ -10,6 +10,12 @@ import {
   isValidTimezone,
   parseEventCreate,
   parseEventPatch,
+  MAX_SERIES_DAYS,
+  MAX_SERIES_SHOWS,
+  buildSeriesShowTitle,
+  groupShowsBySeries,
+  parseSeriesCreate,
+  shiftLocalDays,
 } from './events';
 
 const fieldsWithErrors = (errors: { field: string }[]) => errors.map((error) => error.field);
@@ -249,5 +255,151 @@ describe('toIsoInZone: the hour that does not exist', () => {
     const iso = toIsoInZone('2026-03-29T01:30', 'Europe/London');
     expect(iso).toBe('2026-03-29T01:30:00.000Z');
     expect(formatShowDateTime(iso, 'Europe/London', { includeDate: false })).toBe('02:30');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Series
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('parseSeriesCreate', () => {
+  const base = { seriesTitle: 'Sticks n Stones', artistIds: ['a1', 'a2'], days: 7 };
+
+  it('accepts a festival with several artists and fills the shared defaults in', () => {
+    const result = parseSeriesCreate(base);
+    expect(result.errors).toEqual([]);
+    expect(result.value).toMatchObject({
+      seriesTitle: 'Sticks n Stones',
+      artistIds: ['a1', 'a2'],
+      days: 7,
+      firstDayLocalStart: null,
+      timezone: DEFAULT_TIMEZONE,
+      setLengthMinutes: DEFAULT_SET_LENGTH_MINUTES,
+      venueName: null,
+      city: null,
+    });
+  });
+
+  it('dedupes artists and drops blanks, but refuses an empty list', () => {
+    expect(parseSeriesCreate({ ...base, artistIds: ['a1', ' a1 ', '', 'a2', 7] }).value?.artistIds).toEqual([
+      'a1',
+      'a2',
+    ]);
+    expect(fieldsWithErrors(parseSeriesCreate({ ...base, artistIds: [] }).errors)).toContain('artistIds');
+    expect(fieldsWithErrors(parseSeriesCreate({ ...base, artistIds: 'a1' }).errors)).toContain('artistIds');
+  });
+
+  it('names the festival field in its own error rather than "the show"', () => {
+    const result = parseSeriesCreate({ ...base, seriesTitle: '  ' });
+    expect(result.errors).toEqual([{ field: 'seriesTitle', message: 'Give the festival a name.' }]);
+  });
+
+  it('keeps days inside 1..MAX_SERIES_DAYS and refuses fractions', () => {
+    for (const days of [0, -1, MAX_SERIES_DAYS + 1, 2.5, '7', undefined]) {
+      expect(fieldsWithErrors(parseSeriesCreate({ ...base, days }).errors)).toContain('days');
+    }
+    expect(parseSeriesCreate({ ...base, days: MAX_SERIES_DAYS }).errors).toEqual([]);
+  });
+
+  it('caps days × artists so a slip cannot book sixty-plus rows', () => {
+    const many = Array.from({ length: 9 }, (_, i) => `a${i}`);
+    const result = parseSeriesCreate({ ...base, artistIds: many, days: 7 });
+    expect(fieldsWithErrors(result.errors)).toEqual(['days']);
+    expect(result.errors[0].message).toContain(String(MAX_SERIES_SHOWS));
+    expect(parseSeriesCreate({ ...base, artistIds: many.slice(0, 8), days: 7 }).errors).toEqual([]);
+  });
+
+  it('takes a day-1 wall clock as given and refuses anything else', () => {
+    expect(parseSeriesCreate({ ...base, firstDayLocalStart: '2027-12-10T11:00' }).value?.firstDayLocalStart).toBe(
+      '2027-12-10T11:00'
+    );
+    expect(parseSeriesCreate({ ...base, firstDayLocalStart: '' }).value?.firstDayLocalStart).toBeNull();
+    expect(fieldsWithErrors(parseSeriesCreate({ ...base, firstDayLocalStart: 'tomorrow' }).errors)).toContain(
+      'firstDayLocalStart'
+    );
+  });
+
+  it('still validates the fields shared with a single show', () => {
+    expect(fieldsWithErrors(parseSeriesCreate({ ...base, setLengthMinutes: 0 }).errors)).toContain(
+      'setLengthMinutes'
+    );
+    expect(fieldsWithErrors(parseSeriesCreate({ ...base, timezone: 'Lagos' }).errors)).toContain('timezone');
+  });
+});
+
+describe('buildSeriesShowTitle', () => {
+  it('numbers the day with a colon, and leaves a one-night series bare', () => {
+    expect(buildSeriesShowTitle('Sticks n Stones', 3, 7)).toBe('Sticks n Stones: Day 3');
+    expect(buildSeriesShowTitle('Sticks n Stones', 1, 1)).toBe('Sticks n Stones');
+  });
+});
+
+describe('shiftLocalDays', () => {
+  it('adds calendar days as a wall clock, rolling months and leap days', () => {
+    expect(shiftLocalDays('2027-12-30T11:00', 2)).toBe('2028-01-01T11:00');
+    expect(shiftLocalDays('2028-02-28T23:30', 1)).toBe('2028-02-29T23:30');
+    expect(shiftLocalDays('2027-12-10T11:00', 0)).toBe('2027-12-10T11:00');
+  });
+
+  // The whole reason this is wall-clock arithmetic: 11:00 on the day after the
+  // clocks go forward must still be 11:00 on the venue's clock, which is a
+  // DIFFERENT instant from "24 hours later".
+  it('keeps the same venue wall clock across a daylight-saving change', () => {
+    const before = toIsoInZone('2026-03-28T11:00', 'Europe/London');
+    const after = toIsoInZone(shiftLocalDays('2026-03-28T11:00', 1) as string, 'Europe/London');
+    expect(before).toBe('2026-03-28T11:00:00.000Z');
+    expect(after).toBe('2026-03-29T10:00:00.000Z');
+    expect(formatShowDateTime(after, 'Europe/London', { includeDate: false })).toBe('11:00');
+  });
+
+  it('refuses a value that is not a wall clock', () => {
+    expect(shiftLocalDays('tomorrow', 1)).toBeNull();
+    expect(shiftLocalDays('2027-12-10T11:00', 1.5)).toBeNull();
+  });
+});
+
+describe('groupShowsBySeries', () => {
+  const show = (
+    id: string,
+    artistName: string,
+    series?: { id: string; title: string; day: number }
+  ) => ({
+    id,
+    title: series ? `${series.title}: Day ${series.day}` : id,
+    artistName,
+    seriesId: series?.id ?? null,
+    seriesTitle: series?.title ?? null,
+    seriesDay: series?.day ?? null,
+  });
+
+  it('leaves standalone shows alone and keeps the incoming order', () => {
+    const entries = groupShowsBySeries([show('x', 'Tems'), show('y', 'Rema')]);
+    expect(entries.map((entry) => entry.kind)).toEqual(['show', 'show']);
+  });
+
+  it('groups members under the first one seen and reads them as a schedule', () => {
+    const fest = { id: 's1', title: 'Sticks n Stones' };
+    const entries = groupShowsBySeries([
+      show('solo', 'Tems'),
+      show('d1-victony', 'Victony', { ...fest, day: 1 }),
+      show('d1-rema', 'Rema', { ...fest, day: 1 }),
+      show('d2-victony', 'Victony', { ...fest, day: 2 }),
+      show('later', 'Rema'),
+    ]);
+    expect(entries.map((entry) => entry.kind)).toEqual(['show', 'series', 'show']);
+    const series = entries[1];
+    if (series.kind !== 'series') throw new Error('expected a series');
+    expect(series.title).toBe('Sticks n Stones');
+    expect(series.days).toBe(2);
+    expect(series.artistNames).toEqual(['Victony', 'Rema']);
+    expect(series.shows.map((member) => member.id)).toEqual(['d1-rema', 'd1-victony', 'd2-victony']);
+  });
+
+  it('drops blank artist names from the label but keeps the member', () => {
+    const fest = { id: 's2', title: 'Ember' };
+    const [entry] = groupShowsBySeries([show('a', '', { ...fest, day: 1 }), show('b', 'Rema', { ...fest, day: 1 })]);
+    if (entry.kind !== 'series') throw new Error('expected a series');
+    expect(entry.artistNames).toEqual(['Rema']);
+    expect(entry.shows).toHaveLength(2);
   });
 });

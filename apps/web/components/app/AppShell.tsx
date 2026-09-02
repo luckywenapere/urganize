@@ -26,7 +26,9 @@ import { HardPaywallGate } from '@/components/providers/HardPaywallGate';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
 import { CapacitorPushBridge } from '@/components/providers/CapacitorPushBridge';
 import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
-import { registerPushServiceWorker } from '@/lib/push';
+import { registerAppServiceWorker } from '@/lib/offline/register';
+import { OfflineBanner } from '@/components/app/OfflineBanner';
+import { flushOfflineQueue } from '@/lib/offline/sync';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { buildPrefetchRoutes } from '@/lib/prefetch-routes';
 import { CURATOR_HOME_PATH } from '@/lib/home-path';
@@ -119,6 +121,13 @@ const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true'
 // the assistant page owning a copy.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
+// Type-first create (founder call, 2026-09-01): tapping the type IS the
+// create, and the new release view is where the rest gets filled in — so this
+// instance's deliberate "stay on whatever page" behavior gives way to landing
+// in the release, for the flag-on path only.
+const TYPE_FIRST_CREATE_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_TYPE_FIRST_CREATE === 'true';
+
 // The workspace identity card (URG-214) — a persistent left column, mirroring
 // the UrgAns rail's right column. Only meaningful once workspaces exist, so
 // it's gated on both its own flag and NEXT_PUBLIC_FEATURE_WORKSPACE.
@@ -139,6 +148,7 @@ const ANDROID_APP_BANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_ANDROID_APP_B
 // PushPermissionPrompt.tsx for why the ask is a card and why its BUTTON, not
 // this mount, is what opens the OS prompt.
 const PUSH_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PUSH_PROMPT === 'true';
+const OFFLINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_OFFLINE === 'true';
 
 // "Put us on your Home Screen" (founder request 2026-08-30, retriggered
 // 2026-08-31). Offered a minute into every visit, once per visit, at the
@@ -351,13 +361,36 @@ export function AppShell({ children }: { children: ReactNode }) {
     });
   }, [hasCuratorProfile, isAuthLoading, isAuthenticated, isCuratorAccount, router]);
 
-  // Register the push service worker once per load. Registration alone never
-  // prompts for permission — the prompt only fires when the user explicitly
-  // enables notifications in Settings (PushNotificationsSection). Having the
-  // worker registered early means an already-subscribed device keeps
-  // receiving pushes even before the user navigates anywhere.
+  // Register the app's service worker once per load — push-only (sw.js) or
+  // the offline shell (sw-offline.js), decided by registerAppServiceWorker
+  // itself. Registration alone never prompts for push permission — that
+  // prompt only fires when the user explicitly enables notifications in
+  // Settings (PushNotificationsSection). Having the worker registered early
+  // means an already-subscribed device keeps receiving pushes even before
+  // the user navigates anywhere, and (when the offline flag is on) the
+  // offline shell is ready before the connection ever drops.
   useEffect(() => {
-    void registerPushServiceWorker();
+    void registerAppServiceWorker();
+  }, []);
+
+  // Reconnect: replay whatever queued offline while the connection was
+  // down, THEN re-pull the catalog rather than waiting for the next
+  // natural trigger (a click, the 10s freshness window). flushOfflineQueue
+  // coalesces concurrent calls and loadCommandCenter has its own in-flight
+  // dedup and recency window, so this never doubles up with an
+  // already-running or already-fresh load. Also runs once on mount — a
+  // page reload can leave items queued from before the reload, and they
+  // should not have to wait for a fresh online/offline transition to sync.
+  useEffect(() => {
+    if (!OFFLINE_ENABLED) return;
+    const syncNow = () => {
+      void flushOfflineQueue().finally(() => {
+        void useReleaseStore.getState().loadCommandCenter({ force: true });
+      });
+    };
+    syncNow();
+    window.addEventListener('online', syncNow);
+    return () => window.removeEventListener('online', syncNow);
   }, []);
 
   // Engagement drip (founder request, 2026-07-23): ping once per tab
@@ -471,6 +504,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 already overflows a 375px phone, so a countdown there would
                 break phones. Renders nothing outside the last stretch of a
                 trial, and nothing at all while the flag is off. */}
+            <OfflineBanner />
             <TeamTrialStrip />
             <TeamReadOnlyStrip />
             {/* Assistant-usage indicator, same slot and same contract.
@@ -552,6 +586,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                 ? { prefill: { releaseType: result.releaseType } }
                 : {}),
             });
+          } else if (TYPE_FIRST_CREATE_ENABLED) {
+            // TYPE-FIRST CREATE (2026-09-01): the type tap was the whole
+            // form, so the release view — where name and date get prompted —
+            // is the destination, wherever the modal was opened from. Flag
+            // off, the stay-put behavior above is unchanged.
+            router.push(`/dashboard?release=${releaseId}`);
           }
         }}
       />

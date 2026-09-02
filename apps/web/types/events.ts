@@ -27,6 +27,12 @@ export type ShowEvent = {
   promoterPhone: string | null;
   status: EventStatus;
   notes: string | null;
+  /** A festival is a SERIES of single shows (one row per artist per day). All
+   *  three are null for an ordinary show. The series is a grouping key, not an
+   *  object — see the header of 20260902100000_events_series.sql. */
+  seriesId: string | null;
+  seriesTitle: string | null;
+  seriesDay: number | null;
   createdAt: string;
   updatedAt: string;
 };

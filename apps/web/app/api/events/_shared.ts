@@ -36,7 +36,8 @@ export const SONG_VERSION_COLUMNS =
 
 export const EVENT_COLUMNS =
   'id,owner_user_id,artist_id,title,venue_name,city,country,timezone,set_start_at,' +
-  'set_length_minutes,stage,promoter_name,promoter_phone,status,notes,created_at,updated_at';
+  'set_length_minutes,stage,promoter_name,promoter_phone,status,notes,' +
+  'series_id,series_title,series_day,created_at,updated_at';
 
 /** A team's whole schedule loads in one request; well above any real roster's
  *  year of shows. Revisit alongside a real pagination story, not before. */
@@ -89,6 +90,9 @@ export const toShowEvent = (
   promoterPhone: row.promoter_phone ? String(row.promoter_phone) : null,
   status: (row.status as EventStatus) || 'draft',
   notes: row.notes ? String(row.notes) : null,
+  seriesId: row.series_id ? String(row.series_id) : null,
+  seriesTitle: row.series_title ? String(row.series_title) : null,
+  seriesDay: typeof row.series_day === 'number' && row.series_day > 0 ? row.series_day : null,
   createdAt: String(row.created_at || ''),
   updatedAt: String(row.updated_at || ''),
 });

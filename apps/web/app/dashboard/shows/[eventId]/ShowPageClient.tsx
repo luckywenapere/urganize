@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, CalendarDays, MapPin, Plus } from 'lucide-react';
+import { ArrowLeft, CalendarDays, MapPin, Pencil, Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { EVENT_STATUS_COPY, formatShowDateTime, shortTimezoneLabel } from '@/lib/events';
+import { MAX_SETLIST_NAME_LENGTH } from '@/lib/setlist';
 import { SetlistBuilder } from '@/components/events/SetlistBuilder';
 import { DjPackPanel } from '@/components/events/DjPackPanel';
 import type { RunOfShowItem, Setlist, ShowEvent } from '@/types/events';
@@ -42,6 +43,10 @@ export default function ShowPageClient() {
   const [activeSetlistId, setActiveSetlistId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  // Inline rename of the active set (design-partner ask, 2026-09-02: "Set 2
+  // could be '#2 Victony's setlist'"). null = not editing.
+  const [renameDraft, setRenameDraft] = useState<string | null>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   const loadShow = useCallback(async () => {
     if (!eventId) return;
@@ -108,6 +113,36 @@ export default function ShowPageClient() {
     setActiveSetlistId(body.setlist.id);
   };
 
+  useEffect(() => {
+    if (renameDraft !== null) renameInputRef.current?.select();
+  }, [renameDraft]);
+
+  /** PATCH the active set's name. Empty keeps the old name (the route would
+   *  400 anyway); a failure lands in the page's existing error slot. */
+  const commitRename = async () => {
+    const draft = renameDraft;
+    setRenameDraft(null);
+    const target = setlists.find((setlist) => setlist.id === activeSetlistId);
+    if (draft === null || !target) return;
+    const name = draft.trim();
+    if (!name || name === target.name) return;
+
+    const headers = await authHeaders();
+    if (!headers) return;
+    const response = await fetch(`/api/setlists/${target.id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ name }),
+    });
+    if (!response.ok) {
+      setError(await readError(response, 'Could not rename the set.'));
+      return;
+    }
+    const body = await response.json();
+    const renamed: Setlist = body.setlist;
+    setSetlists((current) => current.map((setlist) => (setlist.id === renamed.id ? renamed : setlist)));
+  };
+
   if (!EVENTS_ENABLED) return null;
 
   if (isLoading) {
@@ -151,9 +186,9 @@ export default function ShowPageClient() {
       </Link>
 
       <header className="mt-4">
-        {event.artistName ? (
+        {event.artistName || event.seriesTitle ? (
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-            {event.artistName}
+            {[event.artistName, event.seriesTitle].filter(Boolean).join(' · ')}
           </p>
         ) : null}
         <div className="mt-1 flex flex-wrap items-center gap-3">
@@ -176,6 +211,16 @@ export default function ShowPageClient() {
               <MapPin className="h-4 w-4" aria-hidden />
               {place}
             </span>
+          ) : null}
+          {/* One member of a festival. Its set and pack are its own; the other
+              days and artists are their own shows on the list. */}
+          {event.seriesId ? (
+            <Link
+              href="/dashboard/shows"
+              className="motion-focus text-content-tertiary underline-offset-2 hover:text-content-primary hover:underline"
+            >
+              Other days and artists
+            </Link>
           ) : null}
         </div>
       </header>
@@ -203,6 +248,18 @@ export default function ShowPageClient() {
       <section className="mt-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-lg font-semibold text-content-primary">The set</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            {activeSetlist ? (
+              <button
+                type="button"
+                onClick={() => setRenameDraft(activeSetlist.name)}
+                disabled={renameDraft !== null}
+                className="motion-focus inline-flex h-9 items-center gap-1.5 rounded-lg border border-stroke-default px-3 text-sm font-semibold text-content-secondary hover:border-brand hover:text-content-primary disabled:opacity-50"
+              >
+                <Pencil className="h-3.5 w-3.5" aria-hidden />
+                Rename
+              </button>
+            ) : null}
           <button
             type="button"
             onClick={() => void createSetlist()}
@@ -211,27 +268,52 @@ export default function ShowPageClient() {
             <Plus className="h-3.5 w-3.5" aria-hidden />
             {setlists.length === 0 ? 'Start the set' : 'Another set'}
           </button>
+          </div>
         </div>
 
         {/* More than one set is normal — you build a 25 and a 40 in case the
-            slot moves — so the picker only appears once there is a choice. */}
-        {setlists.length > 1 ? (
+            slot moves. The chips show from the FIRST set (they used to wait
+            for a second), so the current set's name is always on screen and
+            reachable for a rename. */}
+        {setlists.length > 0 ? (
           <div className="mt-3 flex flex-wrap gap-2">
-            {setlists.map((setlist) => (
-              <button
-                key={setlist.id}
-                type="button"
-                onClick={() => setActiveSetlistId(setlist.id)}
-                aria-pressed={setlist.id === activeSetlistId}
-                className={`motion-focus rounded-full border px-3 py-1 text-xs font-semibold ${
-                  setlist.id === activeSetlistId
-                    ? 'border-brand bg-brand/10 text-brand'
-                    : 'border-stroke-default text-content-secondary hover:text-content-primary'
-                }`}
-              >
-                {setlist.name}
-              </button>
-            ))}
+            {setlists.map((setlist) =>
+              setlist.id === activeSetlistId && renameDraft !== null ? (
+                <input
+                  key={setlist.id}
+                  ref={renameInputRef}
+                  value={renameDraft}
+                  maxLength={MAX_SETLIST_NAME_LENGTH}
+                  aria-label="Set name"
+                  onChange={(changeEvent) => setRenameDraft(changeEvent.target.value)}
+                  onBlur={() => void commitRename()}
+                  onKeyDown={(keyEvent) => {
+                    if (keyEvent.key === 'Enter') {
+                      keyEvent.preventDefault();
+                      void commitRename();
+                    } else if (keyEvent.key === 'Escape') {
+                      keyEvent.preventDefault();
+                      setRenameDraft(null);
+                    }
+                  }}
+                  className="rounded-full border border-brand bg-bg-base px-3 py-1 text-xs font-semibold text-content-primary outline-none"
+                />
+              ) : (
+                <button
+                  key={setlist.id}
+                  type="button"
+                  onClick={() => setActiveSetlistId(setlist.id)}
+                  aria-pressed={setlist.id === activeSetlistId}
+                  className={`motion-focus rounded-full border px-3 py-1 text-xs font-semibold ${
+                    setlist.id === activeSetlistId
+                      ? 'border-brand bg-brand/10 text-brand'
+                      : 'border-stroke-default text-content-secondary hover:text-content-primary'
+                  }`}
+                >
+                  {setlist.name}
+                </button>
+              )
+            )}
           </div>
         ) : null}
 

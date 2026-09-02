@@ -417,3 +417,233 @@ function wallClockUtc(date: Date, zone: string): number | null {
     return null;
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Series — a festival is several linked single shows
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Design-partner ask (2026-09-02): "a show with 7 days, 120 minutes each" and
+ * "different artists with their own set, for a single festival." Founder call:
+ * model it as ONE `events` ROW PER ARTIST PER DAY, linked by a series id, not
+ * as a festival object with days and a lineup. Each row keeps one artist, one
+ * slot and its own setlists, so the setlist builder's per-artist song catalog
+ * and the DJ pack per set keep working with no special cases — and the events
+ * spec's line ("Events cover a single show") still holds. Schema notes in the
+ * header of 20260902100000_events_series.sql.
+ */
+
+/** Two weeks is generous for any festival run; beyond it is a typo. */
+export const MAX_SERIES_DAYS = 14;
+
+/** days × artists. A guard against a slip, not a ceiling anyone meets: 7 days
+ *  of 8 artists is 56 rows. */
+export const MAX_SERIES_SHOWS = 60;
+
+export type SeriesCreateInput = {
+  seriesTitle?: unknown;
+  artistIds?: unknown;
+  days?: unknown;
+  /** A `datetime-local` string for DAY 1, read in `timezone` (see
+   *  toIsoInZone). Every later day is the same wall clock, one day on. */
+  firstDayLocalStart?: unknown;
+  timezone?: unknown;
+  setLengthMinutes?: unknown;
+  venueName?: unknown;
+  city?: unknown;
+};
+
+export type SeriesCreate = {
+  seriesTitle: string;
+  /** Deduplicated, in the order given. Never empty. */
+  artistIds: string[];
+  days: number;
+  firstDayLocalStart: string | null;
+  timezone: string;
+  setLengthMinutes: number;
+  venueName: string | null;
+  city: string | null;
+};
+
+const LOCAL_WALL_CLOCK = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
+
+/**
+ * Validate a series booking. Reuses parseEventFields for every field a single
+ * show also carries, so the messages and limits cannot drift between the two
+ * forms; only artists, days and the day-1 wall clock are new.
+ */
+export function parseSeriesCreate(input: SeriesCreateInput): {
+  errors: FieldError[];
+  value: SeriesCreate | null;
+} {
+  const shared = parseEventFields(
+    {
+      title: input.seriesTitle,
+      venueName: input.venueName ?? null,
+      city: input.city ?? null,
+      timezone: input.timezone ?? DEFAULT_TIMEZONE,
+      setLengthMinutes: input.setLengthMinutes ?? DEFAULT_SET_LENGTH_MINUTES,
+    },
+    { require: ['title', 'timezone', 'setLengthMinutes'] }
+  );
+  const errors: FieldError[] = shared.errors.map((error) =>
+    error.field === 'title'
+      ? { field: 'seriesTitle', message: 'Give the festival a name.' }
+      : error
+  );
+
+  const artistIds = Array.isArray(input.artistIds)
+    ? Array.from(
+        new Set(
+          input.artistIds
+            .filter((id): id is string => typeof id === 'string')
+            .map((id) => id.trim())
+            .filter(Boolean)
+        )
+      )
+    : [];
+  if (artistIds.length === 0) {
+    errors.push({ field: 'artistIds', message: 'Pick at least one artist.' });
+  }
+
+  const days = input.days;
+  const daysOk =
+    typeof days === 'number' && Number.isInteger(days) && days >= 1 && days <= MAX_SERIES_DAYS;
+  if (!daysOk) {
+    errors.push({
+      field: 'days',
+      message: `How many days? Between 1 and ${MAX_SERIES_DAYS}.`,
+    });
+  } else if (artistIds.length > 0 && days * artistIds.length > MAX_SERIES_SHOWS) {
+    errors.push({
+      field: 'days',
+      message: `That is ${days * artistIds.length} shows at once. Keep it to ${MAX_SERIES_SHOWS} and book the rest as a second series.`,
+    });
+  }
+
+  let firstDayLocalStart: string | null = null;
+  const rawStart = input.firstDayLocalStart;
+  if (rawStart !== undefined && rawStart !== null && rawStart !== '') {
+    if (typeof rawStart === 'string' && LOCAL_WALL_CLOCK.test(rawStart)) {
+      firstDayLocalStart = rawStart;
+    } else {
+      errors.push({ field: 'firstDayLocalStart', message: 'That start time is not a real date.' });
+    }
+  }
+
+  if (errors.length > 0) return { errors, value: null };
+
+  return {
+    errors: [],
+    value: {
+      seriesTitle: shared.columns.title as string,
+      artistIds,
+      days: days as number,
+      firstDayLocalStart,
+      timezone: shared.columns.timezone as string,
+      setLengthMinutes: shared.columns.set_length_minutes as number,
+      venueName: shared.columns.venue_name ?? null,
+      city: shared.columns.city ?? null,
+    },
+  };
+}
+
+/**
+ * Each member's own title stays a complete sentence, so a show read alone (the
+ * detail page, a DJ pack header) needs no lookup. A colon, not a dash — the
+ * house copy rule. The artist is NOT repeated here: it is already every row's
+ * eyebrow. A one-day series (several artists, one night) keeps the bare title,
+ * because "Day 1" of one day is noise.
+ */
+export function buildSeriesShowTitle(seriesTitle: string, day: number, totalDays: number): string {
+  return totalDays > 1 ? `${seriesTitle}: Day ${day}` : seriesTitle;
+}
+
+/**
+ * Adds calendar days to a `datetime-local` string AS A WALL CLOCK, so "11:00
+ * every day" stays 11:00 across a daylight-saving change. Adding 24h to the
+ * instant instead would shift every post-transition day by an hour — exactly
+ * the silent set-time error events.timezone exists to prevent. Feed the result
+ * to toIsoInZone with the venue's zone to get the real instant.
+ */
+export function shiftLocalDays(localValue: string, days: number): string | null {
+  const match = LOCAL_WALL_CLOCK.exec(localValue);
+  if (!match || !Number.isInteger(days)) return null;
+  const [, year, month, day, hour, minute] = match.map(Number) as unknown as number[];
+  const shifted = new Date(Date.UTC(year, month - 1, day + days, hour, minute));
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return (
+    `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}` +
+    `T${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}`
+  );
+}
+
+/** What the shows list renders: a lone show, or a series with its members. */
+export type ShowListEntry<T extends SeriesMember> =
+  | { kind: 'show'; event: T }
+  | {
+      kind: 'series';
+      seriesId: string;
+      title: string;
+      /** Distinct, in first-seen order, blanks dropped. */
+      artistNames: string[];
+      /** Distinct series_day values among the members. */
+      days: number;
+      /** In day order, then artist name, so the list reads like a schedule. */
+      shows: T[];
+    };
+
+/** The slice of ShowEvent the grouping needs — kept structural so the list
+ *  and any test can hand in plain objects. */
+export type SeriesMember = {
+  id: string;
+  title: string;
+  artistName: string;
+  seriesId: string | null;
+  seriesTitle: string | null;
+  seriesDay: number | null;
+};
+
+/**
+ * Group an already-ordered list (the API returns soonest first) into standalone
+ * shows and series. A series takes the position of its FIRST member, so a
+ * festival next week still sits above a single show next month.
+ */
+export function groupShowsBySeries<T extends SeriesMember>(events: readonly T[]): ShowListEntry<T>[] {
+  const entries: ShowListEntry<T>[] = [];
+  const bySeries = new Map<string, Extract<ShowListEntry<T>, { kind: 'series' }>>();
+
+  for (const event of events) {
+    if (!event.seriesId) {
+      entries.push({ kind: 'show', event });
+      continue;
+    }
+    let group = bySeries.get(event.seriesId);
+    if (!group) {
+      group = {
+        kind: 'series',
+        seriesId: event.seriesId,
+        title: event.seriesTitle || event.title,
+        artistNames: [],
+        days: 0,
+        shows: [],
+      };
+      bySeries.set(event.seriesId, group);
+      entries.push(group);
+    }
+    group.shows.push(event);
+    if (event.artistName && !group.artistNames.includes(event.artistName)) {
+      group.artistNames.push(event.artistName);
+    }
+  }
+
+  for (const group of bySeries.values()) {
+    group.shows.sort(
+      (a, b) =>
+        (a.seriesDay ?? 0) - (b.seriesDay ?? 0) || a.artistName.localeCompare(b.artistName)
+    );
+    group.days = new Set(group.shows.map((show) => show.seriesDay ?? 0)).size;
+  }
+
+  return entries;
+}

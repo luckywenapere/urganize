@@ -28,6 +28,11 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 // "New release" card can plausibly create a user's very first release too.
 const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
 const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'true';
+// Type-first create (2026-09-01): tap-the-type creation lands straight in the
+// release, skipping the access step / first-win / ?new=1 — see WorkspaceView's
+// onCreated for the full rationale; this handler mirrors it.
+const TYPE_FIRST_CREATE_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_TYPE_FIRST_CREATE === 'true';
 
 // When on, MobileNavBar carries this page's below-lg navigation, so the
 // column has one row of chrome subtracted less: see
@@ -170,6 +175,21 @@ export default function ChappiPageClient() {
           setIsCreateModalOpen(false);
           void loadCommandCenter();
           const plannerPending = result?.plannerPending === true;
+          // TYPE-FIRST CREATE (2026-09-01): straight into the release — same
+          // branch, same rationale as WorkspaceView's onCreated.
+          if (TYPE_FIRST_CREATE_ENABLED) {
+            router.push(`/dashboard?release=${releaseId}`);
+            if (plannerPending) {
+              usePlannerStore.getState().openIntake({
+                source: 'empty_state',
+                releaseId,
+                ...(result?.releaseType
+                  ? { prefill: { releaseType: result.releaseType } }
+                  : {}),
+              });
+            }
+            return;
+          }
           // Deferred continuation, mirroring WorkspaceView's onCreated: the
           // compulsory team-login step runs first, then hands back to the
           // original branches unchanged.
