@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.19.0",
+    date: "September 2, 2026",
+    highlights: [
+      "The Android app can now send you notifications, the same as the web app: when an activity is due, when one is handed to you, and when we have news. Install the newest build of the app, then tap Turn on when the card appears after you sign in, or switch it on any time in Settings.",
+      "Notifications you turned on in a browser keep working. Turning them on in the app adds your phone to the list, so both ring.",
+    ],
+  },
+  {
     version: "1.18.0",
     date: "September 2, 2026",
     highlights: [
