@@ -3,11 +3,17 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, MapPin, Plus } from 'lucide-react';
+import { CalendarDays, Layers, MapPin, Plus } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useEventsStore } from '@/stores/useEventsStore';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
-import { EVENT_STATUS_COPY, formatShowDateTime, shortTimezoneLabel } from '@/lib/events';
+import {
+  EVENT_STATUS_COPY,
+  formatShowDateTime,
+  groupShowsBySeries,
+  shortTimezoneLabel,
+  type ShowListEntry,
+} from '@/lib/events';
 import { CreateShowModal } from '@/components/events/CreateShowModal';
 import type { ShowEvent } from '@/types/events';
 
@@ -71,6 +77,104 @@ function ShowRow({ event }: { event: ShowEvent }) {
         <span className="text-content-tertiary">{event.setLengthMinutes} min set</span>
       </div>
     </Link>
+  );
+}
+
+/** A member of a series: the day and artist are the identity here, since the
+ *  festival's name is already on the card above. */
+function SeriesMemberRow({ event }: { event: ShowEvent }) {
+  return (
+    <Link
+      href={`/dashboard/shows/${event.id}`}
+      className="motion-focus flex items-center justify-between gap-3 rounded-lg border border-stroke-default bg-bg-base px-3 py-2.5 transition-colors hover:border-stroke-strong"
+    >
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-content-primary">
+          {event.seriesDay ? `Day ${event.seriesDay}` : event.title}
+          {event.artistName ? (
+            <span className="font-normal text-content-secondary"> · {event.artistName}</span>
+          ) : null}
+        </p>
+        <p className="mt-0.5 text-xs text-content-secondary">
+          {formatShowDateTime(event.setStartAt, event.timezone)}
+          <span className="text-content-tertiary"> · {event.setLengthMinutes} min set</span>
+        </p>
+      </div>
+      <span
+        className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusClass(
+          event.status
+        )}`}
+      >
+        {EVENT_STATUS_COPY[event.status]}
+      </span>
+    </Link>
+  );
+}
+
+/**
+ * A festival: several single shows grouped by their series id. The card names
+ * the run once; each member row below is a real show with its own page,
+ * setlists and pack (see lib/events.ts "Series").
+ */
+function SeriesCard({ entry }: { entry: Extract<ShowListEntry<ShowEvent>, { kind: 'series' }> }) {
+  const first = entry.shows[0];
+  const dated = entry.shows.filter((show) => show.setStartAt);
+  const firstDated = dated[0];
+  const lastDated = dated[dated.length - 1];
+  const place = first ? [first.venueName, first.city].filter(Boolean).join(', ') : '';
+  const range = firstDated
+    ? entry.days > 1 && lastDated && lastDated.id !== firstDated.id
+      ? `${formatShowDateTime(firstDated.setStartAt, firstDated.timezone, { includeTime: false })} to ${formatShowDateTime(
+          lastDated.setStartAt,
+          lastDated.timezone,
+          { includeTime: false }
+        )}`
+      : formatShowDateTime(firstDated.setStartAt, firstDated.timezone)
+    : 'Dates to confirm';
+  const who =
+    entry.artistNames.length > 1
+      ? `${entry.artistNames.length} artists`
+      : entry.artistNames[0] || '';
+  const summary = [entry.days > 1 ? `${entry.days} days` : null, who].filter(Boolean).join(' · ');
+
+  return (
+    <section className="rounded-xl border border-stroke-default bg-bg-surface p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+            <Layers className="h-3 w-3" aria-hidden />
+            Festival
+          </p>
+          <h2 className="mt-1 truncate font-display text-base font-semibold text-content-primary">
+            {entry.title}
+          </h2>
+        </div>
+        {summary ? (
+          <span className="shrink-0 text-xs font-semibold text-content-secondary">{summary}</span>
+        ) : null}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-content-secondary">
+        <span className="inline-flex items-center gap-1.5">
+          <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+          {range}
+        </span>
+        {place ? (
+          <span className="inline-flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5" aria-hidden />
+            {place}
+          </span>
+        ) : null}
+      </div>
+
+      <ul className="mt-3 space-y-1.5">
+        {entry.shows.map((show) => (
+          <li key={show.id}>
+            <SeriesMemberRow event={show} />
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -153,7 +257,13 @@ export default function ShowsPageClient() {
             </p>
           </div>
         ) : (
-          events.map((event) => <ShowRow key={event.id} event={event} />)
+          groupShowsBySeries(events).map((entry) =>
+            entry.kind === 'series' ? (
+              <SeriesCard key={entry.seriesId} entry={entry} />
+            ) : (
+              <ShowRow key={entry.event.id} event={entry.event} />
+            )
+          )
         )}
       </div>
 
@@ -165,6 +275,9 @@ export default function ShowsPageClient() {
             setIsCreateOpen(false);
             router.push(`/dashboard/shows/${event.id}`);
           }}
+          // A festival has no single show to open; the grouped list is the
+          // right landing, and the store has already refreshed it.
+          onCreatedSeries={() => setIsCreateOpen(false)}
         />
       ) : null}
     </div>

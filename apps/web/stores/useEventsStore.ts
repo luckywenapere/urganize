@@ -28,6 +28,20 @@ type CreateShowInput = {
   timezone?: string;
 };
 
+/** A festival: one show per artist per day, linked by a series id. Mirrors
+ *  POST /api/events/series (validated by lib/events parseSeriesCreate). */
+type CreateSeriesInput = {
+  seriesTitle: string;
+  artistIds: string[];
+  days: number;
+  /** Day 1's `datetime-local` wall clock in `timezone`; later days repeat it. */
+  firstDayLocalStart?: string | null;
+  venueName?: string;
+  city?: string;
+  setLengthMinutes?: number;
+  timezone?: string;
+};
+
 type EventsStore = {
   events: ShowEvent[];
   /** True until the first load settles, so a later visit renders rows rather
@@ -36,6 +50,7 @@ type EventsStore = {
   error: string | null;
   load: (options?: { force?: boolean }) => Promise<void>;
   create: (input: CreateShowInput) => Promise<{ event: ShowEvent } | { error: string }>;
+  createSeries: (input: CreateSeriesInput) => Promise<{ events: ShowEvent[] } | { error: string }>;
   remove: (eventId: string) => Promise<{ error: string } | null>;
 };
 
@@ -129,6 +144,27 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
       const body = await response.json();
       await get().load({ force: true });
       return { event: body.event as ShowEvent };
+    } catch {
+      return { error: 'Could not reach the server. Check your connection.' };
+    }
+  },
+
+  createSeries: async (input) => {
+    try {
+      const headers = await authHeaders();
+      if (!headers) return { error: 'You are signed out. Sign in and try again.' };
+
+      const response = await fetch('/api/events/series', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(input),
+      });
+      if (!response.ok) {
+        return { error: await readError(response, 'Could not book the shows.') };
+      }
+      const body = await response.json();
+      await get().load({ force: true });
+      return { events: Array.isArray(body.events) ? (body.events as ShowEvent[]) : [] };
     } catch {
       return { error: 'Could not reach the server. Check your connection.' };
     }
