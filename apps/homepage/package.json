@@ -10,7 +10,8 @@
     "smoke:waitlist": "node scripts/smoke-waitlist.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma db push --schema prisma/schema.prisma",
-    "prisma:seed": "node prisma/seed.js"
+    "prisma:seed": "node prisma/seed.js",
+    "shots": "node scripts/capture-product-shots.mjs"
   },
   "dependencies": {
     "@formbricks/js": "^4.3.0",

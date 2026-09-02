@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 // Inline waitlist capture — the landing page's primary CTA (reverted from
 // direct app signup 2026-07-15: visitors weren't converting to sign-ups from
@@ -98,6 +99,7 @@ export function WaitlistForm({ source }: { source: string }) {
       if (response.status === 409) {
         setDoneMessage("You're already on the list. We'll be in touch.");
         setStep("done");
+        trackEvent("waitlist_submit", { source, outcome: "duplicate" });
         return;
       }
       if (!response.ok) {
@@ -108,6 +110,7 @@ export function WaitlistForm({ source }: { source: string }) {
 
       setDoneMessage("You're on the list. We'll reach out soon.");
       setStep("done");
+      trackEvent("waitlist_submit", { source, outcome: "new" });
     } catch {
       setError("Something went wrong. Try again.");
     } finally {

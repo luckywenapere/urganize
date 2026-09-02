@@ -31,7 +31,7 @@ export function WorkspaceShotSection() {
             dark="/images/product/workspace-releases-dark.png"
             alt="The Urganize catalog: a grid of release cards, each with cover art, a release date and a progress bar counting finished activities against its 64-activity plan. The top row runs from 0 of 64 done to 30 of 64."
             width={1920}
-            height={970}
+            height={973}
             sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
           />
         </div>
