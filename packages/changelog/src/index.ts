@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.18.0",
+    date: "September 2, 2026",
+    highlights: [
+      "After about a minute in the app, we offer to put Urganize on your device. On Android, one tap gets you the app. On a computer, one tap installs it in its own window. On an iPhone, the card shows you the two taps that add it to your Home Screen.",
+      "Say Not now and it stays out of your way for the rest of the visit. Once you have installed it, we do not ask again.",
+      "If you turn the install down, the notifications card follows a moment later, so you still get the choice.",
+    ],
+  },
+  {
     version: "1.17.0",
     date: "September 2, 2026",
     highlights: [
