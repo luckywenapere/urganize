@@ -76,6 +76,18 @@ export function ContactIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
   );
 }
 
+/** Report: a blown fuse on a patch cable — something in the chain is dead. */
+export function ReportIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 12h3.2M16.8 12H20" strokeLinecap="round" />
+      <rect x="7.2" y="8.4" width="9.6" height="7.2" rx="1.6" />
+      <path d="M12 10.4v3.1" strokeLinecap="round" />
+      <circle cx="12" cy="15.2" r="0.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 /** Community: a speaker cab — the room the whole crowd gathers around. */
 export function CommunityIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
   return (

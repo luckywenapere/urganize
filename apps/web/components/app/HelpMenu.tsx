@@ -3,7 +3,14 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { openExternalUrl } from '@/lib/external-link';
-import { CommunityIcon, ContactIcon, DocsIcon } from '@/components/app/BrandIcons';
+import { CommunityIcon, ContactIcon, DocsIcon, ReportIcon } from '@/components/app/BrandIcons';
+import { useReportIssueStore } from '@/stores/useReportIssueStore';
+
+// In-app issue reporting. The dialog is mounted once by AppShell and opened
+// through the store — this menu is one of its two entry points, the other
+// being Settings → Account (which is what makes it reachable on a phone, since
+// this launcher is `hidden md:block`).
+const REPORT_ISSUE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_REPORT_ISSUE === 'true';
 
 // The keyboard-shortcuts panel (and its "?" hotkey + menu item) was removed
 // 2026-07-23 (founder call) — the menu is Docs / Contact plus the
@@ -54,9 +61,23 @@ export function HelpMenu() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
 
+  const openReportIssue = useReportIssueStore((state) => state.openReportIssue);
+
   const menuGroups = useMemo(
     () => [
       [
+        // First: the reason most people open this menu is that something is
+        // wrong, and a mailto is a worse answer than a form that files the
+        // issue for them.
+        ...(REPORT_ISSUE_ENABLED
+          ? [
+              {
+                label: 'Report an issue',
+                icon: <ReportIcon />,
+                onClick: () => openReportIssue('bug'),
+              },
+            ]
+          : []),
         {
           label: 'Docs',
           icon: <DocsIcon />,
@@ -80,7 +101,7 @@ export function HelpMenu() {
         },
       ],
     ],
-    []
+    [openReportIssue]
   );
 
   useEffect(() => {

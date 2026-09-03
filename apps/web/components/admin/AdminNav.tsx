@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   ArrowLeft,
   BadgeDollarSign,
+  Bug,
   BellRing,
   ClipboardList,
   LayoutDashboard,
@@ -51,6 +52,7 @@ const ITEMS: Array<{
     href: '/admin/curator-invites',
   },
   { key: 'teams', label: 'Teams', icon: Building2, href: '/admin/teams' },
+  { key: 'issue-reports', label: 'Reports', icon: Bug, href: '/admin/issue-reports' },
   { key: 'urgans', label: 'UrgAns actions', icon: Sparkles, href: '/admin/urgans' },
   { key: 'waitlist', label: 'Waitlist', icon: Users, href: '/admin/waitlist' },
   { key: 'growth', label: 'Growth', icon: TrendingUp, href: '/admin/growth' },
