@@ -5,7 +5,6 @@ import {
   LANDING_DESCRIPTION,
   LANDING_TITLE,
 } from "@/lib/seo";
-import { LandingAnalytics } from "./components/landing/LandingAnalytics";
 import {
   FaqSection,
   FeatureGridSection,
@@ -79,7 +78,6 @@ export default function Home() {
         </main>
 
         <MarketingFooter />
-        <LandingAnalytics />
         <script
           type="application/ld+json"
           // JSON.stringify output of our own constants; nothing user-supplied.

@@ -3,7 +3,8 @@ import { ProofLine } from "../components/landing/ProofLine";
 import { ThemedProductShot } from "../components/landing/ThemedProductShot";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
-import { WaitlistForm } from "../components/landing/WaitlistForm";
+import { TrialButton } from "../components/landing/TrialButton";
+import { WaitlistDisclosure } from "../components/landing/WaitlistDisclosure";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
@@ -126,9 +127,15 @@ export default function FeaturesPage() {
                 previously had no ask until the very bottom, ~7 screens
                 down, so anyone who stopped reading early never saw one.
                 No ProofLine here on purpose (keep the first touch light);
-                antoine stays on the final CTA below. */}
-            <div className="mt-8 flex w-full flex-col items-center gap-3">
-              <WaitlistForm source="features_hero" />
+                antoine stays on the final CTA below. Since the 2026-09-02
+                homepage overhaul the ask is the free trial, the same
+                TrialButton the homepage mounts; the waitlist survives as a
+                disclosure under the final CTA. */}
+            <div className="mt-8 flex w-full flex-col items-center gap-4">
+              <TrialButton location="features_hero" size="lg" className="w-full sm:w-auto" />
+              <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
+                14 days free. No card.
+              </p>
             </div>
           </div>
         </SectionShell>
@@ -233,9 +240,15 @@ export default function FeaturesPage() {
               <h2 className={headlineClass}>
                 Run your next release with a system.
               </h2>
-              <div className="mt-10 flex w-full flex-col items-center gap-3">
-                <WaitlistForm source="features_cta" />
+              <div className="mt-10 flex w-full flex-col items-center gap-4">
+                <TrialButton location="features_cta" size="lg" className="w-full sm:w-auto" />
+                <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
+                  14 days free. No card.
+                </p>
                 <ProofLine id="antoine" className="mt-2" />
+                <div className="mt-6 w-full">
+                  <WaitlistDisclosure source="features_cta" />
+                </div>
               </div>
             </div>
           </SectionShell>

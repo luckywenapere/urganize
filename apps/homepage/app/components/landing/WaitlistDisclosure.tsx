@@ -10,14 +10,22 @@ import { WaitlistForm } from "./WaitlistForm";
 // link under the final CTA that mounts the existing form on demand. Two
 // forms on one page read as pressure (the reason the 2026-08-25 mid-page form
 // was cut the day it shipped); a link reads as a door.
-export function WaitlistDisclosure() {
+//
+// `source` is the waitlist row's origin tag. /features and the persona pages
+// pass their own, so the growth dashboard keeps telling the pages apart the
+// way it did when each mounted the form directly.
+export function WaitlistDisclosure({
+  source = "homepage_final_cta",
+}: {
+  source?: string;
+}) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   return (
     <div className="flex w-full flex-col items-center">
       {open ? (
         <div id={panelId} className="w-full">
-          <WaitlistForm source="homepage_final_cta" />
+          <WaitlistForm source={source} />
         </div>
       ) : (
         <button

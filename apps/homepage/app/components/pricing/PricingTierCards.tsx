@@ -171,6 +171,8 @@ export function PricingTierCards() {
 
                 <a
                   href={selfServe ? APP_SIGNUP_URL : salesMailto(tier.label)}
+                  data-track={selfServe ? "start_trial_click" : undefined}
+                  data-location={selfServe ? `pricing_${tierId}` : undefined}
                   className={`mt-8 inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium tracking-[-0.02em] transition-colors ${
                     tier.recommended
                       ? "bg-[var(--marketing-primary)] text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)]"

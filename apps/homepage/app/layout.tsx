@@ -12,6 +12,7 @@ import { Suspense } from "react";
 import FormbricksProvider from "./formbricks-provider";
 import CursorRefresher from "./components/CursorRefresher";
 import { Analytics } from "@vercel/analytics/next";
+import { LandingAnalytics } from "./components/landing/LandingAnalytics";
 
 const SITE_URL = "https://urganize.app";
 const LEGAL_NAME = "The Urganization Ltd";
@@ -238,6 +239,10 @@ export default function RootLayout({
         </Suspense>
         {children}
         <Analytics />
+        {/* One delegated listener for the site's funnel events (trial clicks
+            on every page, FAQ opens on the homepage). Mounted here and nowhere
+            else, or a click reports twice. */}
+        <LandingAnalytics />
       </body>
     </html>
   );
