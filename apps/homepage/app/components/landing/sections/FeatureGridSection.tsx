@@ -4,35 +4,36 @@ import { SectionShell } from "../SectionShell";
 import { ThemedProductShot } from "../ThemedProductShot";
 import { centeredHeadlineClass, wideContainerClass } from "./shared";
 
-// Everything else a release needs, as six tiles (2026-09-02). Each names a
-// surface that is switched ON in production as of this date — press kit,
-// credits link, content calendar, fan page, shows with DJ packs, cover art
-// and song files — and the trailing line covers the two that are live but
-// did not earn a tile: playlist pitching (curators are invite-only, so a tile
-// would imply a network a trial user may find empty) and the recap card.
-// Files and Notes are off in production and are not mentioned anywhere.
+// Everything else a release needs, as tiles (2026-09-02). Each names a
+// surface that is switched ON in production — press kit, shows with DJ packs,
+// cover art and song files — and the trailing line covers the two that are
+// live but did not earn a tile: playlist pitching (curators are invite-only,
+// so a tile would imply a network a trial user may find empty) and the recap
+// card. Files and Notes are off in production and are not mentioned anywhere.
 //
-// No per-tile screenshots, on purpose: six more image requests on metered
-// mobile data for the beat a skimmer is most likely to skip. One shot, the
-// public press kit on a phone — the outward-facing link competitors lack —
-// stands for the whole group. That page is dark-locked, so one capture
-// serves both themes.
+// REMOVED 2026-09-03, the day after they were written: the founder switched
+// the three scenes off in production (v1.21.0), and this page only advertises
+// what is live. Each tile comes back with its flag; the copy is kept here so
+// restoring one is a paste, not a rewrite:
+//   Credits and metadata — "Collaborators fill in their credits and splits
+//     through a link. Codes like ISRC and UPC are saved with the release."
+//     (NEXT_PUBLIC_FEATURE_METADATA)
+//   Content calendar — "Plan posts per platform, release by release. You
+//     still post them." (NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR)
+//   Fan page — "A fan gives an email and gets your link on the same screen.
+//     The list is yours to export." (NEXT_PUBLIC_FEATURE_CAPTURE)
+// With six tiles the list ran two columns beside the phone; with three it
+// runs one, so no tile sits alone on a half-empty row.
+//
+// No per-tile screenshots, on purpose: more image requests on metered mobile
+// data for the beat a skimmer is most likely to skip. One shot, the public
+// press kit on a phone — the outward-facing link competitors lack — stands
+// for the whole group. That page is dark-locked, so one capture serves both
+// themes.
 const TILES = [
   {
     title: "Press kit",
     body: "One link for press, curators and bookers. It updates when the release changes.",
-  },
-  {
-    title: "Credits and metadata",
-    body: "Collaborators fill in their credits and splits through a link. Codes like ISRC and UPC are saved with the release.",
-  },
-  {
-    title: "Content calendar",
-    body: "Plan posts per platform, release by release. You still post them.",
-  },
-  {
-    title: "Fan page",
-    body: "A fan gives an email and gets your link on the same screen. The list is yours to export.",
   },
   {
     title: "Shows and DJ packs",
@@ -57,7 +58,7 @@ export function FeatureGridSection() {
 
         <div className="mx-auto mt-14 grid max-w-[74rem] items-start gap-10 lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-14">
           <div>
-            <ul className="grid gap-4 sm:grid-cols-2">
+            <ul className="grid gap-4">
               {TILES.map((tile) => (
                 <li
                   key={tile.title}

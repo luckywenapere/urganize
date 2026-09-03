@@ -60,7 +60,7 @@ export default function Home() {
               and shows the product; the story opens each of three steps with
               how the work runs today; the roster beat states the position
               nobody else owns and carries the mid-page ask; UrgAns is the
-              differentiator; one large quote; six tiles for everything else;
+              differentiator; one large quote; three tiles for everything else;
               the price, rendered from the pricing package; the objections;
               the final ask with the waitlist folded behind a link.
 
