@@ -136,14 +136,16 @@ describe('MCP tool surface', () => {
   // until it is named — so the count no longer guards against accidental
   // exposure. It is kept because it still catches the opposite mistake: an
   // intended tool silently dropping out of the surface after a rename.
-  it('exposes exactly the thirteen allow-listed tools', () => {
+  it('exposes exactly the fourteen allow-listed tools', () => {
     const names = getMcpToolDescriptors().map((tool) => tool.name);
-    expect(names).toHaveLength(13);
+    expect(names).toHaveLength(14);
     expect(names).not.toContain('navigate');
+    expect(names).not.toContain('get_team_workload');
     expect(names).toEqual(
       expect.arrayContaining([
         'get_workspace_context',
         'get_release_context',
+        'compare_releases',
         'list_releases',
         'get_release',
         'list_tasks',

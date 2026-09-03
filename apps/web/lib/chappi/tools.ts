@@ -29,6 +29,7 @@
 import { CALENDAR_TOOLS } from './tool-families/calendar';
 import { CONTEXT_TOOLS } from './tool-families/context';
 import { CORE_TOOLS } from './tool-families/core';
+import { INSIGHTS_TOOLS } from './tool-families/insights';
 import { METADATA_TOOLS } from './tool-families/metadata';
 import { NOTE_TOOLS } from './tool-families/notes';
 import { PLANNER_TOOLS } from './tool-families/planner';
@@ -43,6 +44,7 @@ export type { ChappiTool, ChappiToolContext, ChappiConfirmOutcome } from './tool
 export const CHAPPI_TOOLS: ChappiTool[] = [
   ...CORE_TOOLS,
   ...CONTEXT_TOOLS,
+  ...INSIGHTS_TOOLS,
   ...RELEASE_TOOLS,
   ...PLANNER_TOOLS,
   ...METADATA_TOOLS,
