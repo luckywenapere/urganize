@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.21.0",
+    date: "September 3, 2026",
+    highlights: [
+      "We turned off three release tools for now: Metadata collection, the fan email capture page, and the content calendar. Any links you shared for these will stop working until we turn them back on.",
+      "Nothing you already saved is gone. Your metadata, credits, calendar posts and email signups are all still there, waiting for these to come back.",
+    ],
+  },
+  {
     version: "1.20.1",
     date: "September 2, 2026",
     highlights: [

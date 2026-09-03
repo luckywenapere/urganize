@@ -1134,6 +1134,14 @@ Founder: *"make it so that each of the features, metadata, calendar and the rest
 
 ## Content calendar refinement pass (2026-08-10)
 
+**Switched off in production (2026-09-03, founder call).** `NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR`
+is off. **Doc-drift note:** no section in this file ever recorded the flag being
+flipped ON in the first place — the same gap already caught for Web Push and the
+native mobile shell — so there is no prior "activated" entry to reconcile this
+against. Every calendar and post already created is untouched in the database;
+the Content scene, its footer pill and its API routes 404 again until the flag
+returns.
+
 A correctness + mobile/desktop polish sweep over the Phase-A calendar, which had been dormant since it shipped 2026-07-20. The load-bearing changes, in case any get re-litigated:
 
 - **The grid↔agenda swap is CONTAINER-width-based now, not viewport-based.** `MonthGrid` (`cc-month-view`) and `AgendaList` (`cc-agenda-view`) swap on the scene column's own width via CSS container queries (`.cc-scene-container`, `container-type: inline-size`, threshold 45rem — all in `globals.css` beside `.cc-island`). This retires the documented `lg:` trap: the UrgAns rail and identity panel are AppShell flex siblings that narrow the centre column without narrowing the viewport, and at 1280px with both open the old gate rendered ~54px day cells. A too-narrow column now degrades to the agenda list on ANY viewport. `@supports` fallback keeps the old viewport behavior for browsers without container queries.
@@ -2040,6 +2048,14 @@ The gap the tabs pass flagged and did not fill. `app/payment/callback/page.tsx` 
 ## Fan email capture (2026-08-14)
 
 The tenth sanctioned v1 scope expansion (see the 2026-08-14 note in "v1 scope"). Built flag-off; **not yet activated**.
+
+**Switched off in production (2026-09-03, founder call).** **Doc-drift note:** the
+"not yet activated" line just above was stale — the flag was evidently turned on
+at some point with no record here, the same pattern already caught for Web Push
+and the native mobile shell. `NEXT_PUBLIC_FEATURE_CAPTURE` is off again now: the
+Fan capture scene, its footer pill and the public `/capture/[token]` page all
+404 until it returns. Nothing in `release_capture_pages` or `release_capture_leads`
+is touched — every authored page and every collected email is exactly as it was.
 
 - **What it is:** a "Fan capture" scene on a scoped release. The owner creates one page in a click, writes a headline, an incentive, and the link fans get; the public page lives at `/capture/[token]`. A fan enters an email and the link is revealed on that screen. Collected emails list in-app with a copy-as-CSV export.
 - **Flag:** `NEXT_PUBLIC_FEATURE_CAPTURE`, default `false`. Registered in `turbo.json` + `.env.example`. Gates the footer pill, the `?scene=capture` URL param (in both `TasksPanel` and `WorkspaceView`, which mirror each other), the scene prefetch list, all five owner routes, the public POST, and the public page.
@@ -5823,6 +5839,13 @@ found the whole spine working (one link per release, public no-login form,
 submissions attached to the release and listed for the owner, split totals shown
 plainly without blocking) and six real gaps. **No new flag**, and no scope
 expansion: this is the same surface, corrected.
+
+**Switched off in production (2026-09-03, founder call).** `NEXT_PUBLIC_FEATURE_METADATA`
+is off again — the Metadata scene, its entry points, both `/credits/[token]`
+routes and the collaborator credit API all 404/bounce until it is flipped back.
+No code removed and no data touched: every existing `release_metadata` row,
+`release_credit_links` row and submitted credit stays exactly as it was.
+Turning it back on is the one-line env flip this feature has always been.
 
 Founder decisions taken before building: **skip** the expected-contributor count
 ("N answers" stands), **keep the 11 detailed roles** rather than collapsing to
