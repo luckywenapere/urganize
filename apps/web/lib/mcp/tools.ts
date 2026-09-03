@@ -46,6 +46,13 @@ export const MCP_TOOL_NAMES_ALLOWED: readonly ChappiToolName[] = [
   // Context — the reason per-user access exists at all.
   'get_workspace_context',
   'get_release_context',
+  // Insights — cross-entity reads, no different in kind from the context pair.
+  // get_team_workload is NOT here: it proxies GET /api/workspace/members,
+  // whose handler does not accept the internal actor (same reason
+  // list_workspace_members below it in Chappi's own registry never made this
+  // list either) — it would 401 for any MCP client. compare_releases has no
+  // such route dependency, so it's clean.
+  'compare_releases',
   // Reads.
   'list_releases',
   'get_release',

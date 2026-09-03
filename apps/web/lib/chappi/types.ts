@@ -95,6 +95,9 @@ export type ChappiToolName =
   // context (2026-08-25) — the portable half of what UrgAns knows
   | 'get_workspace_context'
   | 'get_release_context'
+  // insights (2026-09-03) — cross-entity reasoning aids over existing data
+  | 'compare_releases'
+  | 'get_team_workload'
   // core (pre-expansion)
   | 'list_releases'
   | 'get_release'
