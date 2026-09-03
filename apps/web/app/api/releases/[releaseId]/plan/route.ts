@@ -11,6 +11,7 @@ import {
   toPlanDraftResponse,
 } from './_shared';
 import { parseDraftDoc, parseReleasePlanIntake } from '@/lib/release-planning';
+import { discardPlanDraft } from '@/lib/release-planning-actions-server';
 
 /**
  * The plan draft itself: read it, autosave the manager's edits into it, or
@@ -157,6 +158,10 @@ export async function PUT(
  * DELETE — discard a draft the manager never approved. Idempotent, and refuses
  * to touch an approved one (deleting that would erase the provenance of tasks
  * that already exist).
+ *
+ * A thin wrapper around lib/release-planning-actions-server.ts's
+ * discardPlanDraft, the one implementation the new release.draft_plan
+ * embedded action's discard step also calls.
  */
 export async function DELETE(
   request: NextRequest,
@@ -182,18 +187,9 @@ export async function DELETE(
   const loaded = await loadOwnedRelease(adminClient, releaseId, auth.user.id);
   if ('error' in loaded) return loaded.error;
 
-  const { error } = await adminClient
-    .from(PLAN_DRAFTS_TABLE)
-    .delete()
-    .eq('release_id', releaseId)
-    .eq('owner_user_id', auth.user.id)
-    .eq('status', 'draft');
-
-  if (error) {
-    return NextResponse.json(
-      { error: error.message || 'Could not discard the plan.' },
-      { status: 500 }
-    );
+  const result = await discardPlanDraft(adminClient, { releaseId, ownerUserId: auth.user.id });
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
   return NextResponse.json({ ok: true });

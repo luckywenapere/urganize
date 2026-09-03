@@ -1,0 +1,545 @@
+/**
+ * The three things that happen to a plan draft, extracted so there is exactly
+ * ONE implementation of each — used by the legacy HTTP routes
+ * (app/api/releases/[releaseId]/plan/{generate,approve}/route.ts and the
+ * DELETE handler in plan/route.ts) AND by the new `release.draft_plan`
+ * embedded action (lib/urgans-actions/actions/release-draft-plan.ts).
+ *
+ * DELIBERATELY NOT COUPLED TO NextResponse OR ANY OTHER NEXT.JS TYPE. The
+ * embedded-action runner is not an HTTP handler, so these functions return
+ * plain discriminated-union results ({ ok: true, ... } | { ok: false, status,
+ * error }); each caller is responsible for turning that into whatever
+ * envelope it needs. This is the same boundary release-planning-server.ts
+ * already draws for buildTaskRowsFromDraft/instantiateDraftPlan (plain
+ * data in, plain data or a thrown PlanApprovalError out).
+ *
+ * These functions do their OWN internal reads for "does a draft/approved plan
+ * already exist" rather than depending on the plan route group's
+ * `_shared.ts` helpers, which return NextResponse objects on error and are
+ * meant for the HTTP routes that still call them directly (GET/PUT on
+ * plan/route.ts, the phase regenerate route). Two access paths to one
+ * question is not a duplication to be proud of, but it is the smaller risk
+ * next to reshaping `_shared.ts`'s public signature out from under the four
+ * routes that already depend on it exactly as it is.
+ */
+
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import {
+  applyDeltaToDraft,
+  applyOwnerProposals,
+  buildDraftFromTemplate,
+  buildPlannerMessages,
+  parseDraftDoc,
+  parsePlannerAiDelta,
+  toPromptTasks,
+  validatePlannerDelta,
+  type PlannerAiDelta,
+  type PlannerPromptMember,
+  type PlanDraftFailure,
+  type ReleasePlanDraft,
+  type ReleasePlanDraftDoc,
+  type ReleasePlanIntake,
+} from './release-planning';
+import { generateStructuredAiOutput, isAiConfigured } from './ai/provider';
+import type { Template } from './release-templates/types';
+import { instantiateDraftPlan, PlanApprovalError } from './release-planning-server';
+import { writePlannerPending } from './release-planner-pending';
+import { writeTemplatePending } from './release-template-pending';
+import { writePlannedByUrgans } from './release-planned-by-urgans';
+import { loadPastAssignments } from './task-owners-server';
+import { proposeTaskOwners, type AssignableMember } from './task-owners';
+import type { WorkspaceMember } from '@/types/auth';
+
+const PLAN_DRAFTS_TABLE = 'release_plan_drafts';
+const RELEASES_TABLE = 'releases';
+
+const PLAN_DRAFT_COLUMNS = 'id,status,doc,updated_at,approved_at,approved_task_count';
+
+/** Same budget the routes have always used for one tailoring call. */
+export const PLANNER_TIMEOUT_MS = 25_000;
+export const PLANNER_MAX_RETRIES = 2;
+
+export type PlannerReleaseRow = {
+  id: string;
+  owner_user_id: string;
+  title: string | null;
+  artist_name: string | null;
+  release_date: string | null;
+  release_type: string | null;
+  release_context: unknown;
+  metadata: Record<string, unknown> | null;
+};
+
+type PlanDraftRow = {
+  id: string;
+  status: string;
+  doc: unknown;
+  updated_at: string | null;
+  approved_at: string | null;
+  approved_task_count: number | null;
+};
+
+/**
+ * Turn a provider failure into the reason we record on the draft. Reads the
+ * error's shape rather than its class — AiProviderError is not exported from
+ * lib/ai/provider.ts.
+ */
+export function classifyPlannerFailure(error: unknown): PlanDraftFailure {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const status = (error as { status?: number } | null)?.status;
+  const name = (error as { name?: string } | null)?.name;
+
+  if (name === 'AbortError' || /abort|timed? ?out/i.test(message)) return 'timeout';
+  if (status === 429 || /rate[- ]limit/i.test(message)) return 'busy';
+  if (/parse|json|format/i.test(message)) return 'invalid_output';
+  return 'unavailable';
+}
+
+async function readExistingDraft(
+  admin: SupabaseClient,
+  releaseId: string,
+  ownerUserId: string
+): Promise<{ error: string } | { draft: null } | { draft: ReleasePlanDraft; row: PlanDraftRow }> {
+  const { data, error } = await admin
+    .from(PLAN_DRAFTS_TABLE)
+    .select(PLAN_DRAFT_COLUMNS)
+    .eq('release_id', releaseId)
+    .eq('owner_user_id', ownerUserId)
+    .maybeSingle();
+
+  if (error) return { error: error.message || 'Could not load the plan draft.' };
+  if (!data) return { draft: null };
+
+  const row = data as PlanDraftRow;
+  const parsed = parseDraftDoc(row.doc);
+  if (!parsed.ok) {
+    return { error: 'This plan draft could not be read. Discard it and plan again.' };
+  }
+
+  return {
+    draft: {
+      id: row.id,
+      status: row.status === 'approved' ? 'approved' : 'draft',
+      doc: parsed.doc,
+      updatedAt: row.updated_at || '',
+      approvedAt: row.approved_at,
+    },
+    row,
+  };
+}
+
+async function countAutoGeneratedTasks(
+  admin: SupabaseClient,
+  releaseId: string
+): Promise<{ error: string } | { count: number }> {
+  const { count, error } = await admin
+    .from('tasks')
+    .select('id', { count: 'exact', head: true })
+    .eq('release_id', releaseId)
+    .eq('auto_generated', true);
+
+  if (error) {
+    return { error: error.message || 'Could not check this release for existing activities.' };
+  }
+  return { count: count ?? 0 };
+}
+
+/**
+ * The team the planner may hand work to. Only members who have actually
+ * joined can hold a task: `assigned_to_user_id` is a real auth user id.
+ */
+function toAssignableMembers(
+  members: WorkspaceMember[]
+): { prompt: PlannerPromptMember[]; ids: Set<string>; assignable: AssignableMember[]; names: Record<string, string> } {
+  const joined = members.filter((member) => Boolean(member.userId));
+  const names: Record<string, string> = {};
+  for (const member of joined) {
+    names[member.userId as string] = member.name || member.email || 'Teammate';
+  }
+  return {
+    prompt: joined.map((member) => ({
+      user_id: member.userId as string,
+      name: member.name || member.email || 'Teammate',
+      role: member.role,
+    })),
+    ids: new Set(joined.map((member) => member.userId as string)),
+    assignable: joined.map((member) => ({
+      userId: member.userId as string,
+      status: member.status,
+      role: member.role,
+    })),
+    names,
+  };
+}
+
+export type GeneratePlanDraftResult =
+  | { ok: true; draft: ReleasePlanDraft }
+  | { ok: false; status: number; error: string; code?: string };
+
+/**
+ * Generate (or replace) a release's plan draft.
+ *
+ * Order: refuse to stack a plan on top of one that already exists → save the
+ * intake answers → build the deterministic draft → stamp it with
+ * proposeTaskOwners's history/role guesses (deterministic, runs whether or
+ * not a model is configured) → tailor with a model when one is configured →
+ * save the draft row → audit the raw delta.
+ */
+export async function generatePlanDraft(
+  admin: SupabaseClient,
+  params: {
+    release: PlannerReleaseRow;
+    actor: { id: string; email?: string | null };
+    intake: ReleasePlanIntake;
+    replace: boolean;
+    todayYmd: string;
+    template: Template;
+    fallbackToSingle: boolean;
+    loadTeam: () => Promise<{ ok: true; workspaceId: string; members: WorkspaceMember[] } | { ok: false }>;
+    plannerModel?: string;
+  }
+): Promise<GeneratePlanDraftResult> {
+  const { release, actor, intake, replace, todayYmd, template, fallbackToSingle, loadTeam, plannerModel } =
+    params;
+  const releaseId = release.id;
+
+  // --- Refuse to stack a plan on top of something that already exists --------
+
+  const existing = await readExistingDraft(admin, releaseId, actor.id);
+  if ('error' in existing) return { ok: false, status: 500, error: existing.error };
+  if (existing.draft) {
+    if (existing.draft.status === 'approved') {
+      return { ok: false, status: 409, error: 'This release already has an approved plan.' };
+    }
+    if (!replace) {
+      return {
+        ok: false,
+        status: 409,
+        error: 'This release already has a draft plan.',
+        code: 'draft_exists',
+      };
+    }
+  }
+
+  const taskCount = await countAutoGeneratedTasks(admin, releaseId);
+  if ('error' in taskCount) return { ok: false, status: 500, error: taskCount.error };
+  if (taskCount.count > 0) {
+    return { ok: false, status: 409, error: 'This release already has a rollout plan.', code: 'tasks_exist' };
+  }
+
+  // --- Save the answers first -------------------------------------------------
+
+  const contextSave = await admin
+    .from(RELEASES_TABLE)
+    .update({ release_context: intake, release_type: intake.release_type })
+    .eq('id', releaseId)
+    .eq('owner_user_id', actor.id);
+  if (contextSave.error) {
+    console.error('[plan] could not save intake answers:', contextSave.error);
+    // Non-fatal: the answers also travel inside the draft document below.
+  }
+
+  // --- The deterministic draft, then the owner-history heuristic -------------
+
+  let doc: ReleasePlanDraftDoc = buildDraftFromTemplate({
+    template,
+    intake,
+    ownerUserId: actor.id,
+    generatedAt: new Date().toISOString(),
+  });
+
+  const team = await loadTeam();
+  if (team.ok) {
+    const history = await loadPastAssignments(admin, {
+      workspaceId: team.workspaceId,
+      ownerUserId: actor.id,
+      excludeReleaseId: releaseId,
+    });
+    const assignable = toAssignableMembers(team.members);
+    const proposals = proposeTaskOwners({
+      tasks: doc.tasks.map((task) => ({
+        id: task.id,
+        templateTaskId: task.template_task_id,
+        role: task.role,
+      })),
+      history,
+      members: assignable.assignable,
+      creatorUserId: actor.id,
+      memberNames: assignable.names,
+    });
+    doc = applyOwnerProposals(doc, proposals);
+  }
+
+  // --- Tailoring, if there is a model to tailor with --------------------------
+
+  let delta: PlannerAiDelta | null = null;
+
+  if (!isAiConfigured()) {
+    doc = { ...doc, ai: { applied: false, rationale: null, failure: 'not_configured' } };
+  } else {
+    const assignable = team.ok ? toAssignableMembers(team.members) : toAssignableMembers([]);
+
+    const messages = buildPlannerMessages({
+      release: {
+        title: release.title || '',
+        artistName: release.artist_name || intake.artist_name,
+        releaseDate: release.release_date || intake.release_date,
+      },
+      intake,
+      tasks: toPromptTasks(doc.tasks),
+      members: assignable.prompt,
+      todayYmd,
+      fallbackToSingle,
+    });
+
+    try {
+      delta = await generateStructuredAiOutput<PlannerAiDelta>({
+        messages,
+        timeoutMs: PLANNER_TIMEOUT_MS,
+        maxRetries: PLANNER_MAX_RETRIES,
+        model: plannerModel || undefined,
+        parse: parsePlannerAiDelta,
+        invalidFormatMessage: 'The response was not the expected JSON.',
+      });
+    } catch (error) {
+      const failure = classifyPlannerFailure(error);
+      console.error('[plan] tailoring failed for release', releaseId, failure, error);
+      doc = { ...doc, ai: { applied: false, rationale: null, failure } };
+    }
+
+    if (delta) {
+      const validation = validatePlannerDelta(
+        delta,
+        doc.tasks.map((task) => ({ id: task.id, optional: task.optional })),
+        Array.from(assignable.ids)
+      );
+      if (validation.ok) {
+        doc = applyDeltaToDraft(doc, delta);
+      } else {
+        console.error('[plan] tailoring rejected for release', releaseId, validation.error);
+        delta = null;
+        doc = { ...doc, ai: { applied: false, rationale: null, failure: 'invalid_output' } };
+      }
+    }
+  }
+
+  // --- Save the draft ---------------------------------------------------------
+
+  const { data, error } = await admin
+    .from(PLAN_DRAFTS_TABLE)
+    .upsert(
+      {
+        owner_user_id: actor.id,
+        release_id: releaseId,
+        status: 'draft',
+        doc,
+        approved_at: null,
+        approved_task_count: null,
+      },
+      { onConflict: 'release_id' }
+    )
+    .select('id,status,updated_at')
+    .single();
+
+  if (error) {
+    return { ok: false, status: 500, error: error.message || 'Could not save the plan draft.' };
+  }
+
+  if (delta) {
+    const audit = await admin
+      .from(RELEASES_TABLE)
+      .update({ ai_tailoring_response: { ...delta, tailored_at: new Date().toISOString() } })
+      .eq('id', releaseId);
+    if (audit.error) {
+      console.error('[plan] draft saved but the audit record did not:', audit.error);
+    }
+  }
+
+  const row = data as { id: string; status: string; updated_at: string | null };
+
+  return {
+    ok: true,
+    draft: {
+      id: row.id,
+      status: row.status === 'approved' ? 'approved' : 'draft',
+      doc,
+      updatedAt: row.updated_at || '',
+      approvedAt: null,
+    },
+  };
+}
+
+export type ApprovePlanDraftResult =
+  | { ok: true; tasksCreated: number; taskIds: string[]; warnings: string[] }
+  | { ok: false; status: number; error: string };
+
+/**
+ * Approve a release's draft and schedule it.
+ *
+ * The single irreversible step in the planner:
+ *  - The draft is read from the database here, never trusted from a caller's
+ *    copy — a stale in-memory draft must not be what gets scheduled.
+ *  - The row is CLAIMED with a conditional update before any task is written,
+ *    so two calls cannot both schedule the same plan.
+ *  - A teammate who left the team does not block approval; their tasks come
+ *    back to the owner and the response says so.
+ *  - Settling clears both pending markers and stamps planned_by_urgans, so a
+ *    founder metrics query can later tell this plan was approved through
+ *    UrgAns rather than hand-built.
+ */
+export async function approvePlanDraft(
+  admin: SupabaseClient,
+  params: {
+    release: PlannerReleaseRow;
+    actor: { id: string };
+    loadTeam: () => Promise<{ ok: true; workspaceId: string; members: WorkspaceMember[] } | { ok: false }>;
+  }
+): Promise<ApprovePlanDraftResult> {
+  const { release, actor, loadTeam } = params;
+  const releaseId = release.id;
+
+  const releaseDate = release.release_date ? String(release.release_date).slice(0, 10) : '';
+  if (!releaseDate) {
+    return { ok: false, status: 400, error: 'Set a release date before approving the plan.' };
+  }
+
+  const existing = await readExistingDraft(admin, releaseId, actor.id);
+  if ('error' in existing) return { ok: false, status: 500, error: existing.error };
+  if (!existing.draft) {
+    return { ok: false, status: 404, error: 'No plan draft to approve.' };
+  }
+  if (existing.draft.status === 'approved') {
+    return { ok: false, status: 409, error: 'This plan was already approved.' };
+  }
+
+  const taskCount = await countAutoGeneratedTasks(admin, releaseId);
+  if ('error' in taskCount) return { ok: false, status: 500, error: taskCount.error };
+  if (taskCount.count > 0) {
+    return { ok: false, status: 409, error: 'This release already has a rollout plan.' };
+  }
+
+  const team = await loadTeam();
+  if (!team.ok) {
+    return {
+      ok: false,
+      status: 500,
+      error: 'Could not work out where to file these activities. Try again.',
+    };
+  }
+  const assignable = toAssignableMembers(team.members);
+  // The owner can always hold a task, whatever the membership rows say.
+  assignable.ids.add(actor.id);
+
+  // --- Claim the draft before writing anything --------------------------------
+
+  const approvedAt = new Date();
+  const claim = await admin
+    .from(PLAN_DRAFTS_TABLE)
+    .update({ status: 'approved', approved_at: approvedAt.toISOString() })
+    .eq('id', existing.draft.id)
+    .eq('owner_user_id', actor.id)
+    .eq('status', 'draft')
+    .select('id');
+
+  if (claim.error) {
+    return { ok: false, status: 500, error: claim.error.message || 'Could not approve the plan.' };
+  }
+  if ((claim.data || []).length === 0) {
+    // Someone else got there first. Their tasks are the real ones.
+    return { ok: false, status: 409, error: 'This plan was already approved.' };
+  }
+
+  // --- Create the tasks -------------------------------------------------------
+
+  let created: { tasksCreated: number; taskIds: string[]; warnings: string[] };
+  try {
+    created = await instantiateDraftPlan({
+      doc: existing.draft.doc,
+      draftId: existing.draft.id,
+      releaseId,
+      releaseDate,
+      workspaceId: team.workspaceId,
+      ownerUserId: actor.id,
+      assignableUserIds: assignable.ids,
+      approvedAtMs: approvedAt.getTime(),
+      supabaseClient: admin,
+    });
+  } catch (error) {
+    // Release the claim so the draft is still there to fix and retry.
+    const released = await admin
+      .from(PLAN_DRAFTS_TABLE)
+      .update({ status: 'draft', approved_at: null })
+      .eq('id', existing.draft.id);
+    if (released.error) {
+      console.error('[plan] could not release the approval claim:', released.error);
+    }
+
+    if (error instanceof PlanApprovalError && error.reason === 'empty_plan') {
+      return { ok: false, status: 400, error: 'This plan has no tasks left. Add one before approving.' };
+    }
+
+    console.error('[plan] approval failed for release', releaseId, error);
+    return {
+      ok: false,
+      status: 500,
+      error: 'Could not schedule the plan. Your draft is untouched. Try again.',
+    };
+  }
+
+  // --- Settle the release -----------------------------------------------------
+
+  const nextMetadata = writePlannedByUrgans(
+    writeTemplatePending(writePlannerPending(release.metadata, false), false),
+    true
+  );
+
+  const settle = await admin
+    .from(RELEASES_TABLE)
+    .update({ metadata: nextMetadata })
+    .eq('id', releaseId)
+    .eq('owner_user_id', actor.id);
+  if (settle.error) {
+    console.error('[plan] tasks created but the release flags did not clear:', settle.error);
+  }
+
+  const stamp = await admin
+    .from(PLAN_DRAFTS_TABLE)
+    .update({ approved_task_count: created.tasksCreated })
+    .eq('id', existing.draft.id);
+  if (stamp.error) {
+    console.error('[plan] tasks created but the draft count did not stamp:', stamp.error);
+  }
+
+  return {
+    ok: true,
+    tasksCreated: created.tasksCreated,
+    taskIds: created.taskIds,
+    warnings: created.warnings,
+  };
+}
+
+export type DiscardPlanDraftResult = { ok: true } | { ok: false; status: number; error: string };
+
+/**
+ * Discard a draft the manager never approved. Idempotent, and refuses to
+ * touch an approved one — deleting that would erase the provenance of tasks
+ * that already exist.
+ */
+export async function discardPlanDraft(
+  admin: SupabaseClient,
+  params: { releaseId: string; ownerUserId: string }
+): Promise<DiscardPlanDraftResult> {
+  const { error } = await admin
+    .from(PLAN_DRAFTS_TABLE)
+    .delete()
+    .eq('release_id', params.releaseId)
+    .eq('owner_user_id', params.ownerUserId)
+    .eq('status', 'draft');
+
+  if (error) {
+    return { ok: false, status: 500, error: error.message || 'Could not discard the plan.' };
+  }
+
+  return { ok: true };
+}

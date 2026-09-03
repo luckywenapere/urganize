@@ -6,6 +6,7 @@ import { SINGLE_RELEASE_TEMPLATE } from './release-templates/single';
 import { getTemplateLeadTimeDays } from './release-templates/loader';
 import {
   applyDeltaToDraft,
+  applyOwnerProposals,
   buildDraftFromTemplate,
   buildPlannerMessages,
   computeTaskYmd,
@@ -610,6 +611,45 @@ describe('applyDeltaToDraft', () => {
 
     expect(next.tasks.find((task) => task.id === setupTask!.id)?.why).toBe('In scope.');
     expect(next.tasks.find((task) => task.id === postTask!.id)?.why).toBe(postTask!.why);
+  });
+});
+
+describe('applyOwnerProposals', () => {
+  it('stamps a history proposal onto its task', () => {
+    const doc = buildBaseDraft();
+    const target = doc.tasks[0];
+    const next = applyOwnerProposals(doc, [
+      { taskId: target.id, userId: TEAMMATE, basis: 'history', reason: 'Handled it before.' },
+    ]);
+    const after = next.tasks.find((task) => task.id === target.id);
+    expect(after?.assignee_user_id).toBe(TEAMMATE);
+    expect(after?.assignee_basis).toBe('history');
+  });
+
+  it('stamps a role proposal the same way', () => {
+    const doc = buildBaseDraft();
+    const target = doc.tasks[0];
+    const next = applyOwnerProposals(doc, [
+      { taskId: target.id, userId: TEAMMATE, basis: 'role', reason: 'Usually takes this role.' },
+    ]);
+    expect(next.tasks.find((task) => task.id === target.id)?.assignee_basis).toBe('role');
+  });
+
+  it('a creator proposal changes nothing — it is already the template default', () => {
+    const doc = buildBaseDraft();
+    const target = doc.tasks[0];
+    const next = applyOwnerProposals(doc, [
+      { taskId: target.id, userId: OWNER, basis: 'creator', reason: 'Nobody has done this before.' },
+    ]);
+    const after = next.tasks.find((task) => task.id === target.id);
+    expect(after?.assignee_user_id).toBe(OWNER);
+    expect(after?.assignee_basis).toBeNull();
+  });
+
+  it('leaves a task with no matching proposal untouched', () => {
+    const doc = buildBaseDraft();
+    const next = applyOwnerProposals(doc, []);
+    expect(next.tasks).toEqual(doc.tasks);
   });
 });
 

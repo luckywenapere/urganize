@@ -28,6 +28,7 @@
  */
 
 import type { Template, TaskRole } from './release-templates/types';
+import type { ProposedOwner } from './task-owners';
 
 // ---------------------------------------------------------------------------
 // Feature flag
@@ -828,6 +829,34 @@ export function applyDeltaToDraft(
     ai: { applied: true, rationale: delta.rationale || null, failure: null, warnings: delta.warnings },
     tasks,
   };
+}
+
+/**
+ * Stamp lib/task-owners.ts's per-task owner proposals onto a fresh draft,
+ * before the model is ever called (see generatePlanDraft in
+ * lib/release-planning-actions-server.ts). Deterministic, and independent of
+ * whether AI is configured at all — this is another layer of template
+ * refinement, not tailoring.
+ *
+ * A 'creator' proposal changes nothing: buildDraftFromTemplate already
+ * defaults every task's assignee to the release owner with assignee_basis
+ * null, and a 'creator' proposal is exactly that same answer. Leaving it
+ * untouched is what keeps "nobody has done this before" reading as the plain,
+ * unlabelled default rather than a provenance claim with nothing behind it.
+ */
+export function applyOwnerProposals(
+  doc: ReleasePlanDraftDoc,
+  proposals: ProposedOwner[]
+): ReleasePlanDraftDoc {
+  const byTaskId = new Map(proposals.map((proposal) => [proposal.taskId, proposal]));
+
+  const tasks = doc.tasks.map((task) => {
+    const proposal = byTaskId.get(task.id);
+    if (!proposal || proposal.basis === 'creator') return task;
+    return { ...task, assignee_user_id: proposal.userId, assignee_basis: proposal.basis };
+  });
+
+  return { ...doc, tasks };
 }
 
 /**
