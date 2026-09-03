@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.20.1",
+    date: "September 2, 2026",
+    highlights: [
+      "Renaming a set works properly now. Typing no longer wipes what you had just typed with each new letter.",
+    ],
+  },
+  {
     version: "1.20.0",
     date: "September 2, 2026",
     highlights: [
