@@ -3,6 +3,52 @@ type AiMessage = {
   content: string;
 };
 
+/** Token counts for one gateway call, when the upstream reported them. Each
+ *  field is independently nullable rather than the whole type being nullable:
+ *  a gateway can report one half and omit the other. See extractAiUsage. */
+export type AiUsage = {
+  promptTokens: number | null;
+  completionTokens: number | null;
+};
+
+/**
+ * Pull token usage out of a gateway response, in whichever of the two shapes
+ * this provider actually sees:
+ *
+ *   - OpenAI protocol (OpenRouter, RodiumAi): `usage.prompt_tokens` /
+ *     `usage.completion_tokens`.
+ *   - Ollama protocol (the Zuplo gateway's /api/chat): top-level
+ *     `prompt_eval_count` / `eval_count`, no `usage` object at all.
+ *
+ * Returns null when neither shape is present, rather than a zeroed-out usage
+ * object — a caller storing this must be able to tell "not reported" from "a
+ * free run", and `urgans_actions.tokens_in`/`tokens_out` are nullable for
+ * exactly this reason.
+ */
+export function extractAiUsage(payload: Record<string, unknown>): AiUsage | null {
+  const usage =
+    payload.usage && typeof payload.usage === 'object'
+      ? (payload.usage as Record<string, unknown>)
+      : null;
+  if (usage) {
+    const promptTokens = typeof usage.prompt_tokens === 'number' ? usage.prompt_tokens : null;
+    const completionTokens =
+      typeof usage.completion_tokens === 'number' ? usage.completion_tokens : null;
+    if (promptTokens !== null || completionTokens !== null) {
+      return { promptTokens, completionTokens };
+    }
+  }
+
+  const promptEvalCount =
+    typeof payload.prompt_eval_count === 'number' ? payload.prompt_eval_count : null;
+  const evalCount = typeof payload.eval_count === 'number' ? payload.eval_count : null;
+  if (promptEvalCount !== null || evalCount !== null) {
+    return { promptTokens: promptEvalCount, completionTokens: evalCount };
+  }
+
+  return null;
+}
+
 type GenerateStructuredAiOutputOptions<T> = {
   messages: AiMessage[];
   temperature?: number;
@@ -17,6 +63,10 @@ type GenerateStructuredAiOutputOptions<T> = {
   model?: string;
   parse: (raw: string) => T | null;
   invalidFormatMessage?: string;
+  /** Called once per attempt that got a parseable response back, whether or
+   *  not `parse` accepted it — the model spent tokens either way. Additive:
+   *  every existing caller passes nothing and is byte-for-byte unaffected. */
+  onUsage?: (usage: AiUsage) => void;
 };
 
 const DEFAULT_AI_API_BASE = 'https://urganize-main-34fd8f6.d2.zuplo.dev';
@@ -185,6 +235,7 @@ const requestAiGateway = async ({
   timeoutMs,
   model,
   format = 'json',
+  onUsage,
 }: {
   messages: AiMessage[];
   timeoutMs: number;
@@ -195,6 +246,7 @@ const requestAiGateway = async ({
    * the status update generator, which wants a natural paragraph, not JSON.
    */
   format?: 'json' | 'text';
+  onUsage?: (usage: AiUsage) => void;
 }): Promise<string> => {
   const config = getAiGatewayConfig();
   if (!config) {
@@ -255,6 +307,11 @@ const requestAiGateway = async ({
 
     const rawText = await response.text().catch(() => '');
     const payload = parseAiGatewayResponse(rawText) ?? {};
+    // Reported before the empty-content check below: the model spent tokens
+    // producing whatever it returned, even when that turns out to be nothing
+    // usable.
+    const usage = extractAiUsage(payload);
+    if (usage && onUsage) onUsage(usage);
     const content = extractMessageContent(payload);
     if (!content) {
       throw new Error('Model returned empty content');
@@ -275,6 +332,7 @@ export async function generateStructuredAiOutput<T>({
   model,
   parse,
   invalidFormatMessage = 'Model returned invalid JSON format',
+  onUsage,
 }: GenerateStructuredAiOutputOptions<T>): Promise<T> {
   const config = getAiGatewayConfig();
   if (!config) {
@@ -294,7 +352,7 @@ export async function generateStructuredAiOutput<T>({
 
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     try {
-      const raw = await requestAiGateway({ messages, timeoutMs, model });
+      const raw = await requestAiGateway({ messages, timeoutMs, model, onUsage });
       const parsed = parse(raw);
       if (!parsed) {
         throw new AiProviderError(invalidFormatMessage, { retryable: isFreeAutoRouter });
@@ -328,6 +386,8 @@ type GeneratePlainTextAiOutputOptions = {
   timeoutMs?: number;
   maxRetries?: number;
   model?: string;
+  /** See GenerateStructuredAiOutputOptions.onUsage — same contract. */
+  onUsage?: (usage: AiUsage) => void;
 };
 
 /**
@@ -343,6 +403,7 @@ export async function generatePlainTextAiOutput({
   timeoutMs = DEFAULT_TIMEOUT_MS,
   maxRetries = DEFAULT_MAX_RETRIES,
   model,
+  onUsage,
 }: GeneratePlainTextAiOutputOptions): Promise<string> {
   const config = getAiGatewayConfig();
   if (!config) {
@@ -355,7 +416,7 @@ export async function generatePlainTextAiOutput({
 
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     try {
-      const raw = await requestAiGateway({ messages, timeoutMs, model, format: 'text' });
+      const raw = await requestAiGateway({ messages, timeoutMs, model, format: 'text', onUsage });
       const trimmed = raw.trim();
       if (!trimmed) {
         throw new AiProviderError('Model returned empty content', { retryable: isFreeAutoRouter });
