@@ -6,6 +6,7 @@ import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { PricingTierCards } from "../components/pricing/PricingTierCards";
+import { FOUNDING_MEMBER_LINE } from "@/content/founding-member";
 
 // THE PRICE TABLE IS UNCONDITIONAL. Do not put it back behind a flag.
 //
@@ -91,14 +92,12 @@ export function PricingPageClient() {
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--marketing-text-subtle)]">
                 Built for music executives working with ambitious artists.
               </p>
-              {/* This page's OWN Founding Member line. It used to mirror the
-                  homepage FinalCTA's, which was cut 2026-08-25 — so the
-                  never-disagree rule between the two pages no longer applies
-                  and this is the only place the offer appears. Founder-supplied
-                  (2026-08 brief); update or remove the moment it stops being
-                  true. */}
+              {/* The Founding Member line, from content/founding-member.ts.
+                  The homepage pricing strip renders the same constant since
+                  2026-09-02, so the two pages cannot disagree about the offer
+                  again; removing the constant removes both mounts. */}
               <p className="mt-3 text-sm leading-6 text-[var(--marketing-text-muted)]">
-                Only 10 founding spots. Your price never goes up. Still open.
+                {FOUNDING_MEMBER_LINE}
               </p>
             </div>
           </div>

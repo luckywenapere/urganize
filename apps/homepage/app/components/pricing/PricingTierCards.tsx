@@ -4,7 +4,6 @@ import { useState } from "react";
 import { RiCheckLine } from "react-icons/ri";
 import {
   PRICING_TIER_ORDER,
-  SALES_CONTACT_EMAIL,
   annualSavingCopy,
   formatTierCyclePrice,
   getTier,
@@ -13,6 +12,7 @@ import {
   type PricingTierId,
 } from "@urganize/pricing";
 import { APP_SIGNUP_URL } from "@/lib/app-urls";
+import { salesMailto } from "@/lib/sales-mailto";
 
 // The price table.
 //
@@ -55,11 +55,6 @@ const INTERVAL_LABEL: Record<BillingInterval, string> = {
   monthly: "Monthly",
   annual: "Annual",
 };
-
-function mailtoFor(tierLabel: string): string {
-  const subject = `Urganize ${tierLabel} plan`;
-  return `mailto:${SALES_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}`;
-}
 
 export function PricingTierCards() {
   // Annual first. It is the better deal and the one most teams take, so opening
@@ -175,7 +170,7 @@ export function PricingTierCards() {
                 </ul>
 
                 <a
-                  href={selfServe ? APP_SIGNUP_URL : mailtoFor(tier.label)}
+                  href={selfServe ? APP_SIGNUP_URL : salesMailto(tier.label)}
                   className={`mt-8 inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium tracking-[-0.02em] transition-colors ${
                     tier.recommended
                       ? "bg-[var(--marketing-primary)] text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)]"
